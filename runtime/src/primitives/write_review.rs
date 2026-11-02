@@ -107,7 +107,7 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
         if let Some(key) = observation.decision_key.as_deref() {
             single_line(&format!("observations[{idx}].decision-key"), key)?;
         }
-        if let Some((argument, companion)) = decisions::require_companion(
+        for (argument, companion) in decisions::require_companion(
             "write-review",
             &format!("observations[{idx}].disposition"),
             &observation.disposition,
@@ -242,7 +242,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     }))
     .map_err(|refusal| refusal.into_error("write-review", "observations", "an observation"))?;
     let decisions = decisions::merge(
-        decisions::read_decisions(&feature_dir, super::REVIEW_RECORD_FILE)?,
+        stored_decisions(&feature_dir, args, repo)?,
         &args.expired_decisions,
         &decided_observations(&args.observations),
         &args.reviewed_at,
@@ -379,6 +379,28 @@ fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> Recor
 
 /// The `dispositions:` map for this run's observations. Derived, never
 /// accepted: a caller that supplied the counts could report them clean.
+/// The record's stored decisions, read once every new deferral among the
+/// observations is shown to name work that exists (spec 076) — before the
+/// merge, so a refusal lands before any write.
+fn stored_decisions(
+    feature_dir: &Path,
+    args: &WriteReviewArgs,
+    repo: &Path,
+) -> Result<Vec<RawDecision>> {
+    let stored = decisions::read_decisions(feature_dir, super::REVIEW_RECORD_FILE)?;
+    for (idx, observation) in args.observations.iter().enumerate() {
+        decisions::refuse_missing_work(
+            repo,
+            "write-review",
+            &format!("observations[{idx}].disposition"),
+            &observation.disposition,
+            &observation_key(observation),
+            &stored,
+        )?;
+    }
+    Ok(stored)
+}
+
 fn count_dispositions(observations: &[ReviewObservation]) -> Dispositions {
     let mut counts = Dispositions::default();
     for observation in observations {
@@ -1301,6 +1323,8 @@ mod tests {
                 outcome,
                 target: (outcome == DispositionOutcome::Deferred)
                     .then(|| companion.unwrap_or_default().to_string()),
+                task: None,
+                work_item: None,
                 reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
             },
@@ -2041,6 +2065,10 @@ mod tests {
     #[test]
     fn each_outcome_is_counted_and_rendered_and_none_touches_the_violation_counts() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        // A new deferral names work that exists (spec 076).
+        let scenarios = tmp.path().join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(scenarios.join("gap.md"), "# Gap\n").unwrap();
         let mut args = base_args("001-x");
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![
@@ -2161,6 +2189,8 @@ mod tests {
             key: "bug: since fixed".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),
+            task: None,
+            work_item: None,
             reason: None,
         }];
         // No `decided-by`: a matched decision is not a new one.

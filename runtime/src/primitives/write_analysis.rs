@@ -140,9 +140,8 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // decisions nobody can see (spec 058).
     let analysis_path = feature_dir.join(crate::primitives::ANALYSIS_RECORD_FILE);
     let replaced = analysis_path.is_file();
-    let stored = decisions::read_decisions(&feature_dir, crate::primitives::ANALYSIS_RECORD_FILE)?;
     let merged = decisions::merge(
-        stored,
+        stored_decisions(&feature_dir, args, repo)?,
         &args.expired_decisions,
         &decided_findings(&args.findings),
         &single_line(&args.analyzed_at),
@@ -342,7 +341,29 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
     Ok(counts)
 }
 
-/// The live findings routed or discarded, as the decisions they store, keyed
+/// The record's stored decisions, read once every new deferral among the
+/// live findings is shown to name work that exists (spec 076) — before the
+/// merge, so a refusal lands before any write.
+fn stored_decisions(
+    feature_dir: &Path,
+    args: &WriteAnalysisArgs,
+    repo: &Path,
+) -> Result<Vec<decisions::RawDecision>> {
+    let stored = decisions::read_decisions(feature_dir, crate::primitives::ANALYSIS_RECORD_FILE)?;
+    for (idx, finding) in args.findings.iter().enumerate().filter(|(_, f)| f.live) {
+        decisions::refuse_missing_work(
+            repo,
+            "write-analysis",
+            &format!("findings[{idx}].disposition"),
+            &finding.disposition,
+            &finding_key(finding),
+            &stored,
+        )?;
+    }
+    Ok(stored)
+}
+
+/// The live findings deferred or waived, as the decisions they store, keyed
 /// `{family} — {message}`.
 fn decided_findings(findings: &[AnalysisFinding]) -> Vec<DecisionRef> {
     findings
@@ -701,6 +722,54 @@ mod tests {
         assert!(report.contains("- no-readable-state: 3"), "{report}");
     }
 
+    /// Spec 076: a work-item ID round-trips through `analysis.md` exactly as
+    /// given, with no target beside it.
+    #[test]
+    fn a_work_item_id_round_trips_byte_identical() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.advisory = 1;
+        let mut deferred = finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Deferred,
+            None,
+        );
+        deferred.disposition.work_item = Some(" PROJ-12\t(x) ".into());
+        a.findings = vec![deferred];
+        a.decided_by = Some("dev@example.com".into());
+        run(&a, tmp.path()).unwrap();
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
+        assert_eq!(stored[0].work_item.as_deref(), Some(" PROJ-12\t(x) "));
+        assert_eq!(stored[0].target, None);
+    }
+
+    /// Spec 076: a deferral to work that does not exist is refused before
+    /// anything is written.
+    #[test]
+    fn a_deferral_to_missing_work_is_refused_before_any_write() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.advisory = 1;
+        a.findings = vec![finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Deferred,
+            Some("specs/042-demo/scenarios/gone.md"),
+        )];
+        a.decided_by = Some("dev@example.com".into());
+        let err = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
+                if argument == "findings[0].disposition.target"),
+            "{err:?}"
+        );
+        assert!(!analysis_exists(&tmp));
+    }
+
     fn args() -> WriteAnalysisArgs {
         WriteAnalysisArgs {
             feature: "042-demo".into(),
@@ -734,6 +803,8 @@ mod tests {
                 outcome,
                 target: (outcome == DispositionOutcome::Deferred)
                     .then(|| companion.unwrap_or_default().to_string()),
+                task: None,
+                work_item: None,
                 reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
             },
@@ -767,6 +838,8 @@ mod tests {
     #[test]
     fn each_disposition_is_counted_and_rendered_in_its_section() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
+        // A new deferral names work that exists (spec 076).
+        fs::write(tmp.path().join("specs/042-demo/tasks.md"), "# Tasks\n").unwrap();
         let mut a = args();
         a.blocking_findings = 1;
         a.advisory = 2;
@@ -918,6 +991,8 @@ mod tests {
             key: "applicable-rules — BE-AUTHN-001 does not fire".into(),
             outcome: DecisionOutcome::Waived,
             target: None,
+            task: None,
+            work_item: None,
             reason: Some("future endpoint".into()),
         }];
         run(&next, tmp.path()).unwrap();
@@ -1500,7 +1575,7 @@ mod tests {
             (
                 DispositionOutcome::Deferred,
                 "findings[0].disposition.target",
-                "a route names its target",
+                "a deferral names its work: a target, a work item, or both",
             ),
             (
                 DispositionOutcome::Waived,

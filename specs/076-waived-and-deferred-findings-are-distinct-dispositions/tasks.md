@@ -22,10 +22,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. Give a deferral its companions and refusals
 
-- [ ] Add `task` and `work-item` to `Disposition`, `DecisionRef` and `RawDecision`
-- [ ] Generalize `require_companion` to the data model's refusals, keeping `work-item` byte-identical
-- [ ] Check a `target`, and a `task` in it, against the tree at write time in both writers
-- [ ] Add a test for each refusal and for a byte-identical round trip of a work-item ID
+- [x] Add `task` and `work-item` to `Disposition`, `DecisionRef` and `RawDecision`
+- [x] Generalize `require_companion` to the data model's refusals, keeping `work-item` byte-identical
+- [x] Check a `target`, and a `task` in it, against the tree at write time in both writers
+- [x] Add a test for each refusal and for a byte-identical round trip of a work-item ID
 
 - **Done when**: AC3, AC4, AC10 and AC11 are covered by tests that fail with the behavior removed, and the task 2 cargo commands pass.
 

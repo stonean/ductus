@@ -22,7 +22,7 @@
 
 use std::path::Path;
 
-use crate::primitives::decisions::read_decisions;
+use crate::primitives::decisions::{self, read_decisions};
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
 };
@@ -116,7 +116,12 @@ fn describe(decision: &DecisionRef) -> String {
     match decision.outcome {
         DecisionOutcome::Deferred => format!(
             "deferred to {}",
-            decision.target.as_deref().unwrap_or_default()
+            decisions::work_reference(
+                decision.target.as_deref(),
+                decision.task.as_deref(),
+                decision.work_item.as_deref(),
+                str::to_string,
+            )
         ),
         DecisionOutcome::Waived => {
             format!("waived: {}", decision.reason.as_deref().unwrap_or_default())

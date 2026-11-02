@@ -185,12 +185,20 @@ pub struct Disposition {
     /// What was done.
     #[serde(default)]
     pub outcome: DispositionOutcome,
-    /// The work a deferral names, repo-relative. Required when `outcome` is
-    /// `deferred`.
+    /// The pipeline work a deferral names, repo-relative: a scenario, a
+    /// `tasks.md`, a `spec.md`, a feature directory, or a rule file. A
+    /// deferral names it, a `work-item`, or both (spec 076).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
+    /// The task a deferral names, by number, in the `tasks.md` `target` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task: Option<String>,
+    /// An external work-item ID — a Jira issue key, a GitLab work item. One
+    /// line, stored exactly as given, and never read (spec 076).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub work_item: Option<String>,
     /// Why the finding is not addressed. Required when `outcome` is
-    /// `waived`.
+    /// `waived`; optional on a deferral.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
@@ -217,9 +225,15 @@ pub struct DecisionRef {
     pub key: String,
     /// What was decided.
     pub outcome: DecisionOutcome,
-    /// The work a deferral names, when `outcome` is `deferred`.
+    /// The pipeline work a deferral names, when `outcome` is `deferred`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
+    /// The task a deferral names, by number, in its `tasks.md` target.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task: Option<String>,
+    /// The external work-item ID a deferral names, as given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub work_item: Option<String>,
     /// The waiver's reason, when `outcome` is `waived`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
@@ -7409,6 +7423,8 @@ mod tests {
             key: "grounding — m".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),
+            task: None,
+            work_item: None,
             reason: None,
         };
         let v = serde_json::to_value(&decision).unwrap();
@@ -7448,6 +7464,8 @@ mod tests {
             disposition: Disposition {
                 outcome: DispositionOutcome::Fixed,
                 target: None,
+                task: None,
+                work_item: None,
                 reason: None,
             },
             decision_key: Some("grounding — earlier wording".into()),
@@ -7465,6 +7483,8 @@ mod tests {
             disposition: Disposition {
                 outcome: DispositionOutcome::Waived,
                 target: None,
+                task: None,
+                work_item: None,
                 reason: Some("noise".into()),
             },
             decision_key: Some("perf: slow — `a.rs`".into()),

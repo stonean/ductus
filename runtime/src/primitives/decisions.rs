@@ -46,6 +46,10 @@ pub(crate) struct RawDecision {
     #[serde(default)]
     pub(crate) target: Option<String>,
     #[serde(default)]
+    pub(crate) task: Option<String>,
+    #[serde(default, rename = "work-item")]
+    pub(crate) work_item: Option<String>,
+    #[serde(default)]
     pub(crate) reason: Option<String>,
     #[serde(default, rename = "decided-at")]
     pub(crate) decided_at: Option<String>,
@@ -59,9 +63,10 @@ impl RawDecision {
     /// The entry as a [`DecisionRef`], or — when it is unusable — the first
     /// field that makes it so, named as the field to fix.
     ///
-    /// An outcome's companion is required with it — a deferral names its
-    /// target, a waiver its reason — because an entry missing it records a
-    /// decision nobody can audit, which is no better than no decision.
+    /// An outcome's companion is required with it — a deferral names its work,
+    /// a target or a work item or both; a waiver states its reason and names
+    /// no work — because an entry missing it records a decision nobody can
+    /// audit, which is no better than no decision.
     ///
     /// `routed` and `discarded` are read as `deferred` and `waived`: they are
     /// the names a record written before spec 076 carries, and it must keep
@@ -77,17 +82,52 @@ impl RawDecision {
         };
         present(&self.decided_at).ok_or("decided-at")?;
         present(&self.decided_by).ok_or("decided-by")?;
-        let (target, reason) = match outcome {
-            DecisionOutcome::Deferred => (Some(present(&self.target).ok_or("target")?), None),
-            DecisionOutcome::Waived => (None, Some(present(&self.reason).ok_or("reason")?)),
+        let (target, task, work_item) = (
+            present(&self.target),
+            present(&self.task),
+            present(&self.work_item),
+        );
+        let reason = match outcome {
+            DecisionOutcome::Deferred => {
+                if target.is_none() && work_item.is_none() {
+                    return Err("target");
+                }
+                if task.is_some() && !names_a_tasks_file(target.as_deref()) {
+                    return Err("task");
+                }
+                present(&self.reason)
+            }
+            DecisionOutcome::Waived => {
+                // A waiver names no future work (spec 076).
+                if target.is_some() {
+                    return Err("target");
+                }
+                if task.is_some() {
+                    return Err("task");
+                }
+                if work_item.is_some() {
+                    return Err("work-item");
+                }
+                Some(present(&self.reason).ok_or("reason")?)
+            }
         };
         Ok(DecisionRef {
             key,
             outcome,
             target,
+            task,
+            work_item,
             reason,
         })
     }
+}
+
+/// Whether `target` is a `tasks.md`, the only target a deferral's `task` can
+/// name a task in.
+fn names_a_tasks_file(target: Option<&str>) -> bool {
+    target.is_some_and(|target| {
+        std::path::Path::new(target.trim()).file_name() == Some("tasks.md".as_ref())
+    })
 }
 
 /// `value` when it holds more than whitespace, as it was written. The one
@@ -96,36 +136,144 @@ pub(crate) fn nonblank(value: Option<&str>) -> Option<&str> {
     value.filter(|text| !text.trim().is_empty())
 }
 
-/// Check that `disposition` carries the companion its outcome requires — a
-/// route names its target, a discard states its reason — the one check both
-/// writers apply. `at` is the disposition's argument path
+/// Check that `disposition` carries the companions its outcome requires — a
+/// deferral names its work (a target, a work item, or both), a waiver states
+/// its reason and names no work — the one check both writers apply (spec
+/// 076). `at` is the disposition's argument path
 /// (`observations[0].disposition`) and `primitive` the writer, for the
-/// refusal. Returns the companion, trimmed, with its argument path, so a
-/// writer can screen it further; `None` for an outcome that takes none.
+/// refusal. Returns each companion given but the work-item ID, trimmed, with
+/// its argument path, so a writer can screen it further; empty for an outcome
+/// that takes none. The ID is not returned because it is stored exactly as
+/// given: it is screened here for the one thing that would break the record,
+/// a line break.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidArgument`] naming `{at}.target` or `{at}.reason`
-/// when the companion is absent or blank.
+/// [`PrimitiveError::InvalidArgument`] naming `{at}.target` when a deferral
+/// names neither a target nor a work item; `{at}.work-item` when a work-item
+/// ID spans more than one line; `{at}.task` when a task has no `tasks.md`
+/// target; `{at}.target`, `{at}.task` or `{at}.work-item` when a waiver names
+/// work; and `{at}.reason` when a waiver states no reason.
 pub(crate) fn require_companion<'a>(
     primitive: &str,
     at: &str,
     disposition: &'a Disposition,
-) -> Result<Option<(String, &'a str)>> {
-    let (field, value, rule) = match disposition.outcome {
-        DispositionOutcome::Deferred => ("target", &disposition.target, "a route names its target"),
-        DispositionOutcome::Waived => ("reason", &disposition.reason, "a waiver states its reason"),
-        DispositionOutcome::Fixed | DispositionOutcome::Undispositioned => return Ok(None),
+) -> Result<Vec<(String, &'a str)>> {
+    let refuse = |field: &str, reason: &str| PrimitiveError::InvalidArgument {
+        primitive: primitive.into(),
+        argument: format!("{at}.{field}"),
+        reason: reason.into(),
     };
-    let argument = format!("{at}.{field}");
-    match nonblank(value.as_deref()) {
-        Some(companion) => Ok(Some((argument, companion.trim()))),
-        None => Err(PrimitiveError::InvalidArgument {
-            primitive: primitive.into(),
-            argument,
-            reason: rule.into(),
-        }),
+    let target = nonblank(disposition.target.as_deref());
+    let task = nonblank(disposition.task.as_deref());
+    let work_item = nonblank(disposition.work_item.as_deref());
+    let reason = nonblank(disposition.reason.as_deref());
+    match disposition.outcome {
+        DispositionOutcome::Deferred => {
+            if target.is_none() && work_item.is_none() {
+                return Err(refuse(
+                    "target",
+                    "a deferral names its work: a target, a work item, or both",
+                ));
+            }
+            if work_item.is_some_and(|id| id.contains(['\n', '\r'])) {
+                return Err(refuse("work-item", "a work-item ID is one line"));
+            }
+            if task.is_some() && !names_a_tasks_file(target) {
+                return Err(refuse("task", "a task is numbered in a tasks.md target"));
+            }
+        }
+        DispositionOutcome::Waived => {
+            for (field, value) in [("target", target), ("task", task), ("work-item", work_item)] {
+                if value.is_some() {
+                    return Err(refuse(field, "a waiver names no future work"));
+                }
+            }
+            if reason.is_none() {
+                return Err(refuse("reason", "a waiver states its reason"));
+            }
+        }
+        DispositionOutcome::Fixed | DispositionOutcome::Undispositioned => return Ok(Vec::new()),
     }
+    Ok([("target", target), ("task", task), ("reason", reason)]
+        .into_iter()
+        .filter_map(|(field, value)| value.map(|value| (format!("{at}.{field}"), value.trim())))
+        .collect())
+}
+
+/// Refuse a **new** deferral whose pipeline work does not exist: its `target`
+/// must resolve inside the project, and its `task` must number a task in that
+/// `tasks.md` (spec 076). A deferral already stored under `key` is not new —
+/// its work may since have gone, which `process-decisions` reports as a lapse,
+/// never as a refusal — and a deferral naming only a work item names nothing
+/// the pipeline can look for.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] naming `{at}.target` for a target that
+/// does not exist, or `{at}.task` for a task its `tasks.md` does not hold or a
+/// `tasks.md` that is not a feature's; [`PrimitiveError::InvalidPath`] for a
+/// target the containment screen refuses; and a read or parse error of the
+/// named `tasks.md`.
+pub(crate) fn refuse_missing_work(
+    repo: &Path,
+    primitive: &str,
+    at: &str,
+    disposition: &Disposition,
+    key: &str,
+    stored: &[RawDecision],
+) -> Result<()> {
+    if disposition.outcome != DispositionOutcome::Deferred
+        || stored_decision(stored, key)
+            .is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
+    {
+        return Ok(());
+    }
+    let Some(target) = nonblank(disposition.target.as_deref()).map(str::trim) else {
+        return Ok(());
+    };
+    let refuse = |field: &str, reason: String| PrimitiveError::InvalidArgument {
+        primitive: primitive.into(),
+        argument: format!("{at}.{field}"),
+        reason,
+    };
+    super::validate_contained(repo, target)?;
+    if !repo.join(target).exists() {
+        return Err(refuse("target", format!("`{target}` does not exist")));
+    }
+    let Some(task) = nonblank(disposition.task.as_deref()).map(str::trim) else {
+        return Ok(());
+    };
+    let root = crate::schema::paths::Paths::load(repo).specs_root;
+    let feature = Path::new(target)
+        .parent()
+        .filter(|dir| dir.parent() == Some(Path::new(&root)))
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| refuse("task", format!("`{target}` is not a feature's tasks.md")))?;
+    let tasks = super::read_tasks::read_checked(
+        &crate::schema::primitives::ReadTasksArgs {
+            feature: feature.to_string(),
+        },
+        repo,
+        &root,
+    )?;
+    if tasks.tasks.iter().any(|candidate| candidate.number == task) {
+        Ok(())
+    } else {
+        Err(refuse("task", format!("`{target}` has no task {task}")))
+    }
+}
+
+/// The stored decision a run applies for `key`: the first well-formed entry
+/// carrying it. A later duplicate is reported and ignored by
+/// `process-decisions`, so matching any entry instead would let an ignored
+/// duplicate stand in for the applied one.
+pub(crate) fn stored_decision(stored: &[RawDecision], key: &str) -> Option<DecisionRef> {
+    stored
+        .iter()
+        .filter_map(|entry| entry.to_ref().ok())
+        .find(|decision| same_key(&decision.key, key))
 }
 
 /// Refuse two findings that share a key but carry different outcomes.
@@ -176,26 +324,28 @@ pub(crate) fn same_key(a: &str, b: &str) -> bool {
 /// text pass through [`flatten_line`], the same normalization
 /// `process-decisions` applies to the keys a host fires, so a stored key and a
 /// fired key for the same finding agree.
+///
+/// The one exception is a work-item ID, stored exactly as given: it names an
+/// item in a tracker the pipeline never reads, so any rewrite of it would be a
+/// different ID (spec 076). [`require_companion`] has already refused one
+/// spanning lines.
 pub(crate) fn decision_for(disposition: &Disposition, key: &str) -> Option<DecisionRef> {
-    let companion = |value: &Option<String>| value.as_deref().map(flatten_line);
-    let (outcome, target, reason) = match disposition.outcome {
-        DispositionOutcome::Deferred => (
-            DecisionOutcome::Deferred,
-            companion(&disposition.target),
-            None,
-        ),
-        DispositionOutcome::Waived => (
-            DecisionOutcome::Waived,
-            None,
-            companion(&disposition.reason),
-        ),
+    let flat = |value: &Option<String>| nonblank(value.as_deref()).map(flatten_line);
+    let outcome = match disposition.outcome {
+        DispositionOutcome::Deferred => DecisionOutcome::Deferred,
+        DispositionOutcome::Waived => DecisionOutcome::Waived,
         DispositionOutcome::Fixed | DispositionOutcome::Undispositioned => return None,
     };
+    let deferred = outcome == DecisionOutcome::Deferred;
     Some(DecisionRef {
         key: flatten_line(key),
         outcome,
-        target,
-        reason,
+        target: flat(&disposition.target).filter(|_| deferred),
+        task: flat(&disposition.task).filter(|_| deferred),
+        work_item: nonblank(disposition.work_item.as_deref())
+            .filter(|_| deferred)
+            .map(str::to_string),
+        reason: flat(&disposition.reason),
     })
 }
 
@@ -216,6 +366,28 @@ pub(crate) fn render_dispositions(block: &mut String, counts: Dispositions) {
 /// routed with its target in a code span, discarded with its reason, or
 /// undispositioned, each outcome in bold — with the companion text passed
 /// through `plain`, each writer's own normalization for its report body.
+/// A deferral's work as a report or notice names it: the target in a code
+/// span, followed by its task number when it names one, and the external work
+/// item in a code span, joined when both are given (spec 076). Each value
+/// passes through `plain`, the caller's own normalization.
+pub(crate) fn work_reference(
+    target: Option<&str>,
+    task: Option<&str>,
+    work_item: Option<&str>,
+    plain: impl Fn(&str) -> String,
+) -> String {
+    let pipeline = target.map(|target| match task {
+        Some(task) => format!("`{}` task {}", plain(target), plain(task)),
+        None => format!("`{}`", plain(target)),
+    });
+    let external = work_item.map(|id| format!("work item `{}`", plain(id)));
+    match (pipeline, external) {
+        (Some(pipeline), Some(external)) => format!("{pipeline} and {external}"),
+        (Some(named), None) | (None, Some(named)) => named,
+        (None, None) => "no named work".to_string(),
+    }
+}
+
 pub(crate) fn disposition_suffix(
     disposition: &Disposition,
     plain: impl Fn(&str) -> String,
@@ -223,9 +395,15 @@ pub(crate) fn disposition_suffix(
     let companion = |value: &Option<String>| plain(value.as_deref().unwrap_or(""));
     match disposition.outcome {
         DispositionOutcome::Fixed => "**fixed**".to_string(),
-        DispositionOutcome::Deferred => {
-            format!("**deferred** to `{}`", companion(&disposition.target))
-        }
+        DispositionOutcome::Deferred => format!(
+            "**deferred** to {}",
+            work_reference(
+                nonblank(disposition.target.as_deref()),
+                nonblank(disposition.task.as_deref()),
+                nonblank(disposition.work_item.as_deref()),
+                &plain,
+            )
+        ),
         DispositionOutcome::Waived => {
             format!("**waived**: {}", companion(&disposition.reason))
         }
@@ -316,16 +494,11 @@ pub(crate) fn merge(
     // one; a later duplicate is reported and ignored. Matching against any
     // entry instead let an ignored duplicate stand in for the applied one and
     // swallow a re-decision.
-    let applied = |key: &str| {
-        stored
-            .iter()
-            .filter_map(|entry| entry.to_ref().ok())
-            .find(|stored| same_key(&stored.key, key))
-    };
     let fresh: Vec<&DecisionRef> = once
         .into_iter()
         .filter(|decision| {
-            applied(&decision.key).is_none_or(|stored| stored.outcome != decision.outcome)
+            stored_decision(&stored, &decision.key)
+                .is_none_or(|stored| stored.outcome != decision.outcome)
         })
         .collect();
     let author = decided_by.map(str::trim).filter(|who| !who.is_empty());
@@ -353,6 +526,8 @@ pub(crate) fn merge(
                 .to_string(),
             ),
             target: decision.target.clone(),
+            task: decision.task.clone(),
+            work_item: decision.work_item.clone(),
             reason: decision.reason.clone(),
             decided_at: Some(decided_at.to_string()),
             decided_by: author.map(str::to_string),
@@ -394,6 +569,8 @@ pub(crate) fn render(block: &mut String, decisions: &[RawDecision]) {
                     rendered_outcome(decision.outcome.as_deref()).into(),
                 ),
                 ("target", decision.target.as_deref().into()),
+                ("task", decision.task.as_deref().into()),
+                ("work-item", decision.work_item.as_deref().into()),
                 ("reason", decision.reason.as_deref().into()),
                 ("decided-at", decision.decided_at.as_deref().into()),
                 ("decided-by", decision.decided_by.as_deref().into()),
@@ -459,6 +636,8 @@ mod tests {
                 key: "perf: a() is called in a loop — `src/a.rs`".into(),
                 outcome: DecisionOutcome::Deferred,
                 target: Some("specs/031-x/scenarios/loop.md".into()),
+                task: None,
+                work_item: None,
                 reason: None,
             })
         );
@@ -501,6 +680,8 @@ mod tests {
             key: Some(key.into()),
             outcome: Some(outcome.into()),
             target: (outcome == "deferred").then(|| companion.to_string()),
+            task: None,
+            work_item: None,
             reason: (outcome == "waived").then(|| companion.to_string()),
             decided_at: Some("2026-09-01T00:00:00Z".into()),
             decided_by: Some("first@example.com".into()),
@@ -513,6 +694,8 @@ mod tests {
             key: key.into(),
             outcome,
             target: (outcome == DecisionOutcome::Deferred).then(|| companion.to_string()),
+            task: None,
+            work_item: None,
             reason: (outcome == DecisionOutcome::Waived).then(|| companion.to_string()),
         }
     }
@@ -825,6 +1008,8 @@ mod tests {
         let disposition = Disposition {
             outcome: DispositionOutcome::Waived,
             target: None,
+            task: None,
+            work_item: None,
             reason: Some("false\u{1b}positive".into()),
         };
         let decision = decision_for(&disposition, "grounding — split\nmessage").unwrap();
@@ -882,6 +1067,177 @@ mod tests {
         assert_eq!(
             block,
             "dispositions:\n  fixed: 0\n  deferred: 1\n  waived: 2\n  undispositioned: 0\n"
+        );
+    }
+
+    fn deferral(target: Option<&str>, task: Option<&str>, work_item: Option<&str>) -> Disposition {
+        Disposition {
+            outcome: DispositionOutcome::Deferred,
+            target: target.map(str::to_string),
+            task: task.map(str::to_string),
+            work_item: work_item.map(str::to_string),
+            reason: None,
+        }
+    }
+
+    fn refused<T: std::fmt::Debug>(result: Result<T>) -> String {
+        match result {
+            Err(PrimitiveError::InvalidArgument { argument, .. }) => argument,
+            other => panic!("expected a refusal, got {other:?}"),
+        }
+    }
+
+    /// Spec 076: a deferral names its work — a target, a work item, or both —
+    /// and each refusal names the argument to fix.
+    #[test]
+    fn a_deferral_names_its_work() {
+        let at = "findings[0].disposition";
+        let check = |d: &Disposition| require_companion("w", at, d).map(|c| c.len());
+        assert!(check(&deferral(None, None, Some("PROJ-1"))).is_ok());
+        assert!(
+            check(&deferral(
+                Some("specs/001-x/tasks.md"),
+                Some("3"),
+                Some("PROJ-1")
+            ))
+            .is_ok()
+        );
+        assert_eq!(
+            refused(check(&deferral(None, None, None))),
+            format!("{at}.target")
+        );
+        assert_eq!(
+            refused(check(&deferral(None, None, Some("  ")))),
+            format!("{at}.target")
+        );
+        assert_eq!(
+            refused(check(&deferral(None, None, Some("PROJ-1\nPROJ-2")))),
+            format!("{at}.work-item")
+        );
+        assert_eq!(
+            refused(check(&deferral(
+                Some("specs/001-x/spec.md"),
+                Some("3"),
+                None
+            ))),
+            format!("{at}.task")
+        );
+    }
+
+    /// Spec 076: a waiver states its reason and names no future work.
+    #[test]
+    fn a_waiver_names_no_work() {
+        let waiver = |work_item: Option<&str>, reason: Option<&str>| Disposition {
+            outcome: DispositionOutcome::Waived,
+            work_item: work_item.map(str::to_string),
+            reason: reason.map(str::to_string),
+            ..Disposition::default()
+        };
+        let check = |d: &Disposition| require_companion("w", "o", d).map(|c| c.len());
+        assert!(check(&waiver(None, Some("noise"))).is_ok());
+        assert_eq!(
+            refused(check(&waiver(Some("PROJ-1"), Some("noise")))),
+            "o.work-item"
+        );
+        assert_eq!(refused(check(&waiver(None, None))), "o.reason");
+    }
+
+    /// Spec 076: a work-item ID is stored exactly as given, while the target
+    /// beside it is flattened like every other companion.
+    #[test]
+    fn a_work_item_id_is_stored_as_given() {
+        // An escape is what flattening rewrites: kept in the ID, replaced in
+        // the target.
+        let id = " PROJ-12\u{1b}(x) ";
+        let decision = decision_for(
+            &deferral(Some("specs/001-x/\u{1b}tasks.md"), None, Some(id)),
+            "k",
+        )
+        .unwrap();
+        assert_eq!(decision.work_item.as_deref(), Some(id));
+        assert_eq!(decision.target.as_deref(), Some("specs/001-x/ tasks.md"));
+    }
+
+    /// Spec 076: a stored deferral may name only a work item; one naming no
+    /// work, and a waiver naming some, are malformed.
+    #[test]
+    fn a_stored_deferral_may_name_only_a_work_item() {
+        let mut entry = stored("k", "deferred", "unused");
+        entry.target = None;
+        entry.work_item = Some("PROJ-1".into());
+        assert_eq!(entry.to_ref().unwrap().work_item.as_deref(), Some("PROJ-1"));
+        entry.work_item = None;
+        assert_eq!(entry.to_ref(), Err("target"));
+        let mut waiver = stored("w", "waived", "noise");
+        waiver.work_item = Some("PROJ-1".into());
+        assert_eq!(waiver.to_ref(), Err("work-item"));
+    }
+
+    /// Spec 076: a new deferral names work that exists; one already stored is
+    /// not re-checked, because its work going away is a lapse.
+    #[test]
+    fn a_new_deferral_names_work_that_exists() {
+        let repo = tempfile::tempdir().unwrap();
+        let feature = repo.path().join("specs/001-x");
+        std::fs::create_dir_all(&feature).unwrap();
+        std::fs::write(
+            feature.join("tasks.md"),
+            "# Tasks\n\n## 1. One\n\n- [ ] a\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        let check = |d: &Disposition, stored: &[RawDecision]| {
+            refuse_missing_work(repo.path(), "w", "o", d, "k", stored)
+        };
+        assert!(
+            check(
+                &deferral(Some("specs/001-x/tasks.md"), Some("1"), None),
+                &[]
+            )
+            .is_ok()
+        );
+        assert!(check(&deferral(None, None, Some("PROJ-1")), &[]).is_ok());
+        let gone = "specs/001-x/scenarios/gone.md";
+        assert_eq!(
+            refused(check(&deferral(Some(gone), None, None), &[])),
+            "o.target"
+        );
+        assert_eq!(
+            refused(check(
+                &deferral(Some("specs/001-x/tasks.md"), Some("7"), None),
+                &[]
+            )),
+            "o.task"
+        );
+        assert!(
+            check(
+                &deferral(Some(gone), None, None),
+                &[stored("k", "deferred", gone)]
+            )
+            .is_ok()
+        );
+    }
+
+    /// Spec 076: a deferral renders the work it names — a target with its
+    /// task, a work item, or both — never an empty code span.
+    #[test]
+    fn a_deferral_renders_the_work_it_names() {
+        let plain = |s: &str| s.to_string();
+        let suffix = |d: &Disposition| disposition_suffix(d, plain);
+        assert_eq!(
+            suffix(&deferral(Some("specs/001-x/tasks.md"), None, None)),
+            "**deferred** to `specs/001-x/tasks.md`"
+        );
+        assert_eq!(
+            suffix(&deferral(None, None, Some("PROJ-1"))),
+            "**deferred** to work item `PROJ-1`"
+        );
+        assert_eq!(
+            suffix(&deferral(
+                Some("specs/001-x/tasks.md"),
+                Some("7"),
+                Some("PROJ-1")
+            )),
+            "**deferred** to `specs/001-x/tasks.md` task 7 and work item `PROJ-1`"
         );
     }
 }
