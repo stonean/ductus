@@ -4,10 +4,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Define the terms in the constitution
 
-- [ ] Rewrite Finding dispositions' *Three dispositions* as Fixed / Deferred / Waived, with both definitions and the question meaning of *deferred*
-- [ ] Point §design-principles' dispositions sentence at it, listing a waiver under *decided out of scope*
-- [ ] Point §spec-requirements' deferred-question rule at the definition
-- [ ] Update §implement-phase's SHOULD line and the *only a gating one holds `done`* bullet
+- [x] Rewrite Finding dispositions' *Three dispositions* as Fixed / Deferred / Waived, with both definitions and the question meaning of *deferred*
+- [x] Point §design-principles' dispositions sentence at it, listing a waiver under *decided out of scope*
+- [x] Point §spec-requirements' deferred-question rule at the definition
+- [x] Update §implement-phase's SHOULD line and the *only a gating one holds `done`* bullet
 
 - **Done when**: AC1, AC2 and AC9 hold on `framework/constitution.md`, and `npx markdownlint-cli2 framework/constitution.md` is clean.
 
