@@ -55,6 +55,40 @@ use crate::schema::severity::ReviewSeverity;
 /// pipeline state. Multi-line prose fields — the summary and finding bodies —
 /// are markdown body content and are deliberately not screened; waiver fields
 /// are separately quoted through `yaml_string`.
+/// Refuse a violation's disposition that is not a deferral, or a deferral
+/// missing its companions (spec 076). A violation is waived with `--waive`
+/// and fixed by removing it, so neither reaches this writer as an outcome.
+fn validate_finding_dispositions(args: &WriteReviewArgs) -> Result<()> {
+    for (idx, finding) in args.findings.iter().enumerate() {
+        let at = format!("findings[{idx}].disposition");
+        if matches!(
+            finding.disposition.outcome,
+            DispositionOutcome::Fixed | DispositionOutcome::Waived
+        ) {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("{at}.outcome"),
+                reason:
+                    "a violation is deferred here, waived with --waive, and fixed by removing it"
+                        .into(),
+            });
+        }
+        for (argument, companion) in
+            decisions::require_companion("write-review", &at, &finding.disposition)?
+        {
+            super::validate_single_line("write-review", &argument, companion)?;
+        }
+        if let Some(key) = finding.decision_key.as_deref() {
+            super::validate_single_line(
+                "write-review",
+                &format!("findings[{idx}].decision-key"),
+                key,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     // Scalar fields spliced verbatim into review.md frontmatter must be
     // single-line: an embedded newline would inject a top-level frontmatter
@@ -147,6 +181,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_scalar_fields(args)?;
+    validate_finding_dispositions(args)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {
@@ -158,30 +193,8 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
 
     // Dedup, then bucket the survivors.
     let deduped = dedup_findings(&args.findings);
-    let mut must: Vec<&ReviewFinding> = Vec::new();
-    let mut should: Vec<&ReviewFinding> = Vec::new();
-    let mut low: Vec<&ReviewFinding> = Vec::new();
-    let mut waived: Vec<&ReviewFinding> = Vec::new();
-    for finding in &deduped {
-        if waiver_reason(finding, &args.applied_waivers).is_some() {
-            waived.push(finding);
-        } else if finding.confidence.eq_ignore_ascii_case("low") {
-            low.push(finding);
-        } else {
-            // Exhaustive by construction, and that is the point. This was an
-            // `else` arm reached by any severity that was not exactly `must`,
-            // so a typo, or a value borrowed from the analyze vocabulary,
-            // filed silently as a SHOULD and wrote `blocking: false` past
-            // `check-review-gate`. A match over the closed set has no such
-            // arm: an unrecognized value can no longer be constructed, and
-            // adding a tier is a compile error here rather than a silent
-            // demotion (spec 022 `severity-is-a-closed-set-not-a-string`).
-            match finding.severity {
-                ReviewSeverity::Must => must.push(finding),
-                ReviewSeverity::Should => should.push(finding),
-            }
-        }
-    }
+    let sorted = sort_findings(&deduped, args, repo, &root)?;
+    let (must, should, low, waived) = (&sorted.must, &sorted.should, &sorted.low, &sorted.waived);
 
     let must_n = u32::try_from(must.len()).unwrap_or(u32::MAX);
     let should_n = u32::try_from(should.len()).unwrap_or(u32::MAX);
@@ -234,28 +247,43 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         })?;
     let surviving = surviving_waivers(&feature_dir, args)?;
     let dispositions = count_dispositions(&args.observations);
-    decisions::one_outcome_per_key(args.observations.iter().map(|observation| {
-        (
-            observation_key(observation),
-            observation.disposition.outcome,
-        )
-    }))
+    decisions::one_outcome_per_key(
+        args.observations
+            .iter()
+            .map(|observation| {
+                (
+                    observation_key(observation),
+                    observation.disposition.outcome,
+                )
+            })
+            .chain(
+                deduped
+                    .iter()
+                    .map(|f| (violation_key(f), f.disposition.outcome)),
+            ),
+    )
     .map_err(|refusal| refusal.into_error("write-review", "observations", "an observation"))?;
-    let decisions = decisions::merge(
+    let mut decisions = decisions::merge(
         stored_decisions(&feature_dir, args, repo)?,
         &args.expired_decisions,
-        &decided_observations(&args.observations),
+        &[
+            decided_observations(&args.observations),
+            decided_violations(&deduped),
+        ]
+        .concat(),
         &args.reviewed_at,
         args.decided_by.as_deref(),
     )
     .map_err(|refusal| refusal.into_error("write-review", "observations", "an observation"))?;
+    decisions::mark_gating(&mut decisions, &sorted.holding());
     let report = render_report(
         args,
         &Buckets {
-            must: &must,
-            should: &should,
-            low: &low,
-            waived: &waived,
+            must,
+            should,
+            low,
+            waived,
+            deferred: &sorted.deferred,
         },
         blocking,
         &governance_section,
@@ -398,6 +426,16 @@ fn stored_decisions(
             &stored,
         )?;
     }
+    for (idx, finding) in args.findings.iter().enumerate() {
+        decisions::refuse_missing_work(
+            repo,
+            "write-review",
+            &format!("findings[{idx}].disposition"),
+            &finding.disposition,
+            &violation_key(finding),
+            &stored,
+        )?;
+    }
     Ok(stored)
 }
 
@@ -525,6 +563,110 @@ struct Buckets<'a> {
     should: &'a [&'a ReviewFinding],
     low: &'a [&'a ReviewFinding],
     waived: &'a [&'a ReviewFinding],
+    deferred: &'a [&'a ReviewFinding],
+}
+
+/// The deduped findings sorted into the report's sections. `deferred` holds
+/// the findings whose deferral names pipeline work on another spec: that
+/// spec's gate holds the work, so they leave this spec's counts (spec 076).
+struct Sorted<'a> {
+    must: Vec<&'a ReviewFinding>,
+    should: Vec<&'a ReviewFinding>,
+    low: Vec<&'a ReviewFinding>,
+    waived: Vec<&'a ReviewFinding>,
+    deferred: Vec<&'a ReviewFinding>,
+}
+
+impl Sorted<'_> {
+    /// The keys of the counted MUST and SHOULD violations that carry a
+    /// deferral — the deferrals that hold `done` rather than release it.
+    fn holding(&self) -> Vec<String> {
+        self.must
+            .iter()
+            .chain(&self.should)
+            .filter(|finding| finding.disposition.outcome == DispositionOutcome::Deferred)
+            .map(|finding| violation_key(finding))
+            .collect()
+    }
+}
+
+/// Bucket the deduped findings. A waived finding drops out of the counts into
+/// Waived findings; a finding deferred to another spec's work drops out into
+/// Deferred findings; a `low`-confidence one lands in Low-confidence
+/// regardless of severity; the rest split MUST / SHOULD.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] naming `findings` when one finding is
+/// both deferred and matched by an applied waiver: it holds one disposition.
+fn sort_findings<'a>(
+    deduped: &'a [ReviewFinding],
+    args: &WriteReviewArgs,
+    repo: &Path,
+    root: &str,
+) -> Result<Sorted<'a>> {
+    let mut sorted = Sorted {
+        must: Vec::new(),
+        should: Vec::new(),
+        low: Vec::new(),
+        waived: Vec::new(),
+        deferred: Vec::new(),
+    };
+    for finding in deduped {
+        let waived = waiver_reason(finding, &args.applied_waivers).is_some();
+        let deferred = finding.disposition.outcome == DispositionOutcome::Deferred;
+        if waived && deferred {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: "findings".into(),
+                reason: format!(
+                    "`{}` at `{}` is both deferred and waived; a finding holds one disposition",
+                    finding.rule, finding.file
+                ),
+            });
+        }
+        if waived {
+            sorted.waived.push(finding);
+        } else if deferred && decisions::releases(repo, root, &args.feature, &finding.disposition) {
+            sorted.deferred.push(finding);
+        } else if finding.confidence.eq_ignore_ascii_case("low") {
+            sorted.low.push(finding);
+        } else {
+            // Exhaustive by construction, and that is the point. This was an
+            // `else` arm reached by any severity that was not exactly `must`,
+            // so a typo, or a value borrowed from the analyze vocabulary,
+            // filed silently as a SHOULD and wrote `blocking: false` past
+            // `check-review-gate`. A match over the closed set has no such
+            // arm: an unrecognized value can no longer be constructed, and
+            // adding a tier is a compile error here rather than a silent
+            // demotion (spec 022 `severity-is-a-closed-set-not-a-string`).
+            match finding.severity {
+                ReviewSeverity::Must => sorted.must.push(finding),
+                ReviewSeverity::Should => sorted.should.push(finding),
+            }
+        }
+    }
+    Ok(sorted)
+}
+
+/// The decisions the deferred violations store, keyed by [`violation_key`].
+fn decided_violations(findings: &[ReviewFinding]) -> Vec<DecisionRef> {
+    findings
+        .iter()
+        .filter_map(|finding| {
+            decisions::decision_for(&finding.disposition, &violation_key(finding))
+        })
+        .collect()
+}
+
+/// The stored-decision key for a violation: the stored decision the host
+/// matched it to, when it supplied one, else `rule {rule-id} at {file}` — one
+/// entry per file the rule fires at, the anchor a waiver keeps (spec 076).
+fn violation_key(finding: &ReviewFinding) -> String {
+    decisions::nonblank(finding.decision_key.as_deref()).map_or_else(
+        || format!("rule {} at {}", finding.rule.trim(), finding.file.trim()),
+        str::to_string,
+    )
 }
 
 /// The record's lists and derived counts, rendered into the frontmatter.
@@ -543,7 +685,13 @@ fn render_report(
     record: &Record<'_>,
     contracts: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> String {
-    let (must, should, low, waived) = (buckets.must, buckets.should, buckets.low, buckets.waived);
+    let (must, should, low, waived, deferred) = (
+        buckets.must,
+        buckets.should,
+        buckets.low,
+        buckets.waived,
+        buckets.deferred,
+    );
     let feature = &args.feature;
 
     let mut fm = String::from("---\n");
@@ -632,6 +780,10 @@ fn render_report(
         format!(
             "## Waived findings\n\n{}",
             render_findings(waived, "WAIVED", &args.applied_waivers)
+        ),
+        format!(
+            "## Deferred findings\n\n{}",
+            render_findings(deferred, "DEFERRED", &args.applied_waivers)
         ),
         format!(
             "## Observations\n\n{}",
@@ -731,6 +883,19 @@ fn finding_block(finding: &ReviewFinding, label: &str, waived_reason: Option<&st
     }
     if let Some(reason) = waived_reason {
         let _ = writeln!(out, "- **Waived**: {reason}");
+    }
+    let disposition = &finding.disposition;
+    if disposition.outcome == DispositionOutcome::Deferred {
+        let _ = writeln!(
+            out,
+            "- **Deferred**: to {}",
+            decisions::work_reference(
+                decisions::nonblank(disposition.target.as_deref()),
+                decisions::nonblank(disposition.task.as_deref()),
+                decisions::nonblank(disposition.work_item.as_deref()),
+                |value| value.trim().to_string(),
+            )
+        );
     }
     out.trim_end().to_string()
 }
@@ -942,6 +1107,9 @@ fn waiver_file(paths: Option<&WaiverPaths>) -> EntryValue<'_> {
 pub(crate) enum EntryValue<'a> {
     /// Omitted from the entry.
     Absent,
+    /// Rendered `key: true` when set and omitted when not — a derived flag
+    /// whose absence is its false.
+    Flag(bool),
     /// Rendered inline after the key.
     Scalar(&'a str),
     /// Rendered as a block sequence under the key; `[]` when empty.
@@ -977,7 +1145,10 @@ pub(crate) fn render_list_entry(
     };
     for (key, value) in fields {
         match value {
-            EntryValue::Absent => {}
+            EntryValue::Absent | EntryValue::Flag(false) => {}
+            EntryValue::Flag(true) => {
+                let _ = writeln!(block, "{}{key}: true", indent());
+            }
             EntryValue::Scalar(value) => {
                 let _ = writeln!(block, "{}{key}: {}", indent(), yaml_string(value));
             }
@@ -1163,6 +1334,8 @@ mod tests {
             rule_text: "Verbatim rule text.".into(),
             auto_fixable: false,
             suggested_fix: String::new(),
+            disposition: crate::schema::primitives::Disposition::default(),
+            decision_key: None,
         }
     }
 
@@ -1282,6 +1455,122 @@ mod tests {
         );
         // The denominator is always written: it was always computed.
         assert!(report.contains("scope: "), "{report}");
+    }
+
+    fn deferred(
+        mut finding: ReviewFinding,
+        target: Option<&str>,
+        work_item: Option<&str>,
+    ) -> ReviewFinding {
+        finding.disposition = crate::schema::primitives::Disposition {
+            outcome: DispositionOutcome::Deferred,
+            target: target.map(Into::into),
+            work_item: work_item.map(Into::into),
+            ..crate::schema::primitives::Disposition::default()
+        };
+        finding
+    }
+
+    /// Spec 076: a violation deferred to another spec's work leaves this
+    /// spec's counts for Deferred findings; one deferred to its own spec's
+    /// task, or to a work item alone, stays counted and marks its decision
+    /// gating.
+    #[test]
+    fn a_deferral_releases_a_violation_only_to_another_spec() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let other = tmp.path().join("specs/002-y");
+        std::fs::create_dir_all(other.join("scenarios")).unwrap();
+        std::fs::write(
+            other.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 002\n",
+        )
+        .unwrap();
+        std::fs::write(other.join("scenarios/fix.md"), "# Fix\n").unwrap();
+        std::fs::write(
+            tmp.path().join("specs/001-x/tasks.md"),
+            "# Tasks\n\n## 1. Fix\n\n- [ ] a\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        let mut own = deferred(
+            finding("SEC-1", "must", "src/a.rs", "1-2", "high"),
+            Some("specs/001-x/tasks.md"),
+            None,
+        );
+        own.disposition.task = Some("1".into());
+        args.findings = vec![
+            deferred(
+                finding("SEC-2", "must", "src/b.rs", "1-2", "high"),
+                Some("specs/002-y/scenarios/fix.md"),
+                None,
+            ),
+            own,
+            deferred(
+                finding("SEC-3", "should", "src/c.rs", "1-2", "high"),
+                None,
+                Some("PROJ-9"),
+            ),
+        ];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            result.must_violations, 1,
+            "only the own-spec deferral is counted"
+        );
+        assert_eq!(result.should_violations, 1);
+        assert!(result.blocking);
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("### DEFERRED: SEC-2"), "{report}");
+        assert!(
+            report.contains("- **Deferred**: to `specs/001-x/tasks.md` task 1"),
+            "{report}"
+        );
+        assert!(
+            report.contains("- **Deferred**: to work item `PROJ-9`"),
+            "{report}"
+        );
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
+        let gating = |key: &str| {
+            stored
+                .iter()
+                .find(|d| d.key.as_deref() == Some(key))
+                .map(|d| d.gating)
+        };
+        assert_eq!(gating("rule SEC-2 at src/b.rs"), Some(None));
+        assert_eq!(gating("rule SEC-1 at src/a.rs"), Some(Some(true)));
+        assert_eq!(gating("rule SEC-3 at src/c.rs"), Some(Some(true)));
+    }
+
+    /// Spec 076: a finding holds one disposition, so one both deferred and
+    /// waived is refused, and a violation's disposition is only a deferral.
+    #[test]
+    fn a_violation_is_deferred_or_waived_never_both() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![deferred(
+            finding("SEC-BE-014", "must", "src/internal.ts", "1-2", "high"),
+            None,
+            Some("PROJ-1"),
+        )];
+        args.applied_waivers = vec![waiver("SEC-BE-014", "src/internal.ts")];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "findings"),
+            "{err:?}"
+        );
+        let mut waived = finding("SEC-1", "must", "src/a.rs", "1-2", "high");
+        waived.disposition.outcome = DispositionOutcome::Waived;
+        waived.disposition.reason = Some("noise".into());
+        args.applied_waivers = vec![];
+        args.findings = vec![waived];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
+                if argument == "findings[0].disposition.outcome"),
+            "{err:?}"
+        );
     }
 
     fn base_args(feature: &str) -> WriteReviewArgs {

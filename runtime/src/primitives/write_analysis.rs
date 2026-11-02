@@ -124,7 +124,8 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     if single_line(&args.analyzed_at).is_empty() {
         return Err(invalid("analyzed-at", "the run's timestamp is empty"));
     }
-    let blocking = args.hard_fail > 0 || args.blocking_findings > 0;
+    let gating = gating_counts(args, repo, &root);
+    let blocking = gating.hard_fail > 0 || gating.blocking_findings > 0;
     let dispositions = count_dispositions(args)?;
     decisions::one_outcome_per_key(
         args.findings
@@ -140,7 +141,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // decisions nobody can see (spec 058).
     let analysis_path = feature_dir.join(crate::primitives::ANALYSIS_RECORD_FILE);
     let replaced = analysis_path.is_file();
-    let merged = decisions::merge(
+    let mut merged = decisions::merge(
         stored_decisions(&feature_dir, args, repo)?,
         &args.expired_decisions,
         &decided_findings(&args.findings),
@@ -148,6 +149,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         args.decided_by.as_deref().map(single_line).as_deref(),
     )
     .map_err(|refusal| refusal.into_error("write-analysis", "findings", "a finding"))?;
+    decisions::mark_gating(&mut merged, &gating.holding);
     // The breakdown is the authority when supplied: a total a caller can
     // contradict is a total that will eventually be contradicted, which is
     // the same reason `blocking` is derived rather than accepted.
@@ -222,6 +224,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
             blocking,
             unexamined,
             dispositions,
+            gating,
         },
         &by_reason,
         &subjects,
@@ -404,6 +407,47 @@ struct Derived {
     blocking: bool,
     unexamined: u32,
     dispositions: Dispositions,
+    gating: Gating,
+}
+
+/// The gating tiers as the record states them (spec 076): the re-check's
+/// counts less each live finding whose deferral releases it to another spec's
+/// gate, with the indices of those released findings and the keys of the
+/// gating deferrals that release nothing.
+struct Gating {
+    hard_fail: u32,
+    blocking_findings: u32,
+    released: Vec<usize>,
+    holding: Vec<String>,
+}
+
+fn gating_counts(args: &WriteAnalysisArgs, repo: &Path, root: &str) -> Gating {
+    let gates = |finding: &AnalysisFinding| {
+        finding.live
+            && matches!(
+                finding.tier,
+                AnalysisTier::HardFail | AnalysisTier::Blocking
+            )
+    };
+    let mut gating = Gating {
+        hard_fail: args.hard_fail,
+        blocking_findings: args.blocking_findings,
+        released: Vec::new(),
+        holding: Vec::new(),
+    };
+    for (idx, finding) in args.findings.iter().enumerate().filter(|(_, f)| gates(f)) {
+        if decisions::releases(repo, root, &args.feature, &finding.disposition) {
+            gating.released.push(idx);
+            let count = match finding.tier {
+                AnalysisTier::HardFail => &mut gating.hard_fail,
+                _ => &mut gating.blocking_findings,
+            };
+            *count = count.saturating_sub(1);
+        } else if finding.disposition.outcome == DispositionOutcome::Deferred {
+            gating.holding.push(finding_key(finding));
+        }
+    }
+    gating
 }
 
 /// Render `analysis.md` — the record's frontmatter plus the fixed skeleton.
@@ -437,8 +481,12 @@ fn render_analysis(
         "analyzed-against: {}",
         yaml_string(&single_line(&args.analyzed_against))
     );
-    let _ = writeln!(out, "hard-fail: {}", args.hard_fail);
-    let _ = writeln!(out, "blocking-findings: {}", args.blocking_findings);
+    let _ = writeln!(out, "hard-fail: {}", derived.gating.hard_fail);
+    let _ = writeln!(
+        out,
+        "blocking-findings: {}",
+        derived.gating.blocking_findings
+    );
     let _ = writeln!(out, "advisory: {}", args.advisory);
     let _ = writeln!(out, "unexamined: {unexamined}");
     if !subjects.digests.is_empty() {
@@ -470,8 +518,8 @@ fn render_analysis(
     let mut summary = format!(
         "{} hard-fail, {} blocking, {} advisory; {verdict}. {} unexamined target(s). \
          Dispositions: {} fixed, {} deferred, {} waived, {} undispositioned.",
-        args.hard_fail,
-        args.blocking_findings,
+        derived.gating.hard_fail,
+        derived.gating.blocking_findings,
         args.advisory,
         unexamined,
         counts.fixed,
@@ -490,8 +538,20 @@ fn render_analysis(
         ("Blocking findings", AnalysisTier::Blocking),
         ("Advisory findings", AnalysisTier::Advisory),
     ] {
-        let _ = writeln!(out, "## {heading}\n\n{}\n", render_tier(args, tier));
+        let tier_section = render_tier(args, tier, &derived.gating.released);
+        let _ = writeln!(out, "## {heading}\n\n{tier_section}\n");
     }
+    let released: Vec<&AnalysisFinding> = derived
+        .gating
+        .released
+        .iter()
+        .map(|&idx| &args.findings[idx])
+        .collect();
+    let _ = writeln!(
+        out,
+        "## Deferred to other specs\n\n{}\n",
+        render_list(&released)
+    );
     let _ = writeln!(
         out,
         "## Unexamined targets\n\n{}\n",
@@ -505,13 +565,23 @@ fn render_analysis(
 /// A tier's live findings, each beside its disposition, plus a line for any
 /// the caller counted but did not itemize — so the body can never understate
 /// what the frontmatter counts. `*None.*` when the tier is empty.
-fn render_tier(args: &WriteAnalysisArgs, tier: AnalysisTier) -> String {
+/// A tier's section: its live findings, less those `released` to another
+/// spec's gate, which render under Deferred to other specs, and a line for
+/// any the host counted but did not itemize.
+fn render_tier(args: &WriteAnalysisArgs, tier: AnalysisTier, released: &[usize]) -> String {
+    let in_tier = |finding: &AnalysisFinding| finding.live && finding.tier == tier;
     let listed: Vec<&AnalysisFinding> = args
         .findings
         .iter()
-        .filter(|finding| finding.live && finding.tier == tier)
+        .enumerate()
+        .filter(|(idx, finding)| in_tier(finding) && !released.contains(idx))
+        .map(|(_, finding)| finding)
         .collect();
-    let count = tier_count(args, tier);
+    let moved = released
+        .iter()
+        .filter(|&&idx| in_tier(&args.findings[idx]))
+        .count();
+    let count = tier_count(args, tier).saturating_sub(u32::try_from(moved).unwrap_or(u32::MAX));
     if count == 0 && listed.is_empty() {
         return "*None.*".to_string();
     }
@@ -768,6 +838,71 @@ mod tests {
             "{err:?}"
         );
         assert!(!analysis_exists(&tmp));
+    }
+
+    /// Spec 076: a blocking finding deferred to another spec's work leaves the
+    /// gating count and renders under Deferred to other specs; one deferred to
+    /// a work item alone stays counted and marks its decision gating.
+    #[test]
+    fn a_deferral_releases_a_gating_finding_only_to_another_spec() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let other = tmp.path().join("specs/043-other");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(
+            other.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 043\n",
+        )
+        .unwrap();
+        let mut a = args();
+        a.blocking_findings = 2;
+        a.decided_by = Some("dev@example.com".into());
+        let mut held = finding(
+            AnalysisTier::Blocking,
+            "applicable-rules",
+            "BE-X fails",
+            DispositionOutcome::Deferred,
+            None,
+        );
+        held.disposition.work_item = Some("PROJ-3".into());
+        a.findings = vec![
+            finding(
+                AnalysisTier::Blocking,
+                "grounding",
+                "cites a gone path",
+                DispositionOutcome::Deferred,
+                Some("specs/043-other/spec.md"),
+            ),
+            held,
+        ];
+        assert!(
+            run(&a, tmp.path()).unwrap().blocking,
+            "the work-item deferral still blocks"
+        );
+        let report = analysis_md(&tmp);
+        assert!(report.contains("blocking-findings: 1\n"), "{report}");
+        let deferred_section = report.split("## Deferred to other specs").nth(1).unwrap();
+        assert!(
+            deferred_section
+                .trim_start()
+                .starts_with("- grounding — cites a gone path"),
+            "{report}"
+        );
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
+        let gating = |key: &str| {
+            stored
+                .iter()
+                .find(|d| d.key.as_deref() == Some(key))
+                .map(|d| d.gating)
+        };
+        assert_eq!(gating("grounding — cites a gone path"), Some(None));
+        assert_eq!(gating("applicable-rules — BE-X fails"), Some(Some(true)));
+        a.findings.truncate(1);
+        a.blocking_findings = 1;
+        assert!(
+            !run(&a, tmp.path()).unwrap().blocking,
+            "the release alone does not block"
+        );
     }
 
     fn args() -> WriteAnalysisArgs {

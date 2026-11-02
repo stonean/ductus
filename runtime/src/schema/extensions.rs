@@ -1333,6 +1333,8 @@ mod tests {
                 rule_text: String::new(),
                 auto_fixable: false,
                 suggested_fix: String::new(),
+                disposition: crate::schema::primitives::Disposition::default(),
+                decision_key: None,
             }],
             observations: vec![PassObservation {
                 text: "perf: config re-read per call".into(),

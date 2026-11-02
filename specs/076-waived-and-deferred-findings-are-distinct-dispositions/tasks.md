@@ -40,11 +40,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. Defer review violations, and release gating findings in both writers
 
-- [ ] Add `disposition` and `decision-key` to `ReviewFinding`; store a violation's deferral keyed `rule {rule-id} at {file}`
-- [ ] Exclude a released violation from the MUST/SHOULD counts and render it under Deferred findings; keep a non-releasing one counted, marked `gating: true`
-- [ ] Refuse a finding that is both deferred and matched by an applied waiver
-- [ ] Record `analysis.md`'s `hard-fail`/`blocking-findings` net of released findings, render them under Deferred to other specs, and mark non-releasing gating deferrals `gating: true`
-- [ ] Test release, non-release (same spec, rule file, work item only), the refusal and the net counts
+- [x] Add `disposition` and `decision-key` to `ReviewFinding`; store a violation's deferral keyed `rule {rule-id} at {file}`
+- [x] Exclude a released violation from the MUST/SHOULD counts and render it under Deferred findings; keep a non-releasing one counted, marked `gating: true`
+- [x] Refuse a finding that is both deferred and matched by an applied waiver
+- [x] Record `analysis.md`'s `hard-fail`/`blocking-findings` net of released findings, render them under Deferred to other specs, and mark non-releasing gating deferrals `gating: true`
+- [x] Test release, non-release (same spec, rule file, work item only), the refusal and the net counts
 
 - **Done when**: AC5 and AC13 are covered by tests that fail with the behavior removed, and the task 2 cargo commands pass.
 

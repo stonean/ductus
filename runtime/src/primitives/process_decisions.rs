@@ -163,18 +163,10 @@ fn work_state(repo: &Path, root: &str, decision: &DecisionRef) -> Work {
     let Some(target) = decision.target.as_deref().map(str::trim) else {
         return Work::External;
     };
-    let target = Path::new(target);
-    let feature = target
-        .strip_prefix(root)
-        .ok()
-        .and_then(|inside| inside.components().next())
-        .and_then(|first| match first {
-            std::path::Component::Normal(name) => name.to_str(),
-            _ => None,
-        });
-    let Some(feature) = feature else {
+    let Some(feature) = decisions::target_feature(root, target) else {
         return Work::Complete;
     };
+    let target = Path::new(target);
     let feature_dir = repo.join(root).join(feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {

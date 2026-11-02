@@ -663,6 +663,17 @@ pub struct ReviewFinding {
     /// Suggested fix (code block or prose); omitted from the render when empty.
     #[serde(default)]
     pub suggested_fix: String,
+    /// A deferral of this violation (spec 076): the work that will address
+    /// it, as a target, a work item, or both. Only `deferred` is accepted — a
+    /// violation is waived with `--waive` and fixed by removing it. A deferral
+    /// to pipeline work on another spec takes the finding out of this spec's
+    /// counts, since that spec's gate then holds it.
+    #[serde(default)]
+    pub disposition: Disposition,
+    /// The stored decision the host matched this violation to; absent, its
+    /// key is `rule {rule-id} at {file}`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decision_key: Option<String>,
 }
 
 /// One review **observation** — something the reviewer judged real that maps

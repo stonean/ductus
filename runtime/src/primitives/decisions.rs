@@ -51,6 +51,11 @@ pub(crate) struct RawDecision {
     pub(crate) work_item: Option<String>,
     #[serde(default)]
     pub(crate) reason: Option<String>,
+    /// Derived on every write, never authored: `true` on a deferral of a
+    /// gating finding that does not release it (spec 076), which
+    /// `check-review-gate` reads to name what holds `done`.
+    #[serde(default)]
+    pub(crate) gating: Option<bool>,
     #[serde(default, rename = "decided-at")]
     pub(crate) decided_at: Option<String>,
     #[serde(default, rename = "decided-by")]
@@ -262,6 +267,48 @@ pub(crate) fn refuse_missing_work(
         Ok(())
     } else {
         Err(refuse("task", format!("`{target}` has no task {task}")))
+    }
+}
+
+/// The feature directory a repo-relative `target` lies in, when it lies under
+/// the spec root `root` at all — its first component below the root, which a
+/// caller confirms is a spec by finding its `spec.md`.
+pub(crate) fn target_feature<'a>(root: &str, target: &'a str) -> Option<&'a str> {
+    Path::new(target.trim())
+        .strip_prefix(root)
+        .ok()
+        .and_then(|inside| inside.components().next())
+        .and_then(|first| match first {
+            std::path::Component::Normal(name) => name.to_str(),
+            _ => None,
+        })
+}
+
+/// Whether `disposition` defers a finding to pipeline work on a spec other
+/// than `feature` — the one deferral that releases a gating finding from
+/// `feature`'s gate, because that spec's own gate then holds the work (spec
+/// 076). A deferral to its own spec, to a rule file, or to an external work
+/// item alone releases nothing.
+pub(crate) fn releases(repo: &Path, root: &str, feature: &str, disposition: &Disposition) -> bool {
+    disposition.outcome == DispositionOutcome::Deferred
+        && nonblank(disposition.target.as_deref())
+            .and_then(|target| target_feature(root, target))
+            .is_some_and(|other| {
+                other != feature && repo.join(root).join(other).join("spec.md").is_file()
+            })
+}
+
+/// Derive every stored entry's `gating` flag from this run: `true` on a
+/// deferral whose key is in `holding` — a gating finding deferred to work
+/// that does not release it — and absent on every other entry, so a flag an
+/// earlier run wrote never outlives the state it described.
+pub(crate) fn mark_gating(merged: &mut [RawDecision], holding: &[String]) {
+    for entry in merged.iter_mut() {
+        let deferred = entry
+            .to_ref()
+            .is_ok_and(|decision| decision.outcome == DecisionOutcome::Deferred);
+        let key = entry.key.as_deref().unwrap_or_default();
+        entry.gating = (deferred && holding.iter().any(|held| same_key(held, key))).then_some(true);
     }
 }
 
@@ -529,6 +576,7 @@ pub(crate) fn merge(
             task: decision.task.clone(),
             work_item: decision.work_item.clone(),
             reason: decision.reason.clone(),
+            gating: None,
             decided_at: Some(decided_at.to_string()),
             decided_by: author.map(str::to_string),
             extra: BTreeMap::new(),
@@ -572,6 +620,10 @@ pub(crate) fn render(block: &mut String, decisions: &[RawDecision]) {
                 ("task", decision.task.as_deref().into()),
                 ("work-item", decision.work_item.as_deref().into()),
                 ("reason", decision.reason.as_deref().into()),
+                (
+                    "gating",
+                    super::write_review::EntryValue::Flag(decision.gating == Some(true)),
+                ),
                 ("decided-at", decision.decided_at.as_deref().into()),
                 ("decided-by", decision.decided_by.as_deref().into()),
             ],
@@ -683,6 +735,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: (outcome == "waived").then(|| companion.to_string()),
+            gating: None,
             decided_at: Some("2026-09-01T00:00:00Z".into()),
             decided_by: Some("first@example.com".into()),
             extra: BTreeMap::new(),
