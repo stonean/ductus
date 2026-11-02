@@ -573,6 +573,12 @@ pub struct ProcessDecisionsResult {
     /// Stored decisions whose key did not fire on a restricted run — neither
     /// matched nor expired, so the writer keeps them.
     pub retained: Vec<DecisionRef>,
+    /// Stored deferrals whose key fired although the pipeline work they name
+    /// is complete — its task checked or gone, its spec `done` or gone, or a
+    /// rule file (spec 076). The host passes them to the writer in
+    /// `expired-decisions`, which drops them, and asks for a new disposition.
+    #[serde(default)]
+    pub lapsed: Vec<DecisionRef>,
     /// Ordered notice lines: `decision expired: …`, `decision retained: …`,
     /// `malformed decision …`, and `duplicate decision: …`, in entry order.
     pub notices: Vec<String>,
@@ -7447,10 +7453,11 @@ mod tests {
             matched: vec![decision.clone()],
             expired: Vec::new(),
             retained: Vec::new(),
+            lapsed: vec![decision.clone()],
             notices: vec!["n".into()],
         };
         let v = serde_json::to_value(&result).unwrap();
-        for key in ["matched", "expired", "retained", "notices"] {
+        for key in ["matched", "expired", "retained", "lapsed", "notices"] {
             assert!(v.get(key).is_some(), "{key}");
         }
         assert_eq!(round_trip(&result), result);

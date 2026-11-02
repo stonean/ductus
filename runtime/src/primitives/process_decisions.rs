@@ -1,5 +1,5 @@
-//! `process-decisions` — classify the routed and discarded decisions an audit
-//! record carries against this run's finding keys (spec 058).
+//! `process-decisions` — classify the deferred and waived decisions an audit
+//! record carries against this run's finding keys (specs 058 and 076).
 //!
 //! The host must know which findings already carry a decision **before** it
 //! proposes dispositions, or it asks questions that were answered on an
@@ -8,9 +8,15 @@
 //!
 //! - **matched** — the key fired this run. The finding counts under the stored
 //!   outcome and nothing is asked.
+//! - **lapsed** — the key fired, but the pipeline work its deferral names is
+//!   complete: the deferred work landed and the finding still stands, so the
+//!   finding needs a new disposition and the writer drops the entry (spec 076).
+//!   A deferral naming only an external work item never lapses, because the
+//!   pipeline never reads the tracker; one whose target cannot be read is
+//!   matched, with a notice, so a check that could not run looks like neither.
 //! - **expired** — the key did not fire on an unrestricted run. The writer
-//!   drops the entry. For a routed decision this is the moment the routed work
-//!   landed.
+//!   drops the entry. For a deferred decision this is the moment the deferred
+//!   work landed.
 //! - **retained** — the key did not fire, but the run did not evaluate every
 //!   source, so absence proves nothing and the entry is kept.
 //! - **malformed** — a required field or an outcome's companion is missing;
@@ -29,6 +35,7 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     DecisionOutcome, DecisionRecord, DecisionRef, ProcessDecisionsArgs, ProcessDecisionsResult,
+    ReadTasksArgs,
 };
 
 /// Execute the `process-decisions` primitive.
@@ -91,6 +98,30 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         seen.push(key.clone());
 
         if fired.contains(&key) {
+            if decision.outcome == DecisionOutcome::Deferred {
+                match work_state(repo, &layout.specs_root, &decision) {
+                    Work::Complete => {
+                        result.notices.push(format!(
+                            "deferral lapsed: {} — {} is complete and the finding still fires",
+                            decision.key,
+                            decisions::work_reference(
+                                decision.target.as_deref(),
+                                decision.task.as_deref(),
+                                None,
+                                str::to_string,
+                            )
+                        ));
+                        result.lapsed.push(decision);
+                        continue;
+                    }
+                    Work::Unreadable => result.notices.push(format!(
+                        "deferral target unreadable: {} — `{}`",
+                        decision.key,
+                        decision.target.as_deref().unwrap_or_default()
+                    )),
+                    Work::Pending | Work::External => {}
+                }
+            }
             result.matched.push(decision);
         } else if args.restricted {
             result.notices.push(format!(
@@ -109,6 +140,78 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         }
     }
     Ok(result)
+}
+
+/// Where the pipeline work a stored deferral names stands — what a lapse is
+/// judged from (spec 076).
+#[derive(Debug, PartialEq, Eq)]
+enum Work {
+    /// Still to do: its task has an unchecked box, or its spec is not `done`.
+    Pending,
+    /// Done or gone: its task is checked or absent, its spec is `done` or
+    /// absent, or it lies outside every spec — a rule file, amended when the
+    /// deferral was recorded.
+    Complete,
+    /// Only an external work item is named, and the pipeline never reads one.
+    External,
+    /// The target exists but does not parse, so its state is unknown.
+    Unreadable,
+}
+
+/// Judge the work `decision` names, per the data model's completion table.
+fn work_state(repo: &Path, root: &str, decision: &DecisionRef) -> Work {
+    let Some(target) = decision.target.as_deref().map(str::trim) else {
+        return Work::External;
+    };
+    let target = Path::new(target);
+    let feature = target
+        .strip_prefix(root)
+        .ok()
+        .and_then(|inside| inside.components().next())
+        .and_then(|first| match first {
+            std::path::Component::Normal(name) => name.to_str(),
+            _ => None,
+        });
+    let Some(feature) = feature else {
+        return Work::Complete;
+    };
+    let feature_dir = repo.join(root).join(feature);
+    let spec_path = feature_dir.join("spec.md");
+    if !spec_path.is_file() {
+        // A rule file under the spec root, or a spec since retired.
+        return Work::Complete;
+    }
+    let names_tasks = target.file_name() == Some("tasks.md".as_ref());
+    match decision.task.as_deref().map(str::trim) {
+        Some(number) if names_tasks => {
+            if !feature_dir.join("tasks.md").is_file() {
+                return Work::Complete;
+            }
+            let args = ReadTasksArgs {
+                feature: feature.to_string(),
+            };
+            match super::read_tasks::read_checked(&args, repo, root) {
+                Err(_) => Work::Unreadable,
+                Ok(tasks) => match tasks.tasks.iter().find(|task| task.number == number) {
+                    Some(task)
+                        if !task.subtasks.iter().all(|subtask| subtask.checked)
+                            || task.done_when_checked == Some(false) =>
+                    {
+                        Work::Pending
+                    }
+                    _ => Work::Complete,
+                },
+            }
+        }
+        _ => match std::fs::read_to_string(&spec_path)
+            .ok()
+            .and_then(|content| super::frontmatter_status(&content, &spec_path))
+        {
+            None => Work::Unreadable,
+            Some(status) if status == "done" => Work::Complete,
+            Some(_) => Work::Pending,
+        },
+    }
 }
 
 /// The decision's outcome and its companion, for a notice.
@@ -149,6 +252,13 @@ mod tests {
         std::fs::write(
             dir.join("spec.md"),
             "---\nstatus: in-progress\n---\n# 001\n",
+        )
+        .unwrap();
+        let target = tmp.path().join("specs/031-x");
+        std::fs::create_dir_all(&target).unwrap();
+        std::fs::write(
+            target.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 031\n",
         )
         .unwrap();
         if !decisions.is_empty() {
@@ -374,5 +484,130 @@ mod tests {
         .unwrap();
         assert_eq!(result.matched.len(), 1);
         assert_eq!(result.expired, [] as [DecisionRef; 0]);
+    }
+
+    /// A deferral of `key` naming `target`, and `task` when given.
+    fn deferral(key: &str, target: &str, task: Option<&str>) -> String {
+        let task = task
+            .map(|n| format!("    task: \"{n}\"\n"))
+            .unwrap_or_default();
+        format!(
+            "  - key: \"{key}\"\n    outcome: deferred\n    target: {target}\n{task}    \
+             decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n"
+        )
+    }
+
+    fn write(tmp: &tempfile::TempDir, path: &str, content: &str) {
+        let path = tmp.path().join(path);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+
+    /// Run with every key in `fired` firing, unrestricted.
+    fn classify(tmp: &tempfile::TempDir, fired: &[&str]) -> ProcessDecisionsResult {
+        run(&args(DecisionRecord::Analysis, fired, false), tmp.path()).unwrap()
+    }
+
+    fn keys(decisions: &[DecisionRef]) -> Vec<&str> {
+        decisions.iter().map(|d| d.key.as_str()).collect()
+    }
+
+    /// Spec 076: a deferral to a task lapses once the task is checked or gone,
+    /// and holds while it has an unchecked box.
+    #[test]
+    fn a_deferral_to_a_task_lapses_when_the_task_is_complete() {
+        let tasks = "specs/031-x/tasks.md";
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                deferral("open", tasks, Some("1")),
+                deferral("checked", tasks, Some("2")),
+                deferral("gone", tasks, Some("9")),
+            ]
+            .concat(),
+        );
+        write(
+            &tmp,
+            tasks,
+            "# Tasks\n\n## 1. Open\n\n- [x] a\n- [ ] b\n\n- **Done when**: b.\n\n\
+             ## 2. Checked\n\n- [x] a\n\n- **Done when**: a.\n",
+        );
+        let result = classify(&tmp, &["open", "checked", "gone"]);
+        assert_eq!(keys(&result.matched), ["open"]);
+        assert_eq!(keys(&result.lapsed), ["checked", "gone"]);
+        assert!(
+            result.notices.iter().any(|n| n
+                == "deferral lapsed: checked — `specs/031-x/tasks.md` task 2 is complete \
+                    and the finding still fires"),
+            "{:?}",
+            result.notices
+        );
+    }
+
+    /// Spec 076: a deferral to a spec's work lapses once that spec is `done`
+    /// or gone; one to a rule file lapses as soon as its finding fires again.
+    #[test]
+    fn a_deferral_to_a_spec_or_rule_lapses_when_its_work_is_complete() {
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                deferral("pending", "specs/031-x/scenarios/a.md", None),
+                deferral("done", "specs/032-y/spec.md", None),
+                deferral("retired", "specs/033-z/spec.md", None),
+                deferral("rule", "specs/rules/security-backend.md", None),
+                deferral(
+                    "framework rule",
+                    "framework/rules/security-backend.md",
+                    None,
+                ),
+            ]
+            .concat(),
+        );
+        write(
+            &tmp,
+            "specs/032-y/spec.md",
+            "---\nstatus: done\n---\n# 032\n",
+        );
+        let result = classify(
+            &tmp,
+            &["pending", "done", "retired", "rule", "framework rule"],
+        );
+        assert_eq!(keys(&result.matched), ["pending"]);
+        assert_eq!(
+            keys(&result.lapsed),
+            ["done", "retired", "rule", "framework rule"]
+        );
+    }
+
+    /// Spec 076: a deferral naming only a work item never lapses, and one
+    /// whose target cannot be read is matched with a notice.
+    #[test]
+    fn external_and_unreadable_deferrals_are_matched() {
+        let external = "  - key: \"external\"\n    outcome: deferred\n    work-item: PROJ-1\n    \
+                        decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                external.to_string(),
+                deferral("unreadable", "specs/034-w/spec.md", None),
+            ]
+            .concat(),
+        );
+        write(
+            &tmp,
+            "specs/034-w/spec.md",
+            "---\nstatus: [not, a, string\n---\n",
+        );
+        let result = classify(&tmp, &["external", "unreadable"]);
+        assert_eq!(keys(&result.matched), ["external", "unreadable"]);
+        assert_eq!(result.lapsed, [] as [DecisionRef; 0]);
+        assert!(
+            result
+                .notices
+                .iter()
+                .any(|n| n == "deferral target unreadable: unreadable — `specs/034-w/spec.md`"),
+            "{:?}",
+            result.notices
+        );
     }
 }

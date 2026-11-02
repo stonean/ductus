@@ -31,10 +31,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Classify lapsed deferrals in `process-decisions`
 
-- [ ] Add the `lapsed` result and its notices
-- [ ] Decide completion per the data model's table, reading tasks through `read-tasks`' parser and status from frontmatter
-- [ ] Treat an unreadable target as matched, with a notice
-- [ ] Test each completion row, the external-only case, an absent target, and an unreadable one
+- [x] Add the `lapsed` result and its notices
+- [x] Decide completion per the data model's table, reading tasks through `read-tasks`' parser and status from frontmatter
+- [x] Treat an unreadable target as matched, with a notice
+- [x] Test each completion row, the external-only case, an absent target, and an unreadable one
 
 - **Done when**: AC17 is covered by tests that fail with the behavior removed, and the task 2 cargo commands pass.
 
