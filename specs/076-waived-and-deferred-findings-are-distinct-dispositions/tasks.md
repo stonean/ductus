@@ -13,10 +13,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. Rename the outcomes in the runtime, reading the old names from disk
 
-- [ ] Rename `DispositionOutcome`, `DecisionOutcome` and the `Dispositions` fields, with serde read aliases on the map
-- [ ] Accept `routed` and `discarded` in `RawDecision::to_ref` and `covering_key`
-- [ ] Emit only the new names from `render_dispositions` and `disposition_suffix`
-- [ ] Add tests: a record holding `routed`/`discarded` parses and counts, a re-render writes `deferred`/`waived`, and a map holding a key and its alias is refused
+- [x] Rename `DispositionOutcome`, `DecisionOutcome` and the `Dispositions` fields, with serde read aliases on the map
+- [x] Accept `routed` and `discarded` in `RawDecision::to_ref` and `covering_key`
+- [x] Emit only the new names from `render_dispositions` and `disposition_suffix`
+- [x] Add tests: a record holding `routed`/`discarded` parses and counts, a re-render writes `deferred`/`waived`, and a map holding a key and its alias is refused
 
 - **Done when**: AC14 is covered by tests that fail with the aliases removed, and `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` pass under `runtime/`.
 

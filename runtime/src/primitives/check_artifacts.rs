@@ -2202,7 +2202,7 @@ mod tests {
     const CLEAN_ANALYZE: &str = "  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 1\n  blocking: false";
 
     const OWED: &str =
-        "  dispositions:\n    fixed: 0\n    routed: 0\n    discarded: 0\n    undispositioned: 2";
+        "  dispositions:\n    fixed: 0\n    deferred: 0\n    waived: 0\n    undispositioned: 2";
 
     fn disposition_families(
         result: &crate::schema::primitives::CheckArtifactsResult,

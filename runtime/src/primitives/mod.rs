@@ -3918,7 +3918,7 @@ mod tests {
         std::fs::write(
             dir.path().join("analysis.md"),
             "---\nlast-run: 2026-09-25T00:00:00Z\nblocking: false\n\
-             dispositions:\n  fixed: 0\n  routed: 0\n  discarded: 0\n  undispositioned: 0\n---\n",
+             dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n---\n",
         )
         .unwrap();
         let RecordLoad::Present(analysis) = load_analyze_record(dir.path()) else {
@@ -3937,7 +3937,7 @@ mod tests {
         std::fs::write(
             dir.path().join("review.md"),
             "---\nlast-run: 2026-09-25T00:00:00Z\n\
-             dispositions:\n  fixed: 1\n  routed: 0\n  discarded: 0\n---\n",
+             dispositions:\n  fixed: 1\n  deferred: 0\n  waived: 0\n---\n",
         )
         .unwrap();
         assert!(

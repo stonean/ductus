@@ -1629,7 +1629,7 @@ mod tests {
         let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
         assert!(
             review.contains(
-                "dispositions:\n  fixed: 0\n  routed: 0\n  discarded: 0\n  undispositioned: 2\n"
+                "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 2\n"
             ),
             "{review}"
         );

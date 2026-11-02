@@ -114,14 +114,13 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
 /// The decision's outcome and its companion, for a notice.
 fn describe(decision: &DecisionRef) -> String {
     match decision.outcome {
-        DecisionOutcome::Routed => format!(
-            "routed to {}",
+        DecisionOutcome::Deferred => format!(
+            "deferred to {}",
             decision.target.as_deref().unwrap_or_default()
         ),
-        DecisionOutcome::Discarded => format!(
-            "discarded: {}",
-            decision.reason.as_deref().unwrap_or_default()
-        ),
+        DecisionOutcome::Waived => {
+            format!("waived: {}", decision.reason.as_deref().unwrap_or_default())
+        }
     }
 }
 
@@ -132,10 +131,10 @@ mod tests {
     use super::*;
 
     const ROUTED: &str = "  - key: \"grounding — plan.md cites a missing path\"\n    \
-                          outcome: routed\n    target: specs/031-x/tasks.md\n    \
+                          outcome: deferred\n    target: specs/031-x/tasks.md\n    \
                           decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
     const DISCARDED: &str = "  - key: \"applicable-rules — BE-AUTHN-001 does not fire\"\n    \
-                             outcome: discarded\n    reason: cited for a future endpoint\n    \
+                             outcome: waived\n    reason: cited for a future endpoint\n    \
                              decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
 
     fn repo_with(record: &str, decisions: &str) -> tempfile::TempDir {
@@ -182,12 +181,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.matched.len(), 2);
-        assert_eq!(result.matched[0].outcome, DecisionOutcome::Routed);
+        assert_eq!(result.matched[0].outcome, DecisionOutcome::Deferred);
         assert_eq!(
             result.matched[0].target.as_deref(),
             Some("specs/031-x/tasks.md")
         );
-        assert_eq!(result.matched[1].outcome, DecisionOutcome::Discarded);
+        assert_eq!(result.matched[1].outcome, DecisionOutcome::Waived);
         assert!(result.expired.is_empty() && result.retained.is_empty());
         assert_eq!(result.notices, [] as [String; 0]);
     }
@@ -196,7 +195,7 @@ mod tests {
     fn a_silent_key_expires_on_an_unrestricted_run() {
         let tmp = repo_with("analysis.md", ROUTED);
         let result = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
-        assert_eq!(result.expired.len(), 1, "the routed work landed");
+        assert_eq!(result.expired.len(), 1, "the deferred work landed");
         assert!(result.notices[0].starts_with("decision expired: grounding"));
     }
 
@@ -229,9 +228,9 @@ mod tests {
 
     #[test]
     fn a_missing_companion_is_malformed_and_never_pruned() {
-        let no_target = "  - key: k\n    outcome: routed\n    \
+        let no_target = "  - key: k\n    outcome: deferred\n    \
                          decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
-        let no_reason = "  - key: j\n    outcome: discarded\n    \
+        let no_reason = "  - key: j\n    outcome: waived\n    \
                          decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
         let tmp = repo_with("analysis.md", &format!("{no_target}{no_reason}"));
         let result = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();

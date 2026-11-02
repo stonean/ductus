@@ -245,8 +245,8 @@ mod tests {
         fs::write(
             tmp.path().join("specs/050-alpha/review.md"),
             "---\nspec: 050-alpha\nlast-run: 2026-08-01T00:00:00Z\nmust-violations: 0\nblocking: false\n\
-             dispositions:\n  fixed: 1\n  routed: 0\n  discarded: 1\n  undispositioned: 0\n\
-             decisions:\n  - key: \"other: noise\"\n    outcome: discarded\n    reason: not this spec\n    \
+             dispositions:\n  fixed: 1\n  deferred: 0\n  waived: 1\n  undispositioned: 0\n\
+             decisions:\n  - key: \"other: noise\"\n    outcome: waived\n    reason: not this spec\n    \
              decided-at: 2026-08-01T00:00:00Z\n    decided-by: dev@example.com\n---\n\n# Review — 050-alpha\n",
         )
         .unwrap();

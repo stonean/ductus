@@ -136,18 +136,25 @@ pub struct ReviewBlock {
 /// Every field is **required**. A map missing one of them makes the whole
 /// record unreadable rather than defaulting the absent count to zero, because
 /// a defaulted `undispositioned: 0` would read as every finding decided.
+///
+/// `deferred` and `waived` also read the names a record written before spec
+/// 076 carries, `routed` and `discarded`, so that record keeps parsing until
+/// its writer next runs; the map is always rendered with the current names. A
+/// map carrying both a name and its alias does not parse.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Dispositions {
     /// Findings fixed in the run. A fixed finding is gone from the re-check,
     /// so it is counted from the run's first pass.
     pub fixed: u32,
-    /// Live findings routed to an artifact the pre-`done` gate reads — this
-    /// run, or by a stored decision the run matched.
-    pub routed: u32,
-    /// Live findings discarded with a recorded reason — this run, or by a
-    /// stored decision the run matched.
-    pub discarded: u32,
+    /// Live findings deferred to the work that will address them — this run,
+    /// or by a stored decision the run matched.
+    #[serde(alias = "routed")]
+    pub deferred: u32,
+    /// Live findings waived with a recorded reason — this run, or by a stored
+    /// decision the run matched.
+    #[serde(alias = "discarded")]
+    pub waived: u32,
     /// Live findings with no disposition. Recorded and reported; the gate
     /// does not read it, since only a gating finding holds `done`.
     pub undispositioned: u32,
@@ -159,10 +166,10 @@ pub struct Dispositions {
 pub enum DispositionOutcome {
     /// Fixed in the run.
     Fixed,
-    /// Written to an artifact the pre-`done` gate reads; `target` names it.
-    Routed,
-    /// Judged out of scope; `reason` says why.
-    Discarded,
+    /// To be addressed later by the work `target` names (spec 076).
+    Deferred,
+    /// Not to be addressed; `reason` says why (spec 076).
+    Waived,
     /// No decision was made. The default, so a caller that supplies no
     /// disposition — the exec walker, which has no operator to ask — records
     /// the finding as owed rather than as handled.
@@ -171,19 +178,19 @@ pub enum DispositionOutcome {
 }
 
 /// One finding's disposition: the outcome, plus the companion that makes it
-/// auditable — a route's `target`, a discard's `reason`.
+/// auditable — a deferral's `target`, a waiver's `reason`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Disposition {
     /// What was done.
     #[serde(default)]
     pub outcome: DispositionOutcome,
-    /// The routed-to artifact, repo-relative. Required when `outcome` is
-    /// `routed`.
+    /// The work a deferral names, repo-relative. Required when `outcome` is
+    /// `deferred`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
-    /// Why the finding is out of scope. Required when `outcome` is
-    /// `discarded`.
+    /// Why the finding is not addressed. Required when `outcome` is
+    /// `waived`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
@@ -194,10 +201,10 @@ pub struct Disposition {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DecisionOutcome {
-    /// The finding was written to an artifact the gate reads; `target` names it.
-    Routed,
-    /// The finding was judged out of scope; `reason` says why.
-    Discarded,
+    /// The finding will be addressed by the work `target` names.
+    Deferred,
+    /// The finding will not be addressed; `reason` says why.
+    Waived,
 }
 
 /// A stored decision as `process-decisions` reports it, and as a writer is
@@ -210,10 +217,10 @@ pub struct DecisionRef {
     pub key: String,
     /// What was decided.
     pub outcome: DecisionOutcome,
-    /// The routed-to artifact, when `outcome` is `routed`.
+    /// The work a deferral names, when `outcome` is `deferred`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
-    /// The discard reason, when `outcome` is `discarded`.
+    /// The waiver's reason, when `outcome` is `waived`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
@@ -546,8 +553,8 @@ pub struct ProcessDecisionsResult {
     /// matching finding under the stored outcome and asks nothing.
     pub matched: Vec<DecisionRef>,
     /// Stored decisions whose key did not fire on an unrestricted run. Passed
-    /// to the writer as `expired-decisions`, which drops them. For a routed
-    /// decision this is the moment the routed work landed.
+    /// to the writer as `expired-decisions`, which drops them. For a deferred
+    /// decision this is the moment the deferred work landed.
     pub expired: Vec<DecisionRef>,
     /// Stored decisions whose key did not fire on a restricted run — neither
     /// matched nor expired, so the writer keeps them.
@@ -725,7 +732,7 @@ pub struct WriteReviewArgs {
     pub expired_waivers: Vec<WaiverRef>,
     /// Reviewer observations that map to no loaded rule, each with its
     /// disposition. Excluded from every violation count and from `blocking`;
-    /// counted under `dispositions:`. A routed or discarded observation that
+    /// counted under `dispositions:`. A deferred or waived observation that
     /// matches no stored decision becomes one. Supplied via MCP/interpreter
     /// JSON; not a CLI flag.
     #[serde(default)]
@@ -738,8 +745,8 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
     /// Who made this run's new decisions — `git config user.email`, as
-    /// `waived-by` is. Required when any observation is newly routed or
-    /// discarded; a stored decision nobody can attribute is not auditable.
+    /// `waived-by` is. Required when any observation is newly deferred or
+    /// waived; a stored decision nobody can attribute is not auditable.
     /// Not a CLI flag: `observations` is not one either, so a CLI call can
     /// make no decision to attribute.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -848,9 +855,9 @@ pub enum AnalysisTier {
 #[serde(rename_all = "kebab-case")]
 pub struct AnalysisFinding {
     /// The tier it was detected in. Required, with no default: the writer's
-    /// refusal to store a discard for a `hard-fail` or `blocking` finding
+    /// refusal to store a waiver for a `hard-fail` or `blocking` finding
     /// reads it, so a default could only be the permissive tier, letting an
-    /// untagged blocking finding be stored as discarded.
+    /// untagged blocking finding be stored as waived.
     pub tier: AnalysisTier,
     /// The detecting family, e.g. `review-state-drift`, `grounding`.
     pub family: String,
@@ -863,8 +870,8 @@ pub struct AnalysisFinding {
     /// `false` for a finding fixed in the run and absent from the re-check.
     #[serde(default = "default_true")]
     pub live: bool,
-    /// What the run did with it. `discarded` is refused for a `hard-fail` or
-    /// `blocking` finding: those already gate `done`, and a discard would be a
+    /// What the run did with it. `waived` is refused for a `hard-fail` or
+    /// `blocking` finding: those already gate `done`, and a waiver would be a
     /// bypass the gate does not have.
     #[serde(default)]
     pub disposition: Disposition,
@@ -955,7 +962,7 @@ pub struct WriteAnalysisArgs {
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
     /// Who made this run's new decisions — `git config user.email`. Required
-    /// when any live finding is newly routed or discarded. Not a CLI flag:
+    /// when any live finding is newly deferred or waived. Not a CLI flag:
     /// `findings` is not one either, so a CLI call can make no decision to
     /// attribute.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -5787,6 +5794,36 @@ mod tests {
         SearchState,
     };
 
+    /// Spec 076: a `dispositions:` map written before the rename reads under
+    /// its old names, is serialized under the new ones, and a map carrying a
+    /// name and its alias together does not parse.
+    #[test]
+    fn a_pre_076_dispositions_map_reads_under_its_old_names() {
+        use crate::schema::primitives::Dispositions;
+        let legacy: Dispositions =
+            serde_norway::from_str("fixed: 1\nrouted: 2\ndiscarded: 3\nundispositioned: 4\n")
+                .unwrap();
+        assert_eq!(
+            legacy,
+            Dispositions {
+                fixed: 1,
+                deferred: 2,
+                waived: 3,
+                undispositioned: 4,
+            }
+        );
+        let rendered = serde_json::to_value(legacy).unwrap();
+        assert!(rendered.get("routed").is_none(), "{rendered}");
+        assert_eq!(rendered["deferred"], 2);
+        let both = serde_norway::from_str::<Dispositions>(
+            "fixed: 0\nrouted: 1\ndeferred: 1\nwaived: 0\nundispositioned: 0\n",
+        );
+        assert!(
+            both.is_err(),
+            "a name and its alias together must not parse"
+        );
+    }
+
     fn round_trip<T>(value: &T) -> T
     where
         T: serde::Serialize + serde::de::DeserializeOwned,
@@ -7360,8 +7397,8 @@ mod tests {
         };
         let counts = Dispositions {
             fixed: 1,
-            routed: 2,
-            discarded: 3,
+            deferred: 2,
+            waived: 3,
             undispositioned: 4,
         };
         let v = serde_json::to_value(counts).unwrap();
@@ -7370,12 +7407,12 @@ mod tests {
 
         let decision = DecisionRef {
             key: "grounding — m".into(),
-            outcome: DecisionOutcome::Routed,
+            outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),
             reason: None,
         };
         let v = serde_json::to_value(&decision).unwrap();
-        assert_eq!(v["outcome"], "routed");
+        assert_eq!(v["outcome"], "deferred");
         assert!(v.get("reason").is_none());
         assert_eq!(round_trip(&decision), decision);
 
@@ -7426,7 +7463,7 @@ mod tests {
             text: "perf: slow".into(),
             path: "a.rs".into(),
             disposition: Disposition {
-                outcome: DispositionOutcome::Discarded,
+                outcome: DispositionOutcome::Waived,
                 target: None,
                 reason: Some("noise".into()),
             },
@@ -7434,7 +7471,7 @@ mod tests {
         };
         let v = serde_json::to_value(&observation).unwrap();
         assert_eq!(v["decision-key"], "perf: slow — `a.rs`");
-        assert_eq!(v["disposition"]["outcome"], "discarded");
+        assert_eq!(v["disposition"]["outcome"], "waived");
         assert_eq!(round_trip(&observation), observation);
     }
 

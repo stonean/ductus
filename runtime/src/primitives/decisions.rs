@@ -59,22 +59,27 @@ impl RawDecision {
     /// The entry as a [`DecisionRef`], or — when it is unusable — the first
     /// field that makes it so, named as the field to fix.
     ///
-    /// An outcome's companion is required with it — a route names its target,
-    /// a discard its reason — because an entry missing it records a decision
-    /// nobody can audit, which is no better than no decision.
+    /// An outcome's companion is required with it — a deferral names its
+    /// target, a waiver its reason — because an entry missing it records a
+    /// decision nobody can audit, which is no better than no decision.
+    ///
+    /// `routed` and `discarded` are read as `deferred` and `waived`: they are
+    /// the names a record written before spec 076 carries, and it must keep
+    /// parsing until its writer next runs and renders the new ones. Nothing
+    /// writes the old names.
     pub(crate) fn to_ref(&self) -> std::result::Result<DecisionRef, &'static str> {
         let present = |value: &Option<String>| nonblank(value.as_deref()).map(str::to_string);
         let key = present(&self.key).ok_or("key")?;
         let outcome = match self.outcome.as_deref().map(str::trim) {
-            Some("routed") => DecisionOutcome::Routed,
-            Some("discarded") => DecisionOutcome::Discarded,
+            Some("deferred" | "routed") => DecisionOutcome::Deferred,
+            Some("waived" | "discarded") => DecisionOutcome::Waived,
             _ => return Err("outcome"),
         };
         present(&self.decided_at).ok_or("decided-at")?;
         present(&self.decided_by).ok_or("decided-by")?;
         let (target, reason) = match outcome {
-            DecisionOutcome::Routed => (Some(present(&self.target).ok_or("target")?), None),
-            DecisionOutcome::Discarded => (None, Some(present(&self.reason).ok_or("reason")?)),
+            DecisionOutcome::Deferred => (Some(present(&self.target).ok_or("target")?), None),
+            DecisionOutcome::Waived => (None, Some(present(&self.reason).ok_or("reason")?)),
         };
         Ok(DecisionRef {
             key,
@@ -108,10 +113,8 @@ pub(crate) fn require_companion<'a>(
     disposition: &'a Disposition,
 ) -> Result<Option<(String, &'a str)>> {
     let (field, value, rule) = match disposition.outcome {
-        DispositionOutcome::Routed => ("target", &disposition.target, "a route names its target"),
-        DispositionOutcome::Discarded => {
-            ("reason", &disposition.reason, "a discard states its reason")
-        }
+        DispositionOutcome::Deferred => ("target", &disposition.target, "a route names its target"),
+        DispositionOutcome::Waived => ("reason", &disposition.reason, "a waiver states its reason"),
         DispositionOutcome::Fixed | DispositionOutcome::Undispositioned => return Ok(None),
     };
     let argument = format!("{at}.{field}");
@@ -176,13 +179,13 @@ pub(crate) fn same_key(a: &str, b: &str) -> bool {
 pub(crate) fn decision_for(disposition: &Disposition, key: &str) -> Option<DecisionRef> {
     let companion = |value: &Option<String>| value.as_deref().map(flatten_line);
     let (outcome, target, reason) = match disposition.outcome {
-        DispositionOutcome::Routed => (
-            DecisionOutcome::Routed,
+        DispositionOutcome::Deferred => (
+            DecisionOutcome::Deferred,
             companion(&disposition.target),
             None,
         ),
-        DispositionOutcome::Discarded => (
-            DecisionOutcome::Discarded,
+        DispositionOutcome::Waived => (
+            DecisionOutcome::Waived,
             None,
             companion(&disposition.reason),
         ),
@@ -204,8 +207,8 @@ pub(crate) fn render_dispositions(block: &mut String, counts: Dispositions) {
     use std::fmt::Write as _;
     let _ = writeln!(block, "dispositions:");
     let _ = writeln!(block, "  fixed: {}", counts.fixed);
-    let _ = writeln!(block, "  routed: {}", counts.routed);
-    let _ = writeln!(block, "  discarded: {}", counts.discarded);
+    let _ = writeln!(block, "  deferred: {}", counts.deferred);
+    let _ = writeln!(block, "  waived: {}", counts.waived);
     let _ = writeln!(block, "  undispositioned: {}", counts.undispositioned);
 }
 
@@ -220,9 +223,11 @@ pub(crate) fn disposition_suffix(
     let companion = |value: &Option<String>| plain(value.as_deref().unwrap_or(""));
     match disposition.outcome {
         DispositionOutcome::Fixed => "**fixed**".to_string(),
-        DispositionOutcome::Routed => format!("**routed** to `{}`", companion(&disposition.target)),
-        DispositionOutcome::Discarded => {
-            format!("**discarded**: {}", companion(&disposition.reason))
+        DispositionOutcome::Deferred => {
+            format!("**deferred** to `{}`", companion(&disposition.target))
+        }
+        DispositionOutcome::Waived => {
+            format!("**waived**: {}", companion(&disposition.reason))
         }
         DispositionOutcome::Undispositioned => "**undispositioned**".to_string(),
     }
@@ -247,7 +252,7 @@ impl DecisionRefusal {
         let (argument, reason) = match self {
             Self::DecidedByMissing => (
                 "decided-by".to_string(),
-                format!("required when {noun} is newly routed or discarded"),
+                format!("required when {noun} is newly deferred or waived"),
             ),
             Self::ConflictingDecisions(key) => (
                 list.to_string(),
@@ -342,8 +347,8 @@ pub(crate) fn merge(
             key: Some(decision.key.clone()),
             outcome: Some(
                 match decision.outcome {
-                    DecisionOutcome::Routed => "routed",
-                    DecisionOutcome::Discarded => "discarded",
+                    DecisionOutcome::Deferred => "deferred",
+                    DecisionOutcome::Waived => "waived",
                 }
                 .to_string(),
             ),
@@ -355,6 +360,18 @@ pub(crate) fn merge(
         });
     }
     Ok(merged)
+}
+
+/// The outcome name to render for a stored entry: a name a record written
+/// before spec 076 carries becomes its current one, so a re-render never
+/// writes `routed` or `discarded`; anything else, a malformed value included,
+/// is kept as it was written.
+fn rendered_outcome(outcome: Option<&str>) -> Option<&str> {
+    match outcome.map(str::trim) {
+        Some("routed") => Some("deferred"),
+        Some("discarded") => Some("waived"),
+        _ => outcome,
+    }
 }
 
 /// Append the `decisions:` list to a rendered record, known fields first and
@@ -372,7 +389,10 @@ pub(crate) fn render(block: &mut String, decisions: &[RawDecision]) {
             "",
             &[
                 ("key", decision.key.as_deref().into()),
-                ("outcome", decision.outcome.as_deref().into()),
+                (
+                    "outcome",
+                    rendered_outcome(decision.outcome.as_deref()).into(),
+                ),
                 ("target", decision.target.as_deref().into()),
                 ("reason", decision.reason.as_deref().into()),
                 ("decided-at", decision.decided_at.as_deref().into()),
@@ -419,7 +439,7 @@ mod tests {
             "review.md",
             "decisions:\n\
              \u{20} - key: \"perf: a() is called in a loop — `src/a.rs`\"\n\
-             \u{20}   outcome: routed\n\
+             \u{20}   outcome: deferred\n\
              \u{20}   target: specs/031-x/scenarios/loop.md\n\
              \u{20}   decided-at: 2026-09-25T14:40:00Z\n\
              \u{20}   decided-by: dev@example.com\n\
@@ -437,7 +457,7 @@ mod tests {
             decision.to_ref(),
             Ok(DecisionRef {
                 key: "perf: a() is called in a loop — `src/a.rs`".into(),
-                outcome: DecisionOutcome::Routed,
+                outcome: DecisionOutcome::Deferred,
                 target: Some("specs/031-x/scenarios/loop.md".into()),
                 reason: None,
             })
@@ -480,8 +500,8 @@ mod tests {
         RawDecision {
             key: Some(key.into()),
             outcome: Some(outcome.into()),
-            target: (outcome == "routed").then(|| companion.to_string()),
-            reason: (outcome == "discarded").then(|| companion.to_string()),
+            target: (outcome == "deferred").then(|| companion.to_string()),
+            reason: (outcome == "waived").then(|| companion.to_string()),
             decided_at: Some("2026-09-01T00:00:00Z".into()),
             decided_by: Some("first@example.com".into()),
             extra: BTreeMap::new(),
@@ -492,17 +512,17 @@ mod tests {
         DecisionRef {
             key: key.into(),
             outcome,
-            target: (outcome == DecisionOutcome::Routed).then(|| companion.to_string()),
-            reason: (outcome == DecisionOutcome::Discarded).then(|| companion.to_string()),
+            target: (outcome == DecisionOutcome::Deferred).then(|| companion.to_string()),
+            reason: (outcome == DecisionOutcome::Waived).then(|| companion.to_string()),
         }
     }
 
     #[test]
     fn a_matching_decision_keeps_its_original_stamp() {
         let merged = merge(
-            vec![stored("k", "discarded", "noise")],
+            vec![stored("k", "waived", "noise")],
             &[],
-            &[decided("k", DecisionOutcome::Discarded, "noise")],
+            &[decided("k", DecisionOutcome::Waived, "noise")],
             "2026-09-25T00:00:00Z",
             None,
         )
@@ -518,11 +538,11 @@ mod tests {
     #[test]
     fn a_changed_decision_replaces_the_stored_one() {
         let merged = merge(
-            vec![stored("k", "discarded", "noise")],
+            vec![stored("k", "waived", "noise")],
             &[],
             &[decided(
                 "k",
-                DecisionOutcome::Routed,
+                DecisionOutcome::Deferred,
                 "specs/031-x/tasks.md",
             )],
             "2026-09-25T00:00:00Z",
@@ -530,7 +550,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].outcome.as_deref(), Some("routed"));
+        assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
         assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
         assert_eq!(
             merged[0].decided_at.as_deref(),
@@ -545,10 +565,13 @@ mod tests {
             ..RawDecision::default()
         };
         let merged = merge(
-            vec![stored("gone", "routed", "specs/031-x/tasks.md"), malformed],
+            vec![
+                stored("gone", "deferred", "specs/031-x/tasks.md"),
+                malformed,
+            ],
             &[decided(
                 "gone",
-                DecisionOutcome::Routed,
+                DecisionOutcome::Deferred,
                 "specs/031-x/tasks.md",
             )],
             &[],
@@ -566,7 +589,7 @@ mod tests {
             merge(
                 Vec::new(),
                 &[],
-                &[decided("k", DecisionOutcome::Discarded, "noise")],
+                &[decided("k", DecisionOutcome::Waived, "noise")],
                 "2026-09-25T00:00:00Z",
                 Some("  "),
             ),
@@ -579,7 +602,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut original = stored(
             "perf: a() loops — `src/a.rs`",
-            "routed",
+            "deferred",
             "specs/031-x/tasks.md",
         );
         original.extra.insert(
@@ -599,7 +622,7 @@ mod tests {
     fn each_missing_companion_is_its_own_defect() {
         let routed_without_target = RawDecision {
             key: Some("k".into()),
-            outcome: Some("routed".into()),
+            outcome: Some("deferred".into()),
             decided_at: Some("2026-09-25T00:00:00Z".into()),
             decided_by: Some("dev@example.com".into()),
             ..RawDecision::default()
@@ -607,7 +630,7 @@ mod tests {
         assert_eq!(routed_without_target.to_ref(), Err("target"));
 
         let discarded_without_reason = RawDecision {
-            outcome: Some("discarded".into()),
+            outcome: Some("waived".into()),
             reason: Some("  ".into()),
             ..routed_without_target.clone()
         };
@@ -638,18 +661,14 @@ mod tests {
     #[test]
     fn a_rematch_with_reworded_companion_text_keeps_the_original() {
         let merged = merge(
-            vec![stored("k", "discarded", "noise")],
+            vec![stored("k", "waived", "noise")],
             &[],
-            &[decided(
-                "k",
-                DecisionOutcome::Discarded,
-                "just noise, really",
-            )],
+            &[decided("k", DecisionOutcome::Waived, "just noise, really")],
             "2026-09-25T00:00:00Z",
             None,
         )
         .unwrap();
-        assert_eq!(merged, vec![stored("k", "discarded", "noise")]);
+        assert_eq!(merged, vec![stored("k", "waived", "noise")]);
     }
 
     /// A key decided with a different outcome is a new decision and replaces
@@ -657,11 +676,11 @@ mod tests {
     #[test]
     fn a_changed_outcome_is_a_new_decision() {
         let merged = merge(
-            vec![stored("k", "discarded", "noise")],
+            vec![stored("k", "waived", "noise")],
             &[],
             &[decided(
                 "k",
-                DecisionOutcome::Routed,
+                DecisionOutcome::Deferred,
                 "specs/001-x/tasks.md",
             )],
             "2026-09-25T00:00:00Z",
@@ -669,7 +688,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].outcome.as_deref(), Some("routed"));
+        assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
         assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
     }
 
@@ -677,7 +696,7 @@ mod tests {
     /// stored once.
     #[test]
     fn this_runs_decisions_collapse_by_key() {
-        let twice = decided("k", DecisionOutcome::Discarded, "noise");
+        let twice = decided("k", DecisionOutcome::Waived, "noise");
         let merged = merge(
             Vec::new(),
             &[],
@@ -695,8 +714,8 @@ mod tests {
     /// and a repeated outcome is no contradiction.
     #[test]
     fn two_outcomes_for_one_key_are_refused_whichever_they_are() {
-        use DispositionOutcome::{Discarded, Fixed, Routed, Undispositioned};
-        let all = [Fixed, Routed, Discarded, Undispositioned];
+        use DispositionOutcome::{Deferred, Fixed, Undispositioned, Waived};
+        let all = [Fixed, Deferred, Waived, Undispositioned];
         for first in all {
             for second in all {
                 let verdict = one_outcome_per_key([
@@ -722,7 +741,7 @@ mod tests {
     #[test]
     fn a_wrong_typed_field_or_a_non_mapping_entry_fails_the_whole_list() {
         let dir = tempfile::tempdir().unwrap();
-        let good = "  - key: k\n    outcome: discarded\n    reason: noise\n    \
+        let good = "  - key: k\n    outcome: waived\n    reason: noise\n    \
                     decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
         for bad in ["  - key: j\n    reason: [a, b]\n", "  - just a string\n"] {
             write(dir.path(), "review.md", &format!("decisions:\n{good}{bad}"));
@@ -743,17 +762,17 @@ mod tests {
     #[test]
     fn one_outcome_restated_with_different_wording_is_not_a_conflict() {
         let merged = merge(
-            vec![stored("k", "discarded", "noise")],
+            vec![stored("k", "waived", "noise")],
             &[],
             &[
-                decided("k", DecisionOutcome::Discarded, "noise"),
-                decided("k", DecisionOutcome::Discarded, "noise, as before"),
+                decided("k", DecisionOutcome::Waived, "noise"),
+                decided("k", DecisionOutcome::Waived, "noise, as before"),
             ],
             "2026-09-25T00:00:00Z",
             None,
         )
         .unwrap();
-        assert_eq!(merged, vec![stored("k", "discarded", "noise")]);
+        assert_eq!(merged, vec![stored("k", "waived", "noise")]);
     }
 
     /// A key a person hand-edited with surrounding spaces is the same key to
@@ -762,14 +781,14 @@ mod tests {
     #[test]
     fn a_hand_edited_key_is_the_same_decision() {
         let merged = merge(
-            vec![stored(" k ", "discarded", "noise")],
+            vec![stored(" k ", "waived", "noise")],
             &[],
-            &[decided("k", DecisionOutcome::Discarded, "noise")],
+            &[decided("k", DecisionOutcome::Waived, "noise")],
             "2026-09-25T00:00:00Z",
             None,
         )
         .unwrap();
-        assert_eq!(merged, vec![stored(" k ", "discarded", "noise")]);
+        assert_eq!(merged, vec![stored(" k ", "waived", "noise")]);
     }
 
     /// `process-decisions` applies the first entry for a key and ignores a
@@ -781,13 +800,13 @@ mod tests {
     fn a_re_decision_is_not_lost_to_an_ignored_duplicate() {
         let merged = merge(
             vec![
-                stored("k", "discarded", "noise"),
-                stored("k", "routed", "specs/001-x/tasks.md"),
+                stored("k", "waived", "noise"),
+                stored("k", "deferred", "specs/001-x/tasks.md"),
             ],
             &[],
             &[decided(
                 "k",
-                DecisionOutcome::Routed,
+                DecisionOutcome::Deferred,
                 "specs/001-x/tasks.md",
             )],
             "2026-09-26T00:00:00Z",
@@ -795,7 +814,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(merged.len(), 1, "{merged:?}");
-        assert_eq!(merged[0].outcome.as_deref(), Some("routed"));
+        assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
         assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
     }
 
@@ -804,7 +823,7 @@ mod tests {
     #[test]
     fn decision_for_flattens_line_hazards() {
         let disposition = Disposition {
-            outcome: DispositionOutcome::Discarded,
+            outcome: DispositionOutcome::Waived,
             target: None,
             reason: Some("false\u{1b}positive".into()),
         };
@@ -816,5 +835,53 @@ mod tests {
             ..Disposition::default()
         };
         assert_eq!(decision_for(&fixed, "k"), None);
+    }
+
+    /// Spec 076: a record written before the rename carries `routed` and
+    /// `discarded`, and both still read as the current outcomes.
+    #[test]
+    fn a_pre_076_outcome_name_reads_as_its_current_one() {
+        let mut routed = stored("a", "deferred", "specs/001-x/tasks.md");
+        routed.outcome = Some("routed".into());
+        let mut discarded = stored("b", "waived", "noise");
+        discarded.outcome = Some("discarded".into());
+        assert_eq!(routed.to_ref().unwrap().outcome, DecisionOutcome::Deferred);
+        assert_eq!(discarded.to_ref().unwrap().outcome, DecisionOutcome::Waived);
+    }
+
+    /// Spec 076: a stored entry is re-rendered under the current name, so no
+    /// writer leaves `routed` or `discarded` behind.
+    #[test]
+    fn a_re_render_writes_the_current_outcome_names() {
+        let mut routed = stored("a", "deferred", "specs/001-x/tasks.md");
+        routed.outcome = Some("routed".into());
+        let mut discarded = stored("b", "waived", "noise");
+        discarded.outcome = Some("discarded".into());
+        let mut block = String::new();
+        render(&mut block, &[routed, discarded]);
+        assert!(block.contains("outcome: deferred"), "{block}");
+        assert!(block.contains("outcome: waived"), "{block}");
+        assert!(
+            !block.contains("routed") && !block.contains("discarded"),
+            "{block}"
+        );
+    }
+
+    #[test]
+    fn the_dispositions_map_renders_only_the_current_names() {
+        let mut block = String::new();
+        render_dispositions(
+            &mut block,
+            Dispositions {
+                fixed: 0,
+                deferred: 1,
+                waived: 2,
+                undispositioned: 0,
+            },
+        );
+        assert_eq!(
+            block,
+            "dispositions:\n  fixed: 0\n  deferred: 1\n  waived: 2\n  undispositioned: 0\n"
+        );
     }
 }

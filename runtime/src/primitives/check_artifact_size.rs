@@ -167,7 +167,7 @@ fn decide(
         Err(err) => {
             notices.push(format!(
                 "the stored decisions in `{}` could not be read ({err}); no oversized \
-                 artifact is treated as already discarded",
+                 artifact is treated as already waived",
                 rel_path(&record, repo)
             ));
             return DecisionsState::Unreadable;
@@ -182,11 +182,15 @@ fn decide(
     DecisionsState::Read
 }
 
-/// `decision`'s key when it is a discard of `path` recorded at a read-page
-/// count of at least `pages`. A routed decision never covers a size: only a
-/// discard records that the operator accepted it.
+/// `decision`'s key when it is a waiver of `path` recorded at a read-page
+/// count of at least `pages`. A deferred decision never covers a size: only a
+/// waiver records that the operator accepted it. `discarded` is a waiver's
+/// name in a record written before spec 076.
 fn covering_key(decision: &RawDecision, path: &str, pages: u64) -> Option<String> {
-    if decision.outcome.as_deref().map(str::trim) != Some("discarded") {
+    if !matches!(
+        decision.outcome.as_deref().map(str::trim),
+        Some("waived" | "discarded")
+    ) {
         return None;
     }
     let key = decision.key.as_deref()?;
@@ -965,7 +969,7 @@ mod tests {
         // No fix is a discard: only /{project}:analyze offers one.
         for artifact in &result.oversized {
             assert!(
-                artifact.fixes.iter().all(|f| !f.text.contains("discard")),
+                artifact.fixes.iter().all(|f| !f.text.contains("waive")),
                 "{}",
                 artifact.warning
             );
@@ -1115,7 +1119,7 @@ mod tests {
         use std::fmt::Write as _;
         let mut body = String::from("---\nspec: 001-a\ndecisions:\n");
         for (key, outcome) in decisions {
-            let companion = if *outcome == "routed" {
+            let companion = if *outcome == "deferred" {
                 "target: specs/001-a/tasks.md"
             } else {
                 "reason: accepted"
@@ -1158,11 +1162,22 @@ mod tests {
         assert!(!result.oversized[0].decided);
     }
 
+    /// Spec 076: a waiver recorded before the rename carries `discarded`,
+    /// and it still covers the size it accepted.
+    #[test]
+    fn a_waiver_recorded_before_076_still_covers_its_size() {
+        let tmp = three_page_plan();
+        let key = stored_key(PLAN, 240, 3, 100);
+        record(&tmp, &[(&key, "discarded")]);
+        let plan = &check(&tmp).unwrap().oversized[0];
+        assert!(plan.decided);
+    }
+
     #[test]
     fn a_discard_at_the_same_page_count_decides() {
         let tmp = three_page_plan();
         let key = stored_key(PLAN, 240, 3, 100);
-        record(&tmp, &[(&key, "discarded")]);
+        record(&tmp, &[(&key, "waived")]);
         let result = check(&tmp).unwrap();
         assert_eq!(result.decisions, DecisionsState::Read);
         let plan = &result.oversized[0];
@@ -1176,14 +1191,14 @@ mod tests {
     #[test]
     fn a_discard_at_a_higher_page_count_decides() {
         let tmp = three_page_plan();
-        record(&tmp, &[(&stored_key(PLAN, 380, 4, 100), "discarded")]);
+        record(&tmp, &[(&stored_key(PLAN, 380, 4, 100), "waived")]);
         assert!(check(&tmp).unwrap().oversized[0].decided);
     }
 
     #[test]
     fn growth_into_another_page_fires_again() {
         let tmp = three_page_plan();
-        record(&tmp, &[(&stored_key(PLAN, 190, 2, 100), "discarded")]);
+        record(&tmp, &[(&stored_key(PLAN, 190, 2, 100), "waived")]);
         let plan = &check(&tmp).unwrap().oversized[0];
         assert!(!plan.decided);
         assert!(plan.decision_key.is_none());
@@ -1196,12 +1211,12 @@ mod tests {
         // At 200 bytes the plan is two pages: still covered.
         let tmp = repo(Some("[artifacts]\nread-size-bytes = 200\n"));
         std::fs::write(tmp.path().join(PLAN), "x".repeat(250)).unwrap();
-        record(&tmp, &[(&key, "discarded")]);
+        record(&tmp, &[(&key, "waived")]);
         assert!(check(&tmp).unwrap().oversized[0].decided);
         // At 50 bytes it is five pages: it fires again.
         let tmp = repo(Some("[artifacts]\nread-size-bytes = 50\n"));
         std::fs::write(tmp.path().join(PLAN), "x".repeat(250)).unwrap();
-        record(&tmp, &[(&key, "discarded")]);
+        record(&tmp, &[(&key, "waived")]);
         assert!(!check(&tmp).unwrap().oversized[0].decided);
     }
 
@@ -1211,19 +1226,13 @@ mod tests {
         record(
             &tmp,
             &[
-                (&stored_key(PLAN, 250, 3, 100), "routed"),
-                (
-                    &stored_key("specs/001-a/tasks.md", 250, 3, 100),
-                    "discarded",
-                ),
-                (
-                    "artifact-size — `specs/001-a/plan.md` is too big",
-                    "discarded",
-                ),
+                (&stored_key(PLAN, 250, 3, 100), "deferred"),
+                (&stored_key("specs/001-a/tasks.md", 250, 3, 100), "waived"),
+                ("artifact-size — `specs/001-a/plan.md` is too big", "waived"),
                 (
                     "plan-record — `specs/001-a/plan.md` is 250 bytes, 3 read pages at the \
                      100-byte read size",
-                    "discarded",
+                    "waived",
                 ),
             ],
         );
@@ -1237,7 +1246,7 @@ mod tests {
         let tmp = three_page_plan();
         let first = stored_key(PLAN, 260, 3, 100);
         let second = stored_key(PLAN, 380, 4, 100);
-        record(&tmp, &[(&first, "discarded"), (&second, "discarded")]);
+        record(&tmp, &[(&first, "waived"), (&second, "waived")]);
         let plan = &check(&tmp).unwrap().oversized[0];
         assert_eq!(plan.decision_key.as_deref(), Some(first.as_str()));
     }

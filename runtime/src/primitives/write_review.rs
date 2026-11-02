@@ -384,8 +384,8 @@ fn count_dispositions(observations: &[ReviewObservation]) -> Dispositions {
     for observation in observations {
         let slot = match observation.disposition.outcome {
             DispositionOutcome::Fixed => &mut counts.fixed,
-            DispositionOutcome::Routed => &mut counts.routed,
-            DispositionOutcome::Discarded => &mut counts.discarded,
+            DispositionOutcome::Deferred => &mut counts.deferred,
+            DispositionOutcome::Waived => &mut counts.waived,
             DispositionOutcome::Undispositioned => &mut counts.undispositioned,
         };
         *slot = slot.saturating_add(1);
@@ -1299,9 +1299,9 @@ mod tests {
             text: text.into(),
             disposition: crate::schema::primitives::Disposition {
                 outcome,
-                target: (outcome == DispositionOutcome::Routed)
+                target: (outcome == DispositionOutcome::Deferred)
                     .then(|| companion.unwrap_or_default().to_string()),
-                reason: (outcome == DispositionOutcome::Discarded)
+                reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
             },
             ..ReviewObservation::default()
@@ -2047,12 +2047,12 @@ mod tests {
             dispositioned("bug: off by one", DispositionOutcome::Fixed, None),
             dispositioned(
                 "bug: a gap",
-                DispositionOutcome::Routed,
+                DispositionOutcome::Deferred,
                 Some("specs/001-x/scenarios/gap.md"),
             ),
             dispositioned(
                 "other: machinery",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("pipeline tooling, not this spec"),
             ),
             dispositioned("perf: unclear", DispositionOutcome::Undispositioned, None),
@@ -2062,8 +2062,8 @@ mod tests {
             result.dispositions,
             crate::schema::primitives::Dispositions {
                 fixed: 1,
-                routed: 1,
-                discarded: 1,
+                deferred: 1,
+                waived: 1,
                 undispositioned: 1,
             }
         );
@@ -2075,17 +2075,17 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(
             report.contains(
-                "dispositions:\n  fixed: 1\n  routed: 1\n  discarded: 1\n  undispositioned: 1\n"
+                "dispositions:\n  fixed: 1\n  deferred: 1\n  waived: 1\n  undispositioned: 1\n"
             ),
             "{report}"
         );
         assert!(report.contains("- bug: off by one — **fixed**"), "{report}");
         assert!(
-            report.contains("- bug: a gap — **routed** to `specs/001-x/scenarios/gap.md`"),
+            report.contains("- bug: a gap — **deferred** to `specs/001-x/scenarios/gap.md`"),
             "{report}"
         );
         assert!(
-            report.contains("- other: machinery — **discarded**: pipeline tooling, not this spec"),
+            report.contains("- other: machinery — **waived**: pipeline tooling, not this spec"),
             "{report}"
         );
         assert!(
@@ -2102,7 +2102,7 @@ mod tests {
         args.observations = vec![
             dispositioned(
                 "other: machinery",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("not this spec"),
             ),
             dispositioned("bug: fixed now", DispositionOutcome::Fixed, None),
@@ -2116,7 +2116,7 @@ mod tests {
             "a fixed observation stops firing and stores nothing"
         );
         assert_eq!(stored[0].key.as_deref(), Some("other: machinery"));
-        assert_eq!(stored[0].outcome.as_deref(), Some("discarded"));
+        assert_eq!(stored[0].outcome.as_deref(), Some("waived"));
         assert_eq!(stored[0].reason.as_deref(), Some("not this spec"));
         assert_eq!(
             stored[0].decided_at.as_deref(),
@@ -2131,7 +2131,7 @@ mod tests {
         let mut args = base_args("001-x");
         args.observations = vec![dispositioned(
             "other: x",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("why"),
         )];
         assert!(matches!(
@@ -2147,19 +2147,19 @@ mod tests {
         seed_waivers(
             &tmp,
             "001-x",
-            "decisions:\n  - key: \"other: settled earlier\"\n    outcome: discarded\n    reason: noise\n    decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com\n    ticket: OPS-1\n  - key: \"bug: since fixed\"\n    outcome: routed\n    target: specs/001-x/tasks.md\n    decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com",
+            "decisions:\n  - key: \"other: settled earlier\"\n    outcome: waived\n    reason: noise\n    decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com\n    ticket: OPS-1\n  - key: \"bug: since fixed\"\n    outcome: deferred\n    target: specs/001-x/tasks.md\n    decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com",
         );
         let mut args = base_args("001-x");
         let mut rematched = dispositioned(
             "other: settled, reworded",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("noise"),
         );
         rematched.decision_key = Some("other: settled earlier".into());
         args.observations = vec![rematched];
         args.expired_decisions = vec![DecisionRef {
             key: "bug: since fixed".into(),
-            outcome: DecisionOutcome::Routed,
+            outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),
             reason: None,
         }];
@@ -2194,11 +2194,11 @@ mod tests {
             (observation("two\nlines", ""), "observations[0].text"),
             (observation("ok", "a\nb"), "observations[0].path"),
             (
-                dispositioned("ok", DispositionOutcome::Routed, Some("  ")),
+                dispositioned("ok", DispositionOutcome::Deferred, Some("  ")),
                 "observations[0].disposition.target",
             ),
             (
-                dispositioned("ok", DispositionOutcome::Discarded, None),
+                dispositioned("ok", DispositionOutcome::Waived, None),
                 "observations[0].disposition.reason",
             ),
         ];
@@ -2537,7 +2537,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![dispositioned(
             "other: noise\u{1b}[31m",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("false positive"),
         )];
         assert!(matches!(
@@ -2558,7 +2558,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![dispositioned(
             "other: noise",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("false\u{ffff}positive"),
         )];
         assert!(matches!(
@@ -2578,7 +2578,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![dispositioned(
             "bug: issue\t#12 reopens",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("why\t#not"),
         )];
         run(&args, tmp.path()).unwrap();
@@ -2611,7 +2611,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         let mut observation = dispositioned(
             "other: machinery",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("not this spec"),
         );
         observation.decision_key = Some("  ".into());
@@ -2632,8 +2632,8 @@ mod tests {
         let mut args = base_args("001-x");
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![
-            dispositioned("other: twice", DispositionOutcome::Discarded, Some("noise")),
-            dispositioned("other: twice", DispositionOutcome::Discarded, Some("noise")),
+            dispositioned("other: twice", DispositionOutcome::Waived, Some("noise")),
+            dispositioned("other: twice", DispositionOutcome::Waived, Some("noise")),
         ];
         let result = run(&args, tmp.path()).unwrap();
         let stored =
@@ -2643,13 +2643,13 @@ mod tests {
         // counts the observations a run recorded, and both carry the one
         // disposition their key gets.
         assert_eq!(result.observations, 2);
-        assert_eq!(result.dispositions.discarded, 2);
+        assert_eq!(result.dispositions.waived, 2);
 
         args.observations = vec![
-            dispositioned("other: split", DispositionOutcome::Discarded, Some("noise")),
+            dispositioned("other: split", DispositionOutcome::Waived, Some("noise")),
             dispositioned(
                 "other: split",
-                DispositionOutcome::Routed,
+                DispositionOutcome::Deferred,
                 Some("specs/001-x/tasks.md"),
             ),
         ];
@@ -2664,11 +2664,11 @@ mod tests {
     /// was recorded as both decided and owed.
     #[test]
     fn same_key_observations_with_any_two_outcomes_are_refused() {
-        use DispositionOutcome::{Discarded, Fixed, Routed, Undispositioned};
+        use DispositionOutcome::{Deferred, Fixed, Undispositioned, Waived};
         for (first, second) in [
-            (Routed, Undispositioned),
+            (Deferred, Undispositioned),
             (Fixed, Undispositioned),
-            (Fixed, Discarded),
+            (Fixed, Waived),
         ] {
             let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
             let mut args = base_args("001-x");
@@ -2677,8 +2677,8 @@ mod tests {
                 .into_iter()
                 .map(|outcome| {
                     let companion = match outcome {
-                        Routed => Some("specs/001-x/tasks.md"),
-                        Discarded => Some("noise"),
+                        Deferred => Some("specs/001-x/tasks.md"),
+                        Waived => Some("noise"),
                         Fixed | Undispositioned => None,
                     };
                     let mut observation = dispositioned("bug: same", outcome, companion);

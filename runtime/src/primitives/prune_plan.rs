@@ -327,7 +327,7 @@ fn outside_record(blocks: &[Block], stored: &[RawDecision]) -> (u32, Vec<(usize,
         let key = finding_key_of(&finding.family, &finding.message);
         stored.iter().any(|entry| {
             entry.to_ref().is_ok_and(|decision| {
-                decision.outcome == DecisionOutcome::Discarded && same_key(&decision.key, &key)
+                decision.outcome == DecisionOutcome::Waived && same_key(&decision.key, &key)
             })
         })
     };
@@ -666,7 +666,7 @@ mod tests {
         // only the discard marks its section decided.
         write(
             &feature_dir(tmp.path()).join("analysis.md"),
-            "---\nspec: 041-task-pruning\ndecisions:\n  - key: \"plan-record — plan.md §Implementation notes is outside the design record\"\n    outcome: discarded\n    reason: deliberate\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n  - key: \"plan-record — plan.md §Known limitations is outside the design record\"\n    outcome: routed\n    target: specs/041-task-pruning/tasks.md\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n---\n\n# Analysis\n",
+            "---\nspec: 041-task-pruning\ndecisions:\n  - key: \"plan-record — plan.md §Implementation notes is outside the design record\"\n    outcome: waived\n    reason: deliberate\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n  - key: \"plan-record — plan.md §Known limitations is outside the design record\"\n    outcome: deferred\n    target: specs/041-task-pruning/tasks.md\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n---\n\n# Analysis\n",
         );
         // A `done` spec's preview reads HEAD for the reopen trigger.
         commit_all(&repository, "done");

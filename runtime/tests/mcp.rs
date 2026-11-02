@@ -680,10 +680,10 @@ async fn process_decisions_classifies_via_mcp() {
     fs::write(
         dir.join("analysis.md"),
         "---\nspec: 001-x\nlast-run: 2026-09-25T00:00:00Z\ndecisions:\n  \
-         - key: \"grounding — cites a missing path\"\n    outcome: routed\n    \
+         - key: \"grounding — cites a missing path\"\n    outcome: deferred\n    \
          target: specs/001-x/tasks.md\n    decided-at: 2026-09-25T00:00:00Z\n    \
          decided-by: dev@example.com\n  \
-         - key: \"applicable-rules — BE-AUTHN-001 does not fire\"\n    outcome: discarded\n    \
+         - key: \"applicable-rules — BE-AUTHN-001 does not fire\"\n    outcome: waived\n    \
          reason: cited for a future endpoint\n    decided-at: 2026-09-25T00:00:00Z\n    \
          decided-by: dev@example.com\n---\n\n# Analysis — 001-x\n",
     )
@@ -705,11 +705,11 @@ async fn process_decisions_classifies_via_mcp() {
     let matched = obj["matched"].as_array().unwrap();
     assert_eq!(matched.len(), 1);
     assert_eq!(matched[0]["key"], "grounding — cites a missing path");
-    assert_eq!(matched[0]["outcome"], "routed");
+    assert_eq!(matched[0]["outcome"], "deferred");
     assert_eq!(matched[0]["target"], "specs/001-x/tasks.md");
     let expired = obj["expired"].as_array().unwrap();
     assert_eq!(expired.len(), 1);
-    assert_eq!(expired[0]["outcome"], "discarded");
+    assert_eq!(expired[0]["outcome"], "waived");
     assert_eq!(expired[0]["reason"], "cited for a future endpoint");
     assert_eq!(
         obj["retained"].as_array().unwrap().as_slice(),

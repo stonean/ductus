@@ -279,7 +279,7 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
         }
         let disposition = &finding.disposition;
         decisions::require_companion("write-analysis", &at("disposition"), disposition)?;
-        if disposition.outcome == DispositionOutcome::Discarded
+        if disposition.outcome == DispositionOutcome::Waived
             && matches!(
                 finding.tier,
                 AnalysisTier::HardFail | AnalysisTier::Blocking
@@ -287,7 +287,7 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
         {
             return Err(invalid(
                 at("disposition.outcome"),
-                "a hard-fail or blocking finding already gates done; fix or route it, never discard it",
+                "a hard-fail or blocking finding already gates done; fix or defer it, never waive it",
             ));
         }
         if !finding.live {
@@ -313,8 +313,8 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
                     "the re-check still produces this finding, so it was not fixed",
                 ));
             }
-            DispositionOutcome::Routed => counts.routed = counts.routed.saturating_add(1),
-            DispositionOutcome::Discarded => counts.discarded = counts.discarded.saturating_add(1),
+            DispositionOutcome::Deferred => counts.deferred = counts.deferred.saturating_add(1),
+            DispositionOutcome::Waived => counts.waived = counts.waived.saturating_add(1),
             DispositionOutcome::Undispositioned => {}
         }
     }
@@ -338,7 +338,7 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
         .saturating_add(args.blocking_findings)
         .saturating_add(args.advisory);
     counts.undispositioned =
-        live_total.saturating_sub(counts.routed.saturating_add(counts.discarded));
+        live_total.saturating_sub(counts.deferred.saturating_add(counts.waived));
     Ok(counts)
 }
 
@@ -448,14 +448,14 @@ fn render_analysis(
     let _ = writeln!(out, "## Summary\n");
     let mut summary = format!(
         "{} hard-fail, {} blocking, {} advisory; {verdict}. {} unexamined target(s). \
-         Dispositions: {} fixed, {} routed, {} discarded, {} undispositioned.",
+         Dispositions: {} fixed, {} deferred, {} waived, {} undispositioned.",
         args.hard_fail,
         args.blocking_findings,
         args.advisory,
         unexamined,
         counts.fixed,
-        counts.routed,
-        counts.discarded,
+        counts.deferred,
+        counts.waived,
         counts.undispositioned,
     );
     if counts.undispositioned > 0 {
@@ -732,9 +732,9 @@ mod tests {
             live: outcome != DispositionOutcome::Fixed,
             disposition: crate::schema::primitives::Disposition {
                 outcome,
-                target: (outcome == DispositionOutcome::Routed)
+                target: (outcome == DispositionOutcome::Deferred)
                     .then(|| companion.unwrap_or_default().to_string()),
-                reason: (outcome == DispositionOutcome::Discarded)
+                reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
             },
             decision_key: None,
@@ -783,14 +783,14 @@ mod tests {
                 AnalysisTier::Blocking,
                 "task-consistency",
                 "task 4 has no Done when",
-                DispositionOutcome::Routed,
+                DispositionOutcome::Deferred,
                 Some("specs/042-demo/tasks.md"),
             ),
             finding(
                 AnalysisTier::Advisory,
                 "applicable-rules",
                 "BE-AUTHN-001 does not fire",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("cited for a future endpoint"),
             ),
             finding(
@@ -806,14 +806,14 @@ mod tests {
             result.dispositions,
             Dispositions {
                 fixed: 1,
-                routed: 1,
-                discarded: 1,
+                deferred: 1,
+                waived: 1,
                 undispositioned: 1
             }
         );
         let report = analysis_md(&tmp);
-        assert!(report.contains("- task-consistency — task 4 has no Done when — `spec.md` — **routed** to `specs/042-demo/tasks.md`"), "{report}");
-        assert!(report.contains("- applicable-rules — BE-AUTHN-001 does not fire — `spec.md` — **discarded**: cited for a future endpoint"), "{report}");
+        assert!(report.contains("- task-consistency — task 4 has no Done when — `spec.md` — **deferred** to `specs/042-demo/tasks.md`"), "{report}");
+        assert!(report.contains("- applicable-rules — BE-AUTHN-001 does not fire — `spec.md` — **waived**: cited for a future endpoint"), "{report}");
         assert!(
             report.contains(
                 "## Fixed in this run\n\n- grounding — cites a gone path — `spec.md` — **fixed**"
@@ -834,7 +834,7 @@ mod tests {
                 tier,
                 "f",
                 "m",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("why"),
             )];
             let error = run(&a, tmp.path()).unwrap_err();
@@ -863,7 +863,7 @@ mod tests {
             AnalysisTier::Advisory,
             "f",
             "m",
-            DispositionOutcome::Routed,
+            DispositionOutcome::Deferred,
             Some("t"),
         );
         gone_but_routed.live = false;
@@ -899,7 +899,7 @@ mod tests {
             AnalysisTier::Advisory,
             "applicable-rules",
             "BE-AUTHN-001 does not fire",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("future endpoint"),
         )];
         run(&a, tmp.path()).unwrap();
@@ -916,7 +916,7 @@ mod tests {
         let mut next = args();
         next.expired_decisions = vec![DecisionRef {
             key: "applicable-rules — BE-AUTHN-001 does not fire".into(),
-            outcome: DecisionOutcome::Discarded,
+            outcome: DecisionOutcome::Waived,
             target: None,
             reason: Some("future endpoint".into()),
         }];
@@ -1325,7 +1325,7 @@ mod tests {
             AnalysisTier::Advisory,
             "grounding",
             "cites\u{1b}[31m a path\u{2028}twice",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("false\u{1b}positive"),
         )];
         run(&a, tmp.path()).unwrap();
@@ -1359,14 +1359,14 @@ mod tests {
                 AnalysisTier::Advisory,
                 "grounding",
                 "plan.md cites issue\t#12 as closed",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("why\t#not"),
             ),
             finding(
                 AnalysisTier::Advisory,
                 "grounding",
                 "cites a non\u{ffff}char",
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 Some("noise"),
             ),
         ];
@@ -1409,7 +1409,7 @@ mod tests {
             AnalysisTier::Advisory,
             "grounding",
             "plan.md cites a path, reworded",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("noise"),
         );
         matched.decision_key = Some("grounding — plan.md cites a path".into());
@@ -1466,7 +1466,7 @@ mod tests {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
         let path = tmp.path().join("specs/042-demo/analysis.md");
         let damaged = "---\nspec: 042-demo\ndecisions:\n  - key: \"f — m\"\n    \
-                       outcome: discarded\n    reason: noise\n\n# Analysis\n";
+                       outcome: waived\n    reason: noise\n\n# Analysis\n";
         fs::write(&path, damaged).unwrap();
         let error = run(&args(), tmp.path()).unwrap_err();
         assert!(error.to_string().contains("never closes"), "{error}");
@@ -1482,7 +1482,7 @@ mod tests {
         let dir = tmp.path().join("specs/042-demo");
         fs::write(
             dir.join("analysis.md"),
-            "---\nspec: 042-demo\ndecisions:\n  - key: \"f — m\"\n    outcome: discarded\n    \
+            "---\nspec: 042-demo\ndecisions:\n  - key: \"f — m\"\n    outcome: waived\n    \
              reason: noise\n    decided-at: 2026-09-01T00:00:00Z\n    decided-by: a@example.com\n---",
         )
         .unwrap();
@@ -1498,14 +1498,14 @@ mod tests {
     fn a_disposition_without_its_companion_is_refused() {
         for (outcome, argument, reason) in [
             (
-                DispositionOutcome::Routed,
+                DispositionOutcome::Deferred,
                 "findings[0].disposition.target",
                 "a route names its target",
             ),
             (
-                DispositionOutcome::Discarded,
+                DispositionOutcome::Waived,
                 "findings[0].disposition.reason",
-                "a discard states its reason",
+                "a waiver states its reason",
             ),
         ] {
             let tmp = spec_repo("status: in-progress\ndependencies: []");
@@ -1536,11 +1536,11 @@ mod tests {
     /// fixed beside one still firing under the same key included.
     #[test]
     fn same_key_findings_with_any_two_outcomes_are_refused() {
-        use DispositionOutcome::{Discarded, Fixed, Routed, Undispositioned};
+        use DispositionOutcome::{Deferred, Fixed, Undispositioned, Waived};
         for (first, second) in [
-            (Routed, Undispositioned),
+            (Deferred, Undispositioned),
             (Fixed, Undispositioned),
-            (Fixed, Discarded),
+            (Fixed, Waived),
         ] {
             let tmp = spec_repo("status: in-progress\ndependencies: []");
             let mut a = args();
@@ -1550,8 +1550,8 @@ mod tests {
                 .into_iter()
                 .map(|outcome| {
                     let companion = match outcome {
-                        Routed => Some("specs/042-demo/tasks.md"),
-                        Discarded => Some("noise"),
+                        Deferred => Some("specs/042-demo/tasks.md"),
+                        Waived => Some("noise"),
                         Fixed | Undispositioned => None,
                     };
                     finding(
@@ -1586,12 +1586,12 @@ mod tests {
             AnalysisTier::Advisory,
             "grounding",
             "same",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("noise"),
         );
         a.findings = vec![twice.clone(), twice];
         let result = run(&a, tmp.path()).unwrap();
-        assert_eq!(result.dispositions.discarded, 2);
+        assert_eq!(result.dispositions.waived, 2);
         assert_eq!(result.dispositions.undispositioned, 0);
         let stored =
             decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
@@ -1619,7 +1619,7 @@ mod tests {
         let parsed = serde_json::from_value::<AnalysisFinding>(serde_json::json!({
             "family": "grounding",
             "message": "m",
-            "disposition": { "outcome": "discarded", "reason": "noise" },
+            "disposition": { "outcome": "waived", "reason": "noise" },
         }));
         assert!(parsed.is_err(), "an untagged finding must be refused");
     }
@@ -1639,7 +1639,7 @@ mod tests {
             AnalysisTier::Advisory,
             "grounding",
             "plan.md asserts the cache is warm without a source",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("the plan names the source two lines down"),
         )];
         run(&first, tmp.path()).unwrap();
@@ -1654,7 +1654,7 @@ mod tests {
             AnalysisTier::Advisory,
             "grounding",
             "plan.md claims a warm cache with no citation",
-            DispositionOutcome::Discarded,
+            DispositionOutcome::Waived,
             Some("the plan names the source two lines down"),
         );
         reworded.decision_key = Some(original.clone());

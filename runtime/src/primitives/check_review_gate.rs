@@ -1080,7 +1080,7 @@ mod tests {
             let map = if body.contains("dispositions:") {
                 ""
             } else {
-                "dispositions:\n  fixed: 0\n  routed: 0\n  discarded: 0\n  undispositioned: 0\n"
+                "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n"
             };
             fs::write(
                 dir.join(file),
@@ -2347,7 +2347,7 @@ mod tests {
         // A post-058 record, as `relocate_records_in` writes one.
         if !body.contains("dispositions:") {
             body.push_str(
-                "dispositions:\n  fixed: 0\n  routed: 0\n  discarded: 0\n  undispositioned: 0\n",
+                "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n",
             );
         }
         fs::write(
@@ -2551,7 +2551,7 @@ mod tests {
     // -- dispositions (spec 058) ------------------------------------------------
 
     const ZERO_MAP: &str =
-        "dispositions:\n  fixed: 0\n  routed: 0\n  discarded: 0\n  undispositioned: 0\n";
+        "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n";
 
     /// Rewrite a seeded record as a pre-058 run left it: no `dispositions:`.
     fn strip_dispositions(repo: &Path, file: &str) {
