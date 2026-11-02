@@ -2,6 +2,24 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+Changelog obligations written as their changes land, from 2026-11-02. The
+release commit adds the other changes since 0.59.11 and gives this section
+its version and date.
+
+### Changed
+
+- **The error envelope's home is `specs/errors.md`.** `api-backend.md`'s
+  `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` read the project's error
+  envelope from `specs/errors.md`, where the shipped `errors.md` template
+  already puts it, instead of `specs/system.md`, and `security-backend.md`'s
+  `BE-ERR-004` reads a non-HTTP API's documented error format there too. A
+  project that documented its envelope in `specs/system.md`, as the rules said
+  since `gvrn-v0.5.1`, meets `BE-ERRENV-001` on its endpoint specs until it
+  moves the section to `specs/errors.md`, and a non-HTTP format left there
+  draws `BE-ERR-004`'s warning. Spec 008, task 34; spec 068.
+
 ## [0.59.11] — 2026-10-17
 
 No runtime code change. A framework release: `/{project}:implement` regains
