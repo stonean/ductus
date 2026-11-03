@@ -133,6 +133,7 @@ The read aliases make every existing record parse, and each record is rewritten 
 - **Analysis keeping gross counts beside a released count the gate subtracts.** Rejected: outstanding would be computed in two places, and review's counts are already net of waivers. Net counts give both records one meaning: what still holds `done`.
 - **Aliases on host input.** Rejected: there is no caller older than the runtime it ships with.
 - **A migration rewriting adopters' records.** Rejected: every record parses through the aliases, and its next run rewrites it.
+- **The rename is breaking, within major version zero** (`BE-COMPAT-001`). A reader of a record's `dispositions:` keys sees `deferred` and `waived` where it saw `routed` and `discarded`, and a host sending either old outcome is refused. The runtime is 0.x, and SemVer 2.0.0 lets anything change in 0.y.z (item 4) and requires a major bump only for X > 0 (item 8), so it ships in a minor release. Records written before keep parsing through the read aliases, and the CHANGELOG entry names the rename for adopters' own CI.
 - **Limitation:** a deferral naming a task identifies it by number, so a hand edit that renumbers `tasks.md` misdirects it. The runtime never renumbers.
 - **Limitation:** the pipeline never reads an external tracker, so a deferral naming only a work item records intent it cannot verify. That is why it never releases a gating finding.
 

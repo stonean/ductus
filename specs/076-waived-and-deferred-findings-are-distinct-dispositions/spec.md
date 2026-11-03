@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [020-code-review, 058-findings-route-at-discovery]
 cross-spec-impact:
   - 020-code-review
@@ -49,24 +49,24 @@ No disposition meant *will be addressed later*. A finding was fixed, routed to a
 
 ## Acceptance Criteria
 
-- [ ] AC1: The constitution defines *waived* as a decision not to address a finding, recorded with its reason, and *deferred* as a finding to be addressed later, identified by the pipeline work the routing tree chose, an external work-item ID, or both.
-- [ ] AC9: The constitution's definition of *deferred* covers a question resolved with its trigger as well as a finding, and §spec-requirements' rule for a deferred question points at that definition.
-- [ ] AC2: §design-principles no longer lists a waived finding among the records the pipeline surfaces again.
-- [ ] AC3: A deferral that names neither pipeline work nor an external work-item ID is refused, and the refusal names the missing reference.
-- [ ] AC4: A recorded deferral carries each work reference it was given, the external ID byte-identical to its input, and a recorded waiver carries a reason and no work reference.
-- [ ] AC10: An external work-item ID is accepted as any non-empty one-line text, with no format check. An empty ID counts as no reference, and one spanning more than one line is refused, naming it.
-- [ ] AC11: A deferral naming a task or spec that does not exist when it is recorded is refused, naming the reference. A deferral whose named task or spec has since been removed counts as complete.
-- [ ] AC12: `/{project}:review`, `/{project}:analyze` and `/{project}:implement` each accept an external work-item ID on a deferral, alone or beside pipeline work.
-- [ ] AC13: A finding's record holds one disposition at a time: recording a waiver for a deferred finding, or a deferral for a waived one, replaces the earlier disposition.
-- [ ] AC5: `/{project}:review`'s and `/{project}:analyze`'s reports and records list deferred findings apart from waived ones.
-- [ ] AC6: `framework/reference/review.md` no longer suggests a work-reference field such as `ticket` on a waiver.
-- [ ] AC7: A search of the live artifacts for *waive* and *defer* applied to a finding returns only uses in the defined sense, outside Resolved Questions, signposts and git history.
-- [ ] AC14: `review.md`'s and `analysis.md`'s `dispositions:` map carries `deferred` in place of `routed` and `waived` in place of `discarded`; a stored decision with `outcome: routed` is counted as deferred and one with `outcome: discarded` as waived; and a record written before this change parses without error.
-- [ ] AC15: `/{project}:review` offers to defer a MUST or SHOULD violation, beside fixing and waiving it.
-- [ ] AC16: `check-review-gate` does not block `in-progress → done` on a gating finding its deferral releases (§Deferrals in `framework/reference/review.md`), and blocks on every other deferred gating finding — one deferred to an unchecked task on the same spec, to another spec's work that is complete, or only to an external work item — naming the finding and its work reference.
-- [ ] AC17: A deferral whose finding no longer fires is pruned from the record. One whose named task is checked, or whose named spec is `done`, while its finding still fires lapses: the run reports the finding as needing a new disposition, and as blocking when it is gating. One naming only an external work item is pruned only when its finding stops firing.
-- [ ] AC18: No live artifact names a finding's disposition *routed* or *discarded* outside Resolved Questions, signposts, git history and the code that reads a record written before this change.
-- [ ] AC8: Each spec in `cross-spec-impact:` carries a blockquote signpost linking back to this spec with the contract change it owes, and `check-review-gate` reports the impact discharged.
+- [x] AC1: The constitution defines *waived* as a decision not to address a finding, recorded with its reason, and *deferred* as a finding to be addressed later, identified by the pipeline work the routing tree chose, an external work-item ID, or both.
+- [x] AC9: The constitution's definition of *deferred* covers a question resolved with its trigger as well as a finding, and §spec-requirements' rule for a deferred question points at that definition.
+- [x] AC2: §design-principles no longer lists a waived finding among the records the pipeline surfaces again.
+- [x] AC3: A deferral that names neither pipeline work nor an external work-item ID is refused, and the refusal names the missing reference.
+- [x] AC4: A recorded deferral carries each work reference it was given, the external ID byte-identical to its input, and a recorded waiver carries a reason and no work reference.
+- [x] AC10: An external work-item ID is accepted as any non-empty one-line text, with no format check. An empty ID counts as no reference, and one spanning more than one line is refused, naming it.
+- [x] AC11: A deferral naming a task or spec that does not exist when it is recorded is refused, naming the reference. A deferral whose named task or spec has since been removed counts as complete.
+- [x] AC12: `/{project}:review`, `/{project}:analyze` and `/{project}:implement` each accept an external work-item ID on a deferral, alone or beside pipeline work.
+- [x] AC13: A finding's record holds one disposition at a time: recording a waiver for a deferred finding, or a deferral for a waived one, replaces the earlier disposition.
+- [x] AC5: `/{project}:review`'s and `/{project}:analyze`'s reports and records list deferred findings apart from waived ones.
+- [x] AC6: `framework/reference/review.md` no longer suggests a work-reference field such as `ticket` on a waiver.
+- [x] AC7: A search of the live artifacts for *waive* and *defer* applied to a finding returns only uses in the defined sense, outside Resolved Questions, signposts and git history.
+- [x] AC14: `review.md`'s and `analysis.md`'s `dispositions:` map carries `deferred` in place of `routed` and `waived` in place of `discarded`; a stored decision with `outcome: routed` is counted as deferred and one with `outcome: discarded` as waived; and a record written before this change parses without error.
+- [x] AC15: `/{project}:review` offers to defer a MUST or SHOULD violation, beside fixing and waiving it.
+- [x] AC16: `check-review-gate` does not block `in-progress → done` on a gating finding its deferral releases (§Deferrals in `framework/reference/review.md`), and blocks on every other deferred gating finding — one deferred to an unchecked task on the same spec, to another spec's work that is complete, or only to an external work item — naming the finding and its work reference.
+- [x] AC17: A deferral whose finding no longer fires is pruned from the record. One whose named task is checked, or whose named spec is `done`, while its finding still fires lapses: the run reports the finding as needing a new disposition, and as blocking when it is gating. One naming only an external work item is pruned only when its finding stops firing.
+- [x] AC18: No live artifact names a finding's disposition *routed* or *discarded* outside Resolved Questions, signposts, git history and the code that reads a record written before this change.
+- [x] AC8: Each spec in `cross-spec-impact:` carries a blockquote signpost linking back to this spec with the contract change it owes, and `check-review-gate` reports the impact discharged.
 
 ## Open Questions
 
