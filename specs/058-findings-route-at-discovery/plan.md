@@ -579,3 +579,11 @@ See [data-model.md](data-model.md).
   section.
 - **Known limitation: 022's full re-review is not bought here.** Its record
   will state the small numerator honestly.
+- **The removals are breaking, within major version zero** (`BE-COMPAT-001`).
+  `captured-issues` and the inbox fields leave both records and the tool
+  arguments and results the data model's *Removed fields* lists, and
+  `append-inbox` loses `dedup-prefix` and `deduped`. The runtime is 0.x, and
+  SemVer 2.0.0 lets anything change in 0.y.z (item 4) and requires a major bump
+  only for X > 0 (item 8), so they ship in a minor release. A record written
+  before 058 still parses, because neither record struct denies unknown fields,
+  and a caller still passing `dedup-prefix` is refused by name on MCP and the CLI.

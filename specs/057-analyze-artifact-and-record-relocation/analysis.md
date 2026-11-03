@@ -1,25 +1,25 @@
 ---
 spec: 057-analyze-artifact-and-record-relocation
-last-run: 2026-10-16T19:38:46Z
-analyzed-against: 2ce89f9d91c5ef1d03f1294506ade742e1aa8ef3
+last-run: 2026-11-03T15:30:50Z
+analyzed-against: c5ad7370515d8e0d55b5fa787214053f570c4e35
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 5
 analyzed-digest:
-  data-model.md: d6a91567baa5be37074c007b462024388c36d3bce9a305cd184199e7d1e5fd20
-  plan.md: a0724cc9e9e7b4db8c522dc99ca982419b11d265eedf2fd6a2c75e52069ba9eb
-  review.md: 26f96d4baad74d707f5c9ced16d6497ce57cd8f3197dfff66a44767888bf5813
-  spec.md: ad2b55c4866901aa8f814b2a036d310ae70415092edd473a96ff608f1558f506
-  tasks.md: 32de2dbe7d863cd4e26d1a1a8160178e246e95d981fbeeed514fad5e2fd86dc3
+  data-model.md: 0d6ccfeaab53f42b59ee80fd8466e44351bb3fb88e9c95a28d34a02f35e6d246
+  plan.md: 4f22e6655cb347590f8a335daf591217645eb70a59bfb05b87d4c215f62eb94d
+  review.md: 146513666784065a7a6288abe0ca64d370759721431866e1a79edf00a070c8b9
+  spec.md: 573943234f4fc6396c6689396085aa7bc373a43c9cb963bca42fb3c38ac0fe98
+  tasks.md: 858253e41e0581b7517906e32ca064ef940926978cf483a2ec08d11d2dfb77bc
 unexamined-by-reason:
   not-a-live-claim: 2
   root-absent: 3
 blocking: false
 dispositions:
-  fixed: 2
-  routed: 0
-  discarded: 0
+  fixed: 1
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -27,7 +27,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 5 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 5 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -41,6 +41,10 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
 - not-a-live-claim: 2
@@ -48,5 +52,4 @@ dispositions:
 
 ## Fixed in this run
 
-- plan-record — plan.md section "Implementation notes" is outside the design record — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
-- plan-record — plan.md section "Resuming from here" is outside the design record — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
+- rule-assessment — BE-COMPAT-001: 057 removes the review: and analyze: blocks from spec.md's frontmatter, and neither the spec nor the plan classified the change as additive or breaking — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**

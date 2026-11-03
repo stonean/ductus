@@ -1,21 +1,21 @@
 ---
 spec: 057-analyze-artifact-and-record-relocation
-last-run: 2026-09-25T18:26:04Z
-reviewed-against: 9bf93382d16823ee8f59628058f0bb691f8b1ef0
-diff-base: 2c488bf7d3d45e4177e5ad005d32d04fb88d646c
+last-run: 2026-11-03T14:56:19Z
+reviewed-against: c5ad7370515d8e0d55b5fa787214053f570c4e35
+diff-base: 1405eacc329f3b87691feb513ef2f7d9203db830
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 27
+examined: 3
+scope: 146
 skipped-passes: []
 reviewed-digest:
-  data-model.md: d6a91567baa5be37074c007b462024388c36d3bce9a305cd184199e7d1e5fd20
+  data-model.md: 0d6ccfeaab53f42b59ee80fd8466e44351bb3fb88e9c95a28d34a02f35e6d246
 blocking: false
 dispositions:
   fixed: 1
-  routed: 0
-  discarded: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -23,15 +23,7 @@ dispositions:
 
 ## Summary
 
-Re-review for spec 058's cross-spec discharge (058 task 25). 0 MUST, 0 SHOULD, 0 low-confidence, not blocking. No waivers. One observation, fixed in the run.
-
-**What changed.** 058 removed `captured-issues` from both records and gave each a `dispositions:` map and a `decisions:` list; `analysis.md`'s skeleton replaced its captured-issues section with `## Fixed in this run`, and its tier sections now list findings. `data-model.md` keeps both captured-issues rows as history, marked removed by 058, adds the two new fields to each record, and rewrites the skeleton and its note. `spec.md` gains a 058 signpost; the Motivation's "findings route through the inbox" becomes past tense; AC12, AC14, and the first Resolved Question are annotated.
-
-**Observation, fixed.** §Behavior's "The merge drops no field" paragraph still named `captured-issues` as part of the record in the present tense, a line task 25's corrections missed. With confirmation, it gained a sentence saying 058 replaced the field; the merge claim stays true as history.
-
-**Scope.** `diff-base` 2c488bf7, 27 in scope, examined **2**: this spec's `spec.md` and `data-model.md`, both read in full. The twenty-five unread: 020's four files and 058's `tasks.md` are reviewed under their own specs; the rest are this spec's historical Affected Files (the relocation's runtime, migration, CI, and docs), unchanged by this discharge, two of them plan-table rows rather than files. The skeleton and field rows were checked against `write_analysis.rs`'s `render_analysis` and `write_review.rs`'s frontmatter render.
-
-**Passes.** Security, reuse, and efficiency had no subject: prose in one spec and its data model. Quality: each corrected row was checked against the code that renders it. Simplicity: the captured-issues rows are kept and marked rather than deleted, so the merge's field accounting (six collapsed, five carried) still adds up.
+0 MUST violations, 0 SHOULD violations, 0 low-confidence findings. 057 was reopened for 076's sweep of its data model, which landed before the reopen, so the window is `--since=1405eacc`. Under the shared-window rule (076's review read the window's shared code in depth, and nothing in 057's scope changed after it), the passes read 057's own in-scope artifacts on 2026-11-03: `data-model.md`, whose change is the swap of the disposition names, checked against `Dispositions` and the decision types; `spec.md`, whose only change is the reopen; and `tasks.md`. `examined: 3`. One observation, fixed in `c5ad7370` as 058's reviewer prescribed it: the `review.md` `decisions` row restated its entries as observation decisions only; it now points at 058's and 076's data models, the owners 057's own signpost names.
 
 ## MUST violations (blocking)
 
@@ -49,9 +41,13 @@ Re-review for spec 058's cross-spec discharge (058 task 25). 0 MUST, 0 SHOULD, 0
 
 *None.*
 
+## Deferred findings
+
+*None.*
+
 ## Observations
 
-- convention: the merge paragraph still named captured-issues as part of the record in the present tense — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **fixed**
+- convention: the review.md decisions row restated its entries as observation decisions only, though since 076 the list also holds deferred violations — `specs/057-analyze-artifact-and-record-relocation/data-model.md` — **fixed**
 
 ## Skipped passes
 

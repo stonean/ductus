@@ -69,6 +69,6 @@ The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sortin
 
 076 task 10 reopened this spec `done → in-progress` (`787093ed`) and swept its body, plan, data model and scenarios to fixed / deferred / waived; 076 task 13 (`specs/076-waived-and-deferred-findings-are-distinct-dispositions/tasks.md`) corrected its data model and plan again. After 076's review record is written, review this spec once with its default window (base `1405eacc`), reading only what changed since 076's review plus this spec's own artifacts (AGENTS.md, the shared-window rule), then analyze it and propose `done`. Until it is `done`, the self-audit's Family 7 reports the 058/057 pair, so `framework-checks` stays red.
 
-- [ ] Review with the default window, analyze, and close `done` with the owner's approval
+- [x] Review with the default window, analyze, and close `done` with the owner's approval
 
 - **Done when**: `review.md` and `analysis.md` are current, `check-review-gate` passes, and the owner approved the transition.

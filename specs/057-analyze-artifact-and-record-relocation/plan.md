@@ -242,3 +242,12 @@ and documented rather than engineered around.
 **Limitation: `cross-spec-impact` blocks `done` until `047` and `020` link back.**
 Declared deliberately in the spec frontmatter; the obligation is real work, not
 an artifact of the declaration.
+
+**The relocation is breaking, within major version zero** (`BE-COMPAT-001`).
+`spec.md`'s frontmatter loses its `review:` and `analyze:` blocks, which
+`review.md` and `analysis.md` now carry, so a reader of a spec's frontmatter
+no longer finds the records there. The runtime is 0.x, and SemVer 2.0.0 lets
+anything change in 0.y.z (item 4) and requires a major bump only for X > 0
+(item 8), so it ships in a minor release. An unmigrated spec still parses: the
+open-schema rule reads a residual block harmlessly, `validate-frontmatter`
+reports it as blocking, and `relocate-audit-records` moves it.
