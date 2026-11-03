@@ -50,9 +50,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 6. Name holding deferrals at the gate
 
-- [ ] Make `check-review-gate`'s outstanding-findings block name each `gating: true` deferral with its work reference, in both records
-- [ ] Name deferral as the fix-later exit in its guidance
-- [ ] Test the released, same-spec-task and work-item-only cases
+- [x] Make `check-review-gate`'s outstanding-findings block name each `gating: true` deferral with its work reference, in both records
+- [x] Name deferral as the fix-later exit in its guidance
+- [x] Test the released, same-spec-task and work-item-only cases
 
 - **Done when**: AC16 is covered by tests that fail with the behavior removed, and the task 2 cargo commands pass.
 

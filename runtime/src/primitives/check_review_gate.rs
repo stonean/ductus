@@ -24,6 +24,7 @@
 //! notice never changes `passed`; see [`passing_notices`].
 
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::host::Host;
@@ -210,7 +211,12 @@ pub(crate) fn run_with_lint(
     // because every check above names a more upstream defect: a record that
     // is missing, failing, or stale has to be re-run before what it says about
     // its findings means anything.
-    if let Some(blocked) = disposition_block(&review, analyze_record.as_ref(), &rel_dir, &project) {
+    if let Some(blocked) = disposition_block(
+        &review,
+        analyze_record.as_ref(),
+        (&feature_dir, &rel_dir),
+        &project,
+    ) {
         return Ok(blocked);
     }
 
@@ -267,7 +273,7 @@ pub(crate) fn run_with_lint(
 fn disposition_block(
     review: &crate::schema::primitives::ReviewBlock,
     analyze: Option<&AnalyzeBlock>,
-    rel_dir: &str,
+    (feature_dir, rel_dir): (&Path, &str),
     project: &str,
 ) -> Option<CheckReviewGateResult> {
     let analyze_map = analyze.and_then(|record| record.dispositions);
@@ -344,19 +350,60 @@ fn disposition_block(
         .iter()
         .map(|(_, command, _)| format!("/{project}:{command}"))
         .collect();
+    let mut message = format!(
+        "blocked: {total} outstanding gating finding(s) — {}",
+        detail.join(", ")
+    );
+    let held = holding_deferrals(feature_dir, &owed);
+    if !held.is_empty() {
+        let _ = write!(message, "; held by deferral: {}", held.join("; "));
+    }
     Some(blocked(
         ReviewGateBlock::UndispositionedFindings,
+        message,
         format!(
-            "blocked: {total} outstanding gating finding(s) — {}",
-            detail.join(", ")
-        ),
-        format!(
-            "Fix each outstanding finding, or waive a review SHOULD with its rationale \
-             (/{project}:review --waive <rule-id> --reason \"...\"), then re-run {}. \
-             Undispositioned advisory findings and observations do not hold `done`.",
+            "Fix each outstanding finding; waive a review violation with its rationale \
+             (/{project}:review --waive <rule-id> --reason \"...\"); or defer it to pipeline \
+             work on another spec (/{project}:review --defer <rule-id> --target <path>), whose \
+             gate then holds it — a deferral to this spec's own task, or to an external work \
+             item alone, releases nothing. Then re-run {}. Undispositioned advisory findings \
+             and observations do not hold `done`.",
             commands.join(" and ")
         ),
     ))
+}
+
+/// Each deferral the owing records mark `gating: true`, as its finding and
+/// the work it names (spec 076): a gating finding deferred to its own spec's
+/// task, or to an external work item alone, which releases nothing and so is
+/// part of what holds `done`. A record whose decisions cannot be read says so,
+/// rather than naming none.
+fn holding_deferrals(feature_dir: &Path, owed: &[(&str, &str, u32)]) -> Vec<String> {
+    let mut held = Vec::new();
+    for (file, _, _) in owed {
+        match crate::primitives::decisions::read_decisions(feature_dir, file) {
+            Ok(stored) => held.extend(
+                stored
+                    .iter()
+                    .filter(|entry| entry.gating == Some(true))
+                    .filter_map(|entry| entry.to_ref().ok())
+                    .map(|decision| {
+                        format!(
+                            "{} — to {}",
+                            decision.key,
+                            crate::primitives::decisions::work_reference(
+                                decision.target.as_deref(),
+                                decision.task.as_deref(),
+                                decision.work_item.as_deref(),
+                                str::to_string,
+                            )
+                        )
+                    }),
+            ),
+            Err(_) => held.push(format!("{file}'s decisions could not be read")),
+        }
+    }
+    held
 }
 
 /// What a **passing** gate could not examine, as one guidance line.
@@ -998,7 +1045,6 @@ mod tests {
 
     use super::*;
     use crate::schema::primitives::MarkdownViolation;
-    use std::fmt::Write as _;
     use std::fs;
     use tempfile::tempdir;
 
@@ -2655,6 +2701,62 @@ mod tests {
         let guidance = result.guidance.unwrap();
         assert!(guidance.contains("/ductus:review --waive"), "{guidance}");
         assert!(guidance.contains("do not hold `done`"), "{guidance}");
+    }
+
+    /// Insert a top-level `decisions:` list into the seeded record `file`.
+    fn add_decisions(repo: &Path, file: &str, block: &str) {
+        let path = repo.join("specs/007-gate").join(file);
+        let text = fs::read_to_string(&path).unwrap();
+        assert!(text.contains("  undispositioned: 0\n"), "{text}");
+        fs::write(
+            &path,
+            text.replacen(
+                "  undispositioned: 0\n",
+                &format!("  undispositioned: 0\n{block}"),
+                1,
+            ),
+        )
+        .unwrap();
+    }
+
+    /// Spec 076: a gating finding whose deferral releases nothing — to this
+    /// spec's own task, or to an external work item alone — is named with
+    /// its work reference where the gate blocks on it; a deferral that is
+    /// not gating is not.
+    #[test]
+    fn a_holding_deferral_is_named_where_the_gate_blocks() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY.replace("should-violations: 0", "should-violations: 2"),
+        );
+        let stamp = "    decided-at: 2026-07-10T00:00:00Z\n    decided-by: dev@example.com\n";
+        add_decisions(
+            tmp.path(),
+            "review.md",
+            &format!(
+                "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    outcome: deferred\n    \
+                 work-item: PROJ-1\n    gating: true\n{stamp}  - key: \"rule SEC-2 at src/b.rs\"\n    \
+                 outcome: deferred\n    target: specs/007-gate/tasks.md\n    task: \"3\"\n    \
+                 gating: true\n{stamp}  - key: \"perf: noise\"\n    outcome: deferred\n    \
+                 work-item: PROJ-2\n{stamp}"
+            ),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndispositionedFindings)
+        );
+        let message = result.message.unwrap();
+        assert!(
+            message.ends_with(
+                "; held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1`; \
+                 rule SEC-2 at src/b.rs — to `specs/007-gate/tasks.md` task 3"
+            ),
+            "{message}"
+        );
+        let guidance = result.guidance.unwrap();
+        assert!(guidance.contains("/ductus:review --defer"), "{guidance}");
     }
 
     #[test]
