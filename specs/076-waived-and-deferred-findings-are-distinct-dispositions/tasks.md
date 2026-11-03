@@ -58,7 +58,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Carry the change to the runtime's surfaces
 
-- [ ] Update the tool descriptions in `runtime/src/mcp/server.rs` and the wire-shape tests in `runtime/tests/mcp.rs`
+Two items wait. The bless runs after task 8: through task 7 the parity goldens pass unchanged (2,279 tests, debug and release), but task 8's command edits can move them. The CHANGELOG entry waits until the other session commits its uncommitted `runtime/CHANGELOG.md` edits, so neither commit sweeps in the other's lines.
+
+- [x] Update the tool descriptions in `runtime/src/mcp/server.rs` and the wire-shape tests in `runtime/tests/mcp.rs`
 - [ ] Regenerate the goldens with `BLESS=1`, reading every diff
 - [ ] Add the `runtime/CHANGELOG.md` entry, naming the `dispositions:` rename for adopters' own CI
 

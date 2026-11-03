@@ -665,8 +665,8 @@ async fn process_waivers_applies_via_mcp() {
 
 /// `process-decisions` answers over MCP with the kebab-case wire names the
 /// commands read: `record`, `fired`, `restricted` in, and `matched` /
-/// `expired` / `retained` / `notices` out, each decision carrying its `key`,
-/// `outcome`, and companion (spec 058).
+/// `lapsed` / `expired` / `retained` / `notices` out, each decision carrying
+/// its `key`, `outcome`, and companion (specs 058 and 076).
 #[tokio::test]
 async fn process_decisions_classifies_via_mcp() {
     let tmp = tempfile::tempdir().unwrap();
@@ -707,6 +707,11 @@ async fn process_decisions_classifies_via_mcp() {
     assert_eq!(matched[0]["key"], "grounding — cites a missing path");
     assert_eq!(matched[0]["outcome"], "deferred");
     assert_eq!(matched[0]["target"], "specs/001-x/tasks.md");
+    assert_eq!(
+        obj["lapsed"].as_array().unwrap().as_slice(),
+        [] as [Value; 0],
+        "a deferral to work still in progress is matched, not lapsed"
+    );
     let expired = obj["expired"].as_array().unwrap();
     assert_eq!(expired.len(), 1);
     assert_eq!(expired[0]["outcome"], "waived");
