@@ -10,11 +10,12 @@
 //! and whether it is still current, then the analyze record in
 //! `analysis.md` and whether it is still current, and last the two records'
 //! `dispositions:` maps — a record that predates them — and an outstanding
-//! gating finding, an unwaived SHOULD in practice (spec 058). The first failing
+//! gating finding, in practice a SHOULD neither waived nor deferred to another
+//! spec's work (specs 058, 076). The first failing
 //! check wins and produces the canonical `blocked: …` message — with the
 //! adopter's `[host] project` command namespace substituted into the
 //! `/{project}:review` references — plus, on `must-violations`, the
-//! resolve-or-waive guidance and, on `review-stale`, the re-run guidance.
+//! resolve, waive or defer guidance and, on `review-stale`, the re-run guidance.
 //! A blocked gate is a domain outcome the host acts on (halt, do not
 //! propose the transition), never an operational error.
 //!
@@ -24,7 +25,6 @@
 //! notice never changes `passed`; see [`passing_notices`].
 
 use std::collections::BTreeSet;
-use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::host::Host;
@@ -159,20 +159,12 @@ pub(crate) fn run_with_lint(
     };
 
     if review.blocking {
-        return Ok(CheckReviewGateResult {
-            passed: false,
-            blocked_by: Some(ReviewGateBlock::MustViolations),
-            message: Some(format!(
-                "blocked: spec has {} MUST violation(s) — see {rel_dir}/review.md",
-                review.must_violations
-            )),
-            guidance: Some(format!(
-                "Resolve the violations and re-run /{project}:review, or run \
-                 /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding."
-            )),
-            violations: vec![],
-            cross_spec_impact: vec![],
-        });
+        return Ok(must_violations_block(
+            review.must_violations,
+            &feature_dir,
+            &rel_dir,
+            &project,
+        ));
     }
 
     // Gate check 6: the recorded review still describes the current code.
@@ -258,8 +250,9 @@ pub(crate) fn run_with_lint(
 /// record predating a *digest*, deliberately — a digest-less record says only
 /// that freshness is unknown, while a map-less one may be hiding owed work.
 ///
-/// Then the gating counts: an unwaived review MUST or SHOULD, or an analyze
-/// hard-fail or blocking finding. Only those hold `done` (spec 058,
+/// Then the gating counts: a review MUST or SHOULD, or an analyze hard-fail
+/// or blocking finding, each neither waived nor deferred to another spec's
+/// work (spec 076). Only those hold `done` (spec 058,
 /// `findings-cost-in-proportion-to-risk`). The map's `undispositioned` count
 /// is not read: an undecided advisory finding or review observation is
 /// recorded and visible, and holds nothing. For a record the runtime writes,
@@ -354,10 +347,8 @@ fn disposition_block(
         "blocked: {total} outstanding gating finding(s) — {}",
         detail.join(", ")
     );
-    let held = holding_deferrals(feature_dir, &owed);
-    if !held.is_empty() {
-        let _ = write!(message, "; held by deferral: {}", held.join("; "));
-    }
+    let files: Vec<&str> = owed.iter().map(|(file, _, _)| *file).collect();
+    message.push_str(&held_by_deferral(feature_dir, &files));
     Some(blocked(
         ReviewGateBlock::UndispositionedFindings,
         message,
@@ -373,14 +364,45 @@ fn disposition_block(
     ))
 }
 
-/// Each deferral the owing records mark `gating: true`, as its finding and
-/// the work it names (spec 076): a gating finding deferred to its own spec's
-/// task, or to an external work item alone, which releases nothing and so is
-/// part of what holds `done`. A record whose decisions cannot be read says so,
-/// rather than naming none.
-fn holding_deferrals(feature_dir: &Path, owed: &[(&str, &str, u32)]) -> Vec<String> {
+/// Gate check 5: the review record carries MUST violations. Names each
+/// deferral that holds `done` in `review.md` too, since a MUST deferred to
+/// this spec's own task, or to a work item alone, stops the gate here and
+/// never reaches the last check (spec 076).
+fn must_violations_block(
+    must_violations: u32,
+    feature_dir: &Path,
+    rel_dir: &str,
+    project: &str,
+) -> CheckReviewGateResult {
+    CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::MustViolations),
+        message: Some(format!(
+            "blocked: spec has {must_violations} MUST violation(s) — see {rel_dir}/review.md{}",
+            held_by_deferral(feature_dir, &[crate::primitives::REVIEW_RECORD_FILE]),
+        )),
+        guidance: Some(format!(
+            "Resolve the violations and re-run /{project}:review, run \
+             /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding, \
+             or defer each to pipeline work on another spec \
+             (/{project}:review --defer <rule-id> --target <path>), whose gate then holds it."
+        )),
+        violations: vec![],
+        cross_spec_impact: vec![],
+    }
+}
+
+/// The suffix a blocked message carries for the deferrals that hold `done`
+/// in `files`: each one its record marks `gating: true`, as its finding and
+/// the work it names (spec 076) — a gating finding deferred to its own spec's
+/// task, or to an external work item alone, which releases nothing. Empty when
+/// none does. The MUST, analyze-findings and outstanding-findings blocks all
+/// carry it, since a MUST or a gating analyze finding stops the gate before
+/// the last check. A record whose decisions cannot be read says so, rather
+/// than naming none.
+fn held_by_deferral(feature_dir: &Path, files: &[&str]) -> String {
     let mut held = Vec::new();
-    for (file, _, _) in owed {
+    for file in files {
         match crate::primitives::decisions::read_decisions(feature_dir, file) {
             Ok(stored) => held.extend(
                 stored
@@ -403,7 +425,11 @@ fn holding_deferrals(feature_dir: &Path, owed: &[(&str, &str, u32)]) -> Vec<Stri
             Err(_) => held.push(format!("{file}'s decisions could not be read")),
         }
     }
-    held
+    if held.is_empty() {
+        String::new()
+    } else {
+        format!("; held by deferral: {}", held.join("; "))
+    }
 }
 
 /// What a **passing** gate could not examine, as one guidance line.
@@ -502,11 +528,17 @@ fn analyze_gate_block(
         blocked_by: Some(ReviewGateBlock::AnalyzeFindings),
         message: Some(format!(
             "blocked: spec has {} hard-fail and {} blocking analyze finding(s) — \
-             run /{project}:analyze to see them",
-            analyze.hard_fail, analyze.blocking_findings
+             run /{project}:analyze to see them{}",
+            analyze.hard_fail,
+            analyze.blocking_findings,
+            held_by_deferral(
+                &repo.join(rel_dir),
+                &[crate::primitives::ANALYSIS_RECORD_FILE]
+            ),
         )),
         guidance: Some(format!(
-            "Resolve them and re-run /{project}:analyze. Advisory findings do not block; \
+            "Resolve them and re-run /{project}:analyze, or defer each to pipeline work on \
+             another spec, whose gate then holds it. Advisory findings do not block; \
              the recorded run carries {} of them and {} unexamined target(s).",
             analyze.advisory, analyze.unexamined
         )),
@@ -1045,6 +1077,7 @@ mod tests {
 
     use super::*;
     use crate::schema::primitives::MarkdownViolation;
+    use std::fmt::Write as _;
     use std::fs;
     use tempfile::tempdir;
 
@@ -1550,6 +1583,13 @@ mod tests {
         let message = result.message.as_deref().unwrap();
         assert!(message.contains("1 hard-fail"), "{message}");
         assert!(message.contains("2 blocking"), "{message}");
+        // Spec 076: a deferral to another spec's work releases a gating
+        // analyze finding, so the guidance names it beside fixing.
+        let guidance = result.guidance.as_deref().unwrap();
+        assert!(
+            guidance.contains("defer each to pipeline work on another spec"),
+            "{guidance}"
+        );
     }
 
     /// Advisory findings are recorded and never gate — the deliberate
@@ -1970,6 +2010,13 @@ mod tests {
         let guidance = result.guidance.unwrap();
         assert!(guidance.contains("re-run /ductus:review"), "{guidance}");
         assert!(guidance.contains("--waive <rule-id>"), "{guidance}");
+        // Spec 076: a violation to be fixed later is deferred, not waived, so
+        // the guidance names the deferral that releases the gate.
+        assert!(
+            guidance.contains("--defer <rule-id> --target <path>")
+                && guidance.contains("another spec"),
+            "{guidance}"
+        );
     }
 
     #[test]
@@ -2757,6 +2804,56 @@ mod tests {
         );
         let guidance = result.guidance.unwrap();
         assert!(guidance.contains("/ductus:review --defer"), "{guidance}");
+    }
+
+    /// Spec 076, AC16: a MUST violation deferred to this spec's own task, or
+    /// to a work item alone, blocks at the MUST check, which runs before the
+    /// last one, so that check names the deferral with its work too.
+    #[test]
+    fn a_must_held_by_a_deferral_is_named_where_it_blocks() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_BLOCKING);
+        add_decisions(
+            tmp.path(),
+            "review.md",
+            "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    outcome: deferred\n    \
+             work-item: PROJ-1\n    gating: true\n    decided-at: 2026-07-10T00:00:00Z\n    \
+             decided-by: dev@example.com\n",
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::MustViolations));
+        assert_eq!(
+            result.message.as_deref(),
+            Some(
+                "blocked: spec has 3 MUST violation(s) — see specs/007-gate/review.md; \
+                 held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1`"
+            )
+        );
+    }
+
+    /// Spec 076, AC16: the same for a blocking analyze finding deferred to
+    /// this spec's own task, which blocks at the analyze-findings check.
+    #[test]
+    fn an_analyze_finding_held_by_a_deferral_is_named_where_it_blocks() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ANALYZE_BLOCKING);
+        add_decisions(
+            tmp.path(),
+            "analysis.md",
+            "decisions:\n  - key: \"grounding — cites a gone path\"\n    outcome: deferred\n    \
+             target: specs/007-gate/tasks.md\n    task: \"2\"\n    gating: true\n    \
+             decided-at: 2026-07-10T00:00:00Z\n    decided-by: dev@example.com\n",
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeFindings));
+        let message = result.message.unwrap();
+        assert!(
+            message.ends_with(
+                "; held by deferral: grounding — cites a gone path — to \
+                 `specs/007-gate/tasks.md` task 2"
+            ),
+            "{message}"
+        );
     }
 
     #[test]

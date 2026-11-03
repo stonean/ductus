@@ -138,12 +138,12 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
     })
 }
 
-/// Mark each oversized artifact a stored discard still covers, and say
+/// Mark each oversized artifact a stored waiver still covers, and say
 /// whether the stored decisions could be read.
 ///
 /// `/{project}:analyze` matches a finding to a stored decision by judgment,
 /// because most findings are worded by the host and drift. That cannot hold
-/// the spec's numeric rule — a discard holds until its file grows into
+/// the spec's numeric rule — a waiver holds until its file grows into
 /// another read page (spec 063, AC10) — so this primitive decides it, as
 /// `prune-plan` marks a plan section `decided`, and hands `/{project}:analyze`
 /// the stored key to fire.
@@ -966,7 +966,7 @@ mod tests {
         assert!(data_model.fixes[1].text.contains("never into sub-files"));
         let scenario = by_kind(ArtifactKind::Scenario);
         assert!(scenario.fixes[0].text.contains("its own spec"));
-        // No fix is a discard: only /{project}:analyze offers one.
+        // No fix is a waiver: only /{project}:analyze offers one.
         for artifact in &result.oversized {
             assert!(
                 artifact.fixes.iter().all(|f| !f.text.contains("waive")),
@@ -1174,7 +1174,7 @@ mod tests {
     }
 
     #[test]
-    fn a_discard_at_the_same_page_count_decides() {
+    fn a_waiver_at_the_same_page_count_decides() {
         let tmp = three_page_plan();
         let key = stored_key(PLAN, 240, 3, 100);
         record(&tmp, &[(&key, "waived")]);
@@ -1189,7 +1189,7 @@ mod tests {
     }
 
     #[test]
-    fn a_discard_at_a_higher_page_count_decides() {
+    fn a_waiver_at_a_higher_page_count_decides() {
         let tmp = three_page_plan();
         record(&tmp, &[(&stored_key(PLAN, 380, 4, 100), "waived")]);
         assert!(check(&tmp).unwrap().oversized[0].decided);
@@ -1206,7 +1206,7 @@ mod tests {
 
     #[test]
     fn a_threshold_change_is_judged_by_the_recount() {
-        // Discarded at three pages of 100 bytes.
+        // Waived at three pages of 100 bytes.
         let key = stored_key(PLAN, 250, 3, 100);
         // At 200 bytes the plan is two pages: still covered.
         let tmp = repo(Some("[artifacts]\nread-size-bytes = 200\n"));
@@ -1221,7 +1221,7 @@ mod tests {
     }
 
     #[test]
-    fn only_a_discard_of_the_same_path_decides() {
+    fn only_a_waiver_of_the_same_path_decides() {
         let tmp = three_page_plan();
         record(
             &tmp,
@@ -1242,7 +1242,7 @@ mod tests {
     }
 
     #[test]
-    fn the_first_covering_discard_supplies_the_key() {
+    fn the_first_covering_waiver_supplies_the_key() {
         let tmp = three_page_plan();
         let first = stored_key(PLAN, 260, 3, 100);
         let second = stored_key(PLAN, 380, 4, 100);

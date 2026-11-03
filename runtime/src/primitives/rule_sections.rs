@@ -467,8 +467,9 @@ mod tests {
     }
 
     /// The list of values a log rule's Statement bars: from the word after
-    /// the first `MUST NOT ` through the closing "other sensitive field
-    /// values". `None` when either end is missing.
+    /// the verb that follows the first `MUST NOT ` through the closing "other
+    /// sensitive field values". `None` when either end, or the verb, is
+    /// missing.
     fn barred_values(statement: &str) -> Option<&str> {
         const END: &str = "other sensitive field values";
         let (_, after) = statement.split_once("MUST NOT ")?;

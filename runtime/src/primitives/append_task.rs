@@ -722,7 +722,7 @@ mod tests {
         fs::write(
             tmp.path().join("specs/042-foo/tasks.md"),
             "# 042 — Foo Tasks\n\n## 1. Disposition out-of-spec finding: handle leak\n\n\
-             - [x] src/a.rs — leaks a handle (discarded: fixed upstream)\n\n\
+             - [x] src/a.rs — leaks a handle (waived: fixed upstream)\n\n\
              - **Done when**: the finding is dispositioned.\n",
         )
         .unwrap();

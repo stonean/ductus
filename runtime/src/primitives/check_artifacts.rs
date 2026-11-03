@@ -101,7 +101,7 @@
 //! nor its own state (`last-run`, `blocking`). Every family runs inside
 //! `/{project}:analyze`, whose own run is about to replace that record, so a
 //! finding read from it could never clear: it is blocking, cannot be
-//! discarded, and outlives every re-run. `/{project}:analyze` judges both from
+//! waived, and outlives every re-run. `/{project}:analyze` judges both from
 //! the record it writes instead (scenarios
 //! `analysis-drift-judges-the-record-it-writes` and
 //! `analyze-state-drift-judges-the-record-it-writes`). The analyze-state drift

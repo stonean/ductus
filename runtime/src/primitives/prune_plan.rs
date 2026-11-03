@@ -5,7 +5,7 @@
 //! record is the plan template's own `##` sections, compared ASCII
 //! case-insensitively ([`DESIGN_RECORD`]). A preview reports every other
 //! `##` section with its size, a digest, the advisory `/{project}:analyze`
-//! records for it, and whether `analysis.md` already stores a discard for
+//! records for it, and whether `analysis.md` already stores a waiver for
 //! that advisory. An apply removes the sections the host lists by heading
 //! and digest, refusing the whole write when any of them changed since the
 //! preview, because the host judged its moves against the text it read.
@@ -321,7 +321,7 @@ fn summarize(
 
 /// Every section of `blocks` outside the design record, with the index of its
 /// block, and the count of `##` sections read. A section is decided when
-/// `stored` holds a well-formed discard under its finding's exact key.
+/// `stored` holds a well-formed waiver under its finding's exact key.
 fn outside_record(blocks: &[Block], stored: &[RawDecision]) -> (u32, Vec<(usize, PlanSection)>) {
     let decided = |finding: &PlanFinding| {
         let key = finding_key_of(&finding.family, &finding.message);
@@ -657,13 +657,13 @@ mod tests {
     }
 
     #[test]
-    fn a_stored_discard_sets_decided() {
+    fn a_stored_waiver_sets_decided() {
         let tmp = tempdir().unwrap();
         let repository = git2::Repository::init(tmp.path()).unwrap();
         let plan = format!("{PLAN}\n## Known limitations\n\nDesign.\n");
         project(tmp.path(), "done", Some(&plan));
-        // A discard of the journal's finding, a route of the limitations':
-        // only the discard marks its section decided.
+        // A waiver of the journal's finding, a deferral of the limitations':
+        // only the waiver marks its section decided.
         write(
             &feature_dir(tmp.path()).join("analysis.md"),
             "---\nspec: 041-task-pruning\ndecisions:\n  - key: \"plan-record — plan.md §Implementation notes is outside the design record\"\n    outcome: waived\n    reason: deliberate\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n  - key: \"plan-record — plan.md §Known limitations is outside the design record\"\n    outcome: deferred\n    target: specs/041-task-pruning/tasks.md\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: a@b.c\n---\n\n# Analysis\n",

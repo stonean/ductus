@@ -1,19 +1,21 @@
 //! Stored finding decisions — the `decisions:` list both audit records carry
 //! beside their counts (spec 058).
 //!
-//! A finding routed or discarded in one run fires again in the next, because
-//! detection is stateless: a routed finding keeps firing until the routed work
-//! lands, and a discarded one keeps firing forever. Without a stored decision
-//! every re-run would ask again, and a routed finding would come back
-//! undispositioned. So each routed or discarded
-//! decision is stored in the record of the command that made it, and a later
-//! run counts a matching finding under the stored outcome without asking.
+//! A finding deferred or waived in one run fires again in the next, because
+//! detection is stateless: a deferred finding keeps firing until its work
+//! lands, and a waived one keeps firing forever. Without a stored decision
+//! every re-run would ask again, and a deferred finding would come back
+//! undispositioned. So each deferral or waiver is stored in the record of the
+//! command that made it, and a later run counts a matching finding under the
+//! stored outcome without asking — unless a deferral's named work is complete
+//! while its finding still fires, when `process-decisions` reports it lapsed
+//! (spec 076).
 //!
 //! The lifecycle mirrors review waivers (`framework/commands/review.md`,
 //! §Per-run waiver processing): matched while the key fires, expired when an
 //! unrestricted run no longer produces it, retained when the run did not
-//! evaluate its source. An entry missing a required field or its companion is
-//! reported and never pruned; an entry that does not deserialize at all fails
+//! evaluate its source. An entry missing a required field or its companion, or
+//! carrying a field its outcome forbids, is reported and never pruned; an entry that does not deserialize at all fails
 //! the whole list (see [`RawDecision`]).
 
 use std::collections::BTreeMap;
@@ -29,11 +31,11 @@ use crate::schema::primitives::{
 /// The frontmatter key both records store decisions under.
 pub(crate) const DECISIONS_KEY: &str = "decisions";
 
-/// One stored decision with every known field an optional string, so an entry
-/// missing a field still deserializes and [`Self::to_ref`] reports it as a
-/// notice, and so a re-render preserves the full entry. An entry that is not a
-/// mapping, or a known field holding something other than a string (`reason:
-/// [a, b]`), does not deserialize, and that fails the whole list rather than
+/// One stored decision with every known field optional — each a string, the
+/// derived `gating` a bool — so an entry missing a field still deserializes
+/// and [`Self::to_ref`] reports it as a notice, and so a re-render preserves
+/// the full entry. An entry that is not a mapping, or a known field holding
+/// the wrong type (`reason: [a, b]`, `gating: "yes"`), does not deserialize, and that fails the whole list rather than
 /// the one entry. Unknown adopter-authored fields, of any type, are captured
 /// by `extra` and re-emitted verbatim, the §text-first-artifacts open-schema
 /// rule the waiver list already follows (`RawWaiverFull`).
@@ -210,16 +212,17 @@ pub(crate) fn require_companion<'a>(
 /// must resolve inside the project, and its `task` must number a task in that
 /// `tasks.md` (spec 076). A deferral already stored under `key` is not new —
 /// its work may since have gone, which `process-decisions` reports as a lapse,
-/// never as a refusal — and a deferral naming only a work item names nothing
-/// the pipeline can look for.
+/// never as a refusal — unless this run drops it through `expired`, as it does
+/// a lapsed one: the re-deferral that replaces it is new. A deferral naming
+/// only a work item names nothing the pipeline can look for.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidArgument`] naming `{at}.target` for a target that
 /// does not exist, or `{at}.task` for a task its `tasks.md` does not hold or a
 /// `tasks.md` that is not a feature's; [`PrimitiveError::InvalidPath`] for a
-/// target the containment screen refuses; and a read or parse error of the
-/// named `tasks.md`.
+/// target the containment screen refuses; and [`PrimitiveError::Io`] when the
+/// named `tasks.md` cannot be read or the project root cannot be resolved.
 pub(crate) fn refuse_missing_work(
     repo: &Path,
     primitive: &str,
@@ -227,10 +230,15 @@ pub(crate) fn refuse_missing_work(
     disposition: &Disposition,
     key: &str,
     stored: &[RawDecision],
+    expired: &[DecisionRef],
 ) -> Result<()> {
+    let standing = stored_decision(stored, key).filter(|decision| {
+        !expired
+            .iter()
+            .any(|gone| same_key(&gone.key, &decision.key))
+    });
     if disposition.outcome != DispositionOutcome::Deferred
-        || stored_decision(stored, key)
-            .is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
+        || standing.is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
     {
         return Ok(());
     }
@@ -327,7 +335,7 @@ pub(crate) fn stored_decision(stored: &[RawDecision], key: &str) -> Option<Decis
 ///
 /// One key is one finding and gets one disposition (spec 058), whatever the
 /// two outcomes are — fixed and undispositioned included — so the writer
-/// refuses rather than recording one finding as, say, both routed and owed.
+/// refuses rather than recording one finding as, say, both deferred and waived.
 /// Findings sharing a key *and* an outcome pass: each is still counted, as the
 /// tier counts and `observations` count it, and [`merge`] stores their one
 /// decision once. `keyed` is every finding the run records, as its key and
@@ -409,10 +417,6 @@ pub(crate) fn render_dispositions(block: &mut String, counts: Dispositions) {
     let _ = writeln!(block, "  undispositioned: {}", counts.undispositioned);
 }
 
-/// The suffix a report renders beside a finding for its disposition — fixed,
-/// routed with its target in a code span, discarded with its reason, or
-/// undispositioned, each outcome in bold — with the companion text passed
-/// through `plain`, each writer's own normalization for its report body.
 /// A deferral's work as a report or notice names it: the target in a code
 /// span, followed by its task number when it names one, and the external work
 /// item in a code span, joined when both are given (spec 076). Each value
@@ -435,6 +439,10 @@ pub(crate) fn work_reference(
     }
 }
 
+/// The suffix a report renders beside a finding for its disposition — fixed,
+/// deferred to its [`work_reference`], waived with its reason, or
+/// undispositioned, each outcome in bold — with the companion text passed
+/// through `plain`, each writer's own normalization for its report body.
 pub(crate) fn disposition_suffix(
     disposition: &Disposition,
     plain: impl Fn(&str) -> String,
@@ -516,8 +524,8 @@ pub(crate) fn read_decisions(feature_dir: &Path, file: &str) -> Result<Vec<RawDe
 /// or **new**, stamped with `decided_at` and `decided_by`, replacing every
 /// stored entry for its key. Keys compare through [`same_key`] throughout.
 /// Matching on key and outcome rather than on the companion's wording is the
-/// data model's rule: a host that restates a matched discard's reason, or
-/// normalizes a route's target path, has not made a new decision.
+/// data model's rule: a host that restates a matched waiver's reason, or
+/// normalizes a deferral's target path, has not made a new decision.
 ///
 /// # Errors
 ///
@@ -540,12 +548,17 @@ pub(crate) fn merge(
     // The entry `process-decisions` applies for a key is the first well-formed
     // one; a later duplicate is reported and ignored. Matching against any
     // entry instead let an ignored duplicate stand in for the applied one and
-    // swallow a re-decision.
+    // swallow a re-decision. An entry this write drops through `expired` — a
+    // lapsed deferral among them — stands for nothing, so the decision that
+    // replaces it is fresh even with the same outcome (spec 076).
     let fresh: Vec<&DecisionRef> = once
         .into_iter()
         .filter(|decision| {
-            stored_decision(&stored, &decision.key)
-                .is_none_or(|stored| stored.outcome != decision.outcome)
+            expired
+                .iter()
+                .any(|gone| same_key(&gone.key, &decision.key))
+                || stored_decision(&stored, &decision.key)
+                    .is_none_or(|stored| stored.outcome != decision.outcome)
         })
         .collect();
     let author = decided_by.map(str::trim).filter(|who| !who.is_empty());
@@ -856,25 +869,25 @@ mod tests {
 
     #[test]
     fn each_missing_companion_is_its_own_defect() {
-        let routed_without_target = RawDecision {
+        let deferred_without_target = RawDecision {
             key: Some("k".into()),
             outcome: Some("deferred".into()),
             decided_at: Some("2026-09-25T00:00:00Z".into()),
             decided_by: Some("dev@example.com".into()),
             ..RawDecision::default()
         };
-        assert_eq!(routed_without_target.to_ref(), Err("target"));
+        assert_eq!(deferred_without_target.to_ref(), Err("target"));
 
-        let discarded_without_reason = RawDecision {
+        let waived_without_reason = RawDecision {
             outcome: Some("waived".into()),
             reason: Some("  ".into()),
-            ..routed_without_target.clone()
+            ..deferred_without_target.clone()
         };
-        assert_eq!(discarded_without_reason.to_ref(), Err("reason"));
+        assert_eq!(waived_without_reason.to_ref(), Err("reason"));
 
         let unknown_outcome = RawDecision {
             outcome: Some("fixed".into()),
-            ..routed_without_target.clone()
+            ..deferred_without_target.clone()
         };
         assert_eq!(
             unknown_outcome.to_ref(),
@@ -885,13 +898,13 @@ mod tests {
         let no_author = RawDecision {
             target: Some("specs/031-x/tasks.md".into()),
             decided_by: None,
-            ..routed_without_target
+            ..deferred_without_target
         };
         assert_eq!(no_author.to_ref(), Err("decided-by"));
     }
 
     /// The data model's rule: a stored decision matches on key and outcome. A
-    /// host restating a matched discard's reason in other words has not made
+    /// host restating a matched waiver's reason in other words has not made
     /// a new decision, so the original stamp — and its wording — stand, and
     /// no `decided-by` is needed.
     #[test]
@@ -946,7 +959,7 @@ mod tests {
 
     /// One key, one disposition: two outcomes for one key are refused
     /// whichever two they are — fixed and undispositioned store no decision,
-    /// yet still contradict a routed or discarded one. Keys compare flattened,
+    /// yet still contradict a deferred or waived one. Keys compare flattened,
     /// and a repeated outcome is no contradiction.
     #[test]
     fn two_outcomes_for_one_key_are_refused_whichever_they_are() {
@@ -991,7 +1004,7 @@ mod tests {
         }
     }
 
-    /// Two observations matched to one stored discard are one finding, and a
+    /// Two observations matched to one stored waiver are one finding, and a
     /// host that restates the reason differently for each has not made two
     /// decisions: the same outcome twice collapses, whatever its wording. Only
     /// a different outcome is a contradiction.
@@ -1029,9 +1042,9 @@ mod tests {
 
     /// `process-decisions` applies the first entry for a key and ignores a
     /// later duplicate, so a re-decision is judged against that first entry.
-    /// Judged against any entry, the ignored `routed` duplicate matched a
-    /// re-decision to `routed`, nothing was stored, and the next run still
-    /// applied the `discarded` entry — the decision was lost.
+    /// Judged against any entry, the ignored `deferred` duplicate matched a
+    /// re-decision to `deferred`, nothing was stored, and the next run still
+    /// applied the `waived` entry — the decision was lost.
     #[test]
     fn a_re_decision_is_not_lost_to_an_ignored_duplicate() {
         let merged = merge(
@@ -1051,6 +1064,32 @@ mod tests {
         .unwrap();
         assert_eq!(merged.len(), 1, "{merged:?}");
         assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
+        assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
+    }
+
+    /// Spec 076: a deferral that lapsed arrives in `expired`, and the new
+    /// disposition the run gives its finding — another deferral included — is
+    /// stored with this run's stamp, never dropped with the entry it replaces.
+    #[test]
+    fn a_re_deferral_after_a_lapse_is_stored() {
+        let merged = merge(
+            vec![stored("k", "deferred", "specs/001-x/tasks.md")],
+            &[decided(
+                "k",
+                DecisionOutcome::Deferred,
+                "specs/001-x/tasks.md",
+            )],
+            &[decided(
+                "k",
+                DecisionOutcome::Deferred,
+                "specs/002-y/tasks.md",
+            )],
+            "2026-11-03T00:00:00Z",
+            Some("second@example.com"),
+        )
+        .unwrap();
+        assert_eq!(merged.len(), 1, "{merged:?}");
+        assert_eq!(merged[0].target.as_deref(), Some("specs/002-y/tasks.md"));
         assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
     }
 
@@ -1239,7 +1278,7 @@ mod tests {
         )
         .unwrap();
         let check = |d: &Disposition, stored: &[RawDecision]| {
-            refuse_missing_work(repo.path(), "w", "o", d, "k", stored)
+            refuse_missing_work(repo.path(), "w", "o", d, "k", stored, &[])
         };
         assert!(
             check(

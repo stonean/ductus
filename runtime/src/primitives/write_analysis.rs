@@ -27,9 +27,12 @@
 //! Every finding arrives with its disposition, and the record counts them
 //! under `dispositions:`. The tier counts stay host-supplied scalars from the
 //! re-check, and `undispositioned` is derived as the live tier total minus the
-//! live findings routed or discarded — so a finding the caller does not
+//! live findings deferred or waived — so a finding the caller does not
 //! itemize, including every finding on the exec path, is counted as owed.
-//! Nothing is written to the inbox.
+//! The record's `hard-fail` and `blocking-findings` are those tier counts less
+//! the live findings whose deferral names work on another spec, which render
+//! under `## Deferred to other specs` instead (spec 076). Nothing is written
+//! to the inbox.
 //!
 //! The block deliberately is **not** a copy of `review:`:
 //!
@@ -71,18 +74,24 @@ use crate::schema::primitives::{
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute, or
-///   carries a parent-directory component, or when the feature directory, or
-///   a link inside it, resolves outside the project.
+///   carries a parent-directory component, or when the feature directory, a
+///   link inside it, or a new deferral's target resolves outside the project.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature directory does not
 ///   exist.
 /// - [`PrimitiveError::InvalidArgument`] when `analyzed-at` is blank, when a
 ///   finding's family or message is blank, when a finding's disposition lacks
-///   its companion or discards a `hard-fail` or `blocking` finding, when the
+///   its companion — a deferral naming neither a target nor a work item, or a
+///   waiver stating no reason — or carries one it may not: a work-item ID over
+///   more than one line, a task without a `tasks.md` target, a waiver naming
+///   work; when a new deferral's target or task does not exist, or its task
+///   is in a `tasks.md` that is no feature's; when it waives
+///   a `hard-fail` or `blocking` finding; when the
 ///   findings contradict the tier counts, when two findings sharing a key are
 ///   given different outcomes, or when a new decision has no `decided-by` —
 ///   each before any write.
-/// - [`PrimitiveError::Io`] when `spec.md` or the prior `analysis.md` cannot
-///   be read, or the record cannot be written.
+/// - [`PrimitiveError::Io`] when `spec.md`, the prior `analysis.md` or a new
+///   deferral's named `tasks.md` cannot be read, or the record cannot be
+///   written.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block.
 /// - [`PrimitiveError::Yaml`] when `spec.md`'s frontmatter block is malformed —
@@ -260,8 +269,9 @@ fn tier_count(args: &WriteAnalysisArgs, tier: AnalysisTier) -> u32 {
 }
 
 /// Validate the itemized findings against the tier counts and derive the
-/// `dispositions:` map. Everything that can be refused is refused here, before
-/// any write.
+/// `dispositions:` map. Every refusal of the itemization itself lands here;
+/// the key, author and missing-work refusals follow in `run`, all before any
+/// write.
 ///
 /// The tier counts are the authority on how many live findings exist, so the
 /// itemization may fall short of them — the shortfall is undispositioned — but
@@ -361,13 +371,14 @@ fn stored_decisions(
             &finding.disposition,
             &finding_key(finding),
             &stored,
+            &args.expired_decisions,
         )?;
     }
     Ok(stored)
 }
 
 /// The live findings deferred or waived, as the decisions they store, keyed
-/// `{family} — {message}`.
+/// by [`finding_key`].
 fn decided_findings(findings: &[AnalysisFinding]) -> Vec<DecisionRef> {
     findings
         .iter()
@@ -562,12 +573,11 @@ fn render_analysis(
     out
 }
 
-/// A tier's live findings, each beside its disposition, plus a line for any
-/// the caller counted but did not itemize — so the body can never understate
-/// what the frontmatter counts. `*None.*` when the tier is empty.
 /// A tier's section: its live findings, less those `released` to another
-/// spec's gate, which render under Deferred to other specs, and a line for
-/// any the host counted but did not itemize.
+/// spec's gate, which render under Deferred to other specs, each beside its
+/// disposition, and a line for any the host counted but did not itemize — so
+/// the body never understates the frontmatter. `*None.*` when the tier is
+/// empty.
 fn render_tier(args: &WriteAnalysisArgs, tier: AnalysisTier, released: &[usize]) -> String {
     let in_tier = |finding: &AnalysisFinding| finding.live && finding.tier == tier;
     let listed: Vec<&AnalysisFinding> = args
@@ -840,6 +850,42 @@ mod tests {
         assert!(!analysis_exists(&tmp));
     }
 
+    /// Spec 076: a re-deferral after a lapse is a new deferral, so its work is
+    /// checked against the tree like any other, not waved through because a
+    /// deferral for the key is still on disk until this write drops it.
+    #[test]
+    fn a_re_deferral_after_a_lapse_is_checked_against_the_tree() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.advisory = 1;
+        a.decided_by = Some("dev@example.com".into());
+        a.findings = vec![finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Deferred,
+            Some("specs/042-demo/spec.md"),
+        )];
+        run(&a, tmp.path()).unwrap();
+
+        let mut next = a.clone();
+        next.expired_decisions = vec![DecisionRef {
+            key: "grounding — cites a gone path".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: Some("specs/042-demo/spec.md".into()),
+            task: None,
+            work_item: None,
+            reason: None,
+        }];
+        next.findings[0].disposition.target = Some("specs/042-demo/scenarios/gone.md".into());
+        let err = run(&next, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
+                if argument == "findings[0].disposition.target"),
+            "{err:?}"
+        );
+    }
+
     /// Spec 076: a blocking finding deferred to another spec's work leaves the
     /// gating count and renders under Deferred to other specs; one deferred to
     /// a work item alone stays counted and marks its decision gating.
@@ -1031,7 +1077,7 @@ mod tests {
     }
 
     #[test]
-    fn a_discard_on_a_gating_finding_is_refused_with_nothing_written() {
+    fn a_waiver_on_a_gating_finding_is_refused_with_nothing_written() {
         for tier in [AnalysisTier::HardFail, AnalysisTier::Blocking] {
             let tmp = spec_repo("status: in-progress\ndependencies: []");
             let mut a = args();
@@ -1067,15 +1113,15 @@ mod tests {
             None,
         );
         still_firing.live = true;
-        let mut gone_but_routed = finding(
+        let mut gone_but_deferred = finding(
             AnalysisTier::Advisory,
             "f",
             "m",
             DispositionOutcome::Deferred,
             Some("t"),
         );
-        gone_but_routed.live = false;
-        for bad in [still_firing, gone_but_routed] {
+        gone_but_deferred.live = false;
+        for bad in [still_firing, gone_but_deferred] {
             let mut a = args();
             a.advisory = 1;
             a.findings = vec![bad];
@@ -1521,7 +1567,7 @@ mod tests {
 
     // -- spec 058 review: decision-record hardening -------------------------
 
-    /// A control character in a finding's message or a discard's reason is
+    /// A control character in a finding's message or a waiver's reason is
     /// flattened before it is stored, so the record reads back and the stored
     /// key is the one `process-decisions` fires for the same finding. A raw one
     /// would have left the whole record unreadable.
@@ -1702,7 +1748,7 @@ mod tests {
         assert_eq!(stored[0].key.as_deref(), Some("f — m"));
     }
 
-    /// A route names its target and a discard states its reason, refused by
+    /// A deferral names its work and a waiver states its reason, refused by
     /// the check `write-review` shares, under this primitive's argument path.
     #[test]
     fn a_disposition_without_its_companion_is_refused() {
@@ -1822,7 +1868,7 @@ mod tests {
         assert!(!analysis_exists(&tmp));
     }
 
-    /// `tier` is required: the discard refusal reads it, so a finding that
+    /// `tier` is required: the waiver refusal reads it, so a finding that
     /// omits it must not bind as the permissive advisory tier.
     #[test]
     fn a_finding_without_a_tier_does_not_bind() {

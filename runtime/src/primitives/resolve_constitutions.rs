@@ -187,7 +187,7 @@ fn length_on_disk(path: &Path) -> Option<u64> {
 /// The warning for a document over the limit. The fix is a cut in the
 /// repository that owns it, because nothing in this project can shorten it;
 /// that is also why it is reported here and never as an `/{project}:analyze`
-/// finding, which a project must be able to fix, route or discard. The path
+/// finding, which a project must be able to fix, defer or waive. The path
 /// and the URL come from committed config, so each is flattened to keep the
 /// warning one line.
 fn over_limit_warning(record: &ConstitutionRecord, bytes: u64, limit: u64) -> String {

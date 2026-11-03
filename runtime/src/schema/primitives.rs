@@ -119,7 +119,7 @@ pub struct ReviewBlock {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub skipped_passes: Vec<String>,
     /// How the run's **observations** were dispositioned (spec 058). MUST and
-    /// SHOULD violations keep their own counts and their fix-or-waive model;
+    /// SHOULD violations keep their own counts and are fixed, waived or deferred;
     /// this map counts only what maps to no loaded rule.
     ///
     /// `None` means the record predates dispositions, and is **not** zero:
@@ -166,7 +166,8 @@ pub struct Dispositions {
 pub enum DispositionOutcome {
     /// Fixed in the run.
     Fixed,
-    /// To be addressed later by the work `target` names (spec 076).
+    /// To be addressed later by the work its `target`, `work-item` or both
+    /// name (spec 076).
     Deferred,
     /// Not to be addressed; `reason` says why (spec 076).
     Waived,
@@ -178,7 +179,8 @@ pub enum DispositionOutcome {
 }
 
 /// One finding's disposition: the outcome, plus the companion that makes it
-/// auditable — a deferral's `target`, a waiver's `reason`.
+/// auditable — a deferral's `target` or `work-item` or both, a waiver's
+/// `reason`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Disposition {
@@ -209,7 +211,8 @@ pub struct Disposition {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DecisionOutcome {
-    /// The finding will be addressed by the work `target` names.
+    /// The finding will be addressed by the work its `target`, `work-item` or
+    /// both name.
     Deferred,
     /// The finding will not be addressed; `reason` says why.
     Waived,
@@ -220,8 +223,9 @@ pub enum DecisionOutcome {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DecisionRef {
-    /// The finding key: `{family} — {message}` for analyze, the observation's
-    /// rendered line for review.
+    /// The finding key: `{family} — {message}` for analyze; for review, the
+    /// observation's rendered line, or `rule {rule-id} at {file}` for a MUST
+    /// or SHOULD violation.
     pub key: String,
     /// What was decided.
     pub outcome: DecisionOutcome,
@@ -539,8 +543,9 @@ pub struct ProcessDecisionsArgs {
     #[arg(long, value_enum)]
     pub record: DecisionRecord,
     /// This run's finding keys — for each finding, the stored key the host
-    /// matched it to, or else its own key: `{family} — {message}` for analyze,
-    /// the observation's rendered line for review. MCP only, as
+    /// matched it to, or else its own key: `{family} — {message}` for analyze;
+    /// for review, the observation's rendered line, or `rule {rule-id} at
+    /// {file}` for a MUST or SHOULD violation. MCP only, as
     /// `process-waivers`' `fired` is: the keys come from the host's passes,
     /// which the CLI surface has no way to run.
     #[serde(default)]
@@ -563,7 +568,8 @@ pub struct ProcessDecisionsArgs {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessDecisionsResult {
-    /// Stored decisions whose key fired this run. The host counts each
+    /// Stored decisions whose key fired this run, less the deferrals reported
+    /// in `lapsed`. The host counts each
     /// matching finding under the stored outcome and asks nothing.
     pub matched: Vec<DecisionRef>,
     /// Stored decisions whose key did not fire on an unrestricted run. Passed
@@ -580,7 +586,8 @@ pub struct ProcessDecisionsResult {
     #[serde(default)]
     pub lapsed: Vec<DecisionRef>,
     /// Ordered notice lines: `decision expired: …`, `decision retained: …`,
-    /// `malformed decision …`, and `duplicate decision: …`, in entry order.
+    /// `deferral lapsed: …`, `deferral target unreadable: …`, `malformed
+    /// decision …`, and `duplicate decision: …`, in entry order.
     pub notices: Vec<String>,
 }
 
@@ -664,8 +671,8 @@ pub struct ReviewFinding {
     #[serde(default)]
     pub suggested_fix: String,
     /// A deferral of this violation (spec 076): the work that will address
-    /// it, as a target, a work item, or both. Only `deferred` is accepted — a
-    /// violation is waived with `--waive` and fixed by removing it. A deferral
+    /// it, as a target, a work item, or both. `fixed` and `waived` are refused —
+    /// a violation is waived with `--waive` and fixed by removing it. A deferral
     /// to pipeline work on another spec takes the finding out of this spec's
     /// counts, since that spec's gate then holds it.
     #[serde(default)]
@@ -769,17 +776,18 @@ pub struct WriteReviewArgs {
     #[serde(default)]
     #[arg(skip)]
     pub observations: Vec<ReviewObservation>,
-    /// Stored decisions `process-decisions` reported expired; dropped from
-    /// `review.md`'s `decisions:` list on this write. No alias: the exec walker
+    /// Stored decisions `process-decisions` reported expired or lapsed;
+    /// dropped from `review.md`'s `decisions:` list on this write. No alias: the exec walker
     /// never runs `process-decisions`, and `expired` already binds waivers.
     #[serde(default)]
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
     /// Who made this run's new decisions — `git config user.email`, as
     /// `waived-by` is. Required when any observation is newly deferred or
-    /// waived; a stored decision nobody can attribute is not auditable.
-    /// Not a CLI flag: `observations` is not one either, so a CLI call can
-    /// make no decision to attribute.
+    /// waived, or any violation newly deferred; a stored decision nobody can
+    /// attribute is not auditable. Not a CLI flag: `observations` and
+    /// `findings` are not either, so a CLI call can make no decision to
+    /// attribute.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(skip)]
     pub decided_by: Option<String>,
@@ -823,9 +831,11 @@ pub struct WriteReviewResult {
     /// `review.md`. The path is still reported because a caller identifying
     /// which spec the record belongs to should not have to re-derive it.
     pub spec_path: String,
-    /// MUST violations counted (waived findings excluded).
+    /// MUST violations counted (waived findings, and those deferred to
+    /// another spec's work, excluded).
     pub must_violations: u32,
-    /// SHOULD violations counted (waived findings excluded).
+    /// SHOULD violations counted (waived findings, and those deferred to
+    /// another spec's work, excluded).
     pub should_violations: u32,
     /// Low-confidence findings counted.
     pub low_confidence: u32,
@@ -925,7 +935,7 @@ fn default_true() -> bool {
 ///
 /// The narrow, always-on write that makes analyze's own run durable. Its
 /// detection never mutates an artifact it audits; the confirmed fixes and
-/// routes of the fix-and-route step, and `--fix`'s status revert, are the
+/// deferrals of the fix-and-route step, and `--fix`'s status revert, are the
 /// only writes to one (spec 058). Recording that the audit happened is not
 /// mutating the subject — it is the same thing `write-review` does for the
 /// other gate, and the reason that gate could be enforced while this one could
@@ -987,8 +997,8 @@ pub struct WriteAnalysisArgs {
     #[serde(default)]
     #[arg(skip)]
     pub findings: Vec<AnalysisFinding>,
-    /// Stored decisions `process-decisions` reported expired; dropped from
-    /// `analysis.md`'s `decisions:` list on this write.
+    /// Stored decisions `process-decisions` reported expired or lapsed;
+    /// dropped from `analysis.md`'s `decisions:` list on this write.
     #[serde(default)]
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
@@ -3152,7 +3162,7 @@ pub struct PlanSection {
     pub digest: String,
     /// The advisory `/{project}:analyze` records for the section.
     pub finding: PlanFinding,
-    /// `analysis.md` stores a discard for this section's finding, under its
+    /// `analysis.md` stores a waiver for this section's finding, under its
     /// key as every stored-decision reader compares keys: prune does not
     /// propose it. A decision kept under an earlier wording is not matched
     /// here; the host matches it by judgment.
@@ -4370,8 +4380,9 @@ pub enum ReviewGateBlock {
     /// grandfather clause, for the reason the analyze record has none: the
     /// record is always writable at the moment a spec is being completed.
     RecordPredatesDispositions,
-    /// An outstanding gating finding no earlier check caught: in practice an
-    /// unwaived review SHOULD. Only gating findings hold `done` (spec 058,
+    /// An outstanding gating finding no earlier check caught: in practice a
+    /// review SHOULD neither waived nor deferred to another spec's work (spec
+    /// 076). Only gating findings hold `done` (spec 058,
     /// `findings-cost-in-proportion-to-risk`); the `dispositions:` maps'
     /// `undispositioned` counts of advisory findings and observations are
     /// recorded and never block. The name predates that narrowing and is kept
@@ -4937,17 +4948,17 @@ pub struct OversizedArtifact {
     /// Its read-page count: `bytes` over the threshold, rounded up. At least
     /// 2 for every oversized artifact.
     pub pages: u64,
-    /// The fixes for its kind, in the spec's order. Never a discard: only
+    /// The fixes for its kind, in the spec's order. Never a waiver: only
     /// `/{project}:analyze` can record one, and it offers it itself.
     pub fixes: Vec<ArtifactFix>,
     /// The one-line warning the commands print as given.
     pub warning: String,
     /// The `artifact-size` finding message `/{project}:analyze` records.
     pub message: String,
-    /// A stored discard still covers this artifact: one recorded for the same
+    /// A stored waiver still covers this artifact: one recorded for the same
     /// path at a read-page count at least this one's.
     pub decided: bool,
-    /// The stored discard's key. Present exactly when `decided` is `true`.
+    /// The stored waiver's key. Present exactly when `decided` is `true`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision_key: Option<String>,
 }

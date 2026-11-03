@@ -20,9 +20,13 @@
 //!   `review:` block in `spec.md` until spec 057 left the record one home;
 //! - **records the disposition of the reviewer's observations** — things the
 //!   reviewer judged real that map to no loaded rule. Each renders beside its
-//!   outcome, the record counts them under `dispositions:`, and a newly routed
-//!   or discarded one is stored under `decisions:` so the next run does not ask
-//!   again (spec 058). Nothing is written to the inbox;
+//!   outcome, the record counts them under `dispositions:`, and a newly
+//!   deferred or waived one is stored under `decisions:` so the next run does
+//!   not ask again (spec 058). Nothing is written to the inbox;
+//! - **records a violation's deferral** — a MUST or SHOULD violation deferred
+//!   to its work is stored under `decisions:` keyed `rule {rule-id} at
+//!   {file}`, and leaves the counts only when that work is on another spec
+//!   (spec 076);
 //! - the empty-scope case is a branch of this primitive, not a prose
 //!   special-case: it emits the 0-findings, `blocking: false` report.
 //!
@@ -48,14 +52,7 @@ use crate::schema::primitives::{
     ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
 };
 use crate::schema::severity::ReviewSeverity;
-/// Reject any scalar field that would inject document structure.
-///
-/// Scalars are spliced verbatim into `review.md` frontmatter, so an embedded
-/// newline would add a top-level key (a spoofed `status:`, say) and corrupt
-/// pipeline state. Multi-line prose fields — the summary and finding bodies —
-/// are markdown body content and are deliberately not screened; waiver fields
-/// are separately quoted through `yaml_string`.
-/// Refuse a violation's disposition that is not a deferral, or a deferral
+/// Refuse a violation's disposition that is fixed or waived, or a deferral
 /// missing its companions (spec 076). A violation is waived with `--waive`
 /// and fixed by removing it, so neither reaches this writer as an outcome.
 fn validate_finding_dispositions(args: &WriteReviewArgs) -> Result<()> {
@@ -89,6 +86,13 @@ fn validate_finding_dispositions(args: &WriteReviewArgs) -> Result<()> {
     Ok(())
 }
 
+/// Reject any scalar field that would inject document structure.
+///
+/// Scalars are spliced verbatim into `review.md` frontmatter, so an embedded
+/// newline would add a top-level key (a spoofed `status:`, say) and corrupt
+/// pipeline state. Multi-line prose fields — the summary and finding bodies —
+/// are markdown body content and are deliberately not screened; waiver fields
+/// are separately quoted through `yaml_string`.
 fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     // Scalar fields spliced verbatim into review.md frontmatter must be
     // single-line: an embedded newline would inject a top-level frontmatter
@@ -159,15 +163,20 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 /// Every refusal lands before any write.
 ///
 /// - [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute, or
-///   carries a parent-directory component, or when the feature directory, or
-///   a link inside it, resolves outside the project.
+///   carries a parent-directory component, or when the feature directory, a
+///   link inside it, or a new deferral's target resolves outside the project.
 /// - [`PrimitiveError::InvalidArgument`] when a scalar argument, an
-///   observation's text, path, or `decision-key`, or a route's target or a
-///   discard's reason carries a line break or another character that is not
-///   plain single-line text; when `reviewed-at` or an observation's text is
-///   blank; when a route names no target or a discard states no reason; when
-///   two observations sharing a key are given different outcomes; or when a
-///   new decision has no `decided-by`.
+///   observation's or finding's `decision-key`, an observation's text or
+///   path, or a disposition's target, task or reason carries a line break or
+///   another character that is not plain single-line text; when `reviewed-at`
+///   or an observation's text is blank; when a violation's disposition is
+///   fixed or waived; when a deferral names neither a target nor a work item, spans
+///   its work-item ID over more than one line, or numbers a task without a
+///   `tasks.md` target; when a new deferral's target or task does not exist,
+///   or its task is in a `tasks.md` that is no feature's; when a waiver names work or states no reason; when a finding is both
+///   deferred and matched by an applied waiver; when two observations, or two
+///   violations, sharing a key are given different outcomes; or when a new decision has no
+///   `decided-by`.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature has no `spec.md`.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block, and [`PrimitiveError::UnclosedFrontmatter`] when the block in
@@ -247,22 +256,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         })?;
     let surviving = surviving_waivers(&feature_dir, args)?;
     let dispositions = count_dispositions(&args.observations);
-    decisions::one_outcome_per_key(
-        args.observations
-            .iter()
-            .map(|observation| {
-                (
-                    observation_key(observation),
-                    observation.disposition.outcome,
-                )
-            })
-            .chain(
-                deduped
-                    .iter()
-                    .map(|f| (violation_key(f), f.disposition.outcome)),
-            ),
-    )
-    .map_err(|refusal| refusal.into_error("write-review", "observations", "an observation"))?;
+    one_outcome_per_key(&args.observations, &deduped)?;
     let mut decisions = decisions::merge(
         stored_decisions(&feature_dir, args, repo)?,
         &args.expired_decisions,
@@ -274,7 +268,13 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         &args.reviewed_at,
         args.decided_by.as_deref(),
     )
-    .map_err(|refusal| refusal.into_error("write-review", "observations", "an observation"))?;
+    .map_err(|refusal| {
+        refusal.into_error(
+            "write-review",
+            "observations",
+            "an observation or violation",
+        )
+    })?;
     decisions::mark_gating(&mut decisions, &sorted.holding());
     let report = render_report(
         args,
@@ -405,11 +405,9 @@ fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> Recor
 
 // -- observation dispositions -----------------------------------------------
 
-/// The `dispositions:` map for this run's observations. Derived, never
-/// accepted: a caller that supplied the counts could report them clean.
 /// The record's stored decisions, read once every new deferral among the
-/// observations is shown to name work that exists (spec 076) — before the
-/// merge, so a refusal lands before any write.
+/// observations and violations is shown to name work that exists (spec 076)
+/// — before the merge, so a refusal lands before any write.
 fn stored_decisions(
     feature_dir: &Path,
     args: &WriteReviewArgs,
@@ -424,6 +422,7 @@ fn stored_decisions(
             &observation.disposition,
             &observation_key(observation),
             &stored,
+            &args.expired_decisions,
         )?;
     }
     for (idx, finding) in args.findings.iter().enumerate() {
@@ -434,11 +433,52 @@ fn stored_decisions(
             &finding.disposition,
             &violation_key(finding),
             &stored,
+            &args.expired_decisions,
         )?;
     }
     Ok(stored)
 }
 
+/// Refuse two observations, or two violations, that share a key but carry
+/// different outcomes, naming the list the conflicting key came from: a
+/// violation's key is `rule {rule-id} at {file}`, an observation's its
+/// rendered line.
+fn one_outcome_per_key(
+    observations: &[ReviewObservation],
+    deduped: &[ReviewFinding],
+) -> Result<()> {
+    decisions::one_outcome_per_key(
+        observations
+            .iter()
+            .map(|observation| {
+                (
+                    observation_key(observation),
+                    observation.disposition.outcome,
+                )
+            })
+            .chain(
+                deduped
+                    .iter()
+                    .map(|f| (violation_key(f), f.disposition.outcome)),
+            ),
+    )
+    .map_err(|refusal| {
+        let list = match &refusal {
+            decisions::DecisionRefusal::ConflictingDecisions(key)
+                if deduped
+                    .iter()
+                    .any(|f| decisions::same_key(&violation_key(f), key)) =>
+            {
+                "findings"
+            }
+            _ => "observations",
+        };
+        refusal.into_error("write-review", list, "an observation or violation")
+    })
+}
+
+/// The `dispositions:` map for this run's observations. Derived, never
+/// accepted: a caller that supplied the counts could report them clean.
 fn count_dispositions(observations: &[ReviewObservation]) -> Dispositions {
     let mut counts = Dispositions::default();
     for observation in observations {
@@ -453,7 +493,7 @@ fn count_dispositions(observations: &[ReviewObservation]) -> Dispositions {
     counts
 }
 
-/// The routed and discarded observations, as the decisions they store.
+/// The deferred and waived observations, as the decisions they store.
 fn decided_observations(observations: &[ReviewObservation]) -> Vec<DecisionRef> {
     observations
         .iter()
@@ -555,9 +595,8 @@ fn waiver_reason<'a>(
 
 // -- report rendering --------------------------------------------------------
 
-/// Render the full `review.md` document (frontmatter + fixed skeleton).
-/// The four buckets a run's findings fall into, passed as one value so the
-/// renderer's signature states a shape rather than four positional slices.
+/// The five buckets a run's findings fall into, passed as one value so the
+/// renderer's signature states a shape rather than five positional slices.
 struct Buckets<'a> {
     must: &'a [&'a ReviewFinding],
     should: &'a [&'a ReviewFinding],
@@ -676,6 +715,7 @@ struct Record<'a> {
     dispositions: Dispositions,
 }
 
+/// Render the full `review.md` document (frontmatter + fixed skeleton).
 fn render_report(
     args: &WriteReviewArgs,
     buckets: &Buckets<'_>,
@@ -1540,6 +1580,29 @@ mod tests {
         assert_eq!(gating("rule SEC-2 at src/b.rs"), Some(None));
         assert_eq!(gating("rule SEC-1 at src/a.rs"), Some(Some(true)));
         assert_eq!(gating("rule SEC-3 at src/c.rs"), Some(Some(true)));
+    }
+
+    /// Spec 076: two violations of one rule at one file share a key, so
+    /// deferring one and not the other is refused — naming `findings`, the
+    /// list the key came from, not `observations`.
+    #[test]
+    fn conflicting_violation_dispositions_name_the_findings_list() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            deferred(
+                finding("SEC-1", "must", "src/a.rs", "1-2", "high"),
+                None,
+                Some("PROJ-1"),
+            ),
+            finding("SEC-1", "must", "src/a.rs", "40-41", "high"),
+        ];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "findings"),
+            "{err:?}"
+        );
     }
 
     /// Spec 076: a finding holds one disposition, so one both deferred and
@@ -2412,7 +2475,7 @@ mod tests {
     }
 
     #[test]
-    fn a_routed_or_discarded_observation_is_stored_as_a_decision() {
+    fn a_deferred_or_waived_observation_is_stored_as_a_decision() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
         args.decided_by = Some("dev@example.com".into());
@@ -2887,7 +2950,7 @@ mod tests {
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
     }
 
-    /// A tab-then-`#` in an observation's text and its discard reason reads
+    /// A tab-then-`#` in an observation's text and its waiver reason reads
     /// back intact, so the stored key matches the same observation next run.
     /// Written plain, YAML read it as a comment and truncated both.
     #[test]
@@ -2978,7 +3041,7 @@ mod tests {
         ));
     }
 
-    /// One key, one disposition, whatever the two outcomes are: routed beside
+    /// One key, one disposition, whatever the two outcomes are: deferred beside
     /// undispositioned was accepted and counted once each, so one finding
     /// was recorded as both decided and owed.
     #[test]

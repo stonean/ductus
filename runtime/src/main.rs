@@ -96,7 +96,7 @@ enum Command {
     DiscoverRuleFiles(DiscoverRuleFilesArgs),
     /// Classify a spec's recorded waivers in review.md against currently-firing findings.
     ProcessWaivers(ProcessWaiversArgs),
-    /// Classify a spec's recorded routed/discarded decisions against this run's finding keys.
+    /// Classify a spec's recorded deferred/waived decisions against this run's finding keys.
     ProcessDecisions(ProcessDecisionsArgs),
     /// Resolve /ductus:review's diff-base and file scope.
     ComputeReviewScope(ComputeReviewScopeArgs),

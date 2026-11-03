@@ -12,15 +12,17 @@
 //!   complete: the deferred work landed and the finding still stands, so the
 //!   finding needs a new disposition and the writer drops the entry (spec 076).
 //!   A deferral naming only an external work item never lapses, because the
-//!   pipeline never reads the tracker; one whose target cannot be read is
-//!   matched, with a notice, so a check that could not run looks like neither.
+//!   pipeline never reads the tracker; one whose named `tasks.md`, or owning
+//!   spec's status, cannot be read is matched, with a notice, so a check that
+//!   could not run looks like neither.
 //! - **expired** — the key did not fire on an unrestricted run. The writer
 //!   drops the entry. For a deferred decision this is the moment the deferred
 //!   work landed.
 //! - **retained** — the key did not fire, but the run did not evaluate every
 //!   source, so absence proves nothing and the entry is kept.
-//! - **malformed** — a required field or an outcome's companion is missing;
-//!   reported, applied to nothing, and never pruned.
+//! - **malformed** — a required field or an outcome's companion is missing,
+//!   or a field its outcome forbids is present; reported, applied to nothing,
+//!   and never pruned.
 //! - **duplicate** — a repeated key; the first entry applies.
 //!
 //! Read-only: frontmatter mutation belongs to `write-review` and
@@ -154,7 +156,8 @@ enum Work {
     Complete,
     /// Only an external work item is named, and the pipeline never reads one.
     External,
-    /// The target exists but does not parse, so its state is unknown.
+    /// The named `tasks.md` cannot be read, or the owning spec's `status`
+    /// cannot be read from its frontmatter, so its state is unknown.
     Unreadable,
 }
 
@@ -230,10 +233,10 @@ mod tests {
 
     use super::*;
 
-    const ROUTED: &str = "  - key: \"grounding — plan.md cites a missing path\"\n    \
+    const DEFERRED: &str = "  - key: \"grounding — plan.md cites a missing path\"\n    \
                           outcome: deferred\n    target: specs/031-x/tasks.md\n    \
                           decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
-    const DISCARDED: &str = "  - key: \"applicable-rules — BE-AUTHN-001 does not fire\"\n    \
+    const WAIVED: &str = "  - key: \"applicable-rules — BE-AUTHN-001 does not fire\"\n    \
                              outcome: waived\n    reason: cited for a future endpoint\n    \
                              decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
 
@@ -274,7 +277,7 @@ mod tests {
 
     #[test]
     fn a_firing_key_matches_under_its_stored_outcome() {
-        let tmp = repo_with("analysis.md", &format!("{ROUTED}{DISCARDED}"));
+        let tmp = repo_with("analysis.md", &format!("{DEFERRED}{WAIVED}"));
         let result = run(
             &args(
                 DecisionRecord::Analysis,
@@ -300,7 +303,7 @@ mod tests {
 
     #[test]
     fn a_silent_key_expires_on_an_unrestricted_run() {
-        let tmp = repo_with("analysis.md", ROUTED);
+        let tmp = repo_with("analysis.md", DEFERRED);
         let result = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
         assert_eq!(result.expired.len(), 1, "the deferred work landed");
         assert!(result.notices[0].starts_with("decision expired: grounding"));
@@ -308,7 +311,7 @@ mod tests {
 
     #[test]
     fn a_silent_key_is_retained_on_a_restricted_run() {
-        let tmp = repo_with("review.md", DISCARDED);
+        let tmp = repo_with("review.md", WAIVED);
         let result = run(&args(DecisionRecord::Review, &[], true), tmp.path()).unwrap();
         assert!(
             result.expired.is_empty(),
@@ -320,7 +323,7 @@ mod tests {
 
     #[test]
     fn a_restricted_run_still_matches_a_firing_key() {
-        let tmp = repo_with("review.md", DISCARDED);
+        let tmp = repo_with("review.md", WAIVED);
         let result = run(
             &args(
                 DecisionRecord::Review,
@@ -355,7 +358,7 @@ mod tests {
 
     #[test]
     fn the_first_of_a_duplicated_key_wins() {
-        let tmp = repo_with("analysis.md", &format!("{ROUTED}{ROUTED}"));
+        let tmp = repo_with("analysis.md", &format!("{DEFERRED}{DEFERRED}"));
         let result = run(
             &args(
                 DecisionRecord::Analysis,
@@ -375,11 +378,11 @@ mod tests {
     /// exactly as `merge` judges them when it rewrites the list.
     #[test]
     fn keys_compare_flattened_for_matching_and_duplicates() {
-        let padded = ROUTED.replace(
+        let padded = DEFERRED.replace(
             "\"grounding — plan.md cites a missing path\"",
             "\" grounding — plan.md cites a missing path \"",
         );
-        let tmp = repo_with("analysis.md", &format!("{padded}{ROUTED}"));
+        let tmp = repo_with("analysis.md", &format!("{padded}{DEFERRED}"));
         let result = run(
             &args(
                 DecisionRecord::Analysis,
@@ -431,7 +434,7 @@ mod tests {
         let tmp = repo_with("analysis.md", "");
         std::fs::write(
             tmp.path().join("specs/001-x/analysis.md"),
-            format!("---\nspec: 001-x\ndecisions:\n{ROUTED}\n# Analysis\n"),
+            format!("---\nspec: 001-x\ndecisions:\n{DEFERRED}\n# Analysis\n"),
         )
         .unwrap();
         let error = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap_err();
@@ -441,7 +444,7 @@ mod tests {
 
     #[test]
     fn the_record_argument_selects_the_file() {
-        let tmp = repo_with("review.md", ROUTED);
+        let tmp = repo_with("review.md", DEFERRED);
         let from_analysis = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
         assert!(
             from_analysis.expired.is_empty(),
@@ -464,7 +467,7 @@ mod tests {
     /// whose message carried a stray line break still matches its decision.
     #[test]
     fn a_fired_key_with_a_line_break_matches_its_flattened_decision() {
-        let tmp = repo_with("analysis.md", ROUTED);
+        let tmp = repo_with("analysis.md", DEFERRED);
         let result = run(
             &args(
                 DecisionRecord::Analysis,

@@ -399,8 +399,9 @@ pub enum InboxRoute {
     /// routes it, then removed — never parked (§bug-handling).
     Chore,
     /// Not actionable, or out of scope: removed with no other write. A finding
-    /// a review or analyze run discards has its reason stored in that run's
-    /// record (spec 058).
+    /// a review or analyze run waives has its reason stored in that run's
+    /// record (specs 058, 076); this inbox route keeps its name, since an
+    /// inbox item is not a finding.
     Discard,
 }
 
