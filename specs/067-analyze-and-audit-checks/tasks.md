@@ -169,3 +169,13 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 - [ ] specs/067-analyze-and-audit-checks/plan.md — the Overview says "No runtime behavior changes", while 18 commits to `runtime/src` carry 067's number, tasks 5–11 and its review rounds among them (048's review, 2026-10-29). Restate the Overview, and classify each primitive interface those commits changed as additive or breaking under BE-COMPAT-001, as the Technical Decisions section now does for `check-promotion-coverage`'s empty-`sections` refusal
 
 - **Done when**: the Overview states the runtime work 067 did, and every primitive interface change in it is classified additive or breaking
+
+## 21. Implement scenario: deprecation-labels-are-read-by-the-runtime
+
+Starts once spec 076's runtime work has landed: registering a primitive edits `runtime/src/main.rs`, `runtime/src/mcp/server.rs` and `runtime/src/schema/primitives.rs`, which held 076's uncommitted work when this task was written (owner, 2026-11-02).
+
+- [ ] Implement the behavior described in `scenarios/deprecation-labels-are-read-by-the-runtime.md`
+- [ ] The primitive, registered at all five sites, sharing `check-rule-ids`' label reader
+- [ ] `scripts/audit/deprecation-removal.sh` calls it and drops its own parse, and `scripts/tests/test-deprecation-removal.sh` passes unchanged
+
+- **Done when**: Family 40 reads every label through the primitive, its test passes, and the primitive's tests fail when its label reader is removed.

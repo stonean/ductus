@@ -13,6 +13,8 @@ cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-revie
 
 Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the ductus command as two files — `security-backend.md` and `security-frontend.md` — beside `security-cross.md`, which spec 077 introduced for the security rules that hold on every surface. These are rules, not guidelines: `/{project}:analyze` checks implementation against them.
 
+> **Signpost ([077 — Security cross rules](../077-security-cross-rules/spec.md)):** `security-cross.md` holds `SEC-LOG-001`, new, and `SEC-DEPS-001` and `SEC-AUTHN-001` to `-003`, which take over `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020`. Those four are deprecated in 0.60.0, removed in 0.62.0, and each yields every case to its successor. The yields and Statements in `security-backend.md`, `security-frontend.md` and `configuration-cross.md` that named them, or named `BE-LOG-002` or `BE-LOG-008` for a sensitive value outside a backend, name the successors, and `data-model.md` registers the `SEC` prefix beside `BE` and `FE`. This spec's tasks 32, 40 and 42 close there. 077 records the obligation in its `cross-spec-impact:` frontmatter; this signpost is its discharge.
+
 ## Motivation
 
 The constitution lists "Secure" as a guiding principle but does not operationalize it. Projects adopting `ductus` have no concrete security rules to follow or validate against. Each project reinvents its own security posture, leading to inconsistency and gaps.

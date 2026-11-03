@@ -63,3 +63,22 @@ Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse r
 - Routed: the Antigravity rules-mirror cleanup to 071 task 22; fixed once that lands.
 
 - **Done when**: 026's review and analysis are recorded and not stale, and every criterion is re-verified against the tree
+
+## 3. Implement scenario: family-40-deprecated-rules-are-removed-on-time
+
+- [x] Implement the behavior described in `scenarios/family-40-deprecated-rules-are-removed-on-time.md`
+- [x] `scripts/audit/deprecation-removal.sh`, registered in `scripts/audit/run-all.sh` and listed in `framework/reference/audit.md` and `scripts/audit/README.md` §Scripts
+- [x] `scripts/tests/test-deprecation-removal.sh` shows each case the scenario's last edge case names, and `framework-checks.yml` step (p) runs it
+- [x] The family passes on the tree, its coverage line counting the four labels 077 wrote against `version` 0.59.11
+
+Two independent re-reads ran on 2026-11-02. The first's findings are fixed in the commit that adds this paragraph, which lists them; the second's are the unchecked items below, after which a further re-read is owed.
+
+- [ ] Tests that fail without each behaviour the scenario claims, with any defect they expose fixed: two deprecated rules in one file, both compared; two labels in one section; a `### Notes` heading after a rule ending its section; a rule file that is not UTF-8, giving the parse-failure finding; python3 missing from `PATH`. Until then, `framework/reference/audit.md` item 40's and `scripts/audit/README.md`'s "proves each case" overclaim
+- [ ] A target counts only when it starts like a version (`removed in` then an optional backtick and `v?` and a digit), so a label reading "removed in favour of `SEC-X-001`; removed in 0.62.0" names one target, and a label paragraph ends at a line opening with `>` or `**Field:**`, so a Statement after the label is not read as part of it
+- [ ] Messages that say what is wrong: an unreadable `version` reports it unreadable; a label opening its line in another form (`**DEPRECATED:**`) says it is not in the form `**DEPRECATED in X.Y.Z:**`; one target named twice says so
+- [ ] 067's scenario `deprecation-labels-are-read-by-the-runtime` states the primitive's result per label line, with the rule section it falls in if any, so Family 40's outside-section findings survive the move to the primitive
+- [ ] The "mirrors the runtime" claim is made true or bounded: a tab after a rule heading's hashes crashes the parse (`level = atx(line) or 4`, as the runtime defaults to 4); a rule heading nested in another rule's section is read differently; the pathspec becomes `':(glob)framework/rules/*.md'`, as the runtime's discovery does not descend into subdirectories
+- [ ] The family rejects a deprecating version that is not MAJOR.MINOR.PATCH (`**DEPRECATED in v0.60:**`), which 008's `data-model.md` Deprecated row does not require, and the deprecating version is never compared. — owner's call: drop the check; or state MAJOR.MINOR.PATCH for `{version}` in 008's row
+- [ ] An independent agent re-reads the fix round, re-running both earlier rounds' probes and mutants, repeated until a round finds no MUST or SHOULD
+
+- **Done when**: Family 40 passes on the tree, its test passes, and the test is seen to fail when the family's comparison is removed (077 task 8, owner, 2026-11-02).

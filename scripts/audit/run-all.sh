@@ -97,5 +97,6 @@ run_check "Family 36 — self-URL resolution" "scripts/audit/self-url-resolution
 run_check "Family 37 — analyze-record backlog" "scripts/audit/analyze-record-backlog.sh"
 run_check "Family 38 — promotion coverage" "scripts/audit/promotion-coverage.sh"
 run_check "Family 39 — shipped anchor resolution" "scripts/audit/shipped-anchor-resolution.sh"
+run_check "Family 40 — deprecated rules are removed on time" "scripts/audit/deprecation-removal.sh"
 
 exit "$drift"

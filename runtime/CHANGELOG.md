@@ -23,9 +23,14 @@ its version and date.
   file, installed whatever `[rules] surfaces` says. On a project with feature
   specs, `/ductus`'s one-time brownfield security audit now also runs when it
   newly installs `security-cross.md`, as the upgrade to 0.60.0 does, and
-  reports each spec one of its rules finds a gap in. It now judges a rule's
-  yield against every rule file installed, as `/analyze` does, so it names
-  the owner `/analyze` reports a gap under. `SEC-LOG-001` keeps
+  reports each spec one of its rules finds a gap in. It now leaves a case a
+  rule's **Not flagged:** clause yields to another rule to that rule, judging
+  the yield's load condition against every rule file installed, as `/analyze`
+  does, so the case is reported under the owner's ID when the run newly
+  installs the owner's file too, and not at all when that file was already
+  installed. An upgrade of a backend-only or full-stack project therefore
+  previews none of `SEC-LOG-001`'s gaps, which `BE-LOG-002` and `BE-LOG-008`
+  own there, and `/analyze` reports them. `SEC-LOG-001` keeps
   passwords, tokens, session IDs, keys, one-time and recovery codes, PII and
   other sensitive field values out of logs, error reports and telemetry in
   every shape; where `security-backend.md` is also loaded, `/analyze` reports
