@@ -92,6 +92,29 @@ its version and date.
   project no longer configures stops receiving updates, with the same results
   until the file is deleted or its surface configured again. Spec 077; spec
   008, tasks 32, 40 and 42.
+- **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
+  `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s
+  `dispositions:` map counts `deferred` and `waived` where it counted `routed`
+  and `discarded`, and a stored decision's `outcome` is `deferred` or
+  `waived`. Both writers read a record 0.59.11 wrote, old keys and outcomes
+  included, and write only the new names on their next run, so a CI step or
+  script of your own that reads `dispositions.routed`,
+  `dispositions.discarded` or `outcome: routed` must read the new names. A map
+  carrying a key beside its old name (`routed` and `deferred`) does not parse.
+  A deferral names its work — a `target`, a `task` in a `tasks.md` target, an
+  external `work-item` ID, or pipeline work and a work item both — and is
+  refused when it names none, or a target or task that does not exist; a
+  work-item ID is any one-line text, stored as given and never read. A waiver
+  states its reason and names no work. `/review` defers a MUST or SHOULD
+  violation with `--defer <rule-id>` and `--target`, `--task` or
+  `--work-item`, stored under `decisions:` keyed `rule {rule-id} at {file}`. A
+  deferral of a gating finding — a review MUST or SHOULD, an analyze hard-fail
+  or blocking finding — releases `done` only when its work is on another spec,
+  and leaves that record's counts; one to the spec's own task, or to a work
+  item alone, is stored with `gating: true`, and `check-review-gate` names it
+  where it blocks. `process-decisions` returns a deferral whose task is
+  checked, or whose spec is `done`, while its finding still fires, under
+  `lapsed`, and the finding needs a new disposition. Spec 076.
 
 ## [0.59.11] — 2026-10-17
 
