@@ -204,6 +204,8 @@ than restated. The canonical declaration is
 `/ductus:review` writes is recorded field-by-field in
 [data-model.md](data-model.md).
 
+> **Signpost:** the fix-round loop's fields — `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers` — and the `[review] re-reads-off` key are defined by [078 — Review fix rounds are re-read within a bound](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md).
+
 ```yaml
 ---
 spec: 020-code-review                 # the feature slug, added by the merge

@@ -97,3 +97,15 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] A test shows a result past the bound reaching every entry, and fails when the bound is removed
 
 - **Done when**: every list in the result carries a stated maximum, every entry stays reachable, and 076's 2026-11-03 analysis's BE-PAYLOAD-001 finding no longer fires.
+
+## 15. Implement scenario: the-fix-round-loop-is-recorded-and-gated
+
+Blocked on 078 task 2: `write-review` reads `[review] re-reads-off` through the reader that task adds to `runtime/src/primitives/fix_rounds.rs`.
+
+- [ ] Implement the behavior described in `scenarios/the-fix-round-loop-is-recorded-and-gated.md`
+- [ ] Add the `fix-rounds` argument to `WriteReviewArgs` and derive the six record fields and the Summary line in `runtime/src/primitives/write_review.rs`, refusing the malformed entries the scenario lists
+- [ ] Add check 12, `fix-round-not-re-read`, and the passing guidance for a record without the loop fields to `runtime/src/primitives/check_review_gate.rs`
+- [ ] Name the fields in `framework/constitution.md`'s audit-record table, cutting as many bytes as the row adds, and their meaning in `framework/reference/review.md`; add the check to `data-model.md`'s `check-review-gate` list
+- [ ] Tests: each derived count, the absent-versus-empty list, the switch's waiver, each refusal, and the gate blocking and passing; each fails with its behavior removed
+
+- **Done when**: `write-review` records the loop's fields from `fix-rounds` alone, `check-review-gate` blocks an un-re-read round without a waiver, and the constitution passes `scripts/lint-governing-size.sh`.
