@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 next-criterion: 16
 ---
@@ -146,7 +146,7 @@ are unchanged in substance.
 ## Acceptance Criteria
 
 - [x] AC1: `framework/commands/analyze.md` carries a capture step that appends every surviving finding to the inbox via `append-inbox`, ordered before the report-render step, and the markdown-only reference documents the same behavior for the runtime-less path. **Superseded by 058**: the capture step is gone. After detection, a fix-and-route step proposes a disposition for each live finding and writes each fix or route only after `gate-confirm`, and the markdown-only reference documents the same for the runtime-less path.
-- [x] AC2: Each captured bullet names the finding's category, family, message, and citing artifact path, and marks the capture source as `/{project}:analyze`. **Superseded by 058**: no bullet is written. `analysis.md`'s report lists each finding with its family, message, path, and disposition: the fixed file, the artifact it was deferred to, or the waiver reason.
+- [x] AC2: Each captured bullet names the finding's category, family, message, and citing artifact path, and marks the capture source as `/{project}:analyze`. **Superseded by 058**: no bullet is written. `analysis.md`'s report lists each finding with its family, message, path, and disposition: the fixed file, the artifact or work item it was deferred to, or the waiver reason.
 - [x] AC3: Re-running `/{project}:analyze` against an unchanged repo appends nothing — every bullet is dedup-guarded on category, family, and message — so `inbox.md` is byte-identical across consecutive runs. **Superseded by 058**: no run touches `inbox.md`. What makes a re-run quiet now is the stored decision: a re-run over an unchanged tree counts each decided finding under its stored outcome without asking again.
 - [x] AC4: Two findings of the same family citing the same `spec.md` but naming different missing paths are captured as two bullets, not merged into one. **Superseded by 058**, with its reason carried over: nothing is captured, and a stored decision's key is `{family} — {message}`, so two such findings are still two decisions.
 - [x] AC5: A finding resolved by `--fix` within the same run is not captured. **Superseded by 058**: nothing is captured. A finding resolved within the run no longer fires at the re-check, so the record, written after it, does not count it.

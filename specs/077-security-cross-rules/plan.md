@@ -20,14 +20,14 @@ No runtime behaviour changes; one corpus test is added (§Verification). The rul
 There are three registration sites, and each must agree.
 
 - **This spec's `data-model.md`** registers `SEC-{CATEGORY}-{NNN}` and the categories `LOG`, `DEPS` and `AUTHN`, as 036's does for `QUAL` (`specs/036-quality-cross-rules/data-model.md`, §`QUAL` surface). `framework/reference/analyze.md` ("Which ID format governs a file", item 1) reads a file's introducing-spec data-model first, and a file whose IDs fail it is treated as unloadable.
-- **`scripts/lint-rule-ids.sh`** allows only `^(BE|FE|CFG|QUAL)-` (line 45), so `SEC` joins the allowlist. 077's data-model joins the source comment above it (lines 16–18), and the message on line 76 is updated.
+- **`scripts/lint-rule-ids.sh`**'s `id_re` lists `SEC` beside `BE`, `FE`, `CFG` and `QUAL`, the source comment above it names 077's data-model, and the malformed-heading message lists `SEC`.
 - **The analyze reference** lists 077's data-model beside 008's and 017's in item 1. 008's `data-model.md` (§Rule ID format, the paragraph after the category table) names `security-cross.md`'s `SEC` prefix beside `CFG` and `QUAL`.
 
 `security-cross.md`'s header declares the format and the three categories, as `quality-cross.md`'s does (`framework/rules/quality-cross.md:3`).
 
 ### `SEC-LOG-001` states its own value set
 
-A frontend-only or cross-only project does not install `security-backend.md` (`framework/bootstrap/ductus.md`, "Rule-file surface filter"), so `SEC-LOG-001` cannot rely on `BE-LOG-002` for its value set. Its Statement names the values `BE-LOG-002` bars, word for word: passwords, full authentication tokens, session IDs, encryption keys, one-time codes, recovery codes, security-question answers, raw PII, full payment card numbers and other sensitive field values. It bars them from a log line, an error-reporting payload and telemetry, in any shape.
+A frontend-only or cross-only project does not install `security-backend.md` (`framework/bootstrap/ductus.md`, "Rule-file surface filter"), so `SEC-LOG-001` cannot rely on `BE-LOG-002` for its value set. Its Statement names the values `BE-LOG-002`'s Statement bars, word for word, and bars them from a log line, an error-reporting payload and telemetry, in any shape.
 
 Its Verification asks a spec or plan that introduces logging, error reporting or telemetry, client-side or server-side, to commit to excluding or redacting those values. Its Not-flagged clause names three owners:
 
@@ -51,7 +51,7 @@ The Sources are re-fetched at the move, and any quote that no longer matches is 
 
 Each deprecated rule keeps its heading, its ID and its Statement. It gains a `**DEPRECATED in {version}:**` paragraph directly under the heading, the position `runtime/src/primitives/rule_sections.rs`'s `a_deprecated_section_parses_like_any_other` test uses. The paragraph names the successor and the removal version.
 
-Its Verification becomes one sentence naming the successor as the owner of every case the rule governed, with no load condition. `/{project}:analyze` therefore reports each case once, under the successor. The exec walker still asks about the rule, since a deprecated section parses like any other, and the host answers `passed`.
+Its Verification becomes a pointer, "This rule is deprecated." and a **Not flagged:** clause naming the successor as the owner of every case the rule governed, with no load condition. `/{project}:analyze` therefore reports each case once, under the successor. The exec walker still asks about the rule, since a deprecated section parses like any other, and the host answers `passed`.
 
 The version is the next one `version` would ship, computed when the labels are written: `0.60.0`, since that release carries 076's renamed record and result values (`898a49ec`), a breaking schema change and so a minor bump before 1.0 (`specs/022-deterministic-runtime/data-model.md`, the versioning paragraph). The removal target is the second minor release after it, `0.62.0`, as 077's second Resolved Question decided.
 
@@ -62,7 +62,7 @@ These name a deprecated rule and change to name its successor:
 - `security-backend.md`: the yields in `BE-API-009`, `BE-API-010`, `BE-API-011` and `BE-API-013`, and the Statements of `BE-API-010` (d) and `BE-API-011`. The latter's "Token comparison MUST be constant-time per `BE-AUTHN-009`" becomes per `SEC-AUTHN-001`.
 - `security-frontend.md`: the yields in `FE-AUTHN-001` and `FE-STORAGE-003`, which drop "where `security-backend.md` is also loaded", since a `-cross.md` owner installs in every shape. `FE-DEPS-004` gains a yield, with no condition, of a package a build step's command runs by a mutable reference, such as `npx tool@latest`, in a spec or plan, to `SEC-DEPS-001`, whose trigger reaches a spec or plan and not `system.md`, which a frontend-only project now loads beside it, so the case is reported once; `security-backend.md`'s `BE-DEPS-002` gains the same yield.
 
-`configuration-cross.md`'s `CFG-ENV-006` names a non-configuration sensitive value in a log line as `BE-LOG-002`'s, and one in propagated trace context as `BE-LOG-008`'s. It is the only rule outside the backend surface that does so (grep of `framework/rules/` for both IDs). It then reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there stays `BE-LOG-008`'s with no condition, as 008's task 43 leaves it open.
+`configuration-cross.md`'s `CFG-ENV-006` is the only rule outside the backend surface that names `BE-LOG-002` or `BE-LOG-008` for a sensitive value (grep of `framework/rules/` for both IDs). For a non-configuration value in a log line it reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there stays `BE-LOG-008`'s with no condition, as 008's task 43 leaves it open.
 
 `observability-backend.md`'s pointers to `BE-LOG-008` stay as they are: it installs on the backend surface, beside `security-backend.md`.
 
@@ -153,7 +153,7 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 
 ## Open Questions Resolved
 
-- **The ID prefix** is `SEC`, registered in `data-model.md` and in the three registration sites above.
+- **The ID prefix** is `SEC`, registered in the three registration sites above.
 - **The removal version** is the second minor release after the shipping one, written into each `**DEPRECATED in {version}:**` label.
 
 ## Cross-spec impact

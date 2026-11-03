@@ -60,7 +60,7 @@ The full ID always includes the `CFG-` prefix to disambiguate from the `BE-` (ba
 | Statement | yes | Block quote (`> …`) | The rule's obligation, stated with RFC 2119 keywords of one tier — MUST and MUST NOT, or SHOULD and SHOULD NOT — and optionally MAY for a permission or scope boundary. See **Severity classification** below. |
 | Verification | yes | Paragraph beginning `**Verification:**` | Instruction to `/{project}:analyze` — see **Verification phrasing** below. |
 | Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., 12-Factor App, NIST SP 800, ISO 80000-3 for units of time). Optional but recommended. |
-| Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | Present only on deprecated rules. Includes the removal target version. The rule remains in the file with this label until removed. |
+| Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | As the Deprecated row of `specs/008-security-rules/data-model.md`, which states the label's form, its removal target and what holds a release to it. |
 
 ## Verification phrasing
 

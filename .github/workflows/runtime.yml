@@ -58,7 +58,8 @@ on:
       - 'framework/bootstrap/hooks/ductus-pre-commit'
       - 'scripts/lint-frontmatter.sh'
       # src/primitives/rule_sections.rs holds corpus tests over the shipped
-      # rule files (every rule assessable, no Statement mixing tiers), so an
+      # rule files (every rule assessable, no Statement mixing tiers,
+      # SEC-LOG-001's value list held to BE-LOG-002's), so an
       # edit to a rule file is an edit to their subject. Without this path a
       # rules-only change never runs them.
       - 'framework/rules/**'

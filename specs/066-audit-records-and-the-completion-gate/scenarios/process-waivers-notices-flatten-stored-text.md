@@ -6,7 +6,7 @@ section: "The review record"
 
 ## Context
 
-The review of [076 — Waived and deferred findings are distinct dispositions](../../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md) found that `process-waivers` prints a stored waiver's text as written. Its duplicate, retained and expired notices interpolate the `rule`, `file` and `reason` read from `review.md`'s `waivers:` list, and `/{project}:review` emits each notice verbatim. A hand-edited waiver can carry a control character in any of the three, and `write-review` keeps it across rewrites, escaped, so it reaches the operator raw. Since 076, `process-decisions`' notices and `check-review-gate`'s held-by-deferral suffix flatten every stored text they print; `process-waivers` is the remaining reader of a stored record that does not.
+The review of [076 — Waived and deferred findings are distinct dispositions](../../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md) found that `process-waivers` prints a stored waiver's text as written. Its retained and expired notices interpolate the `rule`, `file` and `reason`, and its duplicate notice the `rule` and `file`, read from `review.md`'s `waivers:` list, and `/{project}:review` emits each notice verbatim. A hand-edited waiver can carry a control character in any of the three, and `write-review` keeps it across rewrites, escaped, so it reaches the operator raw. Since 076, `process-decisions`' notices and `check-review-gate`'s held-by-deferral suffix flatten every stored text they print; `process-waivers` is the remaining reader of a stored record that does not.
 
 ## Behavior
 

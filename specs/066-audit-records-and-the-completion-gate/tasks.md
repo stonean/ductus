@@ -93,7 +93,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 14. Implement scenario: process-decisions-results-have-a-bounded-size
 
 - [ ] Implement the behavior described in `scenarios/process-decisions-results-have-a-bounded-size.md`
-- [ ] Bound `process-decisions`' `matched`, `expired`, `retained` and `lapsed` lists by the mechanism task 7 settles, and state the maximum in `data-model.md`
+- [ ] Bound `process-decisions`' `matched`, `expired`, `retained`, `lapsed` and `notices` lists by the mechanism task 7 settles, and state the maximum in `data-model.md`
 - [ ] A test shows a result past the bound reaching every entry, and fails when the bound is removed
 
 - **Done when**: every list in the result carries a stated maximum, every entry stays reachable, and 076's 2026-11-03 analysis's BE-PAYLOAD-001 finding no longer fires.

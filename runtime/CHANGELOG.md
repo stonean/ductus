@@ -84,9 +84,9 @@ its version and date.
   sensitive value in propagated trace context, one other than configuration
   in an error report, a span or a metric label, and a missing redaction
   commitment for those carriers. A copy pinned from `main` after 0.59.11 keeps
-  whichever moved rules it had not yet deprecated, all four before
-  `ad8a36f9`, and a `BE-DEPS-006` deprecated there may still name removal in
-  0.61.0. Any pinned `security-backend.md` keeps `BE-DEPS-002`'s `npx` case,
+  whichever moved rules it had not yet deprecated, all four from `1598b87a`
+  until `ad8a36f9`, and a `BE-DEPS-006` deprecated there may still name
+  removal in 0.61.0. Any pinned `security-backend.md` keeps `BE-DEPS-002`'s `npx` case,
   and any pinned `security-frontend.md` `FE-DEPS-004`'s, beside
   `SEC-DEPS-001`; and a pinned `specs/rules/security-frontend.md`'s
   `FE-AUTHN-001` and `FE-STORAGE-003` keep their OAuth cases beside
@@ -95,7 +95,10 @@ its version and date.
   `9b067399`, 0.59.11's among them. Each lasts until the file is re-synced. A
   `security-backend.md` or `security-frontend.md` left from a surface the
   project no longer configures stops receiving updates, with the same results
-  until the file is deleted or its surface configured again. Spec 077; spec
+  until the file is deleted or its surface configured again. A project that
+  wrote its own `specs/rules/security-cross.md` should rename or pin it
+  before upgrading: the upgrade replaces it with the shipped file, and no
+  audit runs for it, since the file is not newly created. Spec 077; spec
   008, tasks 32, 40 and 42.
 - **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
   `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s

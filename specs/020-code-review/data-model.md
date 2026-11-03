@@ -109,7 +109,7 @@ decisions:                           # omitted entirely when empty
 | `last-run` | ISO 8601 timestamp or null | yes | Set on each run. Spelled `reviewed-at` here until 057; the spec block called the same instant `last-run`, and one home leaves one spelling. Null only on a record that has never run. |
 | `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for one thing, the mechanical-sweep rename exemption. |
 | `diff-base` | string (Git SHA) | yes | The SHA where the spec advanced to `in-progress`, or the value passed to `--since=<ref>`. |
-| `must-violations` | integer ≥ 0 | yes | Post-waiver count. |
+| `must-violations` | integer ≥ 0 | yes | Count after waivers and releasing deferrals (076). |
 | `should-violations` | integer ≥ 0 | yes | Advisory severity count. |
 | `low-confidence` | integer ≥ 0 | yes | Quality-pass findings below 80 confidence. Excluded from `must-violations`. |
 | `examined` | integer ≥ 0 | no | How many in-scope files the five passes actually **read**. Recorded as absent rather than zero when unstated — an unstated claim and a stated zero are different. Added by 022; see AC15. |
@@ -121,7 +121,7 @@ decisions:                           # omitted entirely when empty
 | `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058; 076 renamed `routed` and `discarded`, still read from an older record. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema above is open per §text-first-artifacts. |
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop`, `round-waivers` | integers, a boolean, a list | no | The fix-round loop's outcome, derived by `write-review` and absent when the run stated nothing about its fixes. Defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md). |
-| `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
+| `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
 **Validation severity** (per [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
 **Audit records**, which has declared both records since 057):

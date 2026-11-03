@@ -121,7 +121,7 @@ Handoff (2026-10-29). The first item waits on the owner, asked as one decision. 
 
 - Fixed: indentless `- item` spliced into invalid YAML (`spec_links.rs`); derive-references split a block-form key from its items (`derive_references.rs`); Family 28 matched a script anywhere in the README, one way (`audit-family-parity.sh`); untested check-command-flags `run`, derive-dependencies `absent`, `framework/reference/` sources' link check and a nested markers file; a rule-ids test named for a removed window; traverse_deps named the retired `gen-spec-deps.sh`; findings_for's doc comment sat on a test; `sections` documented required yet an empty set reported zeros; an unparseable registry promised a skip (`check_orphaned_references.rs`); `orphaned-reference-check.md`'s `last_applied` null and command-file pointer; the data model's two exclusions and traverse-deps `cycles`; AC2 and `anchor-reference-kinds.md` missing the word-boundary and fence rules; the pointers scenario's link-target form; `criterion-negated-creation-phrasing.md`'s mis-resolved `045 §Resolved Questions`; each item of this task.
 - Waived, contrived unless stated: two Tarjan implementations (depth bounded by spec count) and an unparseable transitive node becoming a sink (validate-frontmatter hard-fails it) and `../` dependency names (read-only, the operator's own tree), all `traverse_deps.rs`; a digit as hint word boundary (`check_command_flags.rs`); fence-blind headings and minor untested branches, no claim resting on them (`check_promotion_coverage.rs`); `--section ""` not refused; pair_document restating the pair grammar, only message wording affected (`shipped-anchor-resolution.sh`); a maintainer-only reference allowed from any file, and exact lowercase names only, as its header says (`installer-command-parity.sh`); a renamed `findings` key passing, not a claimed case (`step-reference-integrity.sh`); a cosmetic double blank line (`derive_references.rs`); step 7 with `--agents=` omitting the host, as the owner worded it (`ductus.md`); 1c reducing bullets to distinct edges, as its header states (`cross-doc-consistency.sh`).
-- Routed: the Antigravity rules-mirror cleanup (`ductus.md`) to 071 task 22; fixed once that lands.
+- Deferred: the Antigravity rules-mirror cleanup (`ductus.md`) to 071 task 22; fixed once that lands.
 
 Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
@@ -176,6 +176,14 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 - [ ] Implement the behavior described in `scenarios/deprecation-labels-are-read-by-the-runtime.md`
 - [ ] The primitive, registered at all five sites, sharing `check-rule-ids`' label reader
-- [ ] `scripts/audit/deprecation-removal.sh` calls it and drops its own parse, and `scripts/tests/test-deprecation-removal.sh` passes unchanged
+- [ ] `scripts/audit/deprecation-removal.sh` calls it and drops its own parse, and the cases of `scripts/tests/test-deprecation-removal.sh` carry over unchanged, its fixture builder supplying the runtime binary
 
 - **Done when**: Family 40 reads every label through the primitive, its test passes, and the primitive's tests fail when its label reader is removed.
+
+## 22. Implement scenario: a-record-cites-a-removed-rule
+
+- [ ] Resolve the scenario's open question with `/ductus:clarify`, before the release that removes 077's four deprecated rules (0.62.0)
+- [ ] Implement the behavior described in `scenarios/a-record-cites-a-removed-rule.md`
+- [ ] `check-rule-ids` passes a record's citation of a removed rule and still reports one as a current requirement, each shown by a test that fails without it
+
+- **Done when**: a record citing a removed rule passes `check-rule-ids`, a current-requirement citation of one still fails it, and both are tested.
