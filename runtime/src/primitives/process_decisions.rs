@@ -13,8 +13,9 @@
 //!   finding needs a new disposition and the writer drops the entry (spec 076).
 //!   A deferral naming only an external work item never lapses, because the
 //!   pipeline never reads the tracker; one whose named `tasks.md`, or owning
-//!   spec's status, cannot be read is matched, with a notice, so a check that
-//!   could not run looks like neither.
+//!   spec's status, cannot be read — or whose feature directory resolves
+//!   outside the project — is matched, with a notice, so a check that could
+//!   not run looks like neither.
 //! - **expired** — the key did not fire on an unrestricted run. The writer
 //!   drops the entry. For a deferred decision this is the moment the deferred
 //!   work landed.
@@ -30,14 +31,13 @@
 
 use std::path::Path;
 
-use crate::primitives::decisions::{self, read_decisions};
+use crate::primitives::decisions::{self, Work, read_decisions};
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
     DecisionOutcome, DecisionRecord, DecisionRef, ProcessDecisionsArgs, ProcessDecisionsResult,
-    ReadTasksArgs,
 };
 
 /// Execute the `process-decisions` primitive.
@@ -101,7 +101,12 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
 
         if fired.contains(&key) {
             if decision.outcome == DecisionOutcome::Deferred {
-                match work_state(repo, &layout.specs_root, &decision) {
+                match decisions::work_state(
+                    repo,
+                    &layout.specs_root,
+                    decision.target.as_deref(),
+                    decision.task.as_deref(),
+                ) {
                     Work::Complete => {
                         result.notices.push(format!(
                             "deferral lapsed: {} — {} is complete and the finding still fires",
@@ -110,7 +115,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
                                 decision.target.as_deref(),
                                 decision.task.as_deref(),
                                 None,
-                                str::to_string,
+                                crate::primitives::flatten_line,
                             )
                         ));
                         result.lapsed.push(decision);
@@ -144,71 +149,6 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
     Ok(result)
 }
 
-/// Where the pipeline work a stored deferral names stands — what a lapse is
-/// judged from (spec 076).
-#[derive(Debug, PartialEq, Eq)]
-enum Work {
-    /// Still to do: its task has an unchecked box, or its spec is not `done`.
-    Pending,
-    /// Done or gone: its task is checked or absent, its spec is `done` or
-    /// absent, or it lies outside every spec — a rule file, amended when the
-    /// deferral was recorded.
-    Complete,
-    /// Only an external work item is named, and the pipeline never reads one.
-    External,
-    /// The named `tasks.md` cannot be read, or the owning spec's `status`
-    /// cannot be read from its frontmatter, so its state is unknown.
-    Unreadable,
-}
-
-/// Judge the work `decision` names, per the data model's completion table.
-fn work_state(repo: &Path, root: &str, decision: &DecisionRef) -> Work {
-    let Some(target) = decision.target.as_deref().map(str::trim) else {
-        return Work::External;
-    };
-    let Some(feature) = decisions::target_feature(root, target) else {
-        return Work::Complete;
-    };
-    let target = Path::new(target);
-    let feature_dir = repo.join(root).join(feature);
-    let spec_path = feature_dir.join("spec.md");
-    if !spec_path.is_file() {
-        // A rule file under the spec root, or a spec since retired.
-        return Work::Complete;
-    }
-    let names_tasks = target.file_name() == Some("tasks.md".as_ref());
-    match decision.task.as_deref().map(str::trim) {
-        Some(number) if names_tasks => {
-            if !feature_dir.join("tasks.md").is_file() {
-                return Work::Complete;
-            }
-            let args = ReadTasksArgs {
-                feature: feature.to_string(),
-            };
-            match super::read_tasks::read_checked(&args, repo, root) {
-                Err(_) => Work::Unreadable,
-                Ok(tasks) => match tasks.tasks.iter().find(|task| task.number == number) {
-                    Some(task)
-                        if !task.subtasks.iter().all(|subtask| subtask.checked)
-                            || task.done_when_checked == Some(false) =>
-                    {
-                        Work::Pending
-                    }
-                    _ => Work::Complete,
-                },
-            }
-        }
-        _ => match std::fs::read_to_string(&spec_path)
-            .ok()
-            .and_then(|content| super::frontmatter_status(&content, &spec_path))
-        {
-            None => Work::Unreadable,
-            Some(status) if status == "done" => Work::Complete,
-            Some(_) => Work::Pending,
-        },
-    }
-}
-
 /// The decision's outcome and its companion, for a notice.
 fn describe(decision: &DecisionRef) -> String {
     match decision.outcome {
@@ -218,7 +158,7 @@ fn describe(decision: &DecisionRef) -> String {
                 decision.target.as_deref(),
                 decision.task.as_deref(),
                 decision.work_item.as_deref(),
-                str::to_string,
+                crate::primitives::flatten_line,
             )
         ),
         DecisionOutcome::Waived => {

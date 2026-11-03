@@ -184,13 +184,15 @@ fn decide(
 
 /// `decision`'s key when it is a waiver of `path` recorded at a read-page
 /// count of at least `pages`. A deferred decision never covers a size: only a
-/// waiver records that the operator accepted it. `discarded` is a waiver's
-/// name in a record written before spec 076.
+/// waiver records that the operator accepted it. The outcome is read through
+/// [`RawDecision::to_ref`], which owns the outcome names and their pre-076
+/// aliases (`discarded`), so a malformed entry — a waiver naming work, say —
+/// covers nothing, as it applies to nothing anywhere else (`QUAL-GROUND-001`).
 fn covering_key(decision: &RawDecision, path: &str, pages: u64) -> Option<String> {
-    if !matches!(
-        decision.outcome.as_deref().map(str::trim),
-        Some("waived" | "discarded")
-    ) {
+    if !decision
+        .to_ref()
+        .is_ok_and(|waiver| waiver.outcome == crate::schema::primitives::DecisionOutcome::Waived)
+    {
         return None;
     }
     let key = decision.key.as_deref()?;
@@ -1171,6 +1173,23 @@ mod tests {
         record(&tmp, &[(&key, "discarded")]);
         let plan = &check(&tmp).unwrap().oversized[0];
         assert!(plan.decided);
+    }
+
+    /// `QUAL-GROUND-001`: the outcome is read through `RawDecision::to_ref`,
+    /// so a waiver that names work — malformed, applying to nothing anywhere
+    /// else (spec 076's data model) — does not cover a size either.
+    #[test]
+    fn a_malformed_waiver_covers_nothing() {
+        let tmp = three_page_plan();
+        let key = stored_key(PLAN, 240, 3, 100);
+        let body = format!(
+            "---\nspec: 001-a\ndecisions:\n  - key: {key:?}\n    outcome: waived\n    \
+             reason: accepted\n    work-item: PROJ-1\n    decided-at: 2026-10-04T00:00:00Z\n    \
+             decided-by: a@b.c\n---\n\n# Analysis\n"
+        );
+        std::fs::write(tmp.path().join("specs/001-a/analysis.md"), body).unwrap();
+        let result = check(&tmp).unwrap();
+        assert!(!result.oversized[0].decided, "{:?}", result.oversized[0]);
     }
 
     #[test]

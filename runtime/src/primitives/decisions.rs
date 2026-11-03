@@ -15,8 +15,9 @@
 //! §Per-run waiver processing): matched while the key fires, expired when an
 //! unrestricted run no longer produces it, retained when the run did not
 //! evaluate its source. An entry missing a required field or its companion, or
-//! carrying a field its outcome forbids, is reported and never pruned; an entry that does not deserialize at all fails
-//! the whole list (see [`RawDecision`]).
+//! carrying a field its outcome forbids, is reported and never pruned; an
+//! entry that does not deserialize at all fails the whole list (see
+//! [`RawDecision`]).
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -35,10 +36,11 @@ pub(crate) const DECISIONS_KEY: &str = "decisions";
 /// derived `gating` a bool — so an entry missing a field still deserializes
 /// and [`Self::to_ref`] reports it as a notice, and so a re-render preserves
 /// the full entry. An entry that is not a mapping, or a known field holding
-/// the wrong type (`reason: [a, b]`, `gating: "yes"`), does not deserialize, and that fails the whole list rather than
-/// the one entry. Unknown adopter-authored fields, of any type, are captured
-/// by `extra` and re-emitted verbatim, the §text-first-artifacts open-schema
-/// rule the waiver list already follows (`RawWaiverFull`).
+/// the wrong type (`reason: [a, b]`, `gating: "yes"`), does not deserialize,
+/// and that fails the whole list rather than the one entry. Unknown
+/// adopter-authored fields, of any type, are captured by `extra` and
+/// re-emitted verbatim, the §text-first-artifacts open-schema rule the waiver
+/// list already follows (`RawWaiverFull`).
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub(crate) struct RawDecision {
     #[serde(default)]
@@ -183,7 +185,13 @@ pub(crate) fn require_companion<'a>(
                     "a deferral names its work: a target, a work item, or both",
                 ));
             }
-            if work_item.is_some_and(|id| id.contains(['\n', '\r'])) {
+            // One line: no line feed, carriage return, `U+0085`, or Unicode
+            // line or paragraph separator. Any other character is accepted
+            // and stored as given (spec 076, AC10), and flattened wherever a
+            // report renders it.
+            if work_item
+                .is_some_and(|id| id.contains(['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}']))
+            {
                 return Err(refuse("work-item", "a work-item ID is one line"));
             }
             if task.is_some() && !names_a_tasks_file(target) {
@@ -210,7 +218,8 @@ pub(crate) fn require_companion<'a>(
 
 /// Refuse a **new** deferral whose pipeline work does not exist: its `target`
 /// must resolve inside the project, and its `task` must number a task in that
-/// `tasks.md` (spec 076). A deferral already stored under `key` is not new —
+/// `tasks.md` (spec 076). A deferral already stored under `key` naming the
+/// same work is not new —
 /// its work may since have gone, which `process-decisions` reports as a lapse,
 /// never as a refusal — unless this run drops it through `expired`, as it does
 /// a lapsed one: the re-deferral that replaces it is new. A deferral naming
@@ -237,9 +246,11 @@ pub(crate) fn refuse_missing_work(
             .iter()
             .any(|gone| same_key(&gone.key, &decision.key))
     });
-    if disposition.outcome != DispositionOutcome::Deferred
-        || standing.is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
-    {
+    let same_standing_work = standing.is_some_and(|decision| {
+        decision.outcome == DecisionOutcome::Deferred
+            && decision_for(disposition, key).is_some_and(|new| same_work(&decision, &new))
+    });
+    if disposition.outcome != DispositionOutcome::Deferred || same_standing_work {
         return Ok(());
     }
     let Some(target) = nonblank(disposition.target.as_deref()).map(str::trim) else {
@@ -258,11 +269,7 @@ pub(crate) fn refuse_missing_work(
         return Ok(());
     };
     let root = crate::schema::paths::Paths::load(repo).specs_root;
-    let feature = Path::new(target)
-        .parent()
-        .filter(|dir| dir.parent() == Some(Path::new(&root)))
-        .and_then(Path::file_name)
-        .and_then(|name| name.to_str())
+    let feature = tasks_feature(&root, target)
         .ok_or_else(|| refuse("task", format!("`{target}` is not a feature's tasks.md")))?;
     let tasks = super::read_tasks::read_checked(
         &crate::schema::primitives::ReadTasksArgs {
@@ -293,17 +300,129 @@ pub(crate) fn target_feature<'a>(root: &str, target: &'a str) -> Option<&'a str>
 }
 
 /// Whether `disposition` defers a finding to pipeline work on a spec other
-/// than `feature` — the one deferral that releases a gating finding from
-/// `feature`'s gate, because that spec's own gate then holds the work (spec
-/// 076). A deferral to its own spec, to a rule file, or to an external work
-/// item alone releases nothing.
+/// than `feature` that is still to do — the one deferral that releases a
+/// gating finding from `feature`'s gate, because that spec's own gate then
+/// holds the work (spec 076). A deferral to its own spec, to a rule file, to
+/// an external work item alone, or to work already complete (its task
+/// checked, its spec `done`) or unreadable releases nothing: no gate holds
+/// it.
 pub(crate) fn releases(repo: &Path, root: &str, feature: &str, disposition: &Disposition) -> bool {
     disposition.outcome == DispositionOutcome::Deferred
         && nonblank(disposition.target.as_deref())
             .and_then(|target| target_feature(root, target))
-            .is_some_and(|other| {
-                other != feature && repo.join(root).join(other).join("spec.md").is_file()
-            })
+            .is_some_and(|other| other != feature)
+        && work_state(
+            repo,
+            root,
+            disposition.target.as_deref(),
+            disposition.task.as_deref(),
+        ) == Work::Pending
+}
+
+/// Where the pipeline work a deferral names stands — what a lapse and a
+/// release are judged from (spec 076).
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum Work {
+    /// Still to do: its task has an unchecked box, or its spec is not `done`.
+    Pending,
+    /// Done or gone: its task is checked or absent, its spec is `done` or
+    /// absent, or it lies outside every spec — a rule file, amended when the
+    /// deferral was recorded.
+    Complete,
+    /// Only an external work item is named, and the pipeline never reads one.
+    External,
+    /// The feature directory resolves outside the project, the named
+    /// `tasks.md` cannot be read, or the owning spec's `status` cannot be read
+    /// from its frontmatter, so its state is unknown.
+    Unreadable,
+}
+
+/// The feature a `tasks.md` target numbers tasks in: `target` is exactly
+/// `{root}/{feature}/tasks.md`. `None` for any other path, a `tasks.md`
+/// nested deeper in a feature included, which is no feature's task list.
+pub(crate) fn tasks_feature<'a>(root: &str, target: &'a str) -> Option<&'a str> {
+    let path = Path::new(target.trim());
+    if path.file_name() != Some("tasks.md".as_ref()) {
+        return None;
+    }
+    let dir = path.parent()?;
+    if dir.parent() != Some(Path::new(root)) {
+        return None;
+    }
+    dir.file_name()?.to_str()
+}
+
+/// Judge the work a deferral's `target` and `task` name, per the data
+/// model's completion table. A stored target is hand-editable, so the feature
+/// directory it names is screened before anything in it is opened
+/// (`BE-INPUT-004`); one that resolves outside the project is unreadable.
+pub(crate) fn work_state(
+    repo: &Path,
+    root: &str,
+    target: Option<&str>,
+    task: Option<&str>,
+) -> Work {
+    let Some(target) = nonblank(target).map(str::trim) else {
+        return Work::External;
+    };
+    let Some(feature) = target_feature(root, target) else {
+        return Work::Complete;
+    };
+    if super::validate_feature_contained(repo, root, feature).is_err() {
+        return Work::Unreadable;
+    }
+    let feature_dir = repo.join(root).join(feature);
+    let spec_path = feature_dir.join("spec.md");
+    if !spec_path.is_file() {
+        // A rule file under the spec root, or a spec since retired.
+        return Work::Complete;
+    }
+    match nonblank(task).map(str::trim) {
+        Some(number) if tasks_feature(root, target) == Some(feature) => {
+            if !feature_dir.join("tasks.md").is_file() {
+                return Work::Complete;
+            }
+            let args = crate::schema::primitives::ReadTasksArgs {
+                feature: feature.to_string(),
+            };
+            match super::read_tasks::read_checked(&args, repo, root) {
+                Err(_) => Work::Unreadable,
+                Ok(tasks) => match tasks.tasks.iter().find(|entry| entry.number == number) {
+                    Some(entry)
+                        if !entry.subtasks.iter().all(|subtask| subtask.checked)
+                            || entry.done_when_checked == Some(false) =>
+                    {
+                        Work::Pending
+                    }
+                    _ => Work::Complete,
+                },
+            }
+        }
+        _ => match std::fs::read_to_string(&spec_path)
+            .ok()
+            .and_then(|content| super::frontmatter_status(&content, &spec_path))
+        {
+            None => Work::Unreadable,
+            Some(status) if status == "done" => Work::Complete,
+            Some(_) => Work::Pending,
+        },
+    }
+}
+
+/// Whether two deferrals name the same work: target, task and work-item each
+/// equal once trimmed, a blank one counting as absent. A waiver names none,
+/// so two waivers always do.
+fn same_work(a: &DecisionRef, b: &DecisionRef) -> bool {
+    let norm = |value: &Option<String>| {
+        value
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    };
+    norm(&a.target) == norm(&b.target)
+        && norm(&a.task) == norm(&b.task)
+        && norm(&a.work_item) == norm(&b.work_item)
 }
 
 /// Derive every stored entry's `gating` flag from this run: `true` on a
@@ -391,15 +510,14 @@ pub(crate) fn decision_for(disposition: &Disposition, key: &str) -> Option<Decis
         DispositionOutcome::Waived => DecisionOutcome::Waived,
         DispositionOutcome::Fixed | DispositionOutcome::Undispositioned => return None,
     };
-    let deferred = outcome == DecisionOutcome::Deferred;
+    // A waiver carrying a work reference never reaches here: every caller
+    // runs [`require_companion`] first, which refuses one.
     Some(DecisionRef {
         key: flatten_line(key),
         outcome,
-        target: flat(&disposition.target).filter(|_| deferred),
-        task: flat(&disposition.task).filter(|_| deferred),
-        work_item: nonblank(disposition.work_item.as_deref())
-            .filter(|_| deferred)
-            .map(str::to_string),
+        target: flat(&disposition.target),
+        task: flat(&disposition.task),
+        work_item: nonblank(disposition.work_item.as_deref()).map(str::to_string),
         reason: flat(&disposition.reason),
     })
 }
@@ -519,13 +637,14 @@ pub(crate) fn read_decisions(feature_dir: &Path, file: &str) -> Result<Vec<RawDe
 /// per key, the first kept — two findings sharing a key are one finding with
 /// one outcome (spec 058), which [`one_outcome_per_key`] has already held each
 /// writer to — and each is then either a **match**, the stored entry
-/// `process-decisions` applies for that key with the same outcome, kept
-/// byte-for-byte with its original companion, `decided-at`, and `decided-by`;
-/// or **new**, stamped with `decided_at` and `decided_by`, replacing every
-/// stored entry for its key. Keys compare through [`same_key`] throughout.
-/// Matching on key and outcome rather than on the companion's wording is the
-/// data model's rule: a host that restates a matched waiver's reason, or
-/// normalizes a deferral's target path, has not made a new decision.
+/// `process-decisions` applies for that key with the same outcome and, for a
+/// deferral, the same work, kept byte-for-byte with its original companion,
+/// `decided-at`, and `decided-by`; or **new**, stamped with `decided_at` and
+/// `decided_by`, replacing every stored entry for its key. A key this run
+/// drops through `expired` is always new. Keys compare through [`same_key`]
+/// throughout. A host that restates a matched waiver's or deferral's reason
+/// has not made a new decision; a deferral naming other work has, because its
+/// work decides release and lapse (spec 076).
 ///
 /// # Errors
 ///
@@ -557,8 +676,9 @@ pub(crate) fn merge(
             expired
                 .iter()
                 .any(|gone| same_key(&gone.key, &decision.key))
-                || stored_decision(&stored, &decision.key)
-                    .is_none_or(|stored| stored.outcome != decision.outcome)
+                || stored_decision(&stored, &decision.key).is_none_or(|stored| {
+                    stored.outcome != decision.outcome || !same_work(&stored, decision)
+                })
         })
         .collect();
     let author = decided_by.map(str::trim).filter(|who| !who.is_empty());
@@ -903,7 +1023,8 @@ mod tests {
         assert_eq!(no_author.to_ref(), Err("decided-by"));
     }
 
-    /// The data model's rule: a stored decision matches on key and outcome. A
+    /// The data model's rule: a stored decision matches on key and outcome —
+    /// and, for a deferral, its work (spec 076). A
     /// host restating a matched waiver's reason in other words has not made
     /// a new decision, so the original stamp — and its wording — stand, and
     /// no `decided-by` is needed.
@@ -1232,6 +1353,81 @@ mod tests {
             "o.work-item"
         );
         assert_eq!(refused(check(&waiver(None, None))), "o.reason");
+    }
+
+    /// Spec 076: a deferral naming other work than the standing one is a new
+    /// decision, stamped by this run, because its work decides release and
+    /// lapse; the same work restated keeps the original stamp.
+    #[test]
+    fn a_re_deferral_to_other_work_is_a_new_decision() {
+        let merged = merge(
+            vec![stored("k", "deferred", "specs/001-x/tasks.md")],
+            &[],
+            &[decided(
+                "k",
+                DecisionOutcome::Deferred,
+                "specs/002-y/spec.md",
+            )],
+            "2026-11-03T00:00:00Z",
+            Some("second@example.com"),
+        )
+        .unwrap();
+        assert_eq!(merged.len(), 1, "{merged:?}");
+        assert_eq!(merged[0].target.as_deref(), Some("specs/002-y/spec.md"));
+        assert_eq!(merged[0].decided_by.as_deref(), Some("second@example.com"));
+
+        let kept = merge(
+            vec![stored("k", "deferred", "specs/001-x/tasks.md")],
+            &[],
+            &[decided(
+                "k",
+                DecisionOutcome::Deferred,
+                " specs/001-x/tasks.md ",
+            )],
+            "2026-11-03T00:00:00Z",
+            None,
+        )
+        .unwrap();
+        assert_eq!(kept[0].decided_by.as_deref(), Some("first@example.com"));
+    }
+
+    /// Spec 076, AC10: a work-item ID is one line, so a Unicode line
+    /// separator is refused as a line feed is; any other character is not.
+    #[test]
+    fn a_work_item_spanning_a_line_separator_is_refused() {
+        let check = |id: &str| {
+            require_companion("w", "o", &deferral(None, None, Some(id))).map(|c| c.len())
+        };
+        assert_eq!(refused(check("PROJ-1\u{2028}2")), "o.work-item");
+        assert_eq!(refused(check("PROJ-1\u{85}2")), "o.work-item");
+        assert!(check("PROJ-1\t(x)").is_ok());
+    }
+
+    /// `BE-INPUT-004`: a stored target is hand-editable, so a feature
+    /// directory that is a link out of the project is never opened; its work
+    /// reads as unreadable rather than as the state of the file outside.
+    #[cfg(unix)]
+    #[test]
+    fn work_behind_a_link_out_of_the_project_is_unreadable() {
+        let repo = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join("specs")).unwrap();
+        std::fs::write(outside.path().join("spec.md"), "---\nstatus: done\n---\n").unwrap();
+        std::os::unix::fs::symlink(outside.path(), repo.path().join("specs/009-link")).unwrap();
+        assert_eq!(
+            work_state(repo.path(), "specs", Some("specs/009-link/spec.md"), None),
+            Work::Unreadable
+        );
+        std::fs::create_dir_all(repo.path().join("specs/010-real")).unwrap();
+        std::fs::write(
+            repo.path().join("specs/010-real/spec.md"),
+            "---\nstatus: done\n---\n",
+        )
+        .unwrap();
+        assert_eq!(
+            work_state(repo.path(), "specs", Some("specs/010-real/spec.md"), None),
+            Work::Complete
+        );
     }
 
     /// Spec 076: a work-item ID is stored exactly as given, while the target

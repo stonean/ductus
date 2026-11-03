@@ -238,7 +238,8 @@ pub struct DecisionRef {
     /// The external work-item ID a deferral names, as given.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub work_item: Option<String>,
-    /// The waiver's reason, when `outcome` is `waived`.
+    /// The decision's reason: required when `outcome` is `waived`, optional on
+    /// a deferral.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
@@ -583,7 +584,6 @@ pub struct ProcessDecisionsResult {
     /// is complete — its task checked or gone, its spec `done` or gone, or a
     /// rule file (spec 076). The host passes them to the writer in
     /// `expired-decisions`, which drops them, and asks for a new disposition.
-    #[serde(default)]
     pub lapsed: Vec<DecisionRef>,
     /// Ordered notice lines: `decision expired: …`, `decision retained: …`,
     /// `deferral lapsed: …`, `deferral target unreadable: …`, `malformed
@@ -673,8 +673,8 @@ pub struct ReviewFinding {
     /// A deferral of this violation (spec 076): the work that will address
     /// it, as a target, a work item, or both. `fixed` and `waived` are refused —
     /// a violation is waived with `--waive` and fixed by removing it. A deferral
-    /// to pipeline work on another spec takes the finding out of this spec's
-    /// counts, since that spec's gate then holds it.
+    /// to work still to do on another spec takes the finding out of this
+    /// spec's counts, since that spec's gate then holds it.
     #[serde(default)]
     pub disposition: Disposition,
     /// The stored decision the host matched this violation to; absent, its
@@ -831,11 +831,11 @@ pub struct WriteReviewResult {
     /// `review.md`. The path is still reported because a caller identifying
     /// which spec the record belongs to should not have to re-derive it.
     pub spec_path: String,
-    /// MUST violations counted (waived findings, and those deferred to
-    /// another spec's work, excluded).
+    /// MUST violations counted (waived findings, and those deferred to work
+    /// still to do on another spec, excluded).
     pub must_violations: u32,
-    /// SHOULD violations counted (waived findings, and those deferred to
-    /// another spec's work, excluded).
+    /// SHOULD violations counted (waived findings, and those deferred to work
+    /// still to do on another spec, excluded).
     pub should_violations: u32,
     /// Low-confidence findings counted.
     pub low_confidence: u32,

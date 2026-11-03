@@ -30,7 +30,8 @@
 //! live findings deferred or waived — so a finding the caller does not
 //! itemize, including every finding on the exec path, is counted as owed.
 //! The record's `hard-fail` and `blocking-findings` are those tier counts less
-//! the live findings whose deferral names work on another spec, which render
+//! the live findings whose deferral names work still to do on another spec
+//! ([`decisions::releases`]), which render
 //! under `## Deferred to other specs` instead (spec 076). Nothing is written
 //! to the inbox.
 //!
@@ -949,6 +950,46 @@ mod tests {
             !run(&a, tmp.path()).unwrap().blocking,
             "the release alone does not block"
         );
+    }
+
+    /// Spec 076: a deferral releases a gating finding only to work still to
+    /// do on another spec, whose gate then holds it. A `done` spec's gate holds
+    /// nothing, and a rule file has no gate, so a deferral to either stays
+    /// counted and gating.
+    #[test]
+    fn a_deferral_to_complete_or_non_spec_work_releases_nothing() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let done = tmp.path().join("specs/043-done");
+        fs::create_dir_all(&done).unwrap();
+        fs::write(done.join("spec.md"), "---\nstatus: done\n---\n# 043\n").unwrap();
+        let rules = tmp.path().join("specs/rules");
+        fs::create_dir_all(&rules).unwrap();
+        fs::write(rules.join("x-cross.md"), "# X\n").unwrap();
+        let mut a = args();
+        a.blocking_findings = 2;
+        a.decided_by = Some("dev@example.com".into());
+        a.findings = vec![
+            finding(
+                AnalysisTier::Blocking,
+                "grounding",
+                "cites a gone path",
+                DispositionOutcome::Deferred,
+                Some("specs/043-done/spec.md"),
+            ),
+            finding(
+                AnalysisTier::Blocking,
+                "applicable-rules",
+                "BE-X fails",
+                DispositionOutcome::Deferred,
+                Some("specs/rules/x-cross.md"),
+            ),
+        ];
+        assert!(run(&a, tmp.path()).unwrap().blocking);
+        let report = analysis_md(&tmp);
+        assert!(report.contains("blocking-findings: 2\n"), "{report}");
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
+        assert!(stored.iter().all(|d| d.gating == Some(true)), "{stored:?}");
     }
 
     fn args() -> WriteAnalysisArgs {

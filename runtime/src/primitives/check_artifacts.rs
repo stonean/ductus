@@ -642,9 +642,9 @@ fn check_review_drift(
             family: "review-state-drift".into(),
             severity: AnalyzeSeverity::Blocking,
             message: format!(
-                "review drift: done spec has {} outstanding SHOULD violation(s) — fix each, or \
-                 move it under review.md's Waived findings with its rationale, then re-run the \
-                 review so the count states what is outstanding",
+                "review drift: done spec has {} outstanding SHOULD violation(s) — fix each, \
+                 waive it with its rationale, or defer it to pipeline work on another spec, \
+                 then re-run the review so the count states what is outstanding",
                 review.should_violations
             ),
             path: spec_rel,
@@ -3087,10 +3087,15 @@ mod tests {
         assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
         let msg = &result.findings[0].message;
         assert!(msg.contains("1 outstanding SHOULD"), "{msg}");
-        // The fix names both dispositions, because a SHOULD whose answer is
-        // "keep as-is" is waived rather than fixed, and a message naming only
-        // the first would push an operator toward the wrong one.
-        assert!(msg.contains("Waived findings"), "{msg}");
+        // The fix names all three exits, because a SHOULD whose answer is
+        // "keep as-is" is waived rather than fixed, one to be fixed later is
+        // deferred (spec 076), and a message naming only the first would push
+        // an operator toward the wrong one.
+        assert!(msg.contains("waive it with its rationale"), "{msg}");
+        assert!(
+            msg.contains("defer it to pipeline work on another spec"),
+            "{msg}"
+        );
     }
 
     #[test]

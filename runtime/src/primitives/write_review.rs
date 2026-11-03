@@ -48,8 +48,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ConstitutionOutcome, DecisionRef, DispositionOutcome, Dispositions, RecordFreshness,
-    ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
+    ConstitutionOutcome, DecisionOutcome, DecisionRef, DispositionOutcome, Dispositions,
+    RecordFreshness, ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
 };
 use crate::schema::severity::ReviewSeverity;
 /// Refuse a violation's disposition that is fixed or waived, or a deferral
@@ -170,13 +170,15 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 ///   path, or a disposition's target, task or reason carries a line break or
 ///   another character that is not plain single-line text; when `reviewed-at`
 ///   or an observation's text is blank; when a violation's disposition is
-///   fixed or waived; when a deferral names neither a target nor a work item, spans
-///   its work-item ID over more than one line, or numbers a task without a
-///   `tasks.md` target; when a new deferral's target or task does not exist,
-///   or its task is in a `tasks.md` that is no feature's; when a waiver names work or states no reason; when a finding is both
-///   deferred and matched by an applied waiver; when two observations, or two
-///   violations, sharing a key are given different outcomes; or when a new decision has no
-///   `decided-by`.
+///   fixed or waived; when a deferral names neither a target nor a work item,
+///   spans its work-item ID over more than one line, or numbers a task without
+///   a `tasks.md` target; when a new deferral's target or task does not exist,
+///   or its task is in a `tasks.md` that is no feature's; when a waiver names
+///   work or states no reason; when a finding is both deferred and matched by
+///   an applied waiver, or is waived while a stored deferral for its key
+///   stands outside `expired-decisions` (argument `expired-decisions`); when
+///   two observations, or two violations, sharing a key are given different
+///   outcomes; or when a new decision has no `decided-by`.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature has no `spec.md`.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block, and [`PrimitiveError::UnclosedFrontmatter`] when the block in
@@ -436,6 +438,34 @@ fn stored_decisions(
             &args.expired_decisions,
         )?;
     }
+    // A violation this run waives while its stored deferral stands would be
+    // recorded twice, in `waivers:` and in `decisions:`; the deferral the
+    // waiver replaces arrives in `expired-decisions` (spec 076, AC13).
+    for finding in args
+        .findings
+        .iter()
+        .filter(|finding| waiver_reason(finding, &args.applied_waivers).is_some())
+    {
+        let key = violation_key(finding);
+        let replaced = args
+            .expired_decisions
+            .iter()
+            .any(|gone| decisions::same_key(&gone.key, &key));
+        if !replaced
+            && decisions::stored_decision(&stored, &key)
+                .is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: "expired-decisions".into(),
+                reason: format!(
+                    "`{}` at `{}` is waived while its stored deferral stands; pass that \
+                     deferral in expired-decisions, so the finding holds one disposition",
+                    finding.rule, finding.file
+                ),
+            });
+        }
+    }
     Ok(stored)
 }
 
@@ -606,8 +636,9 @@ struct Buckets<'a> {
 }
 
 /// The deduped findings sorted into the report's sections. `deferred` holds
-/// the findings whose deferral names pipeline work on another spec: that
-/// spec's gate holds the work, so they leave this spec's counts (spec 076).
+/// the findings whose deferral names work still to do on another spec
+/// ([`decisions::releases`]): that spec's gate holds the work, so they leave
+/// this spec's counts (spec 076).
 struct Sorted<'a> {
     must: Vec<&'a ReviewFinding>,
     should: Vec<&'a ReviewFinding>,
@@ -630,8 +661,8 @@ impl Sorted<'_> {
 }
 
 /// Bucket the deduped findings. A waived finding drops out of the counts into
-/// Waived findings; a finding deferred to another spec's work drops out into
-/// Deferred findings; a `low`-confidence one lands in Low-confidence
+/// Waived findings; a finding deferred to work still to do on another spec
+/// drops out into Deferred findings; a `low`-confidence one lands in Low-confidence
 /// regardless of severity; the rest split MUST / SHOULD.
 ///
 /// # Errors
@@ -794,7 +825,7 @@ fn render_report(
                     must.len(),
                     should.len(),
                     low.len(),
-                    waived.len(),
+                    (waived.len(), deferred.len()),
                     blocking,
                     record.dispositions.undispositioned,
                 )
@@ -845,7 +876,7 @@ fn generate_summary(
     must: usize,
     should: usize,
     low: usize,
-    waived: usize,
+    (waived, deferred): (usize, usize),
     blocking: bool,
     undispositioned: u32,
 ) -> String {
@@ -859,6 +890,12 @@ fn generate_summary(
     );
     if waived > 0 {
         let _ = write!(summary, ", {waived} waived");
+    }
+    // A released violation leaves the counts, so without this a run whose
+    // only violation was deferred to another spec reads exactly like a clean
+    // one (spec 076).
+    if deferred > 0 {
+        let _ = write!(summary, ", {deferred} deferred to another spec's work");
     }
     let _ = write!(
         summary,
@@ -933,7 +970,10 @@ fn finding_block(finding: &ReviewFinding, label: &str, waived_reason: Option<&st
                 decisions::nonblank(disposition.target.as_deref()),
                 decisions::nonblank(disposition.task.as_deref()),
                 decisions::nonblank(disposition.work_item.as_deref()),
-                |value| value.trim().to_string(),
+                // The ID is stored as given, but the body shows it flattened
+                // like every other piece of caller text, so a control
+                // character never reaches the report raw.
+                crate::primitives::flatten_line,
             )
         );
     }
@@ -950,9 +990,12 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
     observations
         .iter()
         .map(|observation| {
-            let outcome = decisions::disposition_suffix(&observation.disposition, |text| {
-                text.trim().to_string()
-            });
+            // Flattened like every other piece of caller text, so a
+            // work-item ID, stored as given, never reaches the body raw.
+            let outcome = decisions::disposition_suffix(
+                &observation.disposition,
+                crate::primitives::flatten_line,
+            );
             format!("- {} — {outcome}", observation_line(observation))
         })
         .collect::<Vec<_>>()
@@ -1325,7 +1368,7 @@ fn needs_quote(value: &str) -> bool {
 
 /// One waiver entry with every field optional, so pruning preserves the full
 /// record (`waived-at` / `waived-by` included) that `WaiverRef` drops. Unknown
-/// adopter-authored fields (`ticket`, `co-waived-by`, …) are captured by
+/// adopter-authored fields (`co-waived-by`, `approved-by-team`, …) are captured by
 /// `extra` and re-emitted verbatim on the write, so the §text-first-artifacts
 /// open-schema rule holds across a re-render — an org-specific policy field is
 /// never silently dropped. `BTreeMap` keeps the extras in deterministic order.
@@ -1580,6 +1623,144 @@ mod tests {
         assert_eq!(gating("rule SEC-2 at src/b.rs"), Some(None));
         assert_eq!(gating("rule SEC-1 at src/a.rs"), Some(Some(true)));
         assert_eq!(gating("rule SEC-3 at src/c.rs"), Some(Some(true)));
+    }
+
+    const STANDING_DEFERRAL: &str = "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    \
+         outcome: deferred\n    work-item: PROJ-1\n    gating: true\n    \
+         decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com";
+
+    /// Spec 076, AC4 and AC11: re-deferring a violation whose stored
+    /// deferral stands, to other work, is a new deferral. Its work is checked
+    /// against the tree, and the record then names the work the counts follow
+    /// rather than keeping the old entry.
+    #[test]
+    fn a_re_deferral_to_other_work_is_checked_and_stored() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        seed_waivers(&tmp, "001-x", STANDING_DEFERRAL);
+        let other = tmp.path().join("specs/002-y");
+        std::fs::create_dir_all(&other).unwrap();
+        std::fs::write(
+            other.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 002\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        let mut missing = deferred(
+            finding("SEC-1", "must", "src/a.rs", "1-2", "high"),
+            Some("specs/002-y/tasks.md"),
+            None,
+        );
+        missing.disposition.task = Some("4".into());
+        args.findings = vec![missing];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
+                if argument == "findings[0].disposition.target"),
+            "{err:?}"
+        );
+
+        args.findings = vec![deferred(
+            finding("SEC-1", "must", "src/a.rs", "1-2", "high"),
+            Some("specs/002-y/spec.md"),
+            None,
+        )];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0);
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
+        let entry = stored
+            .iter()
+            .find(|d| d.key.as_deref() == Some("rule SEC-1 at src/a.rs"))
+            .unwrap();
+        assert_eq!(entry.target.as_deref(), Some("specs/002-y/spec.md"));
+        assert_eq!(entry.work_item, None);
+        assert_eq!(entry.gating, None);
+        // A released violation leaves the counts, so the Summary says so.
+        let report = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
+        assert!(
+            report.contains(", 1 deferred to another spec's work"),
+            "{report}"
+        );
+    }
+
+    /// Spec 076: a work-item ID is stored as given, but the report shows it
+    /// flattened like every other piece of caller text, so a control character
+    /// never reaches `review.md`'s body raw.
+    #[test]
+    fn a_work_item_is_flattened_in_the_report_and_kept_in_the_record() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![deferred(
+            finding("SEC-1", "must", "src/a.rs", "1-2", "high"),
+            None,
+            Some("PROJ-1\u{1b}[31m"),
+        )];
+        let mut observed = dispositioned("perf: noise", DispositionOutcome::Deferred, None);
+        observed.disposition.target = None;
+        observed.disposition.work_item = Some("PROJ-2\u{1b}[31m".into());
+        args.observations = vec![observed];
+        run(&args, tmp.path()).unwrap();
+        let report = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
+        let body = report.splitn(3, "---\n").nth(2).unwrap();
+        assert!(!body.contains('\u{1b}'), "{body}");
+        assert!(
+            body.contains("- **Deferred**: to work item `PROJ-1 [31m`"),
+            "{body}"
+        );
+        assert!(
+            body.contains("**deferred** to work item `PROJ-2 [31m`"),
+            "{body}"
+        );
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
+        let item = |key: &str| {
+            stored
+                .iter()
+                .find(|d| d.key.as_deref() == Some(key))
+                .and_then(|d| d.work_item.clone())
+        };
+        assert_eq!(
+            item("rule SEC-1 at src/a.rs").as_deref(),
+            Some("PROJ-1\u{1b}[31m")
+        );
+        assert_eq!(item("perf: noise").as_deref(), Some("PROJ-2\u{1b}[31m"));
+    }
+
+    /// Spec 076, AC13: a violation waived while its stored deferral stands
+    /// is refused unless that deferral arrives in `expired-decisions`, so the
+    /// record never holds a waiver and a deferral for one finding.
+    #[test]
+    fn a_waiver_replaces_a_standing_deferral_only_through_expired_decisions() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        seed_waivers(&tmp, "001-x", STANDING_DEFERRAL);
+        let mut args = base_args("001-x");
+        args.findings = vec![finding("SEC-1", "must", "src/a.rs", "1-2", "high")];
+        args.applied_waivers = vec![waiver("SEC-1", "src/a.rs")];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
+                if argument == "expired-decisions"),
+            "{err:?}"
+        );
+        args.expired_decisions = vec![DecisionRef {
+            key: "rule SEC-1 at src/a.rs".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: None,
+            task: None,
+            work_item: Some("PROJ-1".into()),
+            reason: None,
+        }];
+        run(&args, tmp.path()).unwrap();
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
+        assert!(
+            stored
+                .iter()
+                .all(|d| d.key.as_deref() != Some("rule SEC-1 at src/a.rs")),
+            "{stored:?}"
+        );
     }
 
     /// Spec 076: two violations of one rule at one file share a key, so

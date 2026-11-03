@@ -206,7 +206,8 @@ pub(crate) fn run_with_lint(
     if let Some(blocked) = disposition_block(
         &review,
         analyze_record.as_ref(),
-        (&feature_dir, &rel_dir),
+        &feature_dir,
+        &rel_dir,
         &project,
     ) {
         return Ok(blocked);
@@ -251,8 +252,8 @@ pub(crate) fn run_with_lint(
 /// that freshness is unknown, while a map-less one may be hiding owed work.
 ///
 /// Then the gating counts: a review MUST or SHOULD, or an analyze hard-fail
-/// or blocking finding, each neither waived nor deferred to another spec's
-/// work (spec 076). Only those hold `done` (spec 058,
+/// or blocking finding, each neither waived nor deferred to work still to do
+/// on another spec (spec 076). Only those hold `done` (spec 058,
 /// `findings-cost-in-proportion-to-risk`). The map's `undispositioned` count
 /// is not read: an undecided advisory finding or review observation is
 /// recorded and visible, and holds nothing. For a record the runtime writes,
@@ -266,13 +267,15 @@ pub(crate) fn run_with_lint(
 fn disposition_block(
     review: &crate::schema::primitives::ReviewBlock,
     analyze: Option<&AnalyzeBlock>,
-    (feature_dir, rel_dir): (&Path, &str),
+    feature_dir: &Path,
+    rel_dir: &str,
     project: &str,
 ) -> Option<CheckReviewGateResult> {
+    use crate::primitives::{ANALYSIS_RECORD_FILE, REVIEW_RECORD_FILE};
     let analyze_map = analyze.and_then(|record| record.dispositions);
     let records = [
-        ("review.md", "review", review.dispositions),
-        ("analysis.md", "analyze", analyze_map),
+        (REVIEW_RECORD_FILE, "review", review.dispositions),
+        (ANALYSIS_RECORD_FILE, "analyze", analyze_map),
     ];
     let blocked = |by, message: String, guidance: String| CheckReviewGateResult {
         passed: false,
@@ -316,14 +319,14 @@ fn disposition_block(
 
     let gating = [
         (
-            "review.md",
+            REVIEW_RECORD_FILE,
             "review",
             review
                 .must_violations
                 .saturating_add(review.should_violations),
         ),
         (
-            "analysis.md",
+            ANALYSIS_RECORD_FILE,
             "analyze",
             analyze.map_or(0, |record| {
                 record.hard_fail.saturating_add(record.blocking_findings)
@@ -348,7 +351,7 @@ fn disposition_block(
         detail.join(", ")
     );
     let files: Vec<&str> = owed.iter().map(|(file, _, _)| *file).collect();
-    message.push_str(&held_by_deferral(feature_dir, &files));
+    message.push_str(&held_by_deferral(feature_dir, rel_dir, &files));
     Some(blocked(
         ReviewGateBlock::UndispositionedFindings,
         message,
@@ -365,9 +368,9 @@ fn disposition_block(
 }
 
 /// Gate check 5: the review record carries MUST violations. Names each
-/// deferral that holds `done` in `review.md` too, since a MUST deferred to
-/// this spec's own task, or to a work item alone, stops the gate here and
-/// never reaches the last check (spec 076).
+/// deferral that holds `done` in `review.md` too, since a MUST whose deferral
+/// releases nothing stops the gate here and never reaches the last check
+/// (spec 076).
 fn must_violations_block(
     must_violations: u32,
     feature_dir: &Path,
@@ -379,7 +382,11 @@ fn must_violations_block(
         blocked_by: Some(ReviewGateBlock::MustViolations),
         message: Some(format!(
             "blocked: spec has {must_violations} MUST violation(s) — see {rel_dir}/review.md{}",
-            held_by_deferral(feature_dir, &[crate::primitives::REVIEW_RECORD_FILE]),
+            held_by_deferral(
+                feature_dir,
+                rel_dir,
+                &[crate::primitives::REVIEW_RECORD_FILE]
+            ),
         )),
         guidance: Some(format!(
             "Resolve the violations and re-run /{project}:review, run \
@@ -394,35 +401,45 @@ fn must_violations_block(
 
 /// The suffix a blocked message carries for the deferrals that hold `done`
 /// in `files`: each one its record marks `gating: true`, as its finding and
-/// the work it names (spec 076) — a gating finding deferred to its own spec's
-/// task, or to an external work item alone, which releases nothing. Empty when
-/// none does. The MUST, analyze-findings and outstanding-findings blocks all
+/// the work it names (spec 076) — a gating finding whose deferral releases
+/// nothing ([`crate::primitives::decisions::releases`]). Empty when none
+/// does. The MUST, analyze-findings and outstanding-findings blocks all
 /// carry it, since a MUST or a gating analyze finding stops the gate before
-/// the last check. A record whose decisions cannot be read says so, rather
-/// than naming none.
-fn held_by_deferral(feature_dir: &Path, files: &[&str]) -> String {
+/// the last check. A record whose decisions cannot be read, and an entry
+/// marked gating that does not read as a deferral, are each said so, rather
+/// than named as none (`QUAL-CLAIM-001`).
+fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String {
+    use crate::schema::primitives::DecisionOutcome;
     let mut held = Vec::new();
     for file in files {
-        match crate::primitives::decisions::read_decisions(feature_dir, file) {
-            Ok(stored) => held.extend(
-                stored
-                    .iter()
-                    .filter(|entry| entry.gating == Some(true))
-                    .filter_map(|entry| entry.to_ref().ok())
-                    .map(|decision| {
-                        format!(
-                            "{} — to {}",
-                            decision.key,
-                            crate::primitives::decisions::work_reference(
-                                decision.target.as_deref(),
-                                decision.task.as_deref(),
-                                decision.work_item.as_deref(),
-                                str::to_string,
-                            )
+        let Ok(stored) = crate::primitives::decisions::read_decisions(feature_dir, file) else {
+            held.push(format!(
+                "the decisions in {rel_dir}/{file}, which could not be read"
+            ));
+            continue;
+        };
+        let mut unreadable = 0_usize;
+        for entry in stored.iter().filter(|entry| entry.gating == Some(true)) {
+            match entry.to_ref() {
+                Ok(decision) if decision.outcome == DecisionOutcome::Deferred => {
+                    held.push(format!(
+                        "{} — to {}",
+                        decision.key,
+                        crate::primitives::decisions::work_reference(
+                            decision.target.as_deref(),
+                            decision.task.as_deref(),
+                            decision.work_item.as_deref(),
+                            crate::primitives::flatten_line,
                         )
-                    }),
-            ),
-            Err(_) => held.push(format!("{file}'s decisions could not be read")),
+                    ));
+                }
+                _ => unreadable += 1,
+            }
+        }
+        if unreadable > 0 {
+            held.push(format!(
+                "{unreadable} entr(ies) in {rel_dir}/{file} marked gating that do not read as a deferral"
+            ));
         }
     }
     if held.is_empty() {
@@ -533,6 +550,7 @@ fn analyze_gate_block(
             analyze.blocking_findings,
             held_by_deferral(
                 &repo.join(rel_dir),
+                rel_dir,
                 &[crate::primitives::ANALYSIS_RECORD_FILE]
             ),
         )),
@@ -2828,6 +2846,48 @@ mod tests {
                 "blocked: spec has 3 MUST violation(s) — see specs/007-gate/review.md; \
                  held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1`"
             )
+        );
+    }
+
+    /// `QUAL-CLAIM-001`: where the gate names holding deferrals, a decisions
+    /// list it cannot read, and an entry marked gating that is no deferral,
+    /// are each said so — never rendered as no deferral at all.
+    #[test]
+    fn held_deferrals_the_gate_cannot_read_are_said_so() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_BLOCKING);
+        add_decisions(tmp.path(), "review.md", "decisions:\n  - key: [a, b]\n");
+        let message = run_with_lint(&args(), tmp.path(), clean_lint)
+            .unwrap()
+            .message
+            .unwrap();
+        assert!(
+            message.ends_with(
+                "; held by deferral: the decisions in specs/007-gate/review.md, \
+                 which could not be read"
+            ),
+            "{message}"
+        );
+
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_BLOCKING);
+        add_decisions(
+            tmp.path(),
+            "review.md",
+            "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    outcome: waived\n    \
+             reason: noise\n    gating: true\n    decided-at: 2026-07-10T00:00:00Z\n    \
+             decided-by: dev@example.com\n",
+        );
+        let message = run_with_lint(&args(), tmp.path(), clean_lint)
+            .unwrap()
+            .message
+            .unwrap();
+        assert!(
+            message.ends_with(
+                "; held by deferral: 1 entr(ies) in specs/007-gate/review.md marked gating \
+                 that do not read as a deferral"
+            ),
+            "{message}"
         );
     }
 
