@@ -64,3 +64,11 @@ The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sortin
 - [x] framework/bootstrap/ductus.md and ductus-procedure.md — ambiguities the three hosts named in the pipeline's own machinery — discarded, per AGENTS.md's rule on such observations made while verifying framework work: the walker's placement of the archive-half sections is already `056-bootstrap-archive-boundary-split`'s scenario `the-walker-places-every-archive-half-section`; the Frontmatter Migration's walk matching `specs/templates/spec.md` was discarded before (052's review: the template has frontmatter); State A detection counting another project's `mcp__ductus__*` tools is an artifact of running the bootstrap from this repository's session; no active entry's `sunset_after` falls between 0.59.11 and `main`, so the sunset filter's version on `main` changes nothing; `generator-primitives` and `audit-record-relocate` defining no report line for their normal path, `ln -sf` re-linking an identical pointer, a per-language `.gitignore` 404 reported as a fetch failure, and `cli-config-dir` on the shared `apply-manifest` call change no file a run writes
 
 - **Done when**: each finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 4. Close the 076 reopen
+
+076 task 10 reopened this spec `done → in-progress` (`787093ed`) and swept its body, plan, data model and scenarios to fixed / deferred / waived; 076 task 13 (`specs/076-waived-and-deferred-findings-are-distinct-dispositions/tasks.md`) corrected its data model and plan again. After 076's review record is written, review this spec once with its default window (base `1405eacc`), reading only what changed since 076's review plus this spec's own artifacts (AGENTS.md, the shared-window rule), then analyze it and propose `done`. Until it is `done`, the self-audit's Family 7 reports the 058/057 pair, so `framework-checks` stays red.
+
+- [ ] Review with the default window, analyze, and close `done` with the owner's approval
+
+- **Done when**: `review.md` and `analysis.md` are current, `check-review-gate` passes, and the owner approved the transition.

@@ -117,8 +117,8 @@ least one entry is new. Deriving the list, rather than accepting it, means the
 stored decisions and the rendered dispositions come from one input and cannot
 disagree.
 
-A finding re-matched to a stored decision with the same outcome keeps that
-decision's original stamp, is re-rendered unchanged, and counts toward
+A finding re-matched to a stored decision with the same outcome — and, for a
+deferral, the same work (076) — keeps that decision's original stamp, is re-rendered unchanged, and counts toward
 `deferred` or `waived` in `dispositions:`. A finding re-decided differently
 replaces the stored entry.
 

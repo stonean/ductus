@@ -137,7 +137,8 @@ next time its writer runs.
 
 Neither writer takes a list of new decisions. Each derives them from the
 dispositioned findings it is handed — every deferred or waived live finding
-not already stored with the same outcome — and requires `decided-by` only when
+not already stored with the same outcome and, for a deferral, the same work
+(076's data model) — and requires `decided-by` only when
 at least one is new. The shared disposition shape is `Disposition`
 (`outcome`, a `DispositionOutcome`, plus `target` and `reason`, and 076's
 `task` and `work-item`).

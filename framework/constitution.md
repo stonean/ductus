@@ -295,7 +295,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 - **Detect, decide, re-check, record.** Detection writes nothing, each write is confirmed first, and the record is written from a re-check; with no operator, nothing is written and undecided findings are recorded undispositioned (`.ductus/reference/analyze.md` **§Finding dispositions**).
 - **Scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it, since an in-progress spec is its defects' home; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
 - **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
-- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; only a deferral to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
+- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
 - **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
 

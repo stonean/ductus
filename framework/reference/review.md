@@ -309,7 +309,7 @@ dispositions:
 
 ## Deferred findings
 
-<violations deferred to pipeline work on another spec, which leave the counts; `*None.*` when none>
+<violations deferred to pipeline work still to do on another spec, which leave the counts; `*None.*` when none>
 
 ## Observations
 
@@ -574,7 +574,8 @@ records `blocking: true`. This is enforced as follows:
    record is consulted. Behind them run the review staleness check, the
    analyze checks, and — last — the two disposition checks: a `review.md`
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
-   finding, which for a record the runtime writes is an unwaived SHOULD. The two review checks read the
+   finding, which for a record the runtime writes is a SHOULD neither waived
+   nor deferred to another spec's work. The two review checks read the
    record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 
@@ -583,12 +584,17 @@ records `blocking: true`. This is enforced as follows:
    ```
 
    and only `blocking: true` halts with the MUST-violations message plus
-   waive guidance:
+   resolve, waive or defer guidance:
 
    ```text
-   blocked: spec has N MUST violation(s) — see specs/NNN-feature/review.md
-   resolve the violations and re-run /{project}:review, or waive with /{project}:review --waive
+   blocked: spec has N MUST violation(s) — see specs/NNN-feature/review.md[; held by deferral: {key} — to {work}; …]
+   resolve the violations and re-run /{project}:review, waive each with /{project}:review --waive,
+   or defer each to pipeline work on another spec with /{project}:review --defer
    ```
+
+   The `held by deferral` suffix names each deferral the record marks
+   `gating: true` — one that releases nothing ([Deferrals](#deferrals)) —
+   and says so beside them when the record's decisions cannot be read.
 
 2. **`/{project}:analyze`** — adds a check to its existing audit: if the spec's
    status is `done` but its `review.md` records `blocking: true` or a missing
@@ -761,11 +767,16 @@ and `work-item` as given — the work-item ID byte-identical, and never read.
 The shapes are spec 076's data model. A new deferral's target, and its task in
 that `tasks.md`, must exist.
 
-- **To pipeline work on another spec** — a task, scenario or body edit there,
-  or a new spec — the violation leaves `must-violations` and
-  `should-violations` and renders under **Deferred findings**: that spec's
-  gate now holds the work.
-- **To this spec's own task, or to an external work item alone,** the
+- **To pipeline work still to do on another spec** — an unchecked task, a
+  scenario or body edit on a spec that is not `done`, or a new spec — the
+  violation leaves `must-violations` and `should-violations` and renders under
+  **Deferred findings**: that spec's gate now holds the work. When the spec is
+  `done`, name the `done → in-progress` reopen in a confirmation and perform it
+  through the set-status primitive with `from: done` before `write-review`
+  runs, as a deferral of an observation does. Work already complete — a
+  checked task, a `done` spec left closed — releases nothing, since no gate
+  holds it.
+- **To this spec's own task, to a rule file, or to an external work item alone,** the
   violation stays in its section with a `**Deferred**` line and still holds
   `done`. Its decision carries the derived `gating: true`, and
   `check-review-gate` names it with its work where it blocks. No gate reads an
@@ -774,10 +785,16 @@ that `tasks.md`, must exist.
 A deferral retires when its finding stops firing. When its task is checked, or
 the spec it names is `done`, while the finding still fires, `process-decisions`
 reports it **lapsed**: the host drops it with the expired decisions, and the
-violation needs a fix, a waiver, or a new deferral. One rule both waived and
-deferred in one invocation is refused, and a later `--waive` or `--defer`
-replaces the other's stored entry through the writer's drop lists, so a
-finding holds one disposition.
+violation needs a fix, a waiver, or a new deferral. A new `--defer` naming
+other work than a standing deferral replaces it as a new decision, checked
+against the tree like any other. One rule both waived and deferred in one
+invocation is refused, and a finding holds one disposition across runs
+through the writer's drop lists: a `--defer` whose rule carries a stored
+waiver moves that waiver's anchor from `applied` to `expired-waivers`, and a
+`--waive` whose rule carries a stored deferral passes that deferral in
+`expired-decisions`. `write-review` refuses a finding deferred while still
+in `applied`, and a waiver over a stored deferral outside
+`expired-decisions`.
 
 ## Auto-fix scope
 

@@ -236,3 +236,11 @@ analyze records are stale**, each on the same three paths — `analysis.md`,
 - [x] Check this against AC10's claim that the migration "leaves `spec.md` with no residual block" — that criterion is met; this is a consequence the spec never claimed either way, which is why it needs stating rather than fixing
 
 - **Done when**: the disposition is recorded in both artifacts with the measurement that priced it, and no criterion asserts a freshness property the migration does not leave true.
+
+## 26. Close the 076 reopen
+
+The owner reopened this spec `done → in-progress` on 2026-11-03 (`53a87a87`): 076's sweep (`787093ed`) swapped `routed`/`discarded` for `deferred`/`waived` in `data-model.md`, and the token appears in that one file only, so the mechanical-rename rule did not cover it and the self-audit's Family 19 reported the review stale. The swap landed before the reopen, so the default window holds none of it: review with `--since=1405eacc`, reading only what changed since 076's review plus this spec's own artifacts, then analyze and propose `done`. Until it is `done`, Family 7 reports the 057/020 and 058/057 pairs.
+
+- [ ] Review with `--since=1405eacc`, analyze, and close `done` with the owner's approval
+
+- **Done when**: `review.md` and `analysis.md` are current, `check-review-gate` passes, Family 19 no longer reports 057, and the owner approved the transition.

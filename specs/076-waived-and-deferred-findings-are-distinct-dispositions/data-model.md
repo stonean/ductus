@@ -62,7 +62,7 @@ decisions:
 
 ## Release and lapse — derived on every run, never stored
 
-**Release.** A deferral releases its gating finding when its `target` lies under a feature directory other than the reviewed or analyzed spec's. A deferral whose target is on the same spec, whose target is a rule file, or that names only a `work-item` does not release it.
+**Release.** A deferral releases its gating finding when its `target` lies under a feature directory other than the reviewed or analyzed spec's and that work is still to do — neither complete by the table below nor unreadable — so that spec's own gate holds it. A deferral whose target is on the same spec, whose target is a rule file, whose work is complete or unreadable, or that names only a `work-item` does not release it.
 
 **Completion of the named work**, which decides a lapse:
 
@@ -74,7 +74,7 @@ decisions:
 | Rule file | Always: the amendment was written when the deferral was recorded |
 | `work-item` only | Never: the deferral retires only when its finding stops firing |
 
-A target that exists but does not parse is neither complete nor incomplete: the deferral is matched as stored, and the run emits a notice naming the target.
+A target that exists but does not parse, or whose feature directory resolves outside the project, is neither complete nor incomplete: the deferral is matched as stored, releases nothing, and the run emits a notice naming the target.
 
 ## `Disposition` — writer input
 
@@ -91,8 +91,8 @@ A target that exists but does not parse is neither complete nor incomplete: the 
 | Condition | Argument named | Reason |
 | --- | --- | --- |
 | `deferred` with neither `target` nor a non-blank `work-item` | `{at}.target` | a deferral names its work: a target, a work item, or both |
-| `work-item` spans more than one line | `{at}.work-item` | a work-item ID is one line |
-| `target` does not exist | `{at}.target` | the named path |
+| `work-item` spans more than one line — a line feed, carriage return, `U+0085`, `U+2028` or `U+2029` | `{at}.work-item` | a work-item ID is one line |
+| a new deferral's `target` does not exist — one naming other work than the key's standing deferral is new | `{at}.target` | the named path |
 | `task` without a `tasks.md` target, or naming no task in it | `{at}.task` | the task number and file |
 | `waived` without `reason` | `{at}.reason` | unchanged from 058's discard refusal |
 
@@ -103,7 +103,7 @@ A target that exists but does not parse is neither complete nor incomplete: the 
 | `disposition` | `Disposition`, optional | New. Only `deferred` is accepted; a waiver stays `waivers:` and `--waive`. |
 | `decision-key` | string, optional | New. The stored decision the host matched; absent, `rule {rule-id} at {file}`. |
 
-A finding with a releasing deferral renders under a **Deferred findings** section and is excluded from `must-violations` and `should-violations`, as a waived one is. A finding with a non-releasing deferral stays in its MUST or SHOULD bucket, rendered with its deferral. A finding both deferred and matched by an applied waiver is refused.
+A finding with a releasing deferral renders under a **Deferred findings** section and is excluded from `must-violations` and `should-violations`, as a waived one is. A finding with a non-releasing deferral stays in its MUST or SHOULD bucket, rendered with its deferral. A finding both deferred and matched by an applied waiver is refused, and so is one matched by an applied waiver while a stored deferral for its key stands outside `expired-decisions` (argument `expired-decisions`).
 
 ## `analysis.md` gating counts
 
@@ -115,7 +115,7 @@ A finding with a releasing deferral renders under a **Deferred findings** sectio
 | --- | --- | --- |
 | `lapsed` | list of decision refs | New. Stored deferrals whose key fired and whose named work is complete. The host passes them to the writer in `expired-decisions`, which drops them, and asks for a new disposition. |
 
-New notices: `deferral lapsed: {key} — {target}[ task {n}] is complete and the finding still fires`, and `deferral target unreadable: {key} — {target}`.
+New notices: ``deferral lapsed: {key} — `{target}`[ task {n}] is complete and the finding still fires``, and ``deferral target unreadable: {key} — `{target}` ``.
 
 `DecisionRef` gains optional `task` and `work-item`.
 
@@ -128,4 +128,4 @@ New notices: `deferral lapsed: {key} — {target}[ task {n}] is complete and the
 | `--work-item <id>` | The external ID. |
 | `--reason <text>` | Optional with `--defer`; still required with `--waive`. |
 
-`--defer` and `--waive` naming the same rule in one invocation is an operator error. A deferral that replaces a stored waiver anchor passes that anchor in `expired-waivers`; a waiver that replaces a stored deferral passes it in `expired-decisions`. So a finding holds one disposition through the drop lists the writers already have.
+`--defer` and `--waive` naming the same rule in one invocation is an operator error. A deferral that replaces a stored waiver anchor passes that anchor in `expired-waivers`; a waiver that replaces a stored deferral passes it in `expired-decisions`. So a finding holds one disposition through the drop lists the writers already have. A deferral naming other work than the key's standing deferral needs neither list: it is a new decision, checked and stored in that one's place.
