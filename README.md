@@ -46,11 +46,11 @@ Each command advances the feature one step and leaves a durable artifact behind.
 
 ## Rules
 
-**Rules are how `ductus` knows what "good" means for your project.** A spec says what a feature should do; the rules say what any code is held to, whatever the feature. They are plain markdown, they are the only thing `/review` may cite besides your `AGENTS.md`, and every rule carries a permanent ID (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`) that a waiver, a code comment, or a spec can still cite years later.
+**Rules are how `ductus` knows what "good" means for your project.** A spec says what a feature should do; the rules say what any code is held to, whatever the feature. They are plain markdown, they are the only thing `/review` may cite besides your `AGENTS.md`, and every rule carries a permanent ID (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`), never renumbered or reused, that a waiver, a code comment, or a spec can cite; an ID is removed only after a deprecation window, which the changelog announces.
 
 `ductus` ships rule files for:
 
-- **Security**, backend and frontend — authentication, authorization, input validation, data protection, XSS, CSRF
+- **Security**, backend and frontend, plus `security-cross.md` for every project — authentication, authorization, input validation, data protection, XSS, CSRF, sensitive values kept out of logs and telemetry, pinned build inputs
 - **Accessibility** — WCAG 2.2 AA
 - **Performance**, backend and frontend — query efficiency, caching, Core Web Vitals, bundle size
 - **Reliability**, **concurrency**, and **observability** — timeouts and retries, races and locking, metrics and tracing

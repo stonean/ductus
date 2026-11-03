@@ -10,7 +10,7 @@ These are evaluation criteria, not implementation instructions.
 
 ### Technology
 
-- **Secure:** protect sensitive data through industry standards and best practices. See `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` for enforceable rules.
+- **Secure:** protect sensitive data through industry standards and best practices. See the `specs/rules/security-*.md` files for enforceable rules.
 - **Scalable:** design and implement to be dynamically scaled
 - **Learnable:** fast onboarding through clear patterns, documentation, and accessible codebase design
 - **Reliable:** graceful degradation and automatic recovery when components fail
@@ -434,7 +434,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Constitution section anchors | its `<!-- §<anchor> -->` markers |
 | Command frontmatter (description, argument-hint) | each command's own frontmatter |
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
-| Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; `CFG-`: `specs/017-derive-dont-ask/data-model.md`; `QUAL-`: `specs/036-quality-cross-rules/data-model.md` |
+| Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; another prefix: the data-model of the spec that introduced its file, else the file's header |
 | Service registry schema (`.ductus/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
 | A plan's design record | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
 | Decision-drift tell lists and grammars | `specs/045-decision-state-drift-detection/data-model.md` |

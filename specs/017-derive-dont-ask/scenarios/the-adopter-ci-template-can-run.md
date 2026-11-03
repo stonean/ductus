@@ -16,13 +16,13 @@ An independent BE-DEPS-006 assessment of 022 task 3's pinning found it (2026-10-
 
 - A workflow an adopter copies from the template runs on a fresh checkout of their repository: its first step after the checkout installs the runtime the other steps call.
 - That step downloads the release binary, so the adopter needs no Rust or cargo. It names the release by `DUCTUS_VERSION` and the x86_64 Linux archive's sha256 by `DUCTUS_SHA256`, checks the download against the hash before anything runs, fails when the binary reports another version, and puts the binary on `PATH` from outside the work tree, so the sync check never sees it. The download is bounded by a named connect timeout, a named total timeout and the step's `timeout-minutes` (`BE-TIMEOUT-001`), and is not retried: a failed one fails the job, which can be re-run.
-- Both values are pinned to an immutable reference (`BE-DEPS-006`) and read by the weekly pins check, like every other CI input in this repository: it fails when `DUCTUS_VERSION` is behind this repository's latest release, when `DUCTUS_SHA256` is not the sha256 that release published, and when a version has no hash beside it. A release cannot carry its own archive's hash, so the template always names a release already published, and the bump follows each release.
+- Both values are pinned to an immutable reference (`SEC-DEPS-001`) and read by the weekly pins check, like every other CI input in this repository: it fails when `DUCTUS_VERSION` is behind this repository's latest release, when `DUCTUS_SHA256` is not the sha256 that release published, and when a version has no hash beside it. A release cannot carry its own archive's hash, so the template always names a release already published, and the bump follows each release.
 
 ## Edge Cases
 
 - A project in a subdirectory of its repository keeps working under the template's commented `working-directory` default (spec 059, AC10).
 - The template's runtime and the runtime an adopter's `/ductus` acquired can be different versions, since the adopter's copy is taken once and `/ductus` follows the release its source resolves, the latest by default. Where derived frontmatter differs between the two, the template's sync check would fail a correct commit.
-- Reading the version from this repository's latest release at run time would select what runs by a mutable reference, which `BE-DEPS-006` does not allow, so the template does not do it.
+- Reading the version from this repository's latest release at run time would select what runs by a mutable reference, which `SEC-DEPS-001` does not allow, so the template does not do it.
 
 ## Open Questions
 

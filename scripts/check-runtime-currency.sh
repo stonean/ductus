@@ -18,7 +18,7 @@
 #                     still governs what is ignored).
 #   5. pins         — a CI input the lockfile does not cover has fallen behind
 #                     what its upstream publishes, or is not pinned at all
-#                     (BE-DEPS-006; see the section below).
+#                     (SEC-DEPS-001; see the section below).
 #
 # A compatible update held back only by the declared `rust-version` (MSRV) is
 # reported, never failed: the MSRV is a deliberate floor, raised on purpose.
@@ -161,7 +161,7 @@ else
 fi
 
 # --- 5: pins ------------------------------------------------------------------
-# BE-DEPS-006 pins every CI input the lockfile does not cover: each action to
+# SEC-DEPS-001 pins every CI input the lockfile does not cover: each action to
 # a full commit SHA with its release tag in a same-line comment, each installed
 # tool to an exact version. A pin stays current only if something compares it
 # with upstream, and this is that comparison (022 task 3). An action pin is

@@ -169,7 +169,7 @@ jobs:
 
       - name: Install cargo-zigbuild (cross builds)
         if: matrix.cross
-        # Both pinned (BE-DEPS-006). The hash is the manylinux x86_64 wheel's,
+        # Both pinned (SEC-DEPS-001). The hash is the manylinux x86_64 wheel's,
         # the only one an ubuntu-latest runner selects; hash-checking mode
         # refuses any other file, so a runner on another architecture fails
         # here rather than installing an unverified zig.

@@ -11,7 +11,7 @@ cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-revie
 
 > **Signpost:** 008 defines the *security instance* of the general rules tier later formalized in [016 — Cross-Cutting Rules](../016-cross-cutting-rules/spec.md). The rule-file format, ID conventions, and `/{project}:analyze` enforcement defined here remain the canonical reference for any future rule file (observability, performance, accessibility, etc.). See §rules in `framework/constitution.md` for the general framing of rules as a cross-cutting artifact tier alongside specs and scenarios.
 
-Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the ductus command as two files — `security-backend.md` and `security-frontend.md`. These are rules, not guidelines: `/{project}:analyze` checks implementation against them.
+Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the ductus command as two files — `security-backend.md` and `security-frontend.md` — beside `security-cross.md`, which spec 077 introduced for the security rules that hold on every surface. These are rules, not guidelines: `/{project}:analyze` checks implementation against them.
 
 ## Motivation
 
@@ -29,13 +29,13 @@ Rules for server-side code, APIs, data persistence, and infrastructure integrati
 
 **Categories:**
 
-- **Authentication** — credential storage (with bcrypt only in a legacy system where neither Argon2id nor scrypt is available), password policy, session management, token handling, password-reset and account-recovery flows, re-authentication before a password or other authenticator, the email or recovery contact, or the MFA settings change, JWT verification (algorithms, claims, and key material), OAuth/OIDC flows and the grant types they must not use, multi-factor authentication (required for privileged accounts, with phishing-resistant factors recommended for them), constant-time comparison of secrets
+- **Authentication** — credential storage (with bcrypt only in a legacy system where neither Argon2id nor scrypt is available), password policy, session management, token handling, password-reset and account-recovery flows, re-authentication before a password or other authenticator, the email or recovery contact, or the MFA settings change, JWT verification (algorithms, claims, and key material), multi-factor authentication (required for privileged accounts, with phishing-resistant factors recommended for them); OAuth/OIDC client flows and the grant types they must not use, and constant-time comparison of secrets, moved to `security-cross.md` with spec 077, their old IDs deprecated here until removed
 - **Authorization** — permission enforcement, privilege escalation prevention, default-deny posture, mass-assignment / over-posting prevention
 - **Input validation** — sanitization at system boundaries, reject-by-default, allowlisting over denylisting, explicit size and count limits on input, parameterized queries (SQL/NoSQL/command) with each NoSQL query value type-checked so an object cannot inject an operator, safe deserialization, path-traversal prevention through a containment check on whole path components, XXE/SSTI prevention, formula escaping in CSV and spreadsheet exports, HTTP request smuggling prevention at the edge (ambiguous framing rejected, `Content-Length` values that differ included, identical repeats collapsed to one value), SSRF prevention on outbound URL fetches — checked on the connection actually made, not only on the submitted URL
 - **Data protection** — encryption at rest and in transit, secrets management, revocation and replacement of leaked secrets, PII handling, key rotation
 - **API security** — security headers (HSTS / HTTPS enforcement, CSP, frame protection, referrer policy, cache-control for sensitive responses, an explicit content type) and suppression of version-revealing headers, CORS policy, rate limiting, HTTP method and `Content-Type` restriction, infrastructure management interfaces and database ports kept off public networks, connections to a database server, cache or message broker authenticated, from the application or another component of its deployment, each leg through a pooler or proxy and a local one included, the application's own management and diagnostic endpoints (metrics, profiling, dumps, framework management endpoints) kept off public networks unless every request is authenticated, redirect validation, signed and replay-protected webhooks, server-side CSRF enforcement for ambient credentials (a synchronizer or signed double-submit token, a required custom header, or a `Sec-Fetch-Site` check rejecting a request that lacks the header or falling back to `Origin`), no credentials or personal data in URLs, whether the server accepts them or sends them, WebSocket endpoints with an allowlisted handshake `Origin`, an authenticated connection, and every message validated and authorized as an HTTP request would be
 - **Logging and audit** — security-relevant events must be logged, sensitive data must never appear in logs, in other telemetry (trace attributes, metric labels, error reports), or in propagated trace context (`tracestate`, baggage), audit trails for access control changes
-- **Dependency management** — known-vulnerability scanning before release and on a schedule, pinned versions, a build-time SBOM, signature, provenance, or (for Go modules) checksum-database verification of registry packages as part of installation — or, where the ecosystem's standard installer provides no verification (pip), a documented gap and hash-checked installs — dependency-confusion and typosquatting defenses including integrity-verified installs against committed hashes, immutable pinning of build inputs the lockfile does not cover (CI actions, base images, downloaded tools)
+- **Dependency management** — known-vulnerability scanning before release and on a schedule, pinned versions, a build-time SBOM, signature, provenance, or (for Go modules) checksum-database verification of registry packages as part of installation — or, where the ecosystem's standard installer provides no verification (pip), a documented gap and hash-checked installs — dependency-confusion and typosquatting defenses including integrity-verified installs against committed hashes; immutable pinning of build inputs the lockfile does not cover (CI actions, base images, downloaded tools) moved to `security-cross.md` with spec 077, its old ID deprecated here until removed
 - **Error handling** — no stack traces or internal details in production responses, structured error codes, security controls that fail closed when their check cannot complete
 
 ### Frontend (`security-frontend.md`)
@@ -154,7 +154,7 @@ When `/ductus` installs the security rule files in a project that already has fe
 
 Ductus runs a one-time security audit when **both** conditions hold after the file manifest has been processed:
 
-- Either `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` was newly **created** by the manifest pass (i.e., not already present, not just updated).
+- One of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or, since spec 077, `specs/rules/security-cross.md` was newly **created** by the manifest pass (i.e., not already present, not just updated).
 - The project contains at least one feature spec directory under `specs/`, in either numbering form — the membership rule lives in `framework/constitution.md` §numbering and is not restated here, because a second copy is how the sequential and branch-scoped forms drift apart.
 
 When neither condition holds — greenfield adoption with no existing specs, or a routine re-run where the rule files already exist — the audit is silently skipped. There is no per-run audit; the trigger is "rule file newly installed in a project with existing specs."
@@ -164,7 +164,7 @@ When neither condition holds — greenfield adoption with no existing specs, or 
 For each newly created rule file:
 
 1. Load the rule file, applying the same integrity checks `/{project}:analyze` uses (well-formed headings, required fields, valid IDs, no duplicates). If the file fails to load, ductus reports the load failure and skips the audit for that file — same posture as `/{project}:analyze`.
-2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under a feature spec directory (`spec.md`, `plan.md`, scenario files), produce a finding.
+2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under a feature spec directory (`spec.md`, `plan.md`, scenario files), produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077).
 3. Report each finding under the spec it belongs to. The audit writes no file.
 
 ### Finding format
@@ -204,7 +204,7 @@ The first version of this section wrote each finding to `specs/inbox.md`, so tha
 
 The "Secure" principle in the constitution gains a reference to the security rule files:
 
-> Protect sensitive data through industry standards and best practices. See `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` for enforceable rules.
+> Protect sensitive data through industry standards and best practices. See the `specs/rules/security-*.md` files for enforceable rules.
 
 This connects the principle to its operational detail without duplicating content.
 
@@ -219,7 +219,7 @@ This connects the principle to its operational detail without duplicating conten
 
 How `/{project}:analyze` behaves when the inputs are unusual:
 
-- **Neither rule file present.** If a project has no `specs/rules/security-backend.md` and no `specs/rules/security-frontend.md` (e.g., a cross-only `[rules] surfaces = []` kept both from ever being installed, or both were deleted by hand), `/{project}:analyze` applies no security rules and continues. When the rule-file directory holds no rule file of any kind, it also emits an advisory warning — `No rule files found, skipping rule checks`, generalized from this spec's original security-only wording by 016; a project that still has other rule files (the `-cross.md` files a cross-only setting installs, for instance) gets no such warning. The rule check is non-blocking in either case.
+- **Neither rule file present.** If a project has no `specs/rules/security-backend.md` and no `specs/rules/security-frontend.md` (e.g., a cross-only `[rules] surfaces = []` kept both from ever being installed, or both were deleted by hand), `/{project}:analyze` applies no `security-backend.md` or `security-frontend.md` rule and continues, while `security-cross.md`, which every shape installs since spec 077, still applies. When the rule-file directory holds no rule file of any kind, it also emits an advisory warning — `No rule files found, skipping rule checks`, generalized from this spec's original security-only wording by 016; a project that still has other rule files (the `-cross.md` files a cross-only setting installs, for instance) gets no such warning. The rule check is non-blocking in either case.
 - **Only one file present.** If a project has only one of the two files (e.g., a backend-only project whose `[rules] surfaces` omitted `frontend` before the frontend file was ever installed, or vice versa), `/{project}:analyze` runs over the present file and emits no finding for the missing one. This is the common case for non-fullstack projects.
 - **Malformed rule file.** A rule file is malformed if any rule is missing a required field (ID, statement, verification), if any rule's ID does not match the `{surface}-{category}-{NNN}` format, or if the file fails to parse. `/{project}:analyze` **blocks** with an error: `Malformed rule file {path} at {location}: {reason}` (generalized from this spec's original `Malformed security rule file` wording by 016). The accompanying file is treated as unloadable; no rules from that file are applied. Rationale: the findings must rest on accurate rule data — partial or guessed-at parsing produces unreliable findings.
 - **Stale rule reference.** A spec or plan references a rule ID that does not exist in the current rule files (the rule was removed upstream after `/ductus` updated the file). `/{project}:analyze` **blocks** with an error: `Spec at {path} references unknown rule {ID}.` The adopter must update or remove the reference before the gate will pass. Rationale: stale references silently rot if tolerated.
@@ -273,7 +273,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 ### Constitution Reference
 
-- [x] AC28: The "Secure" principle references `specs/rules/security-backend.md` and `specs/rules/security-frontend.md`
+- [x] AC28: The "Secure" principle references the security rule files (`specs/rules/security-*.md`)
 
 ## Open Questions
 

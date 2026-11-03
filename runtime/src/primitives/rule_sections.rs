@@ -465,4 +465,68 @@ mod tests {
             mixed.len()
         );
     }
+
+    /// The list of values a log rule's Statement bars: from the word after
+    /// the first `MUST NOT ` through the closing "other sensitive field
+    /// values". `None` when either end is missing.
+    fn barred_values(statement: &str) -> Option<&str> {
+        const END: &str = "other sensitive field values";
+        let (_, after) = statement.split_once("MUST NOT ")?;
+        let (_, list) = after.split_once(' ')?;
+        let end = list.find(END)? + END.len();
+        Some(&list[..end])
+    }
+
+    /// The rule section `id` in the shipped rule file `file`, which must
+    /// exist: a rule renamed or removed fails the test that reads it.
+    fn shipped_section(file: &str, id: &str) -> RuleSection {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../framework/rules")
+            .join(file);
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("{}: {err}", path.display()));
+        parse_rule_sections(&content)
+            .into_iter()
+            .find(|section| section.id == id)
+            .unwrap_or_else(|| panic!("{id} not found in {}", path.display()))
+    }
+
+    /// The check below keeps a subject once the shipped lists agree: two
+    /// lists that match are equal whatever verb precedes them, one that
+    /// lacks a value is caught, and a Statement with no list reads as none.
+    #[test]
+    fn a_barred_value_list_is_read_and_a_differing_one_is_caught() {
+        let logs =
+            "Logs MUST NOT contain passwords, session IDs, or other sensitive field values. More.";
+        let carriers = "Logs and spans MUST NOT carry passwords, session IDs, or other sensitive field values, wherever.";
+        let fewer = "Logs MUST NOT contain passwords, or other sensitive field values.";
+        assert_eq!(
+            barred_values(logs),
+            Some("passwords, session IDs, or other sensitive field values")
+        );
+        assert_eq!(barred_values(logs), barred_values(carriers));
+        assert_ne!(barred_values(logs), barred_values(fewer));
+        assert_eq!(barred_values("Logs MUST be structured."), None);
+        assert_eq!(barred_values("Logs MUST NOT contain passwords."), None);
+    }
+
+    /// `security-cross.md` `SEC-LOG-001` copies `security-backend.md`
+    /// `BE-LOG-002`'s list of the values kept out of logs, so a project that
+    /// does not install `security-backend.md` is held to the same set (spec
+    /// 077's plan, Trade-offs). Neither rule's text points an editor of
+    /// `BE-LOG-002` at the copy, so this keeps an edit to one list from
+    /// reaching only some project shapes.
+    #[test]
+    fn sec_log_001_bars_the_values_be_log_002_bars() {
+        let backend = shipped_section("security-backend.md", "BE-LOG-002");
+        let cross = shipped_section("security-cross.md", "SEC-LOG-001");
+        let backend_list = barred_values(&backend.statement)
+            .unwrap_or_else(|| panic!("no value list in BE-LOG-002: {}", backend.statement));
+        let cross_list = barred_values(&cross.statement)
+            .unwrap_or_else(|| panic!("no value list in SEC-LOG-001: {}", cross.statement));
+        assert_eq!(
+            cross_list, backend_list,
+            "SEC-LOG-001's value list has drifted from BE-LOG-002's"
+        );
+    }
 }

@@ -48,7 +48,7 @@ jobs:
 
       # Node is the runner image's own, not a download (owner decision,
       # 2026-10-20, 022 task 3). setup-node fetched it with no checksum check,
-      # from a version manifest read off a branch, which BE-DEPS-006 does not
+      # from a version manifest read off a branch, which SEC-DEPS-001 does not
       # allow; the image's Node, like its shellcheck and jq, moves when GitHub
       # updates the image.
       #
@@ -153,7 +153,7 @@ jobs:
         run: bash scripts/tests/test-install.sh
 
       # (m) The weekly currency run is the update process for the CI pins
-      # (BE-DEPS-006, 022 task 3), and it runs on a schedule, not on push, so a
+      # (SEC-DEPS-001, 022 task 3), and it runs on a schedule, not on push, so a
       # comparison that stopped comparing would read as current for weeks.
       # The test drives the pins check against stubbed lookups and shows it
       # fails on each case it claims to catch.

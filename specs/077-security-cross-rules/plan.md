@@ -11,7 +11,7 @@ Create `framework/rules/security-cross.md` with five `SEC-` rules: one new rule 
 - **Re-point every yield and Statement** that names them, and sweep every live citation.
 - **Ship the file**: the manifest row, `docs/rules.md`, the README, and `runtime/CHANGELOG.md`'s `## [Unreleased]` section.
 
-No runtime code changes. The rule-ID regexes in `runtime/src/primitives/check_rule_ids.rs:103` and `runtime/src/primitives/rule_sections.rs:77` already accept any two-to-five-letter prefix.
+No runtime behaviour changes; one corpus test is added (§Verification). The rule-ID regexes in `runtime/src/primitives/check_rule_ids.rs:103` and `runtime/src/primitives/rule_sections.rs:77` already accept any two-to-five-letter prefix.
 
 ## Technical Decisions
 
@@ -31,16 +31,16 @@ A frontend-only or cross-only project does not install `security-backend.md` (`f
 
 Its Verification asks a spec or plan that introduces logging, error reporting or telemetry, client-side or server-side, to commit to excluding or redacting those values. Its Not-flagged clause names three owners:
 
-- a value in a log line is `BE-LOG-002`'s, and one in telemetry, an error-reporting payload or propagated trace context is `BE-LOG-008`'s, each "where `security-backend.md` is also loaded" (008 `data-model.md` §Verification phrasing, item 6);
+- the exclusion or redaction commitment for logging and a value in a log line are `BE-LOG-002`'s, and the commitment for error reporting, tracing, metrics or baggage and a value in those carriers `BE-LOG-008`'s, each "where `security-backend.md` is also loaded" (008 `data-model.md` §Verification phrasing, item 6), since both owners' triggers fire on the same missing commitment;
 - a sensitive configuration value is `configuration-cross.md` `CFG-ENV-006`'s, with no condition.
 
-Its Source is the OWASP Logging Cheat Sheet, fetched when the rule is written.
+Its Sources are the OWASP Logging Cheat Sheet, W3C Trace Context §6 and OpenTelemetry's Baggage security considerations, fetched when the rule is written.
 
 ### Moved rules keep their text
 
-`SEC-DEPS-001`, `SEC-AUTHN-001`, `SEC-AUTHN-002` and `SEC-AUTHN-003` take the Statement and Verification of `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020` as they stand at the move. Only the IDs and the load conditions change. Each owner a moved rule names that sits on a surface file takes the condition on its file:
+`SEC-DEPS-001`, `SEC-AUTHN-001`, `SEC-AUTHN-002` and `SEC-AUTHN-003` take the Statement and Verification of `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020` as they stand at the move. Only the IDs and the load conditions change, except that `SEC-DEPS-001`'s reusable-workflow sentence and flag, and `BE-DEPS-006`'s kept Statement, ask a full commit SHA of a reusable workflow called by `{owner}/{repo}/…@{ref}`, in another repository or this one, and state that one called by `./` or `$/` is pinned by the caller's commit (owner, 2026-11-02, recorded on task 8), and that `SEC-DEPS-001`'s yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest` (below). Each owner a moved rule names that sits on a surface file takes the condition on its file:
 
-- `SEC-DEPS-001`: `BE-DEPS-002` takes "where `security-backend.md` is also loaded", and `FE-DEPS-004` takes "where `security-frontend.md` is also loaded";
+- `SEC-DEPS-001`: `BE-DEPS-002` takes "where `security-backend.md` is also loaded", and `FE-DEPS-004` takes "where `security-frontend.md` is also loaded"; the yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest`, which `FE-DEPS-004` and `BE-DEPS-002` name as `SEC-DEPS-001`'s, so no rule routes that case to one that routes it back;
 - `SEC-AUTHN-001`: `BE-API-010` (d) takes the backend condition;
 - `SEC-AUTHN-002`: `BE-API-009` takes the backend condition;
 - the mutual references between `BE-AUTHN-013` and `BE-AUTHN-020` become `SEC-AUTHN-002` and `SEC-AUTHN-003`, in the same file, so they take none.
@@ -53,16 +53,16 @@ Each deprecated rule keeps its heading, its ID and its Statement. It gains a `**
 
 Its Verification becomes one sentence naming the successor as the owner of every case the rule governed, with no load condition. `/{project}:analyze` therefore reports each case once, under the successor. The exec walker still asks about the rule, since a deprecated section parses like any other, and the host answers `passed`.
 
-The version is the next one `version` would ship, computed when the labels are written: `0.59.12`, since a release with no primitive change is a patch (`runtime/CHANGELOG.md`, the 0.59.11 entry). The removal target is the second minor release after it, `0.61.0`, as 077's second Resolved Question decided.
+The version is the next one `version` would ship, computed when the labels are written: `0.60.0`, since that release carries 076's renamed record and result values (`898a49ec`), a breaking schema change and so a minor bump before 1.0 (`specs/022-deterministic-runtime/data-model.md`, the versioning paragraph). The removal target is the second minor release after it, `0.62.0`, as 077's second Resolved Question decided.
 
 ### Re-pointing
 
 These name a deprecated rule and change to name its successor:
 
 - `security-backend.md`: the yields in `BE-API-009`, `BE-API-010`, `BE-API-011` and `BE-API-013`, and the Statements of `BE-API-010` (d) and `BE-API-011`. The latter's "Token comparison MUST be constant-time per `BE-AUTHN-009`" becomes per `SEC-AUTHN-001`.
-- `security-frontend.md`: the yields in `FE-AUTHN-001` and `FE-STORAGE-003`, which drop "where `security-backend.md` is also loaded", since a `-cross.md` owner installs in every shape.
+- `security-frontend.md`: the yields in `FE-AUTHN-001` and `FE-STORAGE-003`, which drop "where `security-backend.md` is also loaded", since a `-cross.md` owner installs in every shape. `FE-DEPS-004` gains a yield, with no condition, of a package a build step's command runs by a mutable reference, such as `npx tool@latest`, in a spec or plan, to `SEC-DEPS-001`, whose trigger reaches a spec or plan and not `system.md`, which a frontend-only project now loads beside it, so the case is reported once; `security-backend.md`'s `BE-DEPS-002` gains the same yield.
 
-`configuration-cross.md`'s `CFG-ENV-006` names a non-configuration sensitive value in a log line as `BE-LOG-002`'s, and one in propagated trace context as `BE-LOG-008`'s. It is the only rule outside the backend surface that does so (grep of `framework/rules/` for both IDs). It then reads "`BE-LOG-002`'s where `security-backend.md` is also loaded, otherwise `security-cross.md` `SEC-LOG-001`'s", and the same for `BE-LOG-008`. The trace-context case stays task 43's open item 8 on 008.
+`configuration-cross.md`'s `CFG-ENV-006` names a non-configuration sensitive value in a log line as `BE-LOG-002`'s, and one in propagated trace context as `BE-LOG-008`'s. It is the only rule outside the backend surface that does so (grep of `framework/rules/` for both IDs). It then reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there stays `BE-LOG-008`'s with no condition, as 008's task 43 leaves it open.
 
 `observability-backend.md`'s pointers to `BE-LOG-008` stay as they are: it installs on the backend surface, beside `security-backend.md`.
 
@@ -79,26 +79,28 @@ A live artifact that cites a deprecated ID as a current requirement names the su
 
 Each substitution maps a deprecated ID to its current one, so it is mechanical (constitution §spec-lifecycle, case (a)).
 
-These keep the old ID, because they record what was decided or measured: 008's `tasks.md`, 022's ticked `tasks.md` items, 008's scenario `rules-are-as-short-as-their-required-content` (checked when swept), changelog entries, and `review.md` and `analysis.md` records. `.github/` changes run `actionlint`.
+These keep the old ID, because they record what was decided or measured: 008's `tasks.md`, 022's `tasks.md` (its ticked task 3, and task 10's unticked item naming a stored `analysis.md` decision key), 008's scenario `rules-are-as-short-as-their-required-content` (checked when swept), the dated assessment in the Context of 017's scenario `the-adopter-ci-template-can-run`, changelog entries, and `review.md` and `analysis.md` records. `.github/` changes run `actionlint`.
 
 ### Distribution
 
-- `framework/bootstrap/ductus.md` gains the row `framework/rules/security-cross.md` → `specs/rules/security-cross.md` beside `configuration-cross.md`'s (line 858). The surface filter keeps every `*-cross.md` entry unconditionally (line 836), so every shape installs it.
+- `framework/bootstrap/ductus.md` gains the row `framework/rules/security-cross.md` → `specs/rules/security-cross.md`, between `security-backend.md`'s and `security-frontend.md`'s. The surface filter keeps every `*-cross.md` entry unconditionally (line 836), so every shape installs it.
 - `docs/rules.md`'s "What ships" table gains a row.
 - `README.md`'s security bullet (line 52) names the cross-surface file.
+- `framework/bootstrap/ductus-procedure.md`'s §Security Audit (brownfield) triggers on a newly created `security-cross.md` as on either surface file, loads it, and accepts its `SEC-{CATEGORY}-{NNN}` IDs, so the upgrade that installs it previews its rules' gaps on a project's existing specs; its §Per-rule check applies a Verification's **Not flagged:** clause, judging a load condition against every rule file installed under `specs/rules/`, so each gap is reported under the owner `/{project}:analyze` names, on an upgrade or a surface added alike (owner, 2026-11-02, two calls, recorded on task 8). A change under `framework/bootstrap/` is verified by a real adopter bootstrap (task 10).
+- `framework/constitution.md`'s Secure principle names the `specs/rules/security-*.md` files, and its canonical-sources row for rule ID conventions points any prefix but `BE` and `FE` at the data-model of the spec that introduced its file, else the file's header, so neither lists files or prefixes one by one, and the constitution stays under `scripts/lint-governing-size.sh`'s 50,000 bytes.
 
 `runtime/CHANGELOG.md`'s `## [Unreleased]` section gains one entry. It names:
 
-- the four ID changes and their successors;
+- the four ID changes and their successors, and which of the old IDs 0.59.11 shipped (`BE-AUTHN-009` and `BE-AUTHN-013`; `BE-DEPS-006`, `BE-AUTHN-020` and `BE-LOG-008` came after it);
 - the deprecation and removal versions;
-- that a waiver under an old ID stops applying where the finding moves, since a waiver is anchored on rule ID and file (`framework/reference/review.md`, §Waivers);
-- that a project pinning `security-backend.md` sees each moved case under both IDs until it re-syncs the file.
+- the one defect `/{project}:review` reports under two IDs until 020's routing lands, a configuration value's pair lasting past it, and that a waiver under one needs a counterpart under the other, since a waiver is anchored on rule ID and file (`framework/reference/review.md`, §Waivers), the one under the yielding ID expiring once that routing moves the finding to its owner;
+- what a pinned or leftover `security-backend.md` or `security-frontend.md` reports under both IDs, or under none, until it is re-synced or deleted.
 
 ### Verification
 
 Every rule this spec writes or changes is re-read before the work is called done (AC10). The re-read uses fresh agents, split by cluster: logging, dependencies, authentication, and records. Each probes all four project shapes, under the same severity bar 008's rounds used, repeated until a round has no MUST or SHOULD.
 
-The local gate is a fresh clone of HEAD plus the patch, running `cargo test --release --locked` and every step of `framework-checks.yml`, `generators.yml` and `runtime.yml`. `every_shipped_rule_is_assessable` (`runtime/src/primitives/rule_sections.rs`) parses every file under `framework/rules/` and must pass with the new one.
+The local gate is a fresh clone of HEAD plus the patch, running `cargo test --release --locked` and every step of `framework-checks.yml`, `generators.yml` and `runtime.yml`. `every_shipped_rule_is_assessable` (`runtime/src/primitives/rule_sections.rs`) parses every file under `framework/rules/` and must pass with the new one. Beside it, `sec_log_001_bars_the_values_be_log_002_bars` compares the two value lists, and `a_barred_value_list_is_read_and_a_differing_one_is_caught` proves its comparison both ways on fixtures.
 
 ## Affected Files
 
@@ -106,16 +108,19 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 | --- | --- | --- |
 | `framework/rules/security-cross.md` | Create | The five `SEC-` rules |
 | `specs/077-security-cross-rules/data-model.md` | Create | Registers `SEC` and its categories |
-| `framework/rules/security-backend.md` | Modify | Deprecate four rules; re-point `BE-API-009`, `-010`, `-011`, `-013` |
-| `framework/rules/security-frontend.md` | Modify | Re-point `FE-AUTHN-001` and `FE-STORAGE-003`, dropping their load condition |
+| `framework/rules/security-backend.md` | Modify | Deprecate four rules; re-point `BE-API-009`, `-010`, `-011`, `-013`; `BE-DEPS-002`'s yield to `SEC-DEPS-001` |
+| `framework/rules/security-frontend.md` | Modify | Re-point `FE-AUTHN-001` and `FE-STORAGE-003`, dropping their load condition; `FE-DEPS-004`'s yield to `SEC-DEPS-001` |
 | `framework/rules/configuration-cross.md` | Modify | `CFG-ENV-006` names `SEC-LOG-001` where `security-backend.md` is not loaded |
 | `scripts/lint-rule-ids.sh` | Modify | Allow `SEC` |
+| `runtime/src/primitives/rule_sections.rs` | Modify | A test holding `SEC-LOG-001`'s value list to `BE-LOG-002`'s |
 | `framework/reference/analyze.md` | Modify | Name 077's data-model as `SEC`'s format source |
-| `specs/008-security-rules/data-model.md` | Modify | Name the `SEC` prefix; sweep `BE-DEPS-006` |
+| `specs/008-security-rules/data-model.md` | Modify | Name the `SEC` prefix; sweep `BE-DEPS-006`; the schema's Surface, ID-prefix, Category Name and Deprecated entries and its removal rule |
+| `framework/constitution.md` | Modify | The Secure principle's rule files and the rule-ID canonical-sources row |
 | `framework/bootstrap/ductus.md` | Modify | Manifest row |
+| `framework/bootstrap/ductus-procedure.md` | Modify | The brownfield security audit's trigger, loading and ID check reach `security-cross.md`, and its per-rule check applies a yield's load condition against the installed rule files |
 | `framework/bootstrap/govern.md` | Modify | Byte copy of `ductus.md`, which audit family `transitional-bootstrap-parity` requires |
-| `docs/rules.md` | Modify | "What ships" row |
-| `README.md` | Modify | Security bullet |
+| `docs/rules.md` | Modify | "What ships" row; what a moved rule's old ID does |
+| `README.md` | Modify | Security bullet; ID permanence |
 | `runtime/CHANGELOG.md` | Modify | `## [Unreleased]` entry |
 | `.github/workflows/framework-checks.yml` | Modify | Comment sweep |
 | `.github/workflows/runtime-release.yml` | Modify | Comment sweep |
@@ -125,9 +130,10 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 | `specs/017-derive-dont-ask/scenarios/the-adopter-ci-template-can-run.md` | Modify | Sweep |
 | `specs/017-derive-dont-ask/spec.md` | Modify | Block-quoted signpost discharging 077's impact |
 | `specs/022-deterministic-runtime/plan.md` | Modify | Sweep |
-| `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/an-assessment-sees-the-rule-it-asks-about.md` | Modify | Sweep |
-| `specs/008-security-rules/spec.md` | Modify | Block-quoted signpost discharging 077's impact |
-| `specs/008-security-rules/tasks.md` | Modify | Tick task 32's follow-on, task 40's first, fourth and fifth items, and task 42's item |
+| `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/an-assessment-sees-the-rule-it-asks-about.md` | Modify | Sweep, and its count re-measured over the rule files the sweep changed |
+| `specs/008-security-rules/spec.md` | Modify | Block-quoted signpost discharging 077's impact; its opening and Backend category list, the brownfield audit trigger and logic, the "Neither rule file present" edge case, §Constitution Reference and AC28 |
+| `specs/008-security-rules/plan.md` | Modify | The constitution's Secure sentence it quotes; the brownfield audit trigger and per-rule step |
+| `specs/008-security-rules/tasks.md` | Modify | Tick task 32's two items, task 40's first, fourth and fifth items, and task 42's item; task 44 records the gaps the re-read found; task 30's handoff and task 42's note |
 
 ## Data Model
 
@@ -139,10 +145,10 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 
 ## Trade-offs
 
-- **`SEC-LOG-001` restates `BE-LOG-002`'s value list rather than citing it.** Citing it would leave the rule empty where `security-backend.md` is not installed. The cost is two copies of one list, and a change to either must change both. The rule's Not-flagged clause and this plan name the pair, so a reviewer of one finds the other.
+- **`SEC-LOG-001` restates `BE-LOG-002`'s value list rather than citing it.** Citing it would leave the rule empty where `security-backend.md` is not installed. The cost is two copies of one list, and a change to either must change both. Neither rule's text points an editor of `BE-LOG-002` at the copy, so `sec_log_001_bars_the_values_be_log_002_bars` (`runtime/src/primitives/rule_sections.rs`) fails when the two lists differ, or when either rule is missing.
 - **A deprecated rule's Verification is replaced by a pointer, not kept.** Keeping it would report every moved case under both IDs at `/{project}:analyze` in backend-only and full-stack projects until removal. Its Statement is kept, so `/{project}:review`, which applies Statements and no routing, still reports both until 020 task 15 lands (spec §Edge cases).
 - **`CFG-ENV-006` names both owners directly** rather than naming `SEC-LOG-001` alone and letting that rule yield onward. A direct name reaches the owner in one step, and a chain of yields is what 008's rounds found hardest to read alone.
-- **The deprecation version is computed when the labels are written** (`0.59.12`, removed in `0.61.0`). A release cut under another number must correct the four labels, and nothing checks that today. 008's task 43 item on the `## [Unreleased]` rename names the same release-time gap.
+- **The deprecation version is computed when the labels are written** (`0.60.0`, removed in `0.62.0`). A release cut under another number must correct the four labels, and nothing checks that today. 008's task 43 item on the `## [Unreleased]` rename names the same release-time gap.
 - **A project that pins `security-backend.md` sees doubled findings** until it re-syncs. Nothing a shipped file says can reach a pinned copy, so the changelog entry is the remedy (spec §Edge cases).
 
 ## Open Questions Resolved
@@ -154,4 +160,4 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 
 - **008-security-rules.** Its rule files change (deprecations and re-pointed yields), and so does its `data-model.md` (the `SEC` prefix and the sweep). Its tasks 32, 40 and 42 close here. Discharged by a block-quoted signpost in 008's `spec.md` linking this spec. The block quote keeps `derive-dependencies` from inducing an `008 → 077` edge, which would close a cycle, since 077 depends on 008.
 - **017-derive-dont-ask.** `CFG-ENV-006`, a rule on its surface, changes, and its `plan.md` and scenario are swept. Discharged by a block-quoted signpost in 017's `spec.md`.
-- **022 and 060.** Their swept sentences are mechanical substitutions (constitution §spec-lifecycle, case (a)), owe nothing to 077, and take no back-edge.
+- **022 and 060.** 022's swept sentences are mechanical substitutions (constitution §spec-lifecycle, case (a)). 060's scenario also re-measures its count over the rule files this spec changed, a factual update to an in-progress spec, which takes no back-edge. Neither owes anything to 077.

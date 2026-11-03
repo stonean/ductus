@@ -10,7 +10,7 @@ They are plain markdown in your project's rule-file directory — the `rules/` d
 
 **Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed or waived with a recorded reason. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed or waived.
 
-**Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later.
+**Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later. A rule that moves to another file takes a new ID there, and its old one is deprecated: still loaded, a citation of it drawing an Advisory finding, until the release its label names removes it. Re-point a citation, and record a waiver again, under the successor the changelog names.
 
 ## What ships
 
@@ -18,6 +18,7 @@ They are plain markdown in your project's rule-file directory — the `rules/` d
 | --- | --- |
 | `security-backend.md` | Authentication, authorization, input validation, data protection, API security, logging and audit, dependency management, error handling |
 | `security-frontend.md` | XSS, CSRF, secure client-side storage, authentication UX, content security policy, dependencies, handling of sensitive data |
+| `security-cross.md` | Security obligations that hold wherever code runs, so every project loads it: sensitive values kept out of logs, error reports and telemetry, build inputs pinned to an immutable reference, constant-time comparison of secrets, OAuth and OIDC client flows and grant types |
 | `quality-cross.md` | Silent stubs, unverified contracts, unsubstantiated clean results, unenumerated delegation to shared code, tests that cannot fail |
 | `reliability-backend.md` | Bounded timeouts and deadlines, retry discipline and dead-lettering, circuit breakers, graceful shutdown, bulkheads that shed load rather than queue unboundedly, graceful degradation when a non-critical dependency fails |
 | `performance-backend.md` | Query efficiency (N+1, unindexed filters, unbounded reads, batched writes), caching with a stated expiry, connection-pool discipline, payload budgets and streaming, offloading slow work off the request path |

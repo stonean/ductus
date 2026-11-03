@@ -20,20 +20,78 @@ its version and date.
   moves the section to `specs/errors.md`, and a non-HTTP format left there
   draws `BE-ERR-004`'s warning. Spec 008, task 34; spec 068.
 - **`security-cross.md`: security rules for every project shape.** A new rule
-  file, installed whatever `[rules] surfaces` says. `SEC-LOG-001` keeps
+  file, installed whatever `[rules] surfaces` says. On a project with feature
+  specs, `/ductus`'s one-time brownfield security audit now also runs when it
+  newly installs `security-cross.md`, as the upgrade to 0.60.0 does, and
+  reports each spec one of its rules finds a gap in. It now judges a rule's
+  yield against every rule file installed, as `/analyze` does, so it names
+  the owner `/analyze` reports a gap under. `SEC-LOG-001` keeps
   passwords, tokens, session IDs, keys, one-time and recovery codes, PII and
   other sensitive field values out of logs, error reports and telemetry in
-  every shape; where `security-backend.md` is also loaded, `BE-LOG-002` and
-  `BE-LOG-008` keep reporting those cases. `BE-DEPS-006` (build-input pinning)
-  moves to `SEC-DEPS-001`, deprecated in 0.59.12 and removed in 0.61.0: a spec
-  citing `BE-DEPS-006` draws an Advisory finding until then and a Blocking one
-  after, so re-point it to `SEC-DEPS-001`. `/review` reports a moved case under
-  both IDs until spec 020's owner routing lands, so a waiver recorded under
-  `BE-DEPS-006` needs a counterpart under `SEC-DEPS-001`, and expires with the
-  old ID. A project that pins `specs/rules/security-backend.md` keeps the
-  undeprecated `BE-DEPS-006` beside `SEC-DEPS-001`, so `/analyze` reports each
-  such case under both IDs until it re-syncs the file. Spec 077; spec 008,
-  tasks 32, 40 and 42.
+  every shape; where `security-backend.md` is also loaded, `/analyze` reports
+  those cases under `BE-LOG-002` and under `BE-LOG-008`, which first ships in
+  this release, and `configuration-cross.md` `CFG-ENV-006` names `SEC-LOG-001`
+  where it is not. Two rules 0.59.11 shipped in `security-backend.md` move to
+  `security-cross.md`, deprecated in 0.60.0 and removed in 0.62.0:
+  `BE-AUTHN-009` (constant-time comparison) to `SEC-AUTHN-001`, and
+  `BE-AUTHN-013` (OAuth and OIDC client `state`, PKCE, `nonce` and exact
+  `redirect_uri`) to `SEC-AUTHN-002`. Two more were added to
+  `security-backend.md` after 0.59.11 and move before a release ships them,
+  deprecated the same way for a project that tracks `main`: `BE-DEPS-006`
+  (build-input pinning) to `SEC-DEPS-001`, and `BE-AUTHN-020` (OAuth grant and
+  response types, the PKCE method and public-client refresh tokens) to
+  `SEC-AUTHN-003`. A project upgrading from 0.59.11 meets those two as new
+  MUST rules: `SEC-DEPS-001` flags an action referenced by tag or branch
+  outside a workflow onboarded to a GitHub Actions workflow dependency
+  lockfile, a reusable workflow called by `{owner}/{repo}` and a tag or
+  branch, a container or base image by tag alone, and a download run without
+  checksum verification. A frontend-only or cross-only project is now held to
+  all five: a frontend-only OAuth client needs an exact registered
+  `redirect_uri` where `FE-AUTHN-001` asked only for an allowlist, and
+  `/analyze` reports a client's `redirect_uri` under `SEC-AUTHN-002` rather
+  than `FE-AUTHN-001`, and an access token an authorization response returns
+  in a URL fragment under `SEC-AUTHN-003` rather than `FE-STORAGE-003`. In
+  every shape, `/analyze` reports a package a build step's command runs by a
+  mutable reference, such as `npx tool@latest`, under `SEC-DEPS-001` rather
+  than `BE-DEPS-002` or `FE-DEPS-004`. A spec citing an old ID draws an
+  Advisory finding until 0.62.0 and a Blocking one after, so re-point it to
+  the successor. Until spec 020's owner routing lands, `/review`, which
+  applies Statements and no routing, reports one defect under two IDs: a
+  moved case under the old ID and its successor; where `security-backend.md`
+  is loaded, a sensitive value in a log line, an error report or telemetry
+  under `SEC-LOG-001` beside `BE-LOG-002` or `BE-LOG-008`; where
+  `security-frontend.md` is loaded, a client's `redirect_uri` under
+  `SEC-AUTHN-002` beside `FE-AUTHN-001`, and a token in an authorization
+  response's URL fragment under `SEC-AUTHN-003` beside `FE-STORAGE-003`; and a
+  package a build step's command runs by a mutable reference under
+  `SEC-DEPS-001` beside `BE-DEPS-002` or `FE-DEPS-004`. A sensitive
+  configuration value in a log line, an error report, a span or a metric label
+  stays under both `SEC-LOG-001` and `BE-LOG-002` or `BE-LOG-008` after that
+  routing lands, since each yields it to `configuration-cross.md`, which no
+  review pass applies yet. A waiver recorded under one ID of such a pair needs
+  a counterpart under the other; one under the yielding ID (the old ID,
+  `SEC-LOG-001`, `FE-AUTHN-001`, `FE-STORAGE-003`, `BE-DEPS-002` or
+  `FE-DEPS-004`) expires once that routing moves the finding to its owner,
+  and an old ID's also when it is removed. A `specs/rules/security-backend.md`
+  pinned from 0.59.11 keeps `BE-AUTHN-009` and `BE-AUTHN-013` undeprecated
+  beside their successors, so `/analyze` reports each such case under both
+  IDs, and has no `BE-LOG-008`, so `/analyze` reports under no rule a
+  sensitive value in propagated trace context, one other than configuration
+  in an error report, a span or a metric label, and a missing redaction
+  commitment for those carriers. A copy pinned from `main` after 0.59.11 keeps
+  whichever moved rules it had not yet deprecated, all four before
+  `ad8a36f9`, and a `BE-DEPS-006` deprecated there may still name removal in
+  0.61.0. Any pinned `security-backend.md` keeps `BE-DEPS-002`'s `npx` case,
+  and any pinned `security-frontend.md` `FE-DEPS-004`'s, beside
+  `SEC-DEPS-001`; and a pinned `specs/rules/security-frontend.md`'s
+  `FE-AUTHN-001` and `FE-STORAGE-003` keep their OAuth cases beside
+  `SEC-AUTHN-002` and `SEC-AUTHN-003` in a project without
+  `security-backend.md`, or in any project when the copy predates
+  `9b067399`, 0.59.11's among them. Each lasts until the file is re-synced. A
+  `security-backend.md` or `security-frontend.md` left from a surface the
+  project no longer configures stops receiving updates, with the same results
+  until the file is deleted or its surface configured again. Spec 077; spec
+  008, tasks 32, 40 and 42.
 
 ## [0.59.11] — 2026-10-17
 

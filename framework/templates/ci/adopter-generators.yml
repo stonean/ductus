@@ -70,7 +70,7 @@ jobs:
       # /ductus keeps it in a per-machine store and links it from
       # `.ductus/bin/`, which is gitignored. So this step downloads the
       # release binary, pinned by version and by the sha256 of its archive
-      # (BE-DEPS-006), and checks the hash before anything runs. No Rust
+      # (SEC-DEPS-001), and checks the hash before anything runs. No Rust
       # toolchain is needed. The archive is the x86_64 Linux one an
       # ubuntu-latest runner uses; on another architecture the verified
       # binary will not execute, and running it fails the step before any

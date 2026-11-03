@@ -182,7 +182,7 @@ Run a one-time security audit when the project newly receives a security rule fi
 
 Run the audit only when **both** conditions hold after the **Shared Files** manifest pass has completed:
 
-1. At least one of `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` was **newly created** by the manifest pass (the destination file did not exist before this run). A file that was merely updated or unchanged does not trigger the audit.
+1. At least one of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or `specs/rules/security-cross.md` was **newly created** by the manifest pass (the destination file did not exist before this run). A file that was merely updated or unchanged does not trigger the audit.
 2. The project contains at least one feature spec directory under `specs/`, in either of the two forms `.ductus/constitution.md` §numbering defines — sequential (`000-skeleton`) or branch-scoped (`1234.1-retry-budget`). Do **not** re-derive the digit convention here: §numbering states that one membership rule recognizes both forms and that a surface reading the spec corpus calls it rather than restating it, because a second copy is how the two forms drift apart. An earlier wording of this step said "zero-padded, three-digit prefix", which excluded every branch-scoped directory and, past 999, sequential ones too.
 
 If either condition fails, skip this section silently — no output, no finding. This covers the two routine cases:
@@ -194,9 +194,9 @@ If either condition fails, skip this section silently — no output, no finding.
 
 For each rule file that passed the trigger:
 
-1. Read the file from its destination path (`specs/rules/security-backend.md` or `specs/rules/security-frontend.md`).
-2. Apply the same integrity checks `/{project}:analyze` uses for the security-rule check section: well-formed level-3 headings of the form `### {ID}`, the two required body fields (Statement, Verification), an ID matching `{FE|BE}-{CATEGORY}-{NNN}`, and no duplicate IDs within the file. A `Rationale` or `Source` paragraph is **not** checked: constitution §rules requires neither, so requiring one would make a file that omits it unloadable.
-3. If a file fails any integrity check, report `Security audit: {path} failed to load — {reason}; skipping audit for this file.` and continue with the other rule file (if applicable). Do not abort the surrounding `ductus` run.
+1. Read the file from its destination path (`specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or `specs/rules/security-cross.md`).
+2. Apply the same integrity checks `/{project}:analyze` uses for the security-rule check section: well-formed level-3 headings of the form `### {ID}`, the two required body fields (Statement, Verification), an ID matching `{FE|BE}-{CATEGORY}-{NNN}`, or `SEC-{CATEGORY}-{NNN}` in `security-cross.md` (`specs/077-security-cross-rules/data-model.md`), and no duplicate IDs within the file. A `Rationale` or `Source` paragraph is **not** checked: constitution §rules requires neither, so requiring one would make a file that omits it unloadable.
+3. If a file fails any integrity check, report `Security audit: {path} failed to load — {reason}; skipping audit for this file.` and continue with the other rule files (if applicable). Do not abort the surrounding `ductus` run.
 
 This mirrors `/{project}:analyze`'s posture — partial or guessed-at parsing produces unreliable findings, so an unloadable file is treated as absent for audit purposes.
 
@@ -205,8 +205,8 @@ This mirrors `/{project}:analyze`'s posture — partial or guessed-at parsing pr
 For each rule that loaded successfully:
 
 1. Identify the artifacts in scope: `spec.md`, `plan.md`, and any `scenarios/*.md` under each feature spec directory in the spec root (both forms, per the trigger above).
-2. Read the rule's **Verification** field. The field describes the trigger — what makes the rule applicable to a given artifact — and the commitment the artifact must include when triggered.
-3. For each artifact whose content fires the rule's trigger but does not include the required commitment, produce one finding.
+2. Read the rule's **Verification** field. The field describes the trigger — what makes the rule applicable to a given artifact — the commitment the artifact must include when triggered, and, in its **Not flagged:** clause, the cases another rule owns.
+3. For each artifact whose content fires the rule's trigger but does not include the required commitment, produce one finding, unless the **Not flagged:** clause names that case as another rule's. Judge a load condition there ("where `security-backend.md` is also loaded") against the rule files under `specs/rules/` once the manifest pass has run — the set `/{project}:analyze` loads — not against the files this audit loaded, so a case yielded to a rule in an installed file is left to that rule, the owner `/{project}:analyze` reports it under.
 
 Rules whose Verification trigger does not fire for any artifact produce no finding (the contextual-application property — silently inert when no spec exercises the rule's surface).
 
