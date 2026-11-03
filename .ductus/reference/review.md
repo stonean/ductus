@@ -286,8 +286,8 @@ reviewed-digest:
 blocking: false
 dispositions:
   fixed: 1
-  routed: 1
-  discarded: 1
+  deferred: 1
+  waived: 1
   undispositioned: 0
 ---
 
@@ -306,6 +306,10 @@ dispositions:
 ## Low-confidence findings
 
 ## Waived findings
+
+## Deferred findings
+
+<violations deferred to pipeline work on another spec, which leave the counts; `*None.*` when none>
 
 ## Observations
 
@@ -346,8 +350,9 @@ the observation, the path clause omitted when the observation has none:
 
 ```text
 - {text} — `{path}` — **fixed**
-- {text} — `{path}` — **routed** to `{target}`
-- {text} — `{path}` — **discarded**: {reason}
+- {text} — `{path}` — **deferred** to `{target}`
+- {text} — `{path}` — **deferred** to `{target}` task {n} and work item `{id}`
+- {text} — `{path}` — **waived**: {reason}
 - {text} — `{path}` — **undispositioned**
 ```
 
@@ -357,24 +362,27 @@ the observation, the path clause omitted when the observation has none:
   so the record describes the fixed tree. A fix that fails, or turns out not
   to be mechanical, is reverted and is not a chore; a chore is never counted
   fixed while its fix is not on disk.
-- **Routed** — written to the home the **§Groom decision tree** in `.ductus/reference/groom.md`
+- **Deferred** — to the home the **§Groom decision tree** in `.ductus/reference/groom.md`
   chooses; that is its single canonical statement, and this reference does
-  not restate it. The homes are a task, a scenario with its task, or a body
+  not restate it. An external work-item ID may stand beside that home, or in
+  its place, as the operator gives it (spec 076); an observation never holds
+  `done`, so either suffices. The homes are a task, a scenario with its task, or a body
   edit on this spec; a scenario or body edit on another existing spec; a new
   spec, created through `/ductus:specify`'s procedure in the same run; or
-  an amendment to a rule file the project owns. A route to a `done` spec names
+  an amendment to a rule file the project owns. A deferral to a `done` spec names
   the `done → in-progress` reopen in its confirmation and performs it with
   `from: done`, so a status that changed since the proposal surfaces rather
   than being overwritten. A declined spec creation leaves the observation
-  discarded or undispositioned, never routed to a spec that does not exist,
-  and a confirmed route whose write fails is undispositioned, with the failure
-  named beside it.
-- **Discarded** — with the reason it is out of scope. It is the disposition
+  waived or undispositioned, never deferred to a spec that does not exist,
+  and a confirmed deferral whose write fails is undispositioned, with the
+  failure named beside it.
+- **Waived** — with the reason it is not addressed. It is the disposition
   that ends a loop: an observation about the pipeline's own machinery rather
-  than the code under review, routed to a `done` spec, reopens that spec, and
+  than the code under review, deferred to a `done` spec, reopens that spec, and
   that spec's next review produces the next observation.
 - **Undispositioned** — nobody decided: the operator declined without a
-  reason, a route's write failed, or nobody could be asked. `ductus exec`'s
+  reason, a deferral's write failed, its stored deferral lapsed with nobody to
+  ask, or nobody could be asked. `ductus exec`'s
   walker no-ops steps 9 and 10 of the command's Instructions, so every observation an exec run threads
   through is recorded undispositioned. It stays recorded and visible for a
   later review to decide, and it does not hold `done`: only a gating finding
@@ -386,16 +394,19 @@ the observation, the path clause omitted when the observation has none:
 scope is empty is still dispositioned — the reviewer's judgment is the input,
 not the diff.
 
-**Decisions persist.** Each routed or discarded observation is stored in
+**Decisions persist.** Each deferred or waived observation is stored in
 `review.md`'s `decisions:` list, beside `waivers:`, keyed on its rendered line
-— the text, then an em dash and the path in backticks — with its outcome, its
-target or reason, `decided-at`, and `decided-by`. Observation text is the
+— the text, then an em dash and the path in backticks — with its outcome, a
+deferral's `target`, `task` and `work-item` or a waiver's reason,
+`decided-at`, and `decided-by`. Observation text is the
 reviewer's own wording and does not reproduce byte for byte, so the next run
 matches each new observation to the stored decision describing the same issue
 and passes that decision's key as the observation's `decision-key`; a matched
 observation counts under its stored outcome and is not asked about again. A
 stored decision nothing matched is pruned on an unrestricted run and retained
-when a pass did not run, exactly as a waiver is. A missed match costs one
+when a pass did not run, exactly as a waiver is. A stored deferral whose
+named work is complete while its observation still fires is **lapsed** (spec
+076): it is dropped, and the observation is asked about again. A missed match costs one
 repeated question, never a silent waiver, because an unmatched decision is
 pruned rather than applied to something else. A malformed entry is reported,
 applies to nothing, and is kept; an entry with no fields at all holds no
@@ -414,7 +425,9 @@ The finding sections reconcile the same way. A SHOULD kept as-is is waived
 with `--waive` and its rationale ([Waivers](#waivers)), so it renders under
 **Waived findings** rather than its original heading — an accepted trade-off
 left filed as a violation is indistinguishable from unfinished work; a
-low-confidence finding blocks nothing and needs no waiver. A fix is recorded
+low-confidence finding blocks nothing and needs no waiver. A violation to be
+fixed later is deferred with `--defer` ([Deferrals](#deferrals)) — never
+waived, since a waiver says it will not be addressed. A fix is recorded
 by re-running `/ductus:review`, never by editing the report:
 `write-review` regenerates its body and counts whole, so they state what is
 _outstanding_.
@@ -476,13 +489,13 @@ reviewed-digest:
 blocking: false
 dispositions:
   fixed: 0
-  routed: 1
-  discarded: 0
+  deferred: 1
+  waived: 0
   undispositioned: 0
 waivers: []
 decisions:
   - key: "convention: retry backoff is hard-coded — `src/retry.ts`"
-    outcome: routed
+    outcome: deferred
     target: specs/020-code-review/scenarios/retry-config.md
     decided-at: 2026-05-10T14:32:00Z
     decided-by: dev@example.com
@@ -524,9 +537,11 @@ and `dispositions` on every run; `examined` when the run stated it, and
 `reviewed-unreadable` when a contract could not be read; plus the `waivers`
 and `decisions` lists when present.)
 
-`dispositions:` counts the run's **observations** — `fixed`, `routed`,
-`discarded`, `undispositioned` — never its MUST and SHOULD violations, which
-keep their own counts. The map is always written, all four counts, because its
+`dispositions:` counts the run's **observations** — `fixed`, `deferred`,
+`waived`, `undispositioned` — never its MUST and SHOULD violations, which
+keep their own counts. A record written before spec 076 carries `routed` and
+`discarded`, which read as `deferred` and `waived` until the next run rewrites
+the map. The map is always written, all four counts, because its
 absence has a meaning: a record without it predates dispositions, and the
 pre-done gate blocks an `in-progress` spec on it until this command re-runs.
 Absence is not zero — reading it as zero would pass exactly the old review
@@ -722,11 +737,47 @@ one-path entry.
   claim on it is pruned together.
 
 The `waivers` list follows the §text-first-artifacts open-schema
-rule. Adopters MAY add fields (e.g., `co-waived-by`, `approved-by-team`,
-`ticket`) to enforce org-specific waiver policy in their own CI; `/ductus:review`
+rule. Adopters MAY add fields (e.g., `co-waived-by`, `approved-by-team`) to
+enforce org-specific waiver policy in their own CI — but never a reference to
+work that will fix the finding, which makes it a deferral ([Deferrals](#deferrals)); `/ductus:review`
 and `/ductus:analyze` will not error on unknown fields, and `write-review`
 preserves them verbatim on a surviving waiver when it re-renders the block, so
 an org policy field is never dropped by a later review run.
+
+## Deferrals
+
+A MUST or SHOULD violation that will be fixed later is **deferred**, never
+waived: a waiver records that a finding will not be addressed
+(§brownfield-inbox, Finding dispositions).
+
+```text
+/ductus:review --defer <rule-id> --target <path> [--task <n>] [--work-item <id>] [--reason "<text>"]
+/ductus:review --defer <rule-id> --work-item <id> [--reason "<text>"]
+```
+
+Each file the rule fires at in this run gets one decision in `review.md`'s
+`decisions:`, keyed `rule {rule-id} at {file}`, carrying its `target`, `task`
+and `work-item` as given — the work-item ID byte-identical, and never read.
+The shapes are spec 076's data model. A new deferral's target, and its task in
+that `tasks.md`, must exist.
+
+- **To pipeline work on another spec** — a task, scenario or body edit there,
+  or a new spec — the violation leaves `must-violations` and
+  `should-violations` and renders under **Deferred findings**: that spec's
+  gate now holds the work.
+- **To this spec's own task, or to an external work item alone,** the
+  violation stays in its section with a `**Deferred**` line and still holds
+  `done`. Its decision carries the derived `gating: true`, and
+  `check-review-gate` names it with its work where it blocks. No gate reads an
+  external tracker, so a work item alone never releases a violation.
+
+A deferral retires when its finding stops firing. When its task is checked, or
+the spec it names is `done`, while the finding still fires, `process-decisions`
+reports it **lapsed**: the host drops it with the expired decisions, and the
+violation needs a fix, a waiver, or a new deferral. One rule both waived and
+deferred in one invocation is refused, and a later `--waive` or `--defer`
+replaces the other's stored entry through the writer's drop lists, so a
+finding holds one disposition.
 
 ## Auto-fix scope
 
@@ -755,12 +806,12 @@ Stdout summary (always), followed by the path to `review.md`:
   efficiency  ✓ 0 MUST   0 SHOULD
   simplicity  ✓ 0 MUST   0 SHOULD
 
-  observations 3 — 1 fixed, 1 routed, 1 discarded, 0 undispositioned
+  observations 3 — 1 fixed, 1 deferred, 1 waived, 0 undispositioned
   analyze     ✗ last run 2026-09-06 against 683a1e0 — this review supersedes it
   blocking: no
   report:   specs/042-example-feature/review.md
 
-  next: fix or waive the 3 SHOULD violations, then /ductus:analyze — the done gate holds on an unwaived SHOULD
+  next: fix, waive or defer the 3 SHOULD violations, then /ductus:analyze — the done gate holds on an unwaived SHOULD
 ```
 
 ## The `observations` row
@@ -774,7 +825,7 @@ above zero does not hold `done`, so the row names it for a later review to
 decide rather than leaving it unseen:
 
 ```text
-  observations 2 — 0 fixed, 1 routed, 0 discarded, 1 undispositioned — recorded; it does not hold done
+  observations 2 — 0 fixed, 1 deferred, 0 waived, 1 undispositioned — recorded; it does not hold done
 ```
 
 The standing inbox count is not a review row. It is a count of the todos a

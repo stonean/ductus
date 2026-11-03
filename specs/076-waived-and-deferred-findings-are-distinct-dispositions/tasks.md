@@ -58,20 +58,20 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Carry the change to the runtime's surfaces
 
-Two items wait. The bless runs after task 8: through task 7 the parity goldens pass unchanged (2,279 tests, debug and release), but task 8's command edits can move them. The CHANGELOG entry waits until the other session commits its uncommitted `runtime/CHANGELOG.md` edits, so neither commit sweeps in the other's lines.
+The CHANGELOG entry waits until the other session commits its uncommitted `runtime/CHANGELOG.md` edits, so neither commit sweeps in the other's lines.
 
 - [x] Update the tool descriptions in `runtime/src/mcp/server.rs` and the wire-shape tests in `runtime/tests/mcp.rs`
-- [ ] Regenerate the goldens with `BLESS=1`, reading every diff
+- [x] Regenerate the goldens with `BLESS=1`, reading every diff
 - [ ] Add the `runtime/CHANGELOG.md` entry, naming the `dispositions:` rename for adopters' own CI
 
 - **Done when**: `cargo test --release` passes, the release binary is rebuilt, and the bless diff holds no unintended change.
 
 ## 8. Update the commands and references
 
-- [ ] Add `--defer`, `--target`, `--task` and `--work-item` to `framework/commands/review.md`, with the three exits in its steps and guidance
-- [ ] Update `framework/commands/analyze.md`, `implement.md` and `groom.md`, and their references, to fixed / deferred / waived, keeping the inbox `discard` route
-- [ ] Rewrite `framework/reference/review.md` §Waivers without `ticket`, with deferral as the fix-later path
-- [ ] Update `scripts/gen-help-tables.sh`, then run it and `scripts/gen-claude-commands.sh`
+- [x] Add `--defer`, `--target`, `--task` and `--work-item` to `framework/commands/review.md`, with the three exits in its steps and guidance
+- [x] Update `framework/commands/analyze.md` and `implement.md`, and the analyze, implement and groom references, to fixed / deferred / waived, keeping the inbox `discard` route
+- [x] Rewrite `framework/reference/review.md` §Waivers without `ticket`, with deferral as the fix-later path
+- [x] Run `scripts/gen-help-tables.sh` and `scripts/gen-claude-commands.sh`
 
 - **Done when**: AC6, AC12 and AC15 hold on the command sources, the generated mirrors match them, and `scripts/audit/run-all.sh` passes.
 
