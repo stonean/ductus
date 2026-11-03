@@ -89,11 +89,13 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         };
         // Keys compare flattened, as the writers store them and `merge`
         // compares them, so a hand-edited key is one decision to every reader.
+        // Every notice prints that flattened key, and flattens the stored text
+        // it names, so an escape in a hand-edited record never reaches the
+        // operator.
         let key = flatten_line(&decision.key);
         if seen.contains(&key) {
             result.notices.push(format!(
-                "duplicate decision: {} — entry [{index}] ignored",
-                decision.key
+                "duplicate decision: {key} — entry [{index}] ignored"
             ));
             continue;
         }
@@ -109,8 +111,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
                 ) {
                     Work::Complete => {
                         result.notices.push(format!(
-                            "deferral lapsed: {} — {} is complete and the finding still fires",
-                            decision.key,
+                            "deferral lapsed: {key} — {} is complete and the finding still fires",
                             decisions::work_reference(
                                 decision.target.as_deref(),
                                 decision.task.as_deref(),
@@ -122,9 +123,8 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
                         continue;
                     }
                     Work::Unreadable => result.notices.push(format!(
-                        "deferral target unreadable: {} — `{}`",
-                        decision.key,
-                        decision.target.as_deref().unwrap_or_default()
+                        "deferral target unreadable: {key} — `{}`",
+                        flatten_line(decision.target.as_deref().unwrap_or_default())
                     )),
                     Work::Pending | Work::External => {}
                 }
@@ -132,15 +132,13 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
             result.matched.push(decision);
         } else if args.restricted {
             result.notices.push(format!(
-                "decision retained: {} — its source was not evaluated this run ({})",
-                decision.key,
+                "decision retained: {key} — its source was not evaluated this run ({})",
                 describe(&decision)
             ));
             result.retained.push(decision);
         } else {
             result.notices.push(format!(
-                "decision expired: {} — the finding no longer fires ({})",
-                decision.key,
+                "decision expired: {key} — the finding no longer fires ({})",
                 describe(&decision)
             ));
             result.expired.push(decision);
@@ -149,7 +147,8 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
     Ok(result)
 }
 
-/// The decision's outcome and its companion, for a notice.
+/// The decision's outcome and its companion, for a notice, each stored text
+/// flattened to one line.
 fn describe(decision: &DecisionRef) -> String {
     match decision.outcome {
         DecisionOutcome::Deferred => format!(
@@ -162,7 +161,10 @@ fn describe(decision: &DecisionRef) -> String {
             )
         ),
         DecisionOutcome::Waived => {
-            format!("waived: {}", decision.reason.as_deref().unwrap_or_default())
+            format!(
+                "waived: {}",
+                flatten_line(decision.reason.as_deref().unwrap_or_default())
+            )
         }
     }
 }
@@ -576,5 +578,49 @@ mod tests {
                 result.notices
             );
         }
+    }
+
+    /// Spec 076: a stored key, target and reason are kept as written, so a
+    /// hand-edited record can carry an escape in any of them; every notice
+    /// flattens what it prints, and none reaches the operator raw.
+    #[test]
+    fn notices_flatten_every_stored_text_they_print() {
+        let waiver = |key: &str| {
+            format!(
+                "  - key: \"{key}\"\n    outcome: waived\n    reason: \"noise\\u001b[2J\"\n    \
+                 decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n"
+            )
+        };
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                waiver("dup"),
+                waiver("dup\\u001b"),
+                deferral("lap\\u001b", "framework/rules/a.md", None),
+                deferral("unr\\u001b", "\"specs/034-w/sce\\u001bnario.md\"", None),
+                waiver("exp\\u001b"),
+            ]
+            .concat(),
+        );
+        write(
+            &tmp,
+            "specs/034-w/spec.md",
+            "---\nstatus: [not, a, string\n---\n",
+        );
+        let result = classify(&tmp, &["dup", "lap", "unr"]);
+        let retained = run(&args(DecisionRecord::Analysis, &[], true), tmp.path())
+            .unwrap()
+            .notices;
+        let notices = [result.notices, retained].concat();
+        for notice in [
+            "duplicate decision: dup — entry [1] ignored",
+            "deferral lapsed: lap — `framework/rules/a.md` is complete and the finding still fires",
+            "deferral target unreadable: unr — `specs/034-w/sce nario.md`",
+            "decision expired: exp — the finding no longer fires (waived: noise [2J)",
+            "decision retained: exp — its source was not evaluated this run (waived: noise [2J)",
+        ] {
+            assert!(notices.iter().any(|n| n == notice), "{notices:?}");
+        }
+        assert!(!notices.iter().any(|n| n.contains('\u{1b}')), "{notices:?}");
     }
 }

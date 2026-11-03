@@ -81,3 +81,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] `rust_and_family_19_agree_on_every_done_spec` in `runtime/tests/mechanical_sweep_parity.rs` prints "skipping: not a git checkout" and returns when the tree has no `.git`, so `cargo test` reports it `ok` unrun: 048's second re-read round on 2026-10-29 saw exactly that in a `git archive` export of HEAD (§design-principles: a check that cannot run never looks like one that passed; prefer a test that fails loudly on a missing input). Make it panic naming why, as `rewrite_spec_links.rs`'s permission tests do since 048's review, and check whether any other test in that file skips the same way. The pattern predates 048's window (`db393e03`); CI has `.git`, so CI is unaffected
 
 - **Done when**: Run outside a git checkout, the parity test fails with a message naming why; `cargo test --locked` passes in this repository
+
+## 13. Implement scenario: process-waivers-notices-flatten-stored-text
+
+- [ ] Implement the behavior described in `scenarios/process-waivers-notices-flatten-stored-text.md`
+- [ ] Print each `process-waivers` notice's `rule`, `file` and `reason` through `flatten_line`, classifying on the stored values as before
+- [ ] Add a test that plants an escape in each field of a duplicate, a retained and an expired waiver
+
+- **Done when**: the test fails when any notice prints a stored field as written, and `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` pass under `runtime/`.

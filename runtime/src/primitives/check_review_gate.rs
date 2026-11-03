@@ -424,7 +424,7 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
                 Ok(decision) if decision.outcome == DecisionOutcome::Deferred => {
                     held.push(format!(
                         "{} — to {}",
-                        decision.key,
+                        crate::primitives::flatten_line(&decision.key),
                         crate::primitives::decisions::work_reference(
                             decision.target.as_deref(),
                             decision.task.as_deref(),
@@ -2849,9 +2849,9 @@ mod tests {
         );
     }
 
-    /// Spec 076: a work-item ID is stored as given, so the gate flattens it,
-    /// as every report does, before naming it: an escape in the record never
-    /// reaches the message.
+    /// Spec 076: a work-item ID is stored as given, and a hand-edited key may
+    /// hold anything, so the gate flattens both, as every report does, before
+    /// naming them: an escape in the record never reaches the message.
     #[test]
     fn a_held_deferral_is_named_flattened() {
         let tmp = tempdir().unwrap();
@@ -2859,7 +2859,7 @@ mod tests {
         add_decisions(
             tmp.path(),
             "review.md",
-            "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    outcome: deferred\n    \
+            "decisions:\n  - key: \"rule SEC-1 at src/a\\u001b.rs\"\n    outcome: deferred\n    \
              work-item: \"PROJ-1\\u001b[31m\"\n    gating: true\n    \
              decided-at: 2026-07-10T00:00:00Z\n    decided-by: dev@example.com\n",
         );
@@ -2869,7 +2869,7 @@ mod tests {
             .unwrap();
         assert!(
             message.ends_with(
-                "; held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1 [31m`"
+                "; held by deferral: rule SEC-1 at src/a .rs — to work item `PROJ-1 [31m`"
             ),
             "{message:?}"
         );
