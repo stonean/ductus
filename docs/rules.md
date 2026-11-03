@@ -8,7 +8,7 @@ A spec says what a feature should do; the rules say what any code is held to reg
 
 They are plain markdown in your project's rule-file directory — the `rules/` directory under your spec root once scaffolded, or [`framework/rules/`](../framework/rules/) here in `ductus`'s own repo — and they are the **only** normative source a review may cite: `/review` is instructed not to invent criteria beyond these files and your `AGENTS.md`. That is what keeps two reviews of the same code from disagreeing, and what makes a finding arguable — every one quotes the rule it came from.
 
-**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed or waived with a recorded reason. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed or waived.
+**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed, waived with a recorded reason, or deferred to work on another spec. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed, waived, or deferred to work on another spec.
 
 **Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later. A rule that moves to another file takes a new ID there, and its old one is deprecated: still loaded, a citation of it drawing an Advisory finding, until the release its label names removes it. Re-point a citation, and record a waiver again, under the successor the changelog names.
 
@@ -53,7 +53,15 @@ When a **MUST** violation is intentional, record a waiver rather than silencing 
 /review --waive <rule-id> --reason "<text>"
 ```
 
-The waiver is anchored to the `(rule, file)` pair, so code moving within a file keeps it while a rename or a fix expires it and the finding re-blocks — a waiver cannot quietly outlive the thing it excused. When the rule fires in several files, one waiver lists them all, and each listed path still expires on its own. The schema is open, so an organization can require its own fields (a ticket, a second approver) and `ductus` preserves them. See [specs/020-code-review/data-model.md](../specs/020-code-review/data-model.md).
+The waiver is anchored to the `(rule, file)` pair, so code moving within a file keeps it while a rename or a fix expires it and the finding re-blocks — a waiver cannot quietly outlive the thing it excused. When the rule fires in several files, one waiver lists them all, and each listed path still expires on its own. The schema is open, so an organization can require its own fields (a second approver, say) and `ductus` preserves them. See [specs/020-code-review/data-model.md](../specs/020-code-review/data-model.md).
+
+A waiver says the violation stands, with its reason. When it will be fixed later, defer it instead, naming the work that will fix it:
+
+```text
+/review --defer <rule-id> --target <path> [--task <n>] [--work-item <id>]
+```
+
+The work is pipeline work (`--target`), an external work-item ID (`--work-item`), or both. Only a deferral to work on another spec releases `done`, because that spec's gate then holds the work; one to this spec's own task, or to an external work item alone, is recorded and still holds it. A deferral lapses once its named work is complete while the violation still fires, and the violation needs a new disposition. See **§Deferrals** in [`framework/reference/review.md`](../framework/reference/review.md#deferrals).
 
 ## Writing your own
 

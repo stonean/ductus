@@ -60,11 +60,11 @@ Args:
 Result:
 
 ```json
-{ "matched": [{ "key": "grounding — plan.md cites a missing path", "outcome": "routed", "target": "specs/042-widget/tasks.md" }],
-  "expired": [], "retained": [], "notices": [] }
+{ "matched": [{ "key": "grounding — plan.md cites a missing path", "outcome": "deferred", "target": "specs/042-widget/tasks.md", "task": "3" }],
+  "expired": [], "retained": [], "lapsed": [], "notices": [] }
 ```
 
-Classifies the routed and discarded decisions in `review.md`'s or `analysis.md`'s `decisions:` list against this run's finding keys, before the host proposes any disposition, so a settled finding is counted under its stored outcome rather than asked about again. **matched**: the key fired. **expired**: it did not, on an unrestricted run, and the writer drops it — for a routed finding, the moment the routed work landed. **retained**: it did not, but `restricted` says the run did not evaluate every source. A malformed entry or a repeated key produces a notice; the primitive prunes nothing. `fired` is MCP-only, and each key is compared in the flattened single-line form the writers store. Read-only; a `decisions:` list that does not parse is an error, never an empty result.
+Classifies the deferred and waived decisions in `review.md`'s or `analysis.md`'s `decisions:` list against this run's finding keys, before the host proposes any disposition, so a settled finding is counted under its stored outcome rather than asked about again. **matched**: the key fired. **expired**: it did not, on an unrestricted run, and the writer drops it — for a deferred finding, the moment its work landed. **retained**: it did not, but `restricted` says the run did not evaluate every source. **lapsed**: it fired, but the pipeline work its deferral names is complete — a task checked, or a spec `done` — so the writer drops it and the finding needs a new disposition (076's data model has the completion table). A malformed entry or a repeated key produces a notice; the primitive prunes nothing. `fired` is MCP-only, and each key is compared in the flattened single-line form the writers store. Read-only; a `decisions:` list that does not parse is an error, never an empty result.
 
 ## `write-review` — observations and the review's denominator
 
@@ -74,19 +74,19 @@ Args (the added half only):
 
 ```json
 { "observations": [{ "text": "perf: the config file is re-read on every primitive call", "path": "runtime/src/schema/paths.rs",
-  "disposition": { "outcome": "routed", "target": "specs/022-deterministic-runtime/tasks.md" } }],
+  "disposition": { "outcome": "deferred", "target": "specs/022-deterministic-runtime/tasks.md", "work-item": "PROJ-1234" } }],
   "decided-by": "dev@example.com", "examined": 38 }
 ```
 
 Result (the added half only):
 
 ```json
-{ "observations": 1, "dispositions": { "fixed": 0, "routed": 1, "discarded": 0, "undispositioned": 0 }, "examined": 38, "scope": 46 }
+{ "observations": 1, "dispositions": { "fixed": 0, "deferred": 1, "waived": 0, "undispositioned": 0 }, "examined": 38, "scope": 46 }
 ```
 
 An **observation** is something the reviewer judged real that maps to no loaded rule, so it cannot be a finding. `path` is optional. `text` must be non-empty, and `text`, `path` and `decision-key` must each be one line, since an observation renders as one list item and a decided one's line becomes its decision key; a newline or control character in any of them is refused before anything is written. Observations never enter `must-violations` / `should-violations` / `low-confidence`, never affect `blocking`, and never change the exit code; they render in their own `## Observations` report section, after `## Waived findings` and before `## Skipped passes`, which emits `*None.*` when empty. The report frontmatter carries no `observations:` key.
 
-Each observation carries a disposition — fixed, routed with its target, discarded with its reason, or undispositioned by default — rendered beside it. The record counts the four outcomes in `dispositions:`, and a newly routed or discarded observation is stored under `decisions:`; nothing is written to the inbox. `performReview`'s response carries an optional `observations` array, accumulated across passes as `findings` is; each entry carries `text` and `path` alone, so an exec run records every observation undispositioned (required by spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC25).
+Each observation carries a disposition — fixed, deferred with its work, waived with its reason, or undispositioned by default — rendered beside it. The record counts the four outcomes in `dispositions:`, and a newly deferred or waived observation is stored under `decisions:`; nothing is written to the inbox. `performReview`'s response carries an optional `observations` array, accumulated across passes as `findings` is; each entry carries `text` and `path` alone, so an exec run records every observation undispositioned (required by spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC25).
 
 **`scope` is derived and `examined` is claimed.** `scope` is resolved by the primitive through `compute-review-scope` against the run's own `diff-base`, so no caller can shrink the subject to match what it read; `examined` is the caller's count of in-scope files the passes actually read, which only the host knows. Both are written to `review.md`'s frontmatter; an unstated `examined` is recorded as absent, never as zero. Nothing reads the pair; a person reads it at the completion gate (scenario `a-review-states-what-it-read`).
 
@@ -102,7 +102,7 @@ Args:
   "unexamined-by-reason": [["not-a-live-claim", 79], ["root-absent", 26]],
   "findings": [{ "tier": "advisory", "family": "link-adjacent-drift",
     "message": "...", "path": "specs/042-widget/spec.md",
-    "disposition": { "outcome": "discarded", "reason": "..." } }],
+    "disposition": { "outcome": "waived", "reason": "..." } }],
   "decided-by": "dev@example.com"
 }
 ```
@@ -111,10 +111,10 @@ Result:
 
 ```json
 { "spec-path": "specs/042-widget/spec.md", "blocking": false, "unexamined": 105, "replaced": true,
-  "dispositions": { "fixed": 0, "routed": 0, "discarded": 1, "undispositioned": 7 } }
+  "dispositions": { "fixed": 0, "deferred": 0, "waived": 1, "undispositioned": 7 } }
 ```
 
-Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and the report body's fixed skeleton — and refuses a spec whose `spec.md` frontmatter does not parse rather than recording a clean run into it. Each finding arrives with its tier and disposition. The writer derives `dispositions:`, counting a live finding the call does not itemize as undispositioned, and stores each routed or discarded finding under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to. It refuses a discard on a hard-fail or blocking finding, which is why `tier` is required, and requires `decided-by` when a decision is new.
+Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and the report body's fixed skeleton — and refuses a spec whose `spec.md` frontmatter does not parse rather than recording a clean run into it. Each finding arrives with its tier and disposition. The writer derives `dispositions:`, counting a live finding the call does not itemize as undispositioned, and stores each deferred or waived finding under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to. It refuses a waiver on a hard-fail or blocking finding, which is why `tier` is required, and requires `decided-by` when a decision is new.
 
 **Derived, never accepted:**
 
@@ -152,7 +152,7 @@ Result:
   "passed": false,
   "blocked-by": "must-violations",
   "message": "blocked: spec has 3 MUST violation(s) — see specs/042-widget/review.md",
-  "guidance": "Resolve the violations and re-run /ductus:review, or run /ductus:review --waive <rule-id> --reason \"...\" for each waivable finding.",
+  "guidance": "Resolve the violations and re-run /ductus:review, run /ductus:review --waive <rule-id> --reason \"...\" for each waivable finding, or defer each to pipeline work on another spec (/ductus:review --defer <rule-id> --target <path>), whose gate then holds it.",
   "violations": []
 }
 ```
@@ -168,11 +168,11 @@ The deterministic surface behind `/ductus:implement`'s completion gate. Evaluate
 7. **`not-analyzed`** (`analysis.md` absent, or its `last-run` missing or null) and 8. **`analyze-findings`** (`blocking: true`) — the analyze record, read from `analysis.md`, with the same undeterminable third state, ordered after every review check because the pipeline is `review → analyze → done`. An advisory analyze finding never blocks (scenario `write-analysis-and-the-second-gate`).
 9. **`analyze-stale`** — see **Record freshness** below.
 10. **`record-predates-dispositions`** — `review.md` or `analysis.md` has no `dispositions:` map; absence is not zero. The message names the record, review before analysis, and the command to re-run.
-11. **`undispositioned-findings`** — an outstanding gating finding: the review record's unwaived `must-violations` plus `should-violations`, or the analysis's `hard-fail` plus `blocking-findings`, above zero; the message names the count per record. It never reads `dispositions.undispositioned`, which does not split by tier, so an undecided advisory finding or observation does not hold `done`. For a record the runtime writes, only an unwaived SHOULD reaches it, each other count blocking earlier; the sum keeps them as a guard against a hand-edited record. The wire name predates the narrowing (scenario `only-gating-findings-hold-done`).
+11. **`undispositioned-findings`** — an outstanding gating finding: the review record's `must-violations` plus `should-violations`, which leave out a waived violation and one deferred to another spec's work, or the analysis's `hard-fail` plus `blocking-findings`, above zero; the message names the count per record. It never reads `dispositions.undispositioned`, which does not split by tier, so an undecided advisory finding or observation does not hold `done`. For a record the runtime writes, only a SHOULD neither waived nor deferred to another spec's work reaches it, each other count blocking earlier, and the message names each deferral that holds `done` with its work (spec 076); the sum keeps them as a guard against a hand-edited record. The wire name predates the narrowing (scenario `only-gating-findings-hold-done`).
 
 Within each record's half the staleness check comes last: the others say a record is missing or failing, it says a passing record is out of date. Checks 10 and 11 follow every other review and analyze check, each of which names a more upstream defect. **No check reads `folds-into`**: a pending fold never holds `done` ([051](../051-branch-scoped-spec-numbering/spec.md), scenario `a-pending-fold-never-holds-done`).
 
-`message` is the canonical blocked text with the adopter's `[host] project` command namespace substituted; `guidance` carries the resolve-or-waive follow-up on `must-violations` and the scenario-targeted-clarify pointer on `scenario-open-questions`. Every verdict is a domain outcome — the host halts on a blocked gate, and the primitive never errors for one. An unreadable scenario contributes no questions and never blocks; `read-spec` and `check-artifacts` report it, so not blocking and not reporting stay separate obligations.
+`message` is the canonical blocked text with the adopter's `[host] project` command namespace substituted; `guidance` carries the resolve, waive or defer follow-up on `must-violations` and the scenario-targeted-clarify pointer on `scenario-open-questions`. Every verdict is a domain outcome — the host halts on a blocked gate, and the primitive never errors for one. An unreadable scenario contributes no questions and never blocks; `read-spec` and `check-artifacts` report it, so not blocking and not reporting stay separate obligations.
 
 ### Cross-spec impact
 

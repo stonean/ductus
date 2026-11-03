@@ -29,7 +29,7 @@ Measured over the done specs with a prototype of this design: about 610 raw cand
 
 - **A transition stated without a marker.** "The generators under `.ductus/scripts/` are executed by adopters" names a deleted path as present. It is a finding: the line is stale, and living documents are edited to say what is true.
 - **A marker on an unrelated clause of the line.** `remove` in "to remove a dep, remove the inline link" exempts a stale path named elsewhere on the same line. The family errs toward silence, as the criterion family does; a one-time sweep reads the exempted lines by eye.
-- **An example relative link that resolves to a real past path**, e.g. `../spec.md` cited from a plan, which resolves to `specs/spec.md` — a file that existed before it became `specs/README.md`. The history gate cannot tell an example from a reference there; the finding is advisory, and a stored discard settles it.
+- **An example relative link that resolves to a real past path**, e.g. `../spec.md` cited from a plan, which resolves to `specs/spec.md` — a file that existed before it became `specs/README.md`. The history gate cannot tell an example from a reference there; the finding is advisory, and a stored waiver settles it.
 - **A spec below `done`.** Not scanned: a spec in flight may name files it is about to create.
 
 ## Open Questions

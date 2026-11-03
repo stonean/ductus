@@ -7,7 +7,7 @@ Implements [058 — Findings route at discovery](spec.md).
 The change has three layers, landed in dependency order:
 
 1. **The runtime.** It stops writing to the inbox, records a disposition for
-   every finding, persists routed and discarded decisions across runs, and
+   every finding, persists deferred and waived decisions across runs, and
    gates `done` on outstanding gating findings — on undispositioned ones
    until scenario `findings-cost-in-proportion-to-risk`.
 2. **The framework prose.** Commands, the constitution, templates, docs, and
@@ -24,9 +24,9 @@ first. Then the session restarts. Only after that are any pipeline commands run
 that consume the new primitives.
 
 Disposition is a host judgment, and the runtime never makes it. The host picks
-fix, route, or discard by walking the groom decision tree, and confirms each
+fix, defer, or waive by walking the groom decision tree, and confirms each
 write. The runtime does three things with that judgment: it counts the
-dispositions, persists the routed and discarded decisions, and renders them.
+dispositions, persists the deferred and waived decisions, and renders them.
 Since scenario `findings-cost-in-proportion-to-risk` the gate no longer reads
 the count; it reads the gating counts the records already carry.
 
@@ -109,7 +109,7 @@ The writers then take:
   (`git config user.email`).
 
 There is no `new-decisions` list. Each writer derives its new decisions from
-the findings it is handed: every routed or discarded live finding whose key
+the findings it is handed: every deferred or waived live finding whose key
 and outcome are not already stored becomes an entry, stamped
 with the run's own timestamp (`reviewed-at` or `analyzed-at`) as `decided-at`
 and with `decided-by` as its author. `decided-by` is required only when at
@@ -119,7 +119,7 @@ disagree.
 
 A finding re-matched to a stored decision with the same outcome keeps that
 decision's original stamp, is re-rendered unchanged, and counts toward
-`routed` or `discarded` in `dispositions:`. A finding re-decided differently
+`deferred` or `waived` in `dispositions:`. A finding re-decided differently
 replaces the stored entry.
 
 The key is `{family} — {message}` for analyze findings. The old capture key's
@@ -149,9 +149,9 @@ to reproduce.
 - **Observations carry their disposition.** `ReviewObservation`
   (`primitives.rs:459-468`) gains:
   - `disposition`, a `Disposition`: an outcome (`DispositionOutcome`:
-    `fixed`, `routed`, `discarded`, or `undispositioned`, defaulting to
-    `undispositioned`), plus a `target` for a route and a `reason` for a
-    discard, each validated as required by its outcome;
+    `fixed`, `deferred`, `waived`, or `undispositioned`, defaulting to
+    `undispositioned`), plus a deferral's work (`target`, `task`, `work-item`; 076) and a `reason` for a
+    waiver, each validated as required by its outcome;
   - `decision-key`: optional, naming a matched stored decision.
 
   `WriteReviewArgs` gains `expired-decisions` and `decided-by`, per
@@ -190,12 +190,12 @@ With capture gone, the writer has to be given the findings.
   `write-analysis` (`runtime/tests/golden/analyze-basic.jsonl:15`) bound none,
   so every exec record read 0/0/0 whatever detection found; 058's second review
   found it (QUAL-CLAIM-001). `undispositioned` is computed as the live tier
-  total minus the live findings that carry a `routed` or `discarded` outcome.
+  total minus the live findings that carry a `deferred` or `waived` outcome.
   A finding the caller omits therefore counts as undispositioned by
   construction; it can never be silently counted as handled. That, against the
   walker's tally, is how a `ductus exec` run, which itemizes nothing, records
   every live finding as undispositioned (AC26).
-- **AC30 is enforced in the writer.** A `discarded` outcome on a `hard-fail` or
+- **AC30 is enforced in the writer.** A `waived` outcome on a `hard-fail` or
   `blocking` finding is a validation error, raised before any write.
 - **The body skeleton:**
   - `## Captured issues` (`write_analysis.rs:253-257`) becomes
@@ -323,11 +323,11 @@ The disposition task's shape:
 
 - **Title:** `Disposition out-of-spec finding: {summary}`
 - **Body:** `{path} — {detail}`
-- **Done when:** the finding is fixed, routed, or discarded, with a discard's
+- **Done when:** the finding is fixed, deferred, or waived, with a waiver's
   reason written on the task.
 
 Working the task records its outcome on that body item before checking it —
-`— fixed`, `— routed to {target}`, or `— discarded: {reason}` — so the
+`— fixed`, `— deferred to {work}`, or `— waived: {reason}` — so the
 completion summary reads each disposition from `tasks.md` itself.
 
 ### Command procedures: the fix-and-route step is host work that `ductus exec` skips

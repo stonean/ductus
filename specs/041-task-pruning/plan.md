@@ -164,7 +164,7 @@ keys a finding `{family} — {message}` (`runtime/src/primitives/write_analysis.
 `finding_key`), so the stored key is fully determined by the heading.
 `prune-plan` reads `analysis.md`'s stored decisions with `read_decisions`
 (`runtime/src/primitives/decisions.rs`) and sets `decided: true` for a section
-whose key has a stored `discarded` decision, compared with `same_key`. A
+whose key has a stored `waived` decision, compared with `same_key`. A
 decision analyze re-matched by judgment keeps its original key (058's
 `decision-key`), so a key that no longer matches is left `decided: false` for
 the host to match the way `/{project}:analyze`'s stored-decision step does,
@@ -263,7 +263,7 @@ asked about before the flip, never performed silently; and one the preview
 named that the fresh reading no longer requires, such as a `--reset` that
 removed the unchecked boxes it came from, is not performed. A spec the run
 wrote nothing to keeps its status. A declined section is skipped
-for that run, and the prompt names an analyze discard as the lasting keep.
+for that run, and the prompt names an analyze waiver as the lasting keep.
 The write surface is `tasks.md`, `plan.md`, `AGENTS.md` for moved knowledge,
 and status through `set-status`; knowledge that holds more widely is named
 for the operator to route where §drift-prevention's *Shared knowledge stays
@@ -280,11 +280,11 @@ unchanged — invokes `prune-plan` against the feature, with no `apply`, on a
 spec at `planned` or later, and records **every** section it reports as an
 advisory finding with the result's family and message — decided sections
 included. Reporting only undecided sections would expire their stored
-discards: `process-decisions` drops a decision whose key does not fire on an
+waivers: `process-decisions` drops a decision whose key does not fire on an
 unrestricted run (`runtime/src/primitives/process_decisions.rs`, the
 `expired` outcome), after which prune would propose the section again. Firing
 every section lets the stored-decision step match the decided ones, so they
-count as discarded and nothing is asked. The exec walker binds a step's
+count as waived and nothing is asked. The exec walker binds a step's
 arguments from its context (`runtime/src/interpreter/mod.rs`, the `call!`
 macro), so the step dispatches with the feature and no `apply` — a preview.
 The exec walker's analyze tally counts each section on a `planned`-or-later
@@ -310,7 +310,7 @@ follow it, and every present-tense citation of them names those numbers.
   to adopters with the `update` strategy (`framework/bootstrap/ductus.md`,
   *ductus-owned shared files*), so no migration is needed.
 - **Command sources.** `framework/commands/prune.md` is rewritten for the
-  spec-directory scope, stored discards, the reopen, and `--all`, with a
+  spec-directory scope, stored waivers, the reopen, and `--all`, with a
   markdown-only reference for plan segmentation. `framework/commands/analyze.md`
   gains the new step and a `plan-record` section in its markdown-only
   reference. `scripts/gen-help-tables.sh` carries prune's new description.
@@ -419,7 +419,7 @@ buys nothing here.
 | `framework/constitution.md` | Edit | §plan-phase rule; §tasks-phase sentence; §implement-phase triage clause; §spec-lifecycle's plan rule |
 | `framework/templates/spec/plan.md` | Edit | Trade-offs and optional sections; what-stays-out comment |
 | `framework/templates/spec/tasks.md` | Edit | Working-notes guidance |
-| `framework/commands/prune.md` | Edit | Spec-directory scope, discards, reopen, `--all` |
+| `framework/commands/prune.md` | Edit | Spec-directory scope, waivers, reopen, `--all` |
 | `framework/commands/consolidate.md` | Edit | 041's broadened title in its link |
 | `framework/commands/analyze.md` | Edit | The `prune-plan` step and `plan-record` reference |
 | `scripts/gen-help-tables.sh` | Edit | Prune's description |

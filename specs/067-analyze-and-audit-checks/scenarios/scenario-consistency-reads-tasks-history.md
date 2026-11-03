@@ -27,7 +27,7 @@ The fingerprint answers *was this file pruned*, which is not the question. The q
 ## Edge Cases
 
 - **A task appended and pruned before any commit.** The family reads the working `tasks.md` and the committed history, so a task that lived only between two commits is in neither, and its scenario reads as never tasked. The finding is advisory. The pipeline commits a scenario's task when it records the scenario, so the window is a task appended and pruned by hand within one uncommitted session.
-- **A scenario renamed after its task was pruned.** No revision names the new slug, so it reads as never tasked. The finding is advisory, and a stored discard settles it.
+- **A scenario renamed after its task was pruned.** No revision names the new slug, so it reads as never tasked. The finding is advisory, and a stored waiver settles it.
 - **No `tasks.md`.** Unchanged: the family does not run, and artifact completeness owns the missing file at `planned` and later.
 - **Cost.** The walk runs only when some scenario is unmapped, stops once every unmapped slug has been found, and reads each distinct `tasks.md` blob once. A spec with a reset `tasks.md` and a never-tasked scenario walks the whole history, which is the one case that pays for it.
 

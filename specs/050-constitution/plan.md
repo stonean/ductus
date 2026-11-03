@@ -304,7 +304,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | Entry | Reason |
 | --- | --- |
 | A pushed tag is not a published release, and `release not found` is the *normal* answer for the ~11 minutes in between | This project's release pipeline, its job order and its crates.io step |
-| Discard an observation about the pipeline's own machinery made while reviewing framework work, with its reason — routing it is what feeds the loop | The premise — a review executed *by* the machinery it reviews — holds only for this framework's own repository |
+| Waive an observation about the pipeline's own machinery made while reviewing framework work, with its reason — deferring it is what feeds the loop | The premise — a review executed *by* the machinery it reviews — holds only for this framework's own repository |
 | After changing runtime source, verify through the built binary — not the MCP tools | Adopters do not change runtime source |
 | `framework/commands/help.md` is generated — hand-edits to it are reverted on the next commit | Framework build step |
 | Registering a runtime primitive is five sites, and two of them are only found by tests — de-registering one is the same five | Framework build step |

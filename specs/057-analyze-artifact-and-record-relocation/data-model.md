@@ -28,8 +28,8 @@ line 109 — with the changes each table's Notes section names.
 | `reviewed-digest` | map path → sha256 | `spec.md` block | Subject set unchanged: `scenarios/*.md` and `data-model.md`, excluding `review.md` and `spec.md`. See the plan on why the `spec.md` exclusion's rationale lapses without the set changing. |
 | `blocking` | bool | `spec.md` block | Block-only field. Derived, not authored. |
 | `waivers` | list | `spec.md` block | Block-only field. The one AC12 field most easily lost in a merge, because only one side ever had it. |
-| `dispositions` | map `fixed`/`routed`/`discarded`/`undispositioned` → u32 | 058 | What the run did with its observations. Always written; absence means the record predates dispositions. |
-| `decisions` | list | 058 | Stored routed and discarded observation decisions, beside `waivers`. Omitted when empty. |
+| `dispositions` | map `fixed`/`deferred`/`waived`/`undispositioned` → u32 | 058 | What the run did with its observations. Always written; absence means the record predates dispositions. |
+| `decisions` | list | 058 | Stored deferred and waived observation decisions, beside `waivers`. Omitted when empty. |
 
 **Notes.** Six fields were byte-identical across the two records and collapse to
 one. Five existed on exactly one side and are carried, not dropped — that is the
@@ -52,8 +52,8 @@ is never written empty to signal it.
 | `unexamined-by-reason` | map reason → count | |
 | `captured-issues` | integer | Findings this run appended to the inbox. **Removed by 058**: the inbox is no longer a destination. The pair it formed with the tier counts is what `dispositions` now provides. |
 | `blocking` | bool | Derived. |
-| `dispositions` | map `fixed`/`routed`/`discarded`/`undispositioned` → u32 | Added by 058. What the run did with its findings, in every tier; `undispositioned` is derived as the live tier total less the live findings routed or discarded. Always written. |
-| `decisions` | list | Added by 058. Stored routed and discarded finding decisions, keyed `{family} — {message}`. Omitted when empty. |
+| `dispositions` | map `fixed`/`deferred`/`waived`/`undispositioned` → u32 | Added by 058. What the run did with its findings, in every tier; `undispositioned` is derived as the live tier total less the live findings deferred or waived. Always written. |
+| `decisions` | list | Added by 058. Stored deferred and waived finding decisions, keyed `{family} — {message}`. Omitted when empty. |
 
 **Notes.** No field is added or removed by the relocation; the record is the one
 `write-analysis` already produces. What changes is the file it lands in and the

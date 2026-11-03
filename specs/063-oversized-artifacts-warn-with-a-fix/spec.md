@@ -31,7 +31,7 @@ It runs in three places:
 
 - **`/clarify`**, because splitting a spec is cheapest while it is `draft` or `clarified`, before a plan and tasks exist for the part that moves.
 - **`/plan`'s readiness check**, beside the checks it already runs before proposing `planned`.
-- **`/analyze`**, as an advisory finding, so it is proposed a disposition like any other finding ([058](../058-findings-route-at-discovery/spec.md)): fixed, routed, or discarded with a reason. It never holds `done`, decided or not, since 058's `findings-cost-in-proportion-to-risk`.
+- **`/analyze`**, as an advisory finding, so it is proposed a disposition like any other finding ([058](../058-findings-route-at-discovery/spec.md)): fixed, deferred, or waived with a reason. It never holds `done`, decided or not, since 058's `findings-cost-in-proportion-to-risk`.
 
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 
@@ -45,17 +45,17 @@ Each warning names the file, its size, the threshold, and its read-page count, t
 | `spec.md`, `plan.md` | Split the spec, when a slice can reach `done` on its own. Or trim it: in a plan, the code sketches and the Affected Files rows for finished work. |
 | `data-model.md` | Split the spec, or trim the file. Never into sub-files: review staleness tracks `data-model.md` by its exact name (`is_review_contract` in `runtime/src/primitives/analyze_subjects.rs`), so content moved to a sibling file would drop out of the review's subjects. |
 | a scenario | Promote it to its own spec (§scenario-promotion). |
-| any subject, in `/analyze` | Discard the finding with a reason. |
+| any subject, in `/analyze` | Waive the finding with a reason. |
 
 The fixes a warning names depend on where it fires and on the spec's status:
 
-- **A discard is named only in `/analyze`.** `/clarify` and `/plan` keep no findings record, so there is nothing to discard into.
-- **At `done`, the warning says which fixes reopen the spec**, by §spec-lifecycle's rules for an edit under a spec: an edit that changes a claim the spec makes takes the `done → in-progress` back-edge, unless it is confined to the plan or the task list and adds no unchecked task. Splitting the spec and promoting a scenario always reopen it, because each removes requirements from what the original asserts, even though another spec now asserts them. Trimming `plan.md` never reopens it, because a plan edit takes no back-edge on a `done` spec (§spec-lifecycle; `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`); trimming any other artifact reopens it unless the trim changes no claim. Pruning `tasks.md` and a discard never reopen it.
+- **A waiver is named only in `/analyze`.** `/clarify` and `/plan` keep no findings record, so there is nowhere to record one.
+- **At `done`, the warning says which fixes reopen the spec**, by §spec-lifecycle's rules for an edit under a spec: an edit that changes a claim the spec makes takes the `done → in-progress` back-edge, unless it is confined to the plan or the task list and adds no unchecked task. Splitting the spec and promoting a scenario always reopen it, because each removes requirements from what the original asserts, even though another spec now asserts them. Trimming `plan.md` never reopens it, because a plan edit takes no back-edge on a `done` spec (§spec-lifecycle; `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`); trimming any other artifact reopens it unless the trim changes no claim. Pruning `tasks.md` and a waiver never reopen it.
 - **No warning names a command that does not exist.** No command splits a spec ([/consolidate](../052-spec-supersession-and-consolidation/spec.md) only merges), so a split is described as the manual route it is: create the new spec with `/specify`, move the content into it, and link it from the original.
 
-## A discard re-fires on growth
+## A waiver re-fires on growth
 
-A discarded warning stays discarded while its file keeps the read-page count it had when the discard was recorded. Once the file grows into another page, the warning fires again and needs a new decision, since the reason given for one page does not cover two. A file that shrinks does not re-fire a discard.
+A waived warning stays waived while its file keeps the read-page count it had when the waiver was recorded. Once the file grows into another page, the warning fires again and needs a new decision, since the reason given for one page does not cover two. A file that shrinks does not re-fire a waiver.
 
 ## Plans stop regrowing
 
@@ -70,7 +70,7 @@ A discarded warning stays discarded while its file keeps the read-page count it 
 - **Several oversized subjects** get one warning each. A spec with many scenarios is checked file by file.
 - **An invalid configured threshold** (anything but a positive whole number of bytes, or an `artifacts` that is not a table and so cannot hold the key) halts the command that reads it, naming the setting, the offending value, the file and the accepted form. A fraction or a string does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below the minimum of 1 byte, which is out of range under `CFG-ENV-005`. The default never stands in for a value the project set: only an unset threshold means 50,000 bytes. See [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md).
 - **An unknown key in `[artifacts]`** — `read-size-byte` for `read-size-bytes` — is named in a notice and never halts; the check runs at the threshold the recognized keys give. See [an unknown artifacts key is named](scenarios/an-unknown-artifacts-key-is-named.md).
-- **Changing the threshold recounts every subject's pages.** A discard recorded at one page count fires again if the new threshold puts its file at a higher count.
+- **Changing the threshold recounts every subject's pages.** A waiver recorded at one page count fires again if the new threshold puts its file at a higher count.
 - **The markdown-only path** measures with the host's own file tools. A subject whose size those tools cannot report is reported as not examined, never as under the threshold.
 
 ## Out of scope
@@ -79,7 +79,7 @@ These gaps remain after a warning, and each is its own change:
 
 - **Splitting a spec.** No command splits one, though splitting is the main fix for an oversized `spec.md`, `plan.md` or `data-model.md`.
 - **Moving existing spec content into a scenario.** `/amend` records only new input, and its scenario route appends an implement task for behavior that is already built.
-- **Reading a plan by section.** A large plan that really is one concern has no fix but paging or a discard.
+- **Reading a plan by section.** A large plan that really is one concern has no fix but paging or a waiver.
 
 ## Acceptance Criteria
 
@@ -89,10 +89,10 @@ These gaps remain after a warning, and each is its own change:
 - [x] AC4: With no threshold configured, the threshold is 50,000 bytes; a threshold set in `.ductus/config.toml` replaces it.
 - [x] AC5: A configured threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command that reads it, naming the setting, the value, the file and the accepted form; the default never replaces a value the project set.
 - [x] AC6: Each warning names the fixes for its artifact kind from the table in [The warning names a fix](#the-warning-names-a-fix).
-- [x] AC7: A discard is offered in `/analyze` only.
-- [x] AC8: On a `done` spec, the warning says that splitting the spec and promoting a scenario reopen it, that trimming `plan.md` does not and trimming any other artifact reopens it unless the trim changes no claim, and that pruning `tasks.md` and a discard do not.
+- [x] AC7: A waiver is offered in `/analyze` only.
+- [x] AC8: On a `done` spec, the warning says that splitting the spec and promoting a scenario reopen it, that trimming `plan.md` does not and trimming any other artifact reopens it unless the trim changes no claim, and that pruning `tasks.md` and a waiver do not.
 - [x] AC9: A warning that recommends a split describes the manual route and names no command that does not exist.
-- [x] AC10: A discarded finding fires again once its file grows into a higher read-page count than the one recorded with the discard, and not before.
+- [x] AC10: A waived finding fires again once its file grows into a higher read-page count than the one recorded with the waiver, and not before.
 - [x] AC11: A subject that cannot be read is reported as not examined.
 - [x] AC12: On the markdown-only path, a subject whose size the host's file tools cannot report is reported as not examined.
 - [x] AC13: `/plan`'s guidance no longer tells the agent that code snippets belong in the plan.

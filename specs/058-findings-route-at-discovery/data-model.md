@@ -5,27 +5,32 @@ primitives that write them. Field shapes follow `ReviewBlock` and
 `AnalyzeBlock` in `runtime/src/schema/primitives.rs`, and the waiver record in
 the 020 data model.
 
+Since [076](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md),
+`routed` is `deferred` and `discarded` is `waived`, read under the old names
+from a record written before; that data model adds a deferral's `task`,
+`work-item` and derived `gating`, and the `lapsed` result.
+
 ## `dispositions` — in both `review.md` and `analysis.md` frontmatter
 
 ```yaml
 dispositions:
   fixed: 1
-  routed: 2
-  discarded: 1
+  deferred: 2
+  waived: 1
   undispositioned: 0
 ```
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `fixed` | u32 | Findings fixed in the run. A fixed finding is gone from the re-check, so it is counted from the run's first pass. |
-| `routed` | u32 | Live findings routed this run, plus live findings matching a stored routed decision. |
-| `discarded` | u32 | Live findings discarded this run, plus live findings matching a stored discarded decision. |
+| `deferred` | u32 | Live findings deferred this run, plus live findings matching a stored deferral that did not lapse. |
+| `waived` | u32 | Live findings waived this run, plus live findings matching a stored waiver. |
 | `undispositioned` | u32 | Live findings with neither. Recorded and reported; the gate does not read it, since only a gating finding holds `done`. |
 
 **Notes.**
 
 - **What is counted.** In `review.md` the map counts **observations** only.
-  MUST and SHOULD violations keep their own counts and their fix-or-waive
+  MUST and SHOULD violations keep their own counts and their fix, waive or defer
   model. In `analysis.md` it counts findings of every tier.
 - **Absent is not zero.** `Option<Dispositions>` on both structs. `None` means
   the record predates 058, and the gate blocks an `in-progress` spec on it.
@@ -33,7 +38,7 @@ dispositions:
 - **Derived, never authored.** Both writers compute the map from the
   dispositions they are given. `analysis.md`'s `undispositioned` is the live
   tier total (`hard-fail + blocking-findings + advisory`) minus the live
-  findings carrying `routed` or `discarded`. A finding the caller does not
+  findings carrying `deferred` or `waived`. A finding the caller does not
   itemize therefore counts as undispositioned.
 
 ## `decisions` — the persisted list, in both records
@@ -41,12 +46,12 @@ dispositions:
 ```yaml
 decisions:
   - key: "grounding — plan.md cites runtime/src/foo.rs:12, which does not exist"
-    outcome: routed
+    outcome: deferred
     target: specs/031-some-feature/scenarios/foo-grounding.md
     decided-at: 2026-09-25T14:40:00Z
     decided-by: dev@example.com
   - key: "applicable-rules — BE-AUTHN-001 is listed but its trigger does not fire"
-    outcome: discarded
+    outcome: waived
     reason: "Spec cites the rule for a future endpoint; no trigger surface yet"
     decided-at: 2026-09-25T14:41:00Z
     decided-by: dev@example.com
@@ -55,9 +60,9 @@ decisions:
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `key` | string | yes | Analyze: `{family} — {message}`. Review: the observation's rendered line, as `observation_line` builds it — its text, then an em dash and its path in backticks, or the text alone. |
-| `outcome` | `routed` \| `discarded` | yes | `fixed` is never stored: a fixed finding stops firing. `undispositioned` is never stored: it is the absence of a decision. |
-| `target` | string (repo-relative path) | when `routed` | The scenario, `tasks.md`, spec, or rule file the finding was routed to. |
-| `reason` | string | when `discarded` | Free text; an empty string is invalid. |
+| `outcome` | `deferred` \| `waived` | yes | `fixed` is never stored: a fixed finding stops firing. `undispositioned` is never stored: it is the absence of a decision. |
+| `target` | string (repo-relative path) | when `deferred` without a `work-item` | The scenario, `tasks.md`, spec, or rule file the finding was deferred to. |
+| `reason` | string | when `waived` | Free text; an empty string is invalid. |
 | `decided-at` | ISO 8601 timestamp | yes | The run's own timestamp (`reviewed-at` or `analyzed-at`), stamped by the writer when the decision is new. A re-matched decision keeps its original. |
 | `decided-by` | string (email) | yes | The writer's `decided-by` argument — `git config user.email`, as `waived-by` is. |
 | (additional fields) | any | no | Open-schema, preserved verbatim on re-render, as waiver extras are. |
@@ -68,8 +73,8 @@ decisions:
 - **Matched.** The key fired this run. The entry is re-rendered unchanged, and
   the finding counts under its outcome without being asked about.
 - **Expired.** The key did not fire, and the run evaluated its source. The
-  entry is dropped on this write. For a routed finding, this is the moment the
-  routed work landed.
+  entry is dropped on this write. For a deferred finding, this is the moment the
+  deferred work landed.
 - **Retained.** The key did not fire, but the run did not evaluate its source:
   a review with a pass that did not run (a dimension-restricting flag, or an
   empty scope), or an analysis that could not read a target it meant to
@@ -95,9 +100,10 @@ decisions:
   `analysis.md` that opens no frontmatter block: it stores no decisions, and
   re-running `/{project}:analyze` repairs it.
 
-A hard-fail or blocking analyze finding is never stored as `discarded`, because
-the writer rejects that outcome for those tiers. A stored `routed` decision for
-one keeps the finding blocking until the re-check no longer produces it.
+A hard-fail or blocking analyze finding is never stored as `waived`, because
+the writer rejects that outcome for those tiers. A stored `deferred` decision
+for one keeps the finding blocking until the re-check no longer produces it,
+unless its target is on another spec (076).
 
 ## Removed fields
 
@@ -130,10 +136,11 @@ next time its writer runs.
 ## Changed primitive inputs
 
 Neither writer takes a list of new decisions. Each derives them from the
-dispositioned findings it is handed — every routed or discarded live finding
+dispositioned findings it is handed — every deferred or waived live finding
 not already stored with the same outcome — and requires `decided-by` only when
 at least one is new. The shared disposition shape is `Disposition`
-(`outcome`, a `DispositionOutcome`, plus `target` and `reason`).
+(`outcome`, a `DispositionOutcome`, plus `target` and `reason`, and 076's
+`task` and `work-item`).
 
 ### `write-review` args
 
@@ -141,7 +148,7 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `observations` | list of `ReviewObservation` | Each now carries its disposition (below). |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly routed or discarded. |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived. |
 
 ### `ReviewObservation` — the `write-review` `observations` entry
 
@@ -149,9 +156,9 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `text` | string | Unchanged. Single line, non-empty. |
 | `path` | string, optional | Unchanged. |
-| `disposition.outcome` | `fixed` \| `routed` \| `discarded` \| `undispositioned` | New. Defaults to `undispositioned`. |
-| `disposition.target` | string | Required when `routed`. |
-| `disposition.reason` | string | Required when `discarded`. |
+| `disposition.outcome` | `fixed` \| `deferred` \| `waived` \| `undispositioned` | New. Defaults to `undispositioned`. |
+| `disposition.target` | string | Required when `deferred` without a `work-item`. |
+| `disposition.reason` | string | Required when `waived`. |
 | `decision-key` | string, optional | The key of a stored decision the host matched this observation to. |
 
 ### `write-analysis` args
@@ -160,7 +167,7 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `findings` | list of `AnalysisFinding` | Replaces `captured-issues`. |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any live finding is newly routed or discarded. |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any live finding is newly deferred or waived. |
 
 The tier counts stay host-supplied scalars from the re-check.
 
@@ -174,12 +181,12 @@ reproduce byte for byte (scenario
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `tier` | `AnalysisTier`: `hard-fail` \| `blocking` \| `advisory` | Tier as detected. Required: the discard refusal reads it, so no default is safe. |
+| `tier` | `AnalysisTier`: `hard-fail` \| `blocking` \| `advisory` | Tier as detected. Required: the waiver refusal reads it, so no default is safe. |
 | `family` | string | The detecting family, e.g. `review-state-drift`, `grounding`. |
 | `message` | string | Single line. With `family`, forms the key. |
 | `path` | string | The citing artifact. |
 | `live` | bool | `false` for a finding fixed in the run and absent from the re-check. Defaults to `true`. |
-| `disposition` | as above | `discarded` is rejected when `tier` is `hard-fail` or `blocking`. |
+| `disposition` | as above | `waived` is rejected when `tier` is `hard-fail` or `blocking`. |
 | `decision-key` | string, optional | The key of a stored decision the host matched this finding to. A blank one is no key. |
 
 ### `AppendTaskArgs.dedup-title`
@@ -212,7 +219,7 @@ findings sharing a summary apart. A spent section never matches.
 | Variant | When | Message names |
 | --- | --- | --- |
 | `record-predates-dispositions` | An `in-progress` spec's `review.md` or `analysis.md` has no `dispositions:` map | The record, and the command to re-run |
-| `undispositioned-findings` | An outstanding gating finding: the review record's unwaived MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
+| `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor deferred to another spec's work, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
 
 Both are checked after every existing review and analyze check, in the order
 predates (review, then analysis), then outstanding gating findings (review, then analysis).

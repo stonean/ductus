@@ -15,7 +15,7 @@ Found by the 058 review (2026-09-25).
 ## Behavior
 
 - Under `--auto`, appending a disposition task (`Disposition out-of-spec finding: …`) does not pause the run. The walk records it and continues with the task in hand, and the per-task summary lists it.
-- Working a disposition task still pauses for its confirmation. A fix, a route (including any `done → in-progress` reopen it names), or a discard waits on the operator, because `--auto` never skips a confirmation that writes.
+- Working a disposition task still pauses for its confirmation. A fix, a deferral (including any `done → in-progress` reopen it names), or a waiver waits on the operator, because `--auto` never skips a confirmation that writes.
 - A task that implements a fix inside the targeted spec is a new task under the existing rule, and still pauses.
 
 `implement.md`'s `--auto` gate list names the exception, so the list and walk step 5 agree.

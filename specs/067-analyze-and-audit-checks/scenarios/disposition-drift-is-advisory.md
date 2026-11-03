@@ -17,7 +17,7 @@ section: "Artifact checks"
 ## Edge Cases
 
 - **A record with no `dispositions:` map** still produces nothing.
-- **The finding is itself advisory**, so a run may discard it with its reason, and a stored decision quiets it until its message changes.
+- **The finding is itself advisory**, so a run may waive it with its reason, and a stored decision quiets it until its message changes.
 
 ## Open Questions
 

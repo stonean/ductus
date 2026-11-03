@@ -261,9 +261,9 @@ records for it, built by one function, `plan_section_finding(heading)`:
 
 `write-analysis` keys a stored decision `{family} — {message}`, so the key is
 fully determined by the heading. A section is **decided** when `analysis.md`'s
-`decisions:` list holds a well-formed `discarded` entry under that key,
+`decisions:` list holds a well-formed `waived` entry under that key,
 compared with the stored-decision key normalization every writer uses. A
-routed entry does not decide a section, and a key analyze re-matched by
+deferred entry does not decide a section, and a key analyze re-matched by
 judgment — kept from an earlier wording — is left for the host to match.
 
 ### Request/response schema

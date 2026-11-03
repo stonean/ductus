@@ -899,7 +899,8 @@ When MUST violations are present:
   report:   specs/042-example-feature/review.md
 
   spec cannot advance to done. Resolve violations and re-run /{project}:review,
-  or run /{project}:review --waive <rule-id> --reason "..." for each waivable finding.
+  run /{project}:review --waive <rule-id> --reason "..." for each waivable finding,
+  or defer each to pipeline work on another spec (/{project}:review --defer <rule-id> --target <path>),
   then /{project}:analyze, which the done gate also requires.
 ```
 

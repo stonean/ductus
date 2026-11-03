@@ -26,7 +26,7 @@ A run that fixes every hard-fail and blocking finding on a `done` spec therefore
 
 - **A `done` spec with no `analysis.md`** stays grandfathered, as now; `/{project}:audit` Family 37 counts that set.
 - **`last-run` unset** cannot hold for the record the run writes, so `/{project}:analyze` never reports it. The CI hook still reads the committed record directly, so a hand-edited record is caught there.
-- **A blocking finding routed to the `done` spec in hand** reopens that spec `done → in-progress`, so no drift is reported on it.
+- **A blocking finding deferred to the `done` spec in hand** reopens that spec `done → in-progress`, so no drift is reported on it.
 - **Under `ductus exec`**, the record carries the walker's tier counts, so a `done` spec with a live blocking finding gets a record that is `blocking: true`. The exec run reports nothing: drift is judged at step 21, a host responsibility the walker skips. An interactive run reports the drift, and one that fixes the finding clears it, so it does not loop.
 - **The markdown-only path** judges the drift the same way, from the `analysis.md` it just wrote.
 

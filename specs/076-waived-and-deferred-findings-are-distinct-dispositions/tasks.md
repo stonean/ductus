@@ -62,7 +62,7 @@ The CHANGELOG entry waits until `git status` shows no one else's uncommitted edi
 
 - [x] Update the tool descriptions in `runtime/src/mcp/server.rs` and the wire-shape tests in `runtime/tests/mcp.rs`
 - [x] Regenerate the goldens with `BLESS=1`, reading every diff
-- [ ] Add the `runtime/CHANGELOG.md` entry, naming the `dispositions:` rename for adopters' own CI
+- [x] Add the `runtime/CHANGELOG.md` entry, naming the `dispositions:` rename for adopters' own CI
 
 - **Done when**: `cargo test --release` passes, the release binary is rebuilt, and the bless diff holds no unintended change.
 
@@ -77,17 +77,17 @@ The CHANGELOG entry waits until `git status` shows no one else's uncommitted edi
 
 ## 9. Sweep the live artifacts by meaning
 
-The spec-body reach of this sweep is an owner decision not yet taken. Uses of *routed* and *discarded* sit in 90 files across 36 specs (10 `done`, 3 `draft`, 23 `in-progress`; counted excluding 076 and every `review.md` and `analysis.md`). Classify each use first:
+The owner chose the full sweep (2026-11-03): every current-behavior claim in every spec, `done` bodies included, staged by path in specs another session is working on. Uses of *routed* and *discarded* sit in 90 files across 35 specs (10 `done`, 3 `draft`, 22 `in-progress`; `routed|discarded` over `specs/**/*.md`, excluding 076 and every `review.md` and `analysis.md`, at `1405eacc`). Classify each use first:
 
 - a record — a checked task, a Motivation, a Resolved Question, a rejected alternative, an incident account — which keeps its wording;
 - not a finding disposition — an inbox item's `discard` route, `routed-by`, generic English — which keeps it;
 - a current-behavior claim, which is edited.
 
-Count the `done` specs a claim edit would reopen, and the `in-progress` specs whose `scenarios/` or `data-model.md` would change, then put the scope to the owner with those counts. Task 10 already covers 020's, 058's and 066's data models. The rest of the set needs no decision: `framework/` beyond the files task 8 edited, `scripts/`, the runtime doc comments, `.github/`, `docs/`, `README.md` and `AGENTS.md`. Edit `README.md` and `docs/rules.md` only when `git status` shows no one else's uncommitted edits in them.
+Swap a label word for word wherever the claim still holds, so `done` specs 047 and 057 stay `done` under the mechanical-rename rule (`runtime/src/primitives/mechanical_sweep.rs`); reword only where the contract changed — a "fixed or waived" list that now omits deferral (020, 050, 058, 066). Task 10 already covers 020's, 058's and 066's data models.
 
-- [ ] Grep the `AGENTS.md` sweep-target set for *routed*, *discarded*, *discard*, *waive* and *defer*, and classify each use by who emits it
-- [ ] Rewrite each finding-disposition use, leaving Resolved Questions, signposts, migrations, the inbox route and the alias-reading code
-- [ ] Re-read the doc comments of every runtime item touched in tasks 2–6
+- [x] Grep the `AGENTS.md` sweep-target set for *routed*, *discarded*, *discard*, *waive* and *defer*, and classify each use by who emits it
+- [x] Rewrite each finding-disposition use, leaving Resolved Questions, signposts, migrations, the inbox route and the alias-reading code
+- [x] Re-read the doc comments of every runtime item touched in tasks 2–6
 
 - **Done when**: AC7 and AC18 hold, and `npx markdownlint-cli2` passes on every file touched.
 
@@ -95,8 +95,27 @@ Count the `done` specs a claim edit would reopen, and the `in-progress` specs wh
 
 Edit 020 only when `git status` shows no one else's uncommitted work in `specs/020-code-review/`, or after asking the owner.
 
-- [ ] Add a blockquote signpost linking back to 076, with the contract it owes, to 020, 058, 066 and 073
-- [ ] Apply the key rename to the data models of 020, 058 and 066, pointing at 076's data model for the new fields
-- [ ] Reopen 058 with `set-status` from `done` to `in-progress`
+- [x] Add a blockquote signpost linking back to 076, with the contract it owes, to 020, 058, 066 and 073
+- [x] Apply the key rename to the data models of 020, 058 and 066, pointing at 076's data model for the new fields
+- [x] Reopen 058 with `set-status` from `done` to `in-progress`
 
 - **Done when**: AC8 holds — `check-review-gate` against 076 reports every impact discharged — and 058 is `in-progress` with its signpost committed.
+
+## 11. Name deferral in the gate's MUST and analyze guidance
+
+Found while re-reading `check_review_gate.rs` in task 9: task 6 named deferral in the outstanding-findings guidance only, so a spec blocked on MUST violations or on analyze findings is still told to fix or waive.
+
+- [x] Name deferral to another spec's work in the `must-violations` and `analyze-findings` guidance, with a test of each that fails without it
+- [x] Update the quoted guidance in `framework/reference/implement.md`, `framework/reference/review.md` and 066's `data-model.md`; 020's *Blocking message* quotes are the record of what 020 specified and keep their text
+
+- **Done when**: both guidance strings name `--defer` or deferral to another spec's work, the tests fail with the wording reverted, and the task 2 cargo commands pass.
+
+## 12. Fix the defects the doc-comment re-read found
+
+Found 2026-11-03 by task 9's independent re-read of tasks 2–6's runtime doc comments, which read the code beside them.
+
+- [x] A re-deferral after a lapse is stored and its work checked against the tree: `merge` counts a decision whose key the run drops through `expired-decisions` as fresh, and `refuse_missing_work` takes that list
+- [x] `check-review-gate` names each holding deferral at the MUST and analyze-findings blocks too, which a MUST or gating analyze finding reaches before the last check (AC16)
+- [x] `write-review` names `findings`, not `observations`, when two violations sharing a key conflict
+
+- **Done when**: each has a test that fails with its behavior removed, and the task 2 cargo commands pass.

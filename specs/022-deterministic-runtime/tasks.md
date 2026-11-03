@@ -136,7 +136,7 @@ Recommended: (a). The measure is what a host- or LLM-supplied path can reach out
 
 ## 10. Finish 022's analysis of 2026-10-21 (detection done; dispositions, re-read and record owed)
 
-Detection ran at `1572bb3e` (steps 1–10, 16, 17 through the CLI; steps 11–12 by three agents over spec, plan, data model and scenarios; step 15 by hand over what changed in spec and plan since the previous analysis at `d21aaf0c`). Deterministic steps: clean except two `scenario-consistency` advisories (stored discards) and one `artifact-size` advisory (`plan.md`, two read pages; no stored decision). `unexamined` measured by the done round trip: 53 (never-existed 12, not-a-live-claim 5, root-absent 33, ships-to-adopter 3); the five not-a-live-claim skips were walked by hand and hold. The previous record's two routes (BE-DEPS-006, and BE-INPUT-004 as then worded) no longer fire and expire. Stored discards still firing: BE-METRIC-001, BE-TRACE-002, the eight grounding keys, the two scenario-consistency keys.
+Detection ran at `1572bb3e` (steps 1–10, 16, 17 through the CLI; steps 11–12 by three agents over spec, plan, data model and scenarios; step 15 by hand over what changed in spec and plan since the previous analysis at `d21aaf0c`). Deterministic steps: clean except two `scenario-consistency` advisories (stored waivers) and one `artifact-size` advisory (`plan.md`, two read pages; no stored decision). `unexamined` measured by the done round trip: 53 (never-existed 12, not-a-live-claim 5, root-absent 33, ships-to-adopter 3); the five not-a-live-claim skips were walked by hand and hold. The previous record's two routes (BE-DEPS-006, and BE-INPUT-004 as then worded) no longer fire and expire. Stored discards still firing: BE-METRIC-001, BE-TRACE-002, the eight grounding keys, the two scenario-consistency keys.
 
 - [x] Grounding: cite the sources for four tool-behavior claims in plan.md (markdownlint-cli2's `globbyOptions` and `processArgv`, fast-glob's README and `settings.js`, globby's `normalizeOptions`, coreutils `mktemp.c`, std's Windows `canonicalize`), each verified at its source
 - [x] BE-INPUT-004 (archive entry names): `extract-archive`'s `safe_join` checks each entry with `validate_contained` against `dest`, tested and mutation-proved, and plan.md states it (bullet "Archive entries")
@@ -337,7 +337,7 @@ Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_
 
 ## 15. Disposition three findings from task 11's measurement
 
-Each is measured, written up as its own question when it needs the owner, and fixed, routed or discarded, after tasks 14 and 11.
+Each is measured, written up as its own question when it needs the owner, and fixed, deferred or waived, after tasks 14 and 11.
 
 - [ ] `lint-markdown` and `check-review-gate` run project code: the local `node_modules/.bin/markdownlint-cli2`, and markdownlint-cli2's `.cjs`/`.mjs` configuration and `customRules` (task 14's last paragraph). On Claude, `apply-manifest` (task 11), `merge-managed-block` (re-read 2 created a `.markdownlint-cli2.cjs` with it, and `node` ran the block's code, its default `<!-- … -->` markers included) or the agent's own `Write` writes them; on OpenCode, Antigravity and Auggie the agent's own file tools write them without a prompt
 - [ ] Claude's canonical set (`framework/bootstrap/configure/claude.md`) allows `Bash(make *)` and bare `Write`, so an agent can write a Makefile and run any command through `make` without a prompt; `Bash(./.githooks/pre-commit)` with a writable hook does the same
@@ -588,7 +588,7 @@ Re-read 1 of the task-20 round (`e8208aa2`, on a `git archive` scratch) found th
 
 ## 21. Disposition the findings from task 18's measurement
 
-Found 2026-10-25 by task 18's measurement, outside its question; each is fixed, routed or discarded, after task 18's questions.
+Found 2026-10-25 by task 18's measurement, outside its question; each is fixed, deferred or waived, after task 18's questions.
 
 - [ ] `/configure`'s deny sets refuse `git mv` on Claude (`Bash(git mv *)`, `configure/claude.md:149`), Auggie (`"^git mv "`, `configure/auggie.md:132`) and Antigravity (`command(git mv)`, `configure/antigravity.md:75`), while three active migrations move a tracked file "via `git mv` when the source is tracked" (`constitution-relocate.md:14`, `ductus-rename.md:20`, `govern-dir-consolidate.md:14`, none with a `sunset_after`), and so does the spec-017 hook step (`ductus-procedure.md:272`). An adopter who ran `/configure` before a migration batch meets a denial at each tracked move; OpenCode's deny set lacks it, so there it asks
 - [ ] 032's `data-model.md` (Region 2) copies OpenCode's seed with 12 of today's 19 entries; it points at the registry row instead, or is brought current (a durable contract, so a review refresh)
@@ -598,7 +598,7 @@ Found 2026-10-25 by task 18's measurement, outside its question; each is fixed, 
 - [ ] 007's `spec.md:148` says "Only the additive permission entries seeded earlier in the run remain" after a halt before the archive fetch; since task 18's question 1 (a) the seed also removes retired entries, so the sentence is no longer exact (found by that round's re-read 1; 007 is `done`, so a fix reopens it)
 - [ ] `target.md:40` and `clarify.md:108` advise running `ductus derive-dependencies --write` by hand on the markdown-only path, a bare `ductus` that `PATH` may not hold (the runtime is reached through `.ductus/bin/ductus`, and `PATH` is never consulted). Fixed in `75da4745` at all six sites the advice stood at (048's review, 2026-10-29): `amend.md:46`, `clarify.md:76`, `target.md:40`, and `framework/reference/clarify.md:11` (where `clarify.md:108` moved), `implement.md:14` and `plan.md:9`, each now `.ductus/bin/ductus derive-dependencies`; left unticked for this task's walker to verify
 
-- **Done when**: each finding above is fixed, routed or discarded with its reason
+- **Done when**: each finding above is fixed, deferred or waived with its reason
 
 ## 22. Decide: ductus's own write primitives can replace the runtime pointer (task 16 (b))
 

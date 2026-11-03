@@ -26,7 +26,7 @@ A project may register a shared constitution under `.ductus/config.toml` `[const
 - Minimal fixture: a shared constitution with markers `§a-b` and `§a-b-c`, and one spec citing both in the qualified form. The test asserting both classify alike is proven to fail against the current resolver before the fix.
 - `resolve-constitutions` returns a `..` sibling path, which `resolve-anchor` refuses today (`parent-directory component ('..') not permitted`).
 - A registered constitution that cannot be read: stays `constitution-unresolved`, or the named document's references become unexamined.
-- A stored discard of an `anchor-resolution` finding whose section was since renamed: falls away once registered documents are judged; what remains is 058's decision matching, with 063's primitive-decided `decision-key` as precedent.
+- A stored waiver of an `anchor-resolution` finding whose section was since renamed: falls away once registered documents are judged; what remains is 058's decision matching, with 063's primitive-decided `decision-key` as precedent.
 - The constitution's Cross-document references bullet says nothing about shared constitutions or unchecked qualified references, and still says "longest-first", which AC2 says never decided a match.
 
 ## Open Questions

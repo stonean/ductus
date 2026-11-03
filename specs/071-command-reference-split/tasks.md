@@ -195,7 +195,7 @@ Blocked on task 9: the change is 067's scenario.
 
 Handoff (2026-10-29). Ask the owner as one decision; (a) is recommended. Then 071's review record (`b540581c`) predates task 21 (`117413d6`), task 23 (reviewed in the `c1cf51ff` records), `d9ac40a3`'s Pi-bridge sentence and this task: re-record it by the reuse rule, carrying its 13 decisions. Re-analyze (tasks.md is stale; last `unexamined`: not-a-live-claim 2, ships-to-adopter 1, root-absent 2). Then the gate: re-measure AC20's table in `plan.md` with `git show HEAD:<path> | wc -c` for each `framework/commands/<cmd>.md` and `framework/reference/<cmd>.md`, stamping the sha; re-run AC18 (`scripts/audit/run-all.sh` after committing) and AC19 (every step of `framework-checks.yml`, `generators.yml` and `runtime.yml`, plus actionlint); verify all 24 criteria individually and tick each with `mark-criterion`. 071's runtime changes ship at 0.60.0 and are breaking, per `plan.md` Runtime.
 
-- **Done when**: the item is fixed, routed, or discarded with the owner's decision written on it
+- **Done when**: the item is fixed, deferred, or waived with the owner's decision written on it
 
 ## 23. Existing adopters' unmaintained constitutions region (task 20's first item, for files already installed)
 

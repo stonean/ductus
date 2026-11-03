@@ -220,7 +220,7 @@ The audit writes no file. Each finding is reported as one line under the spec it
 
 The `{one-line summary}` describes the gap concretely (e.g., `does not name a password hashing algorithm`, `does not specify an output encoding strategy`). Leading each line with the rule ID groups related findings and gives the adopter a stable handle for cross-referencing.
 
-**Nothing is written to `specs/inbox.md`.** The inbox holds the todos a person logs, and no command writes a finding there, because it is the one destination no gate reads (`.ductus/constitution.md` §brownfield-inbox, Finding dispositions). A finding here names its spec, and `/{project}:analyze` applies the same rule's Verification trigger to a spec whenever it runs, so the gap comes back — as a finding that run must fix or route, since a MUST-tier gap is blocking and a blocking finding is never discarded; a SHOULD-tier gap may also be discarded with its reason — when the spec is next worked on. The accepted cost is that a legacy spec nobody touches is never re-checked; that is the brownfield stance of letting adoption spread through the areas being worked on. An adopter who wants a particular gap tracked sooner records it with `/{project}:log`.
+**Nothing is written to `specs/inbox.md`.** The inbox holds the todos a person logs, and no command writes a finding there, because it is the one destination no gate reads (`.ductus/constitution.md` §brownfield-inbox, Finding dispositions). A finding here names its spec, and `/{project}:analyze` applies the same rule's Verification trigger to a spec whenever it runs, so the gap comes back — as a finding that run must fix or defer, since a MUST-tier gap is blocking and a blocking finding is never waived; a SHOULD-tier gap may also be waived with its reason — when the spec is next worked on. The accepted cost is that a legacy spec nobody touches is never re-checked; that is the brownfield stance of letting adoption spread through the areas being worked on. An adopter who wants a particular gap tracked sooner records it with `/{project}:log`.
 
 Because nothing is written, re-triggering the audit — after deleting and re-installing a rule file — reports the same findings again and changes no file.
 
@@ -384,7 +384,7 @@ If the **Security Audit (brownfield)** section ran and produced one or more find
 Security audit: {N} gap(s) in {M} existing spec(s) — nothing was written.
   {NNN-feature}
     {Rule ID}: {affected artifact path} does not address — {one-line summary}
-Each gap resurfaces when /{project}:analyze next runs on its spec. Run it on a spec to fix or route its gaps now (a SHOULD-tier gap may also be discarded), or /{project}:log one to track it.
+Each gap resurfaces when /{project}:analyze next runs on its spec. Run it on a spec to fix or defer its gaps now (a SHOULD-tier gap may also be waived), or /{project}:log one to track it.
 ```
 
 One `{NNN-feature}` group per spec with a finding, each listing every finding for that spec — no cap, because a truncated list reads as the complete one. Omit the block when:

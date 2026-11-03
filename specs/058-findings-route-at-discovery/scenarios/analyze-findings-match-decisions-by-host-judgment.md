@@ -25,7 +25,7 @@ Found by the 058 review (2026-09-25).
 - **A deterministic message** matches its stored key exactly, so the host's judgment and byte equality agree.
 - **A missed match** costs one repeated question and prunes the old decision. It never waives a finding silently, because an unmatched decision is pruned rather than applied to something else. The review side makes the same trade.
 - **Under `ductus exec`** nothing is matched, as now.
-- **A `decision-key` naming no stored decision** is used as the finding's key. It becomes a new decision if the finding is routed or discarded.
+- **A `decision-key` naming no stored decision** is used as the finding's key. It becomes a new decision if the finding is deferred or waived.
 
 ## Open Questions
 

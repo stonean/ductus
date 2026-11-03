@@ -9,6 +9,12 @@ next-criterion: 7
 
 A spec states once that it deliberately departs from a rule, and both `/{project}:analyze` and `/{project}:review` read that decision, so an accepted departure is recorded — what was accepted, by whom, when and why — and is never indistinguishable from a rule the spec satisfies.
 
+> **Signpost from [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
+> *Waived* now names every decision not to address a finding, at any tier,
+> replacing *discarded*, and *deferred* replaces *routed*. Whether a gating
+> analyze finding can be waived stays this spec's question; 076 lets one be
+> deferred, releasing `done` only for work on another spec.
+
 ## Motivation
 
 `/{project}:review` recorded a per-file waiver with `--waive <rule-id> --reason`; `/{project}:analyze` had no counterpart (verified 2026-10-26 at HEAD c0952038). At `/{project}:analyze` each MUST-tier rule whose trigger fired got a semantic assessment, and a failing one joined the Blocking tier; a blocking finding could not be discarded — it was fixed or routed, and `write-analysis` refused the discard; `decisions:` held only `routed` and `discarded`; and the record kept tier counts and findings, never which rules were assessed or passed. Whether a spec's stated departure passed therefore rested on the assessing agent's judgment, which left no record of what was accepted, by whom or why, and could flip on the next run.
@@ -35,7 +41,7 @@ A departure is stated once, in the spec, as a structured entry under `## Applica
 ## Open Questions
 
 - At review, does a departure entry waive its rule for every file in scope, or per file — given review anchors a waiver per rule and file and records a rule against extending that anchor?
-- Is a decided waiver a disposition of a blocking finding — overturning 058's edge case that discarding one "would add a bypass the gate does not have" — or a state settled before any finding is produced, so the rule is assessed as waived and never as failing?
+- Is a decided waiver a disposition of a blocking finding — overturning 058's edge case that waiving one "would add a bypass the gate does not have" — or a state settled before any finding is produced, so the rule is assessed as waived and never as failing?
 - Does a decided departure from a MUST revisit 008 Resolved Q1, which declined an acknowledge tier in favour of a SHOULD whose rationale asks for a recorded deviation, or is it distinct from a severity tier?
 - How is `decided-by` derived rather than typed, and may a governing document's advance decision (a shared constitution's pre-decided departures) stand in for a per-spec operator decision?
 - Does `analysis.md` keep a count of waived rules, beyond review's model of a `waivers:` list and a Waived findings body?

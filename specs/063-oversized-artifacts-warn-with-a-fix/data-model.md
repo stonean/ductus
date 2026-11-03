@@ -64,10 +64,10 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | `kind` | `ArtifactKind` | `spec`, `plan`, `tasks`, `data-model`, or `scenario`. |
 | `bytes` | integer | The file's length on disk. |
 | `pages` | integer | `ceil(bytes / threshold)`; at least 2 for every entry here. |
-| `fixes` | list of `ArtifactFix` | The fixes for this kind, in the spec's table order. Never includes a discard. |
+| `fixes` | list of `ArtifactFix` | The fixes for this kind, in the spec's table order. Never includes a waiver. |
 | `warning` | string | The rendered one-line warning the commands print. |
 | `message` | string | The `artifact-size` finding message, in the format below. |
-| `decided` | boolean | A stored discard still covers this subject (the decided rule below). Always `false` unless `decisions` is `read`. |
+| `decided` | boolean | A stored waiver still covers this subject (the decided rule below). Always `false` unless `decisions` is `read`. |
 | `decision-key` | string, optional | The stored decision's key. Present exactly when `decided` is `true`. |
 
 ## `ArtifactFix`
@@ -96,10 +96,10 @@ Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that ap
 
 ## The decided rule
 
-A subject is decided when the `decisions:` list holds a decision with outcome `discarded` whose key:
+A subject is decided when the `decisions:` list holds a decision with outcome `waived` whose key:
 
 1. carries the family `artifact-size` before its ` — ` separator, and
 2. parses under the message format above to the **same path** as the subject, and
 3. records a page count **greater than or equal to** the subject's current `pages`.
 
-The first such decision in list order supplies `decision-key`. A key that does not parse under the format is ignored, never matched. A routed decision never decides a subject: only a discard records that the operator accepted the size.
+The first such decision in list order supplies `decision-key`. A key that does not parse under the format is ignored, never matched. A deferred decision never decides a subject: only a waiver records that the operator accepted the size.

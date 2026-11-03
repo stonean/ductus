@@ -10,7 +10,7 @@ The command's own procedure — the numbered runtime steps — is [`framework/co
 
 Detection is read-only; what it finds is then decided. Three kinds of write are in scope and no others:
 
-1. **Dispositions** — after detection, every live finding is **fixed**, **routed**, or **discarded** with its reason, and each fix or route is written only after the operator confirms it. A fix is a mechanical edit to an artifact the run audited. A route writes the finding where a gate will read it — a task, a scenario, a spec edit, a new spec, or a rule file the project owns — chosen by `/groom`'s decision tree, reopening a `done` spec it lands in. A hard-fail or blocking finding cannot be discarded. When anything was written, detection runs again, so the record describes the state the dispositions left. With nobody to confirm (`ductus exec`), nothing is written and each finding is recorded as undispositioned. Nothing is ever written to the inbox.
+1. **Dispositions** — after detection, every live finding is **fixed**, **deferred**, or **waived** with its reason, and each fix or deferral is written only after the operator confirms it. A fix is a mechanical edit to an artifact the run audited. A deferral names the work that will address the finding: pipeline work where a gate will read it — a task, a scenario, a spec edit, a new spec, or a rule file the project owns — chosen by `/groom`'s decision tree, reopening a `done` spec it lands in; an external work-item ID; or both. A hard-fail or blocking finding cannot be waived, and its deferral releases `done` only when it names work on another spec. When anything was written, detection runs again, so the record describes the state the dispositions left. With nobody to confirm (`ductus exec`), nothing is written and each finding is recorded as undispositioned. Nothing is ever written to the inbox.
 2. **Record** — `specs/{feature}/analysis.md`, written whole on **every** run, including a clean one and one whose scope was empty. Its frontmatter is the record; its body is a fixed section skeleton. `spec.md` never carries the record.
 3. **Revert** — with `--fix` only, a `done` spec whose review state or scenario questions have drifted is set back to `in-progress`, with a non-silent notice naming the spec and what drifted. Disposition drift is reported, never reverted.
 
@@ -27,8 +27,8 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Spec integrity | Blocking | Acceptance criteria present and non-placeholder; open questions consistent with status; no implementation code |
 | Artifact completeness | Blocking | `plan.md` / `tasks.md` present at `planned` and later |
 | Plan and task consistency | Blocking | Plan cites the spec and lists decisions and files; tasks are numbered and carry done-when conditions |
-| Plan record | Advisory | Each `plan.md` section outside the design record — the plan template's own `##` sections — on a spec at `planned` or later, reported even when a stored discard decides it, so the discard is matched rather than expired; `/prune` moves such a section's durable pieces home and removes it |
-| Artifact size | Advisory | Each of `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and every scenario larger than `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), which an agent may not read in one call; the finding names the fixes for its kind and, on a `done` spec, which reopen it, and a stored discard holds until the file grows into another read page |
+| Plan record | Advisory | Each `plan.md` section outside the design record — the plan template's own `##` sections — on a spec at `planned` or later, reported even when a stored waiver decides it, so the waiver is matched rather than expired; `/prune` moves such a section's durable pieces home and removes it |
+| Artifact size | Advisory | Each of `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and every scenario larger than `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), which an agent may not read in one call; the finding names the fixes for its kind and, on a `done` spec, which reopen it, and a stored waiver holds until the file grows into another read page |
 | Rule integrity and citations | Blocking / advisory | Cited rule IDs resolve; deprecated citations and non-firing `## Applicable Rules` entries are advisory |
 | Review state drift | Blocking | A `done` spec whose `review.md` record is missing a run or reports `blocking: true` |
 | Analyze state drift | Blocking | A `done` spec whose `analysis.md`, as this run writes it, reports `blocking: true` |
@@ -44,7 +44,7 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Project-level consistency | Advisory | Generator drift, anchor resolution, command frontmatter, orphaned references, un-folded branch specs |
 | Unexamined targets | Informational | Every target a family could not examine — see [Unexamined](#unexamined) |
 
-Advisory families introduced with a **published promotion criterion** (grounding, Applicable-Rules citations, both decision-drift checks) stay advisory until that criterion is met; the criteria live with each check in `framework/reference/analyze.md`. The plan record carries none and stays advisory: its heading set is a detector, not a verdict, so a design section under another heading fires too, and one stored discard with its reason settles it. Artifact size carries none either and stays advisory for the same kind of reason: bytes are a heuristic about a host's read cap the check cannot see.
+Advisory families introduced with a **published promotion criterion** (grounding, Applicable-Rules citations, both decision-drift checks) stay advisory until that criterion is met; the criteria live with each check in `framework/reference/analyze.md`. The plan record carries none and stays advisory: its heading set is a detector, not a verdict, so a design section under another heading fires too, and one stored waiver with its reason settles it. Artifact size carries none either and stays advisory for the same kind of reason: bytes are a heuristic about a host's read cap the check cannot see.
 
 ## Severity tiers
 
@@ -78,22 +78,23 @@ unexamined-by-reason:
 blocking: false
 dispositions:
   fixed: 1
-  routed: 1
-  discarded: 2
+  deferred: 1
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "grounding — plan.md states the retry budget without a citation"
-    outcome: routed
+    outcome: deferred
     target: specs/047-analyze-findings-durability/tasks.md
+    task: "3"
     decided-at: 2026-09-06T19:02:22Z
     decided-by: dev@example.com
   - key: "link-adjacent-drift — spec.md calls 046 an open question; 046 has none"
-    outcome: discarded
+    outcome: waived
     reason: "Historical prose in a Resolved Questions entry"
     decided-at: 2026-09-06T19:02:22Z
     decided-by: dev@example.com
   - key: "criterion-labels — AC7 appears twice"
-    outcome: discarded
+    outcome: waived
     reason: "The duplicate is in a quoted example block"
     decided-at: 2026-09-06T19:02:22Z
     decided-by: dev@example.com
@@ -105,15 +106,15 @@ decisions:
 | `spec` | Feature slug | The feature the record belongs to, mirroring `review.md`'s |
 | `last-run` | ISO-8601 UTC timestamp, or `null` | When the analysis ran. A **missing `analysis.md`** is the never-analyzed state; a `null` here says the same thing for a record that exists |
 | `analyzed-against` | Commit sha, or `null` | The HEAD sha at the time of the run — **provenance**, not the staleness basis |
-| `hard-fail` | Integer | Hard-fail findings: malformed frontmatter and missing required fields |
-| `blocking-findings` | Integer | Blocking-tier findings |
+| `hard-fail` | Integer | Outstanding hard-fail findings: malformed frontmatter and missing required fields, less those whose deferral names work on another spec |
+| `blocking-findings` | Integer | Outstanding blocking-tier findings, less those whose deferral names work on another spec |
 | `advisory` | Integer | Advisory-tier findings. Recorded, **never** gated on |
 | `unexamined` | Integer | Targets the run could not examine — the size of the informational skipped set |
 | `unexamined-by-reason` | Map of `reason: count` | The `unexamined` total broken out over a closed reason set. Omitted entirely when empty |
 | `analyzed-digest` | Map of `path: sha256` | Per-path digest of every `.md` under the feature **as this run read it**, keyed within the feature directory, `review.md` included and this file excluded whole. The staleness basis. Omitted when empty, which only a pre-digest record can be |
 | `analyzed-unreadable` | List of paths | Subjects that exist but could not be read when the digest was taken, recorded rather than digested as empty. Omitted when empty |
-| `dispositions` | Map of four integers | What the run did with its findings, in every tier: `fixed`, `routed`, `discarded`, `undispositioned`. **Derived**; always written. Absent means the record predates dispositions |
-| `decisions` | List | Stored routed and discarded decisions, keyed `{family} — {message}`, each with its outcome, target or reason, `decided-at`, and `decided-by`. Omitted when empty |
+| `dispositions` | Map of four integers | What the run did with its findings, in every tier: `fixed`, `deferred`, `waived`, `undispositioned`. **Derived**; always written. Absent means the record predates dispositions. A record written before spec 076 carries `routed` and `discarded`, read as `deferred` and `waived` |
+| `decisions` | List | Stored deferred and waived decisions, keyed `{family} — {message}`, each with its outcome, its work reference (`target`, `task`, `work-item`) or `reason`, `decided-at`, and `decided-by`. A deferral of a hard-fail or blocking finding that does not release `done` also carries `gating: true`. Omitted when empty |
 | `blocking` | Boolean | **Derived**, never supplied: `true` when `hard-fail` or `blocking-findings` exceeds zero |
 
 The file is rewritten whole on every run, so the record and the report below it can never disagree. `spec.md` is left alone entirely — it carries neither this record nor the review one, and a residual block there is reported as a violation rather than tolerated under the open-schema rule. A spec whose frontmatter does not parse gets **no** record: that spec is one the analysis would have hard-failed on, and writing a clean record into it would invert the whole mechanism.
@@ -162,13 +163,13 @@ Derived by the runtime from `hard-fail` and `blocking-findings`, never accepted 
 
 ### `dispositions`
 
-What the run did with its findings — `fixed`, `routed`, `discarded`, `undispositioned` — beside the tier counts that say how many there are. A run that found five findings and decided none must not be byte-identical to one that decided all five. It is **derived**: `undispositioned` is the live tier total less the live findings routed or discarded, so a finding the caller did not itemize counts as undispositioned and can never read as handled. `fixed` counts findings gone from the re-check, so it sits outside the tier totals.
+What the run did with its findings — `fixed`, `deferred`, `waived`, `undispositioned` — beside the tier counts that say how many there are. A run that found five findings and decided none must not be byte-identical to one that decided all five. It is **derived**: `undispositioned` is the live tier total less the live findings deferred or waived, so a finding the caller did not itemize counts as undispositioned and can never read as handled. `fixed` counts findings gone from the re-check, so it sits outside the tier totals.
 
 The completion gate does not read `undispositioned`: the map does not split its counts by tier, and only a gating finding holds `done`, so an undecided advisory finding is recorded and does not block, and the advisory tier is not promoted. A record with **no** map predates dispositions, and absence is not zero — the gate blocks an `in-progress` spec on it until the command re-runs, while on a `done` spec it is not drift.
 
 ### `decisions`
 
-Detection is stateless, so a finding decided in one run fires again in the next — a routed one until its routed work lands. Each routed or discarded decision is stored here, keyed `{family} — {message}`. A later run matches each finding to the stored decision describing the same issue, by judgment rather than byte equality since many messages are worded by the host, and counts it under the stored outcome without asking again. A stored decision whose finding no longer fires is pruned. A run that could not read a target — a reason in the **Could not be read** class of `analyze.md`'s [Unexamined targets](../framework/reference/analyze.md#unexamined-targets-informational) — or could not resolve a registered shared constitution retains it instead, since its finding may simply not have been looked at. A reason **Excluded by construction** does not count: it recurs on every run, and counting it would keep the decision forever. A reworded finding the host does not match to its stored decision is a new finding. A list that does not parse is reported by `validate-frontmatter`, and the writer refuses to write over it rather than read it as empty.
+Detection is stateless, so a finding decided in one run fires again in the next — a deferred one until its work lands. Each deferral or waiver is stored here, keyed `{family} — {message}`. A later run matches each finding to the stored decision describing the same issue, by judgment rather than byte equality since many messages are worded by the host, and counts it under the stored outcome without asking again. A stored decision whose finding no longer fires is pruned. A deferral whose named work is complete — its task checked, or the spec it names `done` — while its finding still fires **lapses**: the run asks for a new disposition, and a gating finding blocks again. A deferral naming only an external work item retires only when its finding stops firing, since the pipeline never reads the tracker. A run that could not read a target — a reason in the **Could not be read** class of `analyze.md`'s [Unexamined targets](../framework/reference/analyze.md#unexamined-targets-informational) — or could not resolve a registered shared constitution retains it instead, since its finding may simply not have been looked at. A reason **Excluded by construction** does not count: it recurs on every run, and counting it would keep the decision forever. A reworded finding the host does not match to its stored decision is a new finding. A list that does not parse is reported by `validate-frontmatter`, and the writer refuses to write over it rather than read it as empty.
 
 ## The report body
 
@@ -182,6 +183,7 @@ rendered whole on every run and never appended to:
 ## Hard failures
 ## Blocking findings
 ## Advisory findings
+## Deferred to other specs
 ## Unexamined targets
 ## Fixed in this run
 ```
@@ -190,10 +192,15 @@ Each tier section lists its **live** findings, one per line, beside its
 disposition:
 
 ```text
-- {family} — {message} — `{path}` — **routed** to `{target}`
-- {family} — {message} — `{path}` — **discarded**: {reason}
+- {family} — {message} — `{path}` — **deferred** to `{target}` task {n} and work item `{id}`
+- {family} — {message} — `{path}` — **waived**: {reason}
 - {family} — {message} — `{path}` — **undispositioned**
 ```
+
+A deferral names whichever of its target, task and work item it carries. A
+hard-fail or blocking finding whose deferral names work on another spec is
+listed under `## Deferred to other specs` instead of its tier, and the tier
+counts leave it out.
 
 When a tier's count exceeds the findings the writer was handed, the section
 adds `{n} finding(s) not itemized — counted as undispositioned.`, so the body
@@ -203,18 +210,18 @@ the findings the run fixed, which the re-check no longer produces.
 **No section carries a `- [ ]` item**, and that is enforced mechanically
 rather than by convention: any checkbox marker a finding's text arrives with
 is stripped rather than trusted not to be there. A checkbox is what would turn
-this report into a second triage queue; a routed finding's work lives in the
-artifact it was routed to, not here.
+this report into a second triage queue; a deferred finding's work lives in the
+artifact or work item its deferral names, not here.
 
 ## Reading a record
 
-Taking the example block above: the run examined the spec at `15845324` on 2026-09-06 and found nothing that gates — `blocking: false`, so the completion gate passes on this spec. Three advisory findings stand, and every one is decided: one was routed to a task on the spec, whose checkbox holds `done` until the task lands, and two were discarded with their reasons, so `undispositioned: 0`; one left undecided would be counted there and still not hold `done`. A fourth was fixed in the run and is gone from the counts. Four targets went unexamined, and the breakdown settles what that means: all four are `root-absent`, an exclusion by construction, so nothing is owed and the clean result is as clean as it looks. Had those four been `artifact-unreadable` or `target-missing`, the same `unexamined: 4` would have meant the opposite — a gap in what the run could see, on a spec whose record otherwise reads as verified.
+Taking the example block above: the run examined the spec at `15845324` on 2026-09-06 and found nothing that gates — `blocking: false`, so the completion gate passes on this spec. Three advisory findings stand, and every one is decided: one was deferred to task 3 on the spec, whose checkbox holds `done` until the task lands, and two were waived with their reasons, so `undispositioned: 0`; one left undecided would be counted there and still not hold `done`. A fourth was fixed in the run and is gone from the counts. Four targets went unexamined, and the breakdown settles what that means: all four are `root-absent`, an exclusion by construction, so nothing is owed and the clean result is as clean as it looks. Had those four been `artifact-unreadable` or `target-missing`, the same `unexamined: 4` would have meant the opposite — a gap in what the run could see, on a spec whose record otherwise reads as verified.
 
 ## Where the record is read
 
 - **The completion gate.** `check-review-gate` runs the analyze checks after every review check, because the pipeline is `review → analyze → done` and naming the later gate for an earlier defect sends a contributor to the wrong command. An absent `analysis.md` or a `null` `last-run` blocks with *"spec has not been analyzed"*; `blocking: true` blocks naming both counts, with the advisory and unexamined counts on the guidance line. **There is no grandfather clause here, and there must not be one** — this gate fires at the moment a spec is being completed, so the record is always writable.
 - **Freshness, after presence.** A third check asks whether the recorded analysis still describes the current artifacts, by comparing **content rather than commits**: the record carries `analyzed-digest`, a per-path digest of every `.md` under the feature (`review.md` included) as the run read it from disk, with `analysis.md` itself excluded. Without this check, `review → fix → done` passed on an analysis from before the fixes — the presence check asks only whether `last-run` is set. `analyzed-against` is provenance, not the basis: it records where `HEAD` was, while analyze reads the working tree, so comparing it blocked records whose analysis had genuinely read the current content the moment that content was committed. It is still read for the mechanical-sweep rename exemption, which needs two trees. `/{project}:review` renders the same state as a row in its own summary from the same comparison, so the row and the gate cannot disagree. A record with no digest reads undeterminable — not current, not stale — and clears on the next run. The review record carries `reviewed-digest` and works identically over its own narrower subject set (`scenarios/*.md`, `data-model.md`), which is why the gate's old notice about durable contracts it could not examine is gone: the comparison reads the working tree, so that state is answered rather than reported.
-- **The disposition checks, last.** After every other review and analyze check, the gate blocks on a record — `review.md` or `analysis.md` — with no `dispositions:` map, which predates dispositions, naming the command to re-run, and then on an outstanding gating finding — in practice an unwaived SHOULD, since, for a record the runtime writes, every other gating count blocks earlier. There is no exemption for the missing map, for the same reason there is no grandfather clause above.
+- **The disposition checks, last.** After every other review and analyze check, the gate blocks on a record — `review.md` or `analysis.md` — with no `dispositions:` map, which predates dispositions, naming the command to re-run, and then on an outstanding gating finding — in practice a SHOULD neither waived nor deferred to another spec's work, since, for a record the runtime writes, every other gating count blocks earlier. The message names each deferral that holds `done` — one to this spec's own task, or to an external work item alone — with the work it names. There is no exemption for the missing map, for the same reason there is no grandfather clause above.
 - **The `disposition-drift` check family.** A `done` spec whose `review.md` or `analysis.md` records undispositioned findings is reported, as an advisory finding; `--fix` does not revert it: an undecided observation or advisory finding does not hold `done`, and a gating one already surfaces as review-state or analyze-state drift. `analysis.md` is judged from the record the run itself writes, not the one it replaces, so a run that decides every finding clears its own drift. A map-less record on a `done` spec is not drift: it predates the field.
 - **The analyze-state drift check.** The counterpart to review-state drift: a `done` spec whose analysis reports `blocking: true` has drifted. Since spec 058 it is judged from the record the run writes, after recording it, never from the record the run replaces, whose finding could never clear. A `done` spec with no `analysis.md` at all predates the record; the run writes one, and the CI template's record check and `/audit` Family 37 bound the population that has none.
 - **`/audit` Family 37.** Counts the part of that population that has a `review.md`, against a committed high-water mark. A `done` spec with neither artifact is exempt from the CI check too, but Family 37 counts it separately and does not hold it to the mark, because it needs a review first. The mark keeps the exemption bounded and shrinking rather than a silent permanent hiding place. The set cannot legitimately grow: the completion gate has no grandfather clause, so growth means it was bypassed. The backlog is not backfillable — an analyze record asserts *that a run happened*, which nothing on disk substantiates, and writing one for a run that did not happen is the fabrication the record exists to prevent.

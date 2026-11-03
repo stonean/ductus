@@ -13,7 +13,7 @@ section: "Shape of the setting"
 - **Measured on load.** `resolve-constitutions` measures each `loaded` document's bytes on disk against `[artifacts] read-size-bytes`, 50,000 by default. It adds to the document's record the size, whether it is over the limit, and a warning the runtime words: the alias, the size, the limit, and a fix that is a cut in the repository its `repo` names. The result carries the threshold it measured against.
 - **Only when something is registered.** With no `[constitutions.*]` entry, nothing new is read and the result is unchanged, so AC1 holds.
 - **Two callers stay unmeasured.** `write-review` and `write-analysis` resolve constitutions through the same function, and they keep the resolution without measurement. So a malformed `read-size-bytes` halts `/{project}:target` but never newly halts either of them.
-- **`/{project}:target` step 4** shows each loaded source's size beside its alias, and the warning for one over the limit. It never blocks. Nor is the report an `/{project}:analyze` finding, since nothing in the project can fix, route or discard it.
+- **`/{project}:target` step 4** shows each loaded source's size beside its alias, and the warning for one over the limit. It never blocks. Nor is the report an `/{project}:analyze` finding, since nothing in the project can fix, defer or waive it.
 - `data-model.md` records the new fields.
 - A runtime test proves that a fixture constitution one byte over the limit is named as over it, with its owning repository as the fix; that one at the limit is not; and that the run continues. The test fails with the measurement removed.
 

@@ -8,6 +8,16 @@ next-criterion: 6
 
 The runtime primitives that record a spec's two audits — `/{project}:review` in `review.md` and `/{project}:analyze` in `analysis.md` — and the pre-`done` gate that reads them. The parser, the interpreter, the protocol and the shared surfaces these primitives build on are [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md)'s; the record schema itself is the constitution's (§text-first-artifacts, Audit records). The argument and result shapes are in [data-model.md](data-model.md).
 
+> **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
+> `write-review` and `write-analysis` record a deferral's work (`target`,
+> `task`, `work-item`) and its derived `gating`, refuse a deferral that names
+> no work or work that does not exist, and leave a gating finding deferred to
+> another spec's work out of the counts. `process-decisions` returns `lapsed`
+> for a deferral whose work is complete while its finding still fires, and
+> `check-review-gate`'s last check names each deferral that holds `done`. The
+> `dispositions:` map counts `deferred` and `waived` where it counted `routed`
+> and `discarded`. [data-model.md](data-model.md) records the renamed keys.
+
 ## Motivation
 
 022's data model had reached 99,953 bytes against a 50,000-byte read size, and trimming could not close the gap: measured by eight-word overlap, only 2 KB of its prose repeated another file. Its content was contract. The primitives that write and judge the audit records were one of its two largest slices with a single subject, so they became a spec of their own.

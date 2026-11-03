@@ -78,7 +78,7 @@ A runtime check measures each of the four files' bytes on disk against `[artifac
 
 - **The shipped pre-commit hook** refuses a commit that grows a file already over its limit, or takes one past it: the staged copy is over the limit and larger than the copy at `HEAD`, or has no copy at `HEAD`. A commit that leaves an over-limit file the same size or smaller passes, so an oversized file shrinks over time and never blocks unrelated work.
 - **`/analyze`** reports an over-limit file as an advisory finding naming `/prune --project`.
-- **`/target`** reports each loaded shared constitution's bytes on disk beside its alias, and names one over `read-size-bytes` as over its limit, with the fix in the repository that owns it. That report never blocks and is never an `/analyze` finding, since nothing in the project can fix, route or discard it.
+- **`/target`** reports each loaded shared constitution's bytes on disk beside its alias, and names one over `read-size-bytes` as over its limit, with the fix in the repository that owns it. That report never blocks and is never an `/analyze` finding, since nothing in the project can fix, defer or waive it.
 
 ## `/prune` reduces the project files
 

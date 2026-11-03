@@ -237,6 +237,18 @@ it was the copy every gate actually read.
 > in a `decisions:` list beside `waivers:`. The pre-done gate blocks an
 > `in-progress` spec while the record has no map at all; an undecided
 > observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`). [data-model.md](data-model.md) records both fields.
+>
+> **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
+> A MUST or SHOULD violation is fixed, waived or deferred. A waiver means it
+> will not be fixed, with its reason, and names no future work, so a waiver
+> carries no ticket. `/ductus:review --defer <rule-id>` defers it to its work —
+> `--target` (with `--task`), `--work-item`, or both — stored under
+> `decisions:` keyed `rule {rule-id} at {file}`. One deferred to another spec's
+> work leaves the counts and renders under **Deferred findings**; one deferred
+> to this spec's own task, or to a work item alone, stays counted, carries
+> `gating: true`, and still holds `done`. The `dispositions:` map counts
+> `deferred` and `waived` where it counted `routed` and `discarded`.
+> [data-model.md](data-model.md) records both.
 
 When any waiver's `file` no longer exists or `rule` is no longer triggered
 at that location, the waiver is dropped on the next `/ductus:review` run and

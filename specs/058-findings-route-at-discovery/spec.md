@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 020-code-review, 022-deterministic-runtime, 047-analyze-findings-durability, 050-constitution, 057-analyze-artifact-and-record-relocation]
 cross-spec-impact:
   - 008-security-rules
@@ -16,9 +16,20 @@ next-criterion: 36
 
 Every finding `/{project}:review`, `/{project}:analyze`, or
 `/{project}:implement` produces is proposed exactly one disposition: fixed,
-routed to an artifact the `done` gate reads, or discarded with its reason
+deferred to the work that will address it, or waived with its reason
 recorded. A gating one must have one before its spec can reach `done`. `specs/inbox.md` stops being a place findings are
 sent. It holds only the todos a person captures with `/{project}:log`.
+
+> **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
+> *Routed* is now *deferred* and *discarded* is now *waived*, in this body, in
+> both records' `dispositions:` maps and in stored outcomes, which still read
+> the old names. A deferral names its work: pipeline work the groom tree
+> chooses, an external work-item ID, or both. A gating finding — a review MUST
+> or SHOULD violation, or an analyze hard-fail or blocking finding — can be
+> deferred, and its deferral releases `done` only when the work is on another
+> spec. A deferral whose work is complete while its finding still fires lapses,
+> and the finding needs a new disposition. [data-model.md](data-model.md)
+> records the renamed keys, and 076's data model the new fields.
 
 ## Motivation
 
@@ -76,27 +87,28 @@ The three dispositions:
 1. **Fixed.** A chore (mechanical, and adding no durable requirement, per the
    §bug-handling durability test) is fixed in the run. For `/{project}:analyze`
    this includes a mechanical edit to an artifact it audited.
-2. **Routed.** The finding is written to an artifact the pre-`done` gate reads,
-   chosen by the groom decision tree. `groom.md` stays its single canonical
+2. **Deferred.** The finding is deferred to the work that will address it: an
+   artifact the pre-`done` gate reads, chosen by the groom decision tree, an
+   external work-item ID, or both (076). `groom.md` stays its single canonical
    statement, and each command references it rather than restating it:
    - **The spec in hand:** a task on its `tasks.md`, a scenario, or a body edit.
      If it is `done` — a review or analyze run can examine a finished spec — it
-     is reopened `done → in-progress` as below, so the routed work does not sit
+     is reopened `done → in-progress` as below, so the deferred work does not sit
      unchecked on a spec no gate reads.
    - **Another existing spec:** a scenario or body edit on that spec. If it is
      `done`, it is reopened `done → in-progress`, and the confirmation names the
      reopen before it happens, as `/{project}:groom`'s does.
    - **No covering spec:** the run offers to create one through
      `/{project}:specify`'s procedure, with its routing and creation
-     confirmations. A created spec is the route. If the operator declines, the
-     finding is discarded with a reason or left undispositioned; it is never
-     counted as routed to a spec that does not exist.
+     confirmations. A created spec is the deferral's work. If the operator declines,
+     the finding is waived with a reason or left undispositioned; it is never
+     counted as deferred to a spec that does not exist.
    - **A rule the project owns:** the covering rule file is amended. The
      project owns a rule file it authored, or one it has pinned in its config.
      A rule file `/ductus` manages and the project has not pinned is
-     overwritten on the next update, so the finding is discarded with that
+     overwritten on the next update, so the finding is waived with that
      reason.
-3. **Discarded with its reason.** The finding and the reason it is out of scope
+3. **Waived with its reason.** The finding and the reason it is out of scope
    are recorded in the run's own record: `review.md` for a review,
    `analysis.md` for an analysis, and the checked-off disposition task for an
    implementation run.
@@ -111,27 +123,29 @@ The inbox is not a disposition. No command appends to it automatically.
 Findings whose record already gates `done` keep that gate: a review MUST or
 SHOULD violation, and an analyze hard-fail or blocking finding. What changes is
 that none of them is also copied to the inbox, and that `/{project}:analyze`
-may now fix or route them in the same run.
+may now fix or defer them in the same run. A deferral to pipeline work on
+another spec releases this spec's gate, since that spec's gate then holds the
+work (076).
 
 ### Order within a run
 
-Detection runs first and writes nothing. Dispositions follow; each fix or route
+Detection runs first and writes nothing. Dispositions follow; each fix or deferral
 is confirmed with the operator before it writes. If any disposition wrote,
 detection runs again over what changed. Only then is the run's record written,
 and only then is the report rendered.
 
 The record therefore describes the state after dispositions, and a run does not
-make its own record stale. A routed scenario on the spec in hand still marks
+make its own record stale. A scenario a finding is deferred to on the spec in hand still marks
 the review stale, because the review digest covers `scenarios/*.md`. That is
 intended: the scenario is new, unimplemented work, and its task holds the spec
 out of `done` until it is implemented and reviewed.
 
 `analysis.md` records what the re-check found, not which kind of write
 produced it. A finding the re-check no longer produces is recorded as fixed
-(`live: false`), whether a chore removed it or a confirmed route did. A body
-edit on the spec in hand that resolves the finding is the common route of
-that kind. A finding is recorded as routed only while it still fires, because
-its routed work has not landed yet: an open task, a scenario, a spec created
+(`live: false`), whether a chore removed it or a confirmed deferral did. A body
+edit on the spec in hand that resolves the finding is the common deferral of
+that kind. A finding is recorded as deferred only while it still fires, because
+its deferred work has not landed yet: an open task, a scenario, a spec created
 for it. That is also the only state a stored decision exists for, since a
 finding that no longer fires has nothing to match against. `write-analysis`
 refuses any outcome but fixed for a finding gone from the re-check.
@@ -140,8 +154,8 @@ refuses any outcome but fixed for a finding gone from the re-check.
 
 Detection stays read-only. The read-only promise is narrowed to detection:
 after detection, a **fix-and-route step** proposes a disposition for each live
-finding and writes each fix or route only after `gate-confirm`. When the
-operator declines a proposal, the finding is discarded with the operator's
+finding and writes each fix or deferral only after `gate-confirm`. When the
+operator declines a proposal, the finding is waived with the operator's
 reason or left undispositioned. The re-check follows the step, so `analysis.md`
 records the tier counts after dispositions.
 
@@ -178,13 +192,15 @@ finding's message changes.
 A finding left with no disposition is counted in its run's record, and only a
 gating one holds `done` (scenario `findings-cost-in-proportion-to-risk`).
 `check-review-gate`'s last check blocks `in-progress → done` on an outstanding
-review MUST or SHOULD violation, or a hard-fail or blocking analyze finding —
+review MUST or SHOULD violation, or a hard-fail or blocking analyze finding,
+neither waived nor deferred to another spec's work —
 never on a record's `undispositioned` count, which does not split by tier. An
 undecided advisory finding or review observation stays recorded and visible,
 any decision made on it persists, and it does not block, so analyze's advisory checks are
 not promoted to blocking. The check runs after every existing review and
 analyze check, because each of those names a more upstream defect, so in
-practice it is where an unwaived SHOULD binds.
+practice it is where such a SHOULD binds, and its message names each deferral
+that holds `done` with its work (076).
 
 Until that scenario the gate blocked while either record's `undispositioned`
 count was above zero, asking for a decision rather than a fix. Its cost, in
@@ -193,11 +209,11 @@ disposition work that spawned more of it, is that scenario's Context.
 ### Decisions persist across runs
 
 Detection is stateless, so a finding decided in one run fires again in the
-next. That holds for a routed finding as much as a discarded one: a finding
-routed to a scenario or task keeps firing until the routed work lands. Without
+next. That holds for a deferred finding as much as a waived one: a finding
+deferred to a scenario or task keeps firing until its work lands. Without
 a persisted decision, every re-run would ask again for decisions already made,
-and a routed finding would come back undispositioned.
-Each **routed** or **discarded** decision is therefore stored in the record of
+and a deferred finding would come back undispositioned.
+Each **deferred** or **waived** decision is therefore stored in the record of
 the command that made it. A fixed finding needs no entry, because it stops
 firing.
 
@@ -215,12 +231,15 @@ firing.
   decisions and supplies the matching key, rather than relying on the text
   reproducing byte for byte.
 
-Each stored decision carries its outcome, its target (for a route) or reason
-(for a discard), when it was made, and who made it, matching the review waiver
+Each stored decision carries its outcome, its work (for a deferral: a target,
+a task, an external work-item ID) or its reason (for a waiver), when it was
+made, and who made it, matching the review waiver
 shape. A later run that produces a finding matching a stored decision counts
 it under the stored outcome without asking. A stored decision whose finding no
 longer fires is pruned on the next run, as an expired review waiver is. For a
-routed finding, that is the moment the routed work lands. A run that did not
+deferred finding, that is the moment its work lands. A deferral whose named
+work is complete while its finding still fires lapses instead, and the
+finding is asked about again (076). A run that did not
 evaluate a finding's source retains the decision rather than pruning it, as a
 dimension-restricted review retains a waiver. A reworded finding that the
 host does not match to its stored decision is a new finding and is asked about
@@ -229,16 +248,16 @@ again.
 ### `/{project}:review`
 
 Observations are no longer written through to the inbox. Each observation is
-fixed, routed, or discarded with its reason, and the Observations section of
+fixed, deferred, or waived with its reason, and the Observations section of
 `review.md` records the disposition beside the observation. A chore fix is
 confirmed, and the affected passes re-run before the record is written, as
 `--fix` does today. The **Captured issues** section, and the window diff over
 the inbox that fed it, are retired.
 
 An observation about the pipeline's own machinery, rather than the code under
-review, is the case most likely to feed a loop of reopens. Routing it to a
+review, is the case most likely to feed a loop of reopens. Deferring it to a
 `done` spec reopens that spec, whose next review produces the next
-observation. The discard route, with its reason, is the disposition that ends
+observation. The waiver, with its reason, is the disposition that ends
 the loop.
 
 ### `/{project}:implement`
@@ -254,7 +273,7 @@ while working a disposition task (below):
   its body. It is no longer captured to the inbox.
 
 `/{project}:implement` works a disposition task like any other. It fixes the
-finding if it is a chore, routes it with confirmation, or discards it, writing
+finding if it is a chore, defers it with confirmation, or waives it, writing
 the reason onto the task as it is checked off. A non-blocking finding
 surfaced while working it is recorded on that same task, with its own
 outcome, rather than appended as a new one, so disposition work does not spawn
@@ -272,7 +291,8 @@ This keeps each part of the old capture contract:
   disposition happens when the task is worked.
 
 A disposition task is a work item, not the finding's record. Where a finding is
-routed, its lasting record is the scenario or spec edit it lands in. So
+deferred, its lasting record is the scenario or spec edit it lands in, or the
+external work item it names. So
 `tasks.md` still does not become a second capture queue. The cost is that a
 finding unrelated to the spec holds that spec out of `done` until it is
 dispositioned. That is intended: the spec's work surfaced it.
@@ -310,13 +330,13 @@ them.
 `review.md` and `analysis.md` each drop `captured-issues` and carry the same
 two new fields:
 
-- **`dispositions:`** is a map of four counts: `fixed`, `routed`, `discarded`,
+- **`dispositions:`** is a map of four counts: `fixed`, `deferred`, `waived`,
   and `undispositioned`. In `analysis.md` it counts the run's findings; in
   `review.md` it counts observations, since MUST and SHOULD violations keep
   their own counts. The map's name says what is being counted, so a `fixed`
   count beside `must-violations` cannot be read as violations fixed. The gate
   reads only whether the map is present.
-- **`decisions:`** is the list of stored routed and discarded decisions
+- **`decisions:`** is the list of stored deferred and waived decisions
   (§Decisions persist across runs), beside `review.md`'s existing `waivers:`.
 
 A run that found five findings and dispositioned fewer is visible in the
@@ -341,8 +361,8 @@ Reading absence as zero would pass the case this spec exists for: an old run
 whose findings went to the inbox would reach `done` with none of them seen.
 
 Each report body lists
-every finding with its disposition and target: the fixed file, the artifact it
-was routed to, or the discard reason.
+every finding with its disposition and target: the fixed file, the work it
+was deferred to, or the waiver reason.
 [057 — analyze artifact and record relocation](../057-analyze-artifact-and-record-relocation/spec.md)
 defines the `analysis.md` skeleton, and
 [020 — code review](../020-code-review/spec.md) defines `review.md`'s.
@@ -404,26 +424,28 @@ spec's links to it. Each also gets the contract change itself:
 
 ## Edge Cases
 
-- **A finding that already gates `done` cannot be discarded.** An analyze
-  hard-fail or blocking finding is fixed or routed. It keeps blocking until the
-  re-check no longer produces it, because discarding it would add a bypass the
-  gate does not have today. The discard route applies to advisory findings,
-  review observations, and implementation disposition tasks. Review MUST and
-  SHOULD violations keep their existing fix-or-waive model.
+- **A finding that already gates `done` cannot be waived in analyze.** An
+  analyze hard-fail or blocking finding is fixed or deferred. It keeps blocking
+  until the re-check no longer produces it or its deferral names work on
+  another spec, because waiving it would add a bypass the gate does not have
+  today; whether one can be waived is 073's question. A waiver applies to
+  advisory findings, review observations, and implementation disposition
+  tasks. Review MUST and SHOULD violations are fixed, waived, or deferred
+  (076).
 - **A finding that spans the spec in hand and another spec is split.** The part
   the spec in hand owns becomes a task or scenario on it, and the rest is
-  routed on its own.
+  dispositioned on its own.
 - **A chore fix that fails, or turns out not to be mechanical, is not a
-  chore.** The run reverts the attempt and proposes a route or a discard
+  chore.** The run reverts the attempt and proposes a deferral or a waiver
   instead. A chore is never counted as fixed while its fix is not on disk.
-- **A confirmed route whose write fails is undispositioned.** For example,
+- **A confirmed deferral whose write fails is undispositioned.** For example,
   `create-scenario` refuses a slug that already exists. The failure is reported
-  with the finding, and the record never counts a route that did not land.
+  with the finding, and the record never counts a deferral that did not land.
 - **Two findings with the same key in one run get one disposition.** A
   finding's key is the stored `decision-key` the host matched it to, or else
   its own: `{family} — {message}` for an analyze finding, and the text and
   path for a review observation.
-- **A route to a spec that is not `done` does not reopen it.** It follows
+- **A deferral to a spec that is not `done` does not reopen it.** It follows
   `/{project}:amend`'s rules for that status, including amend's own back-edge
   when a body edit lands in a `clarified` or `planned` spec.
 - **The target spec changed status between proposal and write.** The reopen's
@@ -454,14 +476,14 @@ spec's links to it. Each also gets the contract change itself:
 ## Acceptance Criteria
 
 - [x] AC1: `/{project}:log` is the only framework command that invokes `append-inbox`, and no runtime primitive other than `append-inbox` writes an item to `{specs-root}/inbox.md`. A search of `framework/commands/`, `framework/bootstrap/`, and `runtime/src/` finds no other writer.
-- [x] AC2: A `/{project}:review` run with one or more observations appends nothing to the inbox, and `review.md`'s Observations section records each observation with its disposition (fixed, routed with its target artifact, or discarded with its reason).
-- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection proposes one disposition per live finding and performs each fix or route only after `gate-confirm` returns a confirmed decision.
+- [x] AC2: A `/{project}:review` run with one or more observations appends nothing to the inbox, and `review.md`'s Observations section records each observation with its disposition (fixed, deferred with its work, or waived with its reason).
+- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection proposes one disposition per live finding and performs each fix or deferral only after `gate-confirm` returns a confirmed decision.
 - [x] AC4: After the fix-and-route step writes anything, `/{project}:analyze` re-runs detection and writes `analysis.md` from the re-check. `check-review-gate` run immediately afterwards does not report that analysis stale.
 - [x] AC5: A `/{project}:implement` run that surfaces an issue outside the targeted spec captures nothing to the inbox. It appends an unchecked `Disposition out-of-spec finding:` task to the targeted spec's `tasks.md` before continuing the task in hand, and its completion summary lists the appended task.
 - [x] AC6: `review.md`, `analyze.md`, and `implement.md` route findings by referencing the Groom decision tree in `groom.md` rather than restating it, as `specify.md` already does.
-- [x] AC7: A finding routed to an existing `done` spec names the `done → in-progress` reopen in its confirmation prompt, and performs the reopen through `set-status` with `from: done`.
-- [x] AC8: A finding with no covering spec is routed only when the operator creates a spec through `/{project}:specify`'s procedure in the same run. A declined creation leaves the finding discarded with a reason or undispositioned, and the record never counts it as routed.
-- [x] AC9: `review.md` and `analysis.md` frontmatter carry a `dispositions:` map (`fixed`, `routed`, `discarded`, `undispositioned`) and a `decisions:` list in place of `captured-issues`. The constitution's Frontmatter Schema declares each field and its type, and `validate-frontmatter` validates them.
+- [x] AC7: A finding deferred to an existing `done` spec names the `done → in-progress` reopen in its confirmation prompt, and performs the reopen through `set-status` with `from: done`.
+- [x] AC8: A finding with no covering spec is deferred to a spec only when the operator creates one through `/{project}:specify`'s procedure in the same run. A declined creation leaves the finding waived with a reason or undispositioned, and the record never counts it as deferred to that spec.
+- [x] AC9: `review.md` and `analysis.md` frontmatter carry a `dispositions:` map (`fixed`, `deferred`, `waived`, `undispositioned`) and a `decisions:` list in place of `captured-issues`. The constitution's Frontmatter Schema declares each field and its type, and `validate-frontmatter` validates them.
 - [x] AC10: The Captured issues section is removed from `review.md`'s and `analysis.md`'s skeletons. `compute-review-scope` no longer returns its `captured-issues` window, and `diff-cross-spec` no longer returns `inbox-additions` or `inbox-standing`.
 - [x] AC11: The standing inbox row no longer appears in `/{project}:review` or `/{project}:implement` output. `/{project}:status` renders it from `dashboard` on every run, in the four existing states: outstanding count with the oldest item's date, outstanding with age undeterminable, clean, and no inbox file.
 - [x] AC12: The `/ductus` brownfield security audit writes no inbox item. It reports each finding with its spec and points to `/{project}:analyze`.
@@ -478,15 +500,15 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC35: A later `framework/migrations.toml` entry removes the guidance comment, whatever its text, and the template's former placeholder item, only as that exact text, from an adopter's existing inbox that already ran `inbox-guidance-refresh` against a template carrying the comment. It leaves every other item byte-identical and is idempotent.
 - [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history.
 - [x] AC24: Full markdown lint passes across every file the change touches.
-- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — an unwaived review MUST or SHOULD violation, or a hard-fail or blocking analyze finding — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
-- [x] AC26: `/{project}:analyze` runs its fix-and-route step on every invocation without a flag. Under `ductus exec` it writes no fix or route, and records each live finding that matches no stored decision as undispositioned.
+- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — a review MUST or SHOULD violation, or a hard-fail or blocking analyze finding, neither waived nor deferred to another spec's work — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
+- [x] AC26: `/{project}:analyze` runs its fix-and-route step on every invocation without a flag. Under `ductus exec` it writes no fix or deferral, and records each live finding that matches no stored decision as undispositioned.
 - [x] AC27: `/{project}:analyze` reports a `done` spec whose `analysis.md` or `review.md` records undispositioned findings as advisory disposition drift, and `--fix` does not revert it.
 - [x] AC28: `/{project}:analyze --all` groups fix-and-route proposals by spec, and each prompt offers to leave that spec's remaining findings undispositioned.
 - [x] AC29: `check-review-gate` blocks an `in-progress` spec whose `review.md` or `analysis.md` has no `dispositions:` map, and names the command to re-run. A record written before this change that carries `captured-issues` still parses, and `/{project}:analyze` does not report a `done` spec's map-less record as drift.
-- [x] AC30: `/{project}:analyze` offers no discard for a hard-fail or blocking finding. Such a finding is fixed or routed, and it keeps `blocking: true` in the record until the re-check no longer produces it.
-- [x] AC31: A confirmed disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or routed, and the report names the failure beside the finding.
-- [x] AC32: A routed or discarded decision made in one run is stored with its outcome, its target or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
-- [x] AC33: `/{project}:implement` working a disposition task fixes, routes with confirmation, or discards the finding, and checks the task off only once one of the three has happened. A discard writes its reason onto the checked task.
+- [x] AC30: `/{project}:analyze` offers no waiver for a hard-fail or blocking finding. Such a finding is fixed or deferred, and it keeps `blocking: true` in the record until the re-check no longer produces it or its deferral names work on another spec.
+- [x] AC31: A confirmed disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or deferred, and the report names the failure beside the finding.
+- [x] AC32: A deferred or waived decision made in one run is stored with its outcome, its work or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
+- [x] AC33: `/{project}:implement` working a disposition task fixes, defers with confirmation, or waives the finding, and checks the task off only once one of the three has happened. A waiver writes its reason onto the checked task.
 - [x] AC34: A non-blocking finding surfaced while `/{project}:implement` works a disposition task is recorded on that task as a further body item with its own outcome, not appended as a new task, and the task is checked once every finding on it has a disposition; a blocking one becomes its own task.
 
 ## Open Questions

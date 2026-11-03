@@ -19,7 +19,7 @@ Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative
 
 ## Waiver record
 
-One entry per waiver judgment: one rule, waived at one or more files for one reason. Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`, `ticket`.
+One entry per waiver judgment: one rule, waived at one or more files for one reason. Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
 
 ```yaml
 - rule: SEC-BE-014
@@ -89,13 +89,13 @@ reviewed-digest:
 blocking: false
 dispositions:
   fixed: 0
-  routed: 1
-  discarded: 0
+  deferred: 1
+  waived: 0
   undispositioned: 0
 waivers: []                          # omitted entirely when empty
 decisions:                           # omitted entirely when empty
   - key: "convention: retry backoff is hard-coded — `src/retry.ts`"
-    outcome: routed
+    outcome: deferred
     target: specs/020-code-review/scenarios/retry-config.md
     decided-at: 2026-05-10T14:32:00Z
     decided-by: dev@example.com
@@ -118,9 +118,9 @@ decisions:                           # omitted entirely when empty
 | `reviewed-digest` | map of path → sha256 | yes | Per-path digest of the spec's **durable contracts** (`scenarios/*.md` and `data-model.md`) as the run read them. What freshness is computed from. Always written, empty map included — *digest taken over a spec with no durable contracts* must stay distinct from *pre-digest record*, which reports freshness as undeterminable rather than current. Added by 022. |
 | `reviewed-unreadable` | list of strings | no | Durable contracts that exist but could not be read, recorded rather than digested as empty. Omitted when none. |
 | `blocking` | boolean | yes | MUST equal `must-violations > 0`. Derived by `write-review`, never accepted from the caller. Read by `/ductus:implement`, `/ductus:analyze`, the CI template. |
-| `dispositions` | map: `fixed`, `routed`, `discarded`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058. |
+| `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058; 076 renamed `routed` and `discarded`, still read from an older record. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema above is open per §text-first-artifacts. |
-| `decisions` | list of decision records | no | Stored routed and discarded observation decisions, keyed on the observation's rendered line, each with `outcome`, `target` or `reason`, `decided-at`, and `decided-by`. Omitted entirely when empty. Open-schema like `waivers`. Added by 058. |
+| `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
 **Validation severity** (per [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
 **Audit records**, which has declared both records since 057):
@@ -142,7 +142,8 @@ result.
 | `## SHOULD violations (advisory)` | Always (empty when none) |
 | `## Low-confidence findings` | Always (empty when none) |
 | `## Waived findings` | Always (empty when none) |
-| `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, routed with its target, discarded with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
+| `## Deferred findings` | Always (empty when none). MUST and SHOULD violations deferred to pipeline work on another spec, each with its work; they leave the counts. Added by 076 |
+| `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
 | `## Skipped passes` | Always (empty when none) |
 | `## Unexamined governance` | Always (empty when none). Added by 055 |
 
