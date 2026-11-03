@@ -103,7 +103,7 @@ decisions:
 A hard-fail or blocking analyze finding is never stored as `waived`, because
 the writer rejects that outcome for those tiers. A stored `deferred` decision
 for one keeps the finding blocking until the re-check no longer produces it,
-unless its target is work still to do on another spec (076).
+unless its deferral releases it (076).
 
 ## Removed fields
 
@@ -220,7 +220,7 @@ findings sharing a summary apart. A spent section never matches.
 | Variant | When | Message names |
 | --- | --- | --- |
 | `record-predates-dispositions` | An `in-progress` spec's `review.md` or `analysis.md` has no `dispositions:` map | The record, and the command to re-run |
-| `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor deferred to work still to do on another spec, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
+| `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor released by its deferral, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
 
 Both are checked after every existing review and analyze check, in the order
 predates (review, then analysis), then outstanding gating findings (review, then analysis).

@@ -16,7 +16,7 @@ Since this spec, every finding a run produces needs a disposition before `done`.
 
 ## Behavior
 
-- **Only gating findings hold `done`.** Advisory analyze findings and review observations are still recorded, with a disposition whenever one is made. They stop holding `done`: the pre-`done` gate's last check reads only the gating counts — hard-fail and blocking analyze findings and MUST and SHOULD review violations neither waived nor deferred to work still to do on another spec — never a record's `undispositioned`, and every other gate check is unchanged.
+- **Only gating findings hold `done`.** Advisory analyze findings and review observations are still recorded, with a disposition whenever one is made. They stop holding `done`: the pre-`done` gate's last check reads only the gating counts — hard-fail and blocking analyze findings and MUST and SHOULD review violations neither waived nor released by their deferral — never a record's `undispositioned`, and every other gate check is unchanged.
 - **Disposition work does not spawn disposition work.** A non-blocking finding surfaced while working a disposition task is recorded on that task, not appended as a new one.
 - **Only a substantive fix round is re-read.** A review fix round gets an independent re-read only when it changed code or a durable contract; a prose-only round is not re-read. `AGENTS.md`'s fix-round entry says so, within that file's ceiling.
 - **The constitution amendment fits under its size ceiling**, either by removing as many bytes as it adds or by landing after `050-constitution`'s cut.
@@ -27,7 +27,7 @@ Since this spec, every finding a run produces needs a disposition before `done`.
 - **A stored decision for an advisory finding.** It keeps matching and expiring as today; it simply no longer gates.
 - **A disposition task's finding that turns out to be blocking.** It is still recorded as its own task.
 - **Records written before the change.** A record whose `dispositions:` map counts advisory findings as `undispositioned` is read under the new rule and does not block.
-- **A SHOULD waived at review.** A waiver excludes it from `should-violations`, so a waived SHOULD does not hold `done`, nor does one deferred to pipeline work still to do on another spec (076); any other does, whatever the `dispositions:` map counts.
+- **A SHOULD waived at review.** A waiver excludes it from `should-violations`, so a waived SHOULD does not hold `done`, nor does one its deferral releases (076); any other does, whatever the `dispositions:` map counts.
 
 ## Open Questions
 

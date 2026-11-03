@@ -673,8 +673,8 @@ pub struct ReviewFinding {
     /// A deferral of this violation (spec 076): the work that will address
     /// it, as a target, a work item, or both. `fixed` and `waived` are refused —
     /// a violation is waived with `--waive` and fixed by removing it. A deferral
-    /// to work still to do on another spec takes the finding out of this
-    /// spec's counts, since that spec's gate then holds it.
+    /// that releases the violation (`.ductus/reference/review.md` §Deferrals)
+    /// takes it out of this spec's counts.
     #[serde(default)]
     pub disposition: Disposition,
     /// The stored decision the host matched this violation to; absent, its
@@ -831,11 +831,11 @@ pub struct WriteReviewResult {
     /// `review.md`. The path is still reported because a caller identifying
     /// which spec the record belongs to should not have to re-derive it.
     pub spec_path: String,
-    /// MUST violations counted (waived findings, and those deferred to work
-    /// still to do on another spec, excluded).
+    /// MUST violations counted (waived findings, and those their deferral
+    /// releases, excluded).
     pub must_violations: u32,
-    /// SHOULD violations counted (waived findings, and those deferred to work
-    /// still to do on another spec, excluded).
+    /// SHOULD violations counted (waived findings, and those their deferral
+    /// releases, excluded).
     pub should_violations: u32,
     /// Low-confidence findings counted.
     pub low_confidence: u32,
@@ -4381,8 +4381,8 @@ pub enum ReviewGateBlock {
     /// record is always writable at the moment a spec is being completed.
     RecordPredatesDispositions,
     /// An outstanding gating finding no earlier check caught: in practice a
-    /// review SHOULD neither waived nor deferred to work still to do on
-    /// another spec (spec 076). Only gating findings hold `done` (spec 058,
+    /// review SHOULD neither waived nor released by its deferral (spec 076).
+    /// Only gating findings hold `done` (spec 058,
     /// `findings-cost-in-proportion-to-risk`); the `dispositions:` maps'
     /// `undispositioned` counts of advisory findings and observations are
     /// recorded and never block. The name predates that narrowing and is kept

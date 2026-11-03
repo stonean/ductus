@@ -353,8 +353,8 @@ pub(crate) fn tasks_feature<'a>(root: &str, target: &'a str) -> Option<&'a str> 
     dir.file_name()?.to_str()
 }
 
-/// Judge the work a deferral's `target` and `task` name, per the data
-/// model's completion table. A stored target is hand-editable, so the feature
+/// Judge the work a deferral's `target` and `task` name, per the
+/// completion table in `framework/reference/review.md` §Deferrals. A stored target is hand-editable, so the feature
 /// directory it names, and each file read in it — its `spec.md` and
 /// `tasks.md` — are screened before they are opened (`BE-INPUT-004`); one
 /// that resolves outside the project is unreadable.

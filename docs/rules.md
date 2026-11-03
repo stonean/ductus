@@ -8,7 +8,7 @@ A spec says what a feature should do; the rules say what any code is held to reg
 
 They are plain markdown in your project's rule-file directory — the `rules/` directory under your spec root once scaffolded, or [`framework/rules/`](../framework/rules/) here in `ductus`'s own repo — and they are the **only** normative source a review may cite: `/review` is instructed not to invent criteria beyond these files and your `AGENTS.md`. That is what keeps two reviews of the same code from disagreeing, and what makes a finding arguable — every one quotes the rule it came from.
 
-**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed, waived with a recorded reason, or deferred to work still to do on another spec. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed, waived, or deferred to work still to do on another spec.
+**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed, waived with a recorded reason, or deferred where the deferral releases them ([§Deferrals](../framework/reference/review.md#deferrals)). **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed, waived, or deferred where the deferral releases it.
 
 **Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later. A rule that moves to another file takes a new ID there, and its old one is deprecated: still loaded, a citation of it drawing an Advisory finding, until the release its label names removes it. Re-point a citation, and record a waiver again, under the successor the changelog names.
 
@@ -61,7 +61,7 @@ A waiver says the violation stands, with its reason. When it will be fixed later
 /review --defer <rule-id> --target <path> [--task <n>] [--work-item <id>]
 ```
 
-The work is pipeline work (`--target`), an external work-item ID (`--work-item`), or both. Only a deferral to work still to do on another spec releases `done`, because that spec's gate then holds the work; any other — to this spec's own task, to work already complete, or to an external work item alone — is recorded and still holds it. A deferral lapses once its named work is complete while the violation still fires, and the violation needs a new disposition. See **§Deferrals** in [`framework/reference/review.md`](../framework/reference/review.md#deferrals).
+The work is pipeline work (`--target`), an external work-item ID (`--work-item`), or both. A deferral that releases the violation no longer holds the spec out of `done`, because another spec's gate then holds the work; any other deferral is recorded, and the violation still holds `done`. A deferral lapses once its named work is complete while the violation still fires, and the violation needs a new disposition. See **§Deferrals** in [`framework/reference/review.md`](../framework/reference/review.md#deferrals).
 
 ## Writing your own
 

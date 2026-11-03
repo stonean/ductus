@@ -243,10 +243,9 @@ it was the copy every gate actually read.
 > will not be fixed, with its reason, and names no future work, so a waiver
 > carries no ticket. `/ductus:review --defer <rule-id>` defers it to its work —
 > `--target` (with `--task`), `--work-item`, or both — stored under
-> `decisions:` keyed `rule {rule-id} at {file}`. One deferred to work still to
-> do on another spec leaves the counts and renders under **Deferred findings**; one deferred
-> to this spec's own task, or to a work item alone, stays counted, carries
-> `gating: true`, and still holds `done`. The `dispositions:` map counts
+> `decisions:` keyed `rule {rule-id} at {file}`. A violation its deferral releases
+> leaves the counts and renders under **Deferred findings**; any other stays
+> counted, carries `gating: true`, and still holds `done`. The `dispositions:` map counts
 > `deferred` and `waived` where it counted `routed` and `discarded`.
 > [data-model.md](data-model.md) records both.
 

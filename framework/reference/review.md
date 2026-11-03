@@ -309,7 +309,7 @@ dispositions:
 
 ## Deferred findings
 
-<violations deferred to pipeline work still to do on another spec, which leave the counts; `*None.*` when none>
+<violations their deferral releases (§Deferrals), which leave the counts; `*None.*` when none>
 
 ## Observations
 
@@ -575,7 +575,7 @@ records `blocking: true`. This is enforced as follows:
    analyze checks, and — last — the two disposition checks: a `review.md`
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
    finding, which for a record the runtime writes is a SHOULD neither waived
-   nor deferred to work still to do on another spec. The two review checks
+   nor released by its deferral ([Deferrals](#deferrals)). The two review checks
    read the record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 
@@ -768,24 +768,47 @@ and `work-item` as given — the work-item ID byte-identical, and never read.
 The shapes are spec 076's data model. A new deferral's target, and its task in
 that `tasks.md`, must exist.
 
-- **To pipeline work still to do on another spec** — an unchecked task, a
-  scenario or body edit on a spec that is not `done`, or a new spec — the
-  violation leaves `must-violations` and `should-violations` and renders under
-  **Deferred findings**: that spec's gate now holds the work. When the spec is
-  `done`, name the `done → in-progress` reopen in a confirmation and perform it
-  through the set-status primitive with `from: done` before `write-review`
-  runs, as a deferral of an observation does. Work already complete — a
-  checked task, a `done` spec left closed — releases nothing, since no gate
-  holds it.
-- **To this spec's own work, to a rule file, or to an external work item alone,** the
-  violation stays in its section with a `**Deferred**` line and still holds
-  `done`. Its decision carries the derived `gating: true`, and
-  `check-review-gate` names it with its work where it blocks. No gate reads an
-  external tracker, so a work item alone never releases a violation.
+**When a deferral releases a gating finding.** This is its one full
+statement: wherever else a deferral is said to _release_ a finding, it is in
+this sense. A gating finding — a review MUST or SHOULD
+violation, or an analyze hard-fail or blocking finding — is **released** from
+its spec's gate when its deferral names pipeline work on another spec that is
+still to do: an unchecked task, a scenario or body edit on a spec that is not
+`done`, or a new spec. That spec's gate then holds the work. Any other
+deferral releases nothing, and the finding still holds `done`: one to this
+spec's own work, to a rule file, to an external work item alone — no gate
+reads an external tracker — or to work that is complete or cannot be read.
 
-A deferral retires when its finding stops firing. When its task is checked, or
-the spec it names is `done`, while the finding still fires, `process-decisions`
-reports it **lapsed**: the host drops it with the expired decisions, and the
+The named work is **complete** when:
+
+| Target | Complete when |
+| --- | --- |
+| A `tasks.md` with a task | Every checkbox of that task — each subtask, and a done-when written as a checkbox — is checked, or the task or the file is absent |
+| A `tasks.md` without a task (a record written before spec 076) | The owning spec is `done`, or absent |
+| A scenario, a `spec.md`, or a feature directory | The owning spec is `done`, or absent |
+| A rule file | Always: the amendment was written when the deferral was recorded |
+| A work item only | Never: the deferral retires only when its finding stops firing |
+
+A target that exists but does not parse, or whose feature directory, or the
+`spec.md` or `tasks.md` read in it, resolves outside the project, is neither complete nor still to do:
+the deferral is matched as stored, releases nothing, and the run names the
+target in a notice.
+
+For a violation:
+
+- **Released**, it leaves `must-violations` and `should-violations` and
+  renders under **Deferred findings**. A `--defer` to a `done` spec's work
+  names the `done → in-progress` reopen in a confirmation and performs it
+  through the set-status primitive with `from: done` before `write-review`
+  runs, as a deferral of an observation does. Left closed, a `done` spec's
+  scenario, `spec.md` or directory is complete work and releases nothing.
+- **Not released**, it stays in its section with a `**Deferred**` line and
+  still holds `done`. Its decision carries the derived `gating: true`, and
+  `check-review-gate` names it with its work where it blocks.
+
+A deferral retires when its finding stops firing. When its named work is
+complete while the finding still fires, `process-decisions` reports it
+**lapsed**: the host drops it with the expired decisions, and the
 violation needs a fix, a waiver, or a new deferral. A new `--defer` naming
 other work than a standing deferral replaces it as a new decision, checked
 against the tree like any other. One rule both waived and deferred in one

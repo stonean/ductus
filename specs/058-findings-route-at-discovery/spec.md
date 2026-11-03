@@ -123,9 +123,9 @@ The inbox is not a disposition. No command appends to it automatically.
 Findings whose record already gates `done` keep that gate: a review MUST or
 SHOULD violation, and an analyze hard-fail or blocking finding. What changes is
 that none of them is also copied to the inbox, and that `/{project}:analyze`
-may now fix or defer them in the same run. A deferral to pipeline work still to do on
-another spec releases this spec's gate, since that spec's gate then holds the
-work (076).
+may now fix or defer them in the same run. A deferral can release such a
+finding from this spec's gate, when another spec's gate holds the work
+instead (076).
 
 ### Order within a run
 
@@ -193,7 +193,7 @@ A finding left with no disposition is counted in its run's record, and only a
 gating one holds `done` (scenario `findings-cost-in-proportion-to-risk`).
 `check-review-gate`'s last check blocks `in-progress → done` on an outstanding
 review MUST or SHOULD violation, or a hard-fail or blocking analyze finding,
-neither waived nor deferred to work still to do on another spec —
+neither waived nor released by its deferral —
 never on a record's `undispositioned` count, which does not split by tier. An
 undecided advisory finding or review observation stays recorded and visible,
 any decision made on it persists, and it does not block, so analyze's advisory checks are
@@ -426,8 +426,8 @@ spec's links to it. Each also gets the contract change itself:
 
 - **A finding that already gates `done` cannot be waived in analyze.** An
   analyze hard-fail or blocking finding is fixed or deferred. It keeps blocking
-  until the re-check no longer produces it or its deferral names work on
-  another spec, because waiving it would add a bypass the gate does not have
+  until the re-check no longer produces it or its deferral releases it,
+  because waiving it would add a bypass the gate does not have
   today; whether one can be waived is 073's question. A waiver applies to
   advisory findings, review observations, and implementation disposition
   tasks. Review MUST and SHOULD violations are fixed, waived, or deferred
@@ -500,12 +500,12 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC35: A later `framework/migrations.toml` entry removes the guidance comment, whatever its text, and the template's former placeholder item, only as that exact text, from an adopter's existing inbox that already ran `inbox-guidance-refresh` against a template carrying the comment. It leaves every other item byte-identical and is idempotent.
 - [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history.
 - [x] AC24: Full markdown lint passes across every file the change touches.
-- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — a review MUST or SHOULD violation, or a hard-fail or blocking analyze finding, neither waived nor deferred to work still to do on another spec — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
+- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — a review MUST or SHOULD violation, or a hard-fail or blocking analyze finding, neither waived nor released by its deferral — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
 - [x] AC26: `/{project}:analyze` runs its fix-and-route step on every invocation without a flag. Under `ductus exec` it writes no fix or deferral, and records each live finding that matches no stored decision as undispositioned.
 - [x] AC27: `/{project}:analyze` reports a `done` spec whose `analysis.md` or `review.md` records undispositioned findings as advisory disposition drift, and `--fix` does not revert it.
 - [x] AC28: `/{project}:analyze --all` groups fix-and-route proposals by spec, and each prompt offers to leave that spec's remaining findings undispositioned.
 - [x] AC29: `check-review-gate` blocks an `in-progress` spec whose `review.md` or `analysis.md` has no `dispositions:` map, and names the command to re-run. A record written before this change that carries `captured-issues` still parses, and `/{project}:analyze` does not report a `done` spec's map-less record as drift.
-- [x] AC30: `/{project}:analyze` offers no waiver for a hard-fail or blocking finding. Such a finding is fixed or deferred, and it keeps `blocking: true` in the record until the re-check no longer produces it or its deferral names work still to do on another spec.
+- [x] AC30: `/{project}:analyze` offers no waiver for a hard-fail or blocking finding. Such a finding is fixed or deferred, and it keeps `blocking: true` in the record until the re-check no longer produces it or its deferral releases it.
 - [x] AC31: A confirmed disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or deferred, and the report names the failure beside the finding.
 - [x] AC32: A deferred or waived decision made in one run is stored with its outcome, its work or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
 - [x] AC33: `/{project}:implement` working a disposition task fixes, defers with confirmation, or waives the finding, and checks the task off only once one of the three has happened. A waiver writes its reason onto the checked task.

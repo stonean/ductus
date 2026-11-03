@@ -143,8 +143,8 @@ Handoff, 2026-11-03. 076's review is decided, and its record is written once tas
 
 ## 14. State the release condition once, and point every other statement at it
 
-- [ ] Make `framework/reference/review.md` §Deferrals, which adopters receive, the one full statement of when a deferral releases a gating finding and when its named work is complete, and point 076's data model's *Release and lapse* at it
-- [ ] Replace each other statement of the condition — in `framework/`, `runtime/src` doc comments and tool descriptions, `docs/`, `README.md`, and spec bodies, scenarios and data models — with a pointer to §Deferrals, keeping a clause only where it states a necessary condition or an instruction
-- [ ] Take the sweep's hit list from a grep broad enough to match every phrasing (`another spec`, `releases`, `leaves the counts`, `holds done`), record each site's classification in the commit, and give the re-read that list as its scope
+- [x] Make `framework/reference/review.md` §Deferrals, which adopters receive, the one full statement of when a deferral releases a gating finding and when its named work is complete, and point 076's data model's *Release and lapse* at it
+- [x] Replace each other statement of the condition — in `framework/`, `runtime/src` doc comments and tool descriptions, `docs/`, `README.md`, and spec bodies, scenarios and data models — with a pointer to §Deferrals, keeping a clause only where it states a necessary condition or an instruction
+- [x] Take the sweep's hit list from a grep broad enough to match every phrasing (`another spec`, `releases`, `leaves the counts`, `holds done`), record each site's classification in the commit, and give the re-read that list as its scope
 
 - **Done when**: a search of the live artifacts for a deferral to another spec's work that releases, leaves the counts or does not hold `done` finds only §Deferrals, pointers to it, necessary-condition clauses and instructions; `npx markdownlint-cli2` and the task 2 cargo commands pass.

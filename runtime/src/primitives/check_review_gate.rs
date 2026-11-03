@@ -10,8 +10,8 @@
 //! and whether it is still current, then the analyze record in
 //! `analysis.md` and whether it is still current, and last the two records'
 //! `dispositions:` maps — a record that predates them — and an outstanding
-//! gating finding, in practice a SHOULD neither waived nor deferred to another
-//! spec's work (specs 058, 076). The first failing
+//! gating finding, in practice a SHOULD neither waived nor released by its
+//! deferral (specs 058, 076). The first failing
 //! check wins and produces the canonical `blocked: …` message — with the
 //! adopter's `[host] project` command namespace substituted into the
 //! `/{project}:review` references — plus, on `must-violations`, the
@@ -252,8 +252,8 @@ pub(crate) fn run_with_lint(
 /// that freshness is unknown, while a map-less one may be hiding owed work.
 ///
 /// Then the gating counts: a review MUST or SHOULD, or an analyze hard-fail
-/// or blocking finding, each neither waived nor deferred to work still to do
-/// on another spec (spec 076). Only those hold `done` (spec 058,
+/// or blocking finding, each neither waived nor released by its deferral
+/// ([`crate::primitives::decisions::releases`], spec 076). Only those hold `done` (spec 058,
 /// `findings-cost-in-proportion-to-risk`). The map's `undispositioned` count
 /// is not read: an undecided advisory finding or review observation is
 /// recorded and visible, and holds nothing. For a record the runtime writes,
@@ -1601,8 +1601,8 @@ mod tests {
         let message = result.message.as_deref().unwrap();
         assert!(message.contains("1 hard-fail"), "{message}");
         assert!(message.contains("2 blocking"), "{message}");
-        // Spec 076: a deferral to work still to do on another spec releases a
-        // gating analyze finding, so the guidance names it beside fixing.
+        // Spec 076: a deferral can release a gating analyze finding, so the
+        // guidance names deferral beside fixing.
         let guidance = result.guidance.as_deref().unwrap();
         assert!(
             guidance.contains("defer each to pipeline work on another spec"),

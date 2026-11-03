@@ -62,19 +62,7 @@ decisions:
 
 ## Release and lapse — derived on every run, never stored
 
-**Release.** A deferral releases its gating finding when its `target` lies under a feature directory other than the reviewed or analyzed spec's and that work is still to do — neither complete by the table below nor unreadable — so that spec's own gate holds it. A deferral whose target is on the same spec, whose target is a rule file, whose work is complete or unreadable, or that names only a `work-item` does not release it.
-
-**Completion of the named work**, which decides a lapse:
-
-| Target | Complete when |
-| --- | --- |
-| `tasks.md` with `task` | Every subtask of that task is checked, or the task or the file is absent |
-| `tasks.md` without `task` (a record written before 076) | The owning spec is `done`, or absent |
-| Scenario, `spec.md`, or feature directory | The owning spec is `done`, or absent |
-| Rule file | Always: the amendment was written when the deferral was recorded |
-| `work-item` only | Never: the deferral retires only when its finding stops firing |
-
-A target that exists but does not parse, or whose feature directory, or the `spec.md` or `tasks.md` read in it, resolves outside the project, is neither complete nor incomplete: the deferral is matched as stored, releases nothing, and the run emits a notice naming the target.
+Release and completion are stated once, for adopters and this runtime alike, in [§Deferrals](../../framework/reference/review.md#deferrals) of the review reference (installed as `.ductus/reference/review.md`): when a deferral releases a gating finding, when its named work is complete — which decides a lapse — and what a target that cannot be read does. `decisions::releases` and `decisions::work_state` implement them.
 
 ## `Disposition` — writer input
 

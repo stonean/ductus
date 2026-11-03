@@ -25,8 +25,8 @@
 //!   not ask again (spec 058). Nothing is written to the inbox;
 //! - **records a violation's deferral** — a MUST or SHOULD violation deferred
 //!   to its work is stored under `decisions:` keyed `rule {rule-id} at
-//!   {file}`, and leaves the counts only when that work is on another spec
-//!   (spec 076);
+//!   {file}`, and leaves the counts only when its deferral releases it
+//!   ([`decisions::releases`], spec 076);
 //! - the empty-scope case is a branch of this primitive, not a prose
 //!   special-case: it emits the 0-findings, `blocking: false` report.
 //!
@@ -636,9 +636,8 @@ struct Buckets<'a> {
 }
 
 /// The deduped findings sorted into the report's sections. `deferred` holds
-/// the findings whose deferral names work still to do on another spec
-/// ([`decisions::releases`]): that spec's gate holds the work, so they leave
-/// this spec's counts (spec 076).
+/// the findings their deferral releases ([`decisions::releases`]), which
+/// leave this spec's counts (spec 076).
 struct Sorted<'a> {
     must: Vec<&'a ReviewFinding>,
     should: Vec<&'a ReviewFinding>,
@@ -661,9 +660,9 @@ impl Sorted<'_> {
 }
 
 /// Bucket the deduped findings. A waived finding drops out of the counts into
-/// Waived findings; a finding deferred to work still to do on another spec
-/// drops out into Deferred findings; a `low`-confidence one lands in Low-confidence
-/// regardless of severity; the rest split MUST / SHOULD.
+/// Waived findings; a finding its deferral releases drops out into Deferred
+/// findings; a `low`-confidence one lands in Low-confidence regardless of
+/// severity; the rest split MUST / SHOULD.
 ///
 /// # Errors
 ///
@@ -892,13 +891,10 @@ fn generate_summary(
         let _ = write!(summary, ", {waived} waived");
     }
     // A released violation leaves the counts, so without this a run whose
-    // only violation was deferred to work still to do on another spec reads
-    // exactly like a clean one (spec 076).
+    // only violation its deferral released reads exactly like a clean one
+    // (spec 076).
     if deferred > 0 {
-        let _ = write!(
-            summary,
-            ", {deferred} deferred to work still to do on another spec"
-        );
+        let _ = write!(summary, ", {deferred} released by deferral");
     }
     let _ = write!(
         summary,
@@ -1557,10 +1553,10 @@ mod tests {
         finding
     }
 
-    /// Spec 076: a violation deferred to work still to do on another spec
-    /// leaves this spec's counts for Deferred findings; one deferred to its
-    /// own spec's task, or to a work item alone, stays counted and marks its
-    /// decision gating.
+    /// Spec 076: a violation its deferral releases — here, to an in-progress
+    /// spec — leaves this spec's counts for Deferred findings; one deferred
+    /// to its own spec's task, or to a work item alone, stays counted and
+    /// marks its decision gating.
     #[test]
     fn a_deferral_releases_a_violation_only_to_another_spec() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -1681,10 +1677,7 @@ mod tests {
         assert_eq!(entry.gating, None);
         // A released violation leaves the counts, so the Summary says so.
         let report = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
-        assert!(
-            report.contains(", 1 deferred to work still to do on another spec"),
-            "{report}"
-        );
+        assert!(report.contains(", 1 released by deferral"), "{report}");
     }
 
     /// Spec 076: a work-item ID is stored as given, but the report shows it

@@ -142,7 +142,7 @@ result.
 | `## SHOULD violations (advisory)` | Always (empty when none) |
 | `## Low-confidence findings` | Always (empty when none) |
 | `## Waived findings` | Always (empty when none) |
-| `## Deferred findings` | Always (empty when none). MUST and SHOULD violations deferred to pipeline work still to do on another spec, each with its work; they leave the counts. Added by 076 |
+| `## Deferred findings` | Always (empty when none). MUST and SHOULD violations their deferral releases (076), each with its work; they leave the counts. Added by 076 |
 | `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
 | `## Skipped passes` | Always (empty when none) |
 | `## Unexamined governance` | Always (empty when none). Added by 055 |

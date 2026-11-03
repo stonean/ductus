@@ -10,7 +10,7 @@ An agent closed a round of work with a summary several paragraphs long: what cha
 
 The summary was accurate. Its defect was shape: whether work remains is the question the operator reads a closing reply to answer, and narrative makes them search for it. The longer the reply, the better it hides the answer, and a remaining item mentioned in passing reads the same as a finished one.
 
-The tiers are the pipeline's own. Review findings are MUST or SHOULD, analyze findings are blocking or advisory, and an outstanding SHOULD gates `done` unless it is fixed, waived, or deferred to work still to do on another spec ([§implement-phase](../../../framework/constitution.md#implement-phase)). Reusing them gives the operator a severity they already know how to act on.
+The tiers are the pipeline's own. Review findings are MUST or SHOULD, analyze findings are blocking or advisory, and an outstanding SHOULD gates `done` unless it is fixed, waived, or released by its deferral ([§implement-phase](../../../framework/constitution.md#implement-phase)). Reusing them gives the operator a severity they already know how to act on.
 
 The rule is universal rather than this repository's, because every project running the pipeline has an operator reading the agent's closing replies ([§drift-prevention](../../../framework/constitution.md#drift-prevention), *Shared knowledge stays in git*).
 
