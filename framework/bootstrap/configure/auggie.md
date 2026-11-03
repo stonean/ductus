@@ -122,6 +122,8 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:rewrite-spec-links", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:retire-feature", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:invalidate-review", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:start-fix-rounds", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:brief-re-read", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 
    **Shell commands — denied (destructive):**

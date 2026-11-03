@@ -699,6 +699,17 @@ last_applied = "rule-files-relocate"
 # [review]
 # tech-stack-verified = true
 
+# Consumed by /{project}:review (not /ductus itself). `re-reads-off` switches
+# off /{project}:review's fix-round loop, which has an independent agent re-read
+# the fixes a review makes (spec 078). Its value is the reason, at least 16
+# Unicode codepoints once trimmed, and each run records it as the waiver of
+# every round the loop would have re-read. Any other value halts
+# /{project}:review, naming the setting, the value and the config file. Absent
+# means the loop runs. Listed here for schema reference; uncomment and edit to
+# use.
+#
+# re-reads-off = "Reviews here run on a host without subagents, and no one runs the briefs."
+
 # Consumed by /{project}:review (not /ductus itself). Excludes rule files from
 # /{project}:review's selection regardless of stack detection. The `reason`
 # field is mandatory (trimmed length ≥ 16 Unicode codepoints) and is the audit

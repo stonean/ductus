@@ -4,7 +4,7 @@ The shapes [078](spec.md)'s fix-round loop reads and writes: the round directory
 
 ## Round directory
 
-`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates the directory first writes its `.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot or a `modified-since` list, whatever the repository's own `.gitignore` says.
+`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates the directory first writes its `.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot, and so no round's paths, whatever the repository's own `.gitignore` says.
 
 | File | Written by | Holds |
 | --- | --- | --- |
@@ -40,10 +40,10 @@ Result:
   "result": ".ductus/review-rounds/042-widget/<base>/result.json", "re-reads-off": null }
 ```
 
-- `paths` — the files changed between `base` and the working tree, from the function `compute-review-scope`'s `modified-since` uses (`runtime/src/primitives/compute_review_scope.rs`, `diff_since`), so the two cannot disagree.
-- `kind` — `empty` when `paths` is empty; `exempt` when every path is an analyze subject of this feature that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`); `re-read` otherwise. Only `re-read` takes a snapshot and writes a brief.
-- `re-reads-off` — the `[review] re-reads-off` reason when the switch is set; then no snapshot is taken and no brief is written, and `snapshot`, `brief` and `result` are null.
-- The brief names the spec, its data model when it has one, the `paths`, the command that shows the round's change (`git diff {base} {snapshot} -- <paths>`), the severity bar, and the result file's path and format. Nothing in it comes from the host.
+- `paths` — the files inside the project that differ between `base` and a snapshot of the working tree taken by this call, tree to tree, bounded to the project as `compute-review-scope` bounds it (`runtime/src/primitives/compute_review_scope.rs`, `project_diff_options` and `project_paths`). Not `modified-since`, whose diff runs through the index and would report every unstaged edit a snapshot base already holds.
+- `kind` — `empty` when `paths` is empty; `exempt` when every path is an analyze subject of this feature that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`); `re-read` otherwise. `exempt` and `re-read` take a snapshot, the next round's base, so a later round never re-includes this one's changes; only `re-read` writes a brief, and only `empty` returns no `snapshot`.
+- `re-reads-off` — the `[review] re-reads-off` reason when the switch is set; then no brief is written, and `snapshot`, `brief` and `result` are null.
+- The brief names the spec, its data model and scenarios when it has them, the command that shows the round's change (`git diff --relative {base} {snapshot}`, run from the project root, so no path reaches a shell), the `paths` as a JSON list, the severity bar, and the result file's path and format. Nothing in it comes from the host. Briefing a base again replaces that round's directory, so an earlier `result.json` is never read for a newer brief.
 
 ## Result file
 

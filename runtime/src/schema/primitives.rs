@@ -626,6 +626,82 @@ pub struct ComputeReviewScopeResult {
     pub plan_affected: Vec<String>,
 }
 
+// -- start-fix-rounds (spec 078) ----------------------------------------------
+
+/// Args for `start-fix-rounds`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct StartFixRoundsArgs {
+    /// Feature directory name whose review run is starting its fix rounds.
+    #[arg(long)]
+    pub feature: String,
+}
+
+/// Result for `start-fix-rounds`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct StartFixRoundsResult {
+    /// Sha of the snapshot: a commit object of the whole working tree,
+    /// untracked files included and ignored files excluded, that no ref
+    /// points at. The base of the run's first fix round.
+    pub base: String,
+    /// How many files the snapshot holds, so a snapshot of nothing does not
+    /// read as one of a tree.
+    pub files: usize,
+}
+
+// -- brief-re-read (spec 078) -------------------------------------------------
+
+/// Args for `brief-re-read`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct BriefReReadArgs {
+    /// Feature directory name under review.
+    #[arg(long)]
+    pub feature: String,
+    /// The round's base: `start-fix-rounds`' `base` for the first round, the
+    /// previous round's `snapshot` after it.
+    #[arg(long)]
+    pub base: String,
+}
+
+/// What a fix round needs (spec 078).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum RoundKind {
+    /// Nothing changed since the base: no round.
+    #[default]
+    Empty,
+    /// Every changed path is an analyze subject of the feature that is not a
+    /// durable contract, which `/{project}:analyze` reads again before `done`.
+    Exempt,
+    /// Anything else: the round needs a re-read.
+    ReRead,
+}
+
+/// Result for `brief-re-read`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct BriefReReadResult {
+    /// What the round needs.
+    pub kind: RoundKind,
+    /// Files inside the project that differ between the base and a snapshot
+    /// of the working tree this call takes, from the project root, sorted.
+    pub paths: Vec<String>,
+    /// The snapshot taken now, the next round's base: present for `exempt`
+    /// and `re-read`, unless the loop is switched off.
+    pub snapshot: Option<String>,
+    /// The brief, from the project root: present only for a `re-read` with
+    /// the loop on.
+    pub brief: Option<String>,
+    /// Where the re-read writes its `result.json`, from the project root:
+    /// present whenever `brief` is.
+    pub result: Option<String>,
+    /// The `[review] re-reads-off` reason when the loop is switched off; then
+    /// no snapshot is returned and no brief is written.
+    pub re_reads_off: Option<String>,
+}
+
 // -- write-review ------------------------------------------------------------
 
 /// One review finding — the record shape a `performReview` pass returns and

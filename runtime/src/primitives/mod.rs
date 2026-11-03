@@ -18,6 +18,7 @@ pub mod append_inbox;
 pub mod append_question;
 pub mod append_task;
 pub mod apply_manifest;
+pub mod brief_re_read;
 pub mod check_artifact_size;
 pub mod check_artifacts;
 pub mod check_command_flags;
@@ -44,6 +45,7 @@ pub mod discover_rule_files;
 pub mod enforce_manifest;
 pub mod extract_archive;
 pub mod fetch_archive;
+pub(crate) mod fix_rounds;
 pub mod gate_confirm;
 pub(crate) mod host_config;
 pub(crate) mod inbox_standing;
@@ -77,6 +79,7 @@ pub(crate) mod rule_sections;
 pub mod run_generator;
 pub mod set_status;
 pub(crate) mod spec_links;
+pub mod start_fix_rounds;
 pub mod traverse_deps;
 pub mod validate_frontmatter;
 pub mod write_analysis;
@@ -616,6 +619,22 @@ pub enum PrimitiveError {
         /// warning numbers it.
         index: usize,
         /// What failed, naming the field: `` `reason` is missing ``.
+        problem: String,
+    },
+    /// `[review] re-reads-off` is present but is not a reason: not a string,
+    /// or shorter than the minimum once trimmed (spec 078). It halts rather
+    /// than running or skipping the fix-round loop on a guess, for the reason
+    /// [`Self::InvalidDisabledRuleFile`] gives (`CFG-ENV-008`); `problem`
+    /// names the offending value on one line.
+    #[error(
+        "invalid `[review] {key}` in {path}: {problem} — the key switches the fix-round loop off, and its value is the reason, a string of at least {min} characters; remove it to run the loop",
+        key = fix_rounds::RE_READS_OFF,
+        min = discover_rule_files::MIN_REASON_LEN
+    )]
+    InvalidReReadsOff {
+        /// Path of the config file carrying the value.
+        path: PathBuf,
+        /// What failed, with the offending value.
         problem: String,
     },
 }

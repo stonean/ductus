@@ -134,6 +134,8 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__rewrite-spec-links`
    - `mcp__ductus__retire-feature`
    - `mcp__ductus__invalidate-review`
+   - `mcp__ductus__start-fix-rounds`
+   - `mcp__ductus__brief-re-read`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

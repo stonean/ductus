@@ -4,18 +4,18 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. The round directory and `start-fix-rounds`
 
-- [ ] Create `runtime/src/primitives/fix_rounds.rs`: the `.ductus/review-rounds/{feature}/` path, its self-ignoring `.gitignore`, and removal of a feature's earlier rounds
-- [ ] Create `runtime/src/primitives/start_fix_rounds.rs`: the snapshot as `data-model.md` defines it, from an in-memory index, with a fixed `ductus` identity and no ref update
-- [ ] Register it at the five sites and in `framework/runtime-tools.txt`; run `scripts/gen-configure-mcp.sh`
-- [ ] Tests: an untracked file is in the snapshot and an ignored one is not, a deletion is applied, the index file's bytes, `HEAD` and every ref are unchanged, an unborn `HEAD` gives a parentless snapshot, and earlier rounds are removed; each fails with its behavior removed
+- [x] Create `runtime/src/primitives/fix_rounds.rs`: the `.ductus/review-rounds/{feature}/` path, its self-ignoring `.gitignore`, and removal of a feature's earlier rounds
+- [x] Create `runtime/src/primitives/start_fix_rounds.rs`: the snapshot as `data-model.md` defines it, from an in-memory index, with a fixed `ductus` identity and no ref update
+- [x] Register it at the five sites and in `framework/runtime-tools.txt`; run `scripts/gen-configure-mcp.sh`
+- [x] Tests: an untracked file is in the snapshot and an ignored one is not, a deletion is applied, the index file's bytes, `HEAD` and every ref are unchanged, an unborn `HEAD` gives a parentless snapshot, and earlier rounds are removed; each fails with its behavior removed
 
 - **Done when**: `start-fix-rounds` returns a snapshot whose tree is the working tree, and the tests prove it changed no index, ref or `HEAD` (AC10's first half).
 
 ## 2. The `[review] re-reads-off` switch
 
-- [ ] Add the shared reader to `fix_rounds.rs`, validating the reason as `validate_disabled_entry` does and halting with the setting, the value and the config file
-- [ ] Register `re-reads-off` in `runtime/src/schema/config_keys.rs` `SECTIONS` and document it in `framework/bootstrap/ductus.md` §Project Configuration
-- [ ] Tests: absent, a valid reason, a short reason, a non-string, each config-chain file named in the error
+- [x] Add the shared reader to `fix_rounds.rs`, validating the reason as `validate_disabled_entry` does and halting with the setting, the value and the config file
+- [x] Register `re-reads-off` in `runtime/src/schema/config_keys.rs` `SECTIONS` and document it in `framework/bootstrap/ductus.md` §Project Configuration
+- [x] Tests: absent, a valid reason, a short reason, a non-string, each config-chain file named in the error
 
 - **Done when**: the reader returns the reason or halts on a malformed value naming the file, and `the_installer_documents_the_registry` passes with the key documented.
 
@@ -23,11 +23,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on tasks 1 and 2: it writes into the round directory and reads the switch.
 
-- [ ] Make `compute_review_scope::diff_since` `pub(crate)` and derive the round's `paths` through it
-- [ ] Classify `empty`, `exempt` and `re-read` with `is_analyze_subject` and `is_review_contract`
-- [ ] On `re-read` with the loop on, take the snapshot and write `round.toml` and `brief.md`, the brief's text a constant in `brief_re_read.rs` holding the spec's severity bar and the result-file contract
-- [ ] Register it at the five sites
-- [ ] Tests: each `kind`; `analysis.md` and a non-markdown file in the feature directory are not exempt; the brief carries exactly the derived paths and no caller text; the switch writes no brief
+- [x] Derive the round's `paths` as a tree-to-tree diff from the base to a snapshot taken now, bounded by the project-diff helpers extracted from `compute_review_scope::diff_since`
+- [x] Classify `empty`, `exempt` and `re-read` with `is_analyze_subject` and `is_review_contract`
+- [x] On `re-read` with the loop on, take the snapshot and write `round.toml` and `brief.md`, the brief's text a constant in `brief_re_read.rs` holding the spec's severity bar and the result-file contract
+- [x] Register it at the five sites
+- [x] Tests: each `kind`; `analysis.md` and a non-markdown file in the feature directory are not exempt; the brief carries exactly the derived paths and no caller text; the switch writes no brief
 
 - **Done when**: a brief is written only for a round that needs a re-read, holds only derived paths and fixed text, and its snapshot is the next round's base (AC2, AC3, AC10).
 

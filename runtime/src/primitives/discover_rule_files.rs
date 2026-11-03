@@ -239,7 +239,7 @@ fn validate_surfaces(value: &toml::Value) -> Result<Vec<String>> {
 }
 
 /// Human-readable TOML type name for the type-mismatch diagnostic.
-fn toml_type_name(value: &toml::Value) -> &'static str {
+pub(crate) fn toml_type_name(value: &toml::Value) -> &'static str {
     match value {
         toml::Value::String(_) => "a string",
         toml::Value::Integer(_) => "an integer",
@@ -333,7 +333,7 @@ fn validate_disabled_entry(entry: &toml::Value) -> std::result::Result<DisabledE
 /// config can carry a newline or an escape sequence, and an operator-facing
 /// line must not let it forge a second line or restyle the terminal
 /// (`BE-INPUT-011`).
-fn rendered(value: &toml::Value) -> String {
+pub(crate) fn rendered(value: &toml::Value) -> String {
     flatten_line(&value.to_string())
 }
 

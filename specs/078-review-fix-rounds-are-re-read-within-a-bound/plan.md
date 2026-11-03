@@ -16,9 +16,9 @@ AGENTS.md routes "a feature-specific primitive" to its feature, and these four e
 
 `compute-review-scope` peels `--since` to a commit and diffs that commit's tree to the index and working tree, untracked files included (`runtime/src/primitives/compute_review_scope.rs`, `run` and `diff_since`), so a base must be a commit. The snapshot is built from an in-memory copy of the repository's index: add every non-ignored working-tree file, apply deletions, write the tree objects, and create a commit with `HEAD` as parent and no ref update. **Assumption**, settled by the first task's test: writing the tree through git2 leaves the index file untouched as long as the index is never written back; the test asserts the index file's bytes, `HEAD` and every ref unchanged. An unreferenced object outlives a run, since git's default `gc.pruneExpire` is two weeks.
 
-### A round's paths come from `diff_since`, shared
+### A round's paths are a tree-to-tree diff
 
-`brief-re-read` calls `compute_review_scope::diff_since`, made `pub(crate)`, rather than a copy of it (`QUAL-DELEG-001`), so a round's paths are `compute-review-scope`'s `modified-since` by construction, as the resolved scope question requires.
+`brief-re-read` snapshots the tree first and diffs the base's tree against the snapshot's. `compute-review-scope`'s `modified-since` cannot serve: it diffs from the base through the index, and a snapshot base holds unstaged edits the index lacks, so it reports every one of them in every round. The diff is bounded to the project by `project_diff_options` and `project_paths`, extracted from `diff_since` rather than copied (`QUAL-DELEG-001`), so the two bound a project alike.
 
 ### Exemption is a path predicate the runtime evaluates
 
@@ -30,7 +30,7 @@ A brief the host writes can carry scope the fixer chose, so `brief-re-read` rend
 
 ### The round directory ignores itself
 
-`.ductus/review-rounds/{feature}/` writes its own `.gitignore` of `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`). Its files then never enter a snapshot or a `modified-since` list, including in an adopter whose `.gitignore` predates 078, so no gitignore migration is needed. One subdirectory per round is named by its base sha, and `start-fix-rounds` removes earlier ones.
+`.ductus/review-rounds/{feature}/` writes its own `.gitignore` of `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`). Its files then never enter a snapshot, and so no round's paths, including in an adopter whose `.gitignore` predates 078, so no gitignore migration is needed. One subdirectory per round is named by its base sha, and `start-fix-rounds` removes earlier ones.
 
 ### The re-read reports through a file the runtime reads
 
@@ -66,7 +66,7 @@ The loop step says what to do when the host can start an independent agent and w
 | `runtime/src/primitives/read_re_read.rs` | Create | `read-re-read` |
 | `runtime/src/primitives/check_prescriptions.rs` | Create | `check-prescriptions` |
 | `runtime/src/primitives/mod.rs` | Modify | Module declarations |
-| `runtime/src/primitives/compute_review_scope.rs` | Modify | `diff_since` made `pub(crate)` |
+| `runtime/src/primitives/compute_review_scope.rs` | Modify | Its project bound extracted for `brief-re-read`'s diff |
 | `runtime/src/schema/primitives.rs` | Modify | Args and results of the four primitives |
 | `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` |
 | `runtime/src/mcp/server.rs` | Modify | Four `#[tool]` handlers |

@@ -85,10 +85,11 @@ const SECTIONS: &[Section] = &[
     // `resolve-constitutions`' measured entry (spec 055).
     Section::keys("artifacts", &["read-size-bytes"]),
     // `tech-stack-verified`: `/{project}:review` by hand (spec 020).
+    // `re-reads-off`: `brief-re-read` and `write-review` (spec 078).
     // `disabled-rule-files`: `discover-rule-files` and `dashboard` (spec 025).
     Section {
         name: "review",
-        keys: &["tech-stack-verified"],
+        keys: &["tech-stack-verified", "re-reads-off"],
         entries: false,
         tables: &[("disabled-rule-files", &["file", "reason"])],
     },

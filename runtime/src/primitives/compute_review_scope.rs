@@ -213,18 +213,35 @@ fn diff_since(project: &ProjectRepository, base_sha: &str) -> Result<Vec<String>
 
     // One diff, base tree → index → working tree, so committed, staged and
     // unstaged changes arrive together; untracked files surface too, as
-    // `diff-cross-spec` takes them. Bounded to the project directory, so a
-    // project in a subdirectory does not walk its neighbours' untracked
-    // trees. Literal, because that path may hold `*`, `?` or `[`, which as a
-    // glob would match no file and report no change (QUAL-CLAIM-001).
-    let mut opts = DiffOptions::new();
+    // `diff-cross-spec` takes them.
+    let mut opts = project_diff_options(project);
     opts.include_untracked(true).recurse_untracked_dirs(true);
+    let diff = repo.diff_tree_to_workdir_with_index(Some(&base_tree), Some(&mut opts))?;
+    project_paths(project, &diff)
+}
+
+/// Diff options bounded to the project directory, so a project in a
+/// subdirectory does not walk its neighbours' trees. Literal, because that
+/// path may hold `*`, `?` or `[`, which as a glob would match no file and
+/// report no change (QUAL-CLAIM-001). Shared with `brief-re-read`'s
+/// tree-to-tree diff, so the two bound a project alike.
+pub(crate) fn project_diff_options(project: &ProjectRepository) -> DiffOptions {
+    let mut opts = DiffOptions::new();
     let project_dir = project.to_git("");
     let project_dir = project_dir.trim_end_matches('/');
     if !project_dir.is_empty() {
         opts.pathspec(project_dir).disable_pathspec_match(true);
     }
-    let diff = repo.diff_tree_to_workdir_with_index(Some(&base_tree), Some(&mut opts))?;
+    opts
+}
+
+/// Every path `diff` changes inside the project, named from the project root
+/// and sorted. A change outside the project directory is another project's
+/// work and is left out.
+pub(crate) fn project_paths(
+    project: &ProjectRepository,
+    diff: &git2::Diff<'_>,
+) -> Result<Vec<String>> {
     let mut files: BTreeSet<String> = BTreeSet::new();
     diff.foreach(
         &mut |delta, _| {

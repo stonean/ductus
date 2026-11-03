@@ -36,9 +36,9 @@ use crate::primitives;
 use crate::primitives::gate_confirm::GatePromptPayload;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
-    AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, CheckArtifactSizeArgs,
-    CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult, CheckCommandFlagsArgs,
-    CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
+    AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
+    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
+    CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPromotionCoverageArgs,
     CheckPromotionCoverageResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
     CheckRuleIdsResult, CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs,
@@ -62,9 +62,10 @@ use crate::schema::primitives::{
     ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
     ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
     RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult,
-    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, StartFixRoundsArgs,
+    StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
+    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -641,6 +642,31 @@ impl GovRuntimeServer {
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::compute_review_scope::run(&params.0, repo.as_path()))
             .await
+    }
+
+    #[tool(
+        name = "start-fix-rounds",
+        description = "Start a /ductus:review run's fix rounds (spec 078): clear the feature's earlier rounds under .ductus/review-rounds/{feature}/ — a directory that ignores itself — and snapshot the whole working tree as the first round's base. The snapshot is a commit object holding every tracked file as it is on disk, every untracked file that is not ignored, and no deleted one, with HEAD as its parent; it moves no ref, writes no index file and changes no working-tree file. `files` counts what it holds. Call it when the passes end and before any fix; an error is never a base, so the run's first round is then recorded as not re-read."
+    )]
+    async fn start_fix_rounds(
+        &self,
+        params: Parameters<StartFixRoundsArgs>,
+    ) -> Result<Json<StartFixRoundsResult>, String> {
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::start_fix_rounds::run(&params.0, repo.as_path()))
+            .await
+    }
+
+    #[tool(
+        name = "brief-re-read",
+        description = "Open a /ductus:review fix round (spec 078). It snapshots the working tree, and `paths` are the files inside the project that differ between `base` and that snapshot, tree to tree. `kind` is `empty` when none changed; `exempt` when every path is an analyze subject of the feature that is not a durable contract (spec.md, plan.md, tasks.md and the like, which /ductus:analyze reads again before done); `re-read` otherwise. `exempt` and `re-read` return that snapshot as `snapshot`, the next round's base. A `re-read` also writes `round.toml` and the re-read's whole brief under .ductus/review-rounds/{feature}/{base}/ — the paths, the diff command, the severity bar and the result-file contract, nothing from the caller — and names the `result` file the re-read writes. With `[review] re-reads-off` set, `re-reads-off` carries the reason, no snapshot is returned and nothing is written. Briefing a base again replaces its round. An error is never an empty round."
+    )]
+    async fn brief_re_read(
+        &self,
+        params: Parameters<BriefReReadArgs>,
+    ) -> Result<Json<BriefReReadResult>, String> {
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::brief_re_read::run(&params.0, repo.as_path())).await
     }
 
     #[tool(

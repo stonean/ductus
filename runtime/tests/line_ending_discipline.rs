@@ -72,6 +72,11 @@ const EXEMPT: &[(&str, &str)] = &[
         "creates a new scenario file; there is no prior content whose endings could be preserved",
     ),
     (
+        "brief_re_read.rs",
+        "writes a fix round's brief.md and round.toml into a directory it has just cleared — \
+         generated state the runtime renders whole, never a file a person edited (spec 078)",
+    ),
+    (
         "write_review.rs",
         "renders review.md wholesale from a fixed skeleton on every run — generated state with \
          no prior content to preserve. It stopped rewriting spec.md when the review record moved \

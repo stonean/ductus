@@ -10,21 +10,21 @@ use std::io;
 use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
 use ductus::schema::primitives::{
-    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactSizeArgs,
-    CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
-    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
-    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
-    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
+    CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
+    CheckOrphanedReferencesArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
+    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
+    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
+    FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
+    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
+    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -165,6 +165,10 @@ enum Command {
     RetireFeature(RetireFeatureArgs),
     /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
     InvalidateReview(InvalidateReviewArgs),
+    /// Snapshot the working tree as the base of a review run's first fix round, clearing the feature's earlier rounds.
+    StartFixRounds(StartFixRoundsArgs),
+    /// Open a review fix round: derive its paths, classify it, and write the re-read's brief.
+    BriefReRead(BriefReReadArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
     DeriveDependencies(DeriveDependenciesArgs),
     /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
@@ -834,6 +838,10 @@ fn main() -> ExitCode {
         Command::InvalidateReview(args) => {
             emit_result(primitives::invalidate_review::run(&args, &repo))
         }
+        Command::StartFixRounds(args) => {
+            emit_result(primitives::start_fix_rounds::run(&args, &repo))
+        }
+        Command::BriefReRead(args) => emit_result(primitives::brief_re_read::run(&args, &repo)),
         Command::DeriveDependencies(args) => {
             let outcome = primitives::derive_dependencies::run(&args, &repo);
             if let Ok(result) = &outcome {
