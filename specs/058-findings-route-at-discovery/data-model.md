@@ -23,8 +23,8 @@ dispositions:
 | Field | Type | Notes |
 | --- | --- | --- |
 | `fixed` | u32 | Findings fixed in the run. A fixed finding is gone from the re-check, so it is counted from the run's first pass. |
-| `deferred` | u32 | Live findings deferred this run, plus live findings matching a stored deferral that did not lapse. |
-| `waived` | u32 | Live findings waived this run, plus live findings matching a stored waiver. |
+| `deferred` | u32 | As [076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) defines it. |
+| `waived` | u32 | As [076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) defines it. |
 | `undispositioned` | u32 | Live findings with neither. Recorded and reported; the gate does not read it, since only a gating finding holds `done`. |
 
 **Notes.**
@@ -36,9 +36,10 @@ dispositions:
   the record predates 058, and the gate blocks an `in-progress` spec on it.
   `Some` with every count zero means a run that found nothing.
 - **Derived, never authored.** Both writers compute the map from the
-  dispositions they are given. `analysis.md`'s `undispositioned` is the live
-  tier total (`hard-fail + blocking-findings + advisory`) minus the live
-  findings carrying `deferred` or `waived`. A finding the caller does not
+  dispositions they are given. `analysis.md`'s `undispositioned` is the re-check's
+  live tier total (the host-supplied `hard-fail`, `blocking-findings` and
+  `advisory` arguments, before 076 nets released findings out of the recorded
+  gating counts) minus the live findings carrying `deferred` or `waived`. A finding the caller does not
   itemize therefore counts as undispositioned.
 
 ## `decisions` — the persisted list, in both records
@@ -59,7 +60,7 @@ decisions:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `key` | string | yes | Analyze: `{family} — {message}`. Review: the observation's rendered line, as `observation_line` builds it — its text, then an em dash and its path in backticks, or the text alone. |
+| `key` | string | yes | Analyze: `{family} — {message}`. Review: the observation's rendered line, as `observation_line` builds it — its text, then an em dash and its path in backticks, or the text alone. A deferred MUST or SHOULD violation: `rule {rule-id} at {file}` (076's data model). |
 | `outcome` | `deferred` \| `waived` | yes | `fixed` is never stored: a fixed finding stops firing. `undispositioned` is never stored: it is the absence of a decision. |
 | `target` | string (repo-relative path) | when `deferred` without a `work-item` | The scenario, `tasks.md`, spec, or rule file the finding was deferred to. |
 | `reason` | string | when `waived` | Free text; an empty string is invalid. |
@@ -67,8 +68,8 @@ decisions:
 | `decided-by` | string (email) | yes | The writer's `decided-by` argument — `git config user.email`, as `waived-by` is. |
 | (additional fields) | any | no | Open-schema, preserved verbatim on re-render, as waiver extras are. |
 
-**Lifecycle.** The rules mirror review waivers (`framework/commands/review.md`
-§Per-run waiver processing, §Malformed and duplicate waivers):
+**Lifecycle.** The rules mirror review waivers
+(`framework/reference/review.md` §Per-run waiver processing, §Malformed and duplicate waivers):
 
 - **Matched.** The key fired this run. The entry is re-rendered unchanged, and
   the finding counts under its outcome without being asked about.
@@ -83,8 +84,9 @@ decisions:
   does not count
   ([only-unreadable-targets-retain-decisions](scenarios/only-unreadable-targets-retain-decisions.md)).
   The entry is re-rendered unchanged.
-- **Malformed.** A required field is missing, or the outcome's companion field
-  (`target` or `reason`) is missing. It produces a notice, is never expired, and
+- **Malformed.** A required field is missing, the outcome's companion is missing
+  (a deferral's `target` and `work-item` both, or a waiver's `reason`), or a
+  field its outcome forbids is present (076's data model). It produces a notice, is never expired, and
   applies to nothing. An entry with no fields at all is the one exception: it
   holds no decision to lose, so a re-render drops it, as it drops an all-empty
   waiver.
@@ -149,7 +151,7 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `observations` | list of `ReviewObservation` | Each now carries its disposition (below). |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived. |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived, or any violation newly deferred (076). |
 
 ### `ReviewObservation` — the `write-review` `observations` entry
 
@@ -210,17 +212,19 @@ findings sharing a summary apart. A spent section never matches.
 
 | Result field | Type | Notes |
 | --- | --- | --- |
-| `matched` | list of decision refs | Key, outcome, target or reason. |
+| `matched` | list of decision refs | Key, outcome, and a deferral's work or a waiver's reason. A deferral whose work is complete is listed in `lapsed` instead (076). |
 | `expired` | list of decision refs | Passed to the writer as `expired-decisions`. |
 | `retained` | list of decision refs | Re-rendered unchanged. |
-| `notices` | list of strings | Malformed, duplicate, expired, and retained entries, each named. |
+| `notices` | list of strings | Malformed, duplicate, expired, and retained entries, each named, and 076's lapsed deferrals and unreadable deferral targets. |
+
+[076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) adds the `lapsed` result field and a decision ref's `task` and `work-item`.
 
 ## New gate blocks — `ReviewGateBlock`
 
 | Variant | When | Message names |
 | --- | --- | --- |
 | `record-predates-dispositions` | An `in-progress` spec's `review.md` or `analysis.md` has no `dispositions:` map | The record, and the command to re-run |
-| `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor released by its deferral, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
+| `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor released by its deferral, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, each deferral that holds `done` with its work (076), and the command to re-run |
 
 Both are checked after every existing review and analyze check, in the order
 predates (review, then analysis), then outstanding gating findings (review, then analysis).

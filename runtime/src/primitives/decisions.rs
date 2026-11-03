@@ -11,13 +11,13 @@
 //! while its finding still fires, when `process-decisions` reports it lapsed
 //! (spec 076).
 //!
-//! The lifecycle mirrors review waivers (`framework/commands/review.md`,
-//! §Per-run waiver processing): matched while the key fires, expired when an
-//! unrestricted run no longer produces it, retained when the run did not
-//! evaluate its source. An entry missing a required field or its companion, or
-//! carrying a field its outcome forbids, is reported and never pruned; an
-//! entry that does not deserialize at all fails the whole list (see
-//! [`RawDecision`]).
+//! The lifecycle mirrors review waivers
+//! (`framework/reference/review.md` §Per-run waiver processing): matched
+//! while the key fires, expired when an unrestricted run no longer produces
+//! it, retained when the run did not evaluate its source. An entry missing a
+//! required field or its companion, or carrying a field its outcome forbids,
+//! is reported and never pruned; an entry that does not deserialize at all
+//! fails the whole list (see [`RawDecision`]).
 
 use std::collections::BTreeMap;
 use std::path::Path;

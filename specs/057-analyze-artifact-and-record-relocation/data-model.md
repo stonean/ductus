@@ -29,7 +29,7 @@ line 109 — with the changes each table's Notes section names.
 | `blocking` | bool | `spec.md` block | Block-only field. Derived, not authored. |
 | `waivers` | list | `spec.md` block | Block-only field. The one AC12 field most easily lost in a merge, because only one side ever had it. |
 | `dispositions` | map `fixed`/`deferred`/`waived`/`undispositioned` → u32 | 058 | What the run did with its observations. Always written; absence means the record predates dispositions. |
-| `decisions` | list | 058 | Stored deferred and waived observation decisions, beside `waivers`. Omitted when empty. |
+| `decisions` | list | 058 | As [058's data model](../058-findings-route-at-discovery/data-model.md) and [076's](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) define its entries. |
 
 **Notes.** Six fields were byte-identical across the two records and collapse to
 one. Five existed on exactly one side and are carried, not dropped — that is the

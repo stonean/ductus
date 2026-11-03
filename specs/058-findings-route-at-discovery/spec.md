@@ -22,12 +22,12 @@ sent. It holds only the todos a person captures with `/{project}:log`.
 
 > **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
 > *Routed* is now *deferred* and *discarded* is now *waived*, in this body, in
-> both records' `dispositions:` maps and in stored outcomes, which still read
-> the old names. A deferral names its work: pipeline work the groom tree
+> both records' `dispositions:` maps and in stored outcomes; a record written
+> before 076 still parses under the old names. A deferral names its work: pipeline work the groom tree
 > chooses, an external work-item ID, or both. A gating finding — a review MUST
 > or SHOULD violation, or an analyze hard-fail or blocking finding — can be
-> deferred, and its deferral releases `done` only when the work is on another
-> spec. A deferral whose work is complete while its finding still fires lapses,
+> deferred, and its deferral releases it from `done` only when the work is still
+> to do on another spec (`framework/reference/review.md` §Deferrals). A deferral whose work is complete while its finding still fires lapses,
 > and the finding needs a new disposition. [data-model.md](data-model.md)
 > records the renamed keys, and 076's data model the new fields.
 
@@ -135,15 +135,15 @@ detection runs again over what changed. Only then is the run's record written,
 and only then is the report rendered.
 
 The record therefore describes the state after dispositions, and a run does not
-make its own record stale. A scenario a finding is deferred to on the spec in hand still marks
+make its own record stale. A scenario on the spec in hand that a finding is deferred to still marks
 the review stale, because the review digest covers `scenarios/*.md`. That is
 intended: the scenario is new, unimplemented work, and its task holds the spec
 out of `done` until it is implemented and reviewed.
 
 `analysis.md` records what the re-check found, not which kind of write
 produced it. A finding the re-check no longer produces is recorded as fixed
-(`live: false`), whether a chore removed it or a confirmed deferral did. A body
-edit on the spec in hand that resolves the finding is the common deferral of
+(`live: false`), whether a chore removed it or another confirmed write did. A
+body edit on the spec in hand that resolves the finding is the common write of
 that kind. A finding is recorded as deferred only while it still fires, because
 its deferred work has not landed yet: an open task, a scenario, a spec created
 for it. That is also the only state a stored decision exists for, since a
@@ -429,8 +429,8 @@ spec's links to it. Each also gets the contract change itself:
   until the re-check no longer produces it or its deferral releases it,
   because waiving it would add a bypass the gate does not have
   today; whether one can be waived is 073's question. A waiver applies to
-  advisory findings, review observations, and implementation disposition
-  tasks. Review MUST and SHOULD violations are fixed, waived, or deferred
+  advisory findings, review observations, review MUST and SHOULD violations,
+  and implementation disposition tasks; review violations can also be deferred
   (076).
 - **A finding that spans the spec in hand and another spec is split.** The part
   the spec in hand owns becomes a task or scenario on it, and the rest is

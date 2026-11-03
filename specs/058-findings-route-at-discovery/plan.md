@@ -110,7 +110,7 @@ The writers then take:
 
 There is no `new-decisions` list. Each writer derives its new decisions from
 the findings it is handed: every deferred or waived live finding whose key
-and outcome are not already stored becomes an entry, stamped
+and outcome — and, for a deferral, its work — are not already stored becomes an entry, stamped
 with the run's own timestamp (`reviewed-at` or `analyzed-at`) as `decided-at`
 and with `decided-by` as its author. `decided-by` is required only when at
 least one entry is new. Deriving the list, rather than accepting it, means the
@@ -245,8 +245,8 @@ this order:
 
 1. `review.md` has no `dispositions:` map;
 2. `analysis.md` has no `dispositions:` map;
-3. `review.md` has an unwaived MUST or SHOULD violation;
-4. `analysis.md` has a hard-fail or blocking finding.
+3. `review.md` has a MUST or SHOULD violation neither waived nor released by its deferral;
+4. `analysis.md` has a hard-fail or blocking finding its deferral does not release.
 
 Checks 3 and 4 read the gating counts since scenario
 `findings-cost-in-proportion-to-risk`; until then each read the record's

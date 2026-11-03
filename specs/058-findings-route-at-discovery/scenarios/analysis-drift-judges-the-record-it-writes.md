@@ -8,7 +8,7 @@ section: "`/{project}:analyze`"
 
 `check-artifacts`' disposition-drift family reports a `done` spec whose `review.md` or `analysis.md` records undispositioned findings. `/{project}:analyze` calls `check-artifacts` during detection, so for `analysis.md` the finding describes the record the run is about to replace, not the one it will write.
 
-That finding cannot converge. It is blocking, so it cannot be discarded. No mechanical fix removes it before step 20, because it reads the prior record. So each run records it undispositioned, the new record is blocking, and the next run reports drift again, now joined by analyze-state drift. Only `--fix` or a reopening route ends the loop, although the finding's message says a re-run suffices. On a `done` spec, `--all`'s option to leave the rest undispositioned creates this state at once.
+That finding cannot converge. It is blocking, so it cannot be waived. No mechanical fix removes it before step 20, because it reads the prior record. So each run records it undispositioned, the new record is blocking, and the next run reports drift again, now joined by analyze-state drift. Only `--fix` or a reopening deferral ends the loop, although the finding's message says a re-run suffices. On a `done` spec, `--all`'s option to leave the rest undispositioned creates this state at once.
 
 Found by the 058 review (2026-09-25).
 
