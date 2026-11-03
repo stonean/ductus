@@ -31,7 +31,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 
 ### The scope is derived
 
-- A re-read's scope is the round's changed paths, derived from the repository. Its brief carries that list and the severity bar, and no scope the fixer wrote, so a brief cannot widen past its round.
+- A re-read's scope is the round's changed paths, derived from the repository: `compute-review-scope`'s `modified-since`, with the round's base as `--since`. Its brief carries that list and the severity bar, and no scope the fixer wrote, so a brief cannot widen past its round.
 - A finding outside the round's paths is a NOTE: it is dispositioned as an observation and never changes the round.
 
 ### A prescribed edit is checked by diff
@@ -44,11 +44,16 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 - After two re-reads that each found a MUST or SHOULD, the host stops and reports to the operator — the open findings, the rounds run, and the re-reads' cost — instead of starting another round. The operator decides whether the loop continues, or each open finding is deferred or waived.
 - The count belongs to one `/{project}:review` run and starts at zero on each.
 
+### Hosts
+
+- A host that can start an independent agent starts one for each re-read. One that cannot writes the re-read's brief to a file, and the operator runs it in a fresh session of any host, whose report comes back as the re-read's. A round the operator declines to have re-read is recorded as not re-read, so a skipped check never reads as a clean one.
+
 ## Edge Cases
 
 - A run whose findings were all deferred or waived has no fix round and no re-read.
 - A re-read that does not finish — cut off, or its agent stopped — is not a re-read. It is reported as incomplete and never counts as clean.
 - A round that applies prescribed edits and also changes anything else is re-read whole.
+- In a tree another session also edits, the derived scope includes that session's uncommitted changes. Isolating sessions with `git worktree` is the framework's answer (§concurrent-features); a finding on a path no fix in the round touched is an out-of-round NOTE.
 
 ## Acceptance Criteria
 
@@ -59,7 +64,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 - [ ] AC5: A round that only applies edits a re-read prescribed is verified by comparing its diff with the prescriptions, and a round with any unprescribed change is re-read.
 - [ ] AC6: After two re-reads that each found a MUST or SHOULD, the host starts no further round without the operator's decision, and reports the open findings and the rounds run.
 - [ ] AC7: A re-read that does not finish is reported as incomplete and never counted as clean.
-- [ ] AC8: Every agent in the registry runs the loop, or the review procedure states what replaces the independent re-read on a host that cannot start one.
+- [ ] AC8: On a host that cannot start an independent agent, the review procedure writes the re-read's brief to a file for the operator to run in a fresh session, and a round the operator declines to have re-read is recorded as not re-read.
 - [ ] AC9: This repository's `AGENTS.md` re-read rule points at the framework's statement instead of restating it.
 
 ## Applicable Rules
@@ -68,10 +73,13 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 
 ## Open Questions
 
-- What replaces the independent re-read on a host that cannot start an independent agent: a fresh session, the operator, or no loop with the record saying so?
-- Where does the derived scope come from: `compute-review-scope` with the round's base as `--since`, a new primitive, or the host's diff?
 - What marks a round's base so its changed paths can be derived — a commit, the working tree at the previous re-read, or a recorded sha?
 - How is a prescribed edit represented so the diff check is mechanical: a fixed format in the re-read's report the host parses, or a patch file?
 - Does the record carry the loop's outcome (rounds, re-reads, a budget stop) as frontmatter fields, or only in the Summary?
 - Is the loop on by default, or opt-in, given that it spends agent tokens the adopter pays for?
 - Does the loop also cover `/{project}:analyze`'s fixes and `/{project}:implement`'s disposition fixes, or only `/{project}:review`'s?
+
+## Resolved Questions
+
+- **What replaces the independent re-read on a host that cannot start an independent agent?** A fresh session the operator runs from the written brief, else a record that the round was not re-read (owner, 2026-11-03). The agent registry (`framework/bootstrap/ductus.md`, *Agent registry*) records no host's subagent support, so the procedure must not depend on knowing it. Rejected: the operator doing the re-read, which makes independence rest on who wrote the fix, and no loop on such a host, which leaves every fix there unchecked.
+- **Where does a re-read's derived scope come from?** `compute-review-scope`'s `modified-since`, with the round's base as `--since` (owner, 2026-11-03). That list is every file changed between the base and the working tree, committed, staged, unstaged or untracked (`runtime/src/schema/primitives.rs`, `ComputeReviewScopeResult.modified_since`), so no new primitive is needed. Rejected: a new round-scope primitive, which would see the same mixed tree when sessions share one, and the host's own `git diff`, a hand-rolled equivalent of a primitive.
