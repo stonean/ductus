@@ -56,7 +56,7 @@ Blocked on tasks 3 and 4: it reads the previous round's `round.toml` and `result
 
 The four primitives are public modules of the `ductus` library (`ductus::primitives::{start_fix_rounds, brief_re_read, read_re_read, check_prescriptions}`, each a `run(&args, repo)`), but `fix_rounds` and `git_fixture` are crate-private, so the test builds its own repository and resolves round paths from `brief-re-read`'s `brief` and `result` fields. `check_prescriptions.rs`' `briefed` test helper is the shape to follow.
 
-- [ ] `runtime/tests/fix_rounds.rs`: on a fixture repository, start, change a file, brief, write a result with an edit, apply it, check it, and brief again after an unprescribed change; the scope of each brief is only its round's paths
+- [x] `runtime/tests/fix_rounds.rs`: on a fixture repository, start, change a file, brief, write a result with an edit, apply it, check it, and brief again after an unprescribed change; the scope of each brief is only its round's paths
 
 - **Done when**: the test drives the four primitives through two rounds and each brief's paths are its round's alone (AC3, AC10).
 
