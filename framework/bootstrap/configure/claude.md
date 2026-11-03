@@ -136,6 +136,8 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__invalidate-review`
    - `mcp__ductus__start-fix-rounds`
    - `mcp__ductus__brief-re-read`
+   - `mcp__ductus__read-re-read`
+   - `mcp__ductus__check-prescriptions`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

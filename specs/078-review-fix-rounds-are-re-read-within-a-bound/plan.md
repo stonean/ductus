@@ -14,7 +14,7 @@ AGENTS.md routes "a feature-specific primitive" to its feature, and these four e
 
 ### The snapshot is an unreferenced commit object
 
-`compute-review-scope` peels `--since` to a commit and diffs that commit's tree to the index and working tree, untracked files included (`runtime/src/primitives/compute_review_scope.rs`, `run` and `diff_since`), so a base must be a commit. The snapshot is built from an in-memory copy of the repository's index: add every non-ignored working-tree file, apply deletions, write the tree objects, and create a commit with `HEAD` as parent and no ref update. **Assumption**, settled by the first task's test: writing the tree through git2 leaves the index file untouched as long as the index is never written back; the test asserts the index file's bytes, `HEAD` and every ref unchanged. An unreferenced object outlives a run, since git's default `gc.pruneExpire` is two weeks.
+`compute-review-scope` peels `--since` to a commit and diffs that commit's tree to the index and working tree, untracked files included (`runtime/src/primitives/compute_review_scope.rs`, `run` and `diff_since`), so a base must be a commit. The snapshot is built from an in-memory copy of the repository's index: add every non-ignored working-tree file, apply deletions, write the tree objects, and create a commit with `HEAD` as parent and no ref update. Writing the tree through git2 leaves the index file untouched as long as the index is never written back: `start_fix_rounds`' `the_snapshot_moves_nothing` asserts the index file's bytes, `HEAD` and every ref unchanged. libgit2's `add_all` applies the working tree's deletions itself. An unreferenced object outlives a run, since git's default `gc.pruneExpire` is two weeks.
 
 ### A round's paths are a tree-to-tree diff
 
@@ -74,6 +74,7 @@ The loop step says what to do when the host can start an independent agent and w
 | `runtime/src/main.rs` | Modify | Four `Command` variants |
 | `runtime/src/schema/config_keys.rs` | Modify | `[review] re-reads-off` |
 | `runtime/tests/fix_rounds.rs` | Create | The four primitives driven through one loop |
+| `runtime/tests/line_ending_discipline.rs` | Modify | `brief_re_read.rs` exempt: it writes generated state |
 | `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the changed command |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
 | `framework/runtime-tools.txt` | Modify | Four tool lines |

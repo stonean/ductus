@@ -41,7 +41,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 ### A prescribed edit is checked by diff
 
 - A re-read may prescribe an edit: the file, the text it replaces, and the replacement. It writes its prescriptions to a file its brief names, outside the round's scope, and a runtime primitive reads that file, so no prescription passes through the fixer.
-- A round that only applies prescribed edits is verified by comparing its diff with the prescriptions — every hunk prescribed, every prescription applied — instead of by another re-read: the primitive replaces each old text exactly once in the base snapshot's copy of its file and compares the result with the working tree byte for byte. A round with any change the re-read did not prescribe is re-read, and the primitive names the paths that differ.
+- A round that only applies prescribed edits is verified by comparing its diff with the prescriptions — every hunk prescribed, every prescription applied — instead of by another re-read: the primitive replaces each old text exactly once in the base snapshot's copy of its file and compares the result with a snapshot of the working tree, as git stores both, so a checkout that converts line endings on disk compares alike. A round with any change the re-read did not prescribe is re-read, and the primitive names the paths that differ.
 
 ### The budget
 

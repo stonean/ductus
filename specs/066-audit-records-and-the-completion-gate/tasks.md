@@ -100,7 +100,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 15. Implement scenario: the-fix-round-loop-is-recorded-and-gated
 
-Blocked on 078 task 2: `write-review` reads `[review] re-reads-off` through the reader that task adds to `runtime/src/primitives/fix_rounds.rs`.
+`write-review` reads `[review] re-reads-off` through `fix_rounds::re_reads_off` (`runtime/src/primitives/fix_rounds.rs`, from 078 task 2), which returns the reason on one line or halts with `PrimitiveError::InvalidReReadsOff`.
 
 - [ ] Implement the behavior described in `scenarios/the-fix-round-loop-is-recorded-and-gated.md`
 - [ ] Add the `fix-rounds` argument to `WriteReviewArgs` and derive the six record fields and the Summary line in `runtime/src/primitives/write_review.rs`, refusing the malformed entries the scenario lists

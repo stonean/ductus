@@ -702,6 +702,169 @@ pub struct BriefReReadResult {
     pub re_reads_off: Option<String>,
 }
 
+// -- read-re-read (spec 078) --------------------------------------------------
+
+/// Args for `read-re-read`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadReReadArgs {
+    /// Feature directory name under review.
+    #[arg(long)]
+    pub feature: String,
+    /// The base the round was briefed at: the `base` passed to `brief-re-read`.
+    #[arg(long)]
+    pub base: String,
+}
+
+/// A re-read finding's severity: the brief's severity bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum ReReadSeverity {
+    /// The round's code does what the spec forbids, fails a behavior it
+    /// requires, or breaks one that held.
+    #[serde(rename = "MUST")]
+    Must,
+    /// A sentence the round made untrue, or a test that would pass with its
+    /// behavior removed.
+    #[serde(rename = "SHOULD")]
+    Should,
+    /// A contrived input, a style point, or anything outside the round.
+    #[serde(rename = "NOTE")]
+    Note,
+}
+
+/// One prescribed replacement in a re-read's `result.json`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PrescribedEdit {
+    /// The file, from the project root.
+    pub path: String,
+    /// The exact text the round left, which must occur once in the file.
+    pub old: String,
+    /// Its replacement.
+    pub new: String,
+}
+
+/// One finding in a re-read's `result.json`. Unknown fields are refused, so a
+/// misspelled `edits` cannot silently drop a prescription.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReReadFinding {
+    /// The finding's severity.
+    pub severity: ReReadSeverity,
+    /// The file it concerns, from the project root.
+    pub path: String,
+    /// What is wrong, on one line.
+    pub text: String,
+    /// The edits the re-read prescribes for it, if any.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edits: Vec<PrescribedEdit>,
+}
+
+/// Whether a re-read finished.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReReadState {
+    /// The file parses and says `"complete": true`: a finished re-read.
+    Complete,
+    /// No file, or a parsed one whose `complete` is not `true`: the re-read
+    /// did not finish.
+    #[default]
+    Incomplete,
+    /// The file is not JSON of the result file's shape.
+    Unparseable,
+}
+
+/// Result for `read-re-read`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadReReadResult {
+    /// Whether the re-read finished. Only `complete` is a re-read; the other
+    /// two leave the round needing one.
+    pub state: ReReadState,
+    /// Why the state is not `complete`, naming the file or the field.
+    pub problem: Option<String>,
+    /// MUST findings.
+    pub must: usize,
+    /// SHOULD findings.
+    pub should: usize,
+    /// NOTE findings.
+    pub notes: usize,
+    /// MUST and SHOULD findings that carry no `edits`: each needs a fix the
+    /// re-read did not prescribe, so a later diff check cannot close it.
+    pub unprescribed: usize,
+    /// Every finding, as the file holds it; empty unless `complete`.
+    pub findings: Vec<ReReadFinding>,
+}
+
+// -- check-prescriptions (spec 078) ------------------------------------------
+
+/// Args for `check-prescriptions`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckPrescriptionsArgs {
+    /// Feature directory name under review.
+    #[arg(long)]
+    pub feature: String,
+    /// The **previous** round's base: its `round.toml` names the snapshot the
+    /// edits apply to, and its `result.json` holds the edits.
+    #[arg(long)]
+    pub base: String,
+}
+
+/// The diff check's verdict.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum PrescriptionVerdict {
+    /// The round is exactly the prescribed edits, each applied as written.
+    Matched,
+    /// It is not: something failed, differs or was not prescribed.
+    Differs,
+    /// The check could not run; `problem` says why. Never a match.
+    #[default]
+    CouldNotRun,
+}
+
+/// A prescribed edit whose `old` text did not occur exactly once.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct FailedEdit {
+    /// The finding's index in `result.json`.
+    pub finding: usize,
+    /// The edit's index within that finding.
+    pub edit: usize,
+    /// The edit's file, from the project root.
+    pub path: String,
+    /// Where `old` occurs in the file as the previous re-read read it,
+    /// overlapping occurrences counted: zero, or more than one. A file the
+    /// snapshot does not hold as text has none.
+    pub occurrences: usize,
+}
+
+/// Result for `check-prescriptions`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckPrescriptionsResult {
+    /// The verdict.
+    pub verdict: PrescriptionVerdict,
+    /// Why the check could not run, naming the file or the edit.
+    pub problem: Option<String>,
+    /// The snapshot of the working tree the round was compared with: the
+    /// next round's base when the verdict is `matched`. Absent when the check
+    /// could not run.
+    pub snapshot: Option<String>,
+    /// How many prescribed files were compared.
+    pub examined: usize,
+    /// Prescribed files whose edited text is not what the working tree holds.
+    pub differing: Vec<String>,
+    /// Files changed since the previous re-read's snapshot that no edit names.
+    pub unprescribed: Vec<String>,
+    /// Edits whose `old` did not occur exactly once.
+    pub failed: Vec<FailedEdit>,
+    /// The previous re-read's MUST and SHOULD findings with no `edits`, which
+    /// a match leaves open: the loop ends at a match only when this is zero.
+    pub open: usize,
+}
+
 // -- write-review ------------------------------------------------------------
 
 /// One review finding — the record shape a `performReview` pass returns and

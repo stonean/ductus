@@ -39,14 +39,15 @@ use crate::schema::primitives::{
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
-    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPromotionCoverageArgs,
-    CheckPromotionCoverageResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
-    CheckRuleIdsResult, CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs,
-    CheckStuckResult, CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult,
-    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
-    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
-    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPrescriptionsArgs,
+    CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
+    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
+    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
+    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
+    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
+    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -56,16 +57,16 @@ use crate::schema::primitives::{
     MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
     PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
-    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
-    RelocateAuditRecordsArgs, RelocateAuditRecordsResult, RemoveInboxItemArgs,
-    RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs,
-    ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
-    RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, StartFixRoundsArgs,
-    StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSpecArgs, ReadSpecResult,
+    ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
+    RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
+    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
+    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult,
+    StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult,
+    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
+    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -667,6 +668,31 @@ impl GovRuntimeServer {
     ) -> Result<Json<BriefReReadResult>, String> {
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::brief_re_read::run(&params.0, repo.as_path())).await
+    }
+
+    #[tool(
+        name = "read-re-read",
+        description = "Read a /ductus:review fix round's re-read result (spec 078): the result.json the re-read wrote under .ductus/review-rounds/{feature}/{base}/, where `base` is the one the round was briefed at. `state` is `complete` only for a file that parses and says \"complete\": true; `incomplete` for no file or one whose `complete` is not true — a re-read that did not finish, never a clean one; `unparseable` for a file not of the result file's shape (unknown fields, a severity outside MUST/SHOULD/NOTE, a multi-line text, an empty `old`), with `problem` naming why. A complete result counts its findings by severity and counts apart the MUST and SHOULD findings carrying no `edits`, which no diff check can close. A re-read is clean when it is complete with no MUST and no SHOULD. Read-only."
+    )]
+    async fn read_re_read(
+        &self,
+        params: Parameters<ReadReReadArgs>,
+    ) -> Result<Json<ReadReReadResult>, String> {
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::read_re_read::run(&params.0, repo.as_path())).await
+    }
+
+    #[tool(
+        name = "check-prescriptions",
+        description = "The diff check of a /ductus:review fix round (spec 078). `base` names the PREVIOUS round: its round.toml gives the snapshot that re-read read, and its result.json the edits it prescribed. Each prescribed file is taken from that snapshot, its edits applied in order — each `old` replaced only where it occurs at exactly one position, overlapping ones counted — and compared, as git stores both, with a fresh snapshot of the working tree, returned as `snapshot`, the next round's base on a match. `failed` lists each edit whose `old` occurred zero times or more than once; `differing` the prescribed files whose edited text is not the working tree's; `unprescribed` the files changed since the re-read's snapshot that no edit names. `verdict` is `matched` when all three are empty, `differs` otherwise, and `could-not-run` — never a match — when no round was briefed at the base, the result file is missing, incomplete or unparseable, it prescribes no edit, or an edit names a path outside the project, with `problem` saying which. `open` counts the re-read's MUST and SHOULD findings with no edits: a match ends the loop only when it is zero. Writes git objects only."
+    )]
+    async fn check_prescriptions(
+        &self,
+        params: Parameters<CheckPrescriptionsArgs>,
+    ) -> Result<Json<CheckPrescriptionsResult>, String> {
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::check_prescriptions::run(&params.0, repo.as_path()))
+            .await
     }
 
     #[tool(

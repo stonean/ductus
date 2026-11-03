@@ -13,6 +13,7 @@ use crate::primitives::compute_review_scope::{project_diff_options, project_path
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
+use crate::schema::primitives::ReReadFinding;
 
 /// Where the loop's files live, from the project root.
 pub(crate) const ROUNDS_DIR: &str = ".ductus/review-rounds";
@@ -45,6 +46,116 @@ pub(crate) struct RoundRecord {
 /// root. `base` is a full sha the caller resolved, so it is a safe name.
 pub(crate) fn round_rel(feature: &str, base: &str) -> String {
     format!("{ROUNDS_DIR}/{feature}/{base}")
+}
+
+/// A briefed round's directory for reading, checked to resolve inside the
+/// project and created nowhere: a reader writes no ignore file.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] when it, or a link on the way to it,
+/// resolves outside the project.
+pub(crate) fn round_dir_to_read(repo: &Path, feature: &str, base: &str) -> Result<PathBuf> {
+    let rel = round_rel(feature, base);
+    super::validate_contained(repo, &rel)?;
+    Ok(repo.join(rel))
+}
+
+/// A re-read's `result.json`, as `read-re-read` and `check-prescriptions` read
+/// it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ResultFile {
+    /// No file, or one whose `complete` is not `true`: the re-read did not
+    /// finish. Carries the reason.
+    Incomplete(String),
+    /// Not JSON of the result file's shape. Carries the reason.
+    Unparseable(String),
+    /// A finished re-read and its findings.
+    Complete(Vec<ReReadFinding>),
+}
+
+/// The result file's top level. Unknown fields are refused, as they are in
+/// each finding and edit, so a misspelled key is a reported problem rather
+/// than a silently dropped prescription.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ResultDoc {
+    #[serde(default)]
+    complete: bool,
+    findings: Vec<ReReadFinding>,
+}
+
+/// Read the result file at `path`.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the file exists but cannot be read; an absent
+/// file is [`ResultFile::Incomplete`], since a re-read that never wrote one
+/// did not finish.
+pub(crate) fn read_result(path: &Path) -> Result<ResultFile> {
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(ResultFile::Incomplete(format!(
+                "{} does not exist",
+                path.display()
+            )));
+        }
+        Err(source) => {
+            return Err(PrimitiveError::Io {
+                path: path.into(),
+                source,
+            });
+        }
+    };
+    let doc: ResultDoc = match serde_json::from_slice(&bytes) {
+        Ok(doc) => doc,
+        Err(err) => {
+            return Ok(ResultFile::Unparseable(super::flatten_line(
+                &err.to_string(),
+            )));
+        }
+    };
+    if let Some(problem) = doc
+        .findings
+        .iter()
+        .enumerate()
+        .find_map(|(i, f)| malformed(i, f))
+    {
+        return Ok(ResultFile::Unparseable(problem));
+    }
+    if !doc.complete {
+        return Ok(ResultFile::Incomplete("`complete` is not true".to_string()));
+    }
+    Ok(ResultFile::Complete(doc.findings))
+}
+
+/// What is wrong with a finding the schema admits: an empty or multi-line
+/// `path` or `text`, or an edit with an empty `path` or `old`. An empty `old`
+/// would match everywhere, and a new file is never a prescription.
+fn malformed(index: usize, finding: &ReReadFinding) -> Option<String> {
+    let line = |value: &str| !value.is_empty() && !value.chars().any(super::is_line_hazard);
+    if !line(&finding.path) {
+        return Some(format!(
+            "finding [{index}]: `path` must be one non-empty line"
+        ));
+    }
+    if !line(&finding.text) {
+        return Some(format!(
+            "finding [{index}]: `text` must be one non-empty line"
+        ));
+    }
+    finding.edits.iter().enumerate().find_map(|(e, edit)| {
+        if !line(&edit.path) {
+            Some(format!(
+                "finding [{index}] edit [{e}]: `path` must be one non-empty line"
+            ))
+        } else if edit.old.is_empty() {
+            Some(format!("finding [{index}] edit [{e}]: `old` is empty"))
+        } else {
+            None
+        }
+    })
 }
 
 /// The `[review] re-reads-off` reason from the resolved config file, flattened

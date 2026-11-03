@@ -95,6 +95,8 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "invalidate-review",
     "start-fix-rounds",
     "brief-re-read",
+    "read-re-read",
+    "check-prescriptions",
 ];
 
 /// Primitives the MCP server does not serve, each reachable only through the

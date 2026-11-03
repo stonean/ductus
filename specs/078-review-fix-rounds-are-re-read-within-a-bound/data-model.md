@@ -60,10 +60,11 @@ Result:
 | Field | Type | Notes |
 | --- | --- | --- |
 | `complete` | boolean | Must be `true`. A file without it, or no file, is an incomplete re-read. |
+| (any other key) | — | Refused at every level, so a misspelled key is a problem `read-re-read` reports, never a prescription silently dropped. |
 | `findings[].severity` | `MUST`, `SHOULD` or `NOTE` | The brief's severity bar. A finding outside the round's `paths` is a `NOTE`. |
-| `findings[].path` | string | Repo-relative. |
-| `findings[].text` | string | One line. |
-| `findings[].edits` | list | Optional prescriptions: each a `path`, the exact `old` text, and its `new` replacement. An empty `old` is refused, so a new file is never a prescription. |
+| `findings[].path` | string | From the project root; one non-empty line. |
+| `findings[].text` | string | One non-empty line. |
+| `findings[].edits` | list | Optional prescriptions: each a `path` from the project root, the exact `old` text, and its `new` replacement. An empty `path` or `old` is refused, so a new file is never a prescription. |
 
 JSON because a re-read agent already emits its tool arguments as JSON, and an `old`/`new` pair is the shape of the host's own edit tool; TOML's multi-line strings drop a newline after their opening quotes, and a markdown fence collides with fenced content.
 
@@ -82,11 +83,13 @@ The diff check of a round against the previous re-read's prescriptions.
 
 Args: `{ "feature": "042-widget", "base": "<sha>" }` — `base` names the **previous** round, whose `round.toml` gives the snapshot the edits apply to and whose `result.json` gives the edits.
 
-Result: `{ "verdict": "matched", "examined": 3, "differing": [], "unprescribed": [], "failed": [], "open": 0 }`
+Result: `{ "verdict": "matched", "snapshot": "<sha>", "examined": 3, "differing": [], "unprescribed": [], "failed": [], "open": 0 }`
 
-- Each prescribed file is taken from the snapshot, its edits applied in order, each `old` replaced where it occurs exactly once, and the result compared byte for byte with the working tree. `failed` lists each edit whose `old` occurred zero times or more than once, with the count; `differing` the prescribed files whose result is not the working tree's; `unprescribed` the files changed since the snapshot that no edit names.
-- `verdict` — `matched` when all three are empty; `differs` otherwise; `could-not-run` when `round.toml` or a complete, parseable `result.json` is missing, with `problem` naming which (AC15).
+- Each prescribed file is taken from the snapshot, its edits applied in order, each `old` replaced only where it starts at exactly one position, overlapping ones counted, so an ambiguous prescription never applies. The result is compared with a fresh snapshot of the working tree as git stores both — the edited text hashed as a blob against the blob the snapshot holds — so a checkout that converts line endings on disk compares alike. `failed` lists each edit whose `old` occurred zero times or more than once: `{ "finding", "edit", "path", "occurrences" }`, the indexes as `result.json` orders them, and a file the snapshot does not hold as text has none. `differing` lists the prescribed files whose result is not the working tree's; `unprescribed` the files changed since the previous re-read's snapshot that no edit names, by the tree-to-tree diff `brief-re-read` uses.
+- `verdict` — `matched` when all three are empty; `differs` otherwise; `could-not-run` when no `round.toml` was written at the base or it does not parse, `result.json` is missing, incomplete or unparseable, it prescribes no edit — over which a match would pass vacuously — or an edit names a path outside the project, with `problem` naming which (AC15). `could-not-run` carries no `snapshot` and is never a match.
+- `snapshot` — the fresh snapshot, the next round's base after a `matched` check, so a later round never re-lists the verified edits. After `differs`, the round is re-read whole from its own base.
 - `open` — the previous re-read's MUST and SHOULD findings with no `edits`. A `matched` round with `open` at zero ends the loop; with `open` above zero those findings still need a fix, a deferral or a waiver.
+- It writes git objects for the snapshot and nothing else.
 
 ## `write-review` — the loop's argument and record fields
 
