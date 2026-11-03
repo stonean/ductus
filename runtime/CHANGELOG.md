@@ -119,7 +119,8 @@ its version and date.
   deferral is passed in `expired-decisions`. A deferral of a gating finding — a
   review MUST or SHOULD, an analyze hard-fail or blocking finding — releases
   `done` only when its work is still to do on another spec (an unchecked task,
-  or a spec not `done`), and then leaves that record's counts; any other — to
+  a scenario or a body edit on a spec not `done`), and then leaves that
+  record's counts; any other — to
   the spec's own work, a rule file, complete work, or a work item alone — is
   stored with `gating: true`, and `check-review-gate` names it where it
   blocks. `process-decisions` returns a deferral whose named work is complete —

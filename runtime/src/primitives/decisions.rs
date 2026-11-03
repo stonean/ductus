@@ -323,9 +323,10 @@ pub(crate) fn releases(repo: &Path, root: &str, feature: &str, disposition: &Dis
 /// release are judged from (spec 076).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Work {
-    /// Still to do: its task has an unchecked box, or its spec is not `done`.
+    /// Still to do: its spec is not `done` and, when it names a task, that
+    /// task has an unchecked box.
     Pending,
-    /// Done or gone: its task is checked or absent, its spec is `done` or
+    /// Done or gone: its spec is `done` or absent, its task is checked or
     /// absent, or it lies outside every spec — a rule file, amended when the
     /// deferral was recorded.
     Complete,
@@ -384,6 +385,17 @@ pub(crate) fn work_state(
         // A rule file under the spec root, or a spec since retired.
         return Work::Complete;
     }
+    // The owning spec's status decides first, for a task too: a `done`
+    // spec's gate never runs again, so its work is complete whatever its
+    // tasks say, and a deferral to it releases nothing.
+    match std::fs::read_to_string(&spec_path)
+        .ok()
+        .and_then(|content| super::frontmatter_status(&content, &spec_path))
+    {
+        None => return Work::Unreadable,
+        Some(status) if status == "done" => return Work::Complete,
+        Some(_) => {}
+    }
     match nonblank(task).map(str::trim) {
         Some(number) if tasks_feature(root, target) == Some(feature) => {
             if !contained("tasks.md") {
@@ -408,14 +420,7 @@ pub(crate) fn work_state(
                 },
             }
         }
-        _ => match std::fs::read_to_string(&spec_path)
-            .ok()
-            .and_then(|content| super::frontmatter_status(&content, &spec_path))
-        {
-            None => Work::Unreadable,
-            Some(status) if status == "done" => Work::Complete,
-            Some(_) => Work::Pending,
-        },
+        _ => Work::Pending,
     }
 }
 
@@ -1474,6 +1479,38 @@ mod tests {
             work_state(repo.path(), "specs", Some("specs/010-real/spec.md"), None),
             Work::Complete
         );
+    }
+
+    /// Spec 076: a task's work is complete once its spec is `done`, unchecked
+    /// or not — a closed spec's gate never runs again, so a deferral to it
+    /// releases nothing — and still to do while its spec is open and the task
+    /// has an unchecked box, and unreadable when its spec's status cannot be
+    /// read.
+    #[test]
+    fn a_task_on_a_done_spec_is_complete_work() {
+        let repo = tempfile::tempdir().unwrap();
+        let tasks = "# Tasks\n\n## 1. Open\n\n- [ ] a\n";
+        for (feature, status) in [
+            ("020-open", "in-progress"),
+            ("021-closed", "done"),
+            ("022-broken", "[not, a, string"),
+        ] {
+            let dir = repo.path().join("specs").join(feature);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("spec.md"), format!("---\nstatus: {status}\n---\n")).unwrap();
+            std::fs::write(dir.join("tasks.md"), tasks).unwrap();
+        }
+        let state = |feature: &str| {
+            work_state(
+                repo.path(),
+                "specs",
+                Some(&format!("specs/{feature}/tasks.md")),
+                Some("1"),
+            )
+        };
+        assert_eq!(state("020-open"), Work::Pending);
+        assert_eq!(state("021-closed"), Work::Complete);
+        assert_eq!(state("022-broken"), Work::Unreadable);
     }
 
     /// Spec 076: a work-item ID is stored exactly as given, while the target

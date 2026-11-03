@@ -450,7 +450,7 @@ mod tests {
     }
 
     /// Spec 076: a deferral to a task lapses once the task is checked or gone,
-    /// and holds while it has an unchecked box.
+    /// and holds while its spec is open and the task has an unchecked box.
     #[test]
     fn a_deferral_to_a_task_lapses_when_the_task_is_complete() {
         let tasks = "specs/031-x/tasks.md";

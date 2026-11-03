@@ -773,7 +773,7 @@ statement: wherever else a deferral is said to _release_ a finding, it is in
 this sense. A gating finding — a review MUST or SHOULD
 violation, or an analyze hard-fail or blocking finding — is **released** from
 its spec's gate when its deferral names pipeline work on another spec that is
-still to do: an unchecked task, a scenario or body edit on a spec that is not
+still to do: a scenario, a body edit or an unchecked task on a spec that is not
 `done`, or a new spec. That spec's gate then holds the work. Any other
 deferral releases nothing, and the finding still holds `done`: one to this
 spec's own work, to a rule file, to an external work item alone — no gate
@@ -783,16 +783,18 @@ The named work is **complete** when:
 
 | Target | Complete when |
 | --- | --- |
-| A `tasks.md` with a task | Every checkbox of that task — each subtask, and a done-when written as a checkbox — is checked, or the task or the file is absent |
+| A `tasks.md` with a task | The owning spec is `done` or absent; or every checkbox of that task — each subtask, and a done-when written as a checkbox — is checked; or the task or the file is absent |
 | A `tasks.md` without a task (a record written before spec 076) | The owning spec is `done`, or absent |
 | A scenario, a `spec.md`, or a feature directory | The owning spec is `done`, or absent |
 | A rule file | Always: the amendment was written when the deferral was recorded |
 | A work item only | Never: the deferral retires only when its finding stops firing |
 
-A target that exists but does not parse, or whose feature directory, or the
-`spec.md` or `tasks.md` read in it, resolves outside the project, is neither complete nor still to do:
-the deferral is matched as stored, releases nothing, and the run names the
-target in a notice.
+A target is neither complete nor still to do, whatever its row says, when its
+feature directory or `spec.md` resolves outside the project, when its owning
+spec's `status` cannot be read, or, for a task on a spec that is not `done`,
+when its `tasks.md` resolves outside the project or cannot be read: the
+deferral is matched as stored, releases nothing, and the run names the target
+in a notice.
 
 For a violation:
 
@@ -801,7 +803,7 @@ For a violation:
   names the `done → in-progress` reopen in a confirmation and performs it
   through the set-status primitive with `from: done` before `write-review`
   runs, as a deferral of an observation does. Left closed, a `done` spec's
-  scenario, `spec.md` or directory is complete work and releases nothing.
+  work, its tasks included, is complete and releases nothing.
 - **Not released**, it stays in its section with a `**Deferred**` line and
   still holds `done`. Its decision carries the derived `gating: true`, and
   `check-review-gate` names it with its work where it blocks.
