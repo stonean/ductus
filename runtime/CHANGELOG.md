@@ -23,20 +23,26 @@ its version and date.
   file, installed whatever `[rules] surfaces` says. On a project with feature
   specs, `/ductus`'s one-time brownfield security audit now also runs when it
   newly installs `security-cross.md`, as the upgrade to 0.60.0 does, and
-  reports each spec one of its rules finds a gap in. It now leaves a case a
-  rule's **Not flagged:** clause yields to another rule to that rule, judging
-  the yield's load condition against every rule file installed, as `/analyze`
-  does, so the case is reported under the owner's ID when the run newly
-  installs the owner's file too, and not at all when that file was already
-  installed. An upgrade of a backend-only or full-stack project therefore
-  previews none of `SEC-LOG-001`'s gaps, which `BE-LOG-002` and `BE-LOG-008`
-  own there, and `/analyze` reports them. An owner outside the security rule
-  files, such as `configuration-cross.md` `CFG-ENV-006` for a sensitive
-  configuration value in a log line, is loaded and applied to that case
-  alone, so a first adoption previews the case under `CFG-ENV-006`, an
-  `api-backend.md` rule or an `observability-backend.md` rule, as `/analyze`
-  reports it, and an owner's file that fails to load is named in a
-  `failed to load` line. `SEC-LOG-001` keeps
+  reports each spec one of its rules finds a gap in. It now applies each rule
+  to a spec as `/analyze` does — its trigger, commitment and flags judged
+  against the spec's `spec.md`, `plan.md`, `data-model.md` and scenarios
+  together, with a cross-spec file the spec or the rule refers to, such as
+  `specs/system.md`, one finding per spec and rule — sets aside what the rule
+  sets aside, and leaves a case a rule names as another rule's to that rule,
+  judging the yield's load condition against every rule file installed, as
+  `/analyze` does, so the case is reported under the owner's ID when the run
+  newly installs the owner's file too, and not at all when that file was
+  already installed. An upgrade of a backend-only or full-stack project
+  therefore previews none of `SEC-LOG-001`'s gaps, which `BE-LOG-002` and
+  `BE-LOG-008` own there, and `/analyze` reports them. An owner outside the
+  security rule files, such as `configuration-cross.md` `CFG-ENV-006` for a
+  spec that introduces a sensitive configuration value and logs it, is loaded
+  and applied to that case alone, its Verification applied as `/analyze`
+  applies it, so a first adoption previews the case under its owner's ID — a
+  `configuration-cross.md` rule such as `CFG-ENV-006` or `CFG-ENV-013`, an
+  `api-backend.md` rule or an `observability-backend.md` rule — where the
+  yielding rule's trigger fires too and `/analyze` reports it, and an owner's
+  file that fails to load is named in a `failed to load` line. `SEC-LOG-001` keeps
   passwords, tokens, session IDs, keys, one-time and recovery codes, PII and
   other sensitive field values out of logs, error reports and telemetry in
   every shape; where `security-backend.md` is also loaded, `/analyze` reports

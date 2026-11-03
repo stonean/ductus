@@ -163,10 +163,10 @@ When neither condition holds — greenfield adoption with no existing specs, or 
 
 ### Audit logic
 
-For each newly created rule file:
+For each newly created security rule file:
 
 1. Load the rule file, applying the same integrity checks `/{project}:analyze` uses (well-formed headings, required fields, valid IDs, no duplicates). If the file fails to load, ductus reports the load failure and skips the audit for that file — same posture as `/{project}:analyze`.
-2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under a feature spec directory (`spec.md`, `plan.md`, scenario files), produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in another rule file the manifest pass newly created is reported under that rule's ID, the audit loading its file with the same integrity checks and applying the rule to that case alone (since spec 077).
+2. Apply each MUST/MUST NOT and SHOULD/SHOULD NOT rule to each feature spec — its `spec.md`, `plan.md`, `data-model.md` and scenario files read together, with a cross-spec file the spec or the Verification refers to, such as `specs/system.md` — as `/{project}:analyze` applies it, producing one finding when its Verification trigger fires against the spec and the spec does not include the commitment or holds a case the rule flags, unless the rule sets that gap aside or names it as another rule's, in its **Not flagged:** clause or elsewhere, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in a non-security rule file the manifest pass newly created is reported under that rule's ID, the audit loading its file with the same integrity checks and applying the rule to that case alone, as `/{project}:analyze` applies it (since spec 077).
 3. Report each finding under the spec it belongs to. The audit writes no file.
 
 ### Finding format
@@ -188,7 +188,7 @@ Prefixing every line with the rule ID makes related findings group naturally and
 
 ### Idempotency
 
-The audit writes nothing, so it is safe to re-run if a user deletes and re-installs a rule file or otherwise re-triggers the "newly created" path: a re-run reports the gaps again and duplicates nothing.
+The audit writes nothing, so it is safe to re-run if a user deletes and re-installs a rule file or otherwise re-triggers the "newly created" path: a re-run reports the re-installed file's gaps again, and a case its rules yield to another file's rule only where that file was re-installed too, and duplicates nothing.
 
 ### Reporting
 
@@ -270,7 +270,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 - [x] AC23: On a greenfield run (no existing feature spec directories in the spec root), the audit is silently skipped
 - [x] AC24: On a routine re-run (rule files already present), the audit is silently skipped
 - [x] AC25: Inbox items follow the format `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}` — **Superseded by 058**: no inbox item is written. Each reported finding keeps this format without its leading checkbox.
-- [x] AC26: Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger) — **Superseded by 058**: the audit writes nothing, so a re-trigger re-reports its findings and duplicates nothing. There is no inbox content to deduplicate against.
+- [x] AC26: Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger) — **Superseded by 058**: the audit writes nothing, so a re-trigger reports again the gaps the re-installed file's rules find and duplicates nothing. There is no inbox content to deduplicate against.
 - [x] AC27: Ductus's post-scaffolding output reports the count of new audit items added (omitted when zero) — **Superseded by 058**: no item is added. The output reports how many gaps were found and in how many specs, lists each finding under its spec, and is still omitted when there are none.
 
 ### Constitution Reference
