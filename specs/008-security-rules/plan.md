@@ -113,7 +113,7 @@ When `/ductus` lands rule files in a project with existing `specs/NNN-*/` direct
 
 1. Detect the trigger: at least one of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or, since spec 077, `specs/rules/security-cross.md` was newly created (not updated) by the manifest pass, AND at least one `specs/NNN-*` directory exists.
 2. Load the newly created rule file(s) using the same integrity checks `/{project}:analyze` uses. If a file fails to load, report and skip the audit for that file.
-3. Iterate the rules; for each rule whose Verification trigger fires against an existing project artifact, produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077).
+3. Iterate the rules; for each rule whose Verification trigger fires against an existing project artifact, produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in another rule file the manifest pass newly created is reported under that rule's ID, its file loaded with the same integrity checks and the rule applied to that case alone (since spec 077).
 4. Append findings to `specs/inbox.md`, deduplicating against existing lines that begin with the same `{Rule ID}: {artifact path}` prefix.
 5. Report the audit summary line (`{N} security audit items added to specs/inbox.md.`) in the post-scaffolding output, omitted when N is zero.
 

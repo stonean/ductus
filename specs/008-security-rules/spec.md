@@ -166,7 +166,7 @@ When neither condition holds — greenfield adoption with no existing specs, or 
 For each newly created rule file:
 
 1. Load the rule file, applying the same integrity checks `/{project}:analyze` uses (well-formed headings, required fields, valid IDs, no duplicates). If the file fails to load, ductus reports the load failure and skips the audit for that file — same posture as `/{project}:analyze`.
-2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under a feature spec directory (`spec.md`, `plan.md`, scenario files), produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077).
+2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under a feature spec directory (`spec.md`, `plan.md`, scenario files), produce a finding, unless the rule's **Not flagged:** clause names the case as another rule's, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in another rule file the manifest pass newly created is reported under that rule's ID, the audit loading its file with the same integrity checks and applying the rule to that case alone (since spec 077).
 3. Report each finding under the spec it belongs to. The audit writes no file.
 
 ### Finding format

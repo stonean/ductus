@@ -30,7 +30,13 @@ its version and date.
   installs the owner's file too, and not at all when that file was already
   installed. An upgrade of a backend-only or full-stack project therefore
   previews none of `SEC-LOG-001`'s gaps, which `BE-LOG-002` and `BE-LOG-008`
-  own there, and `/analyze` reports them. `SEC-LOG-001` keeps
+  own there, and `/analyze` reports them. An owner outside the security rule
+  files, such as `configuration-cross.md` `CFG-ENV-006` for a sensitive
+  configuration value in a log line, is loaded and applied to that case
+  alone, so a first adoption previews the case under `CFG-ENV-006`, an
+  `api-backend.md` rule or an `observability-backend.md` rule, as `/analyze`
+  reports it, and an owner's file that fails to load is named in a
+  `failed to load` line. `SEC-LOG-001` keeps
   passwords, tokens, session IDs, keys, one-time and recovery codes, PII and
   other sensitive field values out of logs, error reports and telemetry in
   every shape; where `security-backend.md` is also loaded, `/analyze` reports
