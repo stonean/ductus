@@ -58,7 +58,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Carry the change to the runtime's surfaces
 
-The CHANGELOG entry waits until the other session commits its uncommitted `runtime/CHANGELOG.md` edits, so neither commit sweeps in the other's lines.
+The CHANGELOG entry waits until `git status` shows no one else's uncommitted edits in `runtime/CHANGELOG.md`, so neither commit sweeps in the other's lines. Add it under the unreleased section, naming the `dispositions:` key rename and the read aliases (`runtime/src/schema/primitives.rs`, `Dispositions`), the review `--defer` flags, and the new `lapsed`, `task`, `work-item` and `gating` fields (data model).
 
 - [x] Update the tool descriptions in `runtime/src/mcp/server.rs` and the wire-shape tests in `runtime/tests/mcp.rs`
 - [x] Regenerate the goldens with `BLESS=1`, reading every diff
@@ -77,6 +77,14 @@ The CHANGELOG entry waits until the other session commits its uncommitted `runti
 
 ## 9. Sweep the live artifacts by meaning
 
+The spec-body reach of this sweep is an owner decision not yet taken. Uses of *routed* and *discarded* sit in 90 files across 36 specs (10 `done`, 3 `draft`, 23 `in-progress`; counted excluding 076 and every `review.md` and `analysis.md`). Classify each use first:
+
+- a record — a checked task, a Motivation, a Resolved Question, a rejected alternative, an incident account — which keeps its wording;
+- not a finding disposition — an inbox item's `discard` route, `routed-by`, generic English — which keeps it;
+- a current-behavior claim, which is edited.
+
+Count the `done` specs a claim edit would reopen, and the `in-progress` specs whose `scenarios/` or `data-model.md` would change, then put the scope to the owner with those counts. Task 10 already covers 020's, 058's and 066's data models. The rest of the set needs no decision: `framework/` beyond the files task 8 edited, `scripts/`, the runtime doc comments, `.github/`, `docs/`, `README.md` and `AGENTS.md`. Edit `README.md` and `docs/rules.md` only when `git status` shows no one else's uncommitted edits in them.
+
 - [ ] Grep the `AGENTS.md` sweep-target set for *routed*, *discarded*, *discard*, *waive* and *defer*, and classify each use by who emits it
 - [ ] Rewrite each finding-disposition use, leaving Resolved Questions, signposts, migrations, the inbox route and the alias-reading code
 - [ ] Re-read the doc comments of every runtime item touched in tasks 2–6
@@ -85,7 +93,7 @@ The CHANGELOG entry waits until the other session commits its uncommitted `runti
 
 ## 10. Discharge the cross-spec impacts
 
-Edit 020 only when the other active session has no uncommitted work in `specs/020-code-review/` beyond what `git status` shows now, or after asking the owner.
+Edit 020 only when `git status` shows no one else's uncommitted work in `specs/020-code-review/`, or after asking the owner.
 
 - [ ] Add a blockquote signpost linking back to 076, with the contract it owes, to 020, 058, 066 and 073
 - [ ] Apply the key rename to the data models of 020, 058 and 066, pointing at 076's data model for the new fields
