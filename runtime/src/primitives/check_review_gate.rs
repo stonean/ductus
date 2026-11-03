@@ -1601,8 +1601,8 @@ mod tests {
         let message = result.message.as_deref().unwrap();
         assert!(message.contains("1 hard-fail"), "{message}");
         assert!(message.contains("2 blocking"), "{message}");
-        // Spec 076: a deferral to another spec's work releases a gating
-        // analyze finding, so the guidance names it beside fixing.
+        // Spec 076: a deferral to work still to do on another spec releases a
+        // gating analyze finding, so the guidance names it beside fixing.
         let guidance = result.guidance.as_deref().unwrap();
         assert!(
             guidance.contains("defer each to pipeline work on another spec"),
@@ -2846,6 +2846,32 @@ mod tests {
                 "blocked: spec has 3 MUST violation(s) — see specs/007-gate/review.md; \
                  held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1`"
             )
+        );
+    }
+
+    /// Spec 076: a work-item ID is stored as given, so the gate flattens it,
+    /// as every report does, before naming it: an escape in the record never
+    /// reaches the message.
+    #[test]
+    fn a_held_deferral_is_named_flattened() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_BLOCKING);
+        add_decisions(
+            tmp.path(),
+            "review.md",
+            "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    outcome: deferred\n    \
+             work-item: \"PROJ-1\\u001b[31m\"\n    gating: true\n    \
+             decided-at: 2026-07-10T00:00:00Z\n    decided-by: dev@example.com\n",
+        );
+        let message = run_with_lint(&args(), tmp.path(), clean_lint)
+            .unwrap()
+            .message
+            .unwrap();
+        assert!(
+            message.ends_with(
+                "; held by deferral: rule SEC-1 at src/a.rs — to work item `PROJ-1 [31m`"
+            ),
+            "{message:?}"
         );
     }
 

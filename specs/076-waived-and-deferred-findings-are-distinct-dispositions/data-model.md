@@ -74,7 +74,7 @@ decisions:
 | Rule file | Always: the amendment was written when the deferral was recorded |
 | `work-item` only | Never: the deferral retires only when its finding stops firing |
 
-A target that exists but does not parse, or whose feature directory resolves outside the project, is neither complete nor incomplete: the deferral is matched as stored, releases nothing, and the run emits a notice naming the target.
+A target that exists but does not parse, or whose feature directory, or the `spec.md` or `tasks.md` read in it, resolves outside the project, is neither complete nor incomplete: the deferral is matched as stored, releases nothing, and the run emits a notice naming the target.
 
 ## `Disposition` — writer input
 
@@ -93,8 +93,11 @@ A target that exists but does not parse, or whose feature directory resolves out
 | `deferred` with neither `target` nor a non-blank `work-item` | `{at}.target` | a deferral names its work: a target, a work item, or both |
 | `work-item` spans more than one line — a line feed, carriage return, `U+0085`, `U+2028` or `U+2029` | `{at}.work-item` | a work-item ID is one line |
 | a new deferral's `target` does not exist — one naming other work than the key's standing deferral is new | `{at}.target` | the named path |
-| `task` without a `tasks.md` target, or naming no task in it | `{at}.task` | the task number and file |
+| `task` without a `tasks.md` target, with a `tasks.md` that is not a feature's, or naming no task in it | `{at}.task` | a task is numbered in a tasks.md target; `` `{target}` is not a feature's tasks.md ``; `` `{target}` has no task {n} `` |
+| `waived` carrying `target`, `task` or `work-item` | `{at}.target`, `{at}.task` or `{at}.work-item` | a waiver names no future work |
 | `waived` without `reason` | `{at}.reason` | unchanged from 058's discard refusal |
+
+A new deferral's `target` that the containment screen refuses — a traversal, an absolute path, or a link out of the project — is refused with `PrimitiveError::InvalidPath`.
 
 ## `ReviewFinding` — the `write-review` `findings` entry
 

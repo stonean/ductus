@@ -12,7 +12,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > `write-review` and `write-analysis` record a deferral's work (`target`,
 > `task`, `work-item`) and its derived `gating`, refuse a deferral that names
 > no work or work that does not exist, and leave a gating finding deferred to
-> another spec's work out of the counts. `process-decisions` returns `lapsed`
+> work still to do on another spec out of the counts. `process-decisions` returns `lapsed`
 > for a deferral whose work is complete while its finding still fires, and
 > `check-review-gate`'s last check names each deferral that holds `done`. The
 > `dispositions:` map counts `deferred` and `waived` where it counted `routed`

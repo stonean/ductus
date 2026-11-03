@@ -13,9 +13,9 @@
 //!   finding needs a new disposition and the writer drops the entry (spec 076).
 //!   A deferral naming only an external work item never lapses, because the
 //!   pipeline never reads the tracker; one whose named `tasks.md`, or owning
-//!   spec's status, cannot be read — or whose feature directory resolves
-//!   outside the project — is matched, with a notice, so a check that could
-//!   not run looks like neither.
+//!   spec's status, cannot be read — or whose feature directory, or the
+//!   `spec.md` or `tasks.md` read in it, resolves outside the project — is
+//!   matched, with a notice, so a check that could not run looks like neither.
 //! - **expired** — the key did not fire on an unrestricted run. The writer
 //!   drops the entry. For a deferred decision this is the moment the deferred
 //!   work landed.
@@ -544,5 +544,37 @@ mod tests {
             "{:?}",
             result.notices
         );
+    }
+
+    /// Spec 076: a stored deferral's work is kept as written, so the notices
+    /// flatten it before naming it — the target a lapse names, and the work
+    /// item an expiry names — and an escape in the record reaches neither.
+    #[test]
+    fn notices_name_the_work_flattened() {
+        let external = "  - key: \"external\"\n    outcome: deferred\n    \
+                        work-item: \"PROJ-2\\u001b[0m\"\n    \
+                        decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                deferral("rule", "\"framework/rules/a\\u001b.md\"", None),
+                external.to_string(),
+            ]
+            .concat(),
+        );
+        let result = classify(&tmp, &["rule"]);
+        assert_eq!(keys(&result.lapsed), ["rule"]);
+        assert_eq!(keys(&result.expired), ["external"]);
+        let lapsed = "deferral lapsed: rule — `framework/rules/a .md` is complete and the \
+                      finding still fires";
+        let expired = "decision expired: external — the finding no longer fires (deferred \
+                       to work item `PROJ-2 [0m`)";
+        for notice in [lapsed, expired] {
+            assert!(
+                result.notices.iter().any(|n| n == notice),
+                "{:?}",
+                result.notices
+            );
+        }
     }
 }

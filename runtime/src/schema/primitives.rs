@@ -4381,8 +4381,8 @@ pub enum ReviewGateBlock {
     /// record is always writable at the moment a spec is being completed.
     RecordPredatesDispositions,
     /// An outstanding gating finding no earlier check caught: in practice a
-    /// review SHOULD neither waived nor deferred to another spec's work (spec
-    /// 076). Only gating findings hold `done` (spec 058,
+    /// review SHOULD neither waived nor deferred to work still to do on
+    /// another spec (spec 076). Only gating findings hold `done` (spec 058,
     /// `findings-cost-in-proportion-to-risk`); the `dispositions:` maps'
     /// `undispositioned` counts of advisory findings and observations are
     /// recorded and never block. The name predates that narrowing and is kept

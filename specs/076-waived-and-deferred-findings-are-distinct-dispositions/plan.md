@@ -4,7 +4,7 @@ Implements [076 — Waived and deferred findings are distinct dispositions](spec
 
 ## Overview
 
-A finding takes one of three dispositions: fixed, deferred or waived. The constitution defines them once. The runtime renames `routed` to `deferred` and `discarded` to `waived` and reads the old names from records already on disk. A deferral carries pipeline work, an external work-item ID, or both. Review violations gain deferral beside fix and waive. A deferral to pipeline work on another spec releases a gating finding. A deferral lapses when the work it names is complete while its finding still fires. Every live artifact is swept by meaning, and the four affected specs carry signposts.
+A finding takes one of three dispositions: fixed, deferred or waived. The constitution defines them once. The runtime renames `routed` to `deferred` and `discarded` to `waived` and reads the old names from records already on disk. A deferral carries pipeline work, an external work-item ID, or both. Review violations gain deferral beside fix and waive. A deferral to pipeline work still to do on another spec releases a gating finding. A deferral lapses when the work it names is complete while its finding still fires. Every live artifact is swept by meaning, and the four affected specs carry signposts.
 
 ## Technical Decisions
 
@@ -14,7 +14,7 @@ A finding takes one of three dispositions: fixed, deferred or waived. The consti
 
 - §design-principles (`framework/constitution.md:49`) lists a waiver under *decide it is out of scope and record the decision with its reason*, no longer under *record it where the pipeline will surface it again* (AC2).
 - §spec-requirements (`framework/constitution.md:136`) cites the definition for a question deferred with its trigger (AC9).
-- §implement-phase (`framework/constitution.md:213`) says a SHOULD is addressed when fixed, waived with its rationale, or deferred to pipeline work on another spec.
+- §implement-phase (`framework/constitution.md:213`) says a SHOULD is addressed only when fixed, waived with its rationale, or deferred to another spec.
 - The *only a gating one holds `done`* bullet (`framework/constitution.md:298`) says an analyze hard-fail or blocking finding is fixed or deferred, and review MUST and SHOULD violations are fixed, deferred or waived.
 
 ### The runtime renames, reading the old names only from disk
@@ -38,7 +38,7 @@ A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisio
 
 ### Release is computed by the writers, so the gate reads counts
 
-A deferral releases a gating finding when its target lies under another feature directory (data model, *Release and lapse*).
+A deferral releases a gating finding when its target lies under another feature directory and that work is still to do (data model, *Release and lapse*).
 
 - `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs:165`), and renders it under Deferred findings.
 - `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs:127`). The host-supplied gross counts still bound the itemized findings (`:329`).
@@ -96,6 +96,8 @@ The read aliases make every existing record parse, and each record is rewritten 
 | `runtime/src/primitives/write_analysis.rs` | Modify | Net gating counts, Deferred to other specs |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Naming holding deferrals; guidance |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | `waived` covers a size |
+| `runtime/src/primitives/check_artifacts.rs` | Modify | The review-drift message names the three exits |
+| `runtime/tests/golden/implement-basic.jsonl` | Regenerate | `BLESS=1` after `framework/commands/implement.md` changes |
 | `runtime/src/mcp/server.rs` | Modify | Tool descriptions |
 | `runtime/tests/mcp.rs` | Modify | Wire-shape tests |
 | `runtime/CHANGELOG.md` | Modify | The rename and deferral |

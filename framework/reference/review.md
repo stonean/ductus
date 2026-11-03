@@ -575,8 +575,8 @@ records `blocking: true`. This is enforced as follows:
    analyze checks, and — last — the two disposition checks: a `review.md`
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
    finding, which for a record the runtime writes is a SHOULD neither waived
-   nor deferred to another spec's work. The two review checks read the
-   record from `review.md`: a missing/null `last-run` — or **no `review.md` at
+   nor deferred to work still to do on another spec. The two review checks
+   read the record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 
    ```text
@@ -594,7 +594,8 @@ records `blocking: true`. This is enforced as follows:
 
    The `held by deferral` suffix names each deferral the record marks
    `gating: true` — one that releases nothing ([Deferrals](#deferrals)) —
-   and says so beside them when the record's decisions cannot be read.
+   and says so beside them when the record's decisions cannot be read, or
+   when an entry marked gating does not read as a deferral.
 
 2. **`/{project}:analyze`** — adds a check to its existing audit: if the spec's
    status is `done` but its `review.md` records `blocking: true` or a missing
@@ -776,7 +777,7 @@ that `tasks.md`, must exist.
   runs, as a deferral of an observation does. Work already complete — a
   checked task, a `done` spec left closed — releases nothing, since no gate
   holds it.
-- **To this spec's own task, to a rule file, or to an external work item alone,** the
+- **To this spec's own work, to a rule file, or to an external work item alone,** the
   violation stays in its section with a `**Deferred**` line and still holds
   `done`. Its decision carries the derived `gating: true`, and
   `check-review-gate` names it with its work where it blocks. No gate reads an

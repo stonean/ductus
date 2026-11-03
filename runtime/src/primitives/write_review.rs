@@ -892,10 +892,13 @@ fn generate_summary(
         let _ = write!(summary, ", {waived} waived");
     }
     // A released violation leaves the counts, so without this a run whose
-    // only violation was deferred to another spec reads exactly like a clean
-    // one (spec 076).
+    // only violation was deferred to work still to do on another spec reads
+    // exactly like a clean one (spec 076).
     if deferred > 0 {
-        let _ = write!(summary, ", {deferred} deferred to another spec's work");
+        let _ = write!(
+            summary,
+            ", {deferred} deferred to work still to do on another spec"
+        );
     }
     let _ = write!(
         summary,
@@ -1554,10 +1557,10 @@ mod tests {
         finding
     }
 
-    /// Spec 076: a violation deferred to another spec's work leaves this
-    /// spec's counts for Deferred findings; one deferred to its own spec's
-    /// task, or to a work item alone, stays counted and marks its decision
-    /// gating.
+    /// Spec 076: a violation deferred to work still to do on another spec
+    /// leaves this spec's counts for Deferred findings; one deferred to its
+    /// own spec's task, or to a work item alone, stays counted and marks its
+    /// decision gating.
     #[test]
     fn a_deferral_releases_a_violation_only_to_another_spec() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -1679,7 +1682,7 @@ mod tests {
         // A released violation leaves the counts, so the Summary says so.
         let report = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
         assert!(
-            report.contains(", 1 deferred to another spec's work"),
+            report.contains(", 1 deferred to work still to do on another spec"),
             "{report}"
         );
     }

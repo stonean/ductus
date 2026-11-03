@@ -219,11 +219,11 @@ pub(crate) fn require_companion<'a>(
 /// Refuse a **new** deferral whose pipeline work does not exist: its `target`
 /// must resolve inside the project, and its `task` must number a task in that
 /// `tasks.md` (spec 076). A deferral already stored under `key` naming the
-/// same work is not new —
-/// its work may since have gone, which `process-decisions` reports as a lapse,
-/// never as a refusal — unless this run drops it through `expired`, as it does
-/// a lapsed one: the re-deferral that replaces it is new. A deferral naming
-/// only a work item names nothing the pipeline can look for.
+/// same work is not new — its work may since have gone, which
+/// `process-decisions` reports as a lapse, never as a refusal — unless this
+/// run drops it through `expired`, as it does a lapsed one: the re-deferral
+/// that replaces it is new. A deferral naming only a work item names nothing
+/// the pipeline can look for.
 ///
 /// # Errors
 ///
@@ -331,9 +331,10 @@ pub(crate) enum Work {
     Complete,
     /// Only an external work item is named, and the pipeline never reads one.
     External,
-    /// The feature directory resolves outside the project, the named
-    /// `tasks.md` cannot be read, or the owning spec's `status` cannot be read
-    /// from its frontmatter, so its state is unknown.
+    /// The feature directory, or the `spec.md` or `tasks.md` read in it,
+    /// resolves outside the project, the named `tasks.md` cannot be read, or
+    /// the owning spec's `status` cannot be read from its frontmatter, so its
+    /// state is unknown.
     Unreadable,
 }
 
@@ -354,8 +355,9 @@ pub(crate) fn tasks_feature<'a>(root: &str, target: &'a str) -> Option<&'a str> 
 
 /// Judge the work a deferral's `target` and `task` name, per the data
 /// model's completion table. A stored target is hand-editable, so the feature
-/// directory it names is screened before anything in it is opened
-/// (`BE-INPUT-004`); one that resolves outside the project is unreadable.
+/// directory it names, and each file read in it — its `spec.md` and
+/// `tasks.md` — are screened before they are opened (`BE-INPUT-004`); one
+/// that resolves outside the project is unreadable.
 pub(crate) fn work_state(
     repo: &Path,
     root: &str,
@@ -371,6 +373,11 @@ pub(crate) fn work_state(
     if super::validate_feature_contained(repo, root, feature).is_err() {
         return Work::Unreadable;
     }
+    let contained =
+        |name: &str| super::validate_contained(repo, &format!("{root}/{feature}/{name}")).is_ok();
+    if !contained("spec.md") {
+        return Work::Unreadable;
+    }
     let feature_dir = repo.join(root).join(feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {
@@ -379,6 +386,9 @@ pub(crate) fn work_state(
     }
     match nonblank(task).map(str::trim) {
         Some(number) if tasks_feature(root, target) == Some(feature) => {
+            if !contained("tasks.md") {
+                return Work::Unreadable;
+            }
             if !feature_dir.join("tasks.md").is_file() {
                 return Work::Complete;
             }
@@ -1024,10 +1034,10 @@ mod tests {
     }
 
     /// The data model's rule: a stored decision matches on key and outcome —
-    /// and, for a deferral, its work (spec 076). A
-    /// host restating a matched waiver's reason in other words has not made
-    /// a new decision, so the original stamp — and its wording — stand, and
-    /// no `decided-by` is needed.
+    /// and, for a deferral, its work (spec 076). A host restating a matched
+    /// waiver's reason in other words has not made a new decision, so the
+    /// original stamp — and its wording — stand, and no `decided-by` is
+    /// needed.
     #[test]
     fn a_rematch_with_reworded_companion_text_keeps_the_original() {
         let merged = merge(
@@ -1404,8 +1414,9 @@ mod tests {
     }
 
     /// `BE-INPUT-004`: a stored target is hand-editable, so a feature
-    /// directory that is a link out of the project is never opened; its work
-    /// reads as unreadable rather than as the state of the file outside.
+    /// directory that is a link out of the project is never opened, nor is a
+    /// `spec.md` or `tasks.md` in a real one that is; its work reads as
+    /// unreadable rather than as the state of the file outside.
     #[cfg(unix)]
     #[test]
     fn work_behind_a_link_out_of_the_project_is_unreadable() {
@@ -1413,9 +1424,44 @@ mod tests {
         let outside = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(repo.path().join("specs")).unwrap();
         std::fs::write(outside.path().join("spec.md"), "---\nstatus: done\n---\n").unwrap();
+        std::fs::write(
+            outside.path().join("tasks.md"),
+            "# Tasks\n\n## 1. Done\n\n- [x] a\n",
+        )
+        .unwrap();
         std::os::unix::fs::symlink(outside.path(), repo.path().join("specs/009-link")).unwrap();
         assert_eq!(
             work_state(repo.path(), "specs", Some("specs/009-link/spec.md"), None),
+            Work::Unreadable
+        );
+        std::fs::create_dir_all(repo.path().join("specs/011-file")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("spec.md"),
+            repo.path().join("specs/011-file/spec.md"),
+        )
+        .unwrap();
+        assert_eq!(
+            work_state(repo.path(), "specs", Some("specs/011-file/spec.md"), None),
+            Work::Unreadable
+        );
+        std::fs::create_dir_all(repo.path().join("specs/012-tasks")).unwrap();
+        std::fs::write(
+            repo.path().join("specs/012-tasks/spec.md"),
+            "---\nstatus: in-progress\n---\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("tasks.md"),
+            repo.path().join("specs/012-tasks/tasks.md"),
+        )
+        .unwrap();
+        assert_eq!(
+            work_state(
+                repo.path(),
+                "specs",
+                Some("specs/012-tasks/tasks.md"),
+                Some("1")
+            ),
             Work::Unreadable
         );
         std::fs::create_dir_all(repo.path().join("specs/010-real")).unwrap();

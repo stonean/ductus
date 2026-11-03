@@ -887,9 +887,10 @@ mod tests {
         );
     }
 
-    /// Spec 076: a blocking finding deferred to another spec's work leaves the
-    /// gating count and renders under Deferred to other specs; one deferred to
-    /// a work item alone stays counted and marks its decision gating.
+    /// Spec 076: a blocking finding deferred to work still to do on another
+    /// spec leaves the gating count and renders under Deferred to other
+    /// specs; one deferred to a work item alone stays counted and marks its
+    /// decision gating.
     #[test]
     fn a_deferral_releases_a_gating_finding_only_to_another_spec() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
