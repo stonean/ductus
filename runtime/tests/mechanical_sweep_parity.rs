@@ -770,12 +770,19 @@ fn family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config() {
 
 /// The tests that build their own repository, each running git in it —
 /// directly, through Family 19's Python, or through `review-freshness.sh`.
-const FIXTURE_TESTS: [&str; 4] = [
-    "rust_and_family_19_agree_on_a_built_sweep",
-    "rust_and_family_19_agree_on_a_renumbered_directory",
-    "rust_and_family_19_refuse_an_over_limit_window_alike",
-    "family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config",
-];
+/// The proxy-arm test is compiled on Unix alone, as it runs its script under
+/// `bash`, so it is re-run there alone: asking for it elsewhere runs nothing.
+fn fixture_tests() -> Vec<&'static str> {
+    let mut tests = vec![
+        "rust_and_family_19_agree_on_a_built_sweep",
+        "rust_and_family_19_agree_on_a_renumbered_directory",
+        "rust_and_family_19_refuse_an_over_limit_window_alike",
+    ];
+    if cfg!(unix) {
+        tests.push("family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config");
+    }
+    tests
+}
 
 /// A commit from a linked worktree hands its pre-commit hook an absolute
 /// `GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`, and the hook runs this
@@ -788,7 +795,7 @@ fn the_fixture_tests_pass_under_a_hooks_git_variables() {
     let other = tempfile::tempdir().unwrap();
     git2::Repository::init(other.path()).unwrap();
     let git_dir = other.path().join(".git");
-    for name in FIXTURE_TESTS {
+    for name in fixture_tests() {
         let out = Command::new(std::env::current_exe().unwrap())
             .args(["--exact", name])
             .env("GIT_DIR", &git_dir)
