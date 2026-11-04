@@ -136,11 +136,13 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 19. Fix what 078's review re-read found in 066 task 10's change
 
-- [ ] Apply the prescribed edit of finding [0] in `.ductus/review-rounds/078-review-fix-rounds-are-re-read-within-a-bound/d663dd941b597a0e4af1e96880de2b5b786efc3e/result.json`: 066 `data-model.md`'s inline example lists two `modified-since` paths and says `"modified-since-count": 1`
-- [ ] Apply finding [1]'s edits: `a_result_past_the_read_size_names_a_file_holding_every_list` asserts `deleted` on a fixture that deletes nothing, so three mutations survive; the edits delete a file in its fixture and add M7–M9 to `scripts/mutation/review-scope-cells-and-deletions.py`
-- [ ] Apply finding [2]'s edit: `compute_review_scope.rs`'s module doc still defines `scope` as the plain union
-- [ ] Apply finding [3]'s edit: `scenarios/review-scope-union.md`'s edge case on an empty `plan-affected` contradicts its Behavior paragraph
-- [ ] Apply finding [4]'s edit: `framework/commands/review.md`'s Inputs **Scope** bullet contradicts step 1's deleted-file sentence
+Found by 078's review round 3 (2026-11-04); the round's result file is gitignored and the next 078 review clears it, so each item states its edit. Re-check each against the tree before applying it.
+
+- [ ] [0] 066 `data-model.md`'s inline `compute-review-scope` example lists two `modified-since` paths: set its `"modified-since-count": 1,` to `2`
+- [ ] [1] `a_result_past_the_read_size_names_a_file_holding_every_list` (`runtime/src/primitives/compute_review_scope.rs`) asserts `deleted` on a fixture that deletes nothing: build it with `repo_in_progress_with_an_untouched_file()` and `fs::remove_file` its `src/old.rs` before computing, assert `whole.deleted == ["src/old.rs"]`, the inline result's `deleted` equal to it and its `deleted_count` 1; add to `scripts/mutation/review-scope-cells-and-deletions.py`, each filtered to that test, M7 (`deleted_count: scope.deleted.len(),` → `deleted_count: 0,`), M8 (the list file's `"deleted": scope.deleted,` → `"deleted": Vec::<String>::new(),`) and M9 (`deleted: Some(scope.deleted.clone()),` → `deleted: Some(Vec::new()),`)
+- [ ] [2] `compute_review_scope.rs`'s module doc defines `scope` as the plain union: its bullet's `commits. Both, because either alone can omit what the review exists to look at.` becomes `commits, less the files deleted since it, which no review can read. Both, because either alone can omit what the review exists to look at.`
+- [ ] [3] `scenarios/review-scope-union.md`'s edge case "An empty `plan-affected` leaves `scope` equal to `modified-since`" gains "less the paths the window deleted"
+- [ ] [4] `framework/commands/review.md`'s Inputs **Scope** bullet: "committed or not — see step 1" becomes "committed or not, less the files since deleted — see step 1"
 - [ ] Disposition note [5]: 066 `spec.md` line 27 and `framework/reference/implement.md` line 75 still describe the scope as a plain union
 - [ ] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
 
