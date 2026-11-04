@@ -116,11 +116,21 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 16. Disposition out-of-spec finding: the seeds' compute-review-scope CLI allows outlive the step that ran them
 
+**Decided by the owner, 2026-11-04: fix it in this task.** No step in `framework/` runs the command since task 7, and no `configure/{key}.md` canonical set grants a `.ductus/bin/ductus` CLI entry, so the entries retire cleanly. Re-check each edit against the tree before applying it:
+
+- `framework/bootstrap/ductus.md` and `govern.md`, its byte-identical copy. Remove the entries from the `claude` (two), `auggie` (one rule) and `opencode` (two) `settings_template` cells, and append each to that agent's **Retired seed entries** bullet, in the bullet's grammar. In §Permission Setup, drop the `compute-review-scope` clause beside *the eleven*, which the remaining subcommands number (twelve with it, measured on the `claude` cell), and drop the redirected call from the Auggie clause, leaving `--block` alone.
+- `install.sh`: the same entries, from its `claude`, `auggie` and `opencode` heredocs (Family 14 holds them equal to the registry).
+- 022 `plan.md`, **The seeds**: the same two clauses. 022's `tasks.md` task 18 keeps its mention, a record of that decision.
+
+Antigravity's seed carries no CLI entry, and Pi has no seed. Family 32 holds each retired list disjoint from its seed and canonical set. Verify with `scripts/audit/run-all.sh` and the real adopter bootstrap `AGENTS.md` requires for `framework/bootstrap/`: a project holding the entries loses them, and a fresh seed has none.
+
 - [ ] framework/bootstrap/ductus.md — the Claude, Auggie and OpenCode seeds in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-03 by task 7's consumer sweep
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
 
 ## 17. Implement scenario: a-supplied-summary-carries-the-loops-account
+
+Before the second item, read 078's `status:`. At `done`, that edit is a factual correction to a durable contract, so it takes 078's `done → in-progress` back-edge and stales its review (§spec-lifecycle): put it to the owner first. If the line already says the Summary, supplied or generated, the item is satisfied.
 
 - [ ] Implement the behavior described in `scenarios/a-supplied-summary-carries-the-loops-account.md`
 - [ ] Change `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`'s "The generated Summary renders" line to say the Summary, supplied or generated
@@ -128,6 +138,8 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 - **Done when**: a supplied Summary carries the loop's account whenever the run passes fix-rounds, a run without them renders it as given, and a test fails when the append is removed
 
 ## 18. Fix two notes 078's review re-read found in 066 task 9's change
+
+`spec_with_criteria` takes the fenced checkbox's marker and the out-of-section one's as separate arguments, and the test edits each alone. The mutation is a new one in `scripts/mutation/criterion-ticks-outside-the-digest.py`: `section_line_indices` (`runtime/src/primitives/mod.rs`) stops skipping a fenced line inside the section, filtered to `every_other_spec_edit_still_moves_its_digest`. Measured 2026-11-04: it survives the unsplit test, and the split one kills it.
 
 - [ ] Restore the first line of `the_review_record_remains_a_subject`'s doc comment in `runtime/src/primitives/analyze_subjects.rs` ("The exclusion is the record's alone — the *review* record stays a"), which now opens mid-sentence
 - [ ] Split `every_other_spec_edit_still_moves_its_digest`'s two ticks into separate edits, so normalizing a fenced checkbox inside the criteria alone fails it
