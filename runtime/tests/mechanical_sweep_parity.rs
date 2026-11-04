@@ -38,6 +38,8 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+mod common;
+
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -101,7 +103,7 @@ fn reviewed_done_specs(root: &Path) -> Vec<(String, String)> {
         else {
             continue;
         };
-        let resolves = Command::new("git")
+        let resolves = common::git_command()
             .args(["-C", root.to_str().unwrap(), "cat-file", "-e"])
             .arg(format!("{base}^{{commit}}"))
             .status()
@@ -120,7 +122,7 @@ fn reviewed_done_specs(root: &Path) -> Vec<(String, String)> {
 /// Durable contracts under `slug` that changed since `base`, before any
 /// exemption — the candidate set both implementations start from.
 fn changed_contracts(root: &Path, slug: &str, base: &str) -> BTreeSet<String> {
-    let out = Command::new("git")
+    let out = common::git_command()
         .args([
             "-C",
             root.to_str().unwrap(),
@@ -193,7 +195,9 @@ fn family_19_verdict_with(
          _paths = json.loads(_s.argv[4])\n\
          print(json.dumps([p for p in _paths if changed_beyond_spelling(_base, p)]))\n"
     );
-    let out = Command::new("python3")
+    // The harness runs git through Family 19's own Python, so the hook's
+    // variables are cleared on the interpreter.
+    let out = common::without_git_hook_variables(Command::new("python3"))
         .arg("-")
         .arg(git_root.to_str().unwrap())
         .arg("specs")
@@ -228,10 +232,17 @@ fn family_19_verdict_with(
 #[test]
 fn rust_and_family_19_agree_on_every_done_spec() {
     let root = repo_root();
-    if !root.join(".git").exists() {
-        eprintln!("skipping: not a git checkout");
-        return;
-    }
+    // A test that cannot reach its subject fails, never passes unrun
+    // (§design-principles): outside a git checkout — a `git archive` export,
+    // say — no recorded sha resolves, so there is nothing to compare (066
+    // task 12). A linked worktree's `.git` is a file, and passes.
+    assert!(
+        root.join(".git").exists(),
+        "not a git checkout: {} has no `.git`, so no done spec's reviewed-against \
+         sha can be resolved and the corpus pass cannot run; run the suite from \
+         a clone",
+        root.display()
+    );
     let repo = git2::Repository::open(&root).expect("open repo");
     let head = repo
         .head()
@@ -724,7 +735,7 @@ fn run_family_19_over_a_moved_contract(renames: bool) -> (bool, String) {
     std::fs::write(scenarios.join("other.md"), body("ductus")).expect("sweep other.md");
     commit_all_with_removals(&repo, "fixture: sweep and move", 1_704_067_201);
 
-    let out = Command::new("bash")
+    let out = common::without_git_hook_variables(Command::new("bash"))
         .arg(audit.join("review-freshness.sh"))
         .current_dir(root)
         .output()
@@ -754,5 +765,43 @@ fn family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config() {
             "with diff.renames={renames} the proxy arm must report the moved \
              contract's old path as changed; stdout:\n{stdout}"
         );
+    }
+}
+
+/// The tests that build their own repository, each running git in it —
+/// directly, through Family 19's Python, or through `review-freshness.sh`.
+const FIXTURE_TESTS: [&str; 4] = [
+    "rust_and_family_19_agree_on_a_built_sweep",
+    "rust_and_family_19_agree_on_a_renumbered_directory",
+    "rust_and_family_19_refuse_an_over_limit_window_alike",
+    "family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config",
+];
+
+/// A commit from a linked worktree hands its pre-commit hook an absolute
+/// `GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`, and the hook runs this
+/// suite, so each fixture test must act on its own repository with all three
+/// naming another one (066 task 8). Each is re-run in a child of this binary
+/// with them set to a repository it never builds, and must pass, and must
+/// have run: a filter that matches no test exits 0 too.
+#[test]
+fn the_fixture_tests_pass_under_a_hooks_git_variables() {
+    let other = tempfile::tempdir().unwrap();
+    git2::Repository::init(other.path()).unwrap();
+    let git_dir = other.path().join(".git");
+    for name in FIXTURE_TESTS {
+        let out = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", name])
+            .env("GIT_DIR", &git_dir)
+            .env("GIT_WORK_TREE", other.path())
+            .env("GIT_INDEX_FILE", git_dir.join("index"))
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            out.status.success(),
+            "{name} fails with a hook's git variables set:\n{stdout}{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(stdout.contains("1 passed"), "{name} did not run:\n{stdout}");
     }
 }

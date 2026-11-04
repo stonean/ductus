@@ -37,10 +37,18 @@ pub fn ductus_command(bin: impl AsRef<std::ffi::OsStr>) -> Command {
 /// they make a fixture's `git init` re-initialise the outer repository, its
 /// `git config` write the outer config, and its `git add` stage into the
 /// outer index. A test that spawns git builds its command here, as one that
-/// spawns the runtime builds it with [`ductus_command`];
-/// `mechanical_sweep_parity.rs` does not yet, which spec 066's task 8 owns.
+/// spawns the runtime builds it with [`ductus_command`], and one that spawns
+/// a program that runs git itself passes its command through
+/// [`without_git_hook_variables`].
 pub fn git_command() -> Command {
-    let mut command = Command::new("git");
+    without_git_hook_variables(Command::new("git"))
+}
+
+/// `command` with the variables a git hook exports — `GIT_DIR`,
+/// `GIT_WORK_TREE` and `GIT_INDEX_FILE` — removed, for a program that runs git
+/// itself, such as an audit script or the interpreter running one, in a
+/// fixture repository; see [`git_command`] for why.
+pub fn without_git_hook_variables(mut command: Command) -> Command {
     command
         .env_remove("GIT_DIR")
         .env_remove("GIT_WORK_TREE")
