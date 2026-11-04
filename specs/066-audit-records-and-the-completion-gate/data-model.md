@@ -214,7 +214,7 @@ Both staleness checks are one computation — `analyze_subjects::freshness_of`, 
 | record | subject set | digest field |
 | --- | --- | --- |
 | `review.md` | `scenarios/*.md`, `data-model.md` | `reviewed-digest` |
-| `analysis.md` | every `.md` under the feature — `review.md` and `spec.md` included, `analysis.md` itself **excluded**; on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md`, which the digest still records, and still counts a deleted one (scenario `a-done-specs-plan-edit-leaves-its-analysis-current`) | `analyzed-digest` |
+| `analysis.md` | every `.md` under the feature — `review.md` and `spec.md` included, `spec.md` digested with each acceptance criterion's checkbox normalized to unticked, the criteria `mark-criterion` can flip (scenario `checkbox-state-is-outside-the-analysis-digest`), `analysis.md` itself **excluded**; on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md`, which the digest still records, and still counts a deleted one (scenario `a-done-specs-plan-edit-leaves-its-analysis-current`) | `analyzed-digest` |
 
 `review.md` and `spec.md` are the review's output and a body it does not judge, so counting them would stale every review; both are analyze's inputs, so excluding them there would exempt the edits that most often invalidate an analysis. `analysis.md` is excluded from its own set because the record is written after its subjects are read.
 

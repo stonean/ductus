@@ -178,6 +178,14 @@ its version and date.
   `lists-file-unreadable` when it cannot. A script of your own that reads
   `scope` or `cross-spec-paths` from either result must read `lists-file`
   when `form` is `file`. Spec 066, task 7.
+- **Ticking an acceptance criterion no longer stales the analysis.**
+  `analysis.md`'s `analyzed-digest` takes `spec.md` with each acceptance
+  criterion's checkbox as unticked, so `/implement`'s completion run, which
+  ticks the criteria it verifies, passes the gate on the analysis it began
+  with instead of stopping at `analyze-stale`. Any other change to
+  `spec.md`, a criterion's wording included, still stales it. A record
+  written before this release over a spec with a ticked criterion reads stale
+  once, until the spec's next `/analyze`. Spec 066, task 9.
 
 ### Fixed
 

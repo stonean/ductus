@@ -121,7 +121,11 @@ fn resolve_target(
 /// criteria listing consumes — so criterion index N here is exactly the
 /// criterion `read-spec` reports at index N, and a checkbox embedded in a
 /// template guidance comment or fenced code block is never flippable.
-fn collect_checkbox_line_indices(lines: &[&str]) -> Vec<(usize, usize)> {
+///
+/// Shared with the analysis digest, which normalizes exactly these markers
+/// (`analyze_subjects::without_criterion_ticks`), so what this primitive can
+/// flip is what a tick leaves out of the digest, and nothing else is.
+pub(crate) fn collect_checkbox_line_indices(lines: &[&str]) -> Vec<(usize, usize)> {
     section_line_indices(lines, ACCEPTANCE_HEADING)
         .into_iter()
         .filter_map(|idx| {

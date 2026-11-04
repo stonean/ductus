@@ -2455,9 +2455,18 @@ mod tests {
     /// Seed a spec whose review points at `review_sha` and whose analyze
     /// record carries a digest of the feature's subjects **as they are now**.
     fn seed_with_current_digest(repo: &Path, review_sha: &str) {
+        seed_with_current_digest_over(repo, review_sha, "");
+    }
+
+    /// [`seed_with_current_digest`] with `body` appended to `spec.md` before
+    /// either digest is taken.
+    fn seed_with_current_digest_over(repo: &Path, review_sha: &str, body: &str) {
         let dir = repo.join("specs/007-gate");
         seed_records_at(repo, review_sha, review_sha);
         let spec = dir.join("spec.md");
+        let mut text = fs::read_to_string(&spec).unwrap();
+        text.push_str(body);
+        fs::write(&spec, text).unwrap();
 
         // In pipeline order: the review's digest, then its block, and only
         // then the analysis — which digests the `spec.md` the review just
@@ -2582,6 +2591,52 @@ mod tests {
             "a matching digest is determinable: {:?}",
             result.guidance
         );
+    }
+
+    /// A criterion ticked and another unticked through `mark-criterion` after
+    /// the analysis leave it current, so the gate passes; rewording a
+    /// criterion is any other `spec.md` edit, and stales it (066 scenario
+    /// `checkbox-state-is-outside-the-analysis-digest`).
+    #[test]
+    fn a_criterion_tick_leaves_the_analysis_current_and_another_spec_edit_stales_it() {
+        use crate::primitives::mark_criterion;
+        use crate::schema::primitives::MarkCriterionArgs;
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let spec = tmp.path().join("specs/007-gate/spec.md");
+        let base = git_commit_all(tmp.path(), "base");
+        seed_with_current_digest_over(
+            tmp.path(),
+            &base,
+            "\n## Acceptance Criteria\n\n- [ ] AC1: First.\n- [x] AC2: Second.\n",
+        );
+        git_commit_all(tmp.path(), "commit the record");
+
+        for (label, checked) in [("AC1", true), ("AC2", false)] {
+            let flipped = mark_criterion::run(
+                &MarkCriterionArgs {
+                    feature: "007-gate".into(),
+                    criterion_index: None,
+                    label: Some(label.into()),
+                    checked,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert_ne!(flipped.previous, checked, "{label} was not flipped");
+        }
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "a tick staled the analysis: {result:?}");
+
+        let ticked = fs::read_to_string(&spec).unwrap();
+        fs::write(
+            &spec,
+            ticked.replace("AC1: First.", "AC1: First, reworded."),
+        )
+        .unwrap();
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+        assert!(result.message.unwrap().contains("spec.md"));
     }
 
     /// Gate order: a stale review is the earlier defect and wins. Naming the

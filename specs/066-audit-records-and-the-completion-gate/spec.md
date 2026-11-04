@@ -36,7 +36,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 
 ## Record freshness
 
-A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The review's subjects are the spec's durable contracts, `scenarios/*.md` and `data-model.md`; the analysis's are every markdown file under the feature except `analysis.md`, and on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md` (`scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`). The recorded commit is provenance, read only to exempt a mechanical rename sweep.
+A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The review's subjects are the spec's durable contracts, `scenarios/*.md` and `data-model.md`; the analysis's are every markdown file under the feature except `analysis.md`, with `spec.md` digested less its acceptance criteria's checkbox state, so a tick does not stale the analysis (`scenarios/checkbox-state-is-outside-the-analysis-digest.md`), and on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md` (`scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`). The recorded commit is provenance, read only to exempt a mechanical rename sweep.
 
 ## Acceptance Criteria
 

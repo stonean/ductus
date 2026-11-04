@@ -62,7 +62,7 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 9. Implement scenario: checkbox-state-is-outside-the-analysis-digest
 
-- [ ] Implement the behavior described in `scenarios/checkbox-state-is-outside-the-analysis-digest.md`
+- [x] Implement the behavior described in `scenarios/checkbox-state-is-outside-the-analysis-digest.md`
 
 - **Done when**: The scenario's open question is resolved, a criterion tick after the analyze run no longer surprises the gate by the chosen design, and a fixture test proves the gate's answer in both directions (a tick, and any other spec.md edit).
 
@@ -116,6 +116,6 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 16. Disposition out-of-spec finding: the seeds' compute-review-scope CLI allows outlive the step that ran them
 
-- [ ] framework/bootstrap/ductus.md — the Claude, Auggie and OpenCode seeds in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-04 by task 7's consumer sweep
+- [ ] framework/bootstrap/ductus.md — the Claude, Auggie and OpenCode seeds in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-03 by task 7's consumer sweep
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

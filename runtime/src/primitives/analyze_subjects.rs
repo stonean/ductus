@@ -127,7 +127,9 @@ pub(crate) struct SubjectDigest {
 /// Digest every analyze subject under `feature_dir`.
 ///
 /// `analysis.md` is not digested at all: [`is_analyze_subject`] excludes the
-/// whole file, and every other subject is digested whole. That exclusion is
+/// whole file, and every other subject is digested whole but `spec.md`, whose
+/// acceptance criteria are digested with their checkboxes normalized
+/// ([`without_criterion_ticks`]). That exclusion is
 /// load-bearing rather than tidy: the record is written after the subjects are
 /// read, so a digest covering it could never match on the next comparison and
 /// every run would stale itself. Measured on the sha-diff design the same
@@ -137,9 +139,9 @@ pub(crate) struct SubjectDigest {
 /// It began as an excision of `spec.md`'s `analyze:` block and moved with the
 /// record (spec 057), first as an excision of `analysis.md`'s frontmatter —
 /// which left the body, rewritten by the same call, inside the digest — and
-/// then as the whole-file exclusion. `spec.md` is now digested whole, which
+/// then as the whole-file exclusion. `spec.md` is now digested in full, which
 /// means a frontmatter edit there moves the digest — visible where the old
-/// excision hid it.
+/// excision hid it — and only a criterion's tick does not.
 ///
 /// Both failure modes are reported, and they are one line apart: a subject the
 /// walk could not **reach** and one it opened and could not **read** both land
@@ -187,10 +189,16 @@ pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -
                 // excised here: excising only the frontmatter left the body —
                 // which the same call rewrites — inside the digest, so a run
                 // whose report changed staled itself (spec 057, and see
-                // `is_analyze_subject`). `spec.md` is digested whole too, with
-                // the block gone there is nothing in it to excise.
+                // `is_analyze_subject`). `spec.md` is digested in full too,
+                // with the block gone there is nothing in it to excise; only
+                // its criteria's ticks are normalized, which no analysis
+                // judges (`without_criterion_ticks`).
                 let mut hasher = Sha256::new();
-                hasher.update(text.as_bytes());
+                if rel == "spec.md" {
+                    hasher.update(without_criterion_ticks(&text).as_bytes());
+                } else {
+                    hasher.update(text.as_bytes());
+                }
                 out.digests.insert(rel, hex(&hasher.finalize()));
             }
             Err(_) => out.unreadable.push(rel),
@@ -198,6 +206,34 @@ pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -
     }
     out.unreadable.sort();
     out
+}
+
+/// `spec.md`'s text with every acceptance criterion's checkbox marker set to
+/// a space: what its analyze digest covers (066 scenario
+/// `checkbox-state-is-outside-the-analysis-digest`).
+///
+/// A tick or an untick between the analysis and the gate changes nothing the
+/// analysis judged — no artifact family and no rule's Verification reads a
+/// criterion's state, and `/{project}:implement` checks the ticks itself
+/// before it proposes `done` — so it leaves the digest where it was. A
+/// criterion's text, and every other line, is digested as written. The lines
+/// normalized are the ones `mark-criterion` can flip, found through the same
+/// walker, so a checkbox elsewhere in `spec.md`, or in a comment or fence
+/// inside the criteria, stays content.
+pub(crate) fn without_criterion_ticks(text: &str) -> String {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let markers: BTreeMap<usize, usize> =
+        crate::primitives::mark_criterion::collect_checkbox_line_indices(&lines)
+            .into_iter()
+            .collect();
+    lines
+        .iter()
+        .enumerate()
+        .map(|(idx, line)| match markers.get(&idx) {
+            Some(&marker) => crate::primitives::checkbox::flip_checkbox_at(line, marker, false).1,
+            None => (*line).to_string(),
+        })
+        .collect()
 }
 
 /// Compare a spec's recorded analyze digest against its subjects as they are
@@ -513,7 +549,64 @@ mod tests {
         assert_ne!(before.digests["spec.md"], after.digests["spec.md"]);
     }
 
-    /// The exclusion is the record's alone — the *review* record stays a
+    /// A spec whose criteria carry `first` and `second` as their markers,
+    /// with a checkbox outside the criteria and one in a fence inside them.
+    fn spec_with_criteria(first: char, second: char, text: &str, other: char) -> String {
+        format!(
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n\n\
+             ## Acceptance Criteria\n\n- [{first}] AC1: {text}\n- [{second}] AC2: Second.\n\n\
+             ```text\n- [{other}] Not a criterion: fenced.\n```\n\n\
+             ## Non-Goals\n\n- [{other}] Not a criterion: outside the section.\n"
+        )
+    }
+
+    fn spec_digest(dir: &Path, spec: &str) -> String {
+        fs::write(dir.join("spec.md"), spec).unwrap();
+        subject_digest(dir, is_analyze_subject).digests["spec.md"].clone()
+    }
+
+    /// Ticking or unticking a criterion, in either case, leaves `spec.md`'s
+    /// digest where it was (066 scenario
+    /// `checkbox-state-is-outside-the-analysis-digest`).
+    #[test]
+    fn a_criterion_tick_does_not_move_the_spec_digest() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), "");
+        let analyzed = spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", ' '));
+        for (first, second) in [('x', 'x'), ('X', ' '), (' ', ' ')] {
+            assert_eq!(
+                spec_digest(
+                    tmp.path(),
+                    &spec_with_criteria(first, second, "First.", ' ')
+                ),
+                analyzed,
+                "[{first}] [{second}]"
+            );
+        }
+    }
+
+    /// Everything but a criterion's tick still moves the digest: its text, a
+    /// checkbox outside the criteria, and one in a fence inside them.
+    #[test]
+    fn every_other_spec_edit_still_moves_its_digest() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), "");
+        let analyzed = spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", ' '));
+        assert_ne!(
+            spec_digest(
+                tmp.path(),
+                &spec_with_criteria(' ', 'x', "First, reworded.", ' ')
+            ),
+            analyzed,
+            "a criterion's text"
+        );
+        assert_ne!(
+            spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", 'x')),
+            analyzed,
+            "a checkbox that is not a criterion's"
+        );
+    }
+
     /// subject, body and frontmatter both, because `review.md` is an input to
     /// an analysis rather than its output. Excluding it would exempt the single
     /// edit that most often invalidates an analyze record, which is the
