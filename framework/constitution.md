@@ -356,13 +356,13 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`: sha (provenance only); `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of observation counts; `examined`, `scope`: integer; `skipped-passes`: list; `reviewed-digest`: map of durable-contract path → sha256; `reviewed-unreadable`: list; **`blocking`**: boolean, derived; `waivers`: list; `decisions`: list |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
 
 ##### Analyze record — `analysis.md`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `analyzed-against`: sha (provenance only); `analyzed-digest`: map of subject path → sha256; `analyzed-unreadable`: list; **`hard-fail`**, **`blocking-findings`**, **`advisory`**, **`unexamined`**: integer; `unexamined-by-reason`: map of reason → integer; `dispositions`: map of finding counts; `decisions`: list; **`blocking`**: boolean, derived |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `analyzed-against`: sha; `analyzed-digest`: map of path → sha256; `analyzed-unreadable`: list; **`hard-fail`**, **`blocking-findings`**, **`advisory`**, **`unexamined`**: integer; `unexamined-by-reason`: map of reason → integer; `dispositions`: map of counts; `decisions`: list; **`blocking`**: boolean, derived |
 
 #### Open-schema rule
 

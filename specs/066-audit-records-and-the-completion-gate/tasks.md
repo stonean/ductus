@@ -102,10 +102,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 `write-review` reads `[review] re-reads-off` through `fix_rounds::re_reads_off` (`runtime/src/primitives/fix_rounds.rs`, from 078 task 2), which returns the reason on one line or halts with `PrimitiveError::InvalidReReadsOff`.
 
-- [ ] Implement the behavior described in `scenarios/the-fix-round-loop-is-recorded-and-gated.md`
-- [ ] Add the `fix-rounds` argument to `WriteReviewArgs` and derive the six record fields and the Summary line in `runtime/src/primitives/write_review.rs`, refusing the malformed entries the scenario lists
-- [ ] Add check 12, `fix-round-not-re-read`, and the passing guidance for a record without the loop fields to `runtime/src/primitives/check_review_gate.rs`
-- [ ] Name the fields in `framework/constitution.md`'s audit-record table, cutting as many bytes as the row adds, and their meaning in `framework/reference/review.md`; add the check to `data-model.md`'s `check-review-gate` list
-- [ ] Tests: each derived count, the absent-versus-empty list, the switch's waiver, each refusal, and the gate blocking and passing; each fails with its behavior removed
+- [x] Implement the behavior described in `scenarios/the-fix-round-loop-is-recorded-and-gated.md`
+- [x] Add the `fix-rounds` argument to `WriteReviewArgs` and derive the six record fields and the Summary line in `runtime/src/primitives/write_review.rs`, refusing the malformed entries the scenario lists
+- [x] Add check 12, `fix-round-not-re-read`, and the passing guidance for a record without the loop fields to `runtime/src/primitives/check_review_gate.rs`
+- [x] Name the fields in `framework/constitution.md`'s audit-record table, cutting as many bytes as the row adds, and their meaning in `framework/reference/review.md`; add the check to `data-model.md`'s `check-review-gate` list
+- [x] Tests: each derived count, the absent-versus-empty list, the switch's waiver, each refusal, and the gate blocking and passing; each fails with its behavior removed
 
 - **Done when**: `write-review` records the loop's fields from `fix-rounds` alone, `check-review-gate` blocks an un-re-read round without a waiver, and the constitution passes `scripts/lint-governing-size.sh`.

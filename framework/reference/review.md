@@ -534,8 +534,9 @@ distinct from an absent digest, which cannot be judged at all.
 read. (`write-review` writes `last-run`, `reviewed-against`, `must-violations`,
 `should-violations`, `low-confidence`, `scope`, `reviewed-digest`, `blocking`,
 and `dispositions` on every run; `examined` when the run stated it, and
-`reviewed-unreadable` when a contract could not be read; plus the `waivers`
-and `decisions` lists when present.)
+`reviewed-unreadable` when a contract could not be read; the six fix-round
+fields when the run passed its rounds; plus the `waivers` and `decisions`
+lists when present.)
 
 `dispositions:` counts the run's **observations** — `fixed`, `deferred`,
 `waived`, `undispositioned` — never its MUST and SHOULD violations, which
@@ -546,6 +547,20 @@ absence has a meaning: a record without it predates dispositions, and the
 pre-done gate blocks an `in-progress` spec on it until this command re-runs.
 Absence is not zero — reading it as zero would pass exactly the old review
 whose observations went to the inbox unseen.
+
+The six fix-round fields record the run's fix rounds (spec 078), derived by
+`write-review` from the per-round list the run passes, never from a count:
+`fix-rounds` counts every round with a non-empty scope, `re-reads` those an
+independent agent re-read to completion, `diff-checked` those the diff check
+verified against a re-read's prescriptions, and `not-re-read` those that
+needed a re-read and have none; the rest were exempt. `budget-stop` is true
+when at least two re-reads found a MUST or SHOULD and the last one did.
+`round-waivers` holds one entry per un-re-read round that is waived — the
+operator's reason with `decided-by`, or the `[review] re-reads-off` reason with
+the config file as `waived-by` — and the pre-done gate blocks while
+`not-re-read` exceeds the entries with a reason. A record without the fields
+does not say whether its fixes were re-read, which is not zero rounds: the gate
+passes it, and says so.
 
 ## Window and coverage
 

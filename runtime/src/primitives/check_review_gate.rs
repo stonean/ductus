@@ -8,10 +8,11 @@
 //! invocation), then unresolved scenario open questions, then an
 //! undischarged `cross-spec-impact`, then the review record in `review.md`
 //! and whether it is still current, then the analyze record in
-//! `analysis.md` and whether it is still current, and last the two records'
+//! `analysis.md` and whether it is still current, then the two records'
 //! `dispositions:` maps — a record that predates them — and an outstanding
 //! gating finding, in practice a SHOULD neither waived nor released by its
-//! deferral (specs 058, 076). The first failing
+//! deferral (specs 058, 076), and last a fix round that needed a re-read and
+//! has neither one nor a waiver (spec 078). The first failing
 //! check wins and produces the canonical `blocked: …` message — with the
 //! adopter's `[host] project` command namespace substituted into the
 //! `/{project}:review` references — plus, on `must-violations`, the
@@ -213,6 +214,13 @@ pub(crate) fn run_with_lint(
         return Ok(blocked);
     }
 
+    // Gate check 12: a fix round that needed a re-read has neither one nor a
+    // waiver (spec 078). Last, because it says a fix made during the review
+    // went unchecked, which matters only once the review holds nothing else.
+    if let Some(blocked) = fix_round_block(&review, &rel_dir, &project) {
+        return Ok(blocked);
+    }
+
     // The gate passes. Before saying so, name what it could not examine.
     //
     // Both staleness checks above read the working tree, so an uncommitted
@@ -230,7 +238,7 @@ pub(crate) fn run_with_lint(
         passed: true,
         blocked_by: None,
         message: None,
-        guidance: passing_notices(&review_freshness, &freshness),
+        guidance: passing_notices(&review_freshness, &freshness, review.not_re_read.is_some()),
         violations: vec![],
         // Carried onto the pass, not just onto a block: a discharged
         // obligation is something this gate *examined*, and reporting it only
@@ -449,16 +457,63 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
     }
 }
 
+/// Gate check 12 — `review.md` counts more fix rounds that needed a re-read
+/// and have none (`not-re-read`) than waivers with a reason (spec 078).
+///
+/// Counted rather than matched by round, as the record states it, so a
+/// hand-edited record with fewer waivers than un-re-read rounds blocks
+/// whatever its other counts say, and a waiver whose reason is blank waives
+/// nothing. A record without `not-re-read` does not say whether its fixes
+/// were re-read: it passes here, and [`passing_notices`] says so.
+fn fix_round_block(
+    review: &crate::schema::primitives::ReviewBlock,
+    rel_dir: &str,
+    project: &str,
+) -> Option<CheckReviewGateResult> {
+    let not_re_read = review.not_re_read?;
+    let waived = review
+        .round_waivers
+        .iter()
+        .filter(|waiver| !waiver.reason.trim().is_empty())
+        .count();
+    let waived = u32::try_from(waived).unwrap_or(u32::MAX);
+    if not_re_read <= waived {
+        return None;
+    }
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::FixRoundNotReRead),
+        message: Some(format!(
+            "blocked: {} fix round(s) in {rel_dir}/review.md needed a re-read and have none \
+             ({not_re_read} not re-read, {waived} waived)",
+            not_re_read - waived
+        )),
+        guidance: Some(format!(
+            "Re-run /{project}:review: its fix-round loop re-reads each round, or records the \
+             operator's reason for declining one as that round's waiver."
+        )),
+        violations: vec![],
+        cross_spec_impact: vec![],
+    })
+}
+
 /// What a **passing** gate could not examine, as one guidance line.
 ///
 /// Joined rather than ranked because an operator weighing the transition needs
-/// both. Each arm fires for one of the two durable records — `review:` and
+/// all of it. Two arms fire for one of the two durable records — `review:` and
 /// `analyze:` — whose freshness could not be determined at all, because that
-/// record carries no digest of what its run read.
+/// record carries no digest of what its run read. The third fires for a review
+/// record without the fix-round fields (`fix_rounds_recorded` false), which
+/// does not say whether the fixes made during that review were re-read (spec
+/// 078).
 ///
-/// `None` — real silence — only when both examined cleanly, which is what
-/// makes that silence mean something.
-fn passing_notices(review: &RecordFreshness, analyze: &RecordFreshness) -> Option<String> {
+/// `None` — real silence — only when everything examined cleanly, which is
+/// what makes that silence mean something.
+fn passing_notices(
+    review: &RecordFreshness,
+    analyze: &RecordFreshness,
+    fix_rounds_recorded: bool,
+) -> Option<String> {
     let mut notices: Vec<String> = Vec::new();
     if let RecordFreshness::Undeterminable { reason } = review {
         notices.push(format!(
@@ -471,6 +526,14 @@ fn passing_notices(review: &RecordFreshness, analyze: &RecordFreshness) -> Optio
             "Analyze-record freshness could not be determined ({reason}), so whether the \
              recorded analysis still describes these artifacts was not examined."
         ));
+    }
+    if !fix_rounds_recorded {
+        notices.push(
+            "The review record has no `not-re-read` field, so it does not say whether the \
+             fixes made during that review were re-read: it predates the fix-round loop, or its \
+             run stated nothing about its fixes."
+                .to_string(),
+        );
     }
     if notices.is_empty() {
         None
@@ -2729,6 +2792,146 @@ mod tests {
         assert!(
             message.contains("/ductus:review and /ductus:analyze"),
             "{message}"
+        );
+    }
+
+    // --- gate check 12: a fix round not re-read (spec 078) -----------------
+
+    /// Add `yaml` to the end of the seeded `review.md`'s frontmatter.
+    fn with_review_fields(repo: &Path, yaml: &str) {
+        let path = repo.join("specs/007-gate/review.md");
+        let text = fs::read_to_string(&path).unwrap();
+        let close = "---\n\n# review";
+        assert!(text.contains(close), "{text}");
+        fs::write(&path, text.replacen(close, &format!("{yaml}{close}"), 1)).unwrap();
+    }
+
+    const LOOP_FIELDS: &str = "fix-rounds: 2\nre-reads: 1\ndiff-checked: 0\nbudget-stop: false\n";
+
+    fn round_waiver(round: u32, reason: &str) -> String {
+        format!(
+            "  - round: {round}\n    reason: \"{reason}\"\n    waived-by: dev@example.com\n    \
+             waived-at: 2026-07-10T00:00:00Z\n"
+        )
+    }
+
+    /// An un-re-read round with no waiver holds `done`, naming the count,
+    /// with guidance to re-run the review.
+    #[test]
+    fn an_un_re_read_round_without_a_waiver_holds_done() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(tmp.path(), &format!("{LOOP_FIELDS}not-re-read: 1\n"));
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::FixRoundNotReRead));
+        assert_eq!(
+            result.message.as_deref(),
+            Some(
+                "blocked: 1 fix round(s) in specs/007-gate/review.md needed a re-read and have \
+                 none (1 not re-read, 0 waived)"
+            )
+        );
+        assert!(result.guidance.unwrap().contains("Re-run /ductus:review"));
+    }
+
+    /// A waiver with a reason releases its round, and the passing gate says
+    /// nothing about fix rounds; a waiver whose reason is blank waives nothing.
+    #[test]
+    fn a_waived_round_passes_and_a_blank_waiver_waives_nothing() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(
+            tmp.path(),
+            &format!(
+                "{LOOP_FIELDS}not-re-read: 1\nround-waivers:\n{}",
+                round_waiver(2, "the change reverts round 1")
+            ),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(
+            !result.guidance.unwrap_or_default().contains("not-re-read"),
+            "a record with the loop fields says nothing about them on a pass"
+        );
+
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(
+            tmp.path(),
+            &format!(
+                "{LOOP_FIELDS}not-re-read: 1\nround-waivers:\n{}",
+                round_waiver(2, "  ")
+            ),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::FixRoundNotReRead));
+    }
+
+    /// The check counts what the record states: fewer waivers than un-re-read
+    /// rounds block, whatever the record's other counts say.
+    #[test]
+    fn fewer_waivers_than_un_re_read_rounds_block_whatever_else_the_record_says() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(
+            tmp.path(),
+            &format!(
+                "fix-rounds: 0\nre-reads: 5\nnot-re-read: 2\nround-waivers:\n{}",
+                round_waiver(1, "declined")
+            ),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::FixRoundNotReRead));
+        assert!(
+            result
+                .message
+                .unwrap()
+                .contains("1 fix round(s) in specs/007-gate/review.md needed a re-read and have none (2 not re-read, 1 waived)")
+        );
+    }
+
+    /// A record without the loop fields passes, and the guidance says it does
+    /// not record whether its fixes were re-read; one with them at zero does
+    /// not say so.
+    #[test]
+    fn a_record_without_the_loop_fields_passes_and_says_so() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(
+            result
+                .guidance
+                .unwrap()
+                .contains("does not say whether the fixes made during that review were re-read")
+        );
+
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(tmp.path(), &format!("{LOOP_FIELDS}not-re-read: 0\n"));
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(!result.guidance.unwrap_or_default().contains("re-read"));
+    }
+
+    /// Check 12 follows check 11: an outstanding SHOULD is reported first.
+    #[test]
+    fn an_outstanding_should_is_reported_before_an_un_re_read_round() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(tmp.path(), &format!("{LOOP_FIELDS}not-re-read: 1\n"));
+        let path = tmp.path().join("specs/007-gate/review.md");
+        let text = fs::read_to_string(&path).unwrap();
+        fs::write(
+            &path,
+            text.replace("should-violations: 0", "should-violations: 1"),
+        )
+        .unwrap();
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndispositionedFindings)
         );
     }
 

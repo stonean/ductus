@@ -128,6 +128,88 @@ pub struct ReviewBlock {
     /// inbox and none of them was dispositioned.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dispositions: Option<Dispositions>,
+    /// The review's fix rounds (spec 078), derived by `write-review` from its
+    /// `fix-rounds` argument. This and the four fields below are `None` on a
+    /// record whose run stated nothing about its fixes — every record written
+    /// before the loop existed among them — which is not zero rounds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fix_rounds: Option<u32>,
+    /// Rounds an independent agent re-read to completion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub re_reads: Option<u32>,
+    /// Rounds the diff check verified against a re-read's prescriptions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff_checked: Option<u32>,
+    /// Rounds that needed a re-read and have none finished. The gate blocks
+    /// while this exceeds the waivers in [`Self::round_waivers`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_re_read: Option<u32>,
+    /// Whether the re-read budget stopped the loop: at least two re-reads
+    /// found a MUST or SHOULD, and the last one did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub budget_stop: Option<bool>,
+    /// The waiver of each un-re-read round that carries one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub round_waivers: Vec<RoundWaiver>,
+}
+
+/// The waiver of a fix round that was not re-read (spec 078): the operator's
+/// reason for declining the re-read, or the `[review] re-reads-off` reason
+/// with the config file as `waived-by`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RoundWaiver {
+    /// The round's position in the run, from 1.
+    pub round: u32,
+    /// Why the round was not re-read. A blank reason waives nothing.
+    pub reason: String,
+    /// Who waived it — `decided-by`, or the config file for the switch.
+    pub waived_by: String,
+    /// When: the run's `last-run`.
+    pub waived_at: String,
+}
+
+/// How a fix round of a `/{project}:review` run was checked (spec 078).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum FixRoundCheck {
+    /// Every changed path is an analyze subject of the feature that is not a
+    /// durable contract (`brief-re-read`'s `exempt`), so no re-read.
+    Exempt,
+    /// An independent agent re-read the round and finished.
+    ReRead,
+    /// The round applied only a re-read's prescriptions, and
+    /// `check-prescriptions` matched them.
+    DiffChecked,
+    /// The round needed a re-read and has none finished: none was started,
+    /// one did not finish, or a primitive the round relied on failed.
+    NotReRead,
+}
+
+/// What a finished re-read found.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReReadOutcome {
+    /// No MUST or SHOULD.
+    Clean,
+    /// At least one MUST or SHOULD.
+    Findings,
+}
+
+/// One fix round of a review run, an entry of `write-review`'s `fix-rounds`.
+/// Unknown fields are refused, so a misspelled `reason` cannot drop a waiver.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct FixRound {
+    /// How the round was checked.
+    pub check: FixRoundCheck,
+    /// What the re-read found: required on a `re-read`, refused elsewhere.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<ReReadOutcome>,
+    /// The operator's reason for not re-reading the round, which waives it:
+    /// allowed only on a `not-re-read`, and requires `decided-by`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 /// How a run's findings were dispositioned — the counts both audit records
@@ -1055,6 +1137,15 @@ pub struct WriteReviewArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub examined: Option<u32>,
+    /// The run's fix rounds, in order, one entry per round with a non-empty
+    /// scope (spec 078). `write-review` derives every loop field in the record
+    /// from this list and accepts no count. `None` writes none of them, since
+    /// a run that stated nothing about its fixes is not one with no rounds; an
+    /// empty list writes them all at zero. Supplied via MCP/interpreter JSON;
+    /// not a CLI flag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(skip)]
+    pub fix_rounds: Option<Vec<FixRound>>,
 }
 
 /// Result for `write-review`.
@@ -4627,6 +4718,12 @@ pub enum ReviewGateBlock {
     /// recorded and never block. The name predates that narrowing and is kept
     /// as the result's wire value.
     UndispositionedFindings,
+    /// `review.md` counts more fix rounds that needed a re-read and have none
+    /// finished (`not-re-read`) than waivers with a reason in `round-waivers`
+    /// (spec 078). Ordered last: it says a fix made during the review was not
+    /// checked, which matters only once the review itself holds nothing. A
+    /// record without the loop fields passes, with guidance saying so.
+    FixRoundNotReRead,
 }
 
 /// The freshness of a durable record — `review:` or `analyze:` — against the

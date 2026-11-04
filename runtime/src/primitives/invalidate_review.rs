@@ -106,8 +106,10 @@ fn invalidate_record_artifact(
     // counts would state outcomes of a run it says never happened. So does
     // `captured-issues`, for the same reason: no writer emits it since spec
     // 058, but a record written before then still carries it until its next
-    // review.
-    const SCALARS: [&str; 15] = [
+    // review. The fix-round fields go too (spec 078): they are that run's
+    // outcomes, and a round waiver, unlike a finding's, names a round of that
+    // run, so it outlives it as a waiver of nothing.
+    const SCALARS: [&str; 21] = [
         "last-run",
         "reviewed-against",
         "diff-base",
@@ -123,6 +125,12 @@ fn invalidate_record_artifact(
         "dispositions",
         "captured-issues",
         "waivers",
+        "fix-rounds",
+        "re-reads",
+        "diff-checked",
+        "not-re-read",
+        "budget-stop",
+        "round-waivers",
     ];
 
     let review_path = feature_dir.join(crate::primitives::REVIEW_RECORD_FILE);
@@ -275,6 +283,37 @@ mod tests {
         run(&args("050-alpha"), tmp.path()).unwrap();
         let record = review_md(tmp.path());
         assert!(!record.contains("captured-issues"), "{record}");
+        assert!(record.contains("last-run: null"), "{record}");
+    }
+
+    /// The fix-round fields are the invalidated run's outcomes, and a round
+    /// waiver names one of that run's rounds, so all six go with it (spec 078).
+    #[test]
+    fn the_fix_round_fields_go_with_the_run() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "050-alpha", SPEC);
+        fs::write(
+            tmp.path().join("specs/050-alpha/review.md"),
+            "---\nspec: 050-alpha\nlast-run: 2026-08-01T00:00:00Z\nmust-violations: 0\n\
+             fix-rounds: 2\nre-reads: 1\ndiff-checked: 0\nnot-re-read: 1\nbudget-stop: false\n\
+             round-waivers:\n  - round: 2\n    reason: the change reverts round 1\n    \
+             waived-by: dev@example.com\n    waived-at: 2026-08-01T00:00:00Z\n\
+             blocking: false\n---\n\n# Review — 050-alpha\n",
+        )
+        .unwrap();
+        run(&args("050-alpha"), tmp.path()).unwrap();
+        let record = review_md(tmp.path());
+        for field in [
+            "fix-rounds:",
+            "re-reads:",
+            "diff-checked:",
+            "not-re-read:",
+            "budget-stop:",
+            "round-waivers:",
+            "reverts round 1",
+        ] {
+            assert!(!record.contains(field), "{field} survived: {record}");
+        }
         assert!(record.contains("last-run: null"), "{record}");
     }
 

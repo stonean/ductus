@@ -27,6 +27,11 @@
 //!   to its work is stored under `decisions:` keyed `rule {rule-id} at
 //!   {file}`, and leaves the counts only when its deferral releases it
 //!   ([`decisions::releases`], spec 076);
+//! - **records the fix-round loop** — from the run's `fix-rounds` list it
+//!   derives `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`,
+//!   `budget-stop` and `round-waivers`, applying the `[review] re-reads-off`
+//!   reason to each un-re-read round without its own, and writes none of them
+//!   when the run passed no list (spec 078);
 //! - the empty-scope case is a branch of this primitive, not a prose
 //!   special-case: it emits the 0-findings, `blocking: false` report.
 //!
@@ -43,15 +48,241 @@ use serde::Deserialize;
 
 use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::{
-    PrimitiveError, Result, WaiverPaths, analyze_subjects, read_text, rel_path, split_frontmatter,
-    write_atomic,
+    PrimitiveError, Result, WaiverPaths, analyze_subjects, fix_rounds, read_text, rel_path,
+    split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ConstitutionOutcome, DecisionOutcome, DecisionRef, DispositionOutcome, Dispositions,
-    RecordFreshness, ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
+    ConstitutionOutcome, DecisionOutcome, DecisionRef, DispositionOutcome, Dispositions, FixRound,
+    FixRoundCheck, ReReadOutcome, RecordFreshness, ReviewFinding, ReviewObservation, RoundWaiver,
+    WriteReviewArgs, WriteReviewResult,
 };
 use crate::schema::severity::ReviewSeverity;
+
+/// Refuse a malformed `fix-rounds` entry before anything is written (spec
+/// 078): a `result` anywhere but on a re-read, a re-read without one, a
+/// `reason` anywhere but on a round not re-read, a blank or multi-line reason,
+/// and a reason with no `decided-by`, since a waiver nobody can attribute is
+/// not auditable.
+fn validate_fix_rounds(args: &WriteReviewArgs) -> Result<()> {
+    let Some(rounds) = args.fix_rounds.as_deref() else {
+        return Ok(());
+    };
+    for (idx, round) in rounds.iter().enumerate() {
+        let invalid = |field: &str, reason: &str| PrimitiveError::InvalidArgument {
+            primitive: "write-review".into(),
+            argument: format!("fix-rounds[{idx}].{field}"),
+            reason: reason.into(),
+        };
+        match (round.check, round.result) {
+            (FixRoundCheck::ReRead, None) => {
+                return Err(invalid(
+                    "result",
+                    "a re-read round states what it found: `clean` or `findings`",
+                ));
+            }
+            (FixRoundCheck::ReRead, Some(_)) | (_, None) => {}
+            (_, Some(_)) => return Err(invalid("result", "only a re-read round has a result")),
+        }
+        let Some(reason) = round.reason.as_deref() else {
+            continue;
+        };
+        if round.check != FixRoundCheck::NotReRead {
+            return Err(invalid(
+                "reason",
+                "only a round that was not re-read is waived",
+            ));
+        }
+        if reason.trim().is_empty() {
+            return Err(invalid("reason", "a waiver states its reason"));
+        }
+        super::validate_single_line("write-review", &format!("fix-rounds[{idx}].reason"), reason)?;
+        if args
+            .decided_by
+            .as_deref()
+            .is_none_or(|who| who.trim().is_empty())
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: "decided-by".into(),
+                reason: format!("required when a fix round is waived (fix-rounds[{idx}])"),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// The fix-round loop's record (spec 078), every field derived from the
+/// run's `fix-rounds`, so no caller can state a count its rounds contradict.
+struct LoopRecord {
+    /// Every round, the four kinds together.
+    rounds: usize,
+    /// Rounds re-read to completion.
+    re_reads: usize,
+    /// Rounds the diff check verified.
+    diff_checked: usize,
+    /// Rounds that needed a re-read and have none.
+    not_re_read: usize,
+    /// At least two re-reads found a MUST or SHOULD, and the last one did.
+    budget_stop: bool,
+    /// The exempt rounds, from 1.
+    exempt: Vec<usize>,
+    /// The un-re-read rounds no waiver covers, from 1: each holds `done`.
+    unwaived: Vec<usize>,
+    /// A waiver per un-re-read round that has one.
+    waivers: Vec<RoundWaiver>,
+}
+
+/// The run's loop record, or `None` when it passed no `fix-rounds`. The
+/// switch is read here, so the host cannot leave its waiver out, and only when
+/// the run passed its rounds: it waives rounds, and a run that stated none has
+/// none for it to waive.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidReReadsOff`] for a malformed switch, and
+/// [`PrimitiveError::Toml`] or [`PrimitiveError::Io`] when the config file
+/// cannot be read.
+fn loop_record_of(args: &WriteReviewArgs, repo: &Path) -> Result<Option<LoopRecord>> {
+    let Some(rounds) = args.fix_rounds.as_deref() else {
+        return Ok(None);
+    };
+    let switch = fix_rounds::re_reads_off(repo)?;
+    let (_, config) = paths::resolve_config(repo);
+    Ok(Some(derive_loop(
+        rounds,
+        switch.as_deref().map(|reason| (reason, config)),
+        args.decided_by.as_deref(),
+        &args.reviewed_at,
+    )))
+}
+
+/// Derive the loop's record from its rounds. An un-re-read round is waived by
+/// its own `reason`, attributed to `decided_by`; failing that, by the
+/// `[review] re-reads-off` reason in `switch`, attributed to the config file
+/// it names, so the switch waives every round the host left without one.
+fn derive_loop(
+    rounds: &[FixRound],
+    switch: Option<(&str, &str)>,
+    decided_by: Option<&str>,
+    at: &str,
+) -> LoopRecord {
+    let count = |check: FixRoundCheck| rounds.iter().filter(|r| r.check == check).count();
+    let results: Vec<ReReadOutcome> = rounds
+        .iter()
+        .filter(|r| r.check == FixRoundCheck::ReRead)
+        .filter_map(|r| r.result)
+        .collect();
+    let with_findings = results
+        .iter()
+        .filter(|&&result| result == ReReadOutcome::Findings)
+        .count();
+    let numbered = |check: FixRoundCheck| -> Vec<usize> {
+        (1..=rounds.len())
+            .zip(rounds)
+            .filter(|(_, r)| r.check == check)
+            .map(|(n, _)| n)
+            .collect()
+    };
+    let mut waivers = Vec::new();
+    let mut unwaived = Vec::new();
+    for (n, round) in (1..=rounds.len()).zip(rounds) {
+        if round.check != FixRoundCheck::NotReRead {
+            continue;
+        }
+        let own = round
+            .reason
+            .as_deref()
+            .map(str::trim)
+            .filter(|reason| !reason.is_empty())
+            .map(|reason| (reason, decided_by.unwrap_or_default().trim()));
+        match own.or(switch) {
+            Some((reason, by)) => waivers.push(RoundWaiver {
+                round: u32::try_from(n).unwrap_or(u32::MAX),
+                reason: reason.to_string(),
+                waived_by: by.to_string(),
+                waived_at: at.to_string(),
+            }),
+            None => unwaived.push(n),
+        }
+    }
+    LoopRecord {
+        rounds: rounds.len(),
+        re_reads: count(FixRoundCheck::ReRead),
+        diff_checked: count(FixRoundCheck::DiffChecked),
+        not_re_read: count(FixRoundCheck::NotReRead),
+        budget_stop: with_findings >= 2 && results.last() == Some(&ReReadOutcome::Findings),
+        exempt: numbered(FixRoundCheck::Exempt),
+        unwaived,
+        waivers,
+    }
+}
+
+/// Render the loop's fields into the record, after `skipped-passes`.
+fn render_loop_record(fm: &mut String, record: &LoopRecord) {
+    let _ = writeln!(fm, "fix-rounds: {}", record.rounds);
+    let _ = writeln!(fm, "re-reads: {}", record.re_reads);
+    let _ = writeln!(fm, "diff-checked: {}", record.diff_checked);
+    let _ = writeln!(fm, "not-re-read: {}", record.not_re_read);
+    let _ = writeln!(fm, "budget-stop: {}", record.budget_stop);
+    if record.waivers.is_empty() {
+        return;
+    }
+    let _ = writeln!(fm, "round-waivers:");
+    for waiver in &record.waivers {
+        let _ = writeln!(fm, "  - round: {}", waiver.round);
+        let _ = writeln!(fm, "    reason: {}", yaml_string(&waiver.reason));
+        let _ = writeln!(fm, "    waived-by: {}", yaml_string(&waiver.waived_by));
+        let _ = writeln!(fm, "    waived-at: {}", yaml_string(&waiver.waived_at));
+    }
+}
+
+/// The Summary's account of the loop: the counts, each exempt round, each
+/// waived one with its reason, each un-re-read round no waiver covers, and
+/// whether the budget stopped the loop.
+fn loop_summary(record: &LoopRecord) -> String {
+    let mut out = format!(
+        "{} fix round(s): {} re-read, {} diff-checked, {} exempt, {} not re-read.",
+        record.rounds,
+        record.re_reads,
+        record.diff_checked,
+        record.exempt.len(),
+        record.not_re_read
+    );
+    if !record.exempt.is_empty() {
+        let _ = write!(out, " Exempt: {}.", round_list(&record.exempt));
+    }
+    for waiver in &record.waivers {
+        let _ = write!(
+            out,
+            " Round {} was not re-read, waived: {}.",
+            waiver.round,
+            crate::primitives::flatten_line(&waiver.reason)
+        );
+    }
+    if !record.unwaived.is_empty() {
+        let _ = write!(
+            out,
+            " Not re-read and not waived: {} — each holds `done`.",
+            round_list(&record.unwaived)
+        );
+    }
+    if record.budget_stop {
+        out.push_str(" The budget stopped the loop: two re-reads found a MUST or SHOULD.");
+    }
+    out
+}
+
+/// `round 3`, or `rounds 2, 4 and 5`.
+fn round_list(rounds: &[usize]) -> String {
+    let names: Vec<String> = rounds.iter().map(ToString::to_string).collect();
+    match names.as_slice() {
+        [one] => format!("round {one}"),
+        [rest @ .., last] => format!("rounds {} and {last}", rest.join(", ")),
+        [] => String::new(),
+    }
+}
+
 /// Refuse a violation's disposition that is fixed or waived, or a deferral
 /// missing its companions (spec 076). A violation is waived with `--waive`
 /// and fixed by removing it, so neither reaches this writer as an outcome.
@@ -178,7 +409,13 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 ///   an applied waiver, or is waived while a stored deferral for its key
 ///   stands outside `expired-decisions` (argument `expired-decisions`); when
 ///   two observations, or two violations, sharing a key are given different
-///   outcomes; or when a new decision has no `decided-by`.
+///   outcomes; when a new decision, or a waived fix round, has no
+///   `decided-by`; or when a `fix-rounds` entry carries a `result` on any
+///   check but `re-read`, a re-read none, or a `reason` that is blank,
+///   spans lines, or sits on any check but `not-re-read`.
+/// - [`PrimitiveError::InvalidReReadsOff`] when `fix-rounds` is given and
+///   `[review] re-reads-off` is malformed, and [`PrimitiveError::Toml`] when
+///   the config file it is read from does not parse.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature has no `spec.md`.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block, and [`PrimitiveError::UnclosedFrontmatter`] when the block in
@@ -193,6 +430,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_scalar_fields(args)?;
     validate_finding_dispositions(args)?;
+    validate_fix_rounds(args)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {
@@ -278,6 +516,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         )
     })?;
     decisions::mark_gating(&mut decisions, &sorted.holding());
+    let loop_record = loop_record_of(args, repo)?;
     let report = render_report(
         args,
         &Buckets {
@@ -294,6 +533,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             waivers: &surviving,
             decisions: &decisions,
             dispositions,
+            fix_rounds: loop_record.as_ref(),
         },
         &contracts,
     );
@@ -743,6 +983,9 @@ struct Record<'a> {
     waivers: &'a [RawWaiverFull],
     decisions: &'a [RawDecision],
     dispositions: Dispositions,
+    /// The fix-round loop's fields; `None` when the run passed no
+    /// `fix-rounds`, which writes none of them.
+    fix_rounds: Option<&'a LoopRecord>,
 }
 
 /// Render the full `review.md` document (frontmatter + fixed skeleton).
@@ -787,6 +1030,9 @@ fn render_report(
     }
     let _ = writeln!(fm, "scope: {scope}");
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
+    if let Some(loop_record) = record.fix_rounds {
+        render_loop_record(&mut fm, loop_record);
+    }
     // The three fields that lived only in the spec's `review:` block. They
     // arrive here unchanged in meaning: `reviewed-digest` is still always
     // written (empty map included, so "digest taken over a spec with no
@@ -813,24 +1059,7 @@ fn render_report(
     decisions::render(&mut fm, record.decisions);
     fm.push_str("---");
 
-    let summary = args
-        .summary
-        .as_deref()
-        .filter(|s| !s.trim().is_empty())
-        .map_or_else(
-            || {
-                generate_summary(
-                    args,
-                    must.len(),
-                    should.len(),
-                    low.len(),
-                    (waived.len(), deferred.len()),
-                    blocking,
-                    record.dispositions.undispositioned,
-                )
-            },
-            str::to_string,
-        );
+    let summary = report_summary(args, buckets, blocking, record);
 
     let sections = [
         format!("# Review — {feature}"),
@@ -867,6 +1096,34 @@ fn render_report(
     ];
 
     format!("{fm}\n\n{}\n", sections.join("\n\n"))
+}
+
+/// The report's Summary: the caller's, when it supplied one, else the
+/// generated count line, followed by the loop's account when the run passed
+/// its rounds.
+fn report_summary(
+    args: &WriteReviewArgs,
+    buckets: &Buckets<'_>,
+    blocking: bool,
+    record: &Record<'_>,
+) -> String {
+    if let Some(summary) = args.summary.as_deref().filter(|s| !s.trim().is_empty()) {
+        return summary.to_string();
+    }
+    let mut summary = generate_summary(
+        args,
+        buckets.must.len(),
+        buckets.should.len(),
+        buckets.low.len(),
+        (buckets.waived.len(), buckets.deferred.len()),
+        blocking,
+        record.dispositions.undispositioned,
+    );
+    if let Some(loop_record) = record.fix_rounds {
+        summary.push(' ');
+        summary.push_str(&loop_summary(loop_record));
+    }
+    summary
 }
 
 /// A deterministic one-line Summary derived from the counts.
@@ -1830,6 +2087,7 @@ mod tests {
             expired_decisions: Vec::new(),
             decided_by: None,
             examined: None,
+            fix_rounds: None,
         }
     }
 
@@ -2696,6 +2954,304 @@ mod tests {
             Err(PrimitiveError::InvalidArgument { argument, .. }) if argument == "decided-by"
         ));
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
+    }
+
+    // -- the fix-round loop (spec 078) ---------------------------------------
+
+    fn round(
+        check: FixRoundCheck,
+        result: Option<ReReadOutcome>,
+        reason: Option<&str>,
+    ) -> FixRound {
+        FixRound {
+            check,
+            result,
+            reason: reason.map(str::to_string),
+        }
+    }
+
+    fn record_of(tmp: &TempDir) -> crate::schema::primitives::ReviewBlock {
+        let report = review_md(tmp, "001-x");
+        let (fm, _) =
+            crate::primitives::split_frontmatter(&report, Path::new("review.md")).unwrap();
+        serde_norway::from_str(fm).unwrap()
+    }
+
+    /// Every count comes from the rounds, the waived round names its reason,
+    /// its author and the run's time, and the Summary names the exempt and
+    /// the waived round; the record reads back into the struct the gate reads.
+    #[test]
+    fn each_loop_field_is_derived_from_the_rounds() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.fix_rounds = Some(vec![
+            round(FixRoundCheck::ReRead, Some(ReReadOutcome::Findings), None),
+            round(FixRoundCheck::DiffChecked, None, None),
+            round(FixRoundCheck::Exempt, None, None),
+            round(
+                FixRoundCheck::NotReRead,
+                None,
+                Some("the change reverts round 1"),
+            ),
+            round(FixRoundCheck::ReRead, Some(ReReadOutcome::Clean), None),
+        ]);
+        run(&args, tmp.path()).unwrap();
+
+        let record = record_of(&tmp);
+        assert_eq!(
+            (
+                record.fix_rounds,
+                record.re_reads,
+                record.diff_checked,
+                record.not_re_read,
+                record.budget_stop
+            ),
+            (Some(5), Some(2), Some(1), Some(1), Some(false))
+        );
+        assert_eq!(
+            record.round_waivers,
+            [RoundWaiver {
+                round: 4,
+                reason: "the change reverts round 1".into(),
+                waived_by: "dev@example.com".into(),
+                waived_at: args.reviewed_at.clone(),
+            }]
+        );
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains(
+                "5 fix round(s): 2 re-read, 1 diff-checked, 1 exempt, 1 not re-read. \
+                 Exempt: round 3. Round 4 was not re-read, waived: the change reverts round 1."
+            ),
+            "{report}"
+        );
+        assert!(!report.contains("not waived"), "{report}");
+    }
+
+    /// No list writes no loop field: a run that stated nothing about its
+    /// fixes is not one with no rounds. An empty list writes every field at
+    /// zero, and no `round-waivers`.
+    #[test]
+    fn an_absent_list_writes_no_loop_field_and_an_empty_one_writes_zeros() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        for field in [
+            "fix-rounds:",
+            "re-reads:",
+            "diff-checked:",
+            "not-re-read:",
+            "budget-stop:",
+        ] {
+            assert!(!report.contains(field), "{field}: {report}");
+        }
+        assert!(!report.contains("fix round(s)"), "{report}");
+        let record = record_of(&tmp);
+        assert_eq!((record.fix_rounds, record.not_re_read), (None, None));
+
+        let mut args = base_args("001-x");
+        args.fix_rounds = Some(Vec::new());
+        run(&args, tmp.path()).unwrap();
+        let record = record_of(&tmp);
+        assert_eq!(
+            (
+                record.fix_rounds,
+                record.re_reads,
+                record.diff_checked,
+                record.not_re_read,
+                record.budget_stop
+            ),
+            (Some(0), Some(0), Some(0), Some(0), Some(false))
+        );
+        assert_eq!(record.round_waivers, [] as [RoundWaiver; 0]);
+        let report = review_md(&tmp, "001-x");
+        assert!(!report.contains("round-waivers"), "{report}");
+        assert!(report.contains("0 fix round(s)"), "{report}");
+    }
+
+    /// The budget stopped the loop when at least two re-reads found a MUST or
+    /// SHOULD and the last re-read did; a diff-checked round between them is
+    /// no re-read.
+    #[test]
+    fn the_budget_stop_needs_two_finding_re_reads_and_a_finding_last() {
+        use ReReadOutcome::{Clean, Findings};
+        let re_read = |result| round(FixRoundCheck::ReRead, Some(result), None);
+        let checked = round(FixRoundCheck::DiffChecked, None, None);
+        for (rounds, expect) in [
+            (vec![re_read(Findings), re_read(Findings)], true),
+            (
+                vec![re_read(Findings), re_read(Clean), re_read(Findings)],
+                true,
+            ),
+            (
+                vec![re_read(Findings), checked.clone(), re_read(Findings)],
+                true,
+            ),
+            (
+                vec![re_read(Findings), re_read(Findings), re_read(Clean)],
+                false,
+            ),
+            (vec![re_read(Findings), checked], false),
+            (vec![re_read(Findings)], false),
+            (Vec::new(), false),
+        ] {
+            let record = derive_loop(&rounds, None, None, "2026-07-02T12:00:00Z");
+            assert_eq!(record.budget_stop, expect, "{rounds:?}");
+        }
+        let stopped = derive_loop(
+            &[re_read(Findings), re_read(Findings)],
+            None,
+            None,
+            "2026-07-02T12:00:00Z",
+        );
+        assert!(loop_summary(&stopped).contains("The budget stopped the loop"));
+    }
+
+    /// With `[review] re-reads-off` set, every un-re-read round without its
+    /// own reason is waived with the switch's, attributed to the config file;
+    /// a round with its own reason keeps it. Without the switch, such a round
+    /// is named in the Summary as holding `done`.
+    #[test]
+    fn the_switch_waives_each_round_left_without_a_reason() {
+        const REASON: &str = "Reviews here run on a host without subagents.";
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.fix_rounds = Some(vec![
+            round(FixRoundCheck::NotReRead, None, None),
+            round(
+                FixRoundCheck::NotReRead,
+                None,
+                Some("the operator declined"),
+            ),
+        ]);
+        run(&args, tmp.path()).unwrap();
+        assert!(
+            review_md(&tmp, "001-x")
+                .contains("Not re-read and not waived: round 1 — each holds `done`."),
+            "without the switch the round is open"
+        );
+        assert_eq!(record_of(&tmp).round_waivers.len(), 1);
+
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[review]\nre-reads-off = \"{REASON}\"\n"),
+        )
+        .unwrap();
+        run(&args, tmp.path()).unwrap();
+        let waivers = record_of(&tmp).round_waivers;
+        assert_eq!(
+            waivers
+                .iter()
+                .map(|w| (w.round, w.reason.as_str(), w.waived_by.as_str()))
+                .collect::<Vec<_>>(),
+            [
+                (1, REASON, ".ductus/config.toml"),
+                (2, "the operator declined", "dev@example.com"),
+            ]
+        );
+        assert!(!review_md(&tmp, "001-x").contains("not waived"));
+    }
+
+    /// A malformed switch halts a run that passed its rounds before anything
+    /// is written; a run that passed none does not read the switch, since it
+    /// has no round for it to waive.
+    #[test]
+    fn a_malformed_switch_halts_only_a_run_with_rounds() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[review]\nre-reads-off = \"short\"\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.fix_rounds = Some(Vec::new());
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidReReadsOff { path, .. } if path.ends_with(".ductus/config.toml")),
+            "{err}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        assert!(tmp.path().join("specs/001-x/review.md").exists());
+    }
+
+    /// Each malformed entry is refused, naming its field, before anything is
+    /// written, and an unknown key in an entry does not deserialize.
+    #[test]
+    fn each_malformed_round_is_refused_before_any_write() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        for (entry, author, argument) in [
+            (
+                round(FixRoundCheck::ReRead, None, None),
+                true,
+                "fix-rounds[0].result",
+            ),
+            (
+                round(FixRoundCheck::Exempt, Some(ReReadOutcome::Clean), None),
+                true,
+                "fix-rounds[0].result",
+            ),
+            (
+                round(
+                    FixRoundCheck::NotReRead,
+                    Some(ReReadOutcome::Findings),
+                    None,
+                ),
+                true,
+                "fix-rounds[0].result",
+            ),
+            (
+                round(
+                    FixRoundCheck::ReRead,
+                    Some(ReReadOutcome::Clean),
+                    Some("why"),
+                ),
+                true,
+                "fix-rounds[0].reason",
+            ),
+            (
+                round(FixRoundCheck::DiffChecked, None, Some("why")),
+                true,
+                "fix-rounds[0].reason",
+            ),
+            (
+                round(FixRoundCheck::NotReRead, None, Some("  ")),
+                true,
+                "fix-rounds[0].reason",
+            ),
+            (
+                round(FixRoundCheck::NotReRead, None, Some("one\ntwo")),
+                true,
+                "fix-rounds[0].reason",
+            ),
+            (
+                round(FixRoundCheck::NotReRead, None, Some("why")),
+                false,
+                "decided-by",
+            ),
+        ] {
+            let mut args = base_args("001-x");
+            args.decided_by = author.then(|| "dev@example.com".to_string());
+            args.fix_rounds = Some(vec![entry.clone()]);
+            match run(&args, tmp.path()) {
+                Err(PrimitiveError::InvalidArgument { argument: got, .. }) => {
+                    assert_eq!(got, argument, "{entry:?}");
+                }
+                other => panic!("{entry:?} was not refused: {other:?}"),
+            }
+            assert!(!tmp.path().join("specs/001-x/review.md").exists());
+        }
+
+        let misspelled = serde_json::json!({
+            "feature": "001-x", "reviewed-at": "t", "reviewed-against": "a", "diff-base": "b",
+            "fix-rounds": [{ "check": "not-re-read", "reasn": "why" }]
+        });
+        assert!(serde_json::from_value::<WriteReviewArgs>(misspelled).is_err());
     }
 
     #[test]
