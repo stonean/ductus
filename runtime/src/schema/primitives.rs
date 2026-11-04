@@ -4607,6 +4607,38 @@ pub struct CreatePlanArtifactsResult {
     pub artifacts: Vec<PlanArtifact>,
 }
 
+// -- check-review-freshness (spec 066) ---------------------------------------
+
+/// Args for `check-review-freshness`: whether one feature's review record
+/// still describes its durable contracts.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckReviewFreshnessArgs {
+    /// Feature directory name under the configured spec root.
+    #[arg(long)]
+    pub feature: String,
+}
+
+/// Result for `check-review-freshness`: the comparison `check-review-gate`
+/// makes before `done`, asked of a spec at any status, so `/{project}:audit`
+/// Family 19 asks it of every `done` spec at release (066 plan, *Family 19
+/// calls the runtime*). Read-only; `paths` in a stale answer holds at most the
+/// spec's durable contracts, `scenarios/*.md` and `data-model.md`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckReviewFreshnessResult {
+    /// The feature examined.
+    pub feature: String,
+    /// Whether `review.md` exists. Absent is the never-reviewed state, so a
+    /// caller can set apart a spec that predates `/{project}:review` from one
+    /// whose record carries a null `last-run`, which both answer `never-run`.
+    pub record_present: bool,
+    /// The answer: `current`, `stale` with the changed contracts,
+    /// `undeterminable` for a record with no `reviewed-digest` or a
+    /// `review.md` whose frontmatter does not parse, or `never-run`.
+    pub freshness: RecordFreshness,
+}
+
 // -- check-review-gate -------------------------------------------------------
 
 /// Args for `check-review-gate`. Evaluates `/ductus:implement`'s pre-done

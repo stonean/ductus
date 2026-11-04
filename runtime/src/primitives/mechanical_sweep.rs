@@ -7,8 +7,8 @@
 //! review staleness. Without it the two rules disagree, and one repo-wide
 //! rename turns every done spec's review stale at once.
 //!
-//! That is not hypothetical. `/{project}:audit` Family 19 has carried this
-//! exemption since it was written; `check-review-gate`'s staleness block did
+//! That is not hypothetical. `/{project}:audit` Family 19 carried this
+//! exemption from the start; `check-review-gate`'s staleness block did
 //! not, and the two answered differently for **19 of this repo's 46 `done`
 //! specs** — every one of those 19 a consequence of 049's `govern → ductus`
 //! sweep and none a real contract change. The scenario that exposed it was
@@ -36,19 +36,14 @@
 //! flag would make correctness depend on an author remembering to set it,
 //! which `framework/constitution.md` §design-principles rules out.
 //!
-//! This is the Rust half of a rule with two enforcement moments. Family 19
-//! applies the same rule at release time from `scripts/audit/review-freshness.sh`,
-//! which runs in a toolchain-free CI job and so cannot call this code; the
-//! `mechanical_sweep_parity` integration test pins the two to agree over the
-//! real corpus, so a divergence fails a test rather than going unnoticed.
+//! The rule has two enforcement moments and one implementation:
+//! `check-review-gate` at the transition, and `/{project}:audit` Family 19 at
+//! release, which asks `check-review-freshness` for each `done` spec (066
+//! plan, *Family 19 calls the runtime*). Until 2026-11-04 Family 19 carried a
+//! Python copy of this rule, which `mechanical_sweep_parity` held to it.
 //!
-//! Both halves detect renames, with [`RENAME_THRESHOLD`] and [`RENAME_LIMIT`]
-//! stated in each rather than inherited. One residue the constants cannot
-//! close: libgit2 and git score similarity with different algorithms, so a
-//! file near the threshold can be a rename in one half and a delete plus an
-//! add in the other. The renamed files a sweep produces sit far above it — a
-//! renumber rewrites a few link lines of a file — and where the halves
-//! disagree one gate is the stricter, so nothing passes both unexamined.
+//! Renames are detected with [`RENAME_THRESHOLD`] and [`RENAME_LIMIT`] stated
+//! here rather than inherited from libgit2's defaults.
 //!
 //! Defined by
 //! `specs/066-audit-records-and-the-completion-gate/scenarios/review-staleness-on-done-specs.md`.
@@ -58,22 +53,20 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use git2::{Delta, DiffFindOptions, DiffOptions, Repository, Tree};
 
-/// Rename-detection similarity threshold, in percent. Family 19 passes the
-/// same value to `git diff` as `--find-renames`, and the
-/// `mechanical_sweep_parity` test holds the two to it — stated here rather
-/// than inherited, because libgit2 and git each fall back to their own
-/// default and git's is overridable from a contributor's config (spec 066
-/// scenario `a-renamed-file-contributes-its-rewrites`).
+/// Rename-detection similarity threshold, in percent — stated here rather
+/// than inherited, so the answer does not depend on libgit2's own default
+/// (spec 066 scenario `a-renamed-file-contributes-its-rewrites`).
 pub const RENAME_THRESHOLD: u16 = 50;
 
 /// The most changed markdown paths, counted before renames are paired, a
 /// window may carry and still be read. Above it the index is
-/// [`unreadable`](SweepIndex::unreadable) in both halves alike.
+/// [`unreadable`](SweepIndex::unreadable).
 ///
-/// The guard rather than the libraries' own limits is what keeps the halves
-/// agreeing: git skips inexact detection once sources × destinations exceeds
-/// the limit squared, while libgit2 caps the sources it tries per file, so the
-/// two degrade differently past their limits. Under this count neither can
+/// The guard rather than the libraries' own limits is what kept Family 19's
+/// `git diff` and this index agreeing while Family 19 ran its own copy: git
+/// skips inexact detection once sources × destinations exceeds the limit
+/// squared, while libgit2 caps the sources it tries per file, so the two
+/// degrade differently past their limits. Under this count neither can
 /// bind, and the value sits far above this corpus's size, so no window here
 /// reaches it.
 pub const RENAME_LIMIT: usize = 10_000;
@@ -132,7 +125,7 @@ impl SweepIndex {
 
     /// [`build`](SweepIndex::build) with the window guard at `limit` rather
     /// than [`RENAME_LIMIT`] — the seam `mechanical_sweep_parity` drives to
-    /// show both halves refuse an over-limit window alike, without building a
+    /// show an over-limit window is refused, without building a
     /// ten-thousand-file fixture.
     #[must_use]
     pub fn build_with_rename_limit(
@@ -308,9 +301,9 @@ fn fold_events(events: &[Event]) -> BTreeMap<String, Option<BTreeSet<Pair>>> {
                 path.clone_from(next);
             }
             // The entry is opened by the file's first hunk, not its header —
-            // the moment Family 19 opens it, on the `+++ b/` line that only a
-            // file with hunks carries. A delta with none (a rename with its
-            // content unchanged, a mode change) stays absent in both halves;
+            // the moment Family 19's Python copy opened it, on the `+++ b/`
+            // line that only a file with hunks carries. A delta with none (a
+            // rename with its content unchanged, a mode change) stays absent;
             // opened at the header it was an empty, exempt entry here and an
             // absent, changed one there.
             Event::Hunk => {
@@ -388,16 +381,14 @@ fn pair_run(old_run: &[&str], new_run: &[&str]) -> Option<BTreeSet<Pair>> {
     Some(pairs)
 }
 
-/// Characters that form a single word token. Mirrors Family 19's
-/// `[A-Za-z0-9_.:/-]+` character class exactly — the two implementations must
-/// agree on what a token is, or they agree on nothing downstream.
+/// Characters that form a single word token: `[A-Za-z0-9_.:/-]+`.
 fn is_token_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | ':' | '/' | '-')
 }
 
 /// Split a line into tokens: maximal word runs, maximal whitespace runs, and
-/// any other character on its own. The hand-rolled form of Family 19's
-/// `[A-Za-z0-9_.:/-]+|\s+|.`.
+/// any other character on its own. The hand-rolled form of the regex Family
+/// 19's Python copy used, `[A-Za-z0-9_.:/-]+|\s+|.`.
 fn tokenize(line: &str) -> Vec<&str> {
     let mut tokens = Vec::new();
     let bytes = line.as_bytes();

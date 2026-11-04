@@ -74,7 +74,7 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 11. Decide whether Family 19 delegates to the runtime, now that its stated reason has lapsed
 
-- [ ] runtime/tests/mechanical_sweep_parity.rs and scenarios/review-staleness-on-done-specs.md — both say Family 19 keeps its own implementation because the self-audit's CI job has no Rust toolchain and no runtime build, so calling the runtime would make the gate depend on the artifact it gates; `runtime-release.yml`'s `audit` job now installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, so the reason no longer holds (048's review, 2026-10-29). Decide under §runtime-boundary's eligibility default whether Family 19 calls the runtime, and rewrite both statements to match the answer
+- [x] runtime/tests/mechanical_sweep_parity.rs and scenarios/review-staleness-on-done-specs.md — both say Family 19 keeps its own implementation because the self-audit's CI job has no Rust toolchain and no runtime build, so calling the runtime would make the gate depend on the artifact it gates; `runtime-release.yml`'s `audit` job now installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, so the reason no longer holds (048's review, 2026-10-29). Decide under §runtime-boundary's eligibility default whether Family 19 calls the runtime, and rewrite both statements to match the answer
 
 - **Done when**: Family 19's implementation follows a decision recorded in 066's plan, and no artifact gives a reason for it that the audit job contradicts
 

@@ -159,6 +159,31 @@ The first three `could not be read` reasons are `check-artifacts` skips. The res
 
 **The subject depends on the spec's status when the record is written.** `criterion-path-existence` and `body-path-existence`, the sources of most skipped targets, examine `done` specs only, so a record written while a spec is reopened describes a smaller subject than the same spec at `done`. Write the record last, after the status is settled.
 
+## `check-review-freshness` — whether one spec's review is still current
+
+Args:
+
+```json
+{ "feature": "042-widget" }
+```
+
+Result:
+
+```json
+{
+  "feature": "042-widget",
+  "record-present": true,
+  "freshness": {
+    "state": "stale",
+    "last-run": "2026-11-04T00:00:00Z",
+    "analyzed-against": "<sha>",
+    "paths": ["specs/042-widget/scenarios/edge.md"]
+  }
+}
+```
+
+`freshness` is the gate's own `RecordFreshness` from `analyze_subjects::review_freshness`, asked of a spec at any status: `current`, `stale` with the changed durable contracts, `undeterminable` with a `reason` for a record with no `reviewed-digest` or a `review.md` whose frontmatter does not parse, or `never-run`. `record-present` is false only when `review.md` is absent, which `/{project}:audit` Family 19 grandfathers, so it sets that apart from a record whose `last-run` is null; both answer `never-run`. `paths` holds at most the spec's durable contracts. Family 19 asks it of every `done` spec at release (plan, *Family 19 calls the runtime*). Read-only.
+
 ## `check-review-gate` — evaluate implement's pre-done review gate
 
 Args:

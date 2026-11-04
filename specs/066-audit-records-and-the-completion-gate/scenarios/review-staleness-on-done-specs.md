@@ -77,13 +77,13 @@ The `check-artifacts` staleness arm this scenario first specified was not built;
   `012-multi-agent-govern`'s `d904430` while Family 19's `git cat-file -e`
   resolved it — fixed with `revparse_single`.
 
-  Family 19 keeps its own Python implementation: the CI job that runs the
-  self-audit has no Rust toolchain and no runtime build, because it *gates*
-  the build, so calling the runtime would make the gate depend on compiling
-  the artifact it gates. The `mechanical_sweep_parity` integration test runs
-  both over the real corpus and fails on the first disagreement, so the two
-  cannot drift again in silence. It compares the 19 specs that were previously
-  divergent and asserts it compared something, so a vacuous pass is itself a
-  failure.
+  Family 19 kept its own Python implementation then, because the CI job that
+  ran the self-audit had no Rust toolchain and no runtime build, and the
+  `mechanical_sweep_parity` integration test ran both over the real corpus,
+  failing on the first disagreement. That reason lapsed when the audit jobs
+  gained the toolchain and a release build, and since 2026-11-04 Family 19
+  calls the runtime's `check-review-freshness` instead (066 plan, *Family 19
+  calls the runtime*), so the two gates are one implementation and the
+  corpus comparison went with the copy.
 
 - **Does the `check-artifacts` staleness arm still need building?** No — resolved 2026-08-16: `framework-checks.yml` runs Family 19 over every `done` spec on every push to `main`, so contracts never move unwatched, and the two-week silence the Context describes was the rename exemption correctly holding; what remains is a visibility gap, better closed by surfacing Family 19's verdict in `/{project}:analyze` than by a third implementation of the rule.

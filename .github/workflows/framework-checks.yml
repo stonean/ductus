@@ -37,11 +37,12 @@ jobs:
     # gives the sizing.
     timeout-minutes: 15
     steps:
-      # fetch-depth: 0 — the self-audit's Family 19 (review-freshness) resolves
-      # each spec's `reviewed-against` sha, from its review.md, against history. A shallow
-      # clone has none of those commits, so every spec reports "not a commit in
-      # this repo" and the gate fails for a reason unrelated to review freshness
-      # (observed on gvrn-v0.27.1, which blocked its own publish).
+      # fetch-depth: 0 — the self-audit's Family 19 (review-freshness) exempts a
+      # uniform rename sweep by reading each spec's `reviewed-against` commit,
+      # from its review.md, against HEAD. A shallow clone has none of those
+      # commits, so the exemption cannot run and a contract a sweep rewrote reads
+      # stale (a shallow clone once failed every spec here, on gvrn-v0.27.1,
+      # and blocked its own publish).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0

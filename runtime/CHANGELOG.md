@@ -29,6 +29,13 @@ its version and date.
   this passes with a notice that it does not say. `[review] re-reads-off =
   "<reason>"` switches the loop off, waiving each such round with that
   reason. Spec 078; spec 066, task 15.
+- **`check-review-freshness`: whether a spec's review is still current.** A
+  new primitive, an MCP tool and CLI subcommand, that asks of one spec at any
+  status the comparison `/implement`'s completion gate makes before `done`:
+  `current`, `stale` with the changed scenarios or data model,
+  `undeterminable` for a record with no `reviewed-digest` or a `review.md`
+  that does not parse, or `never-run`, with whether `review.md` exists.
+  Read-only; `/configure` allows it with the other tools. Spec 066, task 11.
 
 ### Changed
 

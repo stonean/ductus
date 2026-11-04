@@ -1,40 +1,20 @@
-//! Conformance: the Rust staleness rule and `/ductus:audit` Family 19 agree.
+//! Conformance: `/ductus:audit` Family 19 reports what the runtime answers,
+//! and the rename-sweep exemption both gates share holds in both directions.
 //!
 //! "Is this review stale?" is enforced at two moments — `check-review-gate` on
 //! the `in-progress → done` transition, and Family 19
-//! (`scripts/audit/review-freshness.sh`) as a release gate. One rule, two
-//! implementations, in two languages.
+//! (`scripts/audit/review-freshness.sh`) as a release gate. Since 2026-11-04
+//! they are one implementation: Family 19 asks `check-review-freshness`, which
+//! makes the gate's own comparison (066 plan, *Family 19 calls the runtime*).
+//! Until then Family 19 carried a Python copy of the rule, kept because the
+//! self-audit job had no Rust toolchain, and this file held the two together:
+//! they disagreed once, silently, for **19 of this repo's 46 `done` specs**
+//! (066 scenario `review-staleness-on-done-specs`).
 //!
-//! That is not the shape anyone would choose, and it is worth saying why it
-//! stands: the CI job that runs the self-audit checks out the repo with no
-//! Rust toolchain and no runtime build (`.github/workflows/runtime-release.yml`,
-//! job `audit`), because it gates the build. Making Family 19 call the runtime
-//! would make the gate depend on compiling the artifact it gates. So the two
-//! implementations stay, and this test is what keeps them honest.
-//!
-//! They disagreed once, silently, and it was expensive: until 2026-08-16 the
-//! Rust side had no mechanical-sweep exemption while Family 19 did, and the two
-//! answered differently for **19 of this repo's 46 `done` specs** — every one a
-//! consequence of 049's `govern → ductus` rename. Nothing compared them, so
-//! nothing said so.
-//!
-//! Two tests carry that. `rust_and_family_19_agree_on_a_built_sweep` builds
-//! its own repository with a known sweep and a known structural edit, so the
-//! parity rule is asserted deterministically and in **both** directions —
-//! exemption granted and exemption refused. `rust_and_family_19_agree_on_every_done_spec`
-//! then runs both over the real corpus and fails on the first spec where they
-//! differ; it asserts agreement, not a particular verdict, so it stays valid
-//! as the corpus changes.
-//!
-//! The corpus pass used to carry the vacuity guard itself, and that was wrong
-//! in a way that took until 2026-09-15 to surface: its subject is the set of
-//! `done` specs whose contracts differ from their `reviewed-against`, and for
-//! most of this repo's history **exactly one spec** supplied it — 020's
-//! `data-model.md`, stale but sweep-exempt. Re-reviewing that one spec emptied
-//! the set and turned the guard red, so the test was asserting that an
-//! *unhealthy* corpus must exist for it to mean anything. An empty set there
-//! is a healthy corpus, not a broken check; the guard belongs on the built
-//! fixture, which always has a subject.
+//! What is left to hold is the exemption itself, on repositories each test
+//! builds with a known sweep and a known structural edit, asserted in both
+//! directions, and that Family 19, run as the release gate runs it, turns each
+//! answer into the right finding or none.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -51,76 +31,46 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// Every `done` spec's `(slug, reviewed-against)`, skipping the grandfathered
-/// ones (no `review.md`) and any whose sha does not resolve — the two cases
-/// both implementations decline to judge.
-///
-/// The status comes from `spec.md` and the sha from `review.md`, because spec
-/// 057 moved the record to the artifact that owns it. Reading the retired
-/// `spec.md` block would build an **empty** subject over a migrated corpus,
-/// which this file's own vacuity guard then reports as a check that could not
-/// run — correctly, and that is how the relocation surfaced here.
-fn reviewed_done_specs(root: &Path) -> Vec<(String, String)> {
-    let mut out = Vec::new();
-    let specs = root.join("specs");
-    let Ok(entries) = std::fs::read_dir(&specs) else {
-        return out;
-    };
-    let mut dirs: Vec<PathBuf> = entries
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .collect();
-    dirs.sort();
-    for dir in dirs {
-        let spec = dir.join("spec.md");
-        let Ok(text) = std::fs::read_to_string(&spec) else {
-            continue;
-        };
-        let Some(fm) = text
-            .strip_prefix("---\n")
-            .and_then(|r| r.split("\n---").next())
-        else {
-            continue;
-        };
-        if !fm.lines().any(|l| l.trim() == "status: done") {
-            continue;
-        }
-        let Ok(review) = std::fs::read_to_string(dir.join("review.md")) else {
-            continue; // grandfathered: the absent artifact is never-reviewed
-        };
-        let Some(review_fm) = review
-            .strip_prefix("---\n")
-            .and_then(|r| r.split("\n---").next())
-        else {
-            continue;
-        };
-        let Some(base) = review_fm
-            .lines()
-            .find_map(|l| l.trim().strip_prefix("reviewed-against:"))
-            .map(|v| v.trim().trim_matches('"').to_string())
-            .filter(|v| !v.is_empty())
-        else {
-            continue;
-        };
-        let resolves = common::git_command()
-            .args(["-C", root.to_str().unwrap(), "cat-file", "-e"])
-            .arg(format!("{base}^{{commit}}"))
-            .status()
-            .is_ok_and(|s| s.success());
-        if !resolves {
-            continue;
-        }
-        out.push((
-            dir.file_name().unwrap().to_string_lossy().into_owned(),
-            base,
-        ));
-    }
-    out
+/// The exemption's verdict over `candidates`: the paths that changed beyond a
+/// uniform rename sweep between `base` and `HEAD`.
+fn rust_verdict(
+    root: &Path,
+    base: &str,
+    candidates: &BTreeSet<String>,
+    rename_limit: Option<usize>,
+) -> BTreeSet<String> {
+    let repo = git2::Repository::open(root).expect("open fixture");
+    let head = repo
+        .head()
+        .expect("HEAD")
+        .peel_to_commit()
+        .expect("HEAD commit")
+        .tree()
+        .expect("HEAD tree");
+    let base_tree = repo
+        .revparse_single(base)
+        .expect("base rev")
+        .peel_to_commit()
+        .expect("base commit")
+        .tree()
+        .expect("base tree");
+    let index = rename_limit.map_or_else(
+        || ductus::primitives::mechanical_sweep::SweepIndex::build(&repo, &base_tree, &head),
+        |limit| {
+            ductus::primitives::mechanical_sweep::SweepIndex::build_with_rename_limit(
+                &repo, &base_tree, &head, limit,
+            )
+        },
+    );
+    candidates
+        .iter()
+        .filter(|p| index.changed_beyond_spelling(p))
+        .cloned()
+        .collect()
 }
 
 /// Durable contracts under `slug` that changed since `base`, before any
-/// exemption — the candidate set both implementations start from.
+/// exemption — the candidate set the exemption starts from.
 fn changed_contracts(root: &Path, slug: &str, base: &str) -> BTreeSet<String> {
     let out = common::git_command()
         .args([
@@ -138,8 +88,8 @@ fn changed_contracts(root: &Path, slug: &str, base: &str) -> BTreeSet<String> {
         .lines()
         .filter_map(|p| p.strip_prefix(&prefix).map(|rest| (p, rest)))
         .filter(|(_, rest)| {
-            // Mirrors both implementations' `is_durable_contract`, which
-            // compare the extension case-insensitively.
+            // Mirrors `analyze_subjects::is_review_contract`, which compares
+            // the extension case-insensitively.
             (rest.starts_with("scenarios/")
                 && std::path::Path::new(rest)
                     .extension()
@@ -148,167 +98,6 @@ fn changed_contracts(root: &Path, slug: &str, base: &str) -> BTreeSet<String> {
         })
         .map(|(p, _)| p.to_string())
         .collect()
-}
-
-/// Family 19's verdict for one path, obtained by running its own
-/// `changed_beyond_spelling` — the Python side, unmodified.
-fn family_19_verdict(
-    script_root: &Path,
-    git_root: &Path,
-    base: &str,
-    paths: &BTreeSet<String>,
-) -> BTreeSet<String> {
-    family_19_verdict_with(script_root, git_root, base, paths, None)
-}
-
-/// [`family_19_verdict`], optionally with Family 19's `RENAME_LIMIT`
-/// rebound — the Python counterpart of `SweepIndex::build_with_rename_limit`.
-fn family_19_verdict_with(
-    script_root: &Path,
-    git_root: &Path,
-    base: &str,
-    paths: &BTreeSet<String>,
-    rename_limit: Option<usize>,
-) -> BTreeSet<String> {
-    if paths.is_empty() {
-        return BTreeSet::new();
-    }
-    let rebind = rename_limit.map_or_else(String::new, |n| format!("RENAME_LIMIT = {n}\n"));
-    let script = std::fs::read_to_string(script_root.join("scripts/audit/review-freshness.sh"))
-        .expect("Family 19 source");
-    // Reuse the family's own definitions rather than restating them: take the
-    // python block between its heredoc markers, drop the driver loop at the
-    // end, and call `changed_beyond_spelling` directly.
-    let body = script
-        .split_once("python3 - \"$ROOT\" \"$SPECS_ROOT\" <<'PY'\n")
-        .expect("python block start")
-        .1
-        .split_once("\nspecs_dir = root / specs_root")
-        .expect("driver loop start")
-        .0
-        .to_string();
-    let harness = format!(
-        "{body}\n\
-         {rebind}\
-         import json, sys as _s\n\
-         _base = _s.argv[3]\n\
-         _paths = json.loads(_s.argv[4])\n\
-         print(json.dumps([p for p in _paths if changed_beyond_spelling(_base, p)]))\n"
-    );
-    // The harness runs git through Family 19's own Python, so the hook's
-    // variables are cleared on the interpreter.
-    let out = common::without_git_hook_variables(Command::new("python3"))
-        .arg("-")
-        .arg(git_root.to_str().unwrap())
-        .arg("specs")
-        .arg(base)
-        .arg(serde_json::to_string(&paths.iter().collect::<Vec<_>>()).unwrap())
-        .current_dir(git_root)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .and_then(|mut child| {
-            use std::io::Write;
-            child
-                .stdin
-                .as_mut()
-                .unwrap()
-                .write_all(harness.as_bytes())?;
-            child.wait_with_output()
-        })
-        .expect("run Family 19's rule");
-    assert!(
-        out.status.success(),
-        "Family 19 harness failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    serde_json::from_slice::<Vec<String>>(&out.stdout)
-        .expect("Family 19 verdict json")
-        .into_iter()
-        .collect()
-}
-
-#[test]
-fn rust_and_family_19_agree_on_every_done_spec() {
-    let root = repo_root();
-    // A test that cannot reach its subject fails, never passes unrun
-    // (§design-principles): outside a git checkout — a `git archive` export,
-    // say — no recorded sha resolves, so there is nothing to compare (066
-    // task 12). A linked worktree's `.git` is a file, and passes.
-    assert!(
-        root.join(".git").exists(),
-        "not a git checkout: {} has no `.git`, so no done spec's reviewed-against \
-         sha can be resolved and the corpus pass cannot run; run the suite from \
-         a clone",
-        root.display()
-    );
-    let repo = git2::Repository::open(&root).expect("open repo");
-    let head = repo
-        .head()
-        .expect("HEAD")
-        .peel_to_commit()
-        .expect("HEAD commit")
-        .tree()
-        .expect("HEAD tree");
-
-    let specs = reviewed_done_specs(&root);
-    assert!(
-        !specs.is_empty(),
-        "no done spec's reviewed-against sha resolved, so there is nothing to \
-         compare — and a green result here would mean the check could not run. \
-         On CI this is almost always a shallow checkout: this job needs \
-         `fetch-depth: 0`, the same requirement Family 19's job carries. \
-         Locally it means the recorded shas are absent from your history."
-    );
-
-    let mut compared = 0usize;
-    for (slug, base) in &specs {
-        let candidates = changed_contracts(&root, slug, base);
-        if candidates.is_empty() {
-            continue;
-        }
-        // revparse, not Oid::from_str — one spec records an abbreviated sha.
-        let base_tree = repo
-            .revparse_single(base)
-            .unwrap()
-            .peel_to_commit()
-            .unwrap()
-            .tree()
-            .unwrap();
-        let index =
-            ductus::primitives::mechanical_sweep::SweepIndex::build(&repo, &base_tree, &head);
-        let rust: BTreeSet<String> = candidates
-            .iter()
-            .filter(|p| index.changed_beyond_spelling(p))
-            .cloned()
-            .collect();
-        let python = family_19_verdict(&root, &root, base, &candidates);
-        assert_eq!(
-            rust, python,
-            "staleness verdicts disagree for {slug} (reviewed-against {base}); \
-             the transition gate and the release gate must answer the same question \
-             the same way"
-        );
-        compared += 1;
-    }
-    // An empty set here means every `done` spec's contracts match its
-    // `reviewed-against` — a healthy corpus, not a check that could not run.
-    // §design-principles forbids rendering those two alike, so say which this
-    // is. The parity rule's own vacuity guard lives on the built fixture
-    // above, which cannot go empty.
-    if compared == 0 {
-        eprintln!(
-            "no done spec carries a contract changed since its reviewed-against \
-             — every review is current, so the corpus pass had no subject. The \
-             rule itself is asserted by rust_and_family_19_agree_on_a_built_sweep."
-        );
-        return;
-    }
-    eprintln!(
-        "compared {compared} spec(s) with changed contracts across {} done spec(s)",
-        specs.len()
-    );
 }
 
 /// Commit everything staged in `repo`, on top of HEAD when one exists.
@@ -381,72 +170,30 @@ fn build_sweep_fixture(structural: &[&str]) -> (tempfile::TempDir, String) {
     (tmp, base)
 }
 
-/// The parity assertion with a subject it builds itself, in both directions.
-///
-/// This is where the vacuity guard belongs: the corpus pass can legitimately
-/// find nothing to compare, but this one always has three changed contracts,
-/// so a green result here always means the two implementations were actually
-/// run against each other.
+/// The exemption with a subject this test builds, in both directions: a pure
+/// repo-wide sweep exempts every contract it touched, and one structural edit
+/// is stale without costing the others their exemption.
 #[test]
-fn rust_and_family_19_agree_on_a_built_sweep() {
+fn the_sweep_exemption_holds_on_a_built_sweep() {
     // (contracts receiving a structural edit, contracts expected to read stale)
     let cases: [(&[&str], &[&str]); 2] = [
-        // Widened: a pure repo-wide sweep exempts every contract it touched.
         (&[], &[]),
-        // Narrowed: one structural edit is stale, and does not cost the other
-        // two their exemption — the pair is still repo-wide.
         (&["beta.md"], &["specs/900-fixture/scenarios/beta.md"]),
     ];
-
     for (structural, expected) in cases {
         let (tmp, base) = build_sweep_fixture(structural);
-        let root = tmp.path();
-        let repo = git2::Repository::open(root).expect("open fixture");
-        let head = repo
-            .head()
-            .expect("HEAD")
-            .peel_to_commit()
-            .expect("HEAD commit")
-            .tree()
-            .expect("HEAD tree");
-        let base_tree = repo
-            .revparse_single(&base)
-            .expect("base rev")
-            .peel_to_commit()
-            .expect("base commit")
-            .tree()
-            .expect("base tree");
-
-        let candidates = changed_contracts(root, "900-fixture", &base);
+        let candidates = changed_contracts(tmp.path(), "900-fixture", &base);
         assert_eq!(
             candidates.len(),
             3,
             "the fixture must present all three contracts as changed, or this \
              test is measuring something other than it claims"
         );
-
-        let index =
-            ductus::primitives::mechanical_sweep::SweepIndex::build(&repo, &base_tree, &head);
-        let rust: BTreeSet<String> = candidates
-            .iter()
-            .filter(|p| index.changed_beyond_spelling(p))
-            .cloned()
-            .collect();
-        let python = family_19_verdict(&repo_root(), root, &base, &candidates);
         let want: BTreeSet<String> = expected.iter().map(|s| (*s).to_string()).collect();
-
         assert_eq!(
-            rust, want,
-            "Rust verdict wrong for structural={structural:?}"
-        );
-        assert_eq!(
-            python, want,
-            "Family 19 verdict wrong for structural={structural:?}"
-        );
-        assert_eq!(
-            rust, python,
-            "the transition gate and the release gate must answer the same \
-             question the same way for structural={structural:?}"
+            rust_verdict(tmp.path(), &base, &candidates, None),
+            want,
+            "verdict wrong for structural={structural:?}"
         );
     }
 }
@@ -462,9 +209,10 @@ fn rust_and_family_19_agree_on_a_built_sweep() {
 /// add, the window holds no substitution at all and every contract reads
 /// stale — which is what the fixture is built to catch.
 ///
-/// The repository's own config is set against both halves: rename detection
-/// off, a rename limit of one, no diff prefixes, colour forced on. A half that
-/// inherited any of it would read this window differently from CI.
+/// The repository's own config is set against the exemption: rename
+/// detection off, a rename limit of one, no diff prefixes, colour forced on.
+/// An exemption that inherited any of it would read this window differently
+/// from CI.
 fn build_renumber_fixture(structural: &[&str]) -> (tempfile::TempDir, String) {
     const CONTRACTS: [&str; 3] = ["alpha.md", "beta.md", "gamma.md"];
     const STABLE: &str = "## Context\n\nA contract long enough that one rewritten line leaves it \
@@ -523,172 +271,110 @@ fn commit_all_with_removals(repo: &git2::Repository, message: &str, seconds: i64
     commit_all(repo, message, seconds)
 }
 
-/// Both halves' verdicts over the renumber fixture's changed contracts.
-fn renumber_verdicts(
+/// The renumber fixture's changed contracts and the exemption's verdict.
+fn renumber_verdict(
     structural: &[&str],
     rename_limit: Option<usize>,
-) -> (BTreeSet<String>, BTreeSet<String>, BTreeSet<String>) {
+) -> (BTreeSet<String>, BTreeSet<String>) {
     let (tmp, base) = build_renumber_fixture(structural);
-    let root = tmp.path();
-    let repo = git2::Repository::open(root).expect("open fixture");
-    let head = repo
-        .head()
-        .expect("HEAD")
-        .peel_to_commit()
-        .expect("HEAD commit")
-        .tree()
-        .expect("HEAD tree");
-    let base_tree = repo
-        .revparse_single(&base)
-        .expect("base rev")
-        .peel_to_commit()
-        .expect("base commit")
-        .tree()
-        .expect("base tree");
-
-    let candidates = changed_contracts(root, "064-fixture", &base);
+    let candidates = changed_contracts(tmp.path(), "064-fixture", &base);
     assert_eq!(
         candidates.len(),
         3,
         "the fixture must present all three renamed contracts as changed, or \
          this test is measuring something other than it claims: {candidates:?}"
     );
-
-    let index = rename_limit.map_or_else(
-        || ductus::primitives::mechanical_sweep::SweepIndex::build(&repo, &base_tree, &head),
-        |limit| {
-            ductus::primitives::mechanical_sweep::SweepIndex::build_with_rename_limit(
-                &repo, &base_tree, &head, limit,
-            )
-        },
-    );
-    let rust: BTreeSet<String> = candidates
-        .iter()
-        .filter(|p| index.changed_beyond_spelling(p))
-        .cloned()
-        .collect();
-    let python = family_19_verdict_with(&repo_root(), root, &base, &candidates, rename_limit);
-    (candidates, rust, python)
+    let verdict = rust_verdict(tmp.path(), &base, &candidates, rename_limit);
+    (candidates, verdict)
 }
 
-/// A renamed file contributes its rewrites, in both halves, in both
-/// directions — and neither half takes its rename settings from the
-/// repository it reads.
+/// A renamed file contributes its rewrites, in both directions, whatever
+/// rename settings the repository it reads carries.
 #[test]
-fn rust_and_family_19_agree_on_a_renumbered_directory() {
-    // (contracts receiving a structural edit, contracts expected to read stale)
+fn the_sweep_exemption_holds_on_a_renumbered_directory() {
     let cases: [(&[&str], &[&str]); 2] = [
         // A pure renumber exempts every renamed contract. Under a
         // delete-plus-add reading all three would be stale.
         (&[], &[]),
-        // One structural edit is stale and costs the others nothing.
         (&["beta.md"], &["specs/064-fixture/scenarios/beta.md"]),
     ];
     for (structural, expected) in cases {
-        let (_, rust, python) = renumber_verdicts(structural, None);
+        let (_, verdict) = renumber_verdict(structural, None);
         let want: BTreeSet<String> = expected.iter().map(|s| (*s).to_string()).collect();
-        assert_eq!(
-            rust, want,
-            "Rust verdict wrong for structural={structural:?}"
-        );
-        assert_eq!(
-            python, want,
-            "Family 19 verdict wrong for structural={structural:?}"
-        );
+        assert_eq!(verdict, want, "verdict wrong for structural={structural:?}");
     }
 }
 
-/// A file renamed with its content unchanged has no hunk, so neither half
-/// indexes it and both read it as changed. The fixture's `spec.md` is one:
-/// opening the entry at the file header, as the Rust half once did, made it an
-/// empty and therefore exempt entry there while Family 19 — which opens it on
-/// the `+++ b/` line such a file never carries — called it changed.
+/// A file renamed with its content unchanged has no hunk, so it is not
+/// indexed and reads as changed, never as an empty and therefore exempt
+/// entry. The fixture's `spec.md` is one.
 #[test]
-fn a_pure_rename_reads_alike_in_both_halves() {
+fn a_pure_rename_is_a_change() {
     let (tmp, base) = build_renumber_fixture(&[]);
-    let root = tmp.path();
-    let repo = git2::Repository::open(root).expect("open fixture");
-    let head = repo
-        .head()
-        .unwrap()
-        .peel_to_commit()
-        .unwrap()
-        .tree()
-        .unwrap();
-    let base_tree = repo
-        .revparse_single(&base)
-        .unwrap()
-        .peel_to_commit()
-        .unwrap()
-        .tree()
-        .unwrap();
     let path = "specs/064-fixture/spec.md".to_string();
-    let index = ductus::primitives::mechanical_sweep::SweepIndex::build(&repo, &base_tree, &head);
+    let verdict = rust_verdict(tmp.path(), &base, &BTreeSet::from([path.clone()]), None);
     assert!(
-        index.changed_beyond_spelling(&path),
-        "Rust must not exempt a rename it read no hunk for"
-    );
-    let python = family_19_verdict(&repo_root(), root, &base, &BTreeSet::from([path.clone()]));
-    assert!(
-        python.contains(&path),
-        "Family 19 must read the same rename as changed"
+        verdict.contains(&path),
+        "a rename read with no hunk must not be exempt"
     );
 }
 
-/// Over the window guard, both halves refuse the window alike: no exemption,
-/// so every changed contract reads stale. The fixture's window holds eight
-/// paths before renames pair them (four files, each deleted and added), so a
-/// limit of seven is the first one it exceeds — and eight still reads it.
+/// Over the window guard no exemption is granted, so every changed contract
+/// reads stale. The window holds eight paths before renames pair them (four
+/// files, each deleted and added), so a limit of seven is the first it
+/// exceeds — and eight still reads it.
 #[test]
-fn rust_and_family_19_refuse_an_over_limit_window_alike() {
-    let (candidates, rust, python) = renumber_verdicts(&[], Some(7));
-    assert_eq!(rust, candidates, "Rust must grant nothing over the limit");
-    assert_eq!(
-        python, candidates,
-        "Family 19 must grant nothing over the limit"
-    );
-
-    let (_, rust, python) = renumber_verdicts(&[], Some(8));
-    assert!(rust.is_empty(), "at the limit the window is read: {rust:?}");
+fn an_over_limit_window_grants_no_exemption() {
+    let (candidates, verdict) = renumber_verdict(&[], Some(7));
+    assert_eq!(verdict, candidates, "nothing is granted over the limit");
+    let (_, verdict) = renumber_verdict(&[], Some(8));
     assert!(
-        python.is_empty(),
-        "at the limit the window is read: {python:?}"
+        verdict.is_empty(),
+        "at the limit the window is read: {verdict:?}"
     );
 }
 
-/// The rename settings are stated once per half and must match: the Rust
-/// constants are the reference, and Family 19's source has to carry the same
-/// values where its diff reads them.
-#[test]
-fn the_rename_settings_are_stated_alike_in_both_halves() {
-    use ductus::primitives::mechanical_sweep::{RENAME_LIMIT, RENAME_THRESHOLD};
-    let script = std::fs::read_to_string(repo_root().join("scripts/audit/review-freshness.sh"))
-        .expect("Family 19 source");
-    for needle in [
-        format!("\nRENAME_THRESHOLD = {RENAME_THRESHOLD}\n"),
-        format!("\nRENAME_LIMIT = {RENAME_LIMIT}\n"),
-        "f\"--find-renames={RENAME_THRESHOLD}%\"".to_string(),
-        "f\"-l{RENAME_LIMIT}\"".to_string(),
-    ] {
-        assert!(
-            script.contains(&needle),
-            "Family 19 must carry {needle:?} — the halves' rename settings have drifted"
-        );
-    }
-}
-
-/// Run Family 19 — the whole script, as the release gate runs it — over a
-/// fixture whose one `done` spec carries a **pre-digest** review record, so
-/// its proxy arm judges it. Since the review, a sweep renamed one contract
-/// within the spec (`old.md` → `new.md`) and rewrote a token in it and in a
-/// sibling contract. `renames` sets the fixture repository's `diff.renames`.
-/// Returns whether the script passed, and its stdout.
+/// A `done` spec under `root` with one scenario, whose review record
+/// carries that scenario's digest when `digest` holds.
 #[cfg(unix)]
-fn run_family_19_over_a_moved_contract(renames: bool) -> (bool, String) {
+fn seed_reviewed_done_spec(root: &Path, slug: &str, digest: bool) {
+    use sha2::{Digest, Sha256};
+    use std::fmt::Write as _;
+    let feature = root.join("specs").join(slug);
+    std::fs::create_dir_all(feature.join("scenarios")).unwrap();
+    std::fs::write(
+        feature.join("spec.md"),
+        "---\nstatus: done\ndependencies: []\n---\n\n# Fixture\n",
+    )
+    .unwrap();
+    let scenario = "# Edge\n\nAs reviewed.\n";
+    std::fs::write(feature.join("scenarios/edge.md"), scenario).unwrap();
+    let mut record = format!(
+        "---\nspec: {slug}\nlast-run: 2026-11-04T00:00:00Z\nreviewed-against: HEAD\n\
+         must-violations: 0\nshould-violations: 0\nlow-confidence: 0\nblocking: false\n"
+    );
+    if digest {
+        let mut hex = String::new();
+        for byte in Sha256::digest(scenario.as_bytes()) {
+            let _ = write!(hex, "{byte:02x}");
+        }
+        let _ = writeln!(record, "reviewed-digest:\n  scenarios/edge.md: {hex}");
+    }
+    record.push_str("---\n\n# Review\n");
+    std::fs::write(feature.join("review.md"), record).unwrap();
+}
+
+/// Family 19, run as the release gate runs it — the whole script, the
+/// runtime reached through `.ductus/bin/ductus` — over a corpus holding each
+/// answer: a current review, a stale one, one with no digest, and a `done`
+/// spec with no `review.md`. Returns whether it passed, its stdout (the
+/// findings) and its stderr (the coverage line).
+#[cfg(unix)]
+fn run_family_19_over_each_answer() -> (bool, String, String) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let root = tmp.path();
     let audit = root.join("scripts/audit");
-    std::fs::create_dir_all(&audit).expect("audit dir");
+    std::fs::create_dir_all(&audit).unwrap();
     for script in ["review-freshness.sh", "lib.sh"] {
         std::fs::copy(
             repo_root().join("scripts/audit").join(script),
@@ -696,44 +382,33 @@ fn run_family_19_over_a_moved_contract(renames: bool) -> (bool, String) {
         )
         .expect("copy Family 19");
     }
-    let feature = root.join("specs/900-proxy");
-    let scenarios = feature.join("scenarios");
-    std::fs::create_dir_all(&scenarios).expect("fixture dirs");
-    std::fs::write(
-        feature.join("spec.md"),
-        "---\nstatus: done\n---\n\n# Proxy\n",
+    std::fs::create_dir_all(root.join(".ductus/bin")).unwrap();
+    std::os::unix::fs::symlink(
+        env!("CARGO_BIN_EXE_ductus"),
+        root.join(".ductus/bin/ductus"),
     )
-    .expect("write spec.md");
-    let body = |token: &str| {
-        format!(
-            "# Contract\n\nThe `{token}` runtime reads its config.\n\n## Context\n\n\
-             Enough unchanged prose that one rewritten line leaves the file well\n\
-             above any rename threshold.\n\n## Behavior\n\nUnchanged.\n"
-        )
-    };
-    std::fs::write(scenarios.join("old.md"), body("govern")).expect("write old.md");
-    std::fs::write(scenarios.join("other.md"), body("govern")).expect("write other.md");
-
-    let repo = git2::Repository::init(root).expect("git init");
-    git2::Config::open(&repo.path().join("config"))
-        .expect("fixture repo config")
-        .set_bool("diff.renames", renames)
-        .unwrap();
-    let base = commit_all(&repo, "fixture: base", 1_704_067_200);
-
-    // A pre-digest record: `reviewed-against` and no `reviewed-digest`.
+    .unwrap();
+    seed_reviewed_done_spec(root, "901-current", true);
+    seed_reviewed_done_spec(root, "902-stale", true);
+    seed_reviewed_done_spec(root, "903-no-digest", false);
+    let grandfathered = root.join("specs/904-unreviewed");
+    std::fs::create_dir_all(&grandfathered).unwrap();
     std::fs::write(
-        feature.join("review.md"),
-        format!(
-            "---\nspec: 900-proxy\nlast-run: 2024-01-01T00:00:00Z\n\
-             reviewed-against: {base}\n---\n\n# Review\n"
-        ),
+        grandfathered.join("spec.md"),
+        "---\nstatus: done\ndependencies: []\n---\n\n# Fixture\n",
     )
-    .expect("write review.md");
-    std::fs::remove_file(scenarios.join("old.md")).expect("move old.md away");
-    std::fs::write(scenarios.join("new.md"), body("ductus")).expect("write new.md");
-    std::fs::write(scenarios.join("other.md"), body("ductus")).expect("sweep other.md");
-    commit_all_with_removals(&repo, "fixture: sweep and move", 1_704_067_201);
+    .unwrap();
+    git2::Repository::init(root).expect("git init");
+    commit_all(
+        &git2::Repository::open(root).unwrap(),
+        "fixture: reviewed",
+        1_704_067_200,
+    );
+    std::fs::write(
+        root.join("specs/902-stale/scenarios/edge.md"),
+        "# Edge\n\nChanged after the review.\n",
+    )
+    .unwrap();
 
     let out = common::without_git_hook_variables(Command::new("bash"))
         .arg(audit.join("review-freshness.sh"))
@@ -743,44 +418,59 @@ fn run_family_19_over_a_moved_contract(renames: bool) -> (bool, String) {
     (
         out.status.success(),
         String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
     )
 }
 
-/// The proxy arm's verdict does not depend on who runs it. A contract that
-/// left its path is a change — the verdict the digest arm reaches on the same
-/// move, whose old key has vanished — so the moved contract reads stale with
-/// `diff.renames` on and off alike. Left to config, renames-on listed only the
-/// new path, which the sweep exemption cleared, and the spec read clean on a
-/// contributor's machine while CI could call it stale.
+/// Family 19 reports a stale review and one it cannot judge as findings,
+/// passes a current one, grandfathers a spec with no `review.md`, and says
+/// how many of each it saw.
 ///
-/// Unix-only: it runs the script under `bash`, as the toolchain-free
-/// framework-checks job on Ubuntu does, which is the only place it gates.
+/// Unix-only: it runs the script under `bash` and reaches the runtime through
+/// a symlink, as the framework-checks job on Ubuntu does.
 #[cfg(unix)]
 #[test]
-fn family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config() {
-    for renames in [true, false] {
-        let (passed, stdout) = run_family_19_over_a_moved_contract(renames);
-        assert!(
-            !passed && stdout.contains("specs/900-proxy/scenarios/old.md"),
-            "with diff.renames={renames} the proxy arm must report the moved \
-             contract's old path as changed; stdout:\n{stdout}"
-        );
-    }
+fn family_19_reports_each_answer_the_runtime_gives() {
+    let (passed, stdout, stderr) = run_family_19_over_each_answer();
+    assert!(
+        !passed,
+        "a stale review must fail the family:\n{stdout}{stderr}"
+    );
+    assert!(
+        stdout.contains("specs/902-stale | done spec's review is stale")
+            && stdout.contains("specs/902-stale/scenarios/edge.md"),
+        "the stale review is not reported:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("specs/903-no-digest | done spec's review freshness cannot be determined"),
+        "the record with no digest is not reported:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("901-current") && !stdout.contains("904-unreviewed"),
+        "a current or grandfathered spec is reported:\n{stdout}"
+    );
+    assert!(
+        stderr.contains(
+            "examined 2 spec(s) at status: done by reviewed-digest; 1 grandfathered \
+             (no review.md); 1 undeterminable; 0 never run; 0 not answered"
+        ),
+        "the coverage line does not account for every spec:\n{stderr}"
+    );
 }
 
-/// The tests that build their own repository, each running git in it —
-/// directly, through Family 19's Python, or through `review-freshness.sh`.
-/// The proxy-arm test is compiled on Unix alone, as it runs its script under
-/// `bash`, so it is re-run there alone: asking for it elsewhere runs nothing.
+/// The tests that build their own repository, each running git in it,
+/// directly or through `review-freshness.sh`. The Family 19 test is compiled on
+/// Unix alone, so it is re-run there alone: asking for it elsewhere runs
+/// nothing.
 fn fixture_tests() -> Vec<&'static str> {
     let mut tests = vec![
-        "rust_and_family_19_agree_on_a_built_sweep",
-        "rust_and_family_19_agree_on_a_renumbered_directory",
-        "a_pure_rename_reads_alike_in_both_halves",
-        "rust_and_family_19_refuse_an_over_limit_window_alike",
+        "the_sweep_exemption_holds_on_a_built_sweep",
+        "the_sweep_exemption_holds_on_a_renumbered_directory",
+        "a_pure_rename_is_a_change",
+        "an_over_limit_window_grants_no_exemption",
     ];
     if cfg!(unix) {
-        tests.push("family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config");
+        tests.push("family_19_reports_each_answer_the_runtime_gives");
     }
     tests
 }

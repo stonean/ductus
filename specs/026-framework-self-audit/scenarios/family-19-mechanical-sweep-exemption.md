@@ -28,7 +28,7 @@ Condition 3 is what carries the weight, and it comes straight from §spec-lifecy
 
 **Collapse is allowed.** Two old tokens may rewrite to one new token — 049 sent both `govern` and `gvrn` to `ductus`. Requiring the rewrite to be invertible was tried first and rejected six spec-diffs in. A collapse that is not a rename (`MUST` and `MAY` both rewritten to `SHOULD`) still fails condition 3.
 
-Implementation reads one `git diff --unified=0` per distinct base sha rather than two blob reads per changed file. The blob-per-file shape measured 61s on this repo's history; the diff shape measures under 4s. This family runs as a hard release gate, so its cost is paid on every tag.
+The runtime's `SweepIndex` (`runtime/src/primitives/mechanical_sweep.rs`) computes the exemption, and Family 19 reaches it through `check-review-freshness` (066 plan, *Family 19 calls the runtime*): one tree-to-tree diff for a review whose contracts changed, and none for a current one, rather than two blob reads per changed file. The blob-per-file shape measured 61s on this repo's history; the family's own diff-based copy of the rule, retired on 2026-11-04, measured under 4s. This family runs as a hard release gate, so its cost is paid on every tag.
 
 ## Edge Cases
 

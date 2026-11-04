@@ -13,19 +13,19 @@ use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
     CheckOrphanedReferencesArgs, CheckPrescriptionsArgs, CheckPromotionCoverageArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
-    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
-    WriteReviewArgs, WriteSessionArgs,
+    CheckReviewFreshnessArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
+    ReadReReadArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -141,6 +141,8 @@ enum Command {
     CreatePlanArtifacts(CreatePlanArtifactsArgs),
     /// Evaluate /ductus:implement's pre-done review gate (markdown lint, scenario questions, fold and cross-spec obligations, then the review and analyze records in review.md and analysis.md).
     CheckReviewGate(CheckReviewGateArgs),
+    /// Report whether one feature's review record still describes its durable contracts, as the completion gate compares them.
+    CheckReviewFreshness(CheckReviewFreshnessArgs),
     /// Append a question bullet to a spec or scenario's ## Open Questions (atomic, with back-edge).
     AppendQuestion(AppendQuestionArgs),
     /// Append a numbered task block to a feature's tasks.md (atomic rewrite).
@@ -794,6 +796,9 @@ fn main() -> ExitCode {
         Command::CreateFeature(args) => emit_result(primitives::create_feature::run(&args, &repo)),
         Command::CreatePlanArtifacts(args) => {
             emit_result(primitives::create_plan_artifacts::run(&args, &repo))
+        }
+        Command::CheckReviewFreshness(args) => {
+            emit_result(primitives::check_review_freshness::run(&args, &repo))
         }
         Command::CheckReviewGate(args) => {
             emit_result(primitives::check_review_gate::run(&args, &repo))

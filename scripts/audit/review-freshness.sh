@@ -18,18 +18,29 @@
 # the adopter-scope suppression shipped unreviewed and every automated check
 # passed (spec 022 review, 2026-08-03).
 #
-# This family is the release-time half of the same test the runtime's
-# `check-review-gate` now applies at completion time. Two enforcement points
-# for one rule, matching how the blocking-semantics gate is already built
-# from three mutually reinforcing mechanisms rather than one.
+# This family is the release-time half of the test `check-review-gate`
+# applies at completion time, and since 2026-11-04 it is the same
+# implementation: it asks the runtime's `check-review-freshness`, which makes
+# the gate's own comparison (`analyze_subjects::review_freshness`), of every
+# `done` spec (066 plan, *Family 19 calls the runtime*). Its earlier Python
+# copy of the rule disagreed with the runtime once, for 19 of 46 `done` specs
+# (066 scenario `review-staleness-on-done-specs`).
 #
-# Method:
-#   19a For each spec at `status: done`, read `reviewed-against` from its
-#       `review.md`.
-#   19b Collect the spec's **durable contracts**: `scenarios/*.md` and
-#       `data-model.md`.
-#   19c Emit a finding when any of them changed between `reviewed-against`
-#       and HEAD.
+# Method: for each spec the `dashboard` primitive reports at `status: done`,
+# read `check-review-freshness`'s answer:
+#   19a `stale` — a finding naming the durable contracts (`scenarios/*.md`
+#       and `data-model.md`) that no longer match `reviewed-digest`. A uniform
+#       rename sweep is exempt, as at the gate.
+#   19b `undeterminable` — a finding: the record carries no
+#       `reviewed-digest`, or `review.md`'s frontmatter does not parse, so
+#       nothing says what the review read.
+#   19c no `review.md` — grandfathered, not a finding: the absent file is the
+#       never-reviewed state (§text-first-artifacts), the population
+#       `/{project}:analyze` and the shipped CI template grandfather too.
+#   19d a `review.md` whose `last-run` is null — counted as never run, not a
+#       finding: the spec never completed a review, which is the completion
+#       gate's `not-reviewed`, not staleness.
+#   A call that fails is a finding, never a pass.
 #
 # Scoped to the durable contracts, and that scoping was earned rather than
 # guessed. Two wider rules were measured against this repo first:
@@ -46,37 +57,27 @@
 # reported nothing on a spec whose only movement was bookkeeping. That count
 # is a snapshot, not a constant: it drains as reviews are refreshed.
 #
-# Deliberately NOT a finding:
-#   - A spec with **no `review.md`**. The absent artifact is the never-run
-#     state (§text-first-artifacts), so this grandfathers the same population
-#     `/{project}:analyze` and the shipped CI template do — a spec predating
-#     `/{project}:review`. Reading the retired `spec.md` block here instead
-#     would grandfather *every* spec in a migrated corpus and take this family
-#     vacuous, which is the defect spec 057 removed from that CI template.
-#   - A spec with no scenarios and no `data-model.md`. It has no durable
-#     contract beyond `spec.md`, so there is nothing this check can compare.
-#   - `tasks.md`, `plan.md`, `review.md`, and `spec.md`. The first is
-#     ephemeral by construction; the rest are bookkeeping `write-review` and
-#     the pipeline touch on their own. Counting any of them would make every
-#     review stale the moment it was recorded.
-#   - A `reviewed-against` that is not a commit in this repo (a shallow
-#     clone, a rewritten history). Reported as a skip, not a finding — the
-#     check cannot prove staleness it cannot resolve.
-#
-# Requires `git` and `python3`.
+# Requires `python3`, to read the primitives' JSON, and the runtime.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family review-freshness
 
-for tool in git python3; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    emit "(precondition)" "$tool not on PATH — cannot compare reviews against history" \
-      "install $tool and re-run"
-    exit 1
-  fi
-done
+if ! command -v python3 >/dev/null 2>&1; then
+  emit "(precondition)" "python3 not on PATH — cannot read the runtime's answers" \
+    "install python3 and re-run"
+  exit 1
+fi
+
+ductus_bin="$(ductus_bin)"
+# An unreachable runtime is a finding, never a silent pass.
+if [ -z "$ductus_bin" ]; then
+  emit "(precondition)" \
+    "ductus runtime not reachable — review freshness could not be compared" \
+    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
+  exit "$drift"
+fi
 
 SPECS_ROOT="specs"
 if [ -f "$ROOT/.ductus/config.toml" ] || [ -f "$ROOT/.govern.toml" ]; then
@@ -96,506 +97,111 @@ PY
   [ -n "$derived" ] && SPECS_ROOT="$derived"
 fi
 
-python3 - "$ROOT" "$SPECS_ROOT" <<'PY'
-import hashlib
-import pathlib
-import re
+python3 - "$ROOT" "$SPECS_ROOT" "$ductus_bin" <<'PY'
+import json
 import subprocess
 import sys
 
-root = pathlib.Path(sys.argv[1])
-specs_root = sys.argv[2]
+root, specs_root, binary = sys.argv[1], sys.argv[2], sys.argv[3]
 findings = []
 
-# Coverage counters. Reported unconditionally at the end, because a family
-# that prints nothing on a clean run is indistinguishable from one that
-# aborted before it examined anything — `run_check` reads the exit code alone
-# and cannot tell them apart either. That is `QUAL-CLAIM-001`, cited in this
-# file's own header, applied to this file.
-examined_digest = 0
-examined_proxy = 0
+# Coverage counters, reported unconditionally at the end: a family that
+# prints nothing on a clean run is indistinguishable from one that aborted
+# before it examined anything (`QUAL-CLAIM-001`).
+examined = 0
 grandfathered = 0
-unresolvable = 0
+undeterminable = 0
+never_run = 0
+failed = 0
 
 
 def emit(location, message, fix):
-    # Buffered rather than printed: the coverage line is computed by walking
-    # the corpus, so it is only known at the end, and it has to render *above*
-    # the findings it quantifies.
+    # Buffered rather than printed: the coverage line is only known at the
+    # end, and it renders above the findings it quantifies.
     findings.append(f"review-freshness | {location} | {message} | {fix}")
 
 
-def frontmatter(text):
-    if not text.startswith("---"):
-        return ""
-    end = text.find("\n---", 3)
-    return text[3:end] if end != -1 else ""
-
-
-def scalar(fm, key, indent=""):
-    # `[ \t]*` never `\s*`: `\s` matches a newline, so a greedy run after the
-    # colon walks past an empty value onto the next line and returns *that*
-    # line's content as this key's — a bare `reviewed-against:` returned
-    # "must-violations: 7". Verified 2026-08-28; latent, because the template
-    # writes `null` rather than an empty value. The durable fix is the one
-    # Family 31 took before it was retired (spec 057): this parse belongs in
-    # the runtime, which deserializes frontmatter with a YAML reader that
-    # cannot express the bug (§runtime-boundary).
-    m = re.search(rf"^{indent}{re.escape(key)}:[ \t]*(.*)$", fm, re.M)
-    if not m:
-        return None
-    v = m.group(1).strip().strip('"\'')
-    return None if v in ("", "null", "~") else v
-
-
-def is_durable_contract(rel_within_feature):
-    """A scenario or the data model — the artifacts a review actually reads."""
-    return (
-        rel_within_feature.startswith("scenarios/")
-        and rel_within_feature.endswith(".md")
-    ) or rel_within_feature == "data-model.md"
-
-
-def recorded_digest(fm):
-    """`review.md`\'s `reviewed-digest` map, or None when the record carries none.
-
-    Three states, and the difference between the last two is the whole reason
-    the runtime types this field as an `Option`:
-      * absent      -> None. A pre-digest record; the caller falls back to the
-                       commit-diff proxy.
-      * `{}`        -> {}. Taken over a spec with no durable contracts, which
-                       reads as *current*, not as unjudgeable.
-      * a map       -> the recorded per-path sha256 set.
-    """
-    m = re.search(r"^reviewed-digest:[ \t]*(.*)$", fm, re.M)
-    if not m:
-        return None
-    if m.group(1).strip() == "{}":
-        return {}
-    digests = {}
-    for line in fm[m.end():].split("\n"):
-        if not line.strip():
-            continue
-        entry = re.match(r"^  ([^\s:]+):[ \t]*([0-9a-f]{64})[ \t]*$", line)
-        if not entry:
-            break  # dedent or a sibling key ends the map
-        digests[entry.group(1)] = entry.group(2)
-    return digests
-
-
-def current_contract_digests(feature_dir):
-    """(path -> sha256) for the durable contracts on disk, plus unreadable ones.
-
-    The working tree, matching `check-review-gate` exactly. At release time the
-    checkout is clean so this equals HEAD; reading the tree is what makes the
-    two enforcement points answer identically rather than merely similarly.
-    """
-    digests = {}
-    unreadable = []
-    candidates = sorted(feature_dir.glob("scenarios/*.md")) + [
-        feature_dir / "data-model.md"
-    ]
-    for path in candidates:
-        # A symlink is skipped, not followed — `subject_digest` walks with
-        # `follow_links(false)` and tests the entry's own type, so a symlinked
-        # scenario is invisible to the runtime. Following it here would digest
-        # a file the gate never saw and make the two arms of one rule disagree
-        # on exactly the spec this criterion promises they agree on.
-        if path.is_symlink() or not path.is_file():
-            continue
-        rel = path.relative_to(feature_dir).as_posix()
-        if not is_durable_contract(rel):
-            continue
-        try:
-            digests[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError:
-            # Recorded, never digested as empty: an unreadable contract is not
-            # a matching one.
-            unreadable.append(rel)
-    return digests, unreadable
-
-
-TOKEN = re.compile(r"[A-Za-z0-9_.:/-]+|\s+|.")
-
-
-def pair_run(old_run, new_run):
-    """Token rewrites for one removed/added line run, or None if not uniform.
-
-    §spec-lifecycle case (a): a uniform token substitution across live
-    artifacts is a *mechanical* edit — it is why a rename sweep does not
-    reopen a `done` spec. A review reads contracts, and a contract that
-    changed only in spelling states what it stated before, so the same rule
-    has to hold here: if the sweep does not reopen the spec, it does not
-    stale the review either. Without this the two rules disagree and one
-    repo-wide rename turns every done spec's review stale at once — a gate
-    that fires on 22 of 48 specs for a diff nobody needs to read is a gate
-    people route around, the failure this family's own history records.
-
-    Derived from the diff, never declared by the author: a commit trailer or
-    an opt-out flag would make correctness depend on someone remembering to
-    set it, which the AGENTS.md design principle rules out.
-
-    Two conditions here, each of which a real edit breaks: a changed run
-    replaces lines one-for-one (adding or dropping a line is structural), and
-    each replaced line has the same token count. The third — that the pairs
-    are ones the sweep also made in other files — is applied by
-    `substitution_index`, because uniformity is a repo-wide property.
-
-    **Substitutions may collapse.** Two old tokens may map onto one new
-    token, because that is what a rename unifying two names does — 049 sent
-    both `govern` and `gvrn` to `ductus`. Requiring the rewrite to be
-    invertible was tried first and rejected exactly six spec-diffs in. A
-    collapse that is *not* a rename (every `MUST` and every `MAY` rewritten
-    to `SHOULD`) is still caught, because it fails the repo-wide test.
-    """
-    # A substitution replaces lines one-for-one; a run that adds or drops
-    # lines is a structural edit.
-    if len(old_run) != len(new_run) or not old_run:
-        return None
-    pairs = set()
-    for old_line, new_line in zip(old_run, new_run):
-        old_toks = TOKEN.findall(old_line)
-        new_toks = TOKEN.findall(new_line)
-        if len(old_toks) != len(new_toks):
-            return None
-        for a, b in zip(old_toks, new_toks):
-            if a != b:
-                pairs.add((a, b))
-    return pairs
-
-
-# Rename detection, stated rather than inherited — the same values as
-# `RENAME_THRESHOLD` and `RENAME_LIMIT` in runtime/src/primitives/mechanical_sweep.rs,
-# which `mechanical_sweep_parity` holds the two halves to (spec 066 scenario
-# a-renamed-file-contributes-its-rewrites). Left to `git diff`, both come from
-# whoever runs it: `diff.renames=false` turned detection off and the verdict
-# with it, so a contributor's local run and CI's could disagree.
-RENAME_THRESHOLD = 50
-RENAME_LIMIT = 10000
-
-
-def diff_substitutions(base):
-    """Per-file token rewrites across `base`..HEAD, from one diff.
-
-    Maps path → set of (old, new) pairs, or None when that file's diff is not
-    a pure substitution. One `git diff` per base rather than two blob reads
-    per changed file: this family runs as a hard release gate, and the
-    blob-per-file shape took a minute on this repo's history.
-
-    Renames are detected, so a renamed file's substitutions count toward the
-    repo-wide pairs, keyed by its new path. A window with more changed paths
-    than `RENAME_LIMIT`, counted before renames pair them up, is unreadable —
-    the Rust half's guard, applied to the same count. Every other flag here
-    pins output this parser reads against configuration that would reshape
-    it: colour, an external diff driver, textconv, and diff prefixes.
-    """
-    proc = subprocess.run(
-        [
-            "git", "-C", str(root), "diff", "--unified=0",
-            f"--find-renames={RENAME_THRESHOLD}%", f"-l{RENAME_LIMIT}",
-            "--no-color", "--no-ext-diff", "--no-textconv",
-            "--src-prefix=a/", "--dst-prefix=b/",
-            f"{base}..HEAD", "--", "*.md",
-        ],
+def call(*args):
+    # UTF-8 explicitly, not the locale default: on Windows that is cp1252,
+    # which raises on the first em-dash in a path or reason.
+    return subprocess.run(
+        [binary, *args],
+        cwd=root,
         capture_output=True,
         text=True,
-        # Explicit, not the locale default: on Windows that is cp1252, which
-        # raises UnicodeDecodeError on the first em-dash in a spec and takes
-        # the whole family down. `replace` rather than a raise so a stray
-        # undecodable byte reads as a changed token — a finding, which is the
-        # safe direction — instead of crashing a release gate.
         encoding="utf-8",
         errors="replace",
     )
-    result = {}
-    if proc.returncode != 0:
-        return result
-    lines = proc.stdout.split("\n")
-    # A paired rename is one header standing for two paths, each named once
-    # on its `rename from` line, so the sum is the count before pairing.
-    unpaired = sum(1 for line in lines if line.startswith("diff --git ")) + sum(
-        1 for line in lines if line.startswith("rename from ")
+
+
+def first_line(text):
+    return (text.strip().splitlines() or ["no output"])[0]
+
+
+dashboard = call("dashboard")
+try:
+    specs = json.loads(dashboard.stdout)["specs"]
+except (ValueError, KeyError, TypeError):
+    emit(
+        "(precondition)",
+        f"dashboard did not answer (exit {dashboard.returncode}): "
+        f"{first_line(dashboard.stderr)} — the done specs could not be listed",
+        f"run {binary} dashboard and read its error",
     )
-    if unpaired > RENAME_LIMIT:
-        return result
+    specs = None
 
-    path = None
-    old_run, new_run = [], []
-
-    def flush():
-        if not old_run and not new_run:
-            return
-        if path is not None and result.get(path, set()) is not None:
-            pairs = pair_run(old_run, new_run)
-            if pairs is None:
-                result[path] = None
-            else:
-                result.setdefault(path, set()).update(pairs)
-        old_run.clear()
-        new_run.clear()
-
-    for line in lines:
-        if line.startswith("diff --git "):
-            # Reset between files: a deleted file's header is `+++ /dev/null`,
-            # which names no path. Without this its removed lines would keep
-            # accumulating against the *previous* file and mark that file's
-            # diff non-uniform — a pure rename reported stale because an
-            # unrelated file was deleted in the same window.
-            flush()
-            path = None
-        elif line.startswith("+++ "):
-            flush()
-            path = line[6:] if line.startswith("+++ b/") else None
-            if path is not None:
-                result.setdefault(path, set())
-        elif line.startswith("@@"):
-            flush()
-        elif line.startswith("-") and not line.startswith("---"):
-            if new_run:  # a new run started, so the previous pairing is closed
-                flush()
-            old_run.append(line[1:])
-        elif line.startswith("+") and not line.startswith("+++"):
-            new_run.append(line[1:])
-    flush()
-    return result
-
-
-_diff_cache = {}
-
-
-def substitution_index(base):
-    """(per-file pairs, pairs appearing in more than one file) for `base`..HEAD.
-
-    §spec-lifecycle case (a) calls a mechanical edit a uniform substitution
-    **across live artifacts** — uniformity is a repo-wide property, not a
-    file-local one, and that distinction is what keeps this check honest. A
-    rename rewrites the same token in many files; a one-cell edit to a
-    data-model table (`| timeout | 30s |` → `| timeout | 60s |`) rewrites one
-    token in one file and reads as perfectly "uniform" on its own. Requiring
-    a pair to appear in at least two files is what separates them, and a
-    table-cell change is exactly the contract change this family exists to
-    catch.
-    """
-    if base not in _diff_cache:
-        per_file = diff_substitutions(base)
-        counts = {}
-        for pairs in per_file.values():
-            if pairs:
-                for pair in pairs:
-                    counts[pair] = counts.get(pair, 0) + 1
-        repo_wide = {p for p, n in counts.items() if n > 1}
-        _diff_cache[base] = (per_file, repo_wide)
-    return _diff_cache[base]
-
-
-def explained_by(pair, repo_wide):
-    """Whether a rewrite follows from the repo-wide ones.
-
-    A rename produces token variants that occur in a single file — 049's
-    sweep rewrote `gvrn_` to `ductus_` in exactly one data model — and those
-    are consequences of the repo-wide rewrite rather than separate edits. So
-    a file-local pair is admitted when applying the repo-wide substitutions
-    to its old token reproduces its new token, and rejected otherwise. A
-    changed table cell (`30s` → `60s`) is not derivable from any repo-wide
-    rewrite, which is what keeps it a finding.
-
-    The rewrites apply simultaneously, in one left-to-right pass: a renumber
-    that shifts `063` -> `064` and `064` -> `065` in the same sweep must not
-    chain `063` through to `065`. Longest first, so a shorter rewrite cannot
-    pre-empt a longer one, and ties in the Rust half's order (`from`, then
-    `to`) so the two halves agree on every input.
-    """
-    old, new = pair
-    ordered = sorted(repo_wide, key=lambda p: (-len(p[0]), p[0], p[1]))
-    out, i = [], 0
-    while i < len(old):
-        for x, y in ordered:
-            if x and old.startswith(x, i):
-                out.append(y)
-                i += len(x)
-                break
-        else:
-            out.append(old[i])
-            i += 1
-    return "".join(out) == new
-
-
-def changed_beyond_spelling(base, path):
-    """Whether `path` differs from `base` by more than a repo-wide rename."""
-    per_file, repo_wide = substitution_index(base)
-    if path not in per_file:
-        # No hunk to read — deleted, or renamed or re-moded with its content
-        # unchanged — so nothing shows it was merely respelled.
-        return True
-    pairs = per_file[path]
-    if pairs is None:
-        return True
-    if not pairs:
-        return False
-    # Every rewrite in this file must be one the sweep made elsewhere too,
-    # or a direct consequence of one.
-    return not all(
-        pair in repo_wide or explained_by(pair, repo_wide) for pair in pairs
-    )
-
-
-specs_dir = root / specs_root
-for spec_path in sorted(specs_dir.glob("*/spec.md")):
-    feature = spec_path.parent.name
+for spec in specs or []:
+    if spec.get("status") != "done":
+        continue
+    feature = spec["slug"]
     rel_dir = f"{specs_root}/{feature}"
-    text = spec_path.read_text(encoding="utf-8")
-    fm = frontmatter(text)
-    if scalar(fm, "status") != "done":
-        continue
-    # The record lives in `review.md` since spec 057, and **the absent file
-    # is the never-reviewed state** — which is what this grandfathers. Reading
-    # the old `spec.md` block here would grandfather every spec in a migrated
-    # corpus and take this family vacuous, the failure the shipped CI template
-    # carried for the same reason.
-    review_path = spec_path.parent / "review.md"
-    if not review_path.is_file():
-        grandfathered += 1
-        continue  # grandfathered: predates /review
-    review_fm = frontmatter(review_path.read_text(encoding="utf-8"))
-    base = scalar(review_fm, "reviewed-against")
-    digest = recorded_digest(review_fm)
-
-    # Whether the sweep exemption can run. It needs two committed trees, so it
-    # is available only when `reviewed-against` resolves — on either arm.
-    base_resolves = False
-    if base:
-        base_resolves = subprocess.run(
-            ["git", "-C", str(root), "cat-file", "-e", f"{base}^{{commit}}"],
-            capture_output=True,
-        ).returncode == 0
-
-    if digest is not None:
-        # --- digest arm: content, not commits --------------------------------
-        # The same comparison `check-review-gate` makes, over the same field,
-        # so the completion gate and this release gate cannot disagree about a
-        # record that carries one.
-        examined_digest += 1
-        current, unreadable = current_contract_digests(spec_path.parent)
-        changed = {
-            rel for rel, sha in current.items() if digest.get(rel) != sha
-        }
-        # A contract the digest covered that is now gone is a change too.
-        changed |= {rel for rel in digest if rel not in current}
-        # An unreadable contract cannot be compared, so it is reported as
-        # changed rather than passed over — the safe direction.
-        changed |= set(unreadable)
-        if base_resolves:
-            changed = {
-                rel
-                for rel in changed
-                if changed_beyond_spelling(base, f"{rel_dir}/{rel}")
-            }
-        stale = sorted(f"{rel_dir}/{rel}" for rel in changed)
-        if stale:
-            shown = ", ".join(stale[:3])
-            more = f" (+{len(stale) - 3} more)" if len(stale) > 3 else ""
-            emit(
-                rel_dir,
-                f"done spec's review is stale — {len(stale)} durable contract(s) no "
-                f"longer match reviewed-digest: {shown}{more}",
-                f"re-run review against {feature} before releasing",
-            )
-        continue
-
-    # --- proxy arm: the commit diff, for records predating the digest --------
-    # Weaker than the digest and known to be so: `write-review` stamps
-    # `reviewed-against: HEAD` while reviewing the working tree, so a contract
-    # reviewed before it was committed makes this diff fire on content the
-    # review had already read. On this arm that false positive is guarded only
-    # by the commit-then-review-then-commit convention in AGENTS.md. It is kept
-    # regardless, because the alternative for a pre-digest record is examining
-    # nothing at all, and every review migrates one more spec off this arm.
-    if not base:
-        # No digest and no sha: nothing to compare against. `not-reviewed` is
-        # check-review-gate's finding, not this one — but the spec is still
-        # *unexamined*, and the coverage line must not imply otherwise.
-        unresolvable += 1
-        continue
-
-    if not base_resolves:
-        unresolvable += 1
+    run = call("check-review-freshness", "--feature", feature)
+    try:
+        result = json.loads(run.stdout)
+        freshness = result["freshness"]
+        state = freshness["state"]
+    except (ValueError, KeyError, TypeError):
+        failed += 1
         emit(
             rel_dir,
-            f"review names reviewed-against {base[:8]}, which is not a commit in this repo "
-            "— staleness cannot be determined",
-            "re-run the review so the recorded sha resolves, or restore the history "
-            "(a shallow clone cannot answer this)",
+            f"check-review-freshness did not answer (exit {run.returncode}): "
+            f"{first_line(run.stderr)} — this spec's review was not compared",
+            f"run {binary} check-review-freshness --feature {feature} and read its error",
         )
         continue
-
-
-    # Both sides of a move, whatever `diff.renames` says. A contract renamed
-    # within the spec is listed under its old path as well as its new one, and
-    # the old path — absent from the substitution index — reads as changed:
-    # the digest arm's verdict on the same move, whose old key has vanished.
-    # Left to config, a contributor with renames on saw only the new path,
-    # which the sweep exemption could clear, and CI could disagree.
-    changed = subprocess.run(
-        [
-            "git", "-C", str(root), "diff", "--name-only", "--no-renames",
-            f"{base}..HEAD",
-        ],
-        capture_output=True,
-        text=True,
-        # Explicit, not the locale default: on Windows that is cp1252, which
-        # raises UnicodeDecodeError on the first em-dash in a spec and takes
-        # the whole family down. `replace` rather than a raise so a stray
-        # undecodable byte reads as a changed token — a finding, which is the
-        # safe direction — instead of crashing a release gate.
-        encoding="utf-8",
-        errors="replace",
-    )
-    if changed.returncode != 0:
-        # The diff is the proxy arm's whole comparison, so a spec whose diff
-        # failed was not examined. Counting it before the call would let a
-        # git failure inflate the coverage line — the exact claim the line
-        # exists to make honest.
-        unresolvable += 1
+    if state == "never-run":
+        if result.get("record-present"):
+            never_run += 1
+        else:
+            grandfathered += 1
         continue
-
-    examined_proxy += 1
-
-    prefix = f"{rel_dir}/"
-    stale = sorted(
-        p
-        for p in changed.stdout.split("\n")
-        if p
-        and p.startswith(prefix)
-        and is_durable_contract(p[len(prefix):])
-        and changed_beyond_spelling(base, p)
-    )
-    if stale:
+    if state == "undeterminable":
+        undeterminable += 1
+        emit(
+            rel_dir,
+            f"done spec's review freshness cannot be determined — {freshness.get('reason', '')}",
+            f"re-run review against {feature}, so review.md records a reviewed-digest",
+        )
+        continue
+    examined += 1
+    if state == "stale":
+        stale = freshness.get("paths", [])
         shown = ", ".join(stale[:3])
         more = f" (+{len(stale) - 3} more)" if len(stale) > 3 else ""
         emit(
             rel_dir,
-            f"done spec's review is stale — {len(stale)} durable contract(s) changed "
-            f"since reviewed-against {base[:8]}: {shown}{more}",
+            f"done spec's review is stale — {len(stale)} durable contract(s) no "
+            f"longer match reviewed-digest: {shown}{more}",
             f"re-run review against {feature} before releasing",
         )
 
-# The coverage claim, printed on every run — clean, findings, or an empty
-# corpus — and *above* the findings it quantifies. The digest/proxy split is
-# not decoration: the two arms do not carry the same strength of claim, and a
-# bare `examined` count would assert the stronger one over both. When the proxy
-# count reaches zero every record carries a digest, the arm above is dead code,
-# and this line is the evidence for deleting it.
-examined = examined_digest + examined_proxy
-# To **stderr**, like every other family's coverage line. It went to stdout
-# until 0.49.8, which meant run-all.sh captured and discarded it on exactly the
-# clean runs it exists for — the line was written on every run since this family
-# shipped and reached an aggregated one never. Ordering is preserved: run_check
-# passes stderr straight through and echoes captured stdout under the family
-# header afterwards, so this still lands above the findings it quantifies.
+# The coverage claim, on every run — clean, findings, or an empty corpus — to
+# stderr like every other family's, so run_check passes it through above the
+# findings it quantifies.
 print(
-    f"review-freshness: examined {examined} spec(s) at status: done — "
-    f"{examined_digest} by reviewed-digest, {examined_proxy} by commit-diff proxy; "
-    f"{grandfathered} grandfathered (no review.md); {unresolvable} unresolvable",
+    f"review-freshness: examined {examined} spec(s) at status: done by reviewed-digest; "
+    f"{grandfathered} grandfathered (no review.md); {undeterminable} undeterminable; "
+    f"{never_run} never run; {failed} not answered",
     file=sys.stderr,
 )
 for finding in findings:

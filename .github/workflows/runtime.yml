@@ -3,12 +3,8 @@ name: runtime
 # Per-PR build, test, clippy, and fmt for the deterministic runtime
 # crate. Triggers only on changes that affect the runtime or that its tests
 # read — the command files, the shipped rule files, and the paths listed
-# below — except the spec corpus, which tests/mechanical_sweep_parity.rs reads
-# across every done spec to compare Family 19's two implementations: a
-# corpus edit can expose a disagreement between them but not create one, so a
-# spec-only change waits for the next runtime change to be compared. Other
-# spec or framework edits are checked by framework-checks.yml, which runs on
-# every pull request and push to main.
+# below. Spec or framework edits are checked by framework-checks.yml, which
+# runs on every pull request and push to main.
 
 on:
   pull_request:
@@ -24,11 +20,11 @@ on:
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
       - '.github/workflows/runtime-release.yml'
-      # tests/mechanical_sweep_parity.rs runs Family 19's own rule and
-      # compares it with the Rust one, so an edit to the family is an edit
-      # to this suite's subject. Without this path a change there breaks the
-      # comparison and nothing notices until an unrelated runtime commit
-      # happens to trigger the workflow.
+      # tests/mechanical_sweep_parity.rs runs Family 19 through the built
+      # runtime and checks the finding it reports for each answer, so an edit
+      # to the family is an edit to this suite's subject. Without this path a
+      # change there breaks the test and nothing notices until an unrelated
+      # runtime commit happens to trigger the workflow.
       - 'scripts/audit/review-freshness.sh'
       # ...and copies the library it sources, so an edit to that is one too.
       - 'scripts/audit/lib.sh'
@@ -116,17 +112,11 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      # fetch-depth: 0 — `tests/mechanical_sweep_parity.rs` resolves every
-      # done spec's `reviewed-against` sha, from its review.md, and diffs it against HEAD,
-      # comparing the Rust staleness rule with /ductus:audit Family 19's. The
-      # default single-commit checkout has none of those commits, so the test
-      # finds nothing to compare and fails its own vacuity guard rather than
-      # passing on an empty set. Same requirement Family 19's job carries in
-      # runtime-release.yml, and the one framework/constitution.md
-      # §design-principles states for any check that reads git history.
+      # The default single-commit checkout: no test here reads this
+      # repository's history, and the whole suite passes in a depth-1 clone.
+      # Family 19's jobs read it, so framework-checks.yml and
+      # runtime-release.yml keep their full-depth checkouts.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       # `components` must match the toolchain file: any cargo command run

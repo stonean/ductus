@@ -41,9 +41,10 @@ use crate::schema::primitives::{
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPrescriptionsArgs,
     CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
-    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
-    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    CheckReviewFreshnessArgs, CheckReviewFreshnessResult, CheckReviewGateArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
+    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
     DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
@@ -903,6 +904,23 @@ impl GovRuntimeServer {
         primitives::append_question::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-review-freshness",
+        description = "Report whether one feature's review record in review.md still describes its durable contracts (scenarios/*.md and data-model.md), by the content comparison check-review-gate makes before done, at any status; /ductus:audit's Family 19 asks it of every done spec. Returns record-present and freshness: current, stale with the changed contract paths, undeterminable for a record with no reviewed-digest or a review.md whose frontmatter does not parse, or never-run. A uniform rename sweep does not stale a record. Read-only (spec 066)."
+    )]
+    async fn check_review_freshness(
+        &self,
+        params: Parameters<CheckReviewFreshnessArgs>,
+    ) -> Result<Json<CheckReviewFreshnessResult>, String> {
+        // Hashes the contracts and may build a sweep index from two trees —
+        // blocking pool, like check-review-gate.
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || {
+            primitives::check_review_freshness::run(&params.0, repo.as_path())
+        })
+        .await
     }
 
     #[tool(

@@ -18,18 +18,22 @@ against history.
 
 ## Behavior
 
-`scripts/audit/review-freshness.sh`. For each spec at `status: done` carrying a
-`review:` block with a resolvable `reviewed-against`, emit a finding when any of
-the spec's **durable contracts** — `scenarios/*.md` or `data-model.md` — changed
-between that commit and `HEAD`.
+`scripts/audit/review-freshness.sh`. For each spec at `status: done`, emit a
+finding when any of the spec's **durable contracts** — `scenarios/*.md` or
+`data-model.md` — no longer match the `reviewed-digest` its `review.md`
+records. The family asks the runtime's `check-review-freshness`, the comparison
+`check-review-gate` makes before `done` (066 plan, *Family 19 calls the
+runtime*). It first compared commits, `reviewed-against`..`HEAD`; 066's digest
+replaced that comparison, and the runtime replaced the family's own copy of it
+on 2026-11-04.
 
 Grandfathering matches the rule `/{project}:analyze` and the shipped CI template
-already apply: a `done` spec with no `review:` block predates `/{project}:review`
-and is exempt. A null `reviewed-against` is `check-review-gate`'s
-`NotReviewed` finding, not this one. A `reviewed-against` that does not resolve
-to a commit here — a shallow clone, a rewritten history — is reported as its own
-finding rather than silently passing, since the check cannot prove staleness it
-cannot resolve.
+already apply: a `done` spec with no `review.md` predates `/{project}:review`
+and is exempt. A null `last-run` is `check-review-gate`'s `NotReviewed`
+finding, not this one, and is counted as never run. A record with no
+`reviewed-digest`, or a `review.md` whose frontmatter does not parse, is
+reported as its own finding rather than silently passing, since the check
+cannot prove staleness it cannot compute.
 
 ## Scoping, measured rather than guessed
 
