@@ -15,7 +15,7 @@ use crate::primitives::analyze_subjects::{is_analyze_subject, is_review_contract
 use crate::primitives::fix_rounds::{self, BRIEF_FILE, RESULT_FILE, ROUND_FILE, RoundRecord};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result, write_atomic};
 use crate::schema::paths;
-use crate::schema::primitives::{BriefReReadArgs, BriefReReadResult, RoundKind};
+use crate::schema::primitives::{BriefReReadArgs, BriefReReadResult, ListsForm, RoundKind};
 
 /// The severity bar every brief states: spec 078's *The loop* section.
 const SEVERITY_BAR: &str = "\
@@ -48,9 +48,10 @@ const RESULT_CONTRACT: &str = r#"```json
 /// [`PrimitiveError::InvalidReReadsOff`] or [`PrimitiveError::Toml`] for a
 /// malformed `[review] re-reads-off` or config file,
 /// [`PrimitiveError::Git`] when `base` names no commit or any libgit2 call
-/// fails, and [`PrimitiveError::Io`] when the round's files cannot be
-/// written. An error is never an empty round: the host counts the round as
-/// not re-read.
+/// fails, [`PrimitiveError::Io`] when the round's files or a list file
+/// cannot be written, and [`PrimitiveError::InvalidReadSize`] for a malformed
+/// `[artifacts] read-size-bytes`. An error is never an empty round: the host
+/// counts the round as not re-read.
 pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
@@ -72,16 +73,16 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     // are diffed against.
     let rounds = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
     let (snapshot, _) = fix_rounds::snapshot(&project)?;
-    let paths = fix_rounds::changed_between(&project, &base, &snapshot)?;
+    let paths = fix_rounds::round_paths(&project, &base, &snapshot, &feature_rel)?;
     let kind = classify(&paths, &format!("{feature_rel}/"));
     let mut result = BriefReReadResult {
         kind,
-        paths,
+        paths: Some(paths.clone()),
         re_reads_off,
         ..BriefReReadResult::default()
     };
     if kind == RoundKind::Empty || result.re_reads_off.is_some() {
-        return Ok(result);
+        return bounded(repo, &args.feature, result);
     }
     if kind == RoundKind::ReRead {
         let round_rel = fix_rounds::round_rel(&args.feature, &base);
@@ -92,7 +93,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         let record = RoundRecord {
             base: base.clone(),
             snapshot: snapshot.clone(),
-            paths: result.paths.clone(),
+            paths: paths.clone(),
         };
         let record_path = round_dir.join(ROUND_FILE);
         // A struct of strings and a string list has no unrepresentable value,
@@ -110,7 +111,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
             has_scenarios: repo.join(&feature_rel).join("scenarios").is_dir(),
             base: &base,
             snapshot: &snapshot,
-            paths: &result.paths,
+            paths: &paths,
             result_rel: &result_rel,
         });
         write_atomic(&round_dir.join(BRIEF_FILE), &brief)?;
@@ -118,6 +119,25 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         result.result = Some(result_rel);
     }
     result.snapshot = Some(snapshot);
+    bounded(repo, &args.feature, result)
+}
+
+/// Bound `result` to one read (spec 078, scenario
+/// `fix-round-results-have-a-bounded-size`): inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with `paths` in the file `lists-file` names,
+/// as `compute-review-scope` bounds its lists. `round.toml` and the brief
+/// already hold every path, whatever the form.
+fn bounded(repo: &Path, feature: &str, mut result: BriefReReadResult) -> Result<BriefReReadResult> {
+    let paths = result.paths.clone().unwrap_or_default();
+    result.paths_count = paths.len();
+    let lists = serde_json::json!({ "paths": paths });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "brief-re-read", feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.paths = None;
+        result.lists_file = Some(file);
+    }
     Ok(result)
 }
 
@@ -258,8 +278,29 @@ mod tests {
         let base = start(&tmp);
         let result = brief(&tmp, &base).unwrap();
         assert_eq!(result.kind, RoundKind::Empty);
-        assert_eq!(result.paths, [] as [String; 0]);
+        assert_eq!(result.paths.as_deref().unwrap(), [] as [String; 0]);
         assert_eq!((result.snapshot, result.brief), (None, None));
+    }
+
+    /// The feature's own `review.md` is never a round's path: a run whose
+    /// only write after its base is its record has no round, and beside code
+    /// the record drops out (scenario `a-reviews-own-record-is-no-fix-round`).
+    #[test]
+    fn the_reviews_own_record_is_no_round_path() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\n---\n",
+        );
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::Empty);
+        assert_eq!(result.paths.as_deref().unwrap(), [] as [String; 0]);
+
+        write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::ReRead);
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
     }
 
     /// An edit to the spec body alone is exempt: it takes a snapshot, the next
@@ -274,7 +315,7 @@ mod tests {
         );
         let result = brief(&tmp, &base).unwrap();
         assert_eq!(result.kind, RoundKind::Exempt);
-        assert_eq!(result.paths, ["specs/001-x/spec.md"]);
+        assert_eq!(result.paths.as_deref().unwrap(), ["specs/001-x/spec.md"]);
         assert!(result.snapshot.is_some());
         assert_eq!((result.brief, result.result), (None, None));
     }
@@ -312,7 +353,42 @@ mod tests {
         write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
         let result = brief(&tmp, &base).unwrap();
         assert_eq!(result.kind, RoundKind::ReRead);
-        assert_eq!(result.paths, ["specs/001-x/spec.md", "src/a.rs"]);
+        assert_eq!(
+            result.paths.as_deref().unwrap(),
+            ["specs/001-x/spec.md", "src/a.rs"]
+        );
+        assert_eq!(
+            (result.form, result.paths_count, result.lists_file),
+            (ListsForm::Inline, 2, None)
+        );
+    }
+
+    /// Past the read size a round's paths are in the file `lists-file`
+    /// names, with their count inline and no list, while `round.toml` keeps
+    /// every one (scenario `fix-round-results-have-a-bounded-size`).
+    #[test]
+    fn a_round_past_the_read_size_names_a_file_holding_its_paths() {
+        let tmp = fixture();
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        );
+        let base = start(&tmp);
+        write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::ReRead);
+        assert_eq!((result.form, result.paths_count), (ListsForm::File, 1));
+        assert_eq!(result.paths, None);
+        let file = result
+            .lists_file
+            .expect("a file-form result names its file");
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(lists["paths"], serde_json::json!(["src/a.rs"]));
+        let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
+        let record: RoundRecord =
+            toml::from_str(&fs::read_to_string(round.join(ROUND_FILE)).unwrap()).unwrap();
+        assert_eq!(record.paths, ["src/a.rs"]);
     }
 
     /// In a project below its repository's root, a round's paths are named
@@ -346,7 +422,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.kind, RoundKind::ReRead);
-        assert_eq!(result.paths, ["src/a.rs"]);
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
     }
 
     /// The result-file example every brief carries is one `read-re-read`
@@ -387,7 +463,7 @@ mod tests {
         );
         let result = brief(&tmp, &base).unwrap();
         let expected = ["specs/001-x/data-model.md", "src/a.rs"];
-        assert_eq!(result.paths, expected);
+        assert_eq!(result.paths.as_deref().unwrap(), expected);
 
         let snapshot = result.snapshot.clone().unwrap();
         let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
@@ -410,7 +486,7 @@ mod tests {
                 has_scenarios: false,
                 base: &base,
                 snapshot: &snapshot,
-                paths: &result.paths,
+                paths: result.paths.as_deref().unwrap(),
                 result_rel: &result_rel,
             })
         );
@@ -442,7 +518,7 @@ mod tests {
         let first = brief(&tmp, &base).unwrap();
         write(&tmp.path().join("src/b.rs"), "fn b() {}\n");
         let second = brief(&tmp, &first.snapshot.unwrap()).unwrap();
-        assert_eq!(second.paths, ["src/b.rs"]);
+        assert_eq!(second.paths.as_deref().unwrap(), ["src/b.rs"]);
     }
 
     /// A file name holding a newline and shell syntax reaches the brief only

@@ -14,18 +14,19 @@ use std::path::Path;
 
 use git2::{ObjectType, Oid};
 
-use crate::primitives::fix_rounds::{self, RESULT_FILE, ROUND_FILE, ResultFile, RoundRecord};
+use crate::primitives::fix_rounds::{self, RESULT_FILE, ResultFile, RoundRecord};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    CheckPrescriptionsArgs, CheckPrescriptionsResult, FailedEdit, PrescriptionVerdict,
-    ReReadFinding,
+    CheckPrescriptionsArgs, CheckPrescriptionsResult, FailedEdit, ListsForm, PrescriptionVerdict,
+    ReReadFinding, ReReadSeverity,
 };
 
 /// Execute the `check-prescriptions` primitive.
 ///
 /// It snapshots the working tree, as `brief-re-read` does, so it writes git
-/// objects and nothing else.
+/// objects, and past the read size the list file its result names, and
+/// nothing else.
 ///
 /// # Errors
 ///
@@ -33,9 +34,11 @@ use crate::schema::primitives::{
 /// the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
 /// [`PrimitiveError::Git`] when `base` names no commit or a libgit2 call
-/// fails, and [`PrimitiveError::Io`] when a round file exists but cannot be
-/// read. A missing, incomplete or unparseable round file is the
-/// `could-not-run` verdict, not an error; neither is ever a match.
+/// fails, [`PrimitiveError::Io`] when a round file exists but cannot be read
+/// or a list file cannot be written, and [`PrimitiveError::InvalidReadSize`]
+/// for a malformed `[artifacts] read-size-bytes`. A missing, incomplete or
+/// unparseable round file is the `could-not-run` verdict, not an error;
+/// neither is ever a match.
 pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescriptionsResult> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
@@ -52,13 +55,15 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
         problem: Some(problem),
         ..CheckPrescriptionsResult::default()
     };
-    let (record, findings) = match load_round(&dir)? {
+    let (record, mut findings) = match load_round(&dir)? {
         Ok(round) => round,
-        Err(problem) => return Ok(could_not_run(problem)),
+        Err(problem) => return bounded(repo, &args.feature, could_not_run(problem)),
     };
+    // A finding outside the round is a NOTE, as `read-re-read` counts it.
+    fix_rounds::demote_out_of_round(&mut findings, &record.paths);
     let by_file = match edits_by_file(repo, &findings) {
         Ok(by_file) => by_file,
-        Err(problem) => return Ok(could_not_run(problem)),
+        Err(problem) => return bounded(repo, &args.feature, could_not_run(problem)),
     };
     let open = findings
         .iter()
@@ -68,26 +73,70 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     let (now, _) = fix_rounds::snapshot(&project)?;
     let (failed, differing) = compare(&project, &record.snapshot, &now, &by_file)?;
     let prescribed: BTreeSet<&str> = by_file.keys().copied().collect();
-    let unprescribed: Vec<String> = fix_rounds::changed_between(&project, &record.snapshot, &now)?
-        .into_iter()
-        .filter(|path| !prescribed.contains(path.as_str()))
-        .collect();
+    let feature_rel = format!("{}/{}", layout.specs_root, args.feature);
+    let unprescribed: Vec<String> =
+        fix_rounds::round_paths(&project, &record.snapshot, &now, &feature_rel)?
+            .into_iter()
+            .filter(|path| !prescribed.contains(path.as_str()))
+            .collect();
 
     let verdict = if failed.is_empty() && differing.is_empty() && unprescribed.is_empty() {
         PrescriptionVerdict::Matched
     } else {
         PrescriptionVerdict::Differs
     };
-    Ok(CheckPrescriptionsResult {
-        verdict,
-        problem: None,
-        snapshot: (verdict == PrescriptionVerdict::Matched).then_some(now),
-        examined: by_file.len(),
-        differing,
-        unprescribed,
-        failed,
-        open,
-    })
+    bounded(
+        repo,
+        &args.feature,
+        CheckPrescriptionsResult {
+            verdict,
+            problem: None,
+            snapshot: (verdict == PrescriptionVerdict::Matched).then_some(now),
+            examined: by_file.len(),
+            differing: Some(differing),
+            unprescribed: Some(unprescribed),
+            failed: Some(failed),
+            open,
+            ..CheckPrescriptionsResult::default()
+        },
+    )
+}
+
+/// Bound `result` to one read (spec 078, scenario
+/// `fix-round-results-have-a-bounded-size`): inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with `differing`, `unprescribed` and `failed`
+/// in the file `lists-file` names, as `compute-review-scope` bounds its lists.
+/// The verdict and every count stay inline, so a file-form result never reads
+/// as a matched check.
+fn bounded(
+    repo: &Path,
+    feature: &str,
+    mut result: CheckPrescriptionsResult,
+) -> Result<CheckPrescriptionsResult> {
+    let differing = result.differing.take().unwrap_or_default();
+    let unprescribed = result.unprescribed.take().unwrap_or_default();
+    let failed = result.failed.take().unwrap_or_default();
+    result.differing_count = differing.len();
+    result.unprescribed_count = unprescribed.len();
+    result.failed_count = failed.len();
+    let lists = serde_json::json!({
+        "differing": differing,
+        "unprescribed": unprescribed,
+        "failed": failed,
+    });
+    result.differing = Some(differing);
+    result.unprescribed = Some(unprescribed);
+    result.failed = Some(failed);
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-prescriptions", feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.differing = None;
+        result.unprescribed = None;
+        result.failed = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
 }
 
 /// The previous round's record and its re-read's findings, or the reason the
@@ -100,30 +149,9 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
 fn load_round(
     dir: &Path,
 ) -> Result<std::result::Result<(RoundRecord, Vec<ReReadFinding>), String>> {
-    let record_path = dir.join(ROUND_FILE);
-    let record: RoundRecord = match std::fs::read_to_string(&record_path) {
-        Ok(text) => match toml::from_str(&text) {
-            Ok(record) => record,
-            Err(err) => {
-                return Ok(Err(format!(
-                    "{} does not parse: {}",
-                    record_path.display(),
-                    super::flatten_line(&err.to_string())
-                )));
-            }
-        },
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(Err(format!(
-                "{} does not exist: no round was briefed at this base",
-                record_path.display()
-            )));
-        }
-        Err(source) => {
-            return Err(PrimitiveError::Io {
-                path: record_path,
-                source,
-            });
-        }
+    let record = match fix_rounds::read_round_record(dir)? {
+        Ok(record) => record,
+        Err(problem) => return Ok(Err(problem)),
     };
     Ok(match fix_rounds::read_result(&dir.join(RESULT_FILE))? {
         ResultFile::Complete(findings) => Ok((record, findings)),
@@ -133,8 +161,9 @@ fn load_round(
     })
 }
 
-/// One prescribed edit: its finding's index, its own, and its `old` and `new`.
-type Edit<'a> = (usize, usize, &'a str, &'a str);
+/// One prescribed edit: its finding's index, its own, whether its finding is
+/// a NOTE, and its `old` and `new`.
+type Edit<'a> = (usize, usize, bool, &'a str, &'a str);
 
 /// Every edit, grouped by file in the order the result file lists them, or
 /// the reason the check cannot run: an edit naming a path outside the
@@ -155,6 +184,7 @@ fn edits_by_file<'a>(
             by_file.entry(edit.path.as_str()).or_default().push((
                 f,
                 e,
+                finding.severity == ReReadSeverity::Note,
                 edit.old.as_str(),
                 edit.new.as_str(),
             ));
@@ -190,33 +220,59 @@ fn compare(
     let mut differing = Vec::new();
     for (&path, edits) in by_file {
         let git_path = project.to_git(path);
-        let mut text = super::blob_text(repository, &read_tree, &git_path)?;
-        for &(finding, edit, old, new) in edits {
-            let occurrences = text.as_deref().map_or(0, |t| occurrences(t, old));
-            if occurrences == 1 {
-                text = text.map(|t| t.replacen(old, new, 1));
-            } else {
-                failed.push(FailedEdit {
-                    finding,
-                    edit,
-                    path: path.to_string(),
-                    occurrences,
-                });
-            }
-        }
-        let expected = text
-            .map(|t| Oid::hash_object(ObjectType::Blob, t.as_bytes()))
-            .transpose()?;
+        let text = super::blob_text(repository, &read_tree, &git_path)?;
         let actual = match now_tree.get_path(Path::new(&git_path)) {
             Ok(entry) => Some(entry.id()),
             Err(err) if err.code() == git2::ErrorCode::NotFound => None,
             Err(err) => return Err(err.into()),
         };
-        if expected.is_none() || expected != actual {
+        // A NOTE's edit the operator declines leaves text the re-read already
+        // judged acceptable, so the file matches with every edit applied or
+        // with only its MUST and SHOULD findings' edits applied (spec 078,
+        // task 13); either way every edit applied must apply cleanly.
+        let all = apply_edits(text.as_deref(), edits, path, |_| true);
+        let blocking = apply_edits(text.as_deref(), edits, path, |&(_, _, note, _, _)| !note);
+        let matches = |(expected, failed): &(Option<String>, Vec<FailedEdit>)| -> Result<bool> {
+            let expected = expected
+                .as_ref()
+                .map(|t| Oid::hash_object(ObjectType::Blob, t.as_bytes()))
+                .transpose()?;
+            Ok(failed.is_empty() && expected.is_some() && expected == actual)
+        };
+        if !matches(&all)? && !matches(&blocking)? {
+            failed.extend(all.1);
             differing.push(path.to_string());
         }
     }
     Ok((failed, differing))
+}
+
+/// `text` with the `edits` that `keep` accepts applied in order, each `old`
+/// replaced only where it occurs at exactly one position, and the edits whose
+/// `old` did not. A file the snapshot does not hold as text applies none.
+fn apply_edits(
+    text: Option<&str>,
+    edits: &[Edit<'_>],
+    path: &str,
+    keep: impl Fn(&Edit<'_>) -> bool,
+) -> (Option<String>, Vec<FailedEdit>) {
+    let mut text = text.map(str::to_string);
+    let mut failed = Vec::new();
+    for edit in edits.iter().filter(|edit| keep(edit)) {
+        let &(finding, edit_index, _, old, new) = edit;
+        let found = text.as_deref().map_or(0, |t| occurrences(t, old));
+        if found == 1 {
+            text = text.map(|t| t.replacen(old, new, 1));
+        } else {
+            failed.push(FailedEdit {
+                finding,
+                edit: edit_index,
+                path: path.to_string(),
+                occurrences: found,
+            });
+        }
+    }
+    (text, failed)
 }
 
 /// Every position `needle` starts at in `text`, overlapping ones included: an
@@ -354,6 +410,88 @@ mod tests {
         assert_eq!(result.examined, 1);
     }
 
+    /// The feature's own `review.md`, rewritten after the re-read as every
+    /// run rewrites it, is no unprescribed change, so exactly the prescribed
+    /// edit still matches (scenario `a-reviews-own-record-is-no-fix-round`).
+    #[test]
+    fn the_reviews_own_record_is_not_unprescribed() {
+        let (tmp, base) = briefed(AGAIN);
+        write(&tmp.path().join("a.txt"), "hello world, once more\n");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\n---\n",
+        );
+        let result = check(&tmp, &base);
+        assert_eq!(result.verdict, PrescriptionVerdict::Matched, "{result:?}");
+        assert_eq!(result.unprescribed_count, 0);
+    }
+
+    /// A finding outside the round is a NOTE here too, as `read-re-read` counts
+    /// it, so a SHOULD with no edit on a path the round did not change leaves
+    /// nothing open (AC4).
+    #[test]
+    fn a_finding_outside_the_round_leaves_nothing_open() {
+        let (tmp, base) = briefed(AGAIN);
+        write(
+            &tmp.path()
+                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(RESULT_FILE),
+            &format!(
+                r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "SHOULD", "path": "b.txt", "text": "outside"}}]}}"#
+            ),
+        );
+        write(&tmp.path().join("a.txt"), "hello world, once more\n");
+        let result = check(&tmp, &base);
+        assert_eq!(result.verdict, PrescriptionVerdict::Matched, "{result:?}");
+        assert_eq!(result.open, 0);
+    }
+
+    /// A NOTE's edit the operator declines still matches: the file holds its
+    /// text with only the SHOULD's edit applied (task 13). With both applied
+    /// it matches too.
+    #[test]
+    fn a_declined_note_edit_still_matches() {
+        for (disk, label) in [
+            ("hello world, once more\n", "note declined"),
+            ("hi world, once more\n", "both applied"),
+        ] {
+            let (tmp, base) = briefed(AGAIN);
+            write(
+                &tmp.path()
+                    .join(fix_rounds::round_rel(FEATURE, &base))
+                    .join(RESULT_FILE),
+                &format!(
+                    r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "NOTE", "path": "a.txt", "text": "y", "edits": [{{"path": "a.txt", "old": "hello", "new": "hi"}}]}}]}}"#
+                ),
+            );
+            write(&tmp.path().join("a.txt"), disk);
+            let result = check(&tmp, &base);
+            assert_eq!(
+                result.verdict,
+                PrescriptionVerdict::Matched,
+                "{label}: {result:?}"
+            );
+        }
+    }
+
+    /// A SHOULD's edit left unapplied still differs, whatever the NOTE's.
+    #[test]
+    fn a_declined_should_edit_still_differs() {
+        let (tmp, base) = briefed(AGAIN);
+        write(
+            &tmp.path()
+                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(RESULT_FILE),
+            &format!(
+                r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "NOTE", "path": "a.txt", "text": "y", "edits": [{{"path": "a.txt", "old": "hello", "new": "hi"}}]}}]}}"#
+            ),
+        );
+        write(&tmp.path().join("a.txt"), "hi world, again\n");
+        let result = check(&tmp, &base);
+        assert_eq!(result.verdict, PrescriptionVerdict::Differs);
+        assert_eq!(result.differing.as_deref().unwrap(), ["a.txt"]);
+    }
+
     /// Two edits to one file apply in order, each to the text the one before
     /// left.
     #[test]
@@ -371,13 +509,19 @@ mod tests {
         let (tmp, base) = briefed(r#"{"path": "a.txt", "old": "absent", "new": "x"}"#);
         let result = check(&tmp, &base);
         assert_eq!(result.verdict, PrescriptionVerdict::Differs);
-        assert_eq!(result.failed[0].occurrences, 0);
+        assert_eq!(result.failed.as_deref().unwrap()[0].occurrences, 0);
 
         let (tmp, base) = briefed(r#"{"path": "a.txt", "old": "l", "new": "L"}"#);
         let result = check(&tmp, &base);
         assert_eq!(result.verdict, PrescriptionVerdict::Differs);
-        assert_eq!((result.failed[0].finding, result.failed[0].edit), (0, 0));
-        assert_eq!(result.failed[0].occurrences, 3);
+        assert_eq!(
+            (
+                result.failed.as_deref().unwrap()[0].finding,
+                result.failed.as_deref().unwrap()[0].edit
+            ),
+            (0, 0)
+        );
+        assert_eq!(result.failed.as_deref().unwrap()[0].occurrences, 3);
     }
 
     /// Overlapping occurrences count, so `aa` in `aaa` is ambiguous.
@@ -396,8 +540,8 @@ mod tests {
         write(&tmp.path().join("b.txt"), "b, changed\n");
         let result = check(&tmp, &base);
         assert_eq!(result.verdict, PrescriptionVerdict::Differs);
-        assert_eq!(result.unprescribed, ["b.txt"]);
-        assert_eq!(result.differing, [] as [String; 0]);
+        assert_eq!(result.unprescribed.as_deref().unwrap(), ["b.txt"]);
+        assert_eq!(result.differing.as_deref().unwrap(), [] as [String; 0]);
         // Not the next round's base: the round is re-read from its own.
         assert_eq!(result.snapshot, None);
     }
@@ -411,7 +555,7 @@ mod tests {
             write(&tmp.path().join("a.txt"), disk);
             let result = check(&tmp, &base);
             assert_eq!(result.verdict, PrescriptionVerdict::Differs, "{disk:?}");
-            assert_eq!(result.differing, ["a.txt"]);
+            assert_eq!(result.differing.as_deref().unwrap(), ["a.txt"]);
         }
     }
 
@@ -421,10 +565,11 @@ mod tests {
         let (tmp, base) = briefed(AGAIN);
         let result = check(&tmp, &base);
         assert_eq!(result.verdict, PrescriptionVerdict::Differs);
-        assert_eq!(result.differing, ["a.txt"]);
+        assert_eq!(result.differing.as_deref().unwrap(), ["a.txt"]);
     }
 
-    /// A MUST or SHOULD the re-read gave no edit stays open after a match.
+    /// A MUST or SHOULD the re-read gave no edit, on a path the round changed,
+    /// stays open after a match.
     #[test]
     fn an_unprescribed_finding_stays_open() {
         let (tmp, base) = briefed(AGAIN);
@@ -437,7 +582,7 @@ mod tests {
             &result_path,
             &text.replace(
                 "\"findings\": [",
-                "\"findings\": [{\"severity\": \"MUST\", \"path\": \"b.txt\", \"text\": \"y\"}, {\"severity\": \"NOTE\", \"path\": \"b.txt\", \"text\": \"z\"}, ",
+                "\"findings\": [{\"severity\": \"MUST\", \"path\": \"a.txt\", \"text\": \"y\"}, {\"severity\": \"NOTE\", \"path\": \"b.txt\", \"text\": \"z\"}, ",
             ),
         );
         write(&tmp.path().join("a.txt"), "hello world, once more\n");
@@ -494,5 +639,44 @@ mod tests {
             );
             assert_eq!(result.snapshot, None);
         }
+    }
+
+    /// Past the read size the three lists are in the file `lists-file`
+    /// names, with the verdict and every count inline and no list, so a
+    /// counts-only result never reads as a matched check (scenario
+    /// `fix-round-results-have-a-bounded-size`).
+    #[test]
+    fn lists_past_the_read_size_are_in_a_file() {
+        let (tmp, base) = briefed(AGAIN);
+        write(&tmp.path().join("a.txt"), "hello world, once more\n");
+        write(&tmp.path().join("b.txt"), "b, changed\n");
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        );
+        let result = check(&tmp, &base);
+        assert_eq!(result.verdict, PrescriptionVerdict::Differs);
+        assert_eq!(
+            (
+                result.form,
+                result.differing_count,
+                result.unprescribed_count,
+                result.failed_count
+            ),
+            (ListsForm::File, 0, 2, 0)
+        );
+        assert_eq!(
+            (&result.differing, &result.unprescribed, &result.failed),
+            (&None, &None, &None)
+        );
+        let file = result
+            .lists_file
+            .expect("a file-form result names its file");
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(
+            lists["unprescribed"],
+            serde_json::json!([".ductus/config.toml", "b.txt"])
+        );
     }
 }

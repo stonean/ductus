@@ -123,7 +123,8 @@ struct LoopRecord {
     diff_checked: usize,
     /// Rounds that needed a re-read and have none.
     not_re_read: usize,
-    /// At least two re-reads found a MUST or SHOULD, and the last one did.
+    /// At least [`fix_rounds::RE_READ_BUDGET`] re-reads found a MUST or SHOULD,
+    /// and the last one did.
     budget_stop: bool,
     /// The exempt rounds, from 1.
     exempt: Vec<usize>,
@@ -211,7 +212,8 @@ fn derive_loop(
         re_reads: count(FixRoundCheck::ReRead),
         diff_checked: count(FixRoundCheck::DiffChecked),
         not_re_read: count(FixRoundCheck::NotReRead),
-        budget_stop: with_findings >= 2 && results.last() == Some(&ReReadOutcome::Findings),
+        budget_stop: with_findings >= fix_rounds::RE_READ_BUDGET
+            && results.last() == Some(&ReReadOutcome::Findings),
         exempt: numbered(FixRoundCheck::Exempt),
         unwaived,
         waivers,
@@ -268,7 +270,11 @@ fn loop_summary(record: &LoopRecord) -> String {
         );
     }
     if record.budget_stop {
-        out.push_str(" The budget stopped the loop: two re-reads found a MUST or SHOULD.");
+        let _ = write!(
+            out,
+            " The budget stopped the loop: {} re-reads found a MUST or SHOULD.",
+            fix_rounds::RE_READ_BUDGET
+        );
     }
     out
 }

@@ -95,36 +95,36 @@ The rule is the Workflow bullet beginning "Have an independent agent re-read eac
 
 ## 10. Implement scenario: fix-round-results-have-a-bounded-size
 
-- [ ] Implement the behavior described in `scenarios/fix-round-results-have-a-bounded-size.md`
+- [x] Implement the behavior described in `scenarios/fix-round-results-have-a-bounded-size.md`
 
 - **Done when**: each list in the three results carries a stated maximum, every entry stays reachable, and the BE-PAYLOAD-001 finding of this spec's 2026-11-04 review no longer fires
 
 ## 11. Implement scenario: a-reviews-own-record-is-no-fix-round
 
-- [ ] Implement the behavior described in `scenarios/a-reviews-own-record-is-no-fix-round.md`
-- [ ] Restate the Edge Case on deferred or waived findings in `spec.md` to match the scenario
+- [x] Implement the behavior described in `scenarios/a-reviews-own-record-is-no-fix-round.md`
+- [x] Restate the Edge Case on deferred or waived findings in `spec.md` to match the scenario
 
 - **Done when**: a run that fixes and defers nothing records no fix round, a deferral's write is classified like any other write, the re-reads-off reason prints when round 1 is empty, and the spec's Edge Case says so
 
 ## 12. read-re-read counts a finding outside the round as a NOTE
 
-- [ ] Read the briefed round's `round.toml` `paths` in `read-re-read`, and count a MUST or SHOULD whose `path` is not one of them as a NOTE, reporting how many it demoted
-- [ ] State the demotion in `data-model.md`'s **read-re-read** section
-- [ ] Add a test that fails when the demotion is removed
+- [x] Read the briefed round's `round.toml` `paths` in `read-re-read`, and count a MUST or SHOULD whose `path` is not one of them as a NOTE, reporting how many it demoted
+- [x] State the demotion in `data-model.md`'s **read-re-read** section
+- [x] Add a test that fails when the demotion is removed
 
 - **Done when**: AC4 holds by construction: an out-of-round MUST or SHOULD never drives a fix round or counts toward the budget, whatever severity the re-read gave it
 
 ## 13. check-prescriptions accepts a declined NOTE edit
 
-- [ ] In `compare`, match a prescribed file when the working tree equals its text with every edit applied, or with only its MUST and SHOULD findings' edits applied
-- [ ] State the two accepted texts in `data-model.md`'s **check-prescriptions** section, and restate `spec.md`'s "every prescription applied" (*A prescribed edit is checked by diff*) to match
-- [ ] Add a test that a round applying the SHOULD edit and declining the NOTE edit matches, and one that a round declining a SHOULD edit still differs
+- [x] In `compare`, match a prescribed file when the working tree equals its text with every edit applied, or with only its MUST and SHOULD findings' edits applied
+- [x] State the two accepted texts in `data-model.md`'s **check-prescriptions** section, and restate `spec.md`'s "every prescription applied" (*A prescribed edit is checked by diff*) to match
+- [x] Add a test that a round applying the SHOULD edit and declining the NOTE edit matches, and one that a round declining a SHOULD edit still differs
 
 - **Done when**: a waived NOTE's unapplied edit no longer forces a re-read, an unapplied MUST or SHOULD edit still reads as differs, and both tests fail when their half is removed
 
 ## 14. Name the re-read budget in one place
 
-- [ ] Make the budget — two re-reads that found a MUST or SHOULD — one named constant in the runtime that `write-review`'s `budget-stop` derivation reads
-- [ ] Have `framework/commands/review.md` step 12 and `framework/reference/review.md`'s **Fix-round loop** cite that constant rather than restate the number as a second source, and name its location in `plan.md`'s **The loop's end and its budget**
+- [x] Make the budget — two re-reads that found a MUST or SHOULD — one named constant in the runtime that `write-review`'s `budget-stop` derivation reads
+- [x] Have `framework/commands/review.md` step 12 and `framework/reference/review.md`'s **Fix-round loop** cite that constant rather than restate the number as a second source, and name its location in `plan.md`'s **The loop's end and its budget**
 
 - **Done when**: the budget's value lives in one named location, every artifact stating it points there, and CFG-CONST-001 no longer fires against 078

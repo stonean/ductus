@@ -124,7 +124,7 @@ fn check(dir: &Path, base: &str) -> CheckPrescriptionsResult {
 /// snapshot.
 fn assert_round(dir: &Path, round: &BriefReReadResult, base: &str, paths: &[&str]) -> String {
     assert_eq!(round.kind, RoundKind::ReRead, "{round:?}");
-    assert_eq!(round.paths, paths, "{round:?}");
+    assert_eq!(round.paths.as_deref().unwrap(), paths, "{round:?}");
     let snapshot = round.snapshot.clone().unwrap();
 
     let text = fs::read_to_string(dir.join(round.brief.as_ref().unwrap())).unwrap();
@@ -213,8 +213,14 @@ fn two_rounds_each_brief_only_their_own_paths() {
     write(&dir.join("src/c.rs"), "fn c() -> u8 { 30 }\n");
     let check_1 = check(dir, &base);
     assert_eq!(check_1.verdict, PrescriptionVerdict::Differs, "{check_1:?}");
-    assert_eq!(check_1.unprescribed, ["src/c.rs"]);
-    assert!(check_1.differing.is_empty() && check_1.failed.is_empty());
+    assert_eq!(check_1.unprescribed.as_deref().unwrap(), ["src/c.rs"]);
+    assert_eq!(
+        (
+            check_1.differing.as_deref().map(<[_]>::len),
+            check_1.failed.as_deref().map(<[_]>::len)
+        ),
+        (Some(0), Some(0))
+    );
 
     // So round 2 is re-read whole, from round 1's snapshot: its brief holds
     // round 2's files alone — not `src/b.rs`, which only round 1 changed, and
@@ -240,7 +246,8 @@ fn two_rounds_each_brief_only_their_own_paths() {
     assert_eq!((check_2.examined, check_2.open), (1, 0));
     let after = brief(dir, check_2.snapshot.as_ref().unwrap());
     assert_eq!(after.kind, RoundKind::Empty, "{after:?}");
-    assert!(after.paths.is_empty() && after.snapshot.is_none() && after.brief.is_none());
+    assert_eq!(after.paths.as_deref().map(<[_]>::len), Some(0));
+    assert!(after.snapshot.is_none() && after.brief.is_none());
 
     // The review committed nothing.
     assert_eq!(untouched_state(dir, &repository), before);

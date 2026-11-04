@@ -12,9 +12,12 @@ use std::path::Path;
 use crate::primitives::fix_rounds::{self, RESULT_FILE, ResultFile};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
-use crate::schema::primitives::{ReReadSeverity, ReReadState, ReadReReadArgs, ReadReReadResult};
+use crate::schema::primitives::{
+    ListsForm, ReReadSeverity, ReReadState, ReadReReadArgs, ReadReReadResult,
+};
 
-/// Execute the `read-re-read` primitive. Read-only.
+/// Execute the `read-re-read` primitive. Read-only, but for the list file a
+/// result past the read size names.
 ///
 /// # Errors
 ///
@@ -22,8 +25,10 @@ use crate::schema::primitives::{ReReadSeverity, ReReadState, ReadReReadArgs, Rea
 /// the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
 /// [`PrimitiveError::Git`] when `base` names no commit, and
-/// [`PrimitiveError::Io`] when the result file exists but cannot be read. An
-/// error is never a clean re-read: the host counts the round as not re-read.
+/// [`PrimitiveError::Io`] when the result file exists but cannot be read or
+/// a list file cannot be written, and [`PrimitiveError::InvalidReadSize`] for
+/// a malformed `[artifacts] read-size-bytes`. An error is never a clean
+/// re-read: the host counts the round as not re-read.
 pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
@@ -36,7 +41,7 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;
     let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
-    Ok(match fix_rounds::read_result(&dir.join(RESULT_FILE))? {
+    let result = match fix_rounds::read_result(&dir.join(RESULT_FILE))? {
         ResultFile::Incomplete(problem) => ReadReReadResult {
             state: ReReadState::Incomplete,
             problem: Some(problem),
@@ -47,7 +52,25 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
             problem: Some(problem),
             ..ReadReReadResult::default()
         },
-        ResultFile::Complete(findings) => {
+        ResultFile::Complete(mut findings) => {
+            // A complete result is scoped by the round it answers: with no
+            // readable `round.toml` there is no round to scope it by, so it is
+            // no re-read, never a clean one.
+            let record = match fix_rounds::read_round_record(&dir)? {
+                Ok(record) => record,
+                Err(problem) => {
+                    return bounded(
+                        repo,
+                        &args.feature,
+                        ReadReReadResult {
+                            state: ReReadState::Unparseable,
+                            problem: Some(problem),
+                            ..ReadReReadResult::default()
+                        },
+                    );
+                }
+            };
+            let demoted = fix_rounds::demote_out_of_round(&mut findings, &record.paths);
             let count = |severity| findings.iter().filter(|f| f.severity == severity).count();
             ReadReReadResult {
                 state: ReReadState::Complete,
@@ -59,10 +82,32 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
                     .iter()
                     .filter(|f| fix_rounds::is_unprescribed(f))
                     .count(),
-                findings,
+                demoted,
+                findings: Some(findings),
+                ..ReadReReadResult::default()
             }
         }
-    })
+    };
+    bounded(repo, &args.feature, result)
+}
+
+/// Bound `result` to one read (spec 078, scenario
+/// `fix-round-results-have-a-bounded-size`): inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with `findings` in the file `lists-file`
+/// names, as `compute-review-scope` bounds its lists. The state and every
+/// count stay inline, so a file-form result never reads as a clean re-read.
+fn bounded(repo: &Path, feature: &str, mut result: ReadReReadResult) -> Result<ReadReReadResult> {
+    let findings = result.findings.take().unwrap_or_default();
+    result.findings_count = findings.len();
+    result.findings = Some(findings.clone());
+    let lists = serde_json::json!({ "findings": findings });
+    if let Some(file) = super::bounded_lists::place(repo, "read-re-read", feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -87,11 +132,17 @@ mod tests {
             "---\nstatus: in-progress\ndependencies: []\n---\n",
         );
         let base = commit_all(&repository, "init").to_string();
-        let result = tmp
-            .path()
-            .join(fix_rounds::round_rel(FEATURE, &base))
-            .join(RESULT_FILE);
-        (tmp, base, result)
+        let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
+        write(
+            &round.join(fix_rounds::ROUND_FILE),
+            &toml::to_string(&fix_rounds::RoundRecord {
+                base: base.clone(),
+                snapshot: base.clone(),
+                paths: vec!["src/a.rs".to_string()],
+            })
+            .unwrap(),
+        );
+        (tmp, base, round.join(RESULT_FILE))
     }
 
     fn read(tmp: &tempfile::TempDir, base: &str) -> ReadReReadResult {
@@ -159,7 +210,7 @@ mod tests {
             let result = read(&tmp, &base);
             assert_eq!(result.state, ReReadState::Unparseable, "{body}");
             assert!(result.problem.is_some());
-            assert_eq!(result.findings, []);
+            assert_eq!(result.findings.as_deref().unwrap(), []);
         }
     }
 
@@ -191,8 +242,9 @@ mod tests {
             ),
             (1, 2, 2, 2)
         );
-        assert_eq!(result.findings.len(), 5);
-        assert_eq!(result.findings[1].edits[0].new, "b");
+        let findings = result.findings.as_deref().unwrap();
+        assert_eq!((findings.len(), result.findings_count), (5, 5));
+        assert_eq!(findings[1].edits[0].new, "b");
     }
 
     #[test]
@@ -202,5 +254,76 @@ mod tests {
         let result = read(&tmp, &base);
         assert_eq!(result.state, ReReadState::Complete);
         assert_eq!((result.must, result.should, result.notes), (0, 0, 0));
+    }
+
+    /// Past the read size a re-read's findings are in the file `lists-file`
+    /// names, with the state and every count inline and no list, so a
+    /// counts-only result never reads as a clean re-read (scenario
+    /// `fix-round-results-have-a-bounded-size`).
+    #[test]
+    fn findings_past_the_read_size_are_in_a_file() {
+        let (tmp, base, path) = fixture();
+        write(
+            &path,
+            &format!(
+                r#"{{"complete": true, "findings": [{}]}}"#,
+                finding("SHOULD", "")
+            ),
+        );
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        );
+        let result = read(&tmp, &base);
+        assert_eq!(result.state, ReReadState::Complete);
+        assert_eq!(
+            (result.form, result.findings_count, result.should),
+            (ListsForm::File, 1, 1)
+        );
+        assert_eq!(result.findings, None);
+        let file = result
+            .lists_file
+            .expect("a file-form result names its file");
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(lists["findings"][0]["severity"], "SHOULD");
+    }
+
+    /// A finding the re-read labelled MUST or SHOULD on a path the round did
+    /// not change counts as a NOTE, by the round's own `round.toml` (AC4).
+    #[test]
+    fn a_finding_outside_the_round_counts_as_a_note() {
+        let (tmp, base, path) = fixture();
+        write(
+            &path,
+            &format!(
+                r#"{{"complete": true, "findings": [{}, {}]}}"#,
+                finding("SHOULD", ""),
+                r#"{"severity": "MUST", "path": "src/elsewhere.rs", "text": "x"}"#
+            ),
+        );
+        let result = read(&tmp, &base);
+        assert_eq!(result.state, ReReadState::Complete);
+        assert_eq!(
+            (result.must, result.should, result.notes, result.demoted),
+            (0, 1, 1, 1)
+        );
+        assert_eq!(result.unprescribed, 1);
+        assert_eq!(
+            result.findings.as_deref().unwrap()[1].severity,
+            ReReadSeverity::Note
+        );
+    }
+
+    /// A complete result with no readable `round.toml` has no round to be
+    /// scoped by, so it is no re-read, never a clean one.
+    #[test]
+    fn a_result_without_its_round_is_unparseable() {
+        let (tmp, base, path) = fixture();
+        write(&path, r#"{"complete": true, "findings": []}"#);
+        std::fs::remove_file(path.with_file_name(fix_rounds::ROUND_FILE)).unwrap();
+        let result = read(&tmp, &base);
+        assert_eq!(result.state, ReReadState::Unparseable);
+        assert!(result.problem.unwrap().contains("round.toml"));
     }
 }

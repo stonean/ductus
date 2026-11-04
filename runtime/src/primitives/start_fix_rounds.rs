@@ -40,7 +40,11 @@ pub fn run(args: &StartFixRoundsArgs, repo: &Path) -> Result<StartFixRoundsResul
     let dir = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
     fix_rounds::clear_rounds(&dir)?;
     let (base, files) = fix_rounds::snapshot(&project)?;
-    Ok(StartFixRoundsResult { base, files })
+    Ok(StartFixRoundsResult {
+        base,
+        files,
+        budget: fix_rounds::RE_READ_BUDGET,
+    })
 }
 
 #[cfg(test)]
@@ -141,6 +145,7 @@ mod tests {
             "{files:?}"
         );
         assert_eq!(result.files, files.len());
+        assert_eq!(result.budget, fix_rounds::RE_READ_BUDGET);
     }
 
     /// Taking a snapshot leaves the index file's bytes, `HEAD` and every ref

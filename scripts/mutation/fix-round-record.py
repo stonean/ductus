@@ -30,15 +30,15 @@ MUTATIONS = [
     (
         'M2 the budget stop ignores whether the last re-read found anything',
         'src/primitives/write_review.rs',
-        'budget_stop: with_findings >= 2 && results.last() == Some(&ReReadOutcome::Findings),',
-        'budget_stop: with_findings >= 2,',
+        'budget_stop: with_findings >= fix_rounds::RE_READ_BUDGET\n            && results.last() == Some(&ReReadOutcome::Findings),',
+        'budget_stop: with_findings >= fix_rounds::RE_READ_BUDGET,',
         'write_review::tests::the_budget_stop_needs_two_finding_re_reads_and_a_finding_last',
     ),
     (
         'M3 the budget stop needs one re-read with findings, not two',
         'src/primitives/write_review.rs',
-        'budget_stop: with_findings >= 2 && results.last() == Some(&ReReadOutcome::Findings),',
-        'budget_stop: with_findings >= 1 && results.last() == Some(&ReReadOutcome::Findings),',
+        'budget_stop: with_findings >= fix_rounds::RE_READ_BUDGET\n            && results.last() == Some(&ReReadOutcome::Findings),',
+        'budget_stop: with_findings >= 1\n            && results.last() == Some(&ReReadOutcome::Findings),',
         'write_review::tests::the_budget_stop_needs_two_finding_re_reads_and_a_finding_last',
     ),
     (

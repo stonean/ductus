@@ -144,8 +144,9 @@ pub struct ReviewBlock {
     /// while this exceeds the waivers in [`Self::round_waivers`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_re_read: Option<u32>,
-    /// Whether the re-read budget stopped the loop: at least two re-reads
-    /// found a MUST or SHOULD, and the last one did.
+    /// Whether the re-read budget stopped the loop: at least the budget's
+    /// re-reads (`start-fix-rounds`' `budget`) found a MUST or SHOULD, and the
+    /// last one did.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub budget_stop: Option<bool>,
     /// The waiver of each un-re-read round that carries one.
@@ -775,6 +776,10 @@ pub struct StartFixRoundsResult {
     /// How many files the snapshot holds, so a snapshot of nothing does not
     /// read as one of a tree.
     pub files: usize,
+    /// The re-read budget: after this many re-reads that found a MUST or
+    /// SHOULD, the host starts no round without the operator's decision
+    /// (spec 078, AC6; the runtime's one copy of the value).
+    pub budget: usize,
 }
 
 // -- brief-re-read (spec 078) -------------------------------------------------
@@ -812,9 +817,17 @@ pub enum RoundKind {
 pub struct BriefReReadResult {
     /// What the round needs.
     pub kind: RoundKind,
+    /// Where `paths` is: in this result, or, past the read size, in the file
+    /// `lists-file` names (spec 078, scenario `fix-round-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `paths`, in either form. `kind`, never an absent list, says
+    /// whether the round is empty.
+    pub paths_count: usize,
     /// Files inside the project that differ between the base and a snapshot
     /// of the working tree this call takes, from the project root, sorted.
-    pub paths: Vec<String>,
+    /// Absent in the file form; `round.toml` and the brief carry every one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paths: Option<Vec<String>>,
     /// The snapshot taken now, the next round's base: present for `exempt`
     /// and `re-read`, unless the loop is switched off.
     pub snapshot: Option<String>,
@@ -827,6 +840,10 @@ pub struct BriefReReadResult {
     /// The `[review] re-reads-off` reason when the loop is switched off; then
     /// no snapshot is returned and no brief is written.
     pub re_reads_off: Option<String>,
+    /// In the file form, the file holding `paths` whole, from the project
+    /// root: a JSON object with `paths`, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- read-re-read (spec 078) --------------------------------------------------
@@ -919,8 +936,23 @@ pub struct ReadReReadResult {
     /// MUST and SHOULD findings that carry no `edits`: each needs a fix the
     /// re-read did not prescribe, so a later diff check cannot close it.
     pub unprescribed: usize,
-    /// Every finding, as the file holds it; empty unless `complete`.
-    pub findings: Vec<ReReadFinding>,
+    /// Findings the re-read labelled MUST or SHOULD on a path the round did
+    /// not change, counted as NOTEs by the round's own `round.toml` (spec 078,
+    /// AC4); `findings` carries them as NOTEs.
+    pub demoted: usize,
+    /// Where `findings` is: in this result, or, past the read size, in the
+    /// file `lists-file` names (spec 078, scenario `fix-round-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
+    /// Every finding, as the file holds it; empty unless `complete`. Absent
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<ReReadFinding>>,
+    /// In the file form, the file holding `findings` whole, from the project
+    /// root: a JSON object with `findings`, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-prescriptions (spec 078) ------------------------------------------
@@ -981,12 +1013,31 @@ pub struct CheckPrescriptionsResult {
     pub snapshot: Option<String>,
     /// How many prescribed files were compared.
     pub examined: usize,
+    /// Where `differing`, `unprescribed` and `failed` are: in this result, or,
+    /// past the read size, in the file `lists-file` names (spec 078, scenario `fix-round-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `differing`, in either form.
+    pub differing_count: usize,
+    /// Entries in `unprescribed`, in either form.
+    pub unprescribed_count: usize,
+    /// Entries in `failed`, in either form.
+    pub failed_count: usize,
     /// Prescribed files whose edited text is not what the working tree holds.
-    pub differing: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub differing: Option<Vec<String>>,
     /// Files changed since the previous re-read's snapshot that no edit names.
-    pub unprescribed: Vec<String>,
-    /// Edits whose `old` did not occur exactly once.
-    pub failed: Vec<FailedEdit>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unprescribed: Option<Vec<String>>,
+    /// Edits whose `old` did not occur exactly once. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed: Option<Vec<FailedEdit>>,
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with `differing`, `unprescribed` and
+    /// `failed`, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// The previous re-read's MUST and SHOULD findings with no `edits`, which
     /// a match leaves open: the loop ends at a match only when this is zero.
     pub open: usize,

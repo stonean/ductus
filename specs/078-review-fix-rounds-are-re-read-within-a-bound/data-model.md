@@ -20,10 +20,11 @@ Called once per `/{project}:review` run, when the passes end and before any fix.
 
 Args: `{ "feature": "042-widget" }`
 
-Result: `{ "base": "<sha>", "files": 812 }`
+Result: `{ "base": "<sha>", "files": 812, "budget": 2 }`
 
 - `base` — a commit object of the whole working tree: tracked files as they are on disk, untracked files included, ignored files excluded, deletions applied. Its parent is `HEAD`, or none on an unborn `HEAD`. It moves no ref, writes no index file and changes no working-tree file; its author and committer are a fixed `ductus` identity, so no `user.name` is needed.
 - `files` — the number of files the snapshot holds, so a snapshot of nothing does not read as one of a tree.
+- `budget` — the re-read budget AC6 sets: after this many re-reads that found a MUST or SHOULD, the host starts no round without the operator's decision. The runtime holds the value once (`runtime/src/primitives/fix_rounds.rs`, `RE_READ_BUDGET`), and `write-review`'s `budget-stop` derivation reads the same constant.
 - Errors: a feature directory that does not exist, a project no work tree contains, or a libgit2 failure. An error is never a base: the host records the run's first round as not re-read (AC15).
 
 ## `brief-re-read`
@@ -35,14 +36,16 @@ Args: `{ "feature": "042-widget", "base": "<sha>" }`
 Result:
 
 ```json
-{ "kind": "re-read", "paths": ["runtime/src/x.rs", "specs/042-widget/data-model.md"],
+{ "kind": "re-read", "form": "inline", "paths-count": 2,
+  "paths": ["runtime/src/x.rs", "specs/042-widget/data-model.md"],
   "snapshot": "<sha>", "brief": ".ductus/review-rounds/042-widget/<base>/brief.md",
   "result": ".ductus/review-rounds/042-widget/<base>/result.json", "re-reads-off": null }
 ```
 
-- `paths` — the files inside the project that differ between `base` and a snapshot of the working tree taken by this call, tree to tree, bounded to the project as `compute-review-scope` bounds it (`runtime/src/primitives/compute_review_scope.rs`, `project_diff_options` and `project_paths`). Not `modified-since`, whose diff runs through the index and would report every unstaged edit a snapshot base already holds.
+- `paths` — the files inside the project that differ between `base` and a snapshot of the working tree taken by this call, tree to tree, bounded to the project as `compute-review-scope` bounds it (`runtime/src/primitives/compute_review_scope.rs`, `project_diff_options` and `project_paths`). Not `modified-since`, whose diff runs through the index and would report every unstaged edit a snapshot base already holds. The reviewed feature's own `review.md` is never one: it is the command's output, rewritten whole on every run (`runtime/src/primitives/fix_rounds.rs`, `round_paths`; scenario `a-reviews-own-record-is-no-fix-round`).
 - `kind` — `empty` when `paths` is empty; `exempt` when every path is an analyze subject of this feature that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`); `re-read` otherwise. `exempt` and `re-read` take a snapshot, the next round's base, so a later round never re-includes this one's changes; only `re-read` writes a brief, and, with the loop on, only `empty` returns no `snapshot`.
 - `re-reads-off` — the `[review] re-reads-off` reason when the switch is set; then no brief is written, and `snapshot`, `brief` and `result` are null.
+- `form`, `paths-count` and `lists-file` — the result's bound. Its maximum size is `[artifacts] read-size-bytes`, 50,000 bytes by default, of serialized result (scenario `fix-round-results-have-a-bounded-size`, `BE-PAYLOAD-001`): up to it `form` is `inline` and the `paths` is in the result; past it `form` is `file`, the `paths` is absent, and `lists-file` names a JSON file under `.ductus/results/brief-re-read/{feature}/` holding them whole, one entry per line, written through `bounded_lists::place` as 066's `compute-review-scope` result is. `kind` and `paths-count` stay inline in both forms, so a file-form result never reads as an empty round. `round.toml` and the brief carry every path in either form.
 - The brief names the spec, its data model and scenarios when it has them, the command that shows the round's change (`git diff --relative {base} {snapshot}`, run from the project root, so no path reaches a shell), the `paths` as a JSON list, the severity bar, and the result file's path and format. Nothing in it comes from the host. Briefing a base again replaces that round's directory, so an earlier `result.json` is never read for a newer brief.
 
 ## Result file
@@ -61,7 +64,7 @@ Result:
 | --- | --- | --- |
 | `complete` | boolean | Must be `true`. A file without it, or no file, is an incomplete re-read. |
 | (any other key) | — | Refused at every level, so a misspelled key is a problem `read-re-read` reports, never a prescription silently dropped. |
-| `findings[].severity` | `MUST`, `SHOULD` or `NOTE` | The brief's severity bar. A finding outside the round's `paths` is a `NOTE`. |
+| `findings[].severity` | `MUST`, `SHOULD` or `NOTE` | The brief's severity bar. A finding outside the round's `paths` is a `NOTE`: `read-re-read` and `check-prescriptions` count a `MUST` or `SHOULD` there as one, by the round's own `round.toml`. |
 | `findings[].path` | string | From the project root; one non-empty line. |
 | `findings[].text` | string | One non-empty line. |
 | `findings[].edits` | list | Optional prescriptions: each a `path` from the project root, the exact `old` text, and its `new` replacement. An empty `path` or `old` is refused, so a new file is never a prescription. |
@@ -72,10 +75,12 @@ JSON because a re-read agent already emits its tool arguments as JSON, and an `o
 
 Args: `{ "feature": "042-widget", "base": "<sha>" }`
 
-Result: `{ "state": "complete", "must": 0, "should": 1, "notes": 2, "unprescribed": 0, "findings": [ … ] }`
+Result: `{ "state": "complete", "must": 0, "should": 1, "notes": 2, "unprescribed": 0, "demoted": 0, "form": "inline", "findings-count": 3, "findings": [ … ] }`
 
 - `state` — `complete`; `incomplete` when the file is absent or `complete` is not `true`; `unparseable` when it is not JSON of the shape above, with `problem` naming the field. Only `complete` is a finished re-read (AC7, AC15).
 - `unprescribed` — the MUST and SHOULD findings with no `edits`. A re-read is clean when it is `complete` with `must` and `should` at zero.
+- `demoted` — the findings the re-read labelled MUST or SHOULD on a path outside the round's `round.toml` `paths`, counted as NOTEs and carried in `findings` as NOTEs, so a finding outside the round changes nothing in it (AC4; `runtime/src/primitives/fix_rounds.rs`, `demote_out_of_round`). A complete result whose `round.toml` is absent or does not parse has no round to be scoped by, and is `unparseable`.
+- `form`, `findings-count` and `lists-file` — the result's bound. Its maximum size is `[artifacts] read-size-bytes`, 50,000 bytes by default, of serialized result (scenario `fix-round-results-have-a-bounded-size`, `BE-PAYLOAD-001`): up to it `form` is `inline` and the `findings` are in the result; past it `form` is `file`, the `findings` are absent, and `lists-file` names a JSON file under `.ductus/results/read-re-read/{feature}/` holding them whole, one entry per line, written through `bounded_lists::place` as 066's `compute-review-scope` result is. `state` and every count stay inline in both forms, so a file-form result never reads as a clean re-read. It is read-only otherwise.
 
 ## `check-prescriptions`
 
@@ -83,13 +88,14 @@ The diff check of a round against the previous re-read's prescriptions.
 
 Args: `{ "feature": "042-widget", "base": "<sha>" }` — `base` names the **previous** round, whose `round.toml` gives the snapshot the edits apply to and whose `result.json` gives the edits.
 
-Result: `{ "verdict": "matched", "snapshot": "<sha>", "examined": 3, "differing": [], "unprescribed": [], "failed": [], "open": 0 }`
+Result: `{ "verdict": "matched", "snapshot": "<sha>", "examined": 3, "form": "inline", "differing-count": 0, "unprescribed-count": 0, "failed-count": 0, "differing": [], "unprescribed": [], "failed": [], "open": 0 }`
 
-- Each prescribed file is taken from the snapshot, its edits applied in order, each `old` replaced only where it starts at exactly one position, overlapping ones counted, so an ambiguous prescription never applies. The result is compared with a fresh snapshot of the working tree as git stores both — the edited text hashed as a blob against the blob the snapshot holds — so a checkout that converts line endings on disk compares alike. `failed` lists each edit whose `old` occurred zero times or more than once: `{ "finding", "edit", "path", "occurrences" }`, the indexes as `result.json` orders them, and a file the snapshot does not hold as text has none. `differing` lists the prescribed files whose result is not the working tree's; `unprescribed` the files changed since the previous re-read's snapshot that no edit names, by the tree-to-tree diff `brief-re-read` uses.
+- Each prescribed file is taken from the snapshot, its edits applied in order, each `old` replaced only where it starts at exactly one position, overlapping ones counted, so an ambiguous prescription never applies. The result is compared with a fresh snapshot of the working tree as git stores both — the edited text hashed as a blob against the blob the snapshot holds — so a checkout that converts line endings on disk compares alike. A file matches when the working tree holds its text with every edit applied, or with only its MUST and SHOULD findings' edits applied, since a NOTE's edit the operator declines leaves text the re-read already judged acceptable (`compare`, `apply_edits`). `failed` lists, for a file that matches neither, each edit whose `old` occurred zero times or more than once: `{ "finding", "edit", "path", "occurrences" }`, the indexes as `result.json` orders them, and a file the snapshot does not hold as text has none. `differing` lists the prescribed files whose result is not the working tree's; `unprescribed` the files changed since the previous re-read's snapshot that no edit names, by the tree-to-tree diff `brief-re-read` uses, the feature's own `review.md` left out as there.
 - `verdict` — `matched` when all three are empty; `differs` otherwise; `could-not-run` when no `round.toml` was written at the base or it does not parse, `result.json` is missing, incomplete or unparseable, it prescribes no edit — over which a match would pass vacuously — or an edit names a path outside the project, with `problem` naming which (AC15). `could-not-run` carries no `snapshot` and is never a match.
 - `snapshot` — the fresh snapshot, returned on a `matched` check alone: the next round's base, so a later round never re-lists the verified edits. `differs` carries none, since the round is re-read whole from its own base.
 - `open` — the previous re-read's MUST and SHOULD findings with no `edits`. A `matched` round with `open` at zero ends the loop; with `open` above zero those findings still need a fix, a deferral or a waiver.
-- It writes git objects for the snapshot and nothing else.
+- `form`, the three counts and `lists-file` — the result's bound. Its maximum size is `[artifacts] read-size-bytes`, 50,000 bytes by default, of serialized result (scenario `fix-round-results-have-a-bounded-size`, `BE-PAYLOAD-001`): up to it `form` is `inline` and the `differing`, `unprescribed` and `failed` are in the result; past it `form` is `file`, the `differing`, `unprescribed` and `failed` are absent, and `lists-file` names a JSON file under `.ductus/results/check-prescriptions/{feature}/` holding all three whole, one entry per line, written through `bounded_lists::place` as 066's `compute-review-scope` result is. `verdict` and every count stay inline in both forms, so a file-form result never reads as a matched check.
+- It writes git objects for the snapshot and, past the read size, the list file its result names, and nothing else.
 
 ## `write-review` — the loop's argument and record fields
 
@@ -125,7 +131,7 @@ round-waivers:
 | Field | Derived as |
 | --- | --- |
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read` | The number of entries, and of entries with each `check` |
-| `budget-stop` | `true` when at least two re-reads found a MUST or SHOULD and the last re-read did |
+| `budget-stop` | `true` when at least `budget` re-reads (`RE_READ_BUDGET`) found a MUST or SHOULD and the last re-read did |
 | `round-waivers` | One per `not-re-read` entry with a `reason`, or, when the switch is set, with the switch's reason and the config file as `waived-by`. Omitted when empty |
 
 The generated Summary renders the counts and names each exempt round and each waived one.

@@ -18,6 +18,12 @@ use crate::schema::primitives::{ReReadFinding, ReReadSeverity};
 /// Where the loop's files live, from the project root.
 pub(crate) const ROUNDS_DIR: &str = ".ductus/review-rounds";
 
+/// The re-read budget: after this many re-reads that found a MUST or SHOULD,
+/// the host starts no fix round without the operator's decision (spec 078,
+/// AC6). Its one home: `start-fix-rounds` reports it as `budget`, and
+/// `write-review` derives `budget-stop` from it.
+pub(crate) const RE_READ_BUDGET: usize = 2;
+
 /// The `[review]` key that switches the fix-round loop off. Its value is the
 /// reason, which every round the loop would have re-read is waived with.
 pub(crate) const RE_READS_OFF: &str = "re-reads-off";
@@ -56,6 +62,50 @@ pub(crate) fn resolve_base(project: &ProjectRepository, base: &str) -> Result<St
         .peel_to_commit()?
         .id()
         .to_string())
+}
+
+/// A briefed round's `round.toml`, or the reason it cannot be read: absent,
+/// since no round was briefed at the base, or not parsing. `dir` is the
+/// round's directory.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the file exists but cannot be read.
+pub(crate) fn read_round_record(dir: &Path) -> Result<std::result::Result<RoundRecord, String>> {
+    let record_path = dir.join(ROUND_FILE);
+    match std::fs::read_to_string(&record_path) {
+        Ok(text) => Ok(toml::from_str(&text).map_err(|err| {
+            format!(
+                "{} does not parse: {}",
+                record_path.display(),
+                super::flatten_line(&err.to_string())
+            )
+        })),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(Err(format!(
+            "{} does not exist: no round was briefed at this base",
+            record_path.display()
+        ))),
+        Err(source) => Err(PrimitiveError::Io {
+            path: record_path,
+            source,
+        }),
+    }
+}
+
+/// Count each MUST or SHOULD finding on a path the round did not change as
+/// a NOTE, and return how many were (spec 078, AC4): a finding outside the
+/// round changes nothing in it, whatever severity the re-read gave it, so it
+/// drives no fix round and counts toward no budget. `paths` are the round's,
+/// from its `round.toml`.
+pub(crate) fn demote_out_of_round(findings: &mut [ReReadFinding], paths: &[String]) -> usize {
+    let mut demoted = 0;
+    for finding in findings.iter_mut() {
+        if finding.severity != ReReadSeverity::Note && !paths.contains(&finding.path) {
+            finding.severity = ReReadSeverity::Note;
+            demoted += 1;
+        }
+    }
+    demoted
 }
 
 /// A MUST or SHOULD finding with no prescribed edit: the diff check cannot
@@ -373,8 +423,31 @@ pub(crate) fn snapshot(project: &ProjectRepository) -> Result<(String, usize)> {
     Ok((commit.to_string(), files))
 }
 
+/// A round's paths: [`changed_between`] its base and snapshot, less the
+/// reviewed feature's own `review.md` (spec 078, scenario
+/// `a-reviews-own-record-is-no-fix-round`). The record is the command's own
+/// output, regenerated whole on every run, so a round never re-reads it,
+/// whoever wrote it, and a run that fixed and deferred nothing has no round.
+/// `feature_rel` is the feature directory from the project root.
+///
+/// # Errors
+///
+/// As [`changed_between`].
+pub(crate) fn round_paths(
+    project: &ProjectRepository,
+    base: &str,
+    snapshot: &str,
+    feature_rel: &str,
+) -> Result<Vec<String>> {
+    let record = format!("{feature_rel}/{}", super::REVIEW_RECORD_FILE);
+    Ok(changed_between(project, base, snapshot)?
+        .into_iter()
+        .filter(|path| *path != record)
+        .collect())
+}
+
 /// The files inside the project that differ between two snapshots, from the
-/// project root and sorted: a round's changed paths.
+/// project root and sorted: what a round's paths are drawn from.
 ///
 /// Tree to tree, because both are whole working-tree snapshots. A diff from a
 /// snapshot to the working tree through the index — `compute-review-scope`'s

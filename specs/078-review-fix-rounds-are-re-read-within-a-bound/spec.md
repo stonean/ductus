@@ -41,7 +41,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 ### A prescribed edit is checked by diff
 
 - A re-read may prescribe an edit: the file, the text it replaces, and the replacement. It writes its prescriptions to a file its brief names, outside the round's scope, and a runtime primitive reads that file, so no prescription passes through the fixer.
-- A round that only applies prescribed edits is verified by comparing its diff with the prescriptions — every hunk prescribed, every prescription applied — instead of by another re-read: the primitive replaces each old text exactly once in the base snapshot's copy of its file and compares the result with a snapshot of the working tree, as git stores both (`runtime/src/primitives/check_prescriptions.rs`, `compare`), so a checkout that converts line endings on disk compares alike. A round with any change the re-read did not prescribe is re-read, and the primitive names the paths that differ.
+- A round that only applies prescribed edits is verified by comparing its diff with the prescriptions — every hunk prescribed, and every MUST and SHOULD prescription applied, a NOTE's edit being the operator's to decline — instead of by another re-read: the primitive replaces each old text exactly once in the base snapshot's copy of its file and compares the result with a snapshot of the working tree, as git stores both (`runtime/src/primitives/check_prescriptions.rs`, `compare`), so a checkout that converts line endings on disk compares alike. A round with any change the re-read did not prescribe is re-read, and the primitive names the paths that differ.
 
 ### The budget
 
@@ -60,7 +60,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 
 ## Edge Cases
 
-- A run whose findings were all deferred or waived has no fix round and no re-read.
+- A run whose findings were all waived has no fix round and no re-read; one with deferrals has the rounds their writes make, and the run's own `review.md` is never a round's path.
 - A round whose derived scope is empty changed nothing and is not re-read.
 - A re-read that does not finish — cut off, or its agent stopped — is not a re-read. It is reported as incomplete and never counts as clean; its round is re-read again or waived with a reason.
 - A round that applies prescribed edits and also changes anything else is re-read whole. A formatter run after the edits is such a change, so the check runs as soon as the prescriptions are applied.

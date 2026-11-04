@@ -187,6 +187,38 @@ its version and date.
   `lists-file-unreadable` when it cannot. A script of your own that reads
   `scope` or `cross-spec-paths` from either result must read `lists-file`
   when `form` is `file`. Spec 066, task 7.
+- **`brief-re-read`, `read-re-read` and `check-prescriptions` results stay
+  within one read.** Each result now carries `form` and each list's count
+  (`paths-count`; `findings-count`; `differing-count`, `unprescribed-count`
+  and `failed-count`). While a result fits `[artifacts] read-size-bytes`, its
+  lists are inline as before; past it, `form` is `file`, no list is inline,
+  and `lists-file` names a JSON file under `.ductus/results/` holding them
+  whole, as `compute-review-scope`'s do, while the round's kind, the
+  re-read's state, the check's verdict and every count stay inline. A script
+  of your own that reads these lists must read `lists-file` when `form` is
+  `file`. Spec 078, task 10.
+- **A review's own record is no fix round.** `brief-re-read` and
+  `check-prescriptions` leave the reviewed feature's own `review.md` out of a
+  round's paths, so a `/review` run that fixed and deferred nothing records
+  no fix round instead of an exempt one, and `/review` prints a
+  `[review] re-reads-off` reason even when its first round is empty. Spec
+  078, task 11.
+- **A re-read's finding outside its round is a NOTE, by the round's own
+  paths.** `read-re-read` and `check-prescriptions` count a MUST or SHOULD
+  on a path the round did not change as a NOTE, read from the round's
+  `round.toml`, whatever severity the re-read gave it, so it drives no fix
+  round and counts toward no budget; `read-re-read`'s new `demoted` says how
+  many, and a complete result with no readable `round.toml` reads as
+  `unparseable`. Spec 078, task 12.
+- **`check-prescriptions` accepts a declined NOTE edit.** A prescribed file
+  matches when the working tree holds its text with every edit applied, or
+  with only its MUST and SHOULD findings' edits applied, so a NOTE whose edit
+  the operator waives no longer forces the round's whole re-read; an
+  unapplied MUST or SHOULD edit still reads as `differs`. Spec 078, task 13.
+- **The re-read budget lives in one place.** `start-fix-rounds` reports it
+  as `budget`, `write-review` derives `budget-stop` from the same constant,
+  and `/review`'s loop stops at the reported budget rather than a number of
+  its own. Spec 078, task 14.
 - **Ticking an acceptance criterion no longer stales the analysis.**
   `analysis.md`'s `analyzed-digest` takes `spec.md` with each acceptance
   criterion's checkbox as unticked, so `/implement`'s completion run, which
