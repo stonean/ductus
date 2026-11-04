@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 020-code-review, 022-deterministic-runtime, 047-analyze-findings-durability, 050-constitution, 057-analyze-artifact-and-record-relocation]
 cross-spec-impact:
   - 008-security-rules
@@ -191,7 +191,7 @@ finding's message changes.
 
 A finding left with no disposition is counted in its run's record, and only a
 gating one holds `done` (scenario `findings-cost-in-proportion-to-risk`).
-`check-review-gate`'s last check blocks `in-progress → done` on an outstanding
+`check-review-gate`'s gating-finding check blocks `in-progress → done` on an outstanding
 review MUST or SHOULD violation, or a hard-fail or blocking analyze finding,
 neither waived nor released by its deferral —
 never on a record's `undispositioned` count, which does not split by tier. An

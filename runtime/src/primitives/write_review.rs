@@ -3070,6 +3070,15 @@ mod tests {
         assert!(report.contains("0 fix round(s)"), "{report}");
     }
 
+    /// One round is named alone, several in order with the last joined by
+    /// "and".
+    #[test]
+    fn rounds_are_listed_in_order() {
+        assert_eq!(round_list(&[3]), "round 3");
+        assert_eq!(round_list(&[1, 2]), "rounds 1 and 2");
+        assert_eq!(round_list(&[2, 4, 5]), "rounds 2, 4 and 5");
+    }
+
     /// The budget stopped the loop when at least two re-reads found a MUST or
     /// SHOULD and the last re-read did; a diff-checked round between them is
     /// no re-read.
@@ -3091,6 +3100,12 @@ mod tests {
             (
                 vec![re_read(Findings), re_read(Findings), re_read(Clean)],
                 false,
+            ),
+            // The last re-read, not the last round: a diff-checked round after
+            // it is no re-read.
+            (
+                vec![re_read(Findings), re_read(Findings), checked.clone()],
+                true,
             ),
             (vec![re_read(Findings), checked], false),
             (vec![re_read(Findings)], false),

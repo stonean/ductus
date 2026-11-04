@@ -471,7 +471,7 @@ Step 12 re-reads the fixes this run made before the record is final (spec 078): 
 
 - **A round is derived, never stated.** The run's first base is the snapshot `start-fix-rounds` takes before step 10 writes anything: a commit object of the whole working tree, untracked files included, that moves no ref, index or `HEAD`. A round is everything inside the project that changed since its base, as `brief-re-read` diffs it tree to tree. Each exempt or briefed round's `snapshot`, and a matched check's, is the next round's base, so no round re-lists an earlier one. A commit between rounds changes no round. In a tree another session also edits, its changes since the base join the round; `git worktree` isolates sessions (§concurrent-features).
 - **The loop ends when a round is `empty`**: after a clean re-read, or a matched check with `open` at zero, nothing has changed since the last base. A NOTE fixed afterwards is a change, so it is a round.
-- **An exempt round is not re-read.** When every changed path is an artifact in the reviewed spec's own directory other than a scenario or the data model, `/{project}:analyze` reads each such edit again before `done`; the round is recorded `exempt` and the Summary names it.
+- **An exempt round is not re-read.** When every changed path is a markdown file in the reviewed spec's own directory other than `analysis.md`, a scenario or the data model, `/{project}:analyze` reads each such edit again before `done`; the round is recorded `exempt` and the Summary names it.
 - **The brief is the runtime's.** Hand the independent agent the `brief` path alone: `brief-re-read` renders the round's paths, the command that shows its diff, the severity bar and the result file's contract, so the host restates none of it and adds no scope. A host that cannot start an independent agent prints the path; the operator runs it in a fresh session of any host, whose result file `read-re-read` reads as it would an agent's.
 - **Only a finished re-read counts.** `read-re-read`'s `complete` is a re-read: `clean` with no MUST or SHOULD, `findings` otherwise. `incomplete` — no file, or no `"complete": true`, as a cut-off agent leaves it — and `unparseable` are not, and never read as clean: brief the round again from the same base and start another agent, or record it `not-re-read`.
 - **Each NOTE is an observation**, dispositioned as step 10 dispositions one. A finding on a path outside the round is a NOTE, and changes nothing in the round.
@@ -551,8 +551,9 @@ distinct from an absent digest, which cannot be judged at all.
 read. (`write-review` writes `last-run`, `reviewed-against`, `must-violations`,
 `should-violations`, `low-confidence`, `scope`, `reviewed-digest`, `blocking`,
 and `dispositions` on every run; `examined` when the run stated it, and
-`reviewed-unreadable` when a contract could not be read; the six fix-round
-fields when the run passed its rounds; plus the `waivers` and `decisions`
+`reviewed-unreadable` when a contract could not be read; the fix-round
+fields when the run passed its rounds, `round-waivers` only when a round is
+waived; plus the `waivers` and `decisions`
 lists when present.)
 
 `dispositions:` counts the run's **observations** — `fixed`, `deferred`,
@@ -604,10 +605,12 @@ records `blocking: true`. This is enforced as follows:
    feature directory's markdown lint, unresolved scenario open questions, and
    an undischarged cross-spec impact — any of which halts before the review
    record is consulted. Behind them run the review staleness check, the
-   analyze checks, and — last — the two disposition checks: a `review.md`
+   analyze checks, the two disposition checks — a `review.md`
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
    finding, which for a record the runtime writes is a SHOULD neither waived
-   nor released by its deferral ([Deferrals](#deferrals)). The two review checks
+   nor released by its deferral ([Deferrals](#deferrals)) — and last the
+   fix-round check: a fix round that needed a re-read with neither one nor a
+   waiver. The two review checks
    read the record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 

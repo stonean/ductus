@@ -190,10 +190,10 @@ mod tests {
         ));
     }
 
-    /// A write removes the feature's list files older than a day and keeps
-    /// newer ones.
+    /// `prune_stale` removes the feature's list files older than a day and
+    /// keeps newer ones.
     #[test]
-    fn a_write_prunes_only_stale_files() {
+    fn prune_stale_removes_only_stale_files() {
         let tmp = repo(None);
         let dir = tmp.path().join("results");
         std::fs::create_dir_all(&dir).unwrap();
@@ -216,5 +216,77 @@ mod tests {
             .collect();
         left.sort();
         assert_eq!(left, ["keep.json", "new.json", "old.txt"]);
+    }
+
+    /// A call past the read size prunes the feature's stale list files: the
+    /// write does it, not only the helper.
+    #[test]
+    fn a_call_past_the_read_size_prunes_stale_files() {
+        let tmp = repo(Some("[artifacts]\nread-size-bytes = 1\n"));
+        let dir = tmp.path().join(RESULTS_DIR).join("p/001-x");
+        std::fs::create_dir_all(&dir).unwrap();
+        let old = dir.join("old.json");
+        std::fs::write(&old, "x").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&old)
+            .unwrap()
+            .set_modified(SystemTime::now() - STALE_AFTER - Duration::from_secs(60))
+            .unwrap();
+        let file = place(tmp.path(), "p", "001-x", &["a"], &["a"])
+            .unwrap()
+            .unwrap();
+        assert!(!old.exists(), "a stale list file outlived the call");
+        assert!(tmp.path().join(file).is_file());
+    }
+
+    /// A results directory linked outside the project is refused before
+    /// anything is written through it.
+    #[cfg(unix)]
+    #[test]
+    fn a_results_directory_linked_outside_the_project_is_refused() {
+        let tmp = repo(Some("[artifacts]\nread-size-bytes = 1\n"));
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join(RESULTS_DIR)).unwrap();
+        assert!(matches!(
+            place(tmp.path(), "p", "001-x", &["a"], &["a"]),
+            Err(PrimitiveError::InvalidPath { .. })
+        ));
+        assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
+    }
+
+    /// A list file that cannot be written fails the call, so a result never
+    /// names lists that are not on disk: a directory where the file goes
+    /// refuses the write.
+    #[test]
+    fn a_file_that_cannot_be_written_fails_the_call() {
+        let tmp = repo(Some("[artifacts]\nread-size-bytes = 1\n"));
+        let file = tmp.path().join(
+            place(tmp.path(), "p", "001-x", &["a"], &["a"])
+                .unwrap()
+                .unwrap(),
+        );
+        std::fs::remove_file(&file).unwrap();
+        std::fs::create_dir(&file).unwrap();
+        assert!(matches!(
+            place(tmp.path(), "p", "001-x", &["a"], &["a"]),
+            Err(PrimitiveError::Io { .. })
+        ));
+    }
+
+    /// A results directory that cannot be made fails the call too.
+    #[test]
+    fn a_directory_that_cannot_be_made_fails_the_call() {
+        let tmp = repo(Some("[artifacts]\nread-size-bytes = 1\n"));
+        std::fs::create_dir_all(tmp.path().join(RESULTS_DIR)).unwrap();
+        std::fs::write(
+            tmp.path().join(RESULTS_DIR).join("p"),
+            "a file, not a directory",
+        )
+        .unwrap();
+        assert!(matches!(
+            place(tmp.path(), "p", "001-x", &["a"], &["a"]),
+            Err(PrimitiveError::Io { .. })
+        ));
     }
 }

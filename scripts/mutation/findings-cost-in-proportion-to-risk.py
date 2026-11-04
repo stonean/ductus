@@ -1,5 +1,5 @@
 """Mutation list for spec 058's `findings-cost-in-proportion-to-risk`: only
-gating findings hold `done`. `check-review-gate`'s last check counts unwaived
+gating findings hold `done`. `check-review-gate`'s gating-finding check counts unwaived
 review MUST and SHOULD violations and analyze's hard-fail and blocking
 findings, never the `dispositions:` map's `undispositioned`
 (`runtime/src/primitives/check_review_gate.rs`, 066), and analyze's

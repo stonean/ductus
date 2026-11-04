@@ -377,8 +377,8 @@ fn disposition_block(
 
 /// Gate check 5: the review record carries MUST violations. Names each
 /// deferral that holds `done` in `review.md` too, since a MUST whose deferral
-/// releases nothing stops the gate here and never reaches the last check
-/// (spec 076).
+/// releases nothing stops the gate here and never reaches the gating-finding
+/// check (spec 076).
 fn must_violations_block(
     must_violations: u32,
     feature_dir: &Path,
@@ -413,7 +413,7 @@ fn must_violations_block(
 /// nothing ([`crate::primitives::decisions::releases`]). Empty when none
 /// does. The MUST, analyze-findings and outstanding-findings blocks all
 /// carry it, since a MUST or a gating analyze finding stops the gate before
-/// the last check. A record whose decisions cannot be read, and an entry
+/// the gating-finding check. A record whose decisions cannot be read, and an entry
 /// marked gating that does not read as a deferral, are each said so, rather
 /// than named as none (`QUAL-CLAIM-001`).
 fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String {
@@ -3204,7 +3204,7 @@ mod tests {
     fn a_gating_count_beside_a_false_blocking_flag_still_holds_done() {
         // A hand-edited record whose `blocking` disagrees with its counts
         // passes the MUST and analyze-findings checks, which read the flag;
-        // the last check's sum is what still holds it.
+        // the gating-finding check's sum is what still holds it.
         let tmp = tempdir().unwrap();
         seed(
             tmp.path(),

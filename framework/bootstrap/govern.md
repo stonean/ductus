@@ -705,8 +705,8 @@ last_applied = "rule-files-relocate"
 # Unicode codepoints once trimmed, and each run records it as the waiver of
 # every round the loop would have re-read. Any other value halts
 # /{project}:review, naming the setting, the value and the config file. Absent
-# means the loop runs. Listed here for schema reference; uncomment and edit to
-# use.
+# means the loop runs. It belongs to the `[review]` table above: uncomment
+# that header with it to use.
 #
 # re-reads-off = "Reviews here run on a host without subagents, and no one runs the briefs."
 

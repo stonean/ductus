@@ -119,3 +119,29 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 - [ ] framework/bootstrap/ductus.md — the Claude, Auggie and OpenCode seeds in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-03 by task 7's consumer sweep
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
+
+## 17. Implement scenario: a-supplied-summary-carries-the-loops-account
+
+- [ ] Implement the behavior described in `scenarios/a-supplied-summary-carries-the-loops-account.md`
+- [ ] Change `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`'s "The generated Summary renders" line to say the Summary, supplied or generated
+
+- **Done when**: a supplied Summary carries the loop's account whenever the run passes fix-rounds, a run without them renders it as given, and a test fails when the append is removed
+
+## 18. Fix two notes 078's review re-read found in 066 task 9's change
+
+- [ ] Restore the first line of `the_review_record_remains_a_subject`'s doc comment in `runtime/src/primitives/analyze_subjects.rs` ("The exclusion is the record's alone — the *review* record stays a"), which now opens mid-sentence
+- [ ] Split `every_other_spec_edit_still_moves_its_digest`'s two ticks into separate edits, so normalizing a fenced checkbox inside the criteria alone fails it
+
+- **Done when**: the doc comment reads whole, and each tick in the test moves the digest on its own, shown by a mutation that normalizes only the fenced checkbox
+
+## 19. Fix what 078's review re-read found in 066 task 10's change
+
+- [ ] Apply the prescribed edit of finding [0] in `.ductus/review-rounds/078-review-fix-rounds-are-re-read-within-a-bound/d663dd941b597a0e4af1e96880de2b5b786efc3e/result.json`: 066 `data-model.md`'s inline example lists two `modified-since` paths and says `"modified-since-count": 1`
+- [ ] Apply finding [1]'s edits: `a_result_past_the_read_size_names_a_file_holding_every_list` asserts `deleted` on a fixture that deletes nothing, so three mutations survive; the edits delete a file in its fixture and add M7–M9 to `scripts/mutation/review-scope-cells-and-deletions.py`
+- [ ] Apply finding [2]'s edit: `compute_review_scope.rs`'s module doc still defines `scope` as the plain union
+- [ ] Apply finding [3]'s edit: `scenarios/review-scope-union.md`'s edge case on an empty `plan-affected` contradicts its Behavior paragraph
+- [ ] Apply finding [4]'s edit: `framework/commands/review.md`'s Inputs **Scope** bullet contradicts step 1's deleted-file sentence
+- [ ] Disposition note [5]: 066 `spec.md` line 27 and `framework/reference/implement.md` line 75 still describe the scope as a plain union
+- [ ] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
+
+- **Done when**: each finding's edit is applied or the finding otherwise fixed, and each note fixed, deferred or waived with its reason on the task

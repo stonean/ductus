@@ -776,6 +776,7 @@ fn fixture_tests() -> Vec<&'static str> {
     let mut tests = vec![
         "rust_and_family_19_agree_on_a_built_sweep",
         "rust_and_family_19_agree_on_a_renumbered_directory",
+        "a_pure_rename_reads_alike_in_both_halves",
         "rust_and_family_19_refuse_an_over_limit_window_alike",
     ];
     if cfg!(unix) {

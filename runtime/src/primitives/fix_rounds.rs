@@ -13,7 +13,7 @@ use crate::primitives::compute_review_scope::{project_diff_options, project_path
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
-use crate::schema::primitives::ReReadFinding;
+use crate::schema::primitives::{ReReadFinding, ReReadSeverity};
 
 /// Where the loop's files live, from the project root.
 pub(crate) const ROUNDS_DIR: &str = ".ductus/review-rounds";
@@ -42,8 +42,30 @@ pub(crate) struct RoundRecord {
     pub(crate) paths: Vec<String>,
 }
 
+/// The full sha of the commit `base` names, whatever spelling the caller
+/// used. A round's directory is named by it, so every primitive resolves its
+/// `base` here, and [`round_rel`] only ever names a fixed-shape directory.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when `base` names no commit.
+pub(crate) fn resolve_base(project: &ProjectRepository, base: &str) -> Result<String> {
+    Ok(project
+        .repository
+        .revparse_single(base)?
+        .peel_to_commit()?
+        .id()
+        .to_string())
+}
+
+/// A MUST or SHOULD finding with no prescribed edit: the diff check cannot
+/// verify its fix, so it needs a fix, a deferral or a waiver of its own.
+pub(crate) fn is_unprescribed(finding: &ReReadFinding) -> bool {
+    finding.severity != ReReadSeverity::Note && finding.edits.is_empty()
+}
+
 /// A briefed round's directory, `{feature rounds}/{base}`, from the project
-/// root. `base` is a full sha the caller resolved, so it is a safe name.
+/// root. `base` is a full sha [`resolve_base`] returned, so it is a safe name.
 pub(crate) fn round_rel(feature: &str, base: &str) -> String {
     format!("{ROUNDS_DIR}/{feature}/{base}")
 }

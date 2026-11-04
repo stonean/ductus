@@ -4,7 +4,7 @@ The shapes [078](spec.md)'s fix-round loop reads and writes: the round directory
 
 ## Round directory
 
-`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates the directory first writes its `.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot, and so no round's paths, whatever the repository's own `.gitignore` says.
+`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates it first writes `.ductus/review-rounds/.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot, and so no round's paths, whatever the repository's own `.gitignore` says.
 
 | File | Written by | Holds |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Result:
 ```
 
 - `paths` — the files inside the project that differ between `base` and a snapshot of the working tree taken by this call, tree to tree, bounded to the project as `compute-review-scope` bounds it (`runtime/src/primitives/compute_review_scope.rs`, `project_diff_options` and `project_paths`). Not `modified-since`, whose diff runs through the index and would report every unstaged edit a snapshot base already holds.
-- `kind` — `empty` when `paths` is empty; `exempt` when every path is an analyze subject of this feature that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`); `re-read` otherwise. `exempt` and `re-read` take a snapshot, the next round's base, so a later round never re-includes this one's changes; only `re-read` writes a brief, and only `empty` returns no `snapshot`.
+- `kind` — `empty` when `paths` is empty; `exempt` when every path is an analyze subject of this feature that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`); `re-read` otherwise. `exempt` and `re-read` take a snapshot, the next round's base, so a later round never re-includes this one's changes; only `re-read` writes a brief, and, with the loop on, only `empty` returns no `snapshot`.
 - `re-reads-off` — the `[review] re-reads-off` reason when the switch is set; then no brief is written, and `snapshot`, `brief` and `result` are null.
 - The brief names the spec, its data model and scenarios when it has them, the command that shows the round's change (`git diff --relative {base} {snapshot}`, run from the project root, so no path reaches a shell), the `paths` as a JSON list, the severity bar, and the result file's path and format. Nothing in it comes from the host. Briefing a base again replaces that round's directory, so an earlier `result.json` is never read for a newer brief.
 
@@ -87,7 +87,7 @@ Result: `{ "verdict": "matched", "snapshot": "<sha>", "examined": 3, "differing"
 
 - Each prescribed file is taken from the snapshot, its edits applied in order, each `old` replaced only where it starts at exactly one position, overlapping ones counted, so an ambiguous prescription never applies. The result is compared with a fresh snapshot of the working tree as git stores both — the edited text hashed as a blob against the blob the snapshot holds — so a checkout that converts line endings on disk compares alike. `failed` lists each edit whose `old` occurred zero times or more than once: `{ "finding", "edit", "path", "occurrences" }`, the indexes as `result.json` orders them, and a file the snapshot does not hold as text has none. `differing` lists the prescribed files whose result is not the working tree's; `unprescribed` the files changed since the previous re-read's snapshot that no edit names, by the tree-to-tree diff `brief-re-read` uses.
 - `verdict` — `matched` when all three are empty; `differs` otherwise; `could-not-run` when no `round.toml` was written at the base or it does not parse, `result.json` is missing, incomplete or unparseable, it prescribes no edit — over which a match would pass vacuously — or an edit names a path outside the project, with `problem` naming which (AC15). `could-not-run` carries no `snapshot` and is never a match.
-- `snapshot` — the fresh snapshot, the next round's base after a `matched` check, so a later round never re-lists the verified edits. After `differs`, the round is re-read whole from its own base.
+- `snapshot` — the fresh snapshot, returned on a `matched` check alone: the next round's base, so a later round never re-lists the verified edits. `differs` carries none, since the round is re-read whole from its own base.
 - `open` — the previous re-read's MUST and SHOULD findings with no `edits`. A `matched` round with `open` at zero ends the loop; with `open` above zero those findings still need a fix, a deferral or a waiver.
 - It writes git objects for the snapshot and nothing else.
 

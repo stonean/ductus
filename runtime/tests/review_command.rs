@@ -4,7 +4,8 @@
 //! review-runtime-acceleration procedure end-to-end: `compute-review-scope` →
 //! `discover-rule-files` → five `performReview` passes → `process-waivers` →
 //! two host-responsibility steps (process decisions, fix and route; spec 058)
-//! → `write-review`. The two are prose the exec walker no-ops by design, which
+//! → `write-review` → a third, the fix-round loop (spec 078). The three are
+//! prose the exec walker no-ops by design, which
 //! is what records an exec run's observations as undispositioned rather than
 //! deciding them with nobody to confirm. `process-waivers` runs after the
 //! passes so waivers are classified against real findings (spec 022 scenario

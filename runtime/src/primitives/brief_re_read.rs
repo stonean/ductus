@@ -35,7 +35,7 @@ const RESULT_CONTRACT: &str = r#"```json
 
 - Write the file **last**, once your reading is done. `"complete": true` is what says you finished: a file without it, or no file, reads as a re-read that did not finish.
 - `severity` is `MUST`, `SHOULD` or `NOTE`; `path` is from the project root; `text` is one line.
-- `edits` is optional. Each prescribes one replacement: its `old` text must occur **exactly once** in its file as this round left it, and must not be empty, so a new file is never a prescription. Prescribe only an edit whose result you have judged correct; a round that applies exactly the edits you prescribe is checked against them instead of being re-read.
+- `edits` is optional. Each prescribes one replacement: its `old` text must occur **exactly once** in its file as this round left it, once the edits listed before it for that file are applied, and must not be empty, so a new file is never a prescription. Prescribe only an edit whose result you have judged correct; a round that applies exactly the edits you prescribe is checked against them instead of being re-read.
 - Put every finding in this file: nothing else you report is read. An empty `findings` list is a clean re-read."#;
 
 /// Execute the `brief-re-read` primitive.
@@ -65,14 +65,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     // rather than briefing it.
     let re_reads_off = fix_rounds::re_reads_off(repo)?;
     let project = ProjectRepository::discover(repo)?;
-    // The full sha, whatever spelling the caller used: it names the round's
-    // directory, so it must be a fixed-shape string.
-    let base = project
-        .repository
-        .revparse_single(&args.base)?
-        .peel_to_commit()?
-        .id()
-        .to_string();
+    let base = fix_rounds::resolve_base(&project, &args.base)?;
     // The rounds directory and its self-ignore exist before the snapshot, so
     // the snapshot never holds the loop's own files. The snapshot is taken
     // whatever the round turns out to be: its tree is what the round's paths
@@ -199,7 +192,7 @@ You are re-reading one round of fixes made during a review of `{feature}`. You d
 
 ## The result file
 
-Write `{result}` as JSON:
+Write `{result}`, from the project root, as JSON:
 
 {RESULT_CONTRACT}
 ",
@@ -303,6 +296,81 @@ mod tests {
             let result = brief(&tmp, &base).unwrap();
             assert_eq!(result.kind, RoundKind::ReRead, "{path}");
             assert!(result.brief.is_some(), "{path}");
+        }
+    }
+
+    /// A round that edits the spec body and code is re-read: one exempt path
+    /// does not exempt the round, every path must be (AC2).
+    #[test]
+    fn a_spec_body_edit_with_code_needs_a_re_read() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Y\n",
+        );
+        write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::ReRead);
+        assert_eq!(result.paths, ["specs/001-x/spec.md", "src/a.rs"]);
+    }
+
+    /// In a project below its repository's root, a round's paths are named
+    /// from the project root, as every path the loop hands out is.
+    #[test]
+    fn a_subdirectory_projects_paths_are_project_relative() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        write(
+            &project.join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# X\n",
+        );
+        write(&project.join("src/a.rs"), "fn a() {}\n");
+        commit_all(&repository, "init");
+        let base = start_fix_rounds::run(
+            &StartFixRoundsArgs {
+                feature: FEATURE.to_string(),
+            },
+            &project,
+        )
+        .unwrap()
+        .base;
+        write(&project.join("src/a.rs"), "fn a() { let _ = 1; }\n");
+        let result = run(
+            &BriefReReadArgs {
+                feature: FEATURE.to_string(),
+                base,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.kind, RoundKind::ReRead);
+        assert_eq!(result.paths, ["src/a.rs"]);
+    }
+
+    /// The result-file example every brief carries is one `read-re-read`
+    /// reads as complete, so a brief never teaches a shape the parser refuses.
+    #[test]
+    fn the_briefs_result_example_parses() {
+        let example = RESULT_CONTRACT
+            .strip_prefix("```json\n")
+            .and_then(|rest| rest.split_once("\n```"))
+            .map(|(json, _)| json)
+            .expect("the contract opens with a json fence");
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(fix_rounds::RESULT_FILE);
+        fs::write(&path, example).unwrap();
+        match fix_rounds::read_result(&path).unwrap() {
+            fix_rounds::ResultFile::Complete(findings) => {
+                assert_eq!(findings.len(), 1, "{findings:?}");
+                assert_eq!(
+                    findings[0].severity,
+                    crate::schema::primitives::ReReadSeverity::Should
+                );
+                assert_eq!(findings[0].edits.len(), 1, "{findings:?}");
+            }
+            other => panic!("the brief's example is not a complete result: {other:?}"),
         }
     }
 

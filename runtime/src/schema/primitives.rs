@@ -961,7 +961,8 @@ pub struct FailedEdit {
     pub edit: usize,
     /// The edit's file, from the project root.
     pub path: String,
-    /// Where `old` occurs in the file as the previous re-read read it,
+    /// How often `old` occurs in the file as the previous re-read read it,
+    /// once the edits listed before it for that file are applied,
     /// overlapping occurrences counted: zero, or more than one. A file the
     /// snapshot does not hold as text has none.
     pub occurrences: usize,
@@ -976,8 +977,7 @@ pub struct CheckPrescriptionsResult {
     /// Why the check could not run, naming the file or the edit.
     pub problem: Option<String>,
     /// The snapshot of the working tree the round was compared with: the
-    /// next round's base when the verdict is `matched`. Absent when the check
-    /// could not run.
+    /// next round's base. Absent unless the verdict is `matched`.
     pub snapshot: Option<String>,
     /// How many prescribed files were compared.
     pub examined: usize,

@@ -11,9 +11,11 @@ its version and date.
 ### Added
 
 - **`/review` re-reads the fixes it makes.** Before the record is final, an
-  independent agent re-reads each round of fixes the review made, from a
-  brief the runtime writes: the round's paths, derived from the repository,
-  and a fixed severity bar. A round that only applies the edits a re-read
+  independent agent re-reads each round of fixes the review made, unless it
+  changed only markdown in the spec's own directory other than `analysis.md`,
+  its scenarios and its data model, from a brief the runtime writes: the
+  round's paths, derived from the repository, and a fixed severity bar. A
+  round that only applies the edits a re-read
   prescribed is checked by diff instead, and after two re-reads that find a
   MUST or SHOULD the loop waits for the operator. A host that cannot start
   an agent prints the brief for the operator to run in a fresh session. Four

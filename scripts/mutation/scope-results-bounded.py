@@ -92,14 +92,14 @@ MUTATIONS = [
         'src/primitives/bounded_lists.rs',
         '                        .is_ok_and(|age| age > STALE_AFTER)',
         '                        .is_ok_and(|age| age >= Duration::ZERO)',
-        'bounded_lists::tests::a_write_prunes_only_stale_files',
+        'bounded_lists::tests::prune_stale_removes_only_stale_files',
     ),
     (
         'M11 a write prunes the file it is about to name',
         'src/primitives/bounded_lists.rs',
         '            && entry.file_name() != keep',
         '            && !keep.is_empty()',
-        'bounded_lists::tests::a_write_prunes_only_stale_files',
+        'bounded_lists::tests::prune_stale_removes_only_stale_files',
     ),
     (
         'M12 the results directory does not ignore itself, so a list file joins the next scope',
@@ -114,5 +114,39 @@ MUTATIONS = [
         '    let name = format!("{}.json", super::hex(&Sha256::digest(body.as_bytes())));',
         '    let name = format!("{}.json", super::hex(&Sha256::digest(b"lists")));',
         'bounded_lists::tests::a_file_is_named_by_its_content',
+    ),
+    (
+        'M14 a write no longer prunes the feature\'s stale list files',
+        'src/primitives/bounded_lists.rs',
+        '    prune_stale(&dir, &name, SystemTime::now());',
+        '    let _ = prune_stale;',
+        'bounded_lists::tests::a_call_past_the_read_size_prunes_stale_files',
+    ),
+    (
+        'M15 a results directory linked outside the project is written through',
+        'src/primitives/bounded_lists.rs',
+        '    super::validate_contained(repo, &dir_rel)?;',
+        '    let _ = super::validate_contained;',
+        'bounded_lists::tests::a_results_directory_linked_outside_the_project_is_refused',
+    ),
+    (
+        'M16 a list file that cannot be written still names its path',
+        'src/primitives/bounded_lists.rs',
+        [
+            '    std::fs::create_dir_all(&dir).map_err(|source| PrimitiveError::Io {\n        path: dir.clone(),\n        source,\n    })?;',
+            '    write_atomic(&dir.join(&name), &body)?;',
+        ],
+        [
+            '    let _ = std::fs::create_dir_all(&dir);',
+            '    let _ = write_atomic(&dir.join(&name), &body);',
+        ],
+        'bounded_lists::tests::a_file_that_cannot_be_written_fails_the_call',
+    ),
+    (
+        'M17 a list file the write cannot land still names its path',
+        'src/primitives/bounded_lists.rs',
+        '    write_atomic(&dir.join(&name), &body)?;',
+        '    let _ = write_atomic(&dir.join(&name), &body);',
+        'bounded_lists::tests::a_file_that_cannot_be_written_fails_the_call',
     ),
 ]

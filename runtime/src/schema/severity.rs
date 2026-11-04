@@ -85,7 +85,8 @@ pub enum ReviewSeverity {
 
 impl ReviewSeverity {
     /// Whether this tier sets the review record's `blocking` flag. An unwaived
-    /// `Should` still holds `done`, at the pre-`done` gate's last check.
+    /// `Should` still holds `done`, at the pre-`done` gate's gating-finding
+    /// check.
     ///
     /// Read by the cross-pass dedup's rank (`finding_rank` in
     /// `write_review.rs`), and expressed once on the type: a tier that is not

@@ -19,7 +19,7 @@ use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
 use crate::schema::primitives::{
     CheckPrescriptionsArgs, CheckPrescriptionsResult, FailedEdit, PrescriptionVerdict,
-    ReReadFinding, ReReadSeverity,
+    ReReadFinding,
 };
 
 /// Execute the `check-prescriptions` primitive.
@@ -46,12 +46,7 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
         });
     }
     let project = ProjectRepository::discover(repo)?;
-    let base = project
-        .repository
-        .revparse_single(&args.base)?
-        .peel_to_commit()?
-        .id()
-        .to_string();
+    let base = fix_rounds::resolve_base(&project, &args.base)?;
     let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
     let could_not_run = |problem: String| CheckPrescriptionsResult {
         problem: Some(problem),
@@ -67,7 +62,7 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     };
     let open = findings
         .iter()
-        .filter(|f| f.severity != ReReadSeverity::Note && f.edits.is_empty())
+        .filter(|f| fix_rounds::is_unprescribed(f))
         .count();
 
     let (now, _) = fix_rounds::snapshot(&project)?;
@@ -86,7 +81,7 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     Ok(CheckPrescriptionsResult {
         verdict,
         problem: None,
-        snapshot: Some(now),
+        snapshot: (verdict == PrescriptionVerdict::Matched).then_some(now),
         examined: by_file.len(),
         differing,
         unprescribed,
@@ -309,6 +304,56 @@ mod tests {
         assert!(result.snapshot.is_some());
     }
 
+    /// In a project below its repository's root, a prescription's path is
+    /// from the project root and is found in git's tree, so exactly the
+    /// prescribed edit still matches.
+    #[test]
+    fn a_subdirectory_project_matches_exactly_the_prescribed_edit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        write(
+            &project.join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n",
+        );
+        write(&project.join("a.txt"), "hello world\n");
+        commit_all(&repository, "init");
+        let base = start_fix_rounds::run(
+            &StartFixRoundsArgs {
+                feature: FEATURE.to_string(),
+            },
+            &project,
+        )
+        .unwrap()
+        .base;
+        write(&project.join("a.txt"), "hello world, again\n");
+        let brief = brief_re_read::run(
+            &BriefReReadArgs {
+                feature: FEATURE.to_string(),
+                base: base.clone(),
+            },
+            &project,
+        )
+        .unwrap();
+        write(
+            &project.join(brief.result.unwrap()),
+            &format!(
+                r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}]}}"#
+            ),
+        );
+        write(&project.join("a.txt"), "hello world, once more\n");
+        let result = run(
+            &CheckPrescriptionsArgs {
+                feature: FEATURE.to_string(),
+                base,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.verdict, PrescriptionVerdict::Matched, "{result:?}");
+        assert_eq!(result.examined, 1);
+    }
+
     /// Two edits to one file apply in order, each to the text the one before
     /// left.
     #[test]
@@ -353,6 +398,8 @@ mod tests {
         assert_eq!(result.verdict, PrescriptionVerdict::Differs);
         assert_eq!(result.unprescribed, ["b.txt"]);
         assert_eq!(result.differing, [] as [String; 0]);
+        // Not the next round's base: the round is re-read from its own.
+        assert_eq!(result.snapshot, None);
     }
 
     /// A prescribed file edited past its prescription differs, a formatter's

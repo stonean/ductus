@@ -30,7 +30,7 @@ A brief the host writes can carry scope the fixer chose, so `brief-re-read` rend
 
 ### The round directory ignores itself
 
-`.ductus/review-rounds/{feature}/` writes its own `.gitignore` of `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`). Its files then never enter a snapshot, and so no round's paths, including in an adopter whose `.gitignore` predates 078, so no gitignore migration is needed. One subdirectory per round is named by its base sha, and `start-fix-rounds` removes earlier ones.
+`.ductus/review-rounds/` writes its own `.gitignore` of `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`). Its files then never enter a snapshot, and so no round's paths, including in an adopter whose `.gitignore` predates 078, so no gitignore migration is needed. One subdirectory per round is named by its base sha, and `start-fix-rounds` removes earlier ones.
 
 ### The re-read reports through a file the runtime reads
 
@@ -42,7 +42,7 @@ The loop ends at a clean re-read, or at a `matched` diff check whose `open` is z
 
 ### The record and the gate are 066's
 
-AGENTS.md routes "the audit records and the completion gate" to 066 as an owner scenario with a task. `write-review` takes the per-round `fix-rounds` list and derives every count, so no caller can supply a count that disagrees with its rounds; an absent list writes no field, which keeps a run that stated nothing apart from a zero, as `examined` does (`runtime/src/schema/primitives.rs`, `WriteReviewArgs.examined`). `check-review-gate` gains check 12, after `undispositioned-findings`. The constitution's audit-record table gains the fields, which `scripts/lint-governing-size.sh` holds to 50,000 bytes against the current 49,951, so that task cuts as much as it adds.
+AGENTS.md routes "the audit records and the completion gate" to 066 as an owner scenario with a task. `write-review` takes the per-round `fix-rounds` list and derives every count, so no caller can supply a count that disagrees with its rounds; an absent list writes no field, which keeps a run that stated nothing apart from a zero, as `examined` does (`runtime/src/schema/primitives.rs`, `WriteReviewArgs.examined`). `check-review-gate` gains check 12, after `undispositioned-findings`. The constitution's audit-record table gains the fields, which `scripts/lint-governing-size.sh` holds to 50,000 bytes, so that task cuts as much as it adds.
 
 ### The switch is read by the runtime
 
@@ -99,7 +99,7 @@ The loop step says what to do when the host can start an independent agent and w
 - **Record fields implemented under this spec** — rejected by AGENTS.md's routing rule; 066's `done` now waits on its scenario's task, and this spec's AC12 and AC13 are verified against that task's work.
 - **Clearing the round directory never** — rejected: it would grow by a directory per round for the life of the checkout. Clearing it at the run's start means two concurrent reviews of one feature in one tree clear each other's rounds; §concurrent-features already answers a shared tree with `git worktree`.
 - **Known limitation:** a snapshot stores every untracked, non-ignored file as a blob, so an unignored build directory makes each snapshot large until git prunes it.
-- **Known limitation:** `framework/reference/review.md` is already over the 50,000-byte read size (57,054 bytes) and grows with the loop's walk; no check gates it.
+- **Known limitation:** `framework/reference/review.md` is already over the 50,000-byte read size and grows with the loop's walk; no check gates it.
 
 ## Cross-spec impact
 

@@ -14,7 +14,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > no work or work that does not exist, and leave a gating finding its deferral
 > releases out of the counts. `process-decisions` returns `lapsed`
 > for a deferral whose work is complete while its finding still fires, and
-> `check-review-gate`'s last check names each deferral that holds `done`. The
+> `check-review-gate`'s gating-finding check names each deferral that holds `done`. The
 > `dispositions:` map counts `deferred` and `waived` where it counted `routed`
 > and `discarded`. [data-model.md](data-model.md) records the renamed keys.
 

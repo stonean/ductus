@@ -34,13 +34,7 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
         });
     }
     let project = ProjectRepository::discover(repo)?;
-    // The full sha `brief-re-read` named the round's directory by.
-    let base = project
-        .repository
-        .revparse_single(&args.base)?
-        .peel_to_commit()?
-        .id()
-        .to_string();
+    let base = fix_rounds::resolve_base(&project, &args.base)?;
     let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
     Ok(match fix_rounds::read_result(&dir.join(RESULT_FILE))? {
         ResultFile::Incomplete(problem) => ReadReReadResult {
@@ -63,7 +57,7 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
                 notes: count(ReReadSeverity::Note),
                 unprescribed: findings
                     .iter()
-                    .filter(|f| f.severity != ReReadSeverity::Note && f.edits.is_empty())
+                    .filter(|f| fix_rounds::is_unprescribed(f))
                     .count(),
                 findings,
             }
