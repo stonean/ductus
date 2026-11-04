@@ -1,7 +1,8 @@
 """Mutation list for 078's `a-reviews-own-record-is-no-fix-round`: the
 reviewed feature's own `review.md` is never a fix round's path
 (`runtime/src/primitives/fix_rounds.rs`, `round_paths`, which `brief-re-read`
-and `check-prescriptions` call).
+and `check-prescriptions` call), and `brief-re-read` reports the `[review]
+re-reads-off` reason whatever the round's kind.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/own-record-is-no-round.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -28,5 +29,12 @@ MUTATIONS = [
         '    let paths = fix_rounds::round_paths(&project, &base, &snapshot, &feature_rel)?;',
         '    let paths = fix_rounds::changed_between(&project, &base, &snapshot)?;',
         'brief_re_read::tests::the_reviews_own_record_is_no_round_path',
+    ),
+    (
+        'M3 the switch is reported on a re-read round alone',
+        'src/primitives/brief_re_read.rs',
+        '        re_reads_off,\n        ..BriefReReadResult::default()',
+        '        re_reads_off: re_reads_off.filter(|_| kind == RoundKind::ReRead),\n        ..BriefReReadResult::default()',
+        'brief_re_read::tests::the_switch_is_reported_on_an_empty_or_exempt_round',
     ),
 ]

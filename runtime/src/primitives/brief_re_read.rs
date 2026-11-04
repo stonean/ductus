@@ -35,15 +35,16 @@ const RESULT_CONTRACT: &str = r#"```json
 
 - Write the file **last**, once your reading is done. `"complete": true` is what says you finished: a file without it, or no file, reads as a re-read that did not finish.
 - `severity` is `MUST`, `SHOULD` or `NOTE`; `path` is from the project root; `text` is one line.
-- `edits` is optional. Each prescribes one replacement: its `old` text must occur **exactly once** in its file as this round left it, once the edits listed before it for that file are applied, and must not be empty, so a new file is never a prescription. Prescribe only an edit whose result you have judged correct; a round that applies exactly the edits you prescribe is checked against them instead of being re-read.
+- `edits` is optional. Each prescribes one replacement: its `old` text must occur **exactly once** in its file as this round left it, as the round's `git diff` shows it (line endings included), once the edits listed before it for that file are applied, and must not be empty, so a new file is never a prescription. Prescribe only an edit whose result you have judged correct; a round that applies exactly the edits you prescribe is checked against them instead of being re-read.
 - Put every finding in this file: nothing else you report is read. An empty `findings` list is a clean re-read."#;
 
 /// Execute the `brief-re-read` primitive.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidPath`] when `feature` would leave the spec root or
-/// the round directory resolves outside the project,
+/// [`PrimitiveError::InvalidArgument`] when `feature` is not a feature
+/// directory name, [`PrimitiveError::InvalidPath`] when it would leave the
+/// spec root or the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
 /// [`PrimitiveError::InvalidReReadsOff`] or [`PrimitiveError::Toml`] for a
 /// malformed `[review] re-reads-off` or config file,
@@ -54,14 +55,8 @@ const RESULT_CONTRACT: &str = r#"```json
 /// counts the round as not re-read.
 pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     let layout = paths::Paths::load(repo);
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
+    fix_rounds::validate_feature("brief-re-read", repo, &layout.specs_root, &args.feature)?;
     let feature_rel = format!("{}/{}", layout.specs_root, args.feature);
-    if !repo.join(&feature_rel).is_dir() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        });
-    }
     // Read before anything is written, so a malformed switch halts the round
     // rather than briefing it.
     let re_reads_off = fix_rounds::re_reads_off(repo)?;
@@ -91,7 +86,6 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         // written for the earlier brief is never read for this one.
         fix_rounds::clear_rounds(&round_dir)?;
         let record = RoundRecord {
-            base: base.clone(),
             snapshot: snapshot.clone(),
             paths: paths.clone(),
         };
@@ -128,7 +122,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
 /// as `compute-review-scope` bounds its lists. `round.toml` and the brief
 /// already hold every path, whatever the form.
 fn bounded(repo: &Path, feature: &str, mut result: BriefReReadResult) -> Result<BriefReReadResult> {
-    let paths = result.paths.clone().unwrap_or_default();
+    let paths = result.paths.as_deref().unwrap_or_default();
     result.paths_count = paths.len();
     let lists = serde_json::json!({ "paths": paths });
     if let Some(file) =
@@ -144,8 +138,9 @@ fn bounded(repo: &Path, feature: &str, mut result: BriefReReadResult) -> Result<
 /// What a round needs, from its changed paths: none is `empty`; every one an
 /// analyze subject of the feature (`feature_prefix` is `{specs-root}/{feature}/`)
 /// that is not a durable contract is `exempt`, since an edit to one stales the
-/// analyze record and `/{project}:analyze` reads it again before `done`; any
-/// other path makes it `re-read`. So `analysis.md`, which is no analyze
+/// analyze record and `/{project}:analyze` reads it again before `done` (a
+/// criterion's tick, outside that record's digest, is verified against the
+/// tree before the spec closes instead); any other path makes it `re-read`. So `analysis.md`, which is no analyze
 /// subject, and a non-markdown file in the feature directory both need one.
 fn classify(paths: &[String], feature_prefix: &str) -> RoundKind {
     if paths.is_empty() {
@@ -470,10 +465,7 @@ mod tests {
         let record: RoundRecord =
             toml::from_str(&fs::read_to_string(round.join(ROUND_FILE)).unwrap()).unwrap();
         assert_eq!(record.paths, expected);
-        assert_eq!(
-            (record.base.as_str(), record.snapshot.as_str()),
-            (base.as_str(), snapshot.as_str())
-        );
+        assert_eq!(record.snapshot, snapshot);
 
         let text = fs::read_to_string(tmp.path().join(result.brief.unwrap())).unwrap();
         let result_rel = result.result.unwrap();
@@ -578,6 +570,34 @@ mod tests {
         assert_eq!(fs::read_dir(rounds).unwrap().count(), 0);
     }
 
+    /// The switch's reason is reported whatever the round's kind, so a run
+    /// with the loop off prints it even when its round is empty or exempt
+    /// (AC14; scenario `a-reviews-own-record-is-no-fix-round`).
+    #[test]
+    fn the_switch_is_reported_on_an_empty_or_exempt_round() {
+        let reason = "No one here runs re-read briefs.";
+        let tmp = fixture();
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            &format!("[review]\nre-reads-off = \"{reason}\"\n"),
+        );
+        let base = start(&tmp);
+        let empty = brief(&tmp, &base).unwrap();
+        assert_eq!(
+            (empty.kind, empty.re_reads_off.as_deref()),
+            (RoundKind::Empty, Some(reason))
+        );
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Y\n",
+        );
+        let exempt = brief(&tmp, &base).unwrap();
+        assert_eq!(
+            (exempt.kind, exempt.re_reads_off.as_deref()),
+            (RoundKind::Exempt, Some(reason))
+        );
+    }
+
     #[test]
     fn a_malformed_switch_or_an_unknown_base_is_an_error() {
         let tmp = fixture();
@@ -595,5 +615,25 @@ mod tests {
             brief(&tmp, "0123456789abcdef0123456789abcdef01234567").unwrap_err(),
             PrimitiveError::Git(_)
         ));
+    }
+
+    /// `feature` names a rounds directory and is rendered into the brief, so
+    /// a name outside the feature-name allowlist is refused (`BE-INPUT-002`).
+    #[test]
+    fn a_name_outside_the_allowlist_is_refused() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        let err = run(
+            &BriefReReadArgs {
+                feature: ".".to_string(),
+                base,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidArgument { .. }),
+            "{err:?}"
+        );
     }
 }

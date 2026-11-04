@@ -29,4 +29,11 @@ MUTATIONS = [
         '        budget: 0,',
         'start_fix_rounds::tests::the_snapshot_is_the_working_tree',
     ),
+    (
+        'M3 the budget sentence counts the budget, not the re-reads',
+        'src/primitives/write_review.rs',
+        '            record.with_findings,\n            fix_rounds::RE_READ_BUDGET',
+        '            fix_rounds::RE_READ_BUDGET,\n            fix_rounds::RE_READ_BUDGET',
+        'write_review::tests::the_budget_stop_needs_two_finding_re_reads_and_a_finding_last',
+    ),
 ]

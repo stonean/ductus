@@ -9,8 +9,10 @@
 
 use std::path::Path;
 
+#[cfg(doc)]
+use crate::primitives::PrimitiveError;
 use crate::primitives::fix_rounds;
-use crate::primitives::{PrimitiveError, ProjectRepository, Result};
+use crate::primitives::{ProjectRepository, Result};
 use crate::schema::paths;
 use crate::schema::primitives::{StartFixRoundsArgs, StartFixRoundsResult};
 
@@ -18,22 +20,22 @@ use crate::schema::primitives::{StartFixRoundsArgs, StartFixRoundsResult};
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidPath`] when `feature` would leave the spec root or
-/// the round directory resolves outside the project,
+/// [`PrimitiveError::InvalidArgument`] when `feature` is not a feature
+/// directory name, [`PrimitiveError::InvalidPath`] when it would leave the
+/// spec root or the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
+/// [`PrimitiveError::InvalidReReadsOff`] or [`PrimitiveError::Toml`] for a
+/// malformed `[review] re-reads-off` or config file,
 /// [`PrimitiveError::Io`] when the round directory cannot be cleared, and
 /// [`PrimitiveError::Git`] for a project no work tree contains or any libgit2
 /// failure. An error is never a base: the host records the run's first round
 /// as not re-read.
 pub fn run(args: &StartFixRoundsArgs, repo: &Path) -> Result<StartFixRoundsResult> {
     let layout = paths::Paths::load(repo);
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
-    if !repo.join(&layout.specs_root).join(&args.feature).is_dir() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        });
-    }
+    fix_rounds::validate_feature("start-fix-rounds", repo, &layout.specs_root, &args.feature)?;
+    // Read before the run writes any fix, so a malformed switch halts the run
+    // here rather than at the first round, after its fixes have landed.
+    fix_rounds::re_reads_off(repo)?;
     // Discovered before anything is cleared, so a project outside any work
     // tree errors with its earlier rounds intact.
     let project = ProjectRepository::discover(repo)?;
@@ -57,6 +59,7 @@ mod tests {
     use git2::{Oid, Repository};
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use crate::primitives::git_fixture::{commit_all, write};
 
     fn args(feature: &str) -> StartFixRoundsArgs {
@@ -229,5 +232,45 @@ mod tests {
             matches!(err, PrimitiveError::FeatureNotFound { .. }),
             "{err:?}"
         );
+    }
+
+    /// `feature` is a feature directory name by the runtime's allowlist
+    /// (`BE-INPUT-002`), refused before anything is cleared: `.` names the
+    /// spec root, and the rounds directory itself, so it would empty every
+    /// feature's rounds, and a nested path names rounds no feature owns.
+    #[test]
+    fn a_name_outside_the_allowlist_clears_nothing() {
+        let (tmp, _repository) = fixture();
+        write(&tmp.path().join("specs/001-x/scenarios/s.md"), "# S\n");
+        let rounds = tmp.path().join(fix_rounds::ROUNDS_DIR);
+        write(&rounds.join("002-y/def/brief.md"), "another feature's\n");
+        for feature in [".", "001-x/scenarios"] {
+            let err = run(&args(feature), tmp.path()).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidArgument { .. }),
+                "{feature}: {err:?}"
+            );
+        }
+        assert!(rounds.join("002-y/def/brief.md").is_file());
+    }
+
+    /// A malformed `[review] re-reads-off` halts the run before its first
+    /// fix, here, with the feature's earlier rounds intact, rather than at
+    /// the first round after the fixes have landed.
+    #[test]
+    fn a_malformed_switch_halts_before_anything_is_cleared() {
+        let (tmp, _repository) = fixture();
+        let rounds = tmp.path().join(fix_rounds::ROUNDS_DIR);
+        write(&rounds.join("001-x/abc/brief.md"), "old brief\n");
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[review]\nre-reads-off = \"short\"\n",
+        );
+        let err = run(&args("001-x"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReReadsOff { .. }),
+            "{err:?}"
+        );
+        assert!(rounds.join("001-x/abc/brief.md").is_file());
     }
 }

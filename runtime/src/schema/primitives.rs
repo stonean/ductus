@@ -833,7 +833,8 @@ pub enum RoundKind {
     #[default]
     Empty,
     /// Every changed path is an analyze subject of the feature that is not a
-    /// durable contract, which `/{project}:analyze` reads again before `done`.
+    /// durable contract, which `/{project}:analyze` reads again before `done`,
+    /// but for a criterion's tick, outside the analysis digest.
     Exempt,
     /// Anything else: the round needs a re-read.
     ReRead,
@@ -852,7 +853,8 @@ pub struct BriefReReadResult {
     /// whether the round is empty.
     pub paths_count: usize,
     /// Files inside the project that differ between the base and a snapshot
-    /// of the working tree this call takes, from the project root, sorted.
+    /// of the working tree this call takes, from the project root, sorted,
+    /// the feature's own `review.md` left out.
     /// Absent in the file form; `round.toml` and the brief carry every one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paths: Option<Vec<String>>,
@@ -973,8 +975,8 @@ pub struct ReadReReadResult {
     pub form: ListsForm,
     /// Entries in `findings`, in either form.
     pub findings_count: usize,
-    /// Every finding, as the file holds it; empty unless `complete`. Absent
-    /// in the file form.
+    /// Every finding, a MUST or SHOULD outside the round carried as a NOTE;
+    /// empty unless `complete`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub findings: Option<Vec<ReReadFinding>>,
     /// In the file form, the file holding `findings` whole, from the project
@@ -1002,7 +1004,8 @@ pub struct CheckPrescriptionsArgs {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PrescriptionVerdict {
-    /// The round is exactly the prescribed edits, each applied as written.
+    /// The round is exactly the prescribed edits: each MUST and SHOULD edit
+    /// applied as written, and a file's NOTE edits applied or all declined.
     Matched,
     /// It is not: something failed, differs or was not prescribed.
     Differs,
@@ -1050,15 +1053,18 @@ pub struct CheckPrescriptionsResult {
     pub unprescribed_count: usize,
     /// Entries in `failed`, in either form.
     pub failed_count: usize,
-    /// Prescribed files whose edited text is not what the working tree holds.
+    /// Prescribed files the working tree holds neither with every edit
+    /// applied nor with only their MUST and SHOULD findings' edits.
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub differing: Option<Vec<String>>,
-    /// Files changed since the previous re-read's snapshot that no edit names.
+    /// Files changed since the previous re-read's snapshot that no edit names,
+    /// the feature's own `review.md` left out.
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unprescribed: Option<Vec<String>>,
-    /// Edits whose `old` did not occur exactly once. Absent in the file form.
+    /// For a file that matches neither text, each edit whose `old` did not
+    /// occur exactly once. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failed: Option<Vec<FailedEdit>>,
     /// In the file form, the file holding the three lists whole, from the

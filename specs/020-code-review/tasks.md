@@ -124,3 +124,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] The runtime's `performReview` extension carries what the pass needs to apply the routing, with a test that fails when the routing is removed
 
 - **Done when**: review reports a defect two loaded rules overlap on under the owner a loaded rule's Verification names, the yielding rule keeping it where the owner's file is not loaded or has no pass, and 008 task 36's call is back-linked by the scenario
+
+## 16. Bring framework/reference/review.md under the read size
+
+- [ ] `framework/reference/review.md` is 64,484 bytes (`wc -c`, 2026-11-04, with 078's second review's edits) against the 50,000-byte `[artifacts] read-size-bytes`, so every agent reads it in parts. Deferred by 078's second review from its plan's known limitation
+- [ ] Cut restatement the constitution's §text-first-artifacts rules out, or split the reference by section, keeping every section other commands and artifacts cite resolving
+
+- **Done when**: `wc -c framework/reference/review.md` is at most 50,000, and every citation of its sections still resolves

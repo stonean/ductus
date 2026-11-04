@@ -14,8 +14,10 @@ use std::path::Path;
 
 use git2::{ObjectType, Oid};
 
+#[cfg(doc)]
+use crate::primitives::PrimitiveError;
 use crate::primitives::fix_rounds::{self, RESULT_FILE, ResultFile, RoundRecord};
-use crate::primitives::{PrimitiveError, ProjectRepository, Result};
+use crate::primitives::{ProjectRepository, Result};
 use crate::schema::paths;
 use crate::schema::primitives::{
     CheckPrescriptionsArgs, CheckPrescriptionsResult, FailedEdit, ListsForm, PrescriptionVerdict,
@@ -25,13 +27,15 @@ use crate::schema::primitives::{
 /// Execute the `check-prescriptions` primitive.
 ///
 /// It snapshots the working tree, as `brief-re-read` does, so it writes git
-/// objects, and past the read size the list file its result names, and
-/// nothing else.
+/// objects, and past the read size the list file its result names, with
+/// `bounded_lists::place`'s `.ductus/results/.gitignore` and its removal of
+/// the feature's stale list files, and nothing else.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidPath`] when `feature` would leave the spec root or
-/// the round directory resolves outside the project,
+/// [`PrimitiveError::InvalidArgument`] when `feature` is not a feature
+/// directory name, [`PrimitiveError::InvalidPath`] when it would leave the
+/// spec root or the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
 /// [`PrimitiveError::Git`] when `base` names no commit or a libgit2 call
 /// fails, [`PrimitiveError::Io`] when a round file exists but cannot be read
@@ -41,13 +45,12 @@ use crate::schema::primitives::{
 /// neither is ever a match.
 pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescriptionsResult> {
     let layout = paths::Paths::load(repo);
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
-    if !repo.join(&layout.specs_root).join(&args.feature).is_dir() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        });
-    }
+    fix_rounds::validate_feature(
+        "check-prescriptions",
+        repo,
+        &layout.specs_root,
+        &args.feature,
+    )?;
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;
     let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
@@ -202,7 +205,8 @@ fn edits_by_file<'a>(
 ///
 /// Compared as git stores both — the edited text hashed as a blob against the
 /// blob `now` holds — so a checkout that converts line endings on disk
-/// compares alike.
+/// compares alike. An `old` is matched in that stored text, which is what the
+/// round's `git diff` shows.
 ///
 /// # Errors
 ///
@@ -290,6 +294,7 @@ mod tests {
     use git2::Repository;
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use crate::primitives::git_fixture::{commit_all, write};
     use crate::primitives::{brief_re_read, start_fix_rounds};
     use crate::schema::primitives::{BriefReReadArgs, StartFixRoundsArgs};
@@ -644,11 +649,11 @@ mod tests {
     /// Past the read size the three lists are in the file `lists-file`
     /// names, with the verdict and every count inline and no list, so a
     /// counts-only result never reads as a matched check (scenario
-    /// `fix-round-results-have-a-bounded-size`).
+    /// `fix-round-results-have-a-bounded-size`). Each list holds an entry, so
+    /// a count left at zero fails it.
     #[test]
     fn lists_past_the_read_size_are_in_a_file() {
-        let (tmp, base) = briefed(AGAIN);
-        write(&tmp.path().join("a.txt"), "hello world, once more\n");
+        let (tmp, base) = briefed(r#"{"path": "a.txt", "old": "absent", "new": "x"}"#);
         write(&tmp.path().join("b.txt"), "b, changed\n");
         write(
             &tmp.path().join(".ductus/config.toml"),
@@ -663,7 +668,7 @@ mod tests {
                 result.unprescribed_count,
                 result.failed_count
             ),
-            (ListsForm::File, 0, 2, 0)
+            (ListsForm::File, 1, 2, 1)
         );
         assert_eq!(
             (&result.differing, &result.unprescribed, &result.failed),
@@ -677,6 +682,27 @@ mod tests {
         assert_eq!(
             lists["unprescribed"],
             serde_json::json!([".ductus/config.toml", "b.txt"])
+        );
+        assert_eq!(lists["differing"], serde_json::json!(["a.txt"]));
+        assert_eq!(lists["failed"][0]["occurrences"], 0);
+    }
+
+    /// `feature` names the round directory read, so a name outside the
+    /// feature-name allowlist is refused (`BE-INPUT-002`).
+    #[test]
+    fn a_name_outside_the_allowlist_is_refused() {
+        let (tmp, base) = briefed(AGAIN);
+        let err = run(
+            &CheckPrescriptionsArgs {
+                feature: ".".to_string(),
+                base,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidArgument { .. }),
+            "{err:?}"
         );
     }
 }

@@ -18,7 +18,7 @@ MUTATIONS = [
     (
         'M1 a finding outside the round keeps its severity',
         'src/primitives/fix_rounds.rs',
-        '        if finding.severity != ReReadSeverity::Note && !paths.contains(&finding.path) {',
+        '        if finding.severity != ReReadSeverity::Note && !paths.contains(&path) {',
         '        if finding.severity != ReReadSeverity::Note && paths.is_empty() {',
         'read_re_read::tests::a_finding_outside_the_round_counts_as_a_note check_prescriptions::tests::a_finding_outside_the_round_leaves_nothing_open',
     ),
@@ -35,5 +35,12 @@ MUTATIONS = [
         '                            state: ReReadState::Unparseable,\n                            problem: Some(problem),\n                            ..ReadReReadResult::default()\n                        },\n                    );',
         '                            state: ReReadState::Complete,\n                            problem: Some(problem),\n                            ..ReadReReadResult::default()\n                        },\n                    );',
         'read_re_read::tests::a_result_without_its_round_is_unparseable',
+    ),
+    (
+        'M4 a finding path is compared as the re-read spelled it',
+        'src/primitives/fix_rounds.rs',
+        '        let path = lexical(&finding.path);',
+        '        let path = finding.path.clone();',
+        'fix_rounds::tests::a_round_path_spelled_another_way_is_not_demoted',
     ),
 ]

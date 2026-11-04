@@ -36,12 +36,11 @@ pub(crate) const BRIEF_FILE: &str = "brief.md";
 /// The file a re-read writes its findings and prescriptions to, last.
 pub(crate) const RESULT_FILE: &str = "result.json";
 
-/// `round.toml`: a briefed round's base, the snapshot its re-read reads, and
-/// the paths that changed between them.
+/// `round.toml`: the snapshot a briefed round's re-read reads, and the paths
+/// that changed between the round's base, which names its directory, and that
+/// snapshot.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub(crate) struct RoundRecord {
-    /// The round's base sha.
-    pub(crate) base: String,
     /// The snapshot sha the brief was written at.
     pub(crate) snapshot: String,
     /// The round's changed paths, from the project root.
@@ -96,16 +95,29 @@ pub(crate) fn read_round_record(dir: &Path) -> Result<std::result::Result<RoundR
 /// a NOTE, and return how many were (spec 078, AC4): a finding outside the
 /// round changes nothing in it, whatever severity the re-read gave it, so it
 /// drives no fix round and counts toward no budget. `paths` are the round's,
-/// from its `round.toml`.
+/// from its `round.toml`, as git spells them; a finding's path is compared
+/// in that spelling ([`lexical`]), so `./src/a.rs` is the round's `src/a.rs`.
 pub(crate) fn demote_out_of_round(findings: &mut [ReReadFinding], paths: &[String]) -> usize {
     let mut demoted = 0;
     for finding in findings.iter_mut() {
-        if finding.severity != ReReadSeverity::Note && !paths.contains(&finding.path) {
+        let path = lexical(&finding.path);
+        if finding.severity != ReReadSeverity::Note && !paths.contains(&path) {
             finding.severity = ReReadSeverity::Note;
             demoted += 1;
         }
     }
     demoted
+}
+
+/// `path` as git spells a path from the project root: trimmed, with empty and
+/// `.` segments dropped. Lexical only: the file system is never consulted,
+/// and a `..` segment is kept, so it names no round path.
+fn lexical(path: &str) -> String {
+    path.trim()
+        .split('/')
+        .filter(|segment| !segment.is_empty() && *segment != ".")
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// A MUST or SHOULD finding with no prescribed edit: the diff check cannot
@@ -301,13 +313,41 @@ const SNAPSHOT_EMAIL: &str = "ductus@localhost";
 /// to anyone who finds it with `git cat-file`.
 const SNAPSHOT_MESSAGE: &str = "ductus fix-round snapshot\n";
 
+/// Screen a loop primitive's `feature` argument: a feature directory name by
+/// the runtime's allowlist (`validate_session_feature`, `BE-INPUT-002`), then
+/// contained in the project and present under the spec root. The name names
+/// the directory [`clear_rounds`] empties and is rendered into the brief, so
+/// `.` or a nested path is refused before either.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] for a name outside the allowlist,
+/// [`PrimitiveError::InvalidPath`] for one that would leave the spec root, and
+/// [`PrimitiveError::FeatureNotFound`] when its directory is absent.
+pub(crate) fn validate_feature(
+    primitive: &str,
+    repo: &Path,
+    specs_root: &str,
+    feature: &str,
+) -> Result<()> {
+    super::validate_session_feature(primitive, "feature", feature)?;
+    super::validate_feature_argument(repo, specs_root, feature)?;
+    if !repo.join(specs_root).join(feature).is_dir() {
+        return Err(PrimitiveError::FeatureNotFound {
+            root: specs_root.to_string(),
+            feature: feature.to_string(),
+        });
+    }
+    Ok(())
+}
+
 /// The feature's round directory, checked to resolve inside the project, with
 /// the rounds directory's own `.gitignore` in place.
 ///
 /// The `.gitignore` holds `*`, so nothing under the rounds directory ever
 /// enters a snapshot or a `modified-since` list, whatever the repository's own
 /// `.gitignore` says — the reason `.ductus/sessions/` ignores itself too.
-/// `feature` must already have passed `validate_feature_argument`.
+/// `feature` must already have passed [`validate_feature`].
 ///
 /// # Errors
 ///
@@ -496,6 +536,35 @@ mod tests {
             PrimitiveError::InvalidReReadsOff { problem, .. } => problem.clone(),
             other => panic!("not InvalidReReadsOff: {other:?}"),
         }
+    }
+
+    /// A finding on a round path spelled another way (`./`, a doubled
+    /// separator, surrounding space) is in the round and keeps its severity;
+    /// only a path the round did not change is demoted (AC4).
+    #[test]
+    fn a_round_path_spelled_another_way_is_not_demoted() {
+        let finding = |severity, path: &str| ReReadFinding {
+            severity,
+            path: path.to_string(),
+            text: "x".to_string(),
+            edits: Vec::new(),
+        };
+        let mut findings = vec![
+            finding(ReReadSeverity::Must, "./src/a.rs"),
+            finding(ReReadSeverity::Should, " src//a.rs"),
+            finding(ReReadSeverity::Must, "src/b.rs"),
+        ];
+        let demoted = demote_out_of_round(&mut findings, &["src/a.rs".to_string()]);
+        assert_eq!(demoted, 1);
+        let severities: Vec<_> = findings.iter().map(|f| f.severity).collect();
+        assert_eq!(
+            severities,
+            [
+                ReReadSeverity::Must,
+                ReReadSeverity::Should,
+                ReReadSeverity::Note
+            ]
+        );
     }
 
     #[test]

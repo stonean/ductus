@@ -14,21 +14,29 @@ its version and date.
   independent agent re-reads each round of fixes the review made, unless it
   changed only markdown in the spec's own directory other than `analysis.md`,
   its scenarios and its data model, from a brief the runtime writes: the
-  round's paths, derived from the repository, and a fixed severity bar. A
-  round that only applies the edits a re-read
-  prescribed is checked by diff instead, and after two re-reads that find a
-  MUST or SHOULD the loop waits for the operator. A host that cannot start
-  an agent prints the brief for the operator to run in a fresh session. Four
-  primitives carry it — `start-fix-rounds`, `brief-re-read`, `read-re-read`
-  and `check-prescriptions` — writing only under the self-ignoring
-  `.ductus/review-rounds/` and as git objects no ref points at, so a review
-  still commits nothing. `review.md` records `fix-rounds`, `re-reads`,
+  round's paths, derived from the repository, and a fixed severity bar. The
+  reviewed spec's own `review.md` is never a round's path, and a re-read's
+  finding on a path outside its round counts as a NOTE. A round that only
+  applies the edits a re-read prescribed is checked by diff instead, a file's
+  NOTE edits being the operator's to decline, and after the reported
+  `budget` of re-reads that find a MUST or SHOULD the loop waits for the
+  operator. A host that cannot start an agent prints the brief for the
+  operator to run in a fresh session. Four primitives carry it —
+  `start-fix-rounds`, `brief-re-read`, `read-re-read` and
+  `check-prescriptions` — each refusing a `feature` that is not a feature
+  directory name and writing only under the self-ignoring
+  `.ductus/review-rounds/` and `.ductus/results/` and as git objects no ref
+  points at, so a review still commits nothing; past `[artifacts]
+  read-size-bytes` a result's lists move to the file `lists-file` names,
+  with every count inline. `review.md` records `fix-rounds`, `re-reads`,
   `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers`, and
   `/implement`'s completion gate holds `done` while a round that needed a
-  re-read has neither one nor the operator's waiver; a record written before
-  this passes with a notice that it does not say. `[review] re-reads-off =
-  "<reason>"` switches the loop off, waiving each such round with that
-  reason. Spec 078; spec 066, task 15.
+  re-read has neither one nor the operator's waiver: `check-review-gate`'s
+  `blocked-by` gains `fix-round-not-re-read`, which a script matching its
+  values must accept. A record written before this passes with a notice that
+  it does not say. `[review] re-reads-off = "<reason>"` switches the loop
+  off, waiving each such round with that reason; a malformed one halts the
+  run before its first fix. Spec 078; spec 066, task 15.
 - **`check-review-freshness`: whether a spec's review is still current.** A
   new primitive, an MCP tool and CLI subcommand, that asks of one spec at any
   status the comparison `/implement`'s completion gate makes before `done`:
@@ -187,38 +195,6 @@ its version and date.
   `lists-file-unreadable` when it cannot. A script of your own that reads
   `scope` or `cross-spec-paths` from either result must read `lists-file`
   when `form` is `file`. Spec 066, task 7.
-- **`brief-re-read`, `read-re-read` and `check-prescriptions` results stay
-  within one read.** Each result now carries `form` and each list's count
-  (`paths-count`; `findings-count`; `differing-count`, `unprescribed-count`
-  and `failed-count`). While a result fits `[artifacts] read-size-bytes`, its
-  lists are inline as before; past it, `form` is `file`, no list is inline,
-  and `lists-file` names a JSON file under `.ductus/results/` holding them
-  whole, as `compute-review-scope`'s do, while the round's kind, the
-  re-read's state, the check's verdict and every count stay inline. A script
-  of your own that reads these lists must read `lists-file` when `form` is
-  `file`. Spec 078, task 10.
-- **A review's own record is no fix round.** `brief-re-read` and
-  `check-prescriptions` leave the reviewed feature's own `review.md` out of a
-  round's paths, so a `/review` run that fixed and deferred nothing records
-  no fix round instead of an exempt one, and `/review` prints a
-  `[review] re-reads-off` reason even when its first round is empty. Spec
-  078, task 11.
-- **A re-read's finding outside its round is a NOTE, by the round's own
-  paths.** `read-re-read` and `check-prescriptions` count a MUST or SHOULD
-  on a path the round did not change as a NOTE, read from the round's
-  `round.toml`, whatever severity the re-read gave it, so it drives no fix
-  round and counts toward no budget; `read-re-read`'s new `demoted` says how
-  many, and a complete result with no readable `round.toml` reads as
-  `unparseable`. Spec 078, task 12.
-- **`check-prescriptions` accepts a declined NOTE edit.** A prescribed file
-  matches when the working tree holds its text with every edit applied, or
-  with only its MUST and SHOULD findings' edits applied, so a NOTE whose edit
-  the operator waives no longer forces the round's whole re-read; an
-  unapplied MUST or SHOULD edit still reads as `differs`. Spec 078, task 13.
-- **The re-read budget lives in one place.** `start-fix-rounds` reports it
-  as `budget`, `write-review` derives `budget-stop` from the same constant,
-  and `/review`'s loop stops at the reported budget rather than a number of
-  its own. Spec 078, task 14.
 - **Ticking an acceptance criterion no longer stales the analysis.**
   `analysis.md`'s `analyzed-digest` takes `spec.md` with each acceptance
   criterion's checkbox as unticked, so `/implement`'s completion run, which

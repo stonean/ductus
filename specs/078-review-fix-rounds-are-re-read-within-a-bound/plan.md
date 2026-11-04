@@ -4,7 +4,7 @@ Implements [078 — Review fix rounds are re-read within a bound](spec.md).
 
 ## Overview
 
-Four feature-specific runtime primitives carry every bound the spec derives: `start-fix-rounds` snapshots the base, `brief-re-read` derives a round's paths, classifies it and writes its brief, `read-re-read` reads the re-read's result file, and `check-prescriptions` runs the diff check. `framework/commands/review.md` gains a loop step between dispositioning and `write-review` that calls them and holds the budget. The record fields and the gate check belong to 066, which owns the audit records and the completion gate, and land through its scenario `the-fix-round-loop-is-recorded-and-gated`. A `[review] re-reads-off` key switches the loop off with a reason. The shapes are in [data-model.md](data-model.md).
+Four feature-specific runtime primitives carry every bound the spec derives: `start-fix-rounds` snapshots the base, `brief-re-read` derives a round's paths, classifies it and writes its brief, `read-re-read` reads the re-read's result file, and `check-prescriptions` runs the diff check. `framework/commands/review.md` gains a loop step between dispositioning and its final `write-review` that calls them and holds the budget. The record fields and the gate check belong to 066, which owns the audit records and the completion gate, and land through its scenario `the-fix-round-loop-is-recorded-and-gated`. A `[review] re-reads-off` key switches the loop off with a reason. The shapes are in [data-model.md](data-model.md).
 
 ## Technical Decisions
 
@@ -38,7 +38,7 @@ The re-read writes `result.json` last, with `complete: true`. `read-re-read` cla
 
 ### The loop's end and its budget
 
-The loop ends at a clean re-read, or at a `matched` diff check whose `open` is zero: every MUST and SHOULD of the re-read that prescribed the edits carried an edit, and each was applied as written. **Assumption**: the spec's stop condition names only a clean re-read, and its diff check replaces "another re-read", so a matched check over fully prescribed findings is taken as that re-read's clean result; a finding without an edit keeps the loop open. The host counts re-reads with a MUST or SHOULD; at the budget it stops and reports the open findings, the rounds, and, where the host reports it, the cost. A diff-checked round is not a re-read and does not count. Once the budget is reached, every further round waits on the operator. The budget's value — two, by AC6 — lives once, as `RE_READ_BUDGET` in `runtime/src/primitives/fix_rounds.rs`: `start-fix-rounds` reports it as `budget` for the host's loop, `write-review` derives `budget-stop` from it, and the command and reference name the result field rather than the number (`CFG-CONST-001`). An open MUST or SHOULD left at a stop is recorded as an observation, its severity in its text, with the operator's deferral or waiver: a re-read finding maps to no loaded rule, which is 066's definition of an observation (the **Write `review.md`** section of `framework/reference/review.md`, under Observations).
+The loop ends at the first round with nothing changed since its base: after a clean re-read, or a `matched` diff check whose `open` is zero, every MUST and SHOULD of the re-read that prescribed the edits having carried an edit, each applied as written. A NOTE fixed afterwards is a change, so it is a round of its own. A matched check over fully prescribed findings stands for that re-read's clean result, since the spec's diff check replaces another re-read; a finding without an edit keeps the loop open. The host counts re-reads with a MUST or SHOULD; at the budget it stops and reports the open findings, the rounds, and, where the host reports it, the cost. A diff-checked round is not a re-read and does not count. Once the budget is reached, every further round waits on the operator. The budget's value — two, by AC6 — lives once, as `RE_READ_BUDGET` in `runtime/src/primitives/fix_rounds.rs`: `start-fix-rounds` reports it as `budget` for the host's loop, `write-review` derives `budget-stop` from it, and the command and reference name the result field rather than the number (`CFG-CONST-001`). An open MUST or SHOULD left at a stop is recorded as an observation, its severity in its text, with the operator's deferral or waiver: a re-read finding maps to no loaded rule, which is 066's definition of an observation (the **Write `review.md`** section of `framework/reference/review.md`, under Observations).
 
 ### The record and the gate are 066's
 
@@ -75,7 +75,16 @@ The loop step says what to do when the host can start an independent agent and w
 | `runtime/src/interpreter/mod.rs` | Modify | Four `dispatch_primitive` arms |
 | `runtime/src/main.rs` | Modify | Four `Command` variants |
 | `runtime/src/schema/config_keys.rs` | Modify | `[review] re-reads-off` |
+| `runtime/src/primitives/discover_rule_files.rs` | Modify | `rendered` and `toml_type_name` shared with the `re-reads-off` reader |
 | `runtime/tests/fix_rounds.rs` | Create | The four primitives driven through one loop |
+| `runtime/tests/review_command.rs` | Modify | Step 12 classified as prose in the command's step table |
+| `scripts/mutation/declined-note-edits.py` | Create | Mutation list: a declined NOTE edit forces no re-read |
+| `scripts/mutation/fix-round-results-bounded.py` | Create | Mutation list: the loop results' bound |
+| `scripts/mutation/loop-inputs-screened.py` | Create | Mutation list: `feature` and the switch screened before any write |
+| `scripts/mutation/out-of-round-findings.py` | Create | Mutation list: a finding outside its round is a NOTE |
+| `scripts/mutation/own-record-is-no-round.py` | Create | Mutation list: the review's own record is no round's path |
+| `scripts/mutation/re-read-budget.py` | Create | Mutation list: the re-read budget's one home |
+| `scripts/mutation/fix-round-record.py` | Create | Through 066's scenario task: the record fields' and check 12's mutation list |
 | `runtime/tests/line_ending_discipline.rs` | Modify | `brief_re_read.rs` exempt: it writes generated state |
 | `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the changed command |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
@@ -89,6 +98,8 @@ The loop step says what to do when the host can start an independent agent and w
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Through 066's scenario task: check 12 |
 | `framework/constitution.md` | Modify | Through 066's scenario task: the audit-record table |
 | `AGENTS.md` | Modify | The re-read rule points at the framework (AC9) |
+| `README.md` | Modify | Documents `[review] re-reads-off` |
+| `docs/slash-commands.md` | Modify | The review command's entry describes the loop |
 
 ## Data Model
 
@@ -101,7 +112,7 @@ The loop step says what to do when the host can start an independent agent and w
 - **Record fields implemented under this spec** — rejected by AGENTS.md's routing rule; 066's `done` now waits on its scenario's task, and this spec's AC12 and AC13 are verified against that task's work.
 - **Clearing the round directory never** — rejected: it would grow by a directory per round for the life of the checkout. Clearing it at the run's start means two concurrent reviews of one feature in one tree clear each other's rounds; §concurrent-features already answers a shared tree with `git worktree`.
 - **Known limitation:** a snapshot stores every untracked, non-ignored file as a blob, so an unignored build directory makes each snapshot large until git prunes it.
-- **Known limitation:** `framework/reference/review.md` is already over the 50,000-byte read size, 63,372 bytes at `f47d2b03` (`wc -c` of the committed file), and grows with the loop's walk; no check gates it.
+- **Known limitation:** `framework/reference/review.md` is over the 50,000-byte read size, and grows with the loop's walk; 020's task 16 brings it under.
 
 ## Cross-spec impact
 

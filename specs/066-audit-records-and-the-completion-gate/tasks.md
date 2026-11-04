@@ -147,3 +147,18 @@ Found by 078's review round 3 (2026-11-04); the round's result file is gitignore
 - [ ] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
 
 - **Done when**: each finding's edit is applied or the finding otherwise fixed, and each note fixed, deferred or waived with its reason on the task
+
+## 20. Implement scenario: freshness-results-have-a-bounded-size
+
+- [ ] Implement the behavior described in `scenarios/freshness-results-have-a-bounded-size.md`
+- [ ] Bound `RecordFreshness.paths` in every result that carries it by the mechanism task 7 settles, and state the maximum and the list's contents in `data-model.md`
+- [ ] A test shows a result past the bound reaching every path, and fails when the bound is removed
+
+- **Done when**: every result carrying `RecordFreshness.paths` states a maximum, every path stays reachable, and 078's 2026-11-04 review's `BE-PAYLOAD-001` finding on `data-model.md` no longer fires
+
+## 21. Family 19 reports a freshness state it does not recognise
+
+- [ ] Found by 078's second review (2026-11-04), `QUAL-CLAIM-001`: `scripts/audit/review-freshness.sh` counts a `check-review-freshness` state other than `never-run`, `undeterminable` and `stale` as examined and current, so an answer from a runtime of another version, or a future `RecordFreshness` state, reads as a clean review. Count it as not answered, with a finding naming the state
+- [ ] A parity-test case in `runtime/tests/mechanical_sweep_parity.rs` feeds the script an unrecognised state and fails when that branch is removed
+
+- **Done when**: an unrecognised state is counted as not answered with a finding, and a test fails without it

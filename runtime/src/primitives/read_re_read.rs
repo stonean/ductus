@@ -9,20 +9,25 @@
 
 use std::path::Path;
 
+#[cfg(doc)]
+use crate::primitives::PrimitiveError;
 use crate::primitives::fix_rounds::{self, RESULT_FILE, ResultFile};
-use crate::primitives::{PrimitiveError, ProjectRepository, Result};
+use crate::primitives::{ProjectRepository, Result};
 use crate::schema::paths;
 use crate::schema::primitives::{
     ListsForm, ReReadSeverity, ReReadState, ReadReReadArgs, ReadReReadResult,
 };
 
 /// Execute the `read-re-read` primitive. Read-only, but for the list file a
-/// result past the read size names.
+/// result past the read size names, with `bounded_lists::place`'s
+/// `.ductus/results/.gitignore` and its removal of the feature's stale list
+/// files.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidPath`] when `feature` would leave the spec root or
-/// the round directory resolves outside the project,
+/// [`PrimitiveError::InvalidArgument`] when `feature` is not a feature
+/// directory name, [`PrimitiveError::InvalidPath`] when it would leave the
+/// spec root or the round directory resolves outside the project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent,
 /// [`PrimitiveError::Git`] when `base` names no commit, and
 /// [`PrimitiveError::Io`] when the result file exists but cannot be read or
@@ -31,13 +36,7 @@ use crate::schema::primitives::{
 /// re-read: the host counts the round as not re-read.
 pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
     let layout = paths::Paths::load(repo);
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
-    if !repo.join(&layout.specs_root).join(&args.feature).is_dir() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        });
-    }
+    fix_rounds::validate_feature("read-re-read", repo, &layout.specs_root, &args.feature)?;
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;
     let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
@@ -99,8 +98,8 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
 fn bounded(repo: &Path, feature: &str, mut result: ReadReReadResult) -> Result<ReadReReadResult> {
     let findings = result.findings.take().unwrap_or_default();
     result.findings_count = findings.len();
-    result.findings = Some(findings.clone());
-    let lists = serde_json::json!({ "findings": findings });
+    let lists = serde_json::json!({ "findings": &findings });
+    result.findings = Some(findings);
     if let Some(file) = super::bounded_lists::place(repo, "read-re-read", feature, &result, &lists)?
     {
         result.form = ListsForm::File;
@@ -117,6 +116,7 @@ mod tests {
     use git2::Repository;
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use crate::primitives::git_fixture::{commit_all, write};
 
     const FEATURE: &str = "001-x";
@@ -136,7 +136,6 @@ mod tests {
         write(
             &round.join(fix_rounds::ROUND_FILE),
             &toml::to_string(&fix_rounds::RoundRecord {
-                base: base.clone(),
                 snapshot: base.clone(),
                 paths: vec!["src/a.rs".to_string()],
             })
@@ -325,5 +324,24 @@ mod tests {
         let result = read(&tmp, &base);
         assert_eq!(result.state, ReReadState::Unparseable);
         assert!(result.problem.unwrap().contains("round.toml"));
+    }
+
+    /// `feature` names the round directory read, so a name outside the
+    /// feature-name allowlist is refused (`BE-INPUT-002`).
+    #[test]
+    fn a_name_outside_the_allowlist_is_refused() {
+        let (tmp, base, _) = fixture();
+        let err = run(
+            &ReadReReadArgs {
+                feature: ".".to_string(),
+                base,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidArgument { .. }),
+            "{err:?}"
+        );
     }
 }

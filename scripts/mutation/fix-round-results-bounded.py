@@ -66,4 +66,18 @@ MUTATIONS = [
         '    result.unprescribed_count = 0;',
         'check_prescriptions::tests::lists_past_the_read_size_are_in_a_file',
     ),
+    (
+        'M8 a check counts no differing files',
+        'src/primitives/check_prescriptions.rs',
+        '    result.differing_count = differing.len();',
+        '    result.differing_count = 0;',
+        'check_prescriptions::tests::lists_past_the_read_size_are_in_a_file',
+    ),
+    (
+        'M9 a check counts no failed edits',
+        'src/primitives/check_prescriptions.rs',
+        '    result.failed_count = failed.len();',
+        '    result.failed_count = 0;',
+        'check_prescriptions::tests::lists_past_the_read_size_are_in_a_file',
+    ),
 ]

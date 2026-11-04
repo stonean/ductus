@@ -126,6 +126,9 @@ struct LoopRecord {
     /// At least [`fix_rounds::RE_READ_BUDGET`] re-reads found a MUST or SHOULD,
     /// and the last one did.
     budget_stop: bool,
+    /// The re-reads that found a MUST or SHOULD: the budget's count, which an
+    /// operator who lets the loop go on carries past the budget.
+    with_findings: usize,
     /// The exempt rounds, from 1.
     exempt: Vec<usize>,
     /// The un-re-read rounds no waiver covers, from 1: each holds `done`.
@@ -214,6 +217,7 @@ fn derive_loop(
         not_re_read: count(FixRoundCheck::NotReRead),
         budget_stop: with_findings >= fix_rounds::RE_READ_BUDGET
             && results.last() == Some(&ReReadOutcome::Findings),
+        with_findings,
         exempt: numbered(FixRoundCheck::Exempt),
         unwaived,
         waivers,
@@ -272,7 +276,8 @@ fn loop_summary(record: &LoopRecord) -> String {
     if record.budget_stop {
         let _ = write!(
             out,
-            " The budget stopped the loop: {} re-reads found a MUST or SHOULD.",
+            " The budget stopped the loop: {} re-reads found a MUST or SHOULD, against a budget of {}.",
+            record.with_findings,
             fix_rounds::RE_READ_BUDGET
         );
     }
@@ -3127,6 +3132,23 @@ mod tests {
             "2026-07-02T12:00:00Z",
         );
         assert!(loop_summary(&stopped).contains("The budget stopped the loop"));
+        // The sentence counts the run's finding re-reads, not the budget: an
+        // operator who let the loop go on past the budget has more.
+        let continued = derive_loop(
+            &[re_read(Findings), re_read(Findings), re_read(Findings)],
+            None,
+            None,
+            "2026-07-02T12:00:00Z",
+        );
+        let expected = format!(
+            "3 re-reads found a MUST or SHOULD, against a budget of {}.",
+            fix_rounds::RE_READ_BUDGET
+        );
+        assert!(
+            loop_summary(&continued).contains(&expected),
+            "{}",
+            loop_summary(&continued)
+        );
     }
 
     /// With `[review] re-reads-off` set, every un-re-read round without its
