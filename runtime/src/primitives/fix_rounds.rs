@@ -249,14 +249,15 @@ pub(crate) fn feature_rounds_dir(repo: &Path, feature: &str) -> Result<PathBuf> 
     Ok(repo.join(rel))
 }
 
-/// Write `dir/.gitignore` containing `*` unless it exists.
+/// Write `dir/.gitignore` containing `*` unless it exists. Shared with the
+/// results directory list files are written to (`bounded_lists`).
 ///
 /// Created with `create_new`, so two first writers cannot replace one
 /// another's file: the second finds it present and leaves it. A rename-based
 /// write raced on Windows for the session directory's identical file
 /// (`crate::session`, `ignore_everything`), which serializes behind a lock
 /// this directory has no need of.
-fn ignore_everything(dir: &Path) -> Result<()> {
+pub(crate) fn ignore_everything(dir: &Path) -> Result<()> {
     std::fs::create_dir_all(dir).map_err(|source| PrimitiveError::Io {
         path: dir.into(),
         source,

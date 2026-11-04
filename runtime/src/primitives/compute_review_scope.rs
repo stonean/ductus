@@ -29,7 +29,9 @@
 //! inbox any more (spec 058), so its additions over a review window say
 //! nothing about the work being reviewed.
 //!
-//! Read-only.
+//! Read-only, except that a result past `[artifacts] read-size-bytes` writes
+//! its lists whole to a file it names under `.ductus/results/`
+//! (`bounded_lists`; 066 scenario `scope-results-have-a-bounded-size`).
 //!
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
@@ -44,9 +46,63 @@ use crate::primitives::{
     PrimitiveError, ProjectRepository, Result, frontmatter_status, parse_affected_files,
 };
 use crate::schema::paths;
-use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult};
+use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm};
 
-/// Execute the `compute-review-scope` primitive.
+/// Execute the `compute-review-scope` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its lists in
+/// the file it names and only their counts inline (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
+    let scope = compute(args, repo)?;
+    let mut result = ComputeReviewScopeResult {
+        diff_base: scope.diff_base.clone(),
+        form: ListsForm::Inline,
+        scope_count: scope.scope.len(),
+        modified_since_count: scope.modified_since.len(),
+        plan_affected_count: scope.plan_affected.len(),
+        scope: Some(scope.scope.clone()),
+        modified_since: Some(scope.modified_since.clone()),
+        plan_affected: Some(scope.plan_affected.clone()),
+        lists_file: None,
+    };
+    let lists = serde_json::json!({
+        "diff-base": scope.diff_base,
+        "scope": scope.scope,
+        "modified-since": scope.modified_since,
+        "plan-affected": scope.plan_affected,
+    });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "compute-review-scope", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.scope = None;
+        result.modified_since = None;
+        result.plan_affected = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// A review's diff base and its three path lists, whole: what
+/// `compute-review-scope` resolves, before its result is bounded.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ReviewScope {
+    /// See [`ComputeReviewScopeResult::diff_base`].
+    pub(crate) diff_base: String,
+    /// The union of `plan_affected` and `modified_since`.
+    pub(crate) scope: Vec<String>,
+    /// See [`ComputeReviewScopeResult::modified_since`].
+    pub(crate) modified_since: Vec<String>,
+    /// See [`ComputeReviewScopeResult::plan_affected`].
+    pub(crate) plan_affected: Vec<String>,
+}
+
+/// Resolve the review's diff base and scope, every list whole. `write-review`
+/// derives its denominator from this, never from the bounded result.
 ///
 /// # Errors
 ///
@@ -57,7 +113,7 @@ use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult
 /// or [`PrimitiveError::Git`] for any libgit2 failure (repo discovery,
 /// including a project no work tree contains, revparse of `--since`,
 /// tree/diff lookup).
-pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
+pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ReviewScope> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
@@ -134,7 +190,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         .into_iter()
         .collect();
 
-    Ok(ComputeReviewScopeResult {
+    Ok(ReviewScope {
         diff_base,
         scope,
         modified_since,
@@ -326,20 +382,20 @@ mod tests {
     #[test]
     fn an_unreadable_plan_is_an_error_not_an_empty_plan() {
         let (tmp, _) = repo_with_progress();
-        assert!(run(&args("001-x", None), tmp.path()).is_ok());
+        assert!(compute(&args("001-x", None), tmp.path()).is_ok());
         fs::write(
             tmp.path().join("specs/001-x/plan.md"),
             b"\xff\xfe not UTF-8",
         )
         .unwrap();
-        let err = run(&args("001-x", None), tmp.path()).unwrap_err();
+        let err = compute(&args("001-x", None), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
     }
 
     #[test]
     fn diff_base_is_the_transition_commits_parent_and_scope_lists_modified_files() {
         let (tmp, sha) = repo_with_progress();
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         // The base is the parent of the transition, so the transition commit
         // is inside the window rather than excluded from it.
         let parent = Repository::discover(tmp.path())
@@ -380,7 +436,7 @@ mod tests {
         write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
         commit_all(&repo, "fix: reopen and implement");
 
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert!(
             result.modified_since.contains(&"src/new.rs".to_string()),
             "the reviewed deliverable fell outside the window: {:?}",
@@ -406,7 +462,7 @@ mod tests {
         write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
         commit_all(&repo, "feat: more");
 
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, sha, "root commit should be its own base");
     }
 
@@ -414,7 +470,7 @@ mod tests {
     fn since_override_replaces_the_derived_base() {
         let (tmp, _sha) = repo_with_progress();
         // Override to HEAD → no files modified since HEAD.
-        let result = run(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
+        let result = compute(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
         let head = Repository::discover(tmp.path())
             .unwrap()
             .head()
@@ -432,7 +488,7 @@ mod tests {
         // An operator naming a commit means that commit. Passing the
         // transition sha explicitly must resolve to it, not to its parent.
         let (tmp, sha) = repo_with_progress();
-        let result = run(&args("001-x", Some(&sha)), tmp.path()).unwrap();
+        let result = compute(&args("001-x", Some(&sha)), tmp.path()).unwrap();
         assert_eq!(result.diff_base, sha);
     }
 
@@ -457,7 +513,7 @@ mod tests {
              | `src/three.rs` | Edit | three |\n",
         );
         commit_all(&repo, "feat: implement");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(
             result.plan_affected,
             vec!["src/one.rs", "src/two.rs", "src/three.rs"]
@@ -496,7 +552,7 @@ mod tests {
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
         commit_all(&repo, "feat: plan");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, "");
         assert_eq!(result.scope, [] as [String; 0]);
         assert_eq!(result.modified_since, [] as [String; 0]);
@@ -521,7 +577,7 @@ mod tests {
         write(&tmp.path().join("other/x.rs"), "fn x() {}\n");
         git_fixture::commit_all(&repo, "feat: implement");
 
-        let result = run(&args("001-x", None), &project).unwrap();
+        let result = compute(&args("001-x", None), &project).unwrap();
         let parent = repo
             .find_commit(sha)
             .unwrap()
@@ -567,7 +623,7 @@ mod tests {
     fn an_unstaged_edit_is_in_scope() {
         let (tmp, _repo, parent) = repo_in_progress_with_an_untouched_file();
         write(&tmp.path().join("src/old.rs"), "fn old() { edited(); }\n");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, parent);
         assert!(
             result.scope.contains(&"src/old.rs".to_string()),
@@ -583,7 +639,7 @@ mod tests {
         let mut index = repo.index().unwrap();
         index.add_path(Path::new("src/old.rs")).unwrap();
         index.write().unwrap();
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert!(
             result.modified_since.contains(&"src/old.rs".to_string()),
             "{:?}",
@@ -596,7 +652,7 @@ mod tests {
         let (tmp, _repo, _) = repo_in_progress_with_an_untouched_file();
         write(&tmp.path().join("tests/new_test.rs"), "#[test] fn t() {}\n");
         write(&tmp.path().join("target/debug/out.o"), "build output\n");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert!(
             result
                 .modified_since
@@ -618,7 +674,7 @@ mod tests {
         let (tmp, repo, _) = repo_in_progress_with_an_untouched_file();
         write(&tmp.path().join("src/old.rs"), "fn old() { edited(); }\n");
         write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
-        let result = run(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
+        let result = compute(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
         assert_eq!(result.diff_base, head_sha(&repo));
         assert_eq!(result.modified_since, vec!["src/new.rs", "src/old.rs"]);
     }
@@ -639,7 +695,7 @@ mod tests {
 
         write(&spec_path, &spec("in-progress"));
         write(&tmp.path().join("src/old.rs"), "fn old() { fixed(); }\n");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, head_sha(&repo));
         assert_eq!(
             result.modified_since,
@@ -661,7 +717,7 @@ mod tests {
 
         write(&spec_path, &spec("in-progress"));
         write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, head_sha(&repo));
         assert_eq!(
             result.modified_since,
@@ -678,7 +734,7 @@ mod tests {
         write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
         commit_all(&repo, "feat: implement");
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, parent);
         assert!(
             result.modified_since.contains(&"src/a.rs".to_string()),
@@ -702,7 +758,7 @@ mod tests {
 
         write(&project.join("src/inside.rs"), "fn i() {}\n");
         write(&tmp.path().join("other/outside.rs"), "fn o() {}\n");
-        let result = run(&args("001-x", None), &project).unwrap();
+        let result = compute(&args("001-x", None), &project).unwrap();
         assert_eq!(
             result.modified_since,
             vec!["specs/001-x/spec.md", "src/inside.rs"]
@@ -727,7 +783,7 @@ mod tests {
 
         write(&project.join("src/old.rs"), "fn old() { edited(); }\n");
         write(&project.join("src/new.rs"), "fn new() {}\n");
-        let result = run(&args("001-x", None), &project).unwrap();
+        let result = compute(&args("001-x", None), &project).unwrap();
         assert_eq!(
             result.modified_since,
             vec!["specs/001-x/spec.md", "src/new.rs", "src/old.rs"]
@@ -738,7 +794,7 @@ mod tests {
     fn missing_feature_is_operational_error() {
         let tmp = tempfile::tempdir().unwrap();
         Repository::init(tmp.path()).unwrap();
-        let err = run(&args("999-nope", None), tmp.path()).unwrap_err();
+        let err = compute(&args("999-nope", None), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
     }
 
@@ -746,9 +802,73 @@ mod tests {
     fn plan_absent_falls_back_to_modified_since() {
         let (tmp, _sha) = repo_with_progress();
         // No plan.md written → plan_affected empty → scope = modified_since.
-        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.plan_affected, [] as [String; 0]);
         assert_eq!(result.scope, result.modified_since);
         assert_ne!(result.scope, [] as [String; 0]);
+    }
+
+    fn read_size(tmp: &tempfile::TempDir, bytes: u64) {
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+
+    /// A result that fits is inline, with its counts. Past `[artifacts]
+    /// read-size-bytes`, every list moves whole to the file the result names,
+    /// none of them inline, and the counts still say how many; the list file
+    /// joins no later scope (066 scenario `scope-results-have-a-bounded-size`).
+    #[test]
+    fn a_result_past_the_read_size_names_a_file_holding_every_list() {
+        let (tmp, _) = repo_with_progress();
+        read_size(&tmp, 1_000_000);
+        let whole = compute(&args("001-x", None), tmp.path()).unwrap();
+        let inline = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.scope.as_deref(), Some(whole.scope.as_slice()));
+        assert_eq!(inline.scope_count, whole.scope.len());
+        assert_eq!(inline.lists_file, None);
+
+        read_size(&tmp, 10);
+        let bounded = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (
+                &bounded.scope,
+                &bounded.modified_since,
+                &bounded.plan_affected
+            ),
+            (&None, &None, &None)
+        );
+        assert_eq!(
+            (
+                bounded.scope_count,
+                bounded.modified_since_count,
+                bounded.plan_affected_count
+            ),
+            (
+                whole.scope.len(),
+                whole.modified_since.len(),
+                whole.plan_affected.len()
+            )
+        );
+        let file: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(bounded.lists_file.unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(file["diff-base"], serde_json::json!(whole.diff_base));
+        assert_eq!(file["scope"], serde_json::json!(whole.scope));
+        assert_eq!(
+            file["modified-since"],
+            serde_json::json!(whole.modified_since)
+        );
+        assert_eq!(
+            file["plan-affected"],
+            serde_json::json!(whole.plan_affected)
+        );
+        assert_eq!(compute(&args("001-x", None), tmp.path()).unwrap(), whole);
     }
 }

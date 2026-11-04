@@ -698,14 +698,48 @@ pub struct ComputeReviewScopeResult {
     /// `in-progress` is uncommitted, and empty when the spec never reached
     /// `in-progress` and no `--since` was given.
     pub diff_base: String,
+    /// Where the three lists are: in this result, or, past the read size, in
+    /// the file `lists-file` names (066 scenario
+    /// `scope-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `scope`, in either form. The scope is empty only when this
+    /// is zero: a file-form result carries no list inline.
+    pub scope_count: usize,
+    /// Entries in `modified-since`, in either form.
+    pub modified_since_count: usize,
+    /// Entries in `plan-affected`, in either form.
+    pub plan_affected_count: usize,
     /// The review scope: the union of `plan-affected` and `modified-since`.
-    pub scope: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<Vec<String>>,
     /// Files changed between `diff-base` and the working tree inside the
     /// project directory — committed, staged, unstaged, and untracked but not
-    /// ignored — named from the project root, sorted.
-    pub modified_since: Vec<String>,
-    /// Files listed under the plan's `## Affected Files` section.
-    pub plan_affected: Vec<String>,
+    /// ignored — named from the project root, sorted. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modified_since: Option<Vec<String>>,
+    /// Files listed under the plan's `## Affected Files` section. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_affected: Option<Vec<String>>,
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with `diff-base`, `scope`,
+    /// `modified-since` and `plan-affected`, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
+/// Where a list-carrying result's lists are (066 scenario
+/// `scope-results-have-a-bounded-size`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ListsForm {
+    /// In the result: it fits the configured read size.
+    #[default]
+    Inline,
+    /// In the file the result's `lists-file` names: inline, the result would
+    /// pass `[artifacts] read-size-bytes`.
+    File,
 }
 
 // -- start-fix-rounds (spec 078) ----------------------------------------------
@@ -4939,8 +4973,9 @@ pub struct DiffCrossSpecArgs {
     pub feature: String,
 }
 
-/// Result for `diff-cross-spec`. Read-only; both lists empty is the
-/// no-impact domain outcome.
+/// Result for `diff-cross-spec`. Read-only but for the list file a result
+/// past the read size names; a zero `cross-spec-count` is the no-impact
+/// domain outcome.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DiffCrossSpecResult {
@@ -4955,7 +4990,19 @@ pub struct DiffCrossSpecResult {
     /// working tree (index + untracked included), so uncommitted sibling
     /// edits surface at the per-task summary; on a clean tree this equals
     /// the documented `git diff <first-commit>..HEAD -- {specs-root}/`.
-    pub cross_spec_paths: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cross_spec_paths: Option<Vec<String>>,
+    /// Where `cross-spec-paths` is: in this result, or, past the read size,
+    /// in the file `lists-file` names (066 scenario
+    /// `scope-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `cross-spec-paths`, in either form.
+    pub cross_spec_count: usize,
+    /// In the file form, the file holding `cross-spec-paths` whole, from the
+    /// project root: a JSON object with that one key, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// Next-step guidance, present only when no commit touches the spec
     /// dir. Without it the empty lists above would read as *"no cross-spec
     /// impact"* — a positive claim — when the truth is that there is no
@@ -7693,7 +7740,7 @@ mod tests {
 
     #[test]
     fn diff_cross_spec_round_trip() {
-        use super::{DiffCrossSpecArgs, DiffCrossSpecResult};
+        use super::{DiffCrossSpecArgs, DiffCrossSpecResult, ListsForm};
         let args = DiffCrossSpecArgs {
             feature: "042-widget".into(),
         };
@@ -7702,7 +7749,10 @@ mod tests {
         let result = DiffCrossSpecResult {
             first_commit: "abc123".into(),
             current_head: "def456".into(),
-            cross_spec_paths: vec!["specs/007-sibling/spec.md".into()],
+            cross_spec_paths: Some(vec!["specs/007-sibling/spec.md".into()]),
+            form: ListsForm::Inline,
+            cross_spec_count: 1,
+            lists_file: None,
             guidance: None,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();

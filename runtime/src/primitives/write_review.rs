@@ -612,7 +612,7 @@ fn resolve_scope_size(args: &WriteReviewArgs, repo: &Path) -> u32 {
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
-    crate::primitives::compute_review_scope::run(&scope_args, repo).map_or(0, |result| {
+    crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or(0, |result| {
         u32::try_from(result.scope.len()).unwrap_or(u32::MAX)
     })
 }

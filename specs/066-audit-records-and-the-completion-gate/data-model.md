@@ -10,18 +10,35 @@ Args:
 { "feature": "042-widget", "since": null }
 ```
 
-Result:
+Result, inline and past the read size:
 
 ```json
 {
   "diff-base": "<sha>",
+  "form": "inline",
+  "scope-count": 2,
+  "modified-since-count": 1,
+  "plan-affected-count": 1,
   "scope": ["runtime/src/primitives/read_spec.rs", "specs/042-widget/data-model.md"],
   "modified-since": ["specs/042-widget/data-model.md"],
   "plan-affected": ["runtime/src/primitives/read_spec.rs"]
 }
 ```
 
+```json
+{
+  "diff-base": "<sha>",
+  "form": "file",
+  "scope-count": 1056,
+  "modified-since-count": 1049,
+  "plan-affected-count": 12,
+  "lists-file": ".ductus/results/compute-review-scope/042-widget/<sha256>.json"
+}
+```
+
 `diff-base` is the parent of the commit that moved the spec into `in-progress`; `HEAD`'s sha while that move is uncommitted; empty when the spec never reached `in-progress` and no `since` was given; or `since` verbatim when supplied. `modified-since` is every file changed between `diff-base` and the working tree inside the project directory — committed, staged, unstaged and untracked but not ignored — named from the project root and sorted. `plan-affected` is the plan's `## Affected Files` list, and `scope` is the union of the two (scenarios `review-base-includes-the-transition-commit`, `review-scope-includes-uncommitted-work`, `review-scope-union`).
+
+**Size** (scenario `scope-results-have-a-bounded-size`). The lists are inline, `form: "inline"`, while the result's compact JSON is at most `[artifacts] read-size-bytes`, 50,000 bytes by default; a result exactly at it fits. Past it, `form` is `"file"`, no list is inline, and `lists-file` names, from the project root, a file holding `diff-base` and the three lists whole as pretty-printed JSON, one entry per line, under `.ductus/results/compute-review-scope/{feature}/` and named by the sha256 of its bytes, so a concurrent call never reads another's lists. The stated maximum is that setting, or, below it, the file form's own size, which no list enlarges: 258 bytes of compact JSON with a 40-character sha, plus the feature directory's name and each count digit past the first. The counts are inline in both forms, so a zero `scope-count`, never an absent list, is an empty scope. `.ductus/results/` ignores itself (a `.gitignore` of `*`), so no list file enters a scope, and a write removes the same feature's list files older than 24 hours. A malformed read size halts the call, as it halts every reader of the setting, and a list file that cannot be written fails it. `write-review` derives `scope` from the unbounded lists, and `ductus exec`'s `performReview` request reads `scope` from the list file, halting with `lists-file-unreadable` when it cannot.
 
 ## `process-waivers` — classify recorded waivers before the write
 
@@ -217,8 +234,10 @@ Result:
 {
   "first-commit": "b39f2727dc6939ad145ede1830205e0d122075d3",
   "current-head": "550c8ddc33e6895da0ce6c81fa6f6e2c42049e9f",
-  "cross-spec-paths": ["specs/007-sibling/spec.md"]
+  "cross-spec-paths": ["specs/007-sibling/spec.md"],
+  "form": "inline",
+  "cross-spec-count": 1
 }
 ```
 
-The filter behind `/ductus:implement`'s per-task summary and completion gate. Diffs the feature's first spec-dir commit — the base `derive-boundary` computes, through the shared `first_commit_for_prefix` revwalk — against the **working tree** (index and untracked files included), scoped to the spec root: `cross-spec-paths` lists changed paths outside the feature's own directory, sorted, with `{specs-root}/inbox.md` excluded. The working-tree diff is why the per-task summary, which fires before the task's commit, sees the run's uncommitted sibling edits. Read-only; an empty list is the no-impact domain outcome.
+The filter behind `/ductus:implement`'s per-task summary and completion gate. Diffs the feature's first spec-dir commit — the base `derive-boundary` computes, through the shared `first_commit_for_prefix` revwalk — against the **working tree** (index and untracked files included), scoped to the spec root: `cross-spec-paths` lists changed paths outside the feature's own directory, sorted, with `{specs-root}/inbox.md` excluded. The working-tree diff is why the per-task summary, which fires before the task's commit, sees the run's uncommitted sibling edits. A zero `cross-spec-count` is the no-impact domain outcome. The result is bounded as `compute-review-scope`'s is (its **Size**): past `[artifacts] read-size-bytes`, `form` is `"file"`, `cross-spec-paths` is absent, and `lists-file` names a file under `.ductus/results/diff-cross-spec/{feature}/` holding it whole; the file form's own size is 270 bytes of compact JSON plus the feature directory's name and each count digit past the first. Read-only but for that file.

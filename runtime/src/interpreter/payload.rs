@@ -80,6 +80,19 @@ pub enum PayloadError {
         /// The unrecognized extension identifier from the step marker.
         identifier: String,
     },
+    /// `compute-review-scope` returned its lists in a file — its result was
+    /// past `[artifacts] read-size-bytes` — and that file cannot be read or
+    /// holds no `scope` list, so the review's in-scope files cannot be
+    /// loaded. The walk halts: a request carrying no in-scope file would
+    /// read as a pass over nothing (066 scenario
+    /// `scope-results-have-a-bounded-size`).
+    #[error("lists-file-unreadable: '{path}': {reason}")]
+    ListsFileUnreadable {
+        /// The list file, from the project root.
+        path: String,
+        /// Why it could not be read.
+        reason: String,
+    },
 }
 
 /// Machine-readable code emitted in the `error` envelope when payload
@@ -93,6 +106,7 @@ impl PayloadError {
             // Matches the code the walker emits when a response arrives
             // for an identifier `validate_response` does not know.
             Self::UnknownExtension { .. } => "unknown-extension",
+            Self::ListsFileUnreadable { .. } => "lists-file-unreadable",
         }
     }
 }
@@ -168,7 +182,7 @@ pub fn build_extension_request(
             command_name,
             step_prose,
         )),
-        "performReview" => Ok(build_perform_review_request(context, repo)),
+        "performReview" => build_perform_review_request(context, repo),
         "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo)),
         "askClarifyQuestion" => Ok(build_ask_clarify_question_request(context, repo)),
         "routeInboxItem" => Ok(build_route_inbox_item_request(context, repo)),
@@ -234,19 +248,28 @@ fn typed_only<T: Serialize>(typed: &T) -> Value {
 }
 
 /// Build the `performReview` request for one pass. Loads the in-scope files
-/// (`scope`, from `compute-review-scope`) and the pass's rule files
+/// (`scope`, from `compute-review-scope`, or from the file its `lists-file`
+/// names when the result was past the read size) and the pass's rule files
 /// (`selected` basenames under `rules-dir`, from `discover-rule-files`) off
 /// disk, and pairs them with the `pass` name. Missing/unreadable files are
 /// skipped rather than erroring — the pass reviews what it can read. The
 /// typed prefix leads (cache-anchor order: `scope-files` is stable across
 /// passes); legacy context fields follow for hosts that already parse them.
-fn build_perform_review_request(context: &Map<String, Value>, repo: &Path) -> Value {
+///
+/// # Errors
+///
+/// [`PayloadError::ListsFileUnreadable`] when the scope is in a list file
+/// that cannot be read or holds no `scope` list.
+fn build_perform_review_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
     let pass = context
         .get("pass")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
-    let scope_files = load_scope_files(context, repo);
+    let scope_files = load_scope_files(context, repo)?;
     let rule_files = load_rule_files(context, repo);
 
     let typed = PerformReviewRequest {
@@ -259,7 +282,7 @@ fn build_perform_review_request(context: &Map<String, Value>, repo: &Path) -> Va
     // primitive results it legitimately needs (`scope`/`diff-base` from
     // compute-review-scope, `selected`/`rules-dir`/`notices` from
     // discover-rule-files).
-    typed_with_legacy_context(&typed, context)
+    Ok(typed_with_legacy_context(&typed, context))
 }
 
 /// Classification of a repo-relative path against the canonicalized repo root
@@ -295,11 +318,18 @@ fn classify_contained(canon_repo: &Path, rel: &Path) -> Contained {
 /// is canonicalized and confined to the repo root before it is opened — an
 /// absolute or traversing entry is skipped, never read into the review
 /// payload. Missing and unreadable paths are likewise skipped (best-effort).
-fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScopeFile> {
+///
+/// # Errors
+///
+/// [`PayloadError::ListsFileUnreadable`] from [`scope_paths`].
+fn load_scope_files(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Vec<ReviewScopeFile>, PayloadError> {
     let Ok(canon_repo) = repo.canonicalize() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
-    string_array(context, "scope")
+    Ok(scope_paths(context, &canon_repo)?
         .into_iter()
         .filter_map(
             |path| match classify_contained(&canon_repo, Path::new(&path)) {
@@ -309,6 +339,50 @@ fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScop
                 Contained::Missing | Contained::Outside => None,
             },
         )
+        .collect())
+}
+
+/// The in-scope paths `compute-review-scope` returned: its `scope` list when
+/// the result was inline, else the `scope` list in the file its `lists-file`
+/// names, read whole (066 scenario `scope-results-have-a-bounded-size`).
+/// Neither key means no scope was computed, which is no paths.
+///
+/// # Errors
+///
+/// [`PayloadError::ListsFileUnreadable`] when the named file resolves outside
+/// the project, cannot be read, is not JSON, or holds no `scope` list of
+/// strings.
+fn scope_paths(
+    context: &Map<String, Value>,
+    canon_repo: &Path,
+) -> Result<Vec<String>, PayloadError> {
+    if context.contains_key("scope") {
+        return Ok(string_array(context, "scope"));
+    }
+    let Some(file) = context.get("lists-file").and_then(Value::as_str) else {
+        return Ok(Vec::new());
+    };
+    let unreadable = |reason: String| PayloadError::ListsFileUnreadable {
+        path: file.to_string(),
+        reason,
+    };
+    let abs = match classify_contained(canon_repo, Path::new(file)) {
+        Contained::Inside(abs) => abs,
+        Contained::Missing => return Err(unreadable("it does not exist".into())),
+        Contained::Outside => return Err(unreadable("it resolves outside the project".into())),
+    };
+    let text = std::fs::read_to_string(&abs).map_err(|err| unreadable(err.to_string()))?;
+    let lists: Value = serde_json::from_str(&text).map_err(|err| unreadable(err.to_string()))?;
+    let Some(scope) = lists.get("scope").and_then(Value::as_array) else {
+        return Err(unreadable("it holds no `scope` list".into()));
+    };
+    scope
+        .iter()
+        .map(|path| {
+            path.as_str().map(str::to_string).ok_or_else(|| {
+                unreadable("its `scope` list holds a value that is not a path".into())
+            })
+        })
         .collect()
 }
 
@@ -1705,7 +1779,8 @@ mod tests {
                 assert_eq!(path, ".env.production");
                 assert_eq!(pattern, ".env.*");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1735,7 +1810,8 @@ mod tests {
                 assert_eq!(path, "secret-config.toml");
                 assert_eq!(pattern, ".gitignore");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1781,7 +1857,8 @@ mod tests {
                 assert_eq!(path, "config/local.toml");
                 assert_eq!(pattern, ".gitignore");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1821,7 +1898,8 @@ mod tests {
                 assert_eq!(path, "../outside.txt");
                 assert_eq!(pattern, "out-of-repo");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1856,7 +1934,10 @@ mod tests {
     fn refusal_pattern(project: &Path) -> Option<String> {
         match load_plan_relevant_files("123-foo", project) {
             Err(PayloadError::SecretExfiltration { pattern, .. }) => Some(pattern),
-            Err(other @ PayloadError::UnknownExtension { .. }) => {
+            Err(
+                other @ (PayloadError::UnknownExtension { .. }
+                | PayloadError::ListsFileUnreadable { .. }),
+            ) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
             Ok(_) => None,
@@ -1964,7 +2045,8 @@ mod tests {
                 assert_eq!(path, "../outside.txt");
                 assert_eq!(pattern, "out-of-repo");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2007,7 +2089,8 @@ mod tests {
                 assert_eq!(path, "../outside.txt");
                 assert_eq!(pattern, "out-of-repo");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2049,7 +2132,8 @@ mod tests {
                 assert_eq!(path, abs_str);
                 assert_eq!(pattern, "out-of-repo");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2103,7 +2187,8 @@ mod tests {
                 // of which case the author spelled.
                 assert_eq!(pattern, ".env");
             }
-            other @ PayloadError::UnknownExtension { .. } => {
+            other @ (PayloadError::UnknownExtension { .. }
+            | PayloadError::ListsFileUnreadable { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2568,7 +2653,7 @@ mod tests {
             Value::Array(vec![Value::String("security-backend.md".into())]),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
         let obj = value.as_object().unwrap();
         // Typed prefix leads in cache-anchor order.
         let prefix: Vec<&str> = obj.keys().map(String::as_str).take(3).collect();
@@ -2587,7 +2672,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
         ctx.insert("pass".into(), Value::String("reuse".into()));
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["pass"], "reuse");
         assert_eq!(
             value["scope-files"].as_array().unwrap().as_slice(),
@@ -2629,10 +2714,63 @@ mod tests {
             ]),
         );
 
-        let files = load_scope_files(&ctx, &repo);
+        let files = load_scope_files(&ctx, &repo).unwrap();
         assert_eq!(files.len(), 1, "only the in-repo scope file is read");
         assert_eq!(files[0].path, "src/in.rs");
         assert_eq!(files[0].content, "fn a() {}");
+    }
+
+    /// A context whose `compute-review-scope` result took the file form: no
+    /// inline `scope`, and `lists-file` naming `file`.
+    fn file_form_context(file: &str) -> Map<String, Value> {
+        let mut ctx = Map::new();
+        ctx.insert("form".into(), Value::String("file".into()));
+        ctx.insert("lists-file".into(), Value::String(file.into()));
+        ctx
+    }
+
+    /// A scope in a list file is loaded from it whole, as an inline one is
+    /// (066 scenario `scope-results-have-a-bounded-size`).
+    #[test]
+    fn a_scope_in_a_list_file_is_loaded_from_it() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("src")).unwrap();
+        fs::write(tmp.path().join("src/a.rs"), "fn a() {}").unwrap();
+        fs::write(tmp.path().join("src/b.rs"), "fn b() {}").unwrap();
+        fs::write(
+            tmp.path().join("lists.json"),
+            r#"{"scope": ["src/a.rs", "src/b.rs"], "modified-since": []}"#,
+        )
+        .unwrap();
+        let files = load_scope_files(&file_form_context("lists.json"), tmp.path()).unwrap();
+        let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
+    }
+
+    /// A list file that is missing, outside the project, not JSON, or holds
+    /// no list of paths halts the request rather than reading as an empty
+    /// scope.
+    #[test]
+    fn an_unreadable_list_file_is_an_error_not_an_empty_scope() {
+        let outer = tempdir().unwrap();
+        let repo = outer.path().join("repo");
+        fs::create_dir_all(&repo).unwrap();
+        fs::write(outer.path().join("outside.json"), r#"{"scope": []}"#).unwrap();
+        fs::write(repo.join("not-json.json"), "{").unwrap();
+        fs::write(repo.join("no-scope.json"), r#"{"modified-since": []}"#).unwrap();
+        fs::write(repo.join("not-paths.json"), r#"{"scope": [1]}"#).unwrap();
+        for file in [
+            "absent.json",
+            "../outside.json",
+            "not-json.json",
+            "no-scope.json",
+            "not-paths.json",
+        ] {
+            match load_scope_files(&file_form_context(file), &repo) {
+                Err(PayloadError::ListsFileUnreadable { path, .. }) => assert_eq!(path, file),
+                other => panic!("{file}: expected ListsFileUnreadable, got {other:?}"),
+            }
+        }
     }
 
     #[test]
@@ -2694,7 +2832,7 @@ mod tests {
             serde_json::json!({ "findings": [] }),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
         let obj = value.as_object().unwrap();
         assert!(!obj.contains_key("findings"));
         assert!(!obj.contains_key("observations"));

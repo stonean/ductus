@@ -3290,4 +3290,59 @@ mod tests {
         let (outcome, _) = walk_write_code(repo, "runtime/alias/x.md");
         assert!(matches!(outcome, WalkOutcome::Complete), "{outcome:?}");
     }
+
+    /// On the exec path a cross-spec surface past the read size reaches the
+    /// walker whole: dispatching `diff-cross-spec` leaves no inline list in
+    /// the context, its count, and the list file holding every sibling path
+    /// (066 scenario `scope-results-have-a-bounded-size`).
+    #[test]
+    fn a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n",
+        );
+        commit_all(&repository, "begin");
+        let mut siblings: Vec<String> = (0..12)
+            .map(|i| format!("specs/002-y/scenarios/s{i}.md"))
+            .collect();
+        siblings.sort();
+        for path in &siblings {
+            write(&tmp.path().join(path), "x\n");
+        }
+        commit_all(&repository, "work");
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 300\n",
+        );
+
+        let procedure = Procedure {
+            command: "implement".into(),
+            steps: vec![Step::Primitive {
+                number: StepNumber(vec![1]),
+                name: "diff-cross-spec".into(),
+                prose: String::new(),
+                location: loc(),
+            }],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            tmp.path().to_path_buf(),
+            ctx_with_feature("001-x"),
+            &mut reader,
+            &mut writer,
+        );
+        assert!(matches!(walker.run().unwrap(), WalkOutcome::Complete));
+        assert_eq!(walker.context["form"], "file");
+        assert!(walker.context.get("cross-spec-paths").is_none());
+        assert_eq!(walker.context["cross-spec-count"], siblings.len());
+        let file = walker.context["lists-file"].as_str().unwrap().to_string();
+        let lists: Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(lists["cross-spec-paths"], serde_json::json!(siblings));
+    }
 }

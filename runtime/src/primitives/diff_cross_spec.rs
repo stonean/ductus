@@ -29,9 +29,54 @@ use git2::DiffOptions;
 use crate::primitives::derive_boundary::first_commit_for_prefix;
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
-use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
+use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult, ListsForm};
 
-/// Execute the `diff-cross-spec` primitive.
+/// Execute the `diff-cross-spec` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with
+/// `cross-spec-paths` in the file it names and only their count inline
+/// (`bounded_lists::place`; 066 scenario `scope-results-have-a-bounded-size`).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
+    let cross = compute(args, repo)?;
+    let mut result = DiffCrossSpecResult {
+        first_commit: cross.first_commit,
+        current_head: cross.current_head,
+        cross_spec_count: cross.cross_spec_paths.len(),
+        cross_spec_paths: Some(cross.cross_spec_paths.clone()),
+        form: ListsForm::Inline,
+        lists_file: None,
+        guidance: cross.guidance,
+    };
+    let lists = serde_json::json!({ "cross-spec-paths": cross.cross_spec_paths });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "diff-cross-spec", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.cross_spec_paths = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// The cross-spec impact surface whole: what `diff-cross-spec` resolves,
+/// before its result is bounded.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ImpactSurface {
+    /// See [`DiffCrossSpecResult::first_commit`].
+    pub(crate) first_commit: String,
+    /// See [`DiffCrossSpecResult::current_head`].
+    pub(crate) current_head: String,
+    /// See [`DiffCrossSpecResult::cross_spec_paths`].
+    pub(crate) cross_spec_paths: Vec<String>,
+    /// See [`DiffCrossSpecResult::guidance`].
+    pub(crate) guidance: Option<String>,
+}
+
+/// Resolve the cross-spec impact surface, every path whole.
 ///
 /// # Errors
 ///
@@ -46,7 +91,7 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 /// no window to diff, so there is nothing to report. Erroring here would
 /// only relocate the halt `derive-boundary` no longer raises — the same
 /// `/{project}:implement` walk hits this primitive at steps 7 and 13.
-pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
+pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSurface> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
@@ -69,7 +114,7 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
 
     let Some(first_commit) = first_commit_for_prefix(repository, &project.to_git(&spec_prefix))?
     else {
-        return Ok(DiffCrossSpecResult {
+        return Ok(ImpactSurface {
             first_commit: String::new(),
             current_head: String::new(),
             cross_spec_paths: Vec::new(),
@@ -124,7 +169,7 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
         None,
     )?;
 
-    Ok(DiffCrossSpecResult {
+    Ok(ImpactSurface {
         first_commit: first_commit.to_string(),
         current_head: head_oid.to_string(),
         cross_spec_paths: cross_spec.into_iter().collect(),
@@ -185,13 +230,13 @@ mod tests {
     #[test]
     fn reports_sibling_changes_only() {
         let tmp = seeded_repo();
-        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert_eq!(
             result.cross_spec_paths,
             vec!["specs/007-sibling/spec.md".to_string()],
             "own feature dir, inbox, and non-spec code are all excluded"
         );
-        let wire = serde_json::to_value(&result).unwrap();
+        let wire = serde_json::to_value(run(&args("020-demo"), tmp.path()).unwrap()).unwrap();
         assert!(
             wire.get("inbox-additions").is_none() && wire.get("inbox-standing").is_none(),
             "no inbox field is reported any more: {wire}"
@@ -241,7 +286,7 @@ mod tests {
         );
         git_fixture::commit_all(&repo, "feat(020): implement");
 
-        let result = run(&args("020-demo"), &project).unwrap();
+        let result = compute(&args("020-demo"), &project).unwrap();
         assert_eq!(result.first_commit, first.to_string());
         assert_eq!(result.guidance, None);
         assert_eq!(
@@ -275,7 +320,7 @@ mod tests {
         );
         commit_all(&repo, "feat(020): implement");
 
-        let result = run(&args("020-demo"), &project).unwrap();
+        let result = compute(&args("020-demo"), &project).unwrap();
         assert_eq!(result.guidance, None);
         assert_eq!(
             result.cross_spec_paths,
@@ -292,7 +337,7 @@ mod tests {
             "---\nstatus: planned\n---\n\n# 020\n",
         );
         commit_all(&repo, "feat(020): plan");
-        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert_eq!(result.cross_spec_paths, [] as [String; 0]);
     }
 
@@ -317,7 +362,7 @@ mod tests {
             &tmp.path().join("specs/inbox.md"),
             "# Inbox\n\n- leak: connection pool never drained\n",
         );
-        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert_eq!(
             result.cross_spec_paths,
             vec!["specs/007-sibling/scenarios/edge.md".to_string()],
@@ -347,7 +392,7 @@ mod tests {
             "# Inbox\n\n- captured under the custom root\n",
         );
         commit_all(&repo, "feat(020): work");
-        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert_eq!(
             result.cross_spec_paths,
             vec!["governance/007-sib/spec.md".to_string()],
@@ -368,7 +413,7 @@ mod tests {
             &tmp.path().join("specs/030-orphan/spec.md"),
             "---\nstatus: planned\n---\n\n# 030\n",
         );
-        let result = run(&args("030-orphan"), tmp.path()).unwrap();
+        let result = compute(&args("030-orphan"), tmp.path()).unwrap();
         assert_eq!(result.first_commit, "");
         assert_eq!(result.current_head, "");
         assert_eq!(result.cross_spec_paths, [] as [String; 0]);
@@ -397,7 +442,7 @@ mod tests {
         );
         commit_all(&repo, "feat(020): plan");
 
-        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert!(result.guidance.is_none());
         assert_ne!(result.first_commit, "");
     }
@@ -405,9 +450,9 @@ mod tests {
     #[test]
     fn missing_feature_and_traversal_error() {
         let tmp = seeded_repo();
-        let err = run(&args("099-absent"), tmp.path()).unwrap_err();
+        let err = compute(&args("099-absent"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
-        let err = run(&args("../escape"), tmp.path()).unwrap_err();
+        let err = compute(&args("../escape"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
     }
 }

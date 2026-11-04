@@ -1070,3 +1070,99 @@ fn clarify_and_plan_size_checks_warn_without_halting_the_walk() {
         );
     }
 }
+
+/// A project whose 001-x went in progress and then gained `n` source files,
+/// and a sibling spec `n` scenarios, with `[artifacts] read-size-bytes` small
+/// enough that both scope results pass it (066 scenario
+/// `scope-results-have-a-bounded-size`).
+fn over_the_read_size(n: usize) -> tempfile::TempDir {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = Repository::init(tmp.path()).unwrap();
+    let spec = |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
+    write_file(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+    write_file(&tmp.path().join("specs/002-y/spec.md"), &spec("planned"));
+    commit_all(&repo, "plan");
+    write_file(
+        &tmp.path().join("specs/001-x/spec.md"),
+        &spec("in-progress"),
+    );
+    commit_all(&repo, "begin");
+    for i in 0..n {
+        write_file(
+            &tmp.path().join(format!("src/f{i}.rs")),
+            &format!("fn f{i}() {{}}\n"),
+        );
+        write_file(
+            &tmp.path().join(format!("specs/002-y/scenarios/s{i}.md")),
+            "x\n",
+        );
+    }
+    commit_all(&repo, "work");
+    write_file(
+        &tmp.path().join(".ductus/config.toml"),
+        "[artifacts]\nread-size-bytes = 300\n",
+    );
+    tmp
+}
+
+/// On the exec path a scope past the read size reaches the review whole: the
+/// walker's `performReview` request loads every in-scope file from the list
+/// file `compute-review-scope` names, and carries no inline `scope`, so the
+/// file form is what it read.
+#[test]
+fn a_scope_past_the_read_size_reaches_the_review_through_its_list_file() {
+    let tmp = over_the_read_size(12);
+    let procedure = Procedure {
+        command: "review".into(),
+        steps: vec![
+            Step::Primitive {
+                number: StepNumber(vec![1]),
+                name: "compute-review-scope".into(),
+                prose: String::new(),
+                location: loc(),
+            },
+            Step::Extension {
+                number: StepNumber(vec![2]),
+                identifier: "performReview".into(),
+                prose: "Run the security pass.".into(),
+                location: loc(),
+            },
+        ],
+    };
+    let mut context = Map::new();
+    context.insert("feature".into(), Value::String("001-x".into()));
+    context.insert("pass".into(), Value::String("security".into()));
+    let responses =
+        "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[]}}\n";
+    let mut reader = Cursor::new(responses.to_string());
+    let mut writer: Vec<u8> = Vec::new();
+    let mut walker = Walker::new(
+        &procedure,
+        tmp.path().to_path_buf(),
+        context,
+        &mut reader,
+        &mut writer,
+    );
+    assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+
+    let request = std::str::from_utf8(&writer)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str::<Value>(l).unwrap())
+        .find(|e| e["type"] == "llm-request" && e["extension-point"] == "performReview")
+        .expect("a performReview llm-request was emitted");
+    assert!(
+        request["request"].get("scope").is_none(),
+        "the scope was inline, so the file form went unexercised: {request}"
+    );
+    let paths: Vec<&str> = request["request"]["scope-files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["path"].as_str().unwrap())
+        .collect();
+    for i in 0..12 {
+        let file = format!("src/f{i}.rs");
+        assert!(paths.contains(&file.as_str()), "{file} missing: {paths:?}");
+    }
+}

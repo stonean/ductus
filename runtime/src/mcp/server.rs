@@ -350,7 +350,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "diff-cross-spec",
-        description = "Compute /ductus:implement's cross-spec impact surface: diff the feature's first spec-dir commit against the working tree, scoped to the spec root and filtered to paths outside the feature's own directory. {specs-root}/inbox.md is excluded: it holds what a person logs, which is no spec's impact. Read-only; empty lists are the no-impact outcome."
+        description = "Compute /ductus:implement's cross-spec impact surface: diff the feature's first spec-dir commit against the working tree, scoped to the spec root and filtered to paths outside the feature's own directory. {specs-root}/inbox.md is excluded: it holds what a person logs, which is no spec's impact. A zero cross-spec-count is the no-impact outcome. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, cross-spec-paths is absent, and lists-file names a JSON file under .ductus/results/ holding the list whole, one entry per line, to read in parts by line offset when it exceeds one read. Read-only but for that file."
     )]
     async fn diff_cross_spec(
         &self,
@@ -634,7 +634,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "compute-review-scope",
-        description = "Resolve /ductus:review's diff-base (the parent of the commit the spec entered in-progress at, or a --since override) and its file scope (the union of the plan's Affected Files and the files modified since the diff base)."
+        description = "Resolve /ductus:review's diff-base (the parent of the commit the spec entered in-progress at, or a --since override) and its file scope (the union of the plan's Affected Files and the files modified since the diff base). When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the scope, modified-since and plan-affected lists are absent, and lists-file names a JSON file under .ductus/results/ holding all three whole, one entry per line, to read in parts by line offset when it exceeds one read. Each list's count is inline in both forms; a zero scope-count, never an absent list, is an empty scope."
     )]
     async fn compute_review_scope(
         &self,

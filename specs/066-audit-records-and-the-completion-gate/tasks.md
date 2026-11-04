@@ -45,11 +45,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Scope results have a bounded size (BE-PAYLOAD-001)
 
-In progress, uncommitted in this checkout (2026-11-03). The scenario's question is resolved (f8a6a205). Written and passing their unit tests: `runtime/src/primitives/bounded_lists.rs` (`place` returns lists inline while the compact JSON result is at most `[artifacts] read-size-bytes`, read through `check_artifact_size::resolve_threshold`; past it, it writes them pretty-printed to `.ductus/results/{primitive}/{feature}/{sha256}.json` under a self-ignoring directory, through `fix_rounds::ignore_everything`, now `pub(crate)`, and prunes that feature's list files older than `STALE_AFTER`, 24 hours); `compute_review_scope.rs` and `diff_cross_spec.rs` split into a crate-private `compute` holding the whole lists and a `run` that bounds them, with `write_review.rs`'s `resolve_scope_size` calling `compute`; the results gain `form`, the counts and `lists-file`, their lists now `Option` (`runtime/src/schema/primitives.rs`, `ListsForm`); `interpreter/payload.rs`'s `performReview` builder reads `scope` from the list file through `scope_paths`, halting with the new `lists-file-unreadable` code when it cannot; and the two exec-path tests (`a_scope_past_the_read_size_reaches_the_review_through_its_list_file` in `runtime/tests/walker.rs`, `a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file` in `runtime/src/interpreter/mod.rs`). Still owed, in order: the two MCP-path tests in `runtime/tests/mcp.rs`; a mutation list proving each test fails with the bound or the file read removed; the shapes and the stated maximum in `data-model.md`; `framework/commands/review.md` step 1, whose empty-scope test must read `scope-count` and whose re-run-through-the-binary workaround goes; `framework/commands/implement.md` steps 7 and 13, which read `cross-spec-paths` or the list file; both MCP tool descriptions; `specs/022-deterministic-runtime/plan.md`'s "bounded by the project … rather than paginated" paragraph; a sweep for other readers of the two results; re-blessing any golden the new keys move; a `runtime/CHANGELOG.md` Unreleased Changed entry; and the full gate.
+Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP tests it cannot run fail under its M1, run by hand as its docstring says.
 
-- [ ] Implement the behavior described in `scenarios/scope-results-have-a-bounded-size.md`
-- [ ] Resolve the scenario's open question through `/ductus:clarify`, then bound `compute-review-scope` and `diff-cross-spec` by the chosen mechanism, state the maximum in `data-model.md`, and update `framework/commands/review.md` step 1 and every other consumer
-- [ ] A test per primitive shows a result past the bound reaching every entry on the MCP and the exec paths, and fails when the bound is removed
+- [x] Implement the behavior described in `scenarios/scope-results-have-a-bounded-size.md`
+- [x] Resolve the scenario's open question through `/ductus:clarify`, then bound `compute-review-scope` and `diff-cross-spec` by the chosen mechanism, state the maximum in `data-model.md`, and update `framework/commands/review.md` step 1 and every other consumer
+- [x] A test per primitive shows a result past the bound reaching every entry on the MCP and the exec paths, and fails when the bound is removed
 
 - **Done when**: both results carry a stated maximum, every entry stays reachable on both paths, and the 2026-10-27 analysis's BE-PAYLOAD-001 finding no longer fires
 
@@ -94,6 +94,8 @@ In progress, uncommitted in this checkout (2026-11-03). The scenario's question 
 
 ## 14. Implement scenario: process-decisions-results-have-a-bounded-size
 
+`bounded_lists::place` (`runtime/src/primitives/bounded_lists.rs`, task 7) is the shared helper: a primitive's `run` builds the inline result from a crate-private `compute` holding the whole lists, and `place` decides the form, as `compute_review_scope.rs` does.
+
 - [ ] Implement the behavior described in `scenarios/process-decisions-results-have-a-bounded-size.md`
 - [ ] Bound `process-decisions`' `matched`, `expired`, `retained`, `lapsed` and `notices` lists by the mechanism task 7 settles, and state the maximum in `data-model.md`
 - [ ] A test shows a result past the bound reaching every entry, and fails when the bound is removed
@@ -111,3 +113,9 @@ In progress, uncommitted in this checkout (2026-11-03). The scenario's question 
 - [x] Tests: each derived count, the absent-versus-empty list, the switch's waiver, each refusal, and the gate blocking and passing; each fails with its behavior removed
 
 - **Done when**: `write-review` records the loop's fields from `fix-rounds` alone, `check-review-gate` blocks an un-re-read round without a waiver, and the constitution passes `scripts/lint-governing-size.sh`.
+
+## 16. Disposition out-of-spec finding: the seeds' compute-review-scope CLI allows outlive the step that ran them
+
+- [ ] framework/bootstrap/ductus.md — the Claude, Auggie and OpenCode seeds in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-04 by task 7's consumer sweep
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

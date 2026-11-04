@@ -77,6 +77,12 @@ const EXEMPT: &[(&str, &str)] = &[
          generated state the runtime renders whole, never a file a person edited (spec 078)",
     ),
     (
+        "bounded_lists.rs",
+        "writes a list file under .ductus/results/ named by the sha256 of its own bytes — \
+         generated state the runtime renders whole, never a file a person edited (066 scenario \
+         scope-results-have-a-bounded-size)",
+    ),
+    (
         "write_review.rs",
         "renders review.md wholesale from a fixed skeleton on every run — generated state with \
          no prior content to preserve. It stopped rewriting spec.md when the review record moved \

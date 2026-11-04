@@ -753,10 +753,115 @@ async fn compute_review_scope_returns_structured_scope_via_mcp() {
     // returns the structured shape.
     assert!(obj["diff-base"].is_string());
     assert!(obj["scope"].is_array());
+    assert_eq!(obj["form"], "inline");
     assert!(
         obj.get("captured-issues").is_none(),
         "the inbox window left this result (spec 058)"
     );
+}
+
+/// The `[artifacts] read-size-bytes` both bounded tests set: small enough
+/// that twelve paths pass it inline, large enough for the file form.
+const SMALL_READ_SIZE: usize = 300;
+
+/// A repository whose `001-x` went in progress and then gained `n` source
+/// files, and whose sibling `002-y` gained `n` scenarios, with `[artifacts]
+/// read-size-bytes` set to [`SMALL_READ_SIZE`] (066 scenario
+/// `scope-results-have-a-bounded-size`).
+fn over_the_read_size(n: usize) -> tempfile::TempDir {
+    use git2::{IndexAddOption, Repository, Signature};
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = Repository::init(tmp.path()).unwrap();
+    let commit = |message: &str| {
+        let mut index = repo.index().unwrap();
+        index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
+        index.write().unwrap();
+        let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+        let sig = Signature::now("Test", "test@example.com").unwrap();
+        let parent = repo.head().ok().map(|head| head.peel_to_commit().unwrap());
+        let parents: Vec<&git2::Commit> = parent.iter().collect();
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+            .unwrap();
+    };
+    let write = |rel: &str, body: &str| {
+        let path = tmp.path().join(rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, body).unwrap();
+    };
+    let spec = |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
+    write("specs/001-x/spec.md", &spec("planned"));
+    write("specs/002-y/spec.md", &spec("planned"));
+    commit("plan");
+    write("specs/001-x/spec.md", &spec("in-progress"));
+    commit("begin");
+    for i in 0..n {
+        write(&format!("src/f{i}.rs"), &format!("fn f{i}() {{}}\n"));
+        write(&format!("specs/002-y/scenarios/s{i}.md"), "x\n");
+    }
+    commit("work");
+    write(
+        ".ductus/config.toml",
+        &format!("[artifacts]\nread-size-bytes = {SMALL_READ_SIZE}\n"),
+    );
+    tmp
+}
+
+/// The lists in the file a file-form result names, after checking the
+/// result itself is within the read size and carries `inline_keys` nowhere.
+fn lists_in_file(
+    tmp: &tempfile::TempDir,
+    obj: &serde_json::Map<String, Value>,
+    inline_keys: &[&str],
+) -> Value {
+    assert_eq!(obj["form"], "file", "the result stayed inline: {obj:?}");
+    for key in inline_keys {
+        assert!(obj.get(*key).is_none(), "`{key}` was inline: {obj:?}");
+    }
+    let size = serde_json::to_vec(obj).unwrap().len();
+    assert!(size <= SMALL_READ_SIZE, "{size} bytes: {obj:?}");
+    let file = obj["lists-file"].as_str().expect("a lists-file path");
+    serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap()
+}
+
+/// On the MCP path a scope past the read size reaches the host whole: the
+/// result is within the bound, and the file it names holds every in-scope
+/// path (066 scenario `scope-results-have-a-bounded-size`).
+#[tokio::test]
+async fn a_scope_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = over_the_read_size(12);
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "compute-review-scope", json!({"feature": "001-x"})).await;
+    let obj = structured_object(&result);
+    let lists = lists_in_file(&tmp, obj, &["scope", "modified-since", "plan-affected"]);
+    let scope = lists["scope"].as_array().unwrap();
+    assert_eq!(obj["scope-count"], scope.len());
+    assert_eq!(
+        obj["modified-since-count"],
+        lists["modified-since"].as_array().unwrap().len()
+    );
+    for i in 0..12 {
+        let path = json!(format!("src/f{i}.rs"));
+        assert!(scope.contains(&path), "{path} missing: {scope:?}");
+    }
+}
+
+/// On the MCP path a cross-spec surface past the read size reaches the host
+/// whole: the result is within the bound, and the file it names holds every
+/// sibling path (066 scenario `scope-results-have-a-bounded-size`).
+#[tokio::test]
+async fn a_cross_spec_surface_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = over_the_read_size(12);
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "diff-cross-spec", json!({"feature": "001-x"})).await;
+    let obj = structured_object(&result);
+    let lists = lists_in_file(&tmp, obj, &["cross-spec-paths"]);
+    // `002-y/spec.md` is in 001-x's first commit, so it is not a change.
+    let mut expected: Vec<String> = (0..12)
+        .map(|i| format!("specs/002-y/scenarios/s{i}.md"))
+        .collect();
+    expected.sort();
+    assert_eq!(lists["cross-spec-paths"], json!(expected));
+    assert_eq!(obj["cross-spec-count"], expected.len());
 }
 
 /// `check-review-gate`'s per-entry `cross-spec-impact`, a field 0.48.0 added

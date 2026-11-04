@@ -164,6 +164,20 @@ its version and date.
   its task checked or gone, its spec `done` or gone, or a rule file — while
   its finding still fires, under `lapsed`, and the finding needs a new
   disposition. Spec 076.
+- **`compute-review-scope` and `diff-cross-spec` results stay within one
+  read.** Each result now carries `form` and each list's count
+  (`scope-count`, `modified-since-count` and `plan-affected-count`;
+  `cross-spec-count`). While a result fits `[artifacts] read-size-bytes`,
+  50,000 bytes by default, its lists are inline as before; past it, `form` is
+  `file`, no list is inline, and `lists-file` names a JSON file under the
+  self-ignoring `.ductus/results/` holding them whole, so a review base with
+  months of history no longer exceeds a host's tool-output cap. `/review`
+  takes an empty scope from a zero `scope-count` and its in-scope paths from
+  that file, and no longer re-runs the call through the runtime binary;
+  `ductus exec`'s review request reads its scope from the file, halting with
+  `lists-file-unreadable` when it cannot. A script of your own that reads
+  `scope` or `cross-spec-paths` from either result must read `lists-file`
+  when `form` is `file`. Spec 066, task 7.
 
 ### Fixed
 
