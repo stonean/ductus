@@ -741,7 +741,10 @@ unchanged rather than expiring:
    waiver expired: rule {rule-id} at {file} ({reason})
    ```
 
-   The notice is the point of the action; expiry MUST NOT be silent. When
+   The notice is the point of the action; expiry MUST NOT be silent. Every
+   waiver notice prints the stored `rule`, `file` and `reason` flattened to
+   one line — each control or line-separator character a space, a tab kept,
+   the ends trimmed — while the classification reads them as written. When
    the same rule still fires anywhere in scope after a drop, the finding
    re-counts toward its severity's count: a MUST toward `must-violations`,
    flipping `review.blocking` to `true` if it was `false`; a SHOULD toward

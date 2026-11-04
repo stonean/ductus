@@ -46,7 +46,7 @@ Result:
 }
 ```
 
-Reads the `waivers` list in `review.md`'s frontmatter and classifies each `(rule, file)` anchor against the passes' findings — a waiver listing several paths contributes one anchor per path (scenario `process-waivers-file-lists`). **applied**: the file exists and the rule still fires there. **expired**: it does not, and `write-review` drops that path on the next write, and the waiver with its last path. **retained**: the run was dimension-restricted (`skipped-passes` non-empty) and the anchor did not fire against the passes that ran, so it is left untouched — a partial run never prunes. `notices` carries the `waiver expired` / `waiver retained` / `malformed waiver` / `duplicate waiver` lines in entry order. `fired` is MCP-only.
+Reads the `waivers` list in `review.md`'s frontmatter and classifies each `(rule, file)` anchor against the passes' findings — a waiver listing several paths contributes one anchor per path (scenario `process-waivers-file-lists`). **applied**: the file exists and the rule still fires there. **expired**: it does not, and `write-review` drops that path on the next write, and the waiver with its last path. **retained**: the run was dimension-restricted (`skipped-passes` non-empty) and the anchor did not fire against the passes that ran, so it is left untouched — a partial run never prunes. `notices` carries the `waiver expired` / `waiver retained` / `malformed waiver` / `duplicate waiver` lines in entry order, each stored value printed flattened to one line (scenario `process-waivers-notices-flatten-stored-text`). `fired` is MCP-only.
 
 ## `process-decisions` — classify stored decisions before dispositions
 

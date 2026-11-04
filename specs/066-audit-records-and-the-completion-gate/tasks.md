@@ -84,9 +84,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 13. Implement scenario: process-waivers-notices-flatten-stored-text
 
-- [ ] Implement the behavior described in `scenarios/process-waivers-notices-flatten-stored-text.md`
-- [ ] Print each `process-waivers` notice's `rule`, `file` and `reason` through `flatten_line`, classifying on the stored values as before
-- [ ] Add a test that plants an escape in each field of a duplicate, a retained and an expired waiver
+- [x] Implement the behavior described in `scenarios/process-waivers-notices-flatten-stored-text.md`
+- [x] Print each `process-waivers` notice's `rule`, `file` and `reason` through `flatten_line`, classifying on the stored values as before
+- [x] Add a test that plants an escape in each field of a duplicate, a retained and an expired waiver
 
 - **Done when**: the test fails when any notice prints a stored field as written, and `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` pass under `runtime/`.
 

@@ -105,14 +105,21 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
         let rule = waiver.rule.clone().unwrap_or_default();
         let reason = waiver.reason.clone().unwrap_or_default();
         let paths = waiver.file.as_ref().map_or(&[][..], WaiverPaths::as_slice);
+        // A notice prints each stored value flattened to one line, so a
+        // control character a hand edit left in the record never reaches the
+        // operator raw; classification reads the values as written (066
+        // scenario `process-waivers-notices-flatten-stored-text`).
+        let shown_rule = super::flatten_line(&rule);
+        let shown_reason = super::flatten_line(&reason);
 
         // Each listed path is its own anchor, so one entry can apply at one
         // path, expire at another, and repeat an anchor an earlier entry
         // already claimed at a third.
         for file in paths {
+            let shown_file = super::flatten_line(file);
             if seen.iter().any(|(r, f)| r == &rule && f == file) {
                 notices.push(format!(
-                    "duplicate waiver: rule {rule} at {file} — entry [{index}] ignored"
+                    "duplicate waiver: rule {shown_rule} at {shown_file} — entry [{index}] ignored"
                 ));
                 continue;
             }
@@ -133,11 +140,13 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
                 applied.push(anchor);
             } else if restricted {
                 notices.push(format!(
-                    "waiver retained: rule {rule} at {file} — dimension not evaluated this run ({reason})"
+                    "waiver retained: rule {shown_rule} at {shown_file} — dimension not evaluated this run ({shown_reason})"
                 ));
                 retained.push(anchor);
             } else {
-                notices.push(format!("waiver expired: rule {rule} at {file} ({reason})"));
+                notices.push(format!(
+                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"
+                ));
                 expired.push(anchor);
             }
         }
@@ -567,6 +576,58 @@ mod tests {
             result.notices,
             vec!["duplicate waiver: rule SEC-BE-014 at src/a.ts — entry [0] ignored"]
         );
+    }
+
+    /// Every notice prints a stored waiver's rule, file and reason flattened
+    /// to one line, while classification reads them as written: an escape
+    /// planted in each field of an expired, a retained and a duplicate waiver
+    /// reaches no notice, and a tab is kept (066 scenario
+    /// `process-waivers-notices-flatten-stored-text`).
+    #[test]
+    fn notices_flatten_stored_text_and_classification_reads_it_as_written() {
+        // ESC in the rule, NEL in the file, U+2028 and a tab in the reason.
+        let planted = "    - rule: \"R\\x1b[2J1\"\n      file: \"src/gone\\x85.ts\"\n      reason: \"why\\u2028so\\tthen\"\n      waived-at: 2026-05-10T14:40:00Z\n      waived-by: dev@example.com\n";
+        let (rule, file, reason) = ("R\u{1b}[2J1", "src/gone\u{85}.ts", "why\u{2028}so\tthen");
+
+        let tmp = setup("001-x", planted, &[]);
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices,
+            ["waiver expired: rule R [2J1 at src/gone .ts (why so\tthen)"]
+        );
+        let anchor = &result.expired[0];
+        assert_eq!(
+            (
+                anchor.rule.as_str(),
+                anchor.file.as_str(),
+                anchor.reason.as_str()
+            ),
+            (rule, file, reason)
+        );
+
+        let result = run(&restricted_args("001-x", &[], &["security"]), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices,
+            [
+                "waiver retained: rule R [2J1 at src/gone .ts — dimension not evaluated this run (why so\tthen)"
+            ]
+        );
+        assert_eq!(result.retained[0].file, file);
+
+        let tmp = setup("001-x", &format!("{planted}{planted}"), &[]);
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices[1],
+            "duplicate waiver: rule R [2J1 at src/gone .ts — entry [1] ignored"
+        );
+        for notice in &result.notices {
+            assert!(
+                !notice
+                    .chars()
+                    .any(|c| c != '\t' && crate::primitives::is_line_hazard(c)),
+                "{notice:?}"
+            );
+        }
     }
 
     #[test]
