@@ -62,6 +62,7 @@ fn review_command_parses_to_the_expected_procedure() {
         ("9", "prose"),
         ("10", "prose"),
         ("11", "primitive:write-review"),
+        ("12", "prose"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))

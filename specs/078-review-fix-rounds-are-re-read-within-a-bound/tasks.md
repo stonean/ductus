@@ -66,10 +66,10 @@ Blocked on 066 task 15, whose `fix-rounds` argument the loop's `write-review` ca
 
 The run's first base is taken when the passes end, before step 10 fixes anything: step 10 already re-runs the affected passes after a chore fix, and `--fix` calls `write-review` a second time, so the loop sits after both and before the final `write-review`. Each round: `brief-re-read` with the round's base; on `exempt` or `empty` no re-read; on `re-read`, hand the agent the `brief` path alone (a host without subagents prints it for the operator), then `read-re-read` with the same base. After a re-read with findings whose fixes apply only its edits, `check-prescriptions` with that re-read's base: `matched` with `open` 0 ends the loop and its `snapshot` is the next base; otherwise brief the round again from the re-read's `snapshot`. Count toward the budget only re-reads with a MUST or SHOULD. `framework/commands/review.md`'s Writes line says no other file is modified, which the round directory and the snapshots' git objects now contradict. `BLESS=1` re-blesses the golden; read its diff for a templated version (AGENTS.md Gotchas).
 
-- [ ] `framework/commands/review.md`: call `start-fix-rounds` when the passes end, and add the loop step between step 10 and `write-review`, its per-round primitives unbackticked behind `<!-- audit:ignore-promotion -->`; update the Writes line
-- [ ] `framework/reference/review.md`: the loop's walk — the end condition, the budget and the operator's decision, an incomplete or failed check counting as not re-read, the host without subagents running the brief in a fresh session, a decline's reason, out-of-round NOTEs and open findings at a stop as observations — pointing at the primitives for the brief's text
-- [ ] Run `scripts/gen-claude-commands.sh`, re-bless `runtime/tests/golden/review-basic.jsonl` and read its diff
-- [ ] Walk `framework/bootstrap/ductus.md` §Derived values' layout-derived rows and record each layout's impact in the commit
+- [x] `framework/commands/review.md`: call `start-fix-rounds` when the passes end, and add the loop step between step 10 and `write-review`, its per-round primitives unbackticked behind `<!-- audit:ignore-promotion -->`; update the Writes line
+- [x] `framework/reference/review.md`: the loop's walk — the end condition, the budget and the operator's decision, an incomplete or failed check counting as not re-read, the host without subagents running the brief in a fresh session, a decline's reason, out-of-round NOTEs and open findings at a stop as observations — pointing at the primitives for the brief's text
+- [x] Run `scripts/gen-claude-commands.sh`, re-bless `runtime/tests/golden/review-basic.jsonl` and read its diff
+- [x] Walk `framework/bootstrap/ductus.md` §Derived values' layout-derived rows and record each layout's impact in the commit
 
 - **Done when**: the command runs the loop as the spec's Behavior states, the parity suite passes, and the generated copies match their source (AC1, AC4, AC6, AC8).
 
@@ -77,7 +77,7 @@ The run's first base is taken when the passes end, before step 10 fixes anything
 
 Blocked on 066 task 15.
 
-- [ ] Confirm against that task's code and tests that the record carries the loop's fields from `fix-rounds` and that the gate blocks an un-re-read round without a waiver, and that `re-reads-off` waives each such round with its reason
+- [x] Confirm against that task's code and tests that the record carries the loop's fields from `fix-rounds` and that the gate blocks an un-re-read round without a waiver, and that `re-reads-off` waives each such round with its reason
 
 - **Done when**: AC12, AC13 and AC14 hold against the tree.
 
