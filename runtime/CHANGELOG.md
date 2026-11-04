@@ -8,6 +8,26 @@ Changelog obligations written as their changes land, from 2026-11-02. The
 release commit adds the other changes since 0.59.11 and gives this section
 its version and date.
 
+### Added
+
+- **`/review` re-reads the fixes it makes.** Before the record is final, an
+  independent agent re-reads each round of fixes the review made, from a
+  brief the runtime writes: the round's paths, derived from the repository,
+  and a fixed severity bar. A round that only applies the edits a re-read
+  prescribed is checked by diff instead, and after two re-reads that find a
+  MUST or SHOULD the loop waits for the operator. A host that cannot start
+  an agent prints the brief for the operator to run in a fresh session. Four
+  primitives carry it — `start-fix-rounds`, `brief-re-read`, `read-re-read`
+  and `check-prescriptions` — writing only under the self-ignoring
+  `.ductus/review-rounds/` and as git objects no ref points at, so a review
+  still commits nothing. `review.md` records `fix-rounds`, `re-reads`,
+  `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers`, and
+  `/implement`'s completion gate holds `done` while a round that needed a
+  re-read has neither one nor the operator's waiver; a record written before
+  this passes with a notice that it does not say. `[review] re-reads-off =
+  "<reason>"` switches the loop off, waiving each such round with that
+  reason. Spec 078; spec 066, task 15.
+
 ### Changed
 
 - **The error envelope's home is `specs/errors.md`.** `api-backend.md`'s

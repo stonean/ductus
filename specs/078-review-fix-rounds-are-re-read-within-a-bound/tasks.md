@@ -87,8 +87,8 @@ Blocked on task 7: AGENTS.md's rule points at the statement that task writes.
 
 The rule is the Workflow bullet beginning "Have an independent agent re-read each fix round"; AGENTS.md is held to 50,000 bytes by `scripts/lint-governing-size.sh`, so the pointer replaces the bullet rather than adding to it.
 
-- [ ] Replace AGENTS.md's re-read rule with a pointer to `framework/reference/review.md`'s loop section
-- [ ] Sweep `framework/`, `docs/`, `README.md` and the specs for prose describing a review with no fix-round loop
-- [ ] Add the unreleased `runtime/CHANGELOG.md` entry
+- [x] Replace AGENTS.md's re-read rule with a pointer to `framework/reference/review.md`'s loop section
+- [x] Sweep `framework/`, `docs/`, `README.md` and the specs for prose describing a review with no fix-round loop
+- [x] Add the unreleased `runtime/CHANGELOG.md` entry
 
 - **Done when**: AGENTS.md restates no part of the loop (AC9), and no live artifact describes a review without one.
