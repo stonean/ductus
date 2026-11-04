@@ -128,3 +128,11 @@ The rule is the Workflow bullet beginning "Have an independent agent re-read eac
 - [x] Have `framework/commands/review.md` step 12 and `framework/reference/review.md`'s **Fix-round loop** cite that constant rather than restate the number as a second source, and name its location in `plan.md`'s **The loop's end and its budget**
 
 - **Done when**: the budget's value lives in one named location, every artifact stating it points there, and CFG-CONST-001 no longer fires against 078
+
+## 15. Close 078 after 079 is done
+
+This task waits until `079-review-and-analysis-work-converges` is `done` (owner, 2026-11-04). Read 079's Resolved Questions first: its answer on whether 078's own loop changes, and every rule it changed, govern this task. `analysis.md` predates tasks 10–14 and the second review, so the completion gate holds at `analyze-findings` until this run rewrites it; the review record itself was current on 2026-11-04. Unless 079 replaced it, the owner's stance for this closing analysis and gate (2026-11-04) applies: fix mechanical findings in the run; waive an observation about machinery outside 078's code, with its reason; defer nothing into 078. If 066 task 17 has edited line 137 of `data-model.md` by then, the review is stale: review only that change, with `--since` set to the commit before it.
+
+- [ ] Run `/ductus:analyze` on 078 and disposition each live finding
+
+- **Done when**: `analysis.md` is current with no live hard-fail or blocking finding, so `/ductus:implement`'s completion gate can run
