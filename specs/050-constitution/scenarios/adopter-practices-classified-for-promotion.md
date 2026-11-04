@@ -16,7 +16,7 @@ An adopter recorded seven practices in its own project that it reports hold for 
 6. Recommend a waiver only where a recorded requirement backs it, never for a cost.
 7. Before routing a review observation, ask whether it is design rationale, whose home is a short why at the code.
 
-Some sit beside existing text: (2) is one of this repository's `AGENTS.md` gotchas, (3) is near §drift-prevention's retired-filename rule, and (6) is near `AGENTS.md`'s rule that process cost never weighs in a recommendation.
+Some sit beside existing text: (2) is one of this repository's `AGENTS.md` gotchas, (3) is near §drift-prevention's retired-filename rule, and (6) is near `AGENTS.md`'s rule on weighing process cost in a recommendation.
 
 ## Behavior
 
