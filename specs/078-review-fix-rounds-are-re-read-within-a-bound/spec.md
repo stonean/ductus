@@ -74,21 +74,21 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 
 ## Acceptance Criteria
 
-- [ ] AC1: `framework/commands/review.md` runs a fix-round loop between dispositioning and `write-review`: each round with a changed path outside the reviewed spec's own non-contract artifacts is re-read by an independent agent whose brief states the severity bar, and the loop stops at a re-read with no MUST or SHOULD.
-- [ ] AC2: A round whose every derived path is an artifact in the reviewed spec's own directory other than a scenario or the data model is not re-read, and the record's Summary names it.
-- [ ] AC3: A re-read's brief carries the round's changed paths, derived from the repository, and the severity bar, and no scope the fixing agent wrote.
-- [ ] AC10: A round's base is a snapshot of the working tree, untracked files included, taken by a runtime primitive that moves no ref, index or HEAD, when the passes end and each time a re-read is briefed; the review commits nothing.
-- [ ] AC4: A finding a re-read makes outside the round's paths is recorded as an observation with a disposition and changes nothing in the round.
-- [ ] AC5: A round that only applies edits a re-read prescribed is verified by comparing its diff with the prescriptions, and a round with any unprescribed change is re-read.
-- [ ] AC11: A re-read's prescriptions are old→new text pairs in a file its brief names, outside the round's scope, and the diff check reads that file through a runtime primitive, so the host passes it no prescription.
-- [ ] AC6: After two re-reads that each found a MUST or SHOULD, the host starts no further round without the operator's decision, and reports the open findings and the rounds run.
-- [ ] AC7: A re-read that does not finish is reported as incomplete and never counted as clean: its round counts in the record as needing a re-read and having none.
-- [ ] AC8: On a host that cannot start an independent agent, the review procedure writes the re-read's brief to a file for the operator to run in a fresh session, and a round the operator declines to have re-read counts in `review.md`'s frontmatter as not re-read and waived with the operator's reason.
-- [ ] AC12: `review.md`'s frontmatter records, through `write-review`'s structured arguments, the run's fix rounds, finished re-reads, rounds verified by the diff check, rounds that needed a re-read and have none finished, and whether the budget stopped the loop, and the generated Summary renders them; a record without these fields reads as unexamined, never as zero.
-- [ ] AC13: `check-review-gate` blocks `done` while the latest review record counts a round that needed a re-read, has no finished re-read, and carries no waiver with a reason.
-- [ ] AC14: The loop runs unless `.ductus/config.toml`'s `[review]` table switches it off with a reason; then each round that needed a re-read is recorded as not re-read and waived with that reason, each run prints it, and a switch without a valid reason halts the run naming the setting and the file.
-- [ ] AC15: A snapshot, scope or diff-check call that fails, or a prescriptions file that is missing or does not parse, leaves its round counted as needing a re-read; it never reads as an empty scope or a passed check.
-- [ ] AC9: This repository's `AGENTS.md` re-read rule points at the framework's statement instead of restating it.
+- [x] AC1: `framework/commands/review.md` runs a fix-round loop between dispositioning and `write-review`: each round with a changed path outside the reviewed spec's own non-contract artifacts is re-read by an independent agent whose brief states the severity bar, and the loop stops at a re-read with no MUST or SHOULD.
+- [x] AC2: A round whose every derived path is an artifact in the reviewed spec's own directory other than a scenario or the data model is not re-read, and the record's Summary names it.
+- [x] AC3: A re-read's brief carries the round's changed paths, derived from the repository, and the severity bar, and no scope the fixing agent wrote.
+- [x] AC10: A round's base is a snapshot of the working tree, untracked files included, taken by a runtime primitive that moves no ref, index or HEAD, when the passes end and each time a re-read is briefed; the review commits nothing.
+- [x] AC4: A finding a re-read makes outside the round's paths is recorded as an observation with a disposition and changes nothing in the round.
+- [x] AC5: A round that only applies edits a re-read prescribed is verified by comparing its diff with the prescriptions, and a round with any unprescribed change is re-read.
+- [x] AC11: A re-read's prescriptions are old→new text pairs in a file its brief names, outside the round's scope, and the diff check reads that file through a runtime primitive, so the host passes it no prescription.
+- [x] AC6: After two re-reads that each found a MUST or SHOULD, the host starts no further round without the operator's decision, and reports the open findings and the rounds run.
+- [x] AC7: A re-read that does not finish is reported as incomplete and never counted as clean: its round counts in the record as needing a re-read and having none.
+- [x] AC8: On a host that cannot start an independent agent, the review procedure writes the re-read's brief to a file for the operator to run in a fresh session, and a round the operator declines to have re-read counts in `review.md`'s frontmatter as not re-read and waived with the operator's reason.
+- [x] AC12: `review.md`'s frontmatter records, through `write-review`'s structured arguments, the run's fix rounds, finished re-reads, rounds verified by the diff check, rounds that needed a re-read and have none finished, and whether the budget stopped the loop, and the generated Summary renders them; a record without these fields reads as unexamined, never as zero.
+- [x] AC13: `check-review-gate` blocks `done` while the latest review record counts a round that needed a re-read, has no finished re-read, and carries no waiver with a reason.
+- [x] AC14: The loop runs unless `.ductus/config.toml`'s `[review]` table switches it off with a reason; then each round that needed a re-read is recorded as not re-read and waived with that reason, each run prints it, and a switch without a valid reason halts the run naming the setting and the file.
+- [x] AC15: A snapshot, scope or diff-check call that fails, or a prescriptions file that is missing or does not parse, leaves its round counted as needing a re-read; it never reads as an empty scope or a passed check.
+- [x] AC9: This repository's `AGENTS.md` re-read rule points at the framework's statement instead of restating it.
 
 ## Applicable Rules
 
