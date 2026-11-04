@@ -59,7 +59,8 @@ untracked files included and ignored files excluded. That covers committed,
 staged, unstaged and new files alike. It has the same shape as the diff
 `diff-cross-spec` already takes. Paths are still named from the project root,
 a change outside the project directory is still left out, and a deleted file
-is still reported by its old path.
+is reported by its old path, in `modified-since` and `deleted` but not in
+`scope` (scenario `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
 
 **An uncommitted transition puts the base at `HEAD`.** When `spec.md` on disk
 reads `in-progress` and the spec at `HEAD` does not, the transition that opened

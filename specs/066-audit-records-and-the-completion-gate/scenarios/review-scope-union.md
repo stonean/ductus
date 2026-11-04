@@ -35,7 +35,8 @@ was the common case rather than the corner one.
 ## Behavior
 
 `scope` becomes the **union** of `plan-affected` and `modified-since`,
-deduplicated and sorted. Both sets, because either alone can omit what the
+deduplicated and sorted, less the paths the window deleted (scenario
+`review-scope-reads-every-cell-path-and-sets-deleted-files-apart`). Both sets, because either alone can omit what the
 review exists to look at: the plan names the feature's surface, the diff names
 what changed, and a review wants each for a different reason.
 

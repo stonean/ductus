@@ -64,9 +64,11 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         scope_count: scope.scope.len(),
         modified_since_count: scope.modified_since.len(),
         plan_affected_count: scope.plan_affected.len(),
+        deleted_count: scope.deleted.len(),
         scope: Some(scope.scope.clone()),
         modified_since: Some(scope.modified_since.clone()),
         plan_affected: Some(scope.plan_affected.clone()),
+        deleted: Some(scope.deleted.clone()),
         lists_file: None,
     };
     let lists = serde_json::json!({
@@ -74,6 +76,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         "scope": scope.scope,
         "modified-since": scope.modified_since,
         "plan-affected": scope.plan_affected,
+        "deleted": scope.deleted,
     });
     if let Some(file) =
         super::bounded_lists::place(repo, "compute-review-scope", &args.feature, &result, &lists)?
@@ -82,23 +85,26 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         result.scope = None;
         result.modified_since = None;
         result.plan_affected = None;
+        result.deleted = None;
         result.lists_file = Some(file);
     }
     Ok(result)
 }
 
-/// A review's diff base and its three path lists, whole: what
+/// A review's diff base and its path lists, whole: what
 /// `compute-review-scope` resolves, before its result is bounded.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct ReviewScope {
     /// See [`ComputeReviewScopeResult::diff_base`].
     pub(crate) diff_base: String,
-    /// The union of `plan_affected` and `modified_since`.
+    /// The union of `plan_affected` and `modified_since`, less `deleted`.
     pub(crate) scope: Vec<String>,
     /// See [`ComputeReviewScopeResult::modified_since`].
     pub(crate) modified_since: Vec<String>,
     /// See [`ComputeReviewScopeResult::plan_affected`].
     pub(crate) plan_affected: Vec<String>,
+    /// See [`ComputeReviewScopeResult::deleted`].
+    pub(crate) deleted: Vec<String>,
 }
 
 /// Resolve the review's diff base and scope, every list whole. `write-review`
@@ -176,6 +182,18 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
 
     let plan_affected = read_plan_affected(&feature_dir)?;
 
+    // A path the window deleted cannot be read, so it leaves the scope a
+    // review's `examined` is measured against, and stays named in
+    // `modified-since` and `deleted` (066 scenario
+    // `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+    // The working tree decides, as the review reads it: a file deleted and
+    // recreated, or removed from the index alone, is present.
+    let deleted: BTreeSet<String> = modified_since
+        .iter()
+        .filter(|path| std::fs::symlink_metadata(repo.join(path)).is_err())
+        .cloned()
+        .collect();
+
     // Union, not "whichever set is larger". Choosing one set can exclude the
     // files the work actually touched: a mature spec's plan lists its whole
     // surface, so on a small follow-on scenario the plan set wins on size and
@@ -185,6 +203,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     let scope: Vec<String> = plan_affected
         .iter()
         .chain(modified_since.iter())
+        .filter(|path| !deleted.contains(*path))
         .cloned()
         .collect::<BTreeSet<String>>()
         .into_iter()
@@ -195,6 +214,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         scope,
         modified_since,
         plan_affected,
+        deleted: deleted.into_iter().collect(),
     })
 }
 
@@ -608,6 +628,51 @@ mod tests {
         (tmp, repo, parent)
     }
 
+    /// A plan cell naming two paths puts both in `plan-affected`. A file
+    /// deleted since the base, in a commit or only on disk, stays in
+    /// `modified-since`, is named in `deleted` and leaves `scope`, even when
+    /// the plan names it; a file deleted and recreated is present, so in
+    /// scope (066 scenario
+    /// `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+    #[test]
+    fn a_two_path_cell_and_a_deleted_file_resolve_as_the_scenario_says() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("planned"));
+        write(
+            &tmp.path().join("specs/001-x/plan.md"),
+            "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n\
+             | `src/gone.rs` / `src/kept.rs` | Edit |\n",
+        );
+        for name in ["gone", "unstaged", "back", "kept"] {
+            write(&tmp.path().join(format!("src/{name}.rs")), "fn f() {}\n");
+        }
+        commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "chore: begin");
+
+        fs::remove_file(tmp.path().join("src/gone.rs")).unwrap();
+        let mut index = repo.index().unwrap();
+        index.remove_path(Path::new("src/gone.rs")).unwrap();
+        index.write().unwrap();
+        fs::remove_file(tmp.path().join("src/back.rs")).unwrap();
+        commit_all(&repo, "fix: drop gone and back");
+        write(&tmp.path().join("src/back.rs"), "fn back() {}\n");
+        fs::remove_file(tmp.path().join("src/unstaged.rs")).unwrap();
+
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.plan_affected, ["src/gone.rs", "src/kept.rs"]);
+        assert_eq!(result.deleted, ["src/gone.rs", "src/unstaged.rs"]);
+        for path in &result.deleted {
+            assert!(result.modified_since.contains(path), "{path}");
+            assert!(!result.scope.contains(path), "{path} in scope");
+        }
+        for path in ["src/back.rs", "src/kept.rs"] {
+            assert!(result.scope.contains(&path.to_string()), "{path}");
+        }
+    }
+
     fn head_sha(repo: &Repository) -> String {
         repo.head()
             .unwrap()
@@ -839,10 +904,12 @@ mod tests {
             (
                 &bounded.scope,
                 &bounded.modified_since,
-                &bounded.plan_affected
+                &bounded.plan_affected,
+                &bounded.deleted
             ),
-            (&None, &None, &None)
+            (&None, &None, &None, &None)
         );
+        assert_eq!(bounded.deleted_count, whole.deleted.len());
         assert_eq!(
             (
                 bounded.scope_count,
@@ -869,6 +936,7 @@ mod tests {
             file["plan-affected"],
             serde_json::json!(whole.plan_affected)
         );
+        assert_eq!(file["deleted"], serde_json::json!(whole.deleted));
         assert_eq!(compute(&args("001-x", None), tmp.path()).unwrap(), whole);
     }
 }

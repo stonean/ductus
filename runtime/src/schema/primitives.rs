@@ -698,7 +698,7 @@ pub struct ComputeReviewScopeResult {
     /// `in-progress` is uncommitted, and empty when the spec never reached
     /// `in-progress` and no `--since` was given.
     pub diff_base: String,
-    /// Where the three lists are: in this result, or, past the read size, in
+    /// Where the lists are: in this result, or, past the read size, in
     /// the file `lists-file` names (066 scenario
     /// `scope-results-have-a-bounded-size`).
     pub form: ListsForm,
@@ -709,8 +709,10 @@ pub struct ComputeReviewScopeResult {
     pub modified_since_count: usize,
     /// Entries in `plan-affected`, in either form.
     pub plan_affected_count: usize,
-    /// The review scope: the union of `plan-affected` and `modified-since`.
-    /// Absent in the file form.
+    /// Entries in `deleted`, in either form.
+    pub deleted_count: usize,
+    /// The review scope: the union of `plan-affected` and `modified-since`,
+    /// less `deleted`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<Vec<String>>,
     /// Files changed between `diff-base` and the working tree inside the
@@ -718,13 +720,22 @@ pub struct ComputeReviewScopeResult {
     /// ignored — named from the project root, sorted. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modified_since: Option<Vec<String>>,
-    /// Files listed under the plan's `## Affected Files` section. Absent in
-    /// the file form.
+    /// Every path a first cell of the plan's `## Affected Files` tables
+    /// names: its first backticked span, and each later one holding no
+    /// whitespace and starting with none of `-`, `/` and `§`. Absent in the
+    /// file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plan_affected: Option<Vec<String>>,
-    /// In the file form, the file holding the three lists whole, from the
-    /// project root: a JSON object with `diff-base`, `scope`,
-    /// `modified-since` and `plan-affected`, one entry per line.
+    /// The `modified-since` paths absent from the working tree: deleted since
+    /// the diff base, so out of `scope`, which no review can read them in
+    /// (066 scenario
+    /// `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted: Option<Vec<String>>,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with `diff-base`, `scope`, `modified-since`,
+    /// `plan-affected` and `deleted`, one entry per line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }

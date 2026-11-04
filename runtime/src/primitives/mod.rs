@@ -3691,21 +3691,47 @@ pub(crate) fn parse_affected_files(plan_content: &str) -> Vec<String> {
         // A cell may carry a qualifier after the path (`` `constitution.md`
         // (root) ``). When it holds a backticked span, that span IS the path;
         // trimming stray backticks off the whole cell would keep the trailing
-        // prose and yield a path that cannot resolve.
+        // prose and yield a path that cannot resolve. A cell may name several
+        // files (`` `a.md` / `b.md` ``), so every later span that is a path
+        // joins too, read from the project root as the first is (066 scenario
+        // `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
         let cell = cell.trim();
-        let path = match cell
-            .split_once('`')
-            .and_then(|(_, rest)| rest.split_once('`'))
-        {
-            Some((inner, _)) => inner.trim(),
-            None => cell.trim_matches('`').trim(),
-        };
-        if path.is_empty() {
+        let mut spans = backticked_spans(cell);
+        let Some(first) = spans.next() else {
+            let path = cell.trim_matches('`').trim();
+            if !path.is_empty() {
+                out.push(path.to_string());
+            }
             continue;
-        }
-        out.push(path.to_string());
+        };
+        out.extend(
+            std::iter::once(first)
+                .filter(|path| !path.is_empty())
+                .chain(spans.filter(|span| is_cell_path(span)))
+                .map(str::to_string),
+        );
     }
     out
+}
+
+/// The trimmed text of each closed backticked span in `cell`, in order. An
+/// opening backtick with no closing one starts no span.
+fn backticked_spans(cell: &str) -> impl Iterator<Item = &str> {
+    let parts: Vec<&str> = cell.split('`').collect();
+    let closed = parts.len().saturating_sub(1);
+    parts
+        .into_iter()
+        .take(closed)
+        .skip(1)
+        .step_by(2)
+        .map(str::trim)
+}
+
+/// Whether a backticked span after a cell's first names a path rather than a
+/// command, a flag or an anchor: it holds no whitespace and starts with none
+/// of `-`, `/` and `§`. A repo-relative path never starts with `/`.
+fn is_cell_path(span: &str) -> bool {
+    !span.is_empty() && !span.chars().any(char::is_whitespace) && !span.starts_with(['-', '/', '§'])
 }
 
 #[cfg(test)]
@@ -5371,7 +5397,26 @@ mod tests {
             vec![
                 "constitution.md".to_string(),
                 "specs/000-016/spec.md".to_string(),
+                "spec-and-plan.md".to_string(),
             ]
+        );
+    }
+
+    /// Every backticked path in a cell joins, whatever separates them, a
+    /// glob among them; a later span that is a command, a flag, an anchor or
+    /// unclosed does not (066 scenario
+    /// `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+    #[test]
+    fn parse_affected_files_takes_every_path_a_cell_names() {
+        let plan = "## Affected Files\n\n\
+                    | File | Action |\n\
+                    | --- | --- |\n\
+                    | `a.md` / `docs/b.md`, `src/*.rs` | Edit |\n\
+                    | `c.md` (`cargo test`, `--since`, `/ductus:review`, `§grounding`) | Edit |\n\
+                    | `d.md` → `e.md` and `f.md | Edit |\n";
+        assert_eq!(
+            parse_affected_files(plan),
+            ["a.md", "docs/b.md", "src/*.rs", "c.md", "d.md", "e.md"]
         );
     }
 

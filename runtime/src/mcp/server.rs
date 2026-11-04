@@ -634,7 +634,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "compute-review-scope",
-        description = "Resolve /ductus:review's diff-base (the parent of the commit the spec entered in-progress at, or a --since override) and its file scope (the union of the plan's Affected Files and the files modified since the diff base). When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the scope, modified-since and plan-affected lists are absent, and lists-file names a JSON file under .ductus/results/ holding all three whole, one entry per line, to read in parts by line offset when it exceeds one read. Each list's count is inline in both forms; a zero scope-count, never an absent list, is an empty scope."
+        description = "Resolve /ductus:review's diff-base (the parent of the commit the spec entered in-progress at, or a --since override) and its file scope (the union of the plan's Affected Files and the files modified since the diff base, less the files deleted since it, which the deleted list names). When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the scope, modified-since, plan-affected and deleted lists are absent, and lists-file names a JSON file under .ductus/results/ holding all four whole, one entry per line, to read in parts by line offset when it exceeds one read. Each list's count is inline in both forms; a zero scope-count, never an absent list, is an empty scope."
     )]
     async fn compute_review_scope(
         &self,

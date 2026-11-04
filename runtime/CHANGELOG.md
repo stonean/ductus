@@ -186,6 +186,15 @@ its version and date.
   `spec.md`, a criterion's wording included, still stales it. A record
   written before this release over a spec with a ticked criterion reads stale
   once, until the spec's next `/analyze`. Spec 066, task 9.
+- **`compute-review-scope` reads every path a plan cell names, and sets
+  deleted files apart.** An Affected Files cell naming several backticked
+  paths (`` `a.md` / `b.md` ``) puts each in `plan-affected`, where only the
+  first counted; a later span that is a command, a flag or an anchor stays
+  out. A file deleted since the diff base stays in `modified-since`, is named
+  in a new `deleted` list beside its `deleted-count`, and leaves `scope`, so a
+  review that reads every readable file is no longer counted short in
+  `examined`. A script reading `scope` no longer finds deleted paths there.
+  Spec 066, task 10.
 
 ### Fixed
 

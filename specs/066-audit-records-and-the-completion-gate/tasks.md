@@ -68,7 +68,7 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 10. Implement scenario: review-scope-reads-every-cell-path-and-sets-deleted-files-apart
 
-- [ ] Implement the behavior described in `scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md`
+- [x] Implement the behavior described in `scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md`
 
 - **Done when**: The scenario's open question is resolved, review-scope-includes-uncommitted-work is amended to match, and fixture tests cover a two-path Affected Files cell and a file deleted since the base.
 

@@ -19,9 +19,11 @@ Result, inline and past the read size:
   "scope-count": 2,
   "modified-since-count": 1,
   "plan-affected-count": 1,
+  "deleted-count": 1,
   "scope": ["runtime/src/primitives/read_spec.rs", "specs/042-widget/data-model.md"],
-  "modified-since": ["specs/042-widget/data-model.md"],
-  "plan-affected": ["runtime/src/primitives/read_spec.rs"]
+  "modified-since": ["specs/042-widget/data-model.md", "specs/042-widget/research.md"],
+  "plan-affected": ["runtime/src/primitives/read_spec.rs"],
+  "deleted": ["specs/042-widget/research.md"]
 }
 ```
 
@@ -32,13 +34,14 @@ Result, inline and past the read size:
   "scope-count": 1056,
   "modified-since-count": 1049,
   "plan-affected-count": 12,
+  "deleted-count": 3,
   "lists-file": ".ductus/results/compute-review-scope/042-widget/<sha256>.json"
 }
 ```
 
-`diff-base` is the parent of the commit that moved the spec into `in-progress`; `HEAD`'s sha while that move is uncommitted; empty when the spec never reached `in-progress` and no `since` was given; or `since` verbatim when supplied. `modified-since` is every file changed between `diff-base` and the working tree inside the project directory — committed, staged, unstaged and untracked but not ignored — named from the project root and sorted. `plan-affected` is the plan's `## Affected Files` list, and `scope` is the union of the two (scenarios `review-base-includes-the-transition-commit`, `review-scope-includes-uncommitted-work`, `review-scope-union`).
+`diff-base` is the parent of the commit that moved the spec into `in-progress`; `HEAD`'s sha while that move is uncommitted; empty when the spec never reached `in-progress` and no `since` was given; or `since` verbatim when supplied. `modified-since` is every file changed between `diff-base` and the working tree inside the project directory — committed, staged, unstaged and untracked but not ignored — named from the project root and sorted. `plan-affected` is every path the first cell of a plan `## Affected Files` table row names: its first backticked span, and each later one holding no whitespace and starting with none of `-`, `/` and `§`. `deleted` is the `modified-since` paths absent from the working tree, and `scope` is the union of `plan-affected` and `modified-since` less `deleted`, so the denominator holds only what a review can read (scenarios `review-base-includes-the-transition-commit`, `review-scope-includes-uncommitted-work`, `review-scope-union`, `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
 
-**Size** (scenario `scope-results-have-a-bounded-size`). The lists are inline, `form: "inline"`, while the result's compact JSON is at most `[artifacts] read-size-bytes`, 50,000 bytes by default; a result exactly at it fits. Past it, `form` is `"file"`, no list is inline, and `lists-file` names, from the project root, a file holding `diff-base` and the three lists whole as pretty-printed JSON, one entry per line, under `.ductus/results/compute-review-scope/{feature}/` and named by the sha256 of its bytes, so a concurrent call never reads another's lists. The stated maximum is that setting, or, below it, the file form's own size, which no list enlarges: 258 bytes of compact JSON with a 40-character sha, plus the feature directory's name and each count digit past the first. The counts are inline in both forms, so a zero `scope-count`, never an absent list, is an empty scope. `.ductus/results/` ignores itself (a `.gitignore` of `*`), so no list file enters a scope, and a write removes the same feature's list files older than 24 hours. A malformed read size halts the call, as it halts every reader of the setting, and a list file that cannot be written fails it. `write-review` derives `scope` from the unbounded lists, and `ductus exec`'s `performReview` request reads `scope` from the list file, halting with `lists-file-unreadable` when it cannot.
+**Size** (scenario `scope-results-have-a-bounded-size`). The lists are inline, `form: "inline"`, while the result's compact JSON is at most `[artifacts] read-size-bytes`, 50,000 bytes by default; a result exactly at it fits. Past it, `form` is `"file"`, no list is inline, and `lists-file` names, from the project root, a file holding `diff-base` and the four lists whole as pretty-printed JSON, one entry per line, under `.ductus/results/compute-review-scope/{feature}/` and named by the sha256 of its bytes, so a concurrent call never reads another's lists. The stated maximum is that setting, or, below it, the file form's own size, which no list enlarges: 276 bytes of compact JSON with a 40-character sha, plus the feature directory's name and each count digit past the first. The counts are inline in both forms, so a zero `scope-count`, never an absent list, is an empty scope. `.ductus/results/` ignores itself (a `.gitignore` of `*`), so no list file enters a scope, and a write removes the same feature's list files older than 24 hours. A malformed read size halts the call, as it halts every reader of the setting, and a list file that cannot be written fails it. `write-review` derives `scope` from the unbounded lists, and `ductus exec`'s `performReview` request reads `scope` from the list file, halting with `lists-file-unreadable` when it cannot.
 
 ## `process-waivers` — classify recorded waivers before the write
 

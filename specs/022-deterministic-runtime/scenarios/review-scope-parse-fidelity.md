@@ -27,8 +27,8 @@ The captured-issues half of this scenario was removed by 058: neither `compute-r
 ## Edge Cases
 
 - A section with exactly one table is unaffected — the reset only fires where a table has already ended.
-- A cell holding several backticked spans yields the first, which is the path; later spans are qualifiers by position.
-- The scope is the union of the plan-affected set and the modified-since set, so an accurate small set is never dropped for a larger one (066's `review-scope-union`).
+- A cell holding several backticked spans yields every one that is a path: the first, and each later one holding no whitespace and starting with none of `-`, `/` and `§` (066's `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+- The scope is the union of the plan-affected set and the modified-since set, less the files the window deleted, so an accurate small set is never dropped for a larger one (066's `review-scope-union`).
 
 ## Open Questions
 
