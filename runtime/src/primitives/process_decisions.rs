@@ -26,8 +26,16 @@
 //!   and never pruned.
 //! - **duplicate** — a repeated key; the first entry applies.
 //!
-//! Read-only: frontmatter mutation belongs to `write-review` and
-//! `write-analysis`.
+//! Each list grows with the record's `decisions:` list, so the result is
+//! bounded as `compute-review-scope`'s is: inline while it fits `[artifacts]
+//! read-size-bytes`, and past it with every list in the file it names and
+//! their counts inline (`bounded_lists::place`; 066 scenario
+//! `process-decisions-results-have-a-bounded-size`). The host drops each
+//! `expired` and `lapsed` decision and asks again about each lapsed finding,
+//! so no form may read as a short complete list.
+//!
+//! Read-only but for that list file: frontmatter mutation belongs to
+//! `write-review` and `write-analysis`.
 
 use std::path::Path;
 
@@ -37,10 +45,73 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    DecisionOutcome, DecisionRecord, DecisionRef, ProcessDecisionsArgs, ProcessDecisionsResult,
+    DecisionOutcome, DecisionRecord, DecisionRef, ListsForm, ProcessDecisionsArgs,
+    ProcessDecisionsResult,
 };
 
-/// Execute the `process-decisions` primitive.
+/// Execute the `process-decisions` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its lists in
+/// the file it names and only their counts inline (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
+    let classified = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "matched": &classified.matched,
+        "expired": &classified.expired,
+        "retained": &classified.retained,
+        "lapsed": &classified.lapsed,
+        "notices": &classified.notices,
+    });
+    let mut result = ProcessDecisionsResult {
+        form: ListsForm::Inline,
+        matched_count: classified.matched.len(),
+        expired_count: classified.expired.len(),
+        retained_count: classified.retained.len(),
+        lapsed_count: classified.lapsed.len(),
+        notices_count: classified.notices.len(),
+        matched: Some(classified.matched),
+        expired: Some(classified.expired),
+        retained: Some(classified.retained),
+        lapsed: Some(classified.lapsed),
+        notices: Some(classified.notices),
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "process-decisions", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.matched = None;
+        result.expired = None;
+        result.retained = None;
+        result.lapsed = None;
+        result.notices = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// A record's stored decisions classified, every list whole: what
+/// `process-decisions` resolves, before its result is bounded.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Classified {
+    /// See [`ProcessDecisionsResult::matched`].
+    pub(crate) matched: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::expired`].
+    pub(crate) expired: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::retained`].
+    pub(crate) retained: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::lapsed`].
+    pub(crate) lapsed: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::notices`].
+    pub(crate) notices: Vec<String>,
+}
+
+/// Classify the record's stored decisions against `args.fired`, every list
+/// whole.
 ///
 /// # Errors
 ///
@@ -55,7 +126,7 @@ use crate::schema::primitives::{
 /// question — or [`PrimitiveError::Io`] on read failure. An absent record, or
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
-pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
+pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classified> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
@@ -75,7 +146,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
     // break still matches the decision stored for it.
     let fired: Vec<String> = args.fired.iter().map(|key| flatten_line(key)).collect();
 
-    let mut result = ProcessDecisionsResult::default();
+    let mut result = Classified::default();
     let mut seen: Vec<String> = Vec::new();
     for (index, entry) in stored.iter().enumerate() {
         let decision = match entry.to_ref() {
@@ -220,7 +291,7 @@ mod tests {
     #[test]
     fn a_firing_key_matches_under_its_stored_outcome() {
         let tmp = repo_with("analysis.md", &format!("{DEFERRED}{WAIVED}"));
-        let result = run(
+        let result = compute(
             &args(
                 DecisionRecord::Analysis,
                 &[
@@ -246,7 +317,7 @@ mod tests {
     #[test]
     fn a_silent_key_expires_on_an_unrestricted_run() {
         let tmp = repo_with("analysis.md", DEFERRED);
-        let result = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
+        let result = compute(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
         assert_eq!(result.expired.len(), 1, "the deferred work landed");
         assert!(result.notices[0].starts_with("decision expired: grounding"));
     }
@@ -254,7 +325,7 @@ mod tests {
     #[test]
     fn a_silent_key_is_retained_on_a_restricted_run() {
         let tmp = repo_with("review.md", WAIVED);
-        let result = run(&args(DecisionRecord::Review, &[], true), tmp.path()).unwrap();
+        let result = compute(&args(DecisionRecord::Review, &[], true), tmp.path()).unwrap();
         assert!(
             result.expired.is_empty(),
             "absence proves nothing when the source was skipped"
@@ -266,7 +337,7 @@ mod tests {
     #[test]
     fn a_restricted_run_still_matches_a_firing_key() {
         let tmp = repo_with("review.md", WAIVED);
-        let result = run(
+        let result = compute(
             &args(
                 DecisionRecord::Review,
                 &["applicable-rules — BE-AUTHN-001 does not fire"],
@@ -285,7 +356,7 @@ mod tests {
         let no_reason = "  - key: j\n    outcome: waived\n    \
                          decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n";
         let tmp = repo_with("analysis.md", &format!("{no_target}{no_reason}"));
-        let result = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
+        let result = compute(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
         assert!(
             result.matched.is_empty() && result.expired.is_empty() && result.retained.is_empty()
         );
@@ -301,7 +372,7 @@ mod tests {
     #[test]
     fn the_first_of_a_duplicated_key_wins() {
         let tmp = repo_with("analysis.md", &format!("{DEFERRED}{DEFERRED}"));
-        let result = run(
+        let result = compute(
             &args(
                 DecisionRecord::Analysis,
                 &["grounding — plan.md cites a missing path"],
@@ -325,7 +396,7 @@ mod tests {
             "\" grounding — plan.md cites a missing path \"",
         );
         let tmp = repo_with("analysis.md", &format!("{padded}{DEFERRED}"));
-        let result = run(
+        let result = compute(
             &args(
                 DecisionRecord::Analysis,
                 &["grounding — plan.md cites a missing path"],
@@ -346,12 +417,12 @@ mod tests {
     #[test]
     fn a_record_with_no_decisions_yields_empty_lists() {
         let tmp = repo_with("analysis.md", "");
-        let result = run(
+        let result = compute(
             &args(DecisionRecord::Analysis, &["anything"], false),
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(result, ProcessDecisionsResult::default());
+        assert_eq!(result, Classified::default());
     }
 
     /// A record that opens no frontmatter block holds no decisions — as
@@ -364,8 +435,8 @@ mod tests {
             let dir = tmp.path().join("specs/001-x");
             std::fs::write(dir.join("analysis.md"), "# Analysis\n\nhand-edited\n").unwrap();
             std::fs::write(dir.join("review.md"), "# Review\n\nhand-edited\n").unwrap();
-            let result = run(&args(record, &["anything"], false), tmp.path()).unwrap();
-            assert_eq!(result, ProcessDecisionsResult::default());
+            let result = compute(&args(record, &["anything"], false), tmp.path()).unwrap();
+            assert_eq!(result, Classified::default());
         }
     }
 
@@ -379,7 +450,7 @@ mod tests {
             format!("---\nspec: 001-x\ndecisions:\n{DEFERRED}\n# Analysis\n"),
         )
         .unwrap();
-        let error = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap_err();
+        let error = compute(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap_err();
         assert!(error.to_string().contains("never closes"), "{error}");
         assert!(matches!(error, PrimitiveError::UnclosedFrontmatter { .. }));
     }
@@ -387,12 +458,13 @@ mod tests {
     #[test]
     fn the_record_argument_selects_the_file() {
         let tmp = repo_with("review.md", DEFERRED);
-        let from_analysis = run(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
+        let from_analysis =
+            compute(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
         assert!(
             from_analysis.expired.is_empty(),
             "analysis.md holds no decisions here"
         );
-        let from_review = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        let from_review = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
         assert_eq!(from_review.expired.len(), 1);
     }
 
@@ -400,7 +472,7 @@ mod tests {
     fn a_missing_feature_is_an_error() {
         let tmp = tempfile::tempdir().unwrap();
         assert!(matches!(
-            run(&args(DecisionRecord::Review, &[], false), tmp.path()),
+            compute(&args(DecisionRecord::Review, &[], false), tmp.path()),
             Err(PrimitiveError::FeatureNotFound { .. })
         ));
     }
@@ -410,7 +482,7 @@ mod tests {
     #[test]
     fn a_fired_key_with_a_line_break_matches_its_flattened_decision() {
         let tmp = repo_with("analysis.md", DEFERRED);
-        let result = run(
+        let result = compute(
             &args(
                 DecisionRecord::Analysis,
                 &["grounding — plan.md cites\na missing path"],
@@ -441,8 +513,8 @@ mod tests {
     }
 
     /// Run with every key in `fired` firing, unrestricted.
-    fn classify(tmp: &tempfile::TempDir, fired: &[&str]) -> ProcessDecisionsResult {
-        run(&args(DecisionRecord::Analysis, fired, false), tmp.path()).unwrap()
+    fn classify(tmp: &tempfile::TempDir, fired: &[&str]) -> Classified {
+        compute(&args(DecisionRecord::Analysis, fired, false), tmp.path()).unwrap()
     }
 
     fn keys(decisions: &[DecisionRef]) -> Vec<&str> {
@@ -608,7 +680,7 @@ mod tests {
             "---\nstatus: [not, a, string\n---\n",
         );
         let result = classify(&tmp, &["dup", "lap", "unr"]);
-        let retained = run(&args(DecisionRecord::Analysis, &[], true), tmp.path())
+        let retained = compute(&args(DecisionRecord::Analysis, &[], true), tmp.path())
             .unwrap()
             .notices;
         let notices = [result.notices, retained].concat();
@@ -622,5 +694,123 @@ mod tests {
             assert!(notices.iter().any(|n| n == notice), "{notices:?}");
         }
         assert!(!notices.iter().any(|n| n.contains('\u{1b}')), "{notices:?}");
+    }
+
+    fn read_size(tmp: &tempfile::TempDir, bytes: u64) {
+        write(
+            tmp,
+            ".ductus/config.toml",
+            &format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        );
+    }
+
+    /// A result that fits is inline, with its counts. Past `[artifacts]
+    /// read-size-bytes` every list moves whole to the file the result names,
+    /// none of them inline, and the counts still say how many — so the
+    /// expired and lapsed decisions the host drops all reach it (066 scenario
+    /// `process-decisions-results-have-a-bounded-size`).
+    #[test]
+    fn a_result_past_the_read_size_names_a_file_holding_every_list() {
+        let tasks = "specs/031-x/tasks.md";
+        let tmp = repo_with(
+            "analysis.md",
+            &[
+                deferral("open", tasks, Some("1")),
+                deferral("checked", tasks, Some("2")),
+                WAIVED.to_string(),
+                DEFERRED.to_string(),
+            ]
+            .concat(),
+        );
+        write(
+            &tmp,
+            tasks,
+            "# Tasks\n\n## 1. Open\n\n- [ ] a\n\n- **Done when**: a.\n\n\
+             ## 2. Checked\n\n- [x] a\n\n- **Done when**: a.\n",
+        );
+        for restricted in [false, true] {
+            let call = args(DecisionRecord::Analysis, &["open", "checked"], restricted);
+            read_size(&tmp, 1_000_000);
+            let whole = compute(&call, tmp.path()).unwrap();
+            assert_eq!(
+                (whole.matched.len(), whole.lapsed.len()),
+                (1, 1),
+                "{whole:?}"
+            );
+            assert_eq!(
+                (whole.expired.len(), whole.retained.len()),
+                if restricted { (0, 2) } else { (2, 0) },
+                "{whole:?}"
+            );
+            let inline = run(&call, tmp.path()).unwrap();
+            assert_eq!(inline.form, ListsForm::Inline);
+            assert_eq!(inline.lists_file, None);
+            assert_eq!(
+                (
+                    &inline.matched,
+                    &inline.expired,
+                    &inline.retained,
+                    &inline.lapsed,
+                    &inline.notices
+                ),
+                (
+                    &Some(whole.matched.clone()),
+                    &Some(whole.expired.clone()),
+                    &Some(whole.retained.clone()),
+                    &Some(whole.lapsed.clone()),
+                    &Some(whole.notices.clone())
+                )
+            );
+
+            read_size(&tmp, 10);
+            let bounded = run(&call, tmp.path()).unwrap();
+            assert_eq!(bounded.form, ListsForm::File);
+            assert_eq!(
+                (
+                    &bounded.matched,
+                    &bounded.expired,
+                    &bounded.retained,
+                    &bounded.lapsed,
+                    &bounded.notices
+                ),
+                (&None, &None, &None, &None, &None)
+            );
+            for result in [&inline, &bounded] {
+                assert_eq!(
+                    (
+                        result.matched_count,
+                        result.expired_count,
+                        result.retained_count,
+                        result.lapsed_count,
+                        result.notices_count
+                    ),
+                    (
+                        whole.matched.len(),
+                        whole.expired.len(),
+                        whole.retained.len(),
+                        whole.lapsed.len(),
+                        whole.notices.len()
+                    )
+                );
+            }
+            let file = bounded.lists_file.unwrap();
+            assert!(
+                file.starts_with(".ductus/results/process-decisions/001-x/"),
+                "{file}"
+            );
+            let lists: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap())
+                    .unwrap();
+            assert_eq!(
+                lists,
+                serde_json::json!({
+                    "matched": whole.matched,
+                    "expired": whole.expired,
+                    "retained": whole.retained,
+                    "lapsed": whole.lapsed,
+                    "notices": whole.notices,
+                })
+            );
+        }
     }
 }

@@ -1679,7 +1679,7 @@ mod tests {
             ]
         );
         assert_eq!(stored[0].reason.as_deref(), Some("why\t#not"));
-        let classified = crate::primitives::process_decisions::run(
+        let classified = crate::primitives::process_decisions::compute(
             &crate::schema::primitives::ProcessDecisionsArgs {
                 feature: "042-demo".into(),
                 record: crate::schema::primitives::DecisionRecord::Analysis,

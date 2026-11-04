@@ -864,6 +864,75 @@ async fn a_cross_spec_surface_past_the_read_size_reaches_the_host_through_its_li
     assert_eq!(obj["cross-spec-count"], expected.len());
 }
 
+/// On the MCP path a classification past the read size reaches the host
+/// whole: the result is within the bound, its counts are inline, and the file
+/// it names holds every expired decision the host passes to the writer and
+/// every notice it emits (066 scenario
+/// `process-decisions-results-have-a-bounded-size`).
+#[tokio::test]
+async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("spec.md"),
+        "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+    )
+    .unwrap();
+    let decisions = (0..12)
+        .map(|i| {
+            format!(
+                "  - key: \"grounding — finding {i}\"\n    outcome: waived\n    \
+                 reason: noise\n    decided-at: 2026-09-25T00:00:00Z\n    \
+                 decided-by: dev@example.com\n"
+            )
+        })
+        .collect::<Vec<_>>()
+        .concat();
+    fs::write(
+        dir.join("analysis.md"),
+        format!("---\nspec: 001-x\ndecisions:\n{decisions}---\n\n# Analysis — 001-x\n"),
+    )
+    .unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        format!("[artifacts]\nread-size-bytes = {SMALL_READ_SIZE}\n"),
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(
+        &client,
+        "process-decisions",
+        json!({"feature": "001-x", "record": "analysis", "fired": [], "restricted": false}),
+    )
+    .await;
+    let obj = structured_object(&result);
+    let lists = lists_in_file(
+        &tmp,
+        obj,
+        &["matched", "expired", "retained", "lapsed", "notices"],
+    );
+    let expired: Vec<&str> = lists["expired"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|decision| decision["key"].as_str().unwrap())
+        .collect();
+    let expected: Vec<String> = (0..12)
+        .map(|i| format!("grounding — finding {i}"))
+        .collect();
+    assert_eq!(expired, expected);
+    assert_eq!(obj["expired-count"], 12);
+    assert_eq!(obj["notices-count"], 12);
+    assert_eq!(lists["notices"].as_array().unwrap().len(), 12);
+    for key in ["matched", "retained", "lapsed"] {
+        assert_eq!(lists[key], json!([]), "{key}");
+        assert_eq!(obj[format!("{key}-count").as_str()], 0, "{key}");
+    }
+}
+
 /// `check-review-gate`'s per-entry `cross-spec-impact`, a field 0.48.0 added
 /// to a primitive **result**, crosses the MCP wire.
 ///

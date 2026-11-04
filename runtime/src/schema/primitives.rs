@@ -652,26 +652,54 @@ pub struct ProcessDecisionsArgs {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessDecisionsResult {
+    /// Where the lists are: in this result, or, past the read size, in the
+    /// file `lists-file` names (066 scenario
+    /// `process-decisions-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// Entries in `matched`, in either form.
+    pub matched_count: usize,
+    /// Entries in `expired`, in either form.
+    pub expired_count: usize,
+    /// Entries in `retained`, in either form.
+    pub retained_count: usize,
+    /// Entries in `lapsed`, in either form.
+    pub lapsed_count: usize,
+    /// Entries in `notices`, in either form.
+    pub notices_count: usize,
     /// Stored decisions whose key fired this run, less the deferrals reported
     /// in `lapsed`. The host counts each
-    /// matching finding under the stored outcome and asks nothing.
-    pub matched: Vec<DecisionRef>,
+    /// matching finding under the stored outcome and asks nothing. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matched: Option<Vec<DecisionRef>>,
     /// Stored decisions whose key did not fire on an unrestricted run. Passed
     /// to the writer as `expired-decisions`, which drops them. For a deferred
-    /// decision this is the moment the deferred work landed.
-    pub expired: Vec<DecisionRef>,
+    /// decision this is the moment the deferred work landed. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expired: Option<Vec<DecisionRef>>,
     /// Stored decisions whose key did not fire on a restricted run — neither
-    /// matched nor expired, so the writer keeps them.
-    pub retained: Vec<DecisionRef>,
+    /// matched nor expired, so the writer keeps them. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retained: Option<Vec<DecisionRef>>,
     /// Stored deferrals whose key fired although the pipeline work they name
     /// is complete — its task checked or gone, its spec `done` or gone, or a
     /// rule file (spec 076). The host passes them to the writer in
     /// `expired-decisions`, which drops them, and asks for a new disposition.
-    pub lapsed: Vec<DecisionRef>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lapsed: Option<Vec<DecisionRef>>,
     /// Ordered notice lines: `decision expired: …`, `decision retained: …`,
     /// `deferral lapsed: …`, `deferral target unreadable: …`, `malformed
-    /// decision …`, and `duplicate decision: …`, in entry order.
-    pub notices: Vec<String>,
+    /// decision …`, and `duplicate decision: …`, in entry order. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notices: Option<Vec<String>>,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with `matched`, `expired`, `retained`, `lapsed` and
+    /// `notices`, one entry per line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- compute-review-scope ----------------------------------------------------
@@ -7907,6 +7935,67 @@ mod tests {
         assert_eq!(round_trip(&result), result);
     }
 
+    /// `process-decisions`' result on the wire, in each of its two forms:
+    /// inline, every count and list under its kebab-case name and no
+    /// `lists-file`; past the read size, the counts and `lists-file` with no
+    /// list (066 scenario `process-decisions-results-have-a-bounded-size`).
+    #[test]
+    fn process_decisions_result_round_trips_in_both_forms() {
+        use super::{DecisionOutcome, DecisionRef, ListsForm, ProcessDecisionsResult};
+        let decision = DecisionRef {
+            key: "grounding — m".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: Some("specs/001-x/tasks.md".into()),
+            task: None,
+            work_item: None,
+            reason: None,
+        };
+        let counts = [
+            "matched-count",
+            "expired-count",
+            "retained-count",
+            "lapsed-count",
+            "notices-count",
+        ];
+        let lists = ["matched", "expired", "retained", "lapsed", "notices"];
+        let inline = ProcessDecisionsResult {
+            matched_count: 1,
+            lapsed_count: 1,
+            notices_count: 1,
+            matched: Some(vec![decision.clone()]),
+            expired: Some(Vec::new()),
+            retained: Some(Vec::new()),
+            lapsed: Some(vec![decision]),
+            notices: Some(vec!["n".into()]),
+            ..ProcessDecisionsResult::default()
+        };
+        let v = serde_json::to_value(&inline).unwrap();
+        assert_eq!(v["form"], "inline");
+        for key in counts.iter().chain(&lists) {
+            assert!(v.get(*key).is_some(), "{key}");
+        }
+        assert!(v.get("lists-file").is_none());
+        assert_eq!(round_trip(&inline), inline);
+
+        let file = ProcessDecisionsResult {
+            form: ListsForm::File,
+            matched_count: 1,
+            lists_file: Some(".ductus/results/process-decisions/001-x/a.json".into()),
+            ..ProcessDecisionsResult::default()
+        };
+        let v = serde_json::to_value(&file).unwrap();
+        assert_eq!(v["form"], "file");
+        assert_eq!(v["matched-count"], 1);
+        assert_eq!(
+            v["lists-file"],
+            ".ductus/results/process-decisions/001-x/a.json"
+        );
+        for key in lists {
+            assert!(v.get(key).is_none(), "{key}");
+        }
+        assert_eq!(round_trip(&file), file);
+    }
+
     /// The spec-058 shapes on the wire: every field name is kebab-case, and
     /// each type round-trips. The commands and the data model name these
     /// fields, so a rename here is a contract change the tests must see.
@@ -7914,8 +8003,7 @@ mod tests {
     fn disposition_shapes_round_trip_with_their_wire_names() {
         use super::{
             AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRecord, DecisionRef,
-            Disposition, DispositionOutcome, Dispositions, ProcessDecisionsArgs,
-            ProcessDecisionsResult, ReviewObservation,
+            Disposition, DispositionOutcome, Dispositions, ProcessDecisionsArgs, ReviewObservation,
         };
         let counts = Dispositions {
             fixed: 1,
@@ -7950,19 +8038,6 @@ mod tests {
         assert_eq!(v["record"], "analysis");
         assert_eq!(v["restricted"], true);
         assert_eq!(round_trip(&args), args);
-
-        let result = ProcessDecisionsResult {
-            matched: vec![decision.clone()],
-            expired: Vec::new(),
-            retained: Vec::new(),
-            lapsed: vec![decision.clone()],
-            notices: vec!["n".into()],
-        };
-        let v = serde_json::to_value(&result).unwrap();
-        for key in ["matched", "expired", "retained", "lapsed", "notices"] {
-            assert!(v.get(key).is_some(), "{key}");
-        }
-        assert_eq!(round_trip(&result), result);
 
         let finding = AnalysisFinding {
             tier: AnalysisTier::HardFail,

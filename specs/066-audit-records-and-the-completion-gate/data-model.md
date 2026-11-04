@@ -80,11 +80,14 @@ Args:
 Result:
 
 ```json
-{ "matched": [{ "key": "grounding — plan.md cites a missing path", "outcome": "deferred", "target": "specs/042-widget/tasks.md", "task": "3" }],
+{ "form": "inline", "matched-count": 1, "expired-count": 0, "retained-count": 0, "lapsed-count": 0, "notices-count": 0,
+  "matched": [{ "key": "grounding — plan.md cites a missing path", "outcome": "deferred", "target": "specs/042-widget/tasks.md", "task": "3" }],
   "expired": [], "retained": [], "lapsed": [], "notices": [] }
 ```
 
-Classifies the deferred and waived decisions in `review.md`'s or `analysis.md`'s `decisions:` list against this run's finding keys, before the host proposes any disposition, so a settled finding is counted under its stored outcome rather than asked about again. **matched**: the key fired. **expired**: it did not, on an unrestricted run, and the writer drops it — for a deferred finding, the moment its work landed. **retained**: it did not, but `restricted` says the run did not evaluate every source. **lapsed**: it fired, but the pipeline work its deferral names is complete — a task checked, or a spec `done` — so the writer drops it and the finding needs a new disposition (`framework/reference/review.md` §Deferrals has the completion table). A malformed entry or a repeated key produces a notice; the primitive prunes nothing. `fired` is MCP-only, and each key is compared in the flattened single-line form the writers store. Read-only; a `decisions:` list that does not parse is an error, never an empty result.
+Classifies the deferred and waived decisions in `review.md`'s or `analysis.md`'s `decisions:` list against this run's finding keys, before the host proposes any disposition, so a settled finding is counted under its stored outcome rather than asked about again. **matched**: the key fired. **expired**: it did not, on an unrestricted run, and the writer drops it — for a deferred finding, the moment its work landed. **retained**: it did not, but `restricted` says the run did not evaluate every source. **lapsed**: it fired, but the pipeline work its deferral names is complete — a task checked, or a spec `done` — so the writer drops it and the finding needs a new disposition (`framework/reference/review.md` §Deferrals has the completion table). A malformed entry or a repeated key produces a notice; the primitive prunes nothing. `fired` is MCP-only, and each key is compared in the flattened single-line form the writers store. Read-only but for a list file; a `decisions:` list that does not parse is an error, never an empty result.
+
+**Size** (scenario `process-decisions-results-have-a-bounded-size`). The result is bounded as `compute-review-scope`'s is (its **Size**): past `[artifacts] read-size-bytes`, `form` is `"file"`, none of the five lists is inline, and `lists-file` names a file under `.ductus/results/process-decisions/{feature}/` holding `matched`, `expired`, `retained`, `lapsed` and `notices` whole. Each list's count is inline in both forms, so a zero count, never an absent list, is an empty list. The file form's own size is 225 bytes of compact JSON plus the feature directory's name and each count digit past the first.
 
 ## `write-review` — observations and the review's denominator
 
