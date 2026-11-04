@@ -4,7 +4,7 @@ The shapes [078](spec.md)'s fix-round loop reads and writes: the round directory
 
 ## Round directory
 
-`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates it first writes `.ductus/review-rounds/.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot, and so no round's paths, whatever the repository's own `.gitignore` says.
+`.ductus/review-rounds/{feature}/`, holding one subdirectory per briefed round, named by that round's base sha. Whichever primitive creates it first writes `.ductus/review-rounds/.gitignore` containing `*`, as `.ductus/sessions/` does (`runtime/src/session.rs`, `ignore_everything`), so nothing in it enters a snapshot, and so no round's paths, whatever the repository's own `.gitignore` says. Two primitives creating it at once both write the same `*`, so repeating the write is harmless (`BE-RACE-003`). Every primitive screens `feature` through `validate_feature_argument` and resolves `base` to a full sha (`fix_rounds::resolve_base`) before naming a directory from either, and checks the rounds directory resolves inside the project, links included (`validate_contained`), as the *Path arguments* section of `specs/022-deterministic-runtime/plan.md` states (`BE-INPUT-004`).
 
 | File | Written by | Holds |
 | --- | --- | --- |
@@ -143,4 +143,4 @@ re-reads-off = "Reviews here run on a host without subagents, and no one runs th
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `re-reads-off` | string | absent: the loop runs | Switches the loop off; the value is the reason, at least 16 characters once trimmed, the length `[[review.disabled-rule-files]]` requires. Any other value halts `brief-re-read`, and `write-review` when the run passes `fix-rounds`, naming the setting, the value and the config file (`CFG-ENV-008`); a run that passes none reads no switch, since it has no round to waive. Registered in `runtime/src/schema/config_keys.rs` and documented in `framework/bootstrap/ductus.md` §Project Configuration (`CFG-ENV-002`). |
+| `re-reads-off` | string | absent: the loop runs | Switches the loop off; the value is the reason, at least 16 characters once trimmed, the length `[[review.disabled-rule-files]]` requires. Any other value halts `brief-re-read`, and `write-review` when the run passes `fix-rounds`, naming the setting, the value, the config file and the 16-character minimum (`CFG-ENV-005`, `CFG-ENV-008`); a run that passes none reads no switch, since it has no round to waive. Registered in `runtime/src/schema/config_keys.rs` and documented in `framework/bootstrap/ductus.md` §Project Configuration (`CFG-ENV-002`). |

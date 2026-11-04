@@ -121,3 +121,10 @@ The rule is the Workflow bullet beginning "Have an independent agent re-read eac
 - [ ] Add a test that a round applying the SHOULD edit and declining the NOTE edit matches, and one that a round declining a SHOULD edit still differs
 
 - **Done when**: a waived NOTE's unapplied edit no longer forces a re-read, an unapplied MUST or SHOULD edit still reads as differs, and both tests fail when their half is removed
+
+## 14. Name the re-read budget in one place
+
+- [ ] Make the budget — two re-reads that found a MUST or SHOULD — one named constant in the runtime that `write-review`'s `budget-stop` derivation reads
+- [ ] Have `framework/commands/review.md` step 12 and `framework/reference/review.md`'s **Fix-round loop** cite that constant rather than restate the number as a second source, and name its location in `plan.md`'s **The loop's end and its budget**
+
+- **Done when**: the budget's value lives in one named location, every artifact stating it points there, and CFG-CONST-001 no longer fires against 078
