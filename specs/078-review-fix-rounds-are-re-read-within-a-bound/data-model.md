@@ -143,4 +143,4 @@ re-reads-off = "Reviews here run on a host without subagents, and no one runs th
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `re-reads-off` | string | absent: the loop runs | Switches the loop off; the value is the reason, at least 16 characters once trimmed, the length `[[review.disabled-rule-files]]` requires. Any other value halts `brief-re-read` and `write-review`, naming the setting, the value and the config file (`CFG-ENV-008`). Registered in `runtime/src/schema/config_keys.rs` and documented in `framework/bootstrap/ductus.md` §Project Configuration (`CFG-ENV-002`). |
+| `re-reads-off` | string | absent: the loop runs | Switches the loop off; the value is the reason, at least 16 characters once trimmed, the length `[[review.disabled-rule-files]]` requires. Any other value halts `brief-re-read`, and `write-review` when the run passes `fix-rounds`, naming the setting, the value and the config file (`CFG-ENV-008`); a run that passes none reads no switch, since it has no round to waive. Registered in `runtime/src/schema/config_keys.rs` and documented in `framework/bootstrap/ductus.md` §Project Configuration (`CFG-ENV-002`). |
