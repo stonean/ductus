@@ -17,8 +17,8 @@ The rule was first written as an `AGENTS.md` entry, which is the failure this sp
 > **Superseded in part by [058 — Findings route at discovery](../../058-findings-route-at-discovery/spec.md).**
 > The three tiers stand, and so does what the rule does not license, but the
 > third tier no longer ends at the inbox. A finding outside the spec gets one
-> of three dispositions: fixed, routed to an artifact the pre-`done` gate
-> reads, or discarded with its reason. `/{project}:implement` first records it
+> of three dispositions: fixed, deferred to pipeline work the pre-`done` gate
+> reads, to an external work item, or both (076), or waived with its reason. `/{project}:implement` first records it
 > as a disposition task on the targeted spec. Two claims below no longer hold:
 > a finding outside the spec is not captured, and a chore a run finds is fixed
 > in that run rather than left as an inbox item. The subsection is now

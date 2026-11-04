@@ -67,7 +67,7 @@ below on every run.
 > `captured-issues` is gone: observations are no longer written to the inbox,
 > so the run has nothing to count there. The record carries a `dispositions:`
 > map counting what the run did with its observations, and a `decisions:` list
-> storing each routed or discarded one beside `waivers:`. The shapes of both are
+> storing each deferred or waived one beside `waivers:`. The shapes of both are
 > recorded in [058's data model](../058-findings-route-at-discovery/data-model.md).
 
 ```yaml
@@ -110,8 +110,8 @@ decisions:                           # omitted entirely when empty
 | `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for one thing, the mechanical-sweep rename exemption. |
 | `diff-base` | string (Git SHA) | yes | The SHA where the spec advanced to `in-progress`, or the value passed to `--since=<ref>`. |
 | `must-violations` | integer ≥ 0 | yes | Count after waivers and releasing deferrals (076). |
-| `should-violations` | integer ≥ 0 | yes | Advisory severity count. |
-| `low-confidence` | integer ≥ 0 | yes | Quality-pass findings below 80 confidence. Excluded from `must-violations`. |
+| `should-violations` | integer ≥ 0 | yes | SHOULD-tier count, after waivers and releasing deferrals (076), as `must-violations`. |
+| `low-confidence` | integer ≥ 0 | yes | Findings of any pass whose `confidence` is `low`, whatever their severity, after waivers and releasing deferrals (076), as `must-violations`. Excluded from `must-violations` and `should-violations`. |
 | `examined` | integer ≥ 0 | no | How many in-scope files the five passes actually **read**. Recorded as absent rather than zero when unstated — an unstated claim and a stated zero are different. Added by 022; see AC15. |
 | `scope` | integer ≥ 0 | yes | The denominator `examined` is asserted against, derived by `write-review` rather than supplied. Always written, because it was always computed. Added by 022. |
 | `skipped-passes` | list of strings | yes | Empty when no flag restricts dimensions. Permitted values: `security`, `reuse`, `quality`, `efficiency`, `simplicity`. |

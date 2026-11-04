@@ -128,9 +128,11 @@ its version and date.
   `security-backend.md` or `security-frontend.md` left from a surface the
   project no longer configures stops receiving updates, with the same results
   until the file is deleted or its surface configured again. A project that
-  wrote its own `specs/rules/security-cross.md` should rename or pin it
-  before upgrading: the upgrade replaces it with the shipped file, and no
-  audit runs for it, since the file is not newly created. Spec 077; spec
+  wrote its own `specs/rules/security-cross.md` should rename it before
+  upgrading: the upgrade replaces it with the shipped file, and no audit
+  runs for it, since the file is not newly created. Pinning it instead
+  keeps the shipped file out, so `/analyze` reports under no rule every case
+  another rule file yields to a `SEC-` rule. Spec 077; spec
   008, tasks 32, 40 and 42.
 - **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
   `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s
@@ -162,6 +164,15 @@ its version and date.
   its task checked or gone, its spec `done` or gone, or a rule file — while
   its finding still fires, under `lapsed`, and the finding needs a new
   disposition. Spec 076.
+
+### Fixed
+
+- **A waiver notice prints a stored waiver's text on one line.**
+  `process-waivers`' expired, retained and duplicate notices, which `/review`
+  prints verbatim, print the waiver's `rule`, `file` and `reason` flattened,
+  so a control character a hand edit left in `review.md`'s `waivers:` list no
+  longer reaches the terminal raw. Which waivers apply, expire or are
+  retained is unchanged. Spec 066, task 13.
 
 ## [0.59.11] — 2026-10-17
 

@@ -265,8 +265,8 @@ run_family "$(make_tree prefixed-target 0.61.0 "$(rule '**DEPRECATED in 0.60.0:*
 expect "target v0.62.0" 1 'removal target v0.62.0 is not MAJOR.MINOR.PATCH'
 
 echo "H. a deprecating version that is not MAJOR.MINOR.PATCH fails"
-run_family "$(make_tree bad-deprecated 0.60.0 "$(rule '**DEPRECATED in v0.60:** moved; removed in 0.62.0.')")"
-expect "DEPRECATED in v0.60" 1 'DEPRECATED in v0.60, which is not MAJOR.MINOR.PATCH'
+run_family "$(make_tree bad-deprecated 0.60.0 "$(rule '**DEPRECATED in 0.60:** moved; removed in 0.62.0.')")"
+expect "DEPRECATED in 0.60" 1 'DEPRECATED in 0.60, which is not MAJOR.MINOR.PATCH'
 run_family "$(make_tree suffixed-deprecated 0.62.0 "$(rule '**DEPRECATED in 0.60.0-rc.1:** moved; removed in 0.62.0.')")"
 expect "DEPRECATED in 0.60.0-rc.1" 1 'DEPRECATED in 0.60.0-rc.1, which is not MAJOR.MINOR.PATCH'
 run_family "$(make_tree prefixed-deprecated 0.61.0 "$(rule '**DEPRECATED in v0.60.0:** moved; removed in 0.62.0.')")"
@@ -286,6 +286,7 @@ expect "on the rule's own heading line" 1 'fixture-backend.md:3 [|] a deprecatio
 counted '1 deprecation label[(]s[)] found, 0 compared'
 run_family "$(make_tree after-category 0.60.0 "$(printf '# Rules\n\n## BE-XX\n\n### BE-XX-001\n\n> A MUST.\n\n## BE-YY\n\n**DEPRECATED in 0.60.0:** moved; removed in 0.62.0.\n')")"
 expect "under a ## heading that follows a rule" 1 'framework/rules/fixture-backend.md:11 [|] a deprecation label outside any rule section'
+counted '1 deprecation label[(]s[)] found, 0 compared'
 k=0
 for outside in '> **DEPRECATED in 0.60.0:** moved; removed in 0.62.0.' '  **DEPRECATED in 0.60.0:** moved; removed in 0.62.0.' 'Rules are retired with a **DEPRECATED in X.Y.Z:** label.'; do
   k=$((k + 1))
@@ -328,8 +329,10 @@ expect "version 0.62" 1 "first line '0.62' is not MAJOR.MINOR.PATCH"
 if printf '%s' "$err" | grep -q 'nothing compared'; then pass "a coverage line on the early exit"; else fail "stderr: $err"; fi
 run_family "$(make_tree long-version 0.62.0.1 "$(rule "$(label 0.60.0 0.62.0)")")"
 expect "version 0.62.0.1" 1 "first line '0.62.0.1' is not MAJOR.MINOR.PATCH"
+counted 'nothing compared: version is not MAJOR.MINOR.PATCH'
 run_family "$(make_tree prefixed-version v0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
 expect "version v0.62.0" 1 "first line 'v0.62.0' is not MAJOR.MINOR.PATCH"
+counted 'nothing compared: version is not MAJOR.MINOR.PATCH'
 d="$(make_tree unreadable-version 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
 if unreadable "$d/version"; then
   run_family "$d"
@@ -543,6 +546,10 @@ expect "and a malformed one after it" 1 "fixture-backend.md:13 [|] BE-AUTH-010's
 run_family "$(make_tree malformed-then-due-files 0.62.0 "$(rule '**DEPRECATED in 0.60.0:** moved.')" "$(rule "$(label 0.60.0 0.62.0)" SEC-AUTH-002)")"
 expect "a malformed label in one file" 1 "fixture-backend.md:7 [|] BE-AUTH-009's label names no removal target"
 expect "and a due one in the next" 1 'fixture-cross.md:7 [|] SEC-AUTH-002 is deprecated'
+run_family "$(make_tree due-then-malformed-files 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")" "$(rule '**DEPRECATED in 0.60.0:** moved.' SEC-AUTH-002)")"
+expect "a due label in one file" 1 'fixture-backend.md:7 [|] BE-AUTH-009 is deprecated'
+expect "and a malformed one in the next" 1 "fixture-cross.md:7 [|] SEC-AUTH-002's label names no removal target"
+counted '2 of 2 rule file[(]s[)] examined; 2 deprecation label[(]s[)] found, 1 compared'
 run_family "$(make_tree two-malformed 0.62.0 "$(two_rules '**DEPRECATED in 0.60.0:** moved.' '**DEPRECATED in 0.60.0:** moved; removed in 0.62.')")"
 expect "two malformed labels, the first" 1 "fixture-backend.md:7 [|] BE-AUTH-009's label names no removal target"
 expect "and the second" 1 "fixture-backend.md:13 [|] BE-AUTH-010's removal target 0.62 is not MAJOR.MINOR.PATCH"
