@@ -261,7 +261,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | Entry | Reason |
 | --- | --- |
 | `examined` counts the in-scope files the passes *read*. A file you are confident about by other means is named in the Summary, never folded into the numerator | The field ships on every review record; the generated-mirror temptation is the adopter's too |
-| The local gate is the whole CI surface, not the checks that look related to your change | **R** — stated as *pick the gate from the blast radius, not the file extension*, dropping this repo's script list |
+| Local checks follow what a change touches | **R** — stated as *pick the gate from the blast radius, not the file extension*, dropping this repo's script list |
 | After pushing, read every workflow's run — not the one whose name matches what you changed | **R** — a green *chosen* workflow is evidence about itself; true of any multi-workflow project |
 | Verify what a commit actually contains before reporting it landed — `git show --stat`, not the absence of an error | Git discipline behind every completion claim; `git show --stat` plus `git status --short` answer different questions |
 | Read the clock and read the sha — never write either from recollection | Both values are adopter-written fields on the review and analyze records |
