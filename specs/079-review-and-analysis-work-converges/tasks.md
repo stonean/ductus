@@ -73,11 +73,11 @@ Blocked on tasks 2 and 5: it reads the fields they write. `review.md` now carrie
 
 The baseline in the spec's outcome entry came from throwaway scripts, so its method there is what to reproduce: closed reopenings by their closing commit's author date. Two traps when re-deriving: `git log --follow --reverse` returned no commits for 007, 064 and 065, so walk without `--follow`; and a grep for `- [ ]` counts the tasks template's example checkboxes, which 026, 052 and 058 keep inside an HTML comment, so `waiting` reads through `read-tasks`. Another walk gives another count (commits adding `status: done` under `--since` gave 119 against 123), so state which walk a figure used.
 
-- [ ] Create `measure-reopenings` and register it in the five sites
-- [ ] `dashboard` and `framework/commands/status.md`: the counts on every run
-- [ ] `runtime/tests/measure_reopenings.rs`: `measured`, `shallow-history` and `nothing-to-compare`, within the bound, over it, a second run after a gating finding, a reopening with no recorded run, a record that does not parse, and a review's two writes counting as one run
-- [ ] Run it at `d62e72f3` over the window since 2026-10-01 and record in the commit whether it reproduces 123 reopenings and 255 runs; explain any difference by method (AC20)
-- [ ] Time `dashboard` before and after, and narrow `REOPENING_WINDOW_DAYS` if the difference is noticeable; state the times in the commit
+- [x] Create `measure-reopenings` and register it in the five sites
+- [x] `dashboard` and `framework/commands/status.md`: the counts on every run
+- [x] `runtime/tests/measure_reopenings.rs`: `measured`, `shallow-history` and `nothing-to-compare`, within the bound, over it, a second run after a gating finding, a reopening with no recorded run, a record that does not parse, and a review's two writes counting as one run
+- [x] Run it at `d62e72f3` over the window since 2026-10-01 and record in the commit whether it reproduces 123 reopenings and 255 runs; explain any difference by method (AC20)
+- [x] Time `dashboard` before and after, and narrow `REOPENING_WINDOW_DAYS` if the difference is noticeable; state the times in the commit
 
 - **Done when**: the tests pass, each fails with its behavior removed, the baseline result is recorded, and `/{project}:status` shows the counts in an adopter-shaped fixture project.
 
@@ -139,6 +139,6 @@ Blocked on tasks 1–11.
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
 - [ ] Propose `done` with the completion gate
 
-Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them.
+Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.
