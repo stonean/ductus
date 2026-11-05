@@ -239,7 +239,7 @@ fn tasks_reasons(side: &Side<'_>, reasons: &mut BTreeSet<SpecEditReason>) -> Res
 /// Each unchecked box with its task's heading, which carries no number, so
 /// renumbering a task changes nothing. A checkbox-form `Done when` counts, since
 /// a reader sees its box.
-fn unchecked_items(content: &str) -> BTreeMap<(String, String), usize> {
+pub(crate) fn unchecked_items(content: &str) -> BTreeMap<(String, String), usize> {
     let mut items = BTreeMap::new();
     for task in parse_tasks(content) {
         let clause = task

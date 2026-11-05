@@ -88,6 +88,11 @@ pub struct ReviewBlock {
     /// Low-confidence findings from the last review.
     #[serde(default)]
     pub low_confidence: u32,
+    /// Observations marked as breaking the spec's own contract that the last
+    /// review did not fix, each a gating finding left by that run (spec 079).
+    /// Zero on a record written before the field existed.
+    #[serde(default)]
+    pub contract_breaks: u32,
     /// Whether the last review left blocking findings.
     #[serde(default)]
     pub blocking: bool,
@@ -2506,6 +2511,10 @@ pub struct DashboardResult {
     /// inbox, a count of personal todos had no bearing on the spec a review or
     /// implementation run was working on.
     pub inbox_standing: InboxStanding,
+    /// How many reopenings closed over the bound on review and analysis runs and
+    /// how many `in-progress` specs have no unchecked task, rendered as the view's
+    /// `Reopenings:` line on every run (spec 079, AC19).
+    pub reopenings: ReopeningCounts,
     /// The full pipeline view pre-rendered as one markdown fragment —
     /// preamble, dashboard table, counts and callouts, and the
     /// cross-service references readout (the runtime resolves each spec's
@@ -4866,6 +4875,153 @@ pub struct ClassifySpecEditResult {
     pub kind: SpecEditKind,
     /// Why it reopens, in one fixed order. Empty unless `kind` is `reopens`.
     pub reasons: Vec<SpecEditReason>,
+}
+
+// -- measure-reopenings (spec 079) -------------------------------------------
+
+/// Args for `measure-reopenings`: whether reopenings stayed within the bound on
+/// review and analysis runs.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct MeasureReopeningsArgs {
+    /// Which closings count: a date, `2026-10-01` or an ISO-8601 UTC timestamp, by
+    /// the closing commit's author date, or a ref, for the closings `at` reaches
+    /// and it does not. The last 30 days when absent.
+    #[serde(default)]
+    #[arg(long)]
+    pub since: Option<String>,
+    /// The ref to measure at. `HEAD` when absent.
+    #[serde(default)]
+    #[arg(long)]
+    pub at: Option<String>,
+}
+
+/// What a measurement could say. Each case the count cannot speak to is its own.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReopeningState {
+    /// At least one reopening closed in the window.
+    Measured,
+    /// The history is too shallow to hold its status commits.
+    ShallowHistory,
+    /// No reopening closed in the window.
+    #[default]
+    NothingToCompare,
+    /// `dashboard` only: the measurement failed, for the block's `reason`.
+    NotMeasured,
+}
+
+/// Why a closed reopening could not be counted.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum NotCountedReason {
+    /// No `last-run` in `review.md` or `analysis.md` is new inside it.
+    NoRecordedRun,
+    /// A record inside it does not parse, so a run's findings are unknown.
+    RecordUnparseable,
+    /// The status reached `done` with no `in-progress` commit to start from, as a
+    /// reopening squashed into one commit does.
+    NoInProgressCommit,
+}
+
+/// One closed reopening that could be counted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct Reopening {
+    /// Feature directory name.
+    pub feature: String,
+    /// The commit that last entered `in-progress`.
+    pub start: String,
+    /// The commit that made the spec `done`.
+    pub end: String,
+    /// Distinct `last-run` values in `review.md` inside it.
+    pub reviews: usize,
+    /// Distinct `last-run` values in `analysis.md` inside it.
+    pub analyses: usize,
+    /// A second or later run of a kind followed a run that left no gating finding.
+    pub over_bound: bool,
+    /// Stored decisions stamped with one of its runs' times that a person made.
+    pub decisions_by_person: usize,
+}
+
+/// One closed reopening that could not be counted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct NotCountedReopening {
+    /// Feature directory name.
+    pub feature: String,
+    /// The commit that last entered `in-progress`. Absent when no pass shows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start: Option<String>,
+    /// The commit that made the spec `done`.
+    pub end: String,
+    /// Why it is not counted.
+    pub reason: NotCountedReason,
+}
+
+/// Result for `measure-reopenings`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MeasureReopeningsResult {
+    /// What the measurement could say.
+    pub state: ReopeningState,
+    /// The window's start as it was applied: a date, or a ref's full sha.
+    pub since: String,
+    /// Each closed reopening counted, by feature and then closing order. Absent
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reopenings: Option<Vec<Reopening>>,
+    /// Each closed reopening not counted, in the same order. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_counted: Option<Vec<NotCountedReopening>>,
+    /// The `in-progress` specs with no unchecked task, read from the commit
+    /// measured. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waiting: Option<Vec<String>>,
+    /// Reopenings closed in the window, counted or not.
+    pub closed_count: usize,
+    /// Entries in `reopenings` over the bound, in either form.
+    pub over_bound_count: usize,
+    /// Entries in `not-counted`, in either form.
+    pub not_counted_count: usize,
+    /// Entries in `waiting`, in either form.
+    pub waiting_count: usize,
+    /// Review and analysis runs in `reopenings`, in either form.
+    pub runs: usize,
+    /// Where the lists are: in this result, or past the read size in the file
+    /// `lists-file` names (066 scenario `scope-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project root:
+    /// a JSON object with their three keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
+/// `measure-reopenings`' counts over its default window, as `dashboard` carries
+/// them for `/{project}:status`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReopeningCounts {
+    /// What the measurement could say.
+    pub state: ReopeningState,
+    /// The window's start. Absent when the measurement failed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub since: Option<String>,
+    /// See [`MeasureReopeningsResult::closed_count`].
+    pub closed_count: usize,
+    /// See [`MeasureReopeningsResult::over_bound_count`].
+    pub over_bound_count: usize,
+    /// See [`MeasureReopeningsResult::not_counted_count`].
+    pub not_counted_count: usize,
+    /// See [`MeasureReopeningsResult::waiting_count`].
+    pub waiting_count: usize,
+    /// See [`MeasureReopeningsResult::runs`].
+    pub runs: usize,
+    /// Why the measurement failed, on `not-measured` only: its counts are zero
+    /// because nothing was examined, not because nothing was found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 // -- check-review-gate -------------------------------------------------------

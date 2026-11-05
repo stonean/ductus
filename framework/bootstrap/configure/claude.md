@@ -120,6 +120,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__check-review-freshness`
    - `mcp__ductus__check-review-gate`
    - `mcp__ductus__classify-spec-edit`
+   - `mcp__ductus__measure-reopenings`
    - `mcp__ductus__append-question`
    - `mcp__ductus__diff-cross-spec`
    - `mcp__ductus__append-inbox`

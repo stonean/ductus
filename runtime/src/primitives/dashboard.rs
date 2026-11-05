@@ -40,7 +40,8 @@ use crate::schema::paths;
 use crate::schema::primitives::{
     DashboardArgs, DashboardConfig, DashboardResult, DashboardScenarioDetail,
     DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, InboxState,
-    ReferenceOutcome, ResolutionRecord, ResolveReferencesArgs, SessionNotice, SessionSource,
+    ReferenceOutcome, ReopeningCounts, ReopeningState, ResolutionRecord, ResolveReferencesArgs,
+    SessionNotice, SessionSource,
 };
 use crate::schema::services::Services;
 use crate::schema::status::{ALLOWED_STATUSES, UNBLOCKING_STATUSES};
@@ -79,6 +80,7 @@ pub(crate) fn run_as(
     let (config, config_name) = load_config(repo)?;
     let (session_target, session) = load_session_target(repo, identity, now)?;
     let inbox_standing = super::inbox_standing::standing(repo);
+    let reopenings = super::measure_reopenings::counts(repo, now);
     let rendered_markdown = render_markdown(
         repo,
         &View {
@@ -87,6 +89,7 @@ pub(crate) fn run_as(
             config: &config,
             config_name,
             inbox: &inbox_standing,
+            reopenings: &reopenings,
         },
         session_target.as_ref(),
         &session,
@@ -101,6 +104,7 @@ pub(crate) fn run_as(
         tags_union,
         config,
         inbox_standing,
+        reopenings,
         rendered_markdown,
     })
 }
@@ -122,6 +126,7 @@ struct View<'a> {
     config: &'a DashboardConfig,
     config_name: &'a str,
     inbox: &'a InboxStanding,
+    reopenings: &'a ReopeningCounts,
 }
 
 /// Render the full pipeline view. Blocks are joined by blank lines; the
@@ -374,8 +379,37 @@ fn render_callouts(view: &View<'_>, project: &str) -> String {
             config.unknown_keys.join(", ")
         ));
     }
+    lines.push(render_reopenings_line(view.reopenings));
     lines.push(render_inbox_line(view.inbox, project));
     lines.join("\n")
+}
+
+/// The reopenings row, rendered on **every** run (spec 079, AC19). A state the
+/// count cannot speak to renders its own words, so nothing reads as a clean zero
+/// over a history that was not examined.
+fn render_reopenings_line(reopenings: &ReopeningCounts) -> String {
+    let since = reopenings.since.as_deref().unwrap_or("the window's start");
+    let waiting = format!(
+        "{} in-progress spec(s) with no unchecked task",
+        reopenings.waiting_count
+    );
+    match reopenings.state {
+        ReopeningState::Measured => format!(
+            "Reopenings since {since}: {} closed, {} over the review and analysis bound, \
+             {} not counted · {waiting}",
+            reopenings.closed_count, reopenings.over_bound_count, reopenings.not_counted_count,
+        ),
+        ReopeningState::NothingToCompare => {
+            format!("Reopenings since {since}: none closed, nothing to compare · {waiting}")
+        }
+        ReopeningState::ShallowHistory => {
+            format!("Reopenings: ? history too shallow to measure · {waiting}")
+        }
+        ReopeningState::NotMeasured => format!(
+            "Reopenings: ? not measured — {}",
+            reopenings.reason.as_deref().unwrap_or("no reason given")
+        ),
+    }
 }
 
 /// The `Counts:` line, in lifecycle order. An out-of-set status (a
@@ -2188,6 +2222,91 @@ reason = "Deferred until v2 perf budget lands."
         assert!(
             !rendered.contains("unresolved scenario question(s)"),
             "no callout when nothing is outstanding: {rendered}"
+        );
+    }
+
+    // -- the reopenings row (spec 079) ------------------------------------------
+
+    #[test]
+    fn the_reopenings_line_says_each_state_in_its_own_words() {
+        let counts = |state, since: Option<&str>, reason: Option<&str>| ReopeningCounts {
+            state,
+            since: since.map(str::to_string),
+            closed_count: 12,
+            over_bound_count: 1,
+            not_counted_count: 2,
+            waiting_count: 3,
+            runs: 20,
+            reason: reason.map(str::to_string),
+        };
+        let since = Some("2026-10-06");
+        let waiting = "3 in-progress spec(s) with no unchecked task";
+        assert_eq!(
+            render_reopenings_line(&counts(ReopeningState::Measured, since, None)),
+            format!(
+                "Reopenings since 2026-10-06: 12 closed, 1 over the review and analysis bound, \
+                 2 not counted · {waiting}"
+            )
+        );
+        assert_eq!(
+            render_reopenings_line(&counts(ReopeningState::NothingToCompare, since, None)),
+            format!("Reopenings since 2026-10-06: none closed, nothing to compare · {waiting}")
+        );
+        assert_eq!(
+            render_reopenings_line(&counts(ReopeningState::ShallowHistory, since, None)),
+            format!("Reopenings: ? history too shallow to measure · {waiting}")
+        );
+        assert_eq!(
+            render_reopenings_line(&counts(ReopeningState::NotMeasured, None, Some("no repo"))),
+            "Reopenings: ? not measured — no repo"
+        );
+    }
+
+    /// Never omitted, and last but the inbox, which keeps its place at the end. With
+    /// no repository the state says the measurement did not run.
+    #[test]
+    fn the_reopenings_row_renders_on_every_run_just_before_the_inbox_row() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.reopenings.state, ReopeningState::NotMeasured);
+        let rendered = &result.rendered_markdown;
+        let lines: Vec<&str> = rendered.lines().collect();
+        let row = lines
+            .iter()
+            .position(|line| line.starts_with("Reopenings: ? not measured — "))
+            .unwrap_or_else(|| panic!("{rendered}"));
+        assert!(lines[row + 1].starts_with("Inbox:"), "{rendered}");
+    }
+
+    /// The block and the line are the measurement's counts at `now`.
+    #[test]
+    fn the_reopenings_block_carries_the_measurement() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let spec = tmp.path().join("specs/001-alpha/spec.md");
+        for status in ["in-progress", "done"] {
+            crate::primitives::git_fixture::write(
+                &spec,
+                &format!("---\nstatus: {status}\ndependencies: []\n---\n\n# A\n"),
+            );
+            crate::primitives::git_fixture::commit_all(&repository, "work(001): step");
+        }
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.reopenings.state, ReopeningState::Measured);
+        assert_eq!(result.reopenings.closed_count, 1);
+        assert_eq!(result.reopenings.not_counted_count, 1);
+        assert!(
+            result.rendered_markdown.contains("1 closed, 0 over"),
+            "{}",
+            result.rendered_markdown
         );
     }
 

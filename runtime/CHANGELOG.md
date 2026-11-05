@@ -52,6 +52,16 @@ its version and date.
   reasons otherwise; a label or a tick alone is a correction, and a run's record
   is no edit. `/amend` calls it before offering to reopen a spec, and stays
   quiet on a correction. Spec 079, task 6.
+- **`measure-reopenings`: whether review and analysis converged, from history.**
+  A new primitive, an MCP tool and CLI subcommand. A reopening is one pass from
+  `in-progress` to `done`, and it holds at most one review run and one analysis
+  run, or a second of either only after the earlier run left a gating finding.
+  It reports each reopening closed since a date or a ref, the last 30 days by
+  default, each one it could not count and why, how many stored decisions each
+  put to a person, and the `in-progress` specs with no unchecked task, and says so
+  when the history is shallow or nothing closed. `/status` shows the counts on
+  every run through `dashboard`'s new `reopenings` block. `/configure` allows it
+  with the other tools. Spec 079, task 7.
 
 ### Changed
 

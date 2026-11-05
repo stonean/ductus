@@ -19,9 +19,9 @@ use ductus::schema::primitives::{
     DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
     DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
     FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
+    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
+    MergePermissionsArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
+    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
     RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
     ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
     RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
@@ -146,6 +146,8 @@ enum Command {
     CheckReviewFreshness(CheckReviewFreshnessArgs),
     /// Classify the edit under a spec's directory as a correction, which leaves a done spec done, or as one that reopens it, from the diff.
     ClassifySpecEdit(ClassifySpecEditArgs),
+    /// Measure from history whether reopenings stayed within the bound on review and analysis runs.
+    MeasureReopenings(MeasureReopeningsArgs),
     /// Append a question bullet to a spec or scenario's ## Open Questions (atomic, with back-edge).
     AppendQuestion(AppendQuestionArgs),
     /// Append a numbered task block to a feature's tasks.md (atomic rewrite).
@@ -805,6 +807,9 @@ fn main() -> ExitCode {
         }
         Command::ClassifySpecEdit(args) => {
             emit_result(primitives::classify_spec_edit::run(&args, &repo))
+        }
+        Command::MeasureReopenings(args) => {
+            emit_result(primitives::measure_reopenings::run(&args, &repo))
         }
         Command::CheckReviewGate(args) => {
             emit_result(primitives::check_review_gate::run(&args, &repo))

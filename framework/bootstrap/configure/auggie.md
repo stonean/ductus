@@ -108,6 +108,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:check-review-freshness", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-review-gate", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:classify-spec-edit", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:measure-reopenings", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:append-question", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:diff-cross-spec", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:append-inbox", "permission": { "type": "allow" } }`

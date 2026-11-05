@@ -54,20 +54,20 @@ use crate::schema::primitives::{
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
     FetchArchiveResult, GateConfirmArgs, InvalidateReviewArgs, InvalidateReviewResult,
     LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs, LintMarkdownResult,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult,
-    MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
-    ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
-    PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
-    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSpecArgs, ReadSpecResult,
-    ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
-    RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
-    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
-    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
-    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult,
-    StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult,
-    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MeasureReopeningsResult,
+    MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult,
+    MigrateSessionFileArgs, MigrateSessionFileResult, ProcessDecisionsArgs, ProcessDecisionsResult,
+    ProcessWaiversArgs, ProcessWaiversResult, PrunePlanArgs, PrunePlanResult, PruneProjectArgs,
+    PruneProjectResult, PruneTasksArgs, PruneTasksResult, ReadReReadArgs, ReadReReadResult,
+    ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs,
+    RelocateAuditRecordsResult, RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs,
+    ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs,
+    ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs,
+    ResolveSessionResult, RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs,
+    RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs,
+    SetStatusResult, StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
+    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -776,7 +776,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "dashboard",
-        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config summary (.ductus/config.toml: disabled rule files, and every key in a ductus-owned section that no reader recognizes), the standing inbox (outstanding count and oldest item's date, rendered as an Inbox: line on every run), and the optional session target resolved for this process (spec 062): its own target when it has a session identity (DUCTUS_SESSION or a platform session id), else the shared default (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration). An identified process also gets session-identity, session-source and session-notices, rendered under the target line. The read is a peek: it pins no adoption and consumes no notice, so the notices shown are the ones the process's next command delivers."
+        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config summary (.ductus/config.toml: disabled rule files, and every key in a ductus-owned section that no reader recognizes), the standing inbox (outstanding count and oldest item's date, rendered as an Inbox: line on every run), the reopenings block (measure-reopenings' counts over its default window, rendered as a Reopenings: line on every run, with state not-measured and a reason when the measurement failed), and the optional session target resolved for this process (spec 062): its own target when it has a session identity (DUCTUS_SESSION or a platform session id), else the shared default (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration). An identified process also gets session-identity, session-source and session-notices, rendered under the target line. The read is a peek: it pins no adoption and consumes no notice, so the notices shown are the ones the process's next command delivers."
     )]
     async fn dashboard(
         &self,
@@ -935,6 +935,21 @@ impl GovRuntimeServer {
         // history readers.
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::classify_spec_edit::run(&params.0, repo.as_path()))
+            .await
+    }
+
+    #[tool(
+        name = "measure-reopenings",
+        description = "Measure from the repository's history whether reopenings stayed within the bound on review and analysis runs (spec 079). A reopening is one pass into in-progress and on to done, by the status of each spec.md at each commit, counted when its closing commit falls in the window: since, a date by that commit's author date or a ref for what it does not reach, the last 30 days when absent, at the ref at, HEAD when absent. A run is a distinct last-run in the committed review.md or analysis.md inside it, so a run's two writes are one and a value carried in from before it is none. A second run of a kind is over the bound unless the previous run of that kind left a gating finding: blocking, or a MUST, SHOULD or contract-breaks count on a review, or a hard-fail or blocking-findings count on an analysis. Returns state (measured; shallow-history, which cannot measure; nothing-to-compare, no reopening closed in the window), since, reopenings (feature, start, end, reviews, analyses, over-bound, decisions-by-person, the decisions stamped with a run's time that a person made), not-counted (feature, start, end, reason: no-recorded-run, record-unparseable or no-in-progress-commit), waiting (in-progress specs at that commit with no unchecked task), and closed-count, over-bound-count, not-counted-count, waiting-count and runs. A walk that could not finish is an error, never a count. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the three lists are absent, and lists-file names a JSON file under .ductus/results/ holding them whole. Read-only but for that file."
+    )]
+    async fn measure_reopenings(
+        &self,
+        params: Parameters<MeasureReopeningsArgs>,
+    ) -> Result<Json<MeasureReopeningsResult>, String> {
+        // A history walk unbounded in a large adopter repo — blocking pool, like
+        // the other history readers.
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::measure_reopenings::run(&params.0, repo.as_path()))
             .await
     }
 

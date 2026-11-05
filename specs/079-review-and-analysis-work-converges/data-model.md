@@ -48,12 +48,13 @@ Arguments: `since` (a ref or date; default the last `REOPENING_WINDOW_DAYS` days
 | Result field | Type | Meaning |
 | --- | --- | --- |
 | `state` | `measured`, `shallow-history` or `nothing-to-compare` | A distinct value for each case the count cannot speak to |
+| `since` | string | The window's start as applied: a date, or a ref's full sha |
 | `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
-| `not-counted` | list | Each closed reopening holding no recorded run or a record that does not parse, with its reason |
-| `waiting` | list of features | `in-progress` specs with no unchecked task |
-| `over-bound-count`, `not-counted-count`, `waiting-count`, `closed-count`, `runs` | integers | The counts `/{project}:status` renders |
+| `not-counted` | list | Each closed reopening that cannot be counted: `feature`, `start` when a pass shows, `end`, `reason` (`no-recorded-run`, `record-unparseable`, or `no-in-progress-commit` for a status reaching `done` from another, as a squashed reopening does) |
+| `waiting` | list of features | `in-progress` specs with no unchecked task at the commit measured |
+| `over-bound-count`, `not-counted-count`, `waiting-count`, `closed-count`, `runs` | integers | The counts `/{project}:status` renders; `closed-count` holds both lists and `runs` only `reopenings` |
 
-The lists are bounded as `compute-review-scope`'s are. `dashboard` carries the same counts in a `reopenings` block.
+The lists are bounded as `compute-review-scope`'s are. `dashboard` carries the same counts and `since` in a `reopenings` block, whose `state` may also be `not-measured`, with a `reason`, when the measurement failed, so `/{project}:status` still renders.
 
 ## `classify-spec-edit` (new primitive)
 

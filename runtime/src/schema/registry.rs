@@ -78,6 +78,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "check-review-freshness",
     "check-review-gate",
     "classify-spec-edit",
+    "measure-reopenings",
     "append-question",
     "diff-cross-spec",
     "append-inbox",

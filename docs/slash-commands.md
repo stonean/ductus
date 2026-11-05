@@ -111,7 +111,7 @@ It walks the list one item at a time and routes each: a rule for a cross-cutting
 
 ### `/status` — the pipeline view of every feature
 
-**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold — and, on every run, how many items stand in the inbox and how old the oldest is.
+**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold — and, on every run, how many items stand in the inbox and how old the oldest is, how many reopenings closed over the bound on review and analysis runs, and how many `in-progress` specs have no unchecked task.
 
 ### `/link` — a registered sibling service, so cross-service references resolve
 
