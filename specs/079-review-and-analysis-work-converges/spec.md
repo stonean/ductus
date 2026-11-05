@@ -1,5 +1,5 @@
 ---
-status: draft
+status: clarified
 dependencies: []
 next-criterion: 21
 ---
