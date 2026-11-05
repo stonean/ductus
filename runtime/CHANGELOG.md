@@ -65,6 +65,14 @@ its version and date.
 
 ### Changed
 
+- **A command's reference holds what a step does with a result, and no more.**
+  `framework/commands/` and `framework/reference/` together fell from 553,352
+  bytes to about 427,000, `framework/reference/review.md` from 67,168 to 43,198
+  and `framework/reference/analyze.md` from 78,632 to about 47,700, each within one
+  read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
+  `write-analysis` and `process-decisions` now state when a deferral releases a
+  finding and when its work is complete, which their descriptions used to cite
+  from the review reference (spec 079).
 - **The pre-`done` gate names a contract break nothing holds.** `check-review-gate`
   still passes a record whose `contract-breaks` is above 0, and its `guidance` now
   says so, since no gating count holds an observation and a run with no operator

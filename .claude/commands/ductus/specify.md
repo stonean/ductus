@@ -44,7 +44,7 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference — what its steps do with a result, and the policy they apply — is `.ductus/reference/specify.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/specify.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
 1. Invoke `derive-routing-candidates` with the feature description from `$ARGUMENTS` (required — if empty, ask the user what feature to specify), plus `routed-by` when another command's routing tree already chose this route (`/ductus:groom` recommending `/ductus:specify` is the case that matters). It derives the homes this work could already have — the runtime-owning spec when the description names a primitive or a `runtime/` path, a rule surface whose category it shares, a spec whose subject it overlaps — and reports every source as examined or skipped. A `gate-required: false` result means the decision has been made already: skip steps 2 and 3 and continue at step 4.
 

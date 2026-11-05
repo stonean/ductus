@@ -2,7 +2,7 @@
 
 The Gate table in `clarify.md` governs.
 
-**Where a named section lives.** This file is read alongside its command, `clarify.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
+**Where a named section lives.** A section named below with no heading here is in the command file, `clarify.md`, with the numbered steps this file cites. A bare `§name` is a heading here or a constitution marker; one with another file's path on its line is a heading there, unless it is a constitution marker.
 
 ## Feature-targeted clarify (hot path: `draft` spec)
 

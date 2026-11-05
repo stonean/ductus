@@ -24,7 +24,7 @@ Use the session target if set — invoke `resolve-session` and display any notic
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference — what its steps do with a result, and the policy they apply — is `.ductus/reference/groom.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/groom.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
 Process items **one at a time** — do not batch or pre-process multiple items. Complete steps 2–8 for one item (decision, confirmation, writes, removal), then repeat from step 2 for the next; step 9 runs once after all items. The decision-tree detail, prompt wording, and write shapes are in that reference.
 

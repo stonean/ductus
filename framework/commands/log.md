@@ -25,7 +25,7 @@ This command does not require a session target — items in the inbox span the w
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference — what its steps do with a result, and the policy they apply — is `.ductus/reference/log.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/log.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
 <!-- audit:ignore-promotion -->
 1. Capture the item. If `$ARGUMENTS` is provided, treat it as the item text. Otherwise, ask the user: "What do you want to log?" Optionally ask follow-up questions if the item is so terse it would be unrecoverable later (e.g., "broken" with no context) — one short clarification is enough; do not interrogate.
