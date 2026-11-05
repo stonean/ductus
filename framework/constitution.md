@@ -187,7 +187,7 @@ Define *how* the feature is built: a plan references its spec, addresses its ope
 
 Break the plan into ordered work items, each derived from the plan, finishable in one working session, and carrying a clear definition of done.
 
-`tasks.md` is an **ephemeral work-tracking artifact**, distinct from the durable `spec.md`, scenarios and rules: a task's value is spent once checked, since those, the design record and git history record what was built. `/{project}:prune` may drop done sections; nothing may treat `tasks.md` as a durable index. **Handoff state** — what is owed, in what order — is prose in the pending task it concerns, never a checkbox or a free-standing heading; an ordering constraint goes on the task that must wait.
+`tasks.md` is an **ephemeral work-tracking artifact**, distinct from the durable `spec.md`, `data-model.md`, scenarios and rules: a task's value is spent once checked, since those, the design record and git history record what was built. `/{project}:prune` may drop done sections; nothing may treat `tasks.md` as a durable index. **Handoff state** — what is owed, in what order — is prose in the pending task it concerns, never a checkbox or a free-standing heading; an ordering constraint goes on the task that must wait.
 
 <!-- §readiness-check -->
 
