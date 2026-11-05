@@ -979,8 +979,8 @@ mod tests {
     #[test]
     fn primitive_names_are_the_mcp_tool_names_plus_the_cli_only_ones() {
         // Guard against a primitive wired at some of its registration sites
-        // but not all (AGENTS.md Gotchas, "Registering a runtime primitive
-        // is five sites"): a primitive exposed over MCP must also be
+        // but not all (docs/developing-ductus.md, "Adding or removing a
+        // runtime primitive"): a primitive exposed over MCP must also be
         // recognizable in command prose.
         // The parser recognizes every MCP tool plus the CLI-only
         // primitives, which the server deliberately does not serve
@@ -991,7 +991,7 @@ mod tests {
         served.extend(crate::schema::registry::CLI_ONLY_PRIMITIVES.iter().copied());
         assert_eq!(
             parser, served,
-            "parser PRIMITIVE_NAMES and the MCP tool names plus CLI_ONLY_PRIMITIVES diverged — wire the missing sites (see AGENTS.md Gotchas)"
+            "parser PRIMITIVE_NAMES and the MCP tool names plus CLI_ONLY_PRIMITIVES diverged — wire the missing sites (see docs/developing-ductus.md)"
         );
     }
 

@@ -307,9 +307,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | Waive an observation about the pipeline's own machinery made while reviewing framework work, with its reason — deferring it is what feeds the loop | The premise — a review executed *by* the machinery it reviews — holds only for this framework's own repository |
 | After changing runtime source, verify through the built binary — not the MCP tools | Adopters do not change runtime source |
 | `framework/commands/help.md` is generated — hand-edits to it are reverted on the next commit | Framework build step |
-| Registering a runtime primitive is five sites, and two of them are only found by tests — de-registering one is the same five | Framework build step |
 | `check-artifacts`' `skipped` array names targets that could not be *reached*, never subjects that were empty | About *authoring* a check family; the interpretive half is already §design-principles |
-| A new slash command wires into five places outside `framework/commands/`, and two of them are load-bearing for adopters | Framework build step |
 | Never write a literal `ductus-vX.Y.Z` into a `framework/commands/*.md` prose line — `BLESS` will template it into a time bomb | Framework build step, and the trap is this repo's parity goldens |
 | In a `set -e` script, `[ test ] && cmd` as the *last* command of a block exits the script when the test is false | Shell idiom in this project's own tooling rather than pipeline governance |
 | clap expands `{n}` in a doc comment as a newline, so a `#[derive(clap::Args)]` field's docs cannot contain one | Runtime source detail |
@@ -345,7 +343,6 @@ The 9 entries the promotion-coverage notice reported unclassified on 2026-09-28,
 | No dead code — remove what nothing calls, reads, or reaches in the change that makes it dead | Recorded as this repository's rule at the operator's request (2026-09-25); promoted, it would govern code and route to a rule file |
 | Two extension points fan out in the exec walker, so neither is a stand-in for "one request, one response" in a test | This runtime's exec walker and its rule fixtures |
 | A word starting with `=` is a command lookup in zsh, so an unquoted `======` separator kills the command it sits in | A shell trap with no pipeline connection, like the zsh `path` entry |
-| Mutating code to prove a test fails: run unit tests in the dev profile, and rebuild the release binary after any parity mutation | This repository's cargo profiles and parity harness |
 | A boolean argument is a valueless flag on the CLI and a JSON boolean over MCP — `--checked true` is an error, `--checked` is the call | Tool-call hygiene for this runtime's CLI; generalized it stops biting, like *use repo-relative paths in tool calls* |
 | The project root is not the git work tree's root, and every path that crosses between them must be converted | Runtime and command-source authoring; an adopter receives the behavior, not the rule |
 | An `assessSpecQuality` step's prose chooses the tier of rules the exec walker asks about, so a `-tier` word added to that prose can change what the step covers | Concerns authoring this framework's command sources |
@@ -372,7 +369,6 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 | Stop your own background tasks before writing a handoff | Concerns the agent's own background tasks and handoff notes, which the pipeline has no step for, like *use repo-relative paths in tool calls* |
 | A CI verdict comes from pushing `main` | This repository's trunk-based flow and release-tag distribution, as W1 and W3 |
 | Pi has no MCP client | Concerns maintaining this framework's Pi bridge |
-| A primitive whose result has two shapes returns one struct with two flattened `Option` halves | Runtime authoring |
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
 
@@ -386,7 +382,6 @@ The one entry the promotion-coverage notice reported unclassified on 2026-10-17,
 
 | Entry | Reason |
 | --- | --- |
-| Adding a member to a closed set the `check-artifacts` families use | Runtime check-family authoring in this repository; an adopter extends no `check-artifacts` family, so the sweep it prices never reaches one |
 
 Two entries were reclassified after checking the constitution rather than the
 survey: **W14 and W15 are already promoted.** They are cases (b) and (c) of

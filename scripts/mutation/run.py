@@ -31,7 +31,8 @@ The exit status is 0 only when every anchor is valid, runtime/src is restored
 byte for byte, no mutation errored, and the survivors are exactly the expected
 ones among those selected. Do not edit anything under runtime/ while it runs:
 each restore writes back the file as it was read before the mutation, so an
-edit made in between is undone (AGENTS.md, Gotchas, on mutating code).
+edit made in between is undone (docs/developing-ductus.md, "Proving a test
+fails").
 """
 
 import ast

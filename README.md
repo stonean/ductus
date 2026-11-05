@@ -280,7 +280,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [reference/](framework/reference/) — each command's markdown-only reference, installed at `.ductus/reference/`
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
-- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [rules.md](docs/rules.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md), [shared-constitution.md](docs/shared-constitution.md)
+- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [rules.md](docs/rules.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md), [shared-constitution.md](docs/shared-constitution.md), and for changing `ductus` itself, [developing-ductus.md](docs/developing-ductus.md)
 - **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
