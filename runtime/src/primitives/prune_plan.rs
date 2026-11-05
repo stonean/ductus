@@ -5,7 +5,7 @@
 //! record is the plan template's own `##` sections, compared ASCII
 //! case-insensitively ([`DESIGN_RECORD`]). A preview reports every other
 //! `##` section with its size, a digest, the advisory `/{project}:analyze`
-//! records for it, and whether `analysis.md` already stores a waiver for
+//! records for it, and whether `analysis.md` already stores a person's waiver for
 //! that advisory. An apply removes the sections the host lists by heading
 //! and digest, refusing the whole write when any of them changed since the
 //! preview, because the host judged its moves against the text it read.
@@ -321,13 +321,17 @@ fn summarize(
 
 /// Every section of `blocks` outside the design record, with the index of its
 /// block, and the count of `##` sections read. A section is decided when
-/// `stored` holds a well-formed waiver under its finding's exact key.
+/// `stored` holds a well-formed waiver by a person under its finding's exact key:
+/// the disposition rule waives every plan-record finding, which decides nothing
+/// about where the section belongs (§plan-phase, spec 079).
 fn outside_record(blocks: &[Block], stored: &[RawDecision]) -> (u32, Vec<(usize, PlanSection)>) {
     let decided = |finding: &PlanFinding| {
         let key = finding_key_of(&finding.family, &finding.message);
         stored.iter().any(|entry| {
             entry.to_ref().is_ok_and(|decision| {
-                decision.outcome == DecisionOutcome::Waived && same_key(&decision.key, &key)
+                decision.outcome == DecisionOutcome::Waived
+                    && !decision.by_rule
+                    && same_key(&decision.key, &key)
             })
         })
     };
@@ -654,6 +658,23 @@ mod tests {
             run(&no_apply, tmp.path()).unwrap_err(),
             PrimitiveError::InvalidArgument { .. }
         ));
+    }
+
+    /// The disposition rule waives every plan-record finding, which decides nothing
+    /// about where a section belongs, so `/prune` still proposes it (spec 079).
+    #[test]
+    fn a_waiver_the_rule_made_does_not_set_decided() {
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        project(tmp.path(), "done", Some(PLAN));
+        write(
+            &feature_dir(tmp.path()).join("analysis.md"),
+            "---\nspec: 041-task-pruning\ndecisions:\n  - key: \"plan-record — plan.md §Implementation notes is outside the design record\"\n    outcome: waived\n    reason: not mechanical\n    decided-at: 2026-09-29T00:00:00Z\n    decided-by: rule\n---\n\n# Analysis\n",
+        );
+        commit_all(&repository, "done");
+        let result = run(&preview(), tmp.path()).unwrap();
+        assert!(!result.sections.is_empty(), "{result:?}");
+        assert!(result.sections.iter().all(|section| !section.decided));
     }
 
     #[test]

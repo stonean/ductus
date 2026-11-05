@@ -261,10 +261,12 @@ records for it, built by one function, `plan_section_finding(heading)`:
 
 `write-analysis` keys a stored decision `{family} — {message}`, so the key is
 fully determined by the heading. A section is **decided** when `analysis.md`'s
-`decisions:` list holds a well-formed `waived` entry under that key,
-compared with the stored-decision key normalization every writer uses. A
-deferred entry does not decide a section, and a key analyze re-matched by
-judgment — kept from an earlier wording — is left for the host to match.
+`decisions:` list holds a well-formed `waived` entry by a person under that
+key, compared with the stored-decision key normalization every writer uses. A
+deferred entry does not decide a section, nor does a waiver stamped
+`decided-by: rule`, since the disposition rule waives every `plan-record`
+finding it does not fix (spec 079), and a key analyze re-matched by judgment —
+kept from an earlier wording — is left for the host to match.
 
 ### Request/response schema
 

@@ -55,15 +55,11 @@ say why. Asking a question that has been answered is friction, not rigor.
 ## Resolve feature number and slug
 
 1. The command's argument is the feature description (e.g., "webhook delivery"). This is required — if empty, ask the user what feature to specify.
-2. Determine the next available feature number by checking existing directories under `specs/` matching the NNN-feature pattern; the next number is the highest existing NNN plus one (zero-padded to three digits).
-3. Generate the slug from the feature description: lowercase, hyphenated, no whitespace, no punctuation beyond hyphens.
+2. `create-feature` derives the number and the slug.
 
 ## Create the feature directory
 
-1. Create `specs/{NNN-feature-name}/`.
-2. Copy `specs/templates/spec.md` into the directory as `spec.md`.
-
-Both sections above are what the `create-feature` primitive automates (number scan, slug derivation, directory creation, atomic template copy).
+`create-feature` creates the directory and copies the template.
 
 ## Settle branch-scoped creation
 

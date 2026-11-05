@@ -163,7 +163,7 @@ keys a finding `{family} — {message}` (`runtime/src/primitives/write_analysis.
 `finding_key`), so the stored key is fully determined by the heading.
 `prune-plan` reads `analysis.md`'s stored decisions with `read_decisions`
 (`runtime/src/primitives/decisions.rs`) and sets `decided: true` for a section
-whose key has a stored `waived` decision, compared with `same_key`. A
+whose key has a stored `waived` decision by a person, compared with `same_key`. A
 decision analyze re-matched by judgment keeps its original key (058's
 `decision-key`), so a key that no longer matches is left `decided: false` for
 the host to match the way `/{project}:analyze`'s stored-decision step does,
@@ -262,7 +262,7 @@ asked about before the flip, never performed silently; and one the preview
 named that the fresh reading no longer requires, such as a `--reset` that
 removed the unchecked boxes it came from, is not performed. A spec the run
 wrote nothing to keeps its status. A declined section is skipped
-for that run, and the prompt names an analyze waiver as the lasting keep.
+for that run, and the prompt names a fold under a design-record heading as the lasting keep.
 The write surface is `tasks.md`, `plan.md`, `AGENTS.md` for moved knowledge,
 and status through `set-status`; knowledge that holds more widely is named
 for the operator to route where §drift-prevention's *Shared knowledge stays

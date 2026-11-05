@@ -131,5 +131,5 @@ Q5, option A — *not* a `merge-permissions` extension):
   exists.
 - Invalid JSON → do not touch the file (skip wiring, warn; the run continues
   through the CLI) — a hand-maintained config is never clobbered.
-- The merge is host-side (markdown-only path faithful); a generic JSON-region
+- The merge is host-side; a generic JSON-region
   merge runtime primitive is a deferred 022 follow-up.

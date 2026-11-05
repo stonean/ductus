@@ -49,7 +49,7 @@ project = "ductus"
 4. `/ductus`'s bootstrap (`framework/bootstrap/ductus.md`) writes a `[host]` block carrying only `project` into the adopter's active config file during the install, as a managed block — re-runs update it in place rather than appending duplicate sections. `cli-config-dir` goes to the session file — see `cli-config-dir-per-contributor`.
 5. Fixtures under `runtime/tests/fixtures/` exercise `ductus exec` against non-Claude layouts: `exec-auggie` (`.augment`, `project = "acme"`, with `cli-config-dir` in its legacy `[host]` block) is the regression test for this scenario, and `exec-opencode` resolves the singular `command/` directory with `cli-config-dir` in its session file.
 
-### Markdown-only path
+### Scope
 
 The hardcoded path is a runtime-only concern.
 

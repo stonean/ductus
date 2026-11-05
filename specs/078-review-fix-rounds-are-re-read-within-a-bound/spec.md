@@ -71,7 +71,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 - A snapshot, scope or diff-check call that fails is not an empty scope and not a passed check: its round counts as needing a re-read and having none.
 - A round verified by the diff check is not a re-read and does not count toward the budget. Once the budget is reached, every further round waits for the operator's decision.
 - With no operator to ask and no agent to start — `ductus exec`, among others — a round that needed a re-read is recorded as not re-read with no waiver, so the gate holds `done` until an interactive run re-reads or waives it.
-- A commit made between rounds changes no round's scope, since the diff runs from the snapshot to the working tree.
+- A commit this spec or no spec claims, made between rounds, changes no round's scope, since the diff runs from the snapshot to the working tree; a commit only another spec claims takes the paths it alone changed out of the round.
 - In a tree another session also edits, the derived scope includes that session's uncommitted changes made since the round's base, while a path only commits another spec claims changed leaves the round. Isolating sessions with `git worktree` is the framework's answer (§concurrent-features); a finding on a path no fix in the round touched is an out-of-round NOTE.
 
 ## Acceptance Criteria

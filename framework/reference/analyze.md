@@ -36,9 +36,9 @@ Enforces `.ductus/constitution.md` §plan-phase's *a plan records the design as 
 
 **Not covered:** a journal nested under a design heading — a `### Task 7 notes` inside Technical Decisions — is part of that section, and no heading test reaches it. The rule applies there all the same.
 
-Suggested fix per finding: run `/{project}:prune`, which moves the section's durable pieces into the design record or their own homes and then removes it; or, when the section is deliberately part of this plan's design — a *Known limitations*, a *Classification* — waive the finding with that reason, which stores the decision so neither the next analyze nor any prune proposes it again.
+Suggested fix per finding: run `/{project}:prune`, which moves the section's durable pieces into the design record or their own homes and then removes it; or, when the section is deliberately part of this plan's design — a *Known limitations*, a *Classification* — fold it under a design-record heading, which ends the finding. The rule's own waiver of the finding only keeps the next analyze from deciding it again, so a prune still proposes the section; a person's waiver stored earlier still keeps it.
 
-**Severity:** advisory, and it stays advisory. The heading set is a detector, not a verdict: a legitimate design section under another heading fires too, so the answer to a false positive is one stored waiver, never a gate.
+**Severity:** advisory, and it stays advisory. The heading set is a detector, not a verdict: a legitimate design section under another heading fires too, so the answer to a false positive is folding the section under a design-record heading, never a gate.
 
 ## Artifact size (advisory)
 

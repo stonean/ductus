@@ -80,7 +80,7 @@ Reversal of the wiring follows the written file's tracking status. Both `write-f
 
 Because the write is idempotent, State B is self-limiting: once it has run, the next session is either State A (the entry took effect) or — if the binary was removed between runs — State B again, which re-acquires it.
 
-Wiring is triggered by the binary's presence alone; the gate performs **no version-compatibility check**. This follows [spec 022 §Versioning enforcement](../022-deterministic-runtime/spec.md), which deliberately rejects startup version comparison and refuse-on-mismatch in favor of lockstep tagged releases plus the runtime's own parse-error path. A too-old wired `ductus` surfaces through that runtime parse error on the next session, and any failing primitive falls back to the markdown path — so the gate has no reason to second-guess the binary's version.
+Wiring is triggered by the binary's presence alone; the gate performs **no version-compatibility check**. This follows [spec 022 §Versioning enforcement](../022-deterministic-runtime/spec.md), which deliberately rejects startup version comparison and refuse-on-mismatch in favor of lockstep tagged releases plus the runtime's own parse-error path. A too-old wired `ductus` surfaces through that runtime parse error on the next session, and any failing primitive falls back to that step's shell specification — so the gate has no reason to second-guess the binary's version.
 
 ## Permission Setup
 

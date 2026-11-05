@@ -15,7 +15,7 @@ On 2026-10-26 the constitution was 119,262 bytes. Every pipeline command loads i
 - The cut is measured before it is planned. The plan names which sections move, where each goes and how many bytes each removes, so it shows the threshold is reachable rather than assuming it.
 - The change that lands the cut lowers 072's ceiling for `framework/constitution.md` to the read-size threshold, so the document cannot grow back.
 - Once the constitution fits one read, it loads at startup, not only when `/{project}:target` reads it. The project template's `CLAUDE.md` imports `@.ductus/constitution.md`, this repository's `CLAUDE.md` imports `@framework/constitution.md`, and a migration adds the import line to an existing adopter's `CLAUDE.md`. A session started from a handoff prompt then has the constitution without running a command, and `/{project}:target`'s read becomes the fallback for a host that does not resolve `@path`. Resolved 2026-10-26 by the owner, with `002-project-scaffolding`'s `claude-md-template-imports-load`.
-- **A primitive's own behavior is not the constitution's to state.** The binary is its source (spec 079), so a sentence about one primitive moves to its compiled description. That paid for 079's amendment, which added the rule on what a review or analysis run may create and what a correction is, and left the constitution at 49,861 bytes by `wc -c`.
+- **A primitive's own behavior is not the constitution's to state.** The binary is its source (spec 079), so a sentence about one primitive moves to its compiled description. That paid for 079's amendment, which added the rule on what a review or analysis run may create and what a correction is, and left the constitution at 49,861 bytes by `wc -c` at `ad4fae5b`.
 
 ## Edge Cases
 

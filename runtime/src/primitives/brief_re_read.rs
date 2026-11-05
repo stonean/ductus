@@ -495,6 +495,23 @@ mod tests {
         assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
     }
 
+    /// By object, not by text, or an edit to a file that is not UTF-8 would read as
+    /// no edit and leave the round.
+    #[test]
+    fn an_uncommitted_edit_to_a_binary_file_on_another_specs_path_stays_in_the_round() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        std::fs::create_dir_all(tmp.path().join("src")).unwrap();
+        std::fs::write(tmp.path().join("src/other.bin"), [0xff, 0xfe, 0x01]).unwrap();
+        let repository = Repository::discover(tmp.path()).unwrap();
+        commit_all(&repository, "feat(002): its landing");
+        std::fs::write(tmp.path().join("src/other.bin"), [0xff, 0xfe, 0x02]).unwrap();
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/other.bin"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
     /// The same at the base's snapshot: the round started with an uncommitted
     /// edit there, so what the commit replaced was not the commit's alone.
     #[test]

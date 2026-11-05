@@ -448,19 +448,11 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
     }
 }
 
-/// Gate check 12 — `review.md` still carries `fix-rounds-open` (spec 079), or
-/// counts more fix rounds that needed a re-read and have none (`not-re-read`)
-/// than waivers with a reason (spec 078).
-///
-/// Counted rather than matched by round, as the record states it, so a
-/// hand-edited record with fewer waivers than un-re-read rounds blocks
-/// whatever its other counts say, and a waiver whose reason is blank waives
-/// nothing. A record with neither field does not say whether its fixes
-/// were re-read: it passes here, and [`passing_notices`] says so.
 /// Whether this record holds `done` until `/review` runs again, whatever the
 /// window holds: a gating count, no `dispositions:` map, the open mark, or a fix
-/// round with neither a re-read nor a waiver. `review-owed` reads it, so it never
-/// says no review is owed while this gate asks for one (spec 079).
+/// round with neither a re-read nor a waiver. `compute-review-scope` reads it, with
+/// the digest's freshness that takes files to judge, so `review-owed` never says no
+/// review is owed while this gate asks for one (spec 079).
 pub(crate) fn holds_done_until_reviewed(review: &crate::schema::primitives::ReviewBlock) -> bool {
     review.blocking
         || review
@@ -484,6 +476,15 @@ fn waived_rounds(review: &crate::schema::primitives::ReviewBlock) -> u32 {
     u32::try_from(waived).unwrap_or(u32::MAX)
 }
 
+/// Gate check 12 — `review.md` still carries `fix-rounds-open` (spec 079), or
+/// counts more fix rounds that needed a re-read and have none (`not-re-read`)
+/// than waivers with a reason (spec 078).
+///
+/// Counted rather than matched by round, as the record states it, so a
+/// hand-edited record with fewer waivers than un-re-read rounds blocks
+/// whatever its other counts say, and a waiver whose reason is blank waives
+/// nothing. A record with neither field does not say whether its fixes
+/// were re-read: it passes here, and [`passing_notices`] says so.
 fn fix_round_block(
     review: &crate::schema::primitives::ReviewBlock,
     rel_dir: &str,
@@ -495,7 +496,8 @@ fn fix_round_block(
             blocked_by: Some(ReviewGateBlock::FixRoundLoopOpen),
             message: Some(format!(
                 "blocked: the fix-round loop in {rel_dir}/review.md is still open, so the review \
-                 stopped before its last write and its fixes may be unread"
+                 stopped before its last write and its fixes may be unread — re-run \
+                 /{project}:review"
             )),
             guidance: Some(format!(
                 "Re-run /{project}:review: its last write records the rounds and clears the mark."
@@ -2943,6 +2945,15 @@ mod tests {
                 .as_deref()
                 .unwrap()
                 .contains("specs/007-gate/review.md is still open"),
+            "{:?}",
+            result.message
+        );
+        assert!(
+            result
+                .message
+                .as_deref()
+                .unwrap()
+                .contains("re-run /ductus:review"),
             "{:?}",
             result.message
         );

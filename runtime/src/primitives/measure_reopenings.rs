@@ -9,8 +9,9 @@
 //! seen counts, so a fold or a consolidation cannot erase a miss.
 //!
 //! The walk goes newest first and stops once it is past the window with no closing commit
-//! waiting for its start, so `/{project}:status` pays for the window and the reopenings
-//! closed in it, not for the whole history. A path is followed by name, so a renamed
+//! waiting for its start, so `/{project}:status` reads trees and records only for the
+//! window and the reopenings closed in it; the sorted walk still parses every commit
+//! header once. A path is followed by name, so a renamed
 //! spec's history starts at the rename. A reopening squashed into one commit shows no
 //! pass: when its status moves to `done` from another status it is reported as not
 //! counted, and from `done` to `done` nothing can show it.
@@ -32,8 +33,9 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AnalyzeBlock, ListsForm, MeasureReopeningsArgs, MeasureReopeningsResult, NotCountedReason,
-    NotCountedReopening, Reopening, ReopeningCounts, ReopeningState, ReviewBlock,
+    AnalyzeBlock, DecisionRecord, ListsForm, MeasureReopeningsArgs, MeasureReopeningsResult,
+    NotCountedReason, NotCountedReopening, Reopening, ReopeningCounts, ReopeningState, ReviewBlock,
+    RunDecisions,
 };
 use crate::session::{iso8601_utc, parse_iso8601_utc};
 
@@ -305,6 +307,15 @@ struct Run {
     decisions_by_person: usize,
 }
 
+/// Each run's count of a person's decisions, oldest first.
+fn run_decisions(record: DecisionRecord, runs: &[Run]) -> impl Iterator<Item = RunDecisions> + '_ {
+    runs.iter().map(move |run| RunDecisions {
+        record,
+        last_run: run.stamp.clone(),
+        decisions_by_person: run.decisions_by_person,
+    })
+}
+
 /// A record as a tree holds it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum RecordState {
@@ -413,16 +424,17 @@ impl<'a> History<'a> {
     fn directories_of(&mut self, commit: &Commit<'_>) -> Result<Rc<BTreeMap<String, Oid>>> {
         let tree = commit.tree()?;
         let root = match tree.get_path(Path::new(&self.specs_root)) {
-            Ok(entry) => entry.id(),
+            Ok(entry) if entry.kind() == Some(ObjectType::Tree) => entry.id(),
+            Ok(_) => return Ok(Rc::default()),
             Err(error) if error.code() == ErrorCode::NotFound => return Ok(Rc::default()),
             Err(error) => return Err(error.into()),
         };
         if let Some(cached) = self.directories.get(&root) {
             return Ok(Rc::clone(cached));
         }
-        let Ok(specs) = self.repository.find_tree(root) else {
-            return Ok(Rc::default());
-        };
+        // A tree that cannot be read is a walk that could not finish, never a commit
+        // holding no feature directory.
+        let specs = self.repository.find_tree(root)?;
         let found: BTreeMap<String, Oid> = specs
             .iter()
             .filter(|entry| entry.kind() == Some(ObjectType::Tree))
@@ -616,6 +628,9 @@ impl OpenPass {
                 .chain(&analyses)
                 .map(|run| run.decisions_by_person)
                 .sum(),
+            run_decisions: run_decisions(DecisionRecord::Review, &reviews)
+                .chain(run_decisions(DecisionRecord::Analysis, &analyses))
+                .collect(),
         })
     }
 
@@ -877,6 +892,18 @@ mod tests {
                 analyses: 1,
                 over_bound: false,
                 decisions_by_person: 0,
+                run_decisions: vec![
+                    RunDecisions {
+                        record: DecisionRecord::Review,
+                        last_run: "2026-01-01T00:00:00Z".to_string(),
+                        decisions_by_person: 0,
+                    },
+                    RunDecisions {
+                        record: DecisionRecord::Analysis,
+                        last_run: "2026-01-01T00:00:01Z".to_string(),
+                        decisions_by_person: 0,
+                    },
+                ],
             }
         );
     }
@@ -1138,7 +1165,23 @@ mod tests {
             format!("decisions:\n{}", decision(analysis_when, "a@example.com"));
         fixture.commit("analysis.md", &analysis(analysis_when, &analysis_decisions));
         fixture.status("done");
-        assert_eq!(fixture.only_reopening().decisions_by_person, 2);
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.decisions_by_person, 2);
+        assert_eq!(
+            reopening.run_decisions,
+            [
+                RunDecisions {
+                    record: DecisionRecord::Review,
+                    last_run: when.to_string(),
+                    decisions_by_person: 1,
+                },
+                RunDecisions {
+                    record: DecisionRecord::Analysis,
+                    last_run: analysis_when.to_string(),
+                    decisions_by_person: 1,
+                },
+            ]
+        );
     }
 
     #[test]
@@ -1277,23 +1320,29 @@ mod tests {
         assert_eq!(measurement.not_counted[0].feature, FEATURE);
     }
 
-    /// Stopping at the date must not stop short of a counted reopening's start.
+    /// A specs tree the repository cannot read is a walk that could not finish, so
+    /// it reports an error, never a commit holding no feature directory.
     #[test]
-    fn the_walk_stops_past_the_window_only_with_nothing_waiting() {
-        let (since_seconds, since) = (1_700_000_000, "2023-11-15");
+    fn a_specs_tree_that_cannot_be_read_is_an_error_not_an_empty_history() {
         let fixture = Fixture::new();
-        let mut parent = fixture.head();
-        for offset in (1..=5).rev() {
-            fixture.write("plan.md", &format!("step {offset}\n"));
-            parent = fixture.commit_at(since_seconds - offset * 86_400, &[parent], true);
-        }
-        fixture.write("spec.md", &spec("done"));
-        let closed_outside = fixture.commit_at(since_seconds - 86_400, &[parent], true);
-        fixture.write("spec.md", &spec("in-progress"));
-        fixture.commit_at(since_seconds + 1, &[closed_outside], true);
-        let measurement = fixture.measure_since(since);
-        assert_eq!(measurement.state, ReopeningState::NothingToCompare);
-        assert_eq!(measurement.not_counted, Vec::new());
+        fixture.status("in-progress");
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.status("done");
+        let tree = fixture.repository.head().unwrap().peel_to_tree().unwrap();
+        let specs = tree.get_path(Path::new("specs")).unwrap().id().to_string();
+        let (directory, file) = specs.split_at(2);
+        let objects = fixture.repository.path().join("objects");
+        std::fs::remove_file(objects.join(directory).join(file)).unwrap();
+
+        let error = compute(
+            &MeasureReopeningsArgs {
+                since: Some("2020-01-01".to_string()),
+                at: None,
+            },
+            &fixture.root,
+            SystemTime::now(),
+        );
+        assert!(matches!(error, Err(PrimitiveError::Git(_))), "{error:?}");
     }
 
     #[test]

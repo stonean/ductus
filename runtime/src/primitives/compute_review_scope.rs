@@ -28,7 +28,7 @@ use std::path::Path;
 use git2::{DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
 
-use crate::primitives::analyze_subjects::is_review_contract;
+use crate::primitives::analyze_subjects::{is_review_contract, review_freshness};
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::find_in_progress_commit;
 use crate::primitives::commit_attribution::Attributor;
@@ -38,7 +38,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm, ReviewBlock,
+    BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm, RecordFreshness,
+    ReviewBlock,
 };
 
 /// Execute the `compute-review-scope` primitive: [`compute`], returned inline
@@ -212,8 +213,23 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     let run = record
         .as_present()
         .filter(|record| record.last_run.is_some());
-    let review_owed = run.is_none_or(holds_done_until_reviewed)
-        || scope.iter().any(|path| {
+    let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
+    let record_is_held = |record: &ReviewBlock| {
+        holds_done_until_reviewed(record)
+            || matches!(
+                review_freshness(repo, &rel_dir, Some(record)),
+                RecordFreshness::Stale { .. }
+            )
+    };
+    // A deletion left the scope because it cannot be read, and is still a change:
+    // this spec's unless only another spec's commit made it, as the scope's own rule.
+    let its_own_deletions = deleted.iter().filter(|path| {
+        window.own.contains(*path)
+            || uncommitted.contains(*path)
+            || !window.others.contains_key(*path)
+    });
+    let review_owed = run.is_none_or(record_is_held)
+        || scope.iter().chain(its_own_deletions).any(|path| {
             path.strip_prefix(&own_prefix)
                 .is_none_or(is_review_contract)
         });
@@ -382,12 +398,13 @@ fn run_in_spec_block(
 /// run finished, one that did not stop early. The transition itself is left
 /// out, since work committed with a reopen belongs to the window it opens.
 ///
-/// A commit finishes a run when its record names a run its first parent's does
-/// not, or when its parent's write of the same run still had the loop open: a
-/// run's two writes share one `last-run`, and the fixes committed between them
-/// are the ones its fix rounds re-read. A commit that only moves a run's record
-/// out of `spec.md`'s frontmatter finishes nothing, or an adopter's upgrade would
-/// leave what was committed before it unread.
+/// A commit finishes a run when no parent's record already holds that run with its
+/// loop closed: a run's two writes share one `last-run`, and the fixes committed
+/// between them are the ones its fix rounds re-read. Every parent, since a merge
+/// carrying the record in finishes nothing, or what was committed after the run on
+/// that branch would leave the window unread. A commit that only moves a run's record
+/// out of `spec.md`'s frontmatter finishes nothing either, or an adopter's upgrade
+/// would leave what was committed before it unread.
 fn last_review_commit(
     project: &ProjectRepository,
     record_rel: &str,
@@ -408,20 +425,19 @@ fn last_review_commit(
         if run.stopped_early {
             continue;
         }
-        let (previous, relocated) = match commit.parent(0) {
-            Ok(parent) => {
-                let tree = parent.tree()?;
-                (
-                    recorded_run(repository, &tree, &git_path)?,
-                    run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
-                        == Some(&run.last_run),
-                )
+        let mut finishes_a_run = true;
+        for parent in commit.parents() {
+            let tree = parent.tree()?;
+            let holds_it = recorded_run(repository, &tree, &git_path)?
+                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
+            let relocated = run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
+                == Some(&run.last_run);
+            if holds_it || relocated {
+                finishes_a_run = false;
+                break;
             }
-            Err(_) => (None, false),
-        };
-        let finishes_a_run =
-            previous.is_none_or(|prior| prior.last_run != run.last_run || prior.loop_open);
-        if finishes_a_run && !relocated {
+        }
+        if finishes_a_run {
             return Ok(Some(commit.id().to_string()));
         }
     }
@@ -1322,8 +1338,8 @@ mod tests {
     // -- spec 079: the window, the scope, `excluded` and `review-owed` -------
 
     /// Specs 001-x and 002-y, with 001-x in `in-progress` at a committed
-    /// transition and 002-y in `in-progress` since the first commit. `planned`
-    /// is the plan each spec's `plan.md` starts with.
+    /// transition and 002-y in `in-progress` since the first commit. `plan_x` and
+    /// `plan_y` are the entries each spec's `plan.md` starts with.
     fn two_specs(plan_x: &[&str], plan_y: &[&str]) -> (tempfile::TempDir, Repository, String) {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
@@ -1528,8 +1544,6 @@ mod tests {
         assert_eq!(scope.base_source, BaseSource::LastReview);
     }
 
-    /// A later commit carrying the same finished run, such as a re-commit of its
-    /// record, finishes nothing, so the window still starts at the run's commit.
     /// An upgrade moving a pre-057 record out of `spec.md` is no review, so what
     /// was committed between that run and the upgrade stays in the window.
     #[test]
@@ -1577,6 +1591,37 @@ mod tests {
         assert_eq!(scope.base_source, BaseSource::LastReview);
     }
 
+    /// A merge carrying a finished run in is no review, so what was committed after
+    /// that run on the branch stays in the window.
+    #[test]
+    fn a_merge_carrying_a_finished_run_does_not_move_the_start() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let main_tip = repo.head().unwrap().peel_to_commit().unwrap();
+        change(&tmp, &repo, "src/a.rs", "feat(001): the work");
+        let review = commit_record(&tmp, &repo, "", "2026-10-01T00:00:00Z");
+        change(&tmp, &repo, "src/b.rs", "fix(001): after the review");
+        let branch_tip = repo.head().unwrap().peel_to_commit().unwrap();
+        let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+        let merge = repo
+            .commit(
+                None,
+                &signature,
+                &signature,
+                "Merge branch 'story'",
+                &branch_tip.tree().unwrap(),
+                &[&main_tip, &branch_tip],
+            )
+            .unwrap();
+        repo.set_head_detached(merge).unwrap();
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(has(&scope, "src/b.rs"), "{:?}", scope.scope);
+    }
+
+    /// A later commit carrying the same finished run, such as a re-commit of its
+    /// record, finishes nothing, so the window still starts at the run's commit.
     #[test]
     fn a_later_commit_of_a_finished_run_does_not_move_the_start_again() {
         let (tmp, repo, _) = two_specs(&[], &[]);
@@ -1881,6 +1926,80 @@ mod tests {
                 "{fields}"
             );
         }
+    }
+
+    /// A spec with a clean review record, reopened by a commit deleting `gone`.
+    fn reopened_deleting(gone: &str) -> ReviewScope {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(&tmp.path().join(gone), "there\n");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        std::fs::remove_file(tmp.path().join(gone)).unwrap();
+        commit_all(&repo, "fix(001): the reopening deletes it");
+        x(&tmp)
+    }
+
+    #[test]
+    fn a_reopening_deleting_code_or_a_contract_owes_a_review() {
+        for gone in ["src/old.rs", "specs/001-x/scenarios/a.md"] {
+            let scope = reopened_deleting(gone);
+            assert_eq!(scope.deleted, [gone]);
+            assert!(scope.review_owed, "{gone}");
+        }
+    }
+
+    #[test]
+    fn a_reopening_deleting_only_text_of_its_own_owes_no_review() {
+        assert!(!reopened_deleting("specs/001-x/research.md").review_owed);
+    }
+
+    /// Another spec's deletion is that spec's change, as the scope's rule has it.
+    #[test]
+    fn another_specs_deletion_owes_this_spec_no_review() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("src/theirs.rs"), "theirs\n");
+        commit_all(&repo, "chore: seed theirs");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-01T00:00:00Z");
+        std::fs::remove_file(tmp.path().join("src/theirs.rs")).unwrap();
+        write(&tmp.path().join("specs/002-y/notes.md"), "notes\n");
+        commit_all(&repo, "fix(002): it deletes its file");
+        let scope = x(&tmp);
+        assert!(!scope.review_owed, "{:?}", scope.scope);
+    }
+
+    /// A contract changed before the flip lies outside the window, and the gate still
+    /// reads the digest as stale, so a review is owed.
+    #[test]
+    fn a_stale_digest_owes_a_review_though_the_window_holds_no_contract() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(&tmp.path().join("specs/001-x/scenarios/a.md"), "first\n");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(
+                &format!("{DISPOSITIONS}reviewed-digest:\n  scenarios/a.md: 0000\n"),
+                "2026-10-01T00:00:00Z",
+            ),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        let scope = x(&tmp);
+        assert_eq!(scope.scope, ["specs/001-x/spec.md"]);
+        assert!(scope.review_owed);
     }
 
     #[test]

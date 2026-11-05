@@ -10,10 +10,11 @@ use std::path::{Path, PathBuf};
 
 use git2::{IndexAddOption, Oid, Signature};
 
+use crate::primitives::check_stuck::tree_entry_id;
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
-use crate::primitives::{PrimitiveError, ProjectRepository, Result, blob_text, parse_feature_dir};
+use crate::primitives::{PrimitiveError, ProjectRepository, Result, parse_feature_dir};
 use crate::schema::paths;
 use crate::schema::primitives::{ReReadFinding, ReReadSeverity};
 
@@ -562,10 +563,10 @@ fn changed_only_by_other_specs(
     let mut left = BTreeSet::new();
     for path in others.into_iter().filter(|path| !own.contains(path)) {
         let git_path = project.to_git(&path);
-        let unedited = blob_text(repository, &base_tree, &git_path)?
-            == blob_text(repository, &base_head_tree, &git_path)?
-            && blob_text(repository, &snapshot_tree, &git_path)?
-                == blob_text(repository, &snapshot_head_tree, &git_path)?;
+        let unedited = tree_entry_id(&base_tree, &git_path)
+            == tree_entry_id(&base_head_tree, &git_path)
+            && tree_entry_id(&snapshot_tree, &git_path)
+                == tree_entry_id(&snapshot_head_tree, &git_path);
         if unedited {
             left.insert(path);
         }

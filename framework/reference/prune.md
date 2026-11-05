@@ -8,7 +8,7 @@ The reset body and the design-record heading set are compiled into `prune-tasks`
 
 **`plan.md`.** `prune-plan`'s description states the design record.
 
-- **Decided** — a section is kept without being proposed when `analysis.md`'s `decisions:` list stores a `waived` decision under `plan-record — plan.md §{heading} is outside the design record`, or one the host matches to it by judgment.
+- **Decided** — a section is kept without being proposed when `analysis.md`'s `decisions:` list stores a person's `waived` decision under `plan-record — plan.md §{heading} is outside the design record`, or one the host matches to it by judgment.
 - **Reopen** — on a `done` spec the spec reopens when `tasks.md` holds an unchecked checkbox line more times than HEAD's does, so a line moved or re-indented adds nothing. It is compared once before the first write, for the preview, and once more after the run's writes to the spec, which decides the reopen (step 9). Anything else leaves the spec `done`, a `plan.md` edit included, whatever it corrects (§spec-lifecycle).
 
 **`--project`.** `prune-project`'s description states what it segments and returns; judge and confirm each entry as the command's **Project files (`--project`)** says.

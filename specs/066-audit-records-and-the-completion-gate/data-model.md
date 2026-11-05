@@ -15,26 +15,33 @@ Result, inline and past the read size:
 ```json
 {
   "diff-base": "<sha>",
+  "base-source": "reopen",
+  "review-owed": true,
   "form": "inline",
   "scope-count": 2,
-  "modified-since-count": 1,
+  "modified-since-count": 2,
   "plan-affected-count": 1,
   "deleted-count": 1,
+  "excluded-count": 0,
   "scope": ["runtime/src/primitives/read_spec.rs", "specs/042-widget/data-model.md"],
   "modified-since": ["specs/042-widget/data-model.md", "specs/042-widget/research.md"],
   "plan-affected": ["runtime/src/primitives/read_spec.rs"],
-  "deleted": ["specs/042-widget/research.md"]
+  "deleted": ["specs/042-widget/research.md"],
+  "excluded": []
 }
 ```
 
 ```json
 {
   "diff-base": "<sha>",
+  "base-source": "reopen",
+  "review-owed": true,
   "form": "file",
   "scope-count": 1056,
   "modified-since-count": 1049,
   "plan-affected-count": 12,
   "deleted-count": 3,
+  "excluded-count": 0,
   "lists-file": ".ductus/results/compute-review-scope/042-widget/<sha256>.json"
 }
 ```

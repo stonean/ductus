@@ -24,13 +24,12 @@ use std::path::Path;
 use git2::{IndexAddOption, Repository, Signature};
 
 use ductus::primitives::{
-    brief_re_read, check_prescriptions, check_review_gate, read_re_read, start_fix_rounds,
-    write_review,
+    brief_re_read, check_prescriptions, read_re_read, start_fix_rounds, write_review,
 };
 use ductus::schema::primitives::{
     BriefReReadArgs, BriefReReadResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
-    CheckReviewGateArgs, PrescriptionVerdict, ReReadState, ReadReReadArgs, ReadReReadResult,
-    ReviewGateBlock, RoundKind, StartFixRoundsArgs, WriteReviewArgs,
+    PrescriptionVerdict, ReReadState, ReadReReadArgs, ReadReReadResult, RoundKind,
+    StartFixRoundsArgs, WriteReviewArgs,
 };
 
 const FEATURE: &str = "001-widget";
@@ -354,23 +353,16 @@ fn another_specs_commit_between_rounds_leaves_the_round() {
     assert_eq!(checked.verdict, PrescriptionVerdict::Matched, "{checked:?}");
 }
 
-/// Spec 079, AC14: a review cut off after its first write holds `done`, and its
-/// last write releases it, while a record written with no loop, as `ductus
-/// exec` writes one, was never held.
+/// Spec 079, AC14: a review's first write leaves the mark and its last clears it, and
+/// the mark is what `check_review_gate`'s `an_open_fix_round_loop_holds_done` blocks on.
+/// This fixture's markdown would stop the real gate at its lint, so the gate's block is
+/// proved there, and a record with no mark, as `ductus exec` writes one, by
+/// `a_record_with_no_mark_is_unaffected`.
 #[test]
-fn a_review_cut_off_between_its_writes_holds_done() {
+fn a_cut_off_review_leaves_the_mark_its_last_write_clears() {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path();
     fixture(dir);
-    let gate = || {
-        check_review_gate::run(
-            &CheckReviewGateArgs {
-                feature: FEATURE.to_string(),
-            },
-            dir,
-        )
-        .unwrap()
-    };
     let write = |loop_open: bool| {
         write_review::run(
             &WriteReviewArgs {
@@ -392,14 +384,8 @@ fn a_review_cut_off_between_its_writes_holds_done() {
             .unwrap()
             .contains("fix-rounds-open: true")
     );
-    assert_ne!(
-        gate().blocked_by,
-        None,
-        "the gate must not pass a run cut off between its writes"
-    );
 
     write(false);
     let record = fs::read_to_string(dir.join("specs").join(FEATURE).join("review.md")).unwrap();
     assert!(!record.contains("fix-rounds-open"), "{record}");
-    assert_ne!(gate().blocked_by, Some(ReviewGateBlock::FixRoundLoopOpen));
 }

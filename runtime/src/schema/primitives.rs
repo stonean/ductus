@@ -755,9 +755,10 @@ pub struct ComputeReviewScopeResult {
     pub diff_base: String,
     /// Where the window starts.
     pub base_source: BaseSource,
-    /// False when a review record exists and the scope holds no path outside
-    /// the spec's own directory and no scenario or data-model edit; true with
-    /// no record, since the gate holds `done` on a spec's first pass.
+    /// False when a review record names a run and holds nothing only a review
+    /// clears, and the scope and the deletions it attributes to the spec hold no
+    /// path outside the spec's own directory and no scenario or data-model edit;
+    /// true otherwise, since the gate holds `done` on a spec's first pass.
     pub review_owed: bool,
     /// Where the lists are: in this result, or, past the read size, in
     /// the file `lists-file` names (066 scenario
@@ -1360,8 +1361,8 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub fix_rounds: Option<Vec<FixRound>>,
     /// Marks the run's fix-round loop open in the record, as `fix-rounds-open`
-    /// (spec 079, AC14). The review command's first write passes it and its last
-    /// omits it; `ductus exec`, whose walker has no loop, never passes it.
+    /// (spec 079, AC14). Every review-command write but the last passes it;
+    /// `ductus exec`, whose walker has no loop, never passes it.
     #[serde(default)]
     #[arg(long)]
     pub loop_open: bool,
@@ -3716,7 +3717,7 @@ pub struct PlanSection {
     pub digest: String,
     /// The advisory `/{project}:analyze` records for the section.
     pub finding: PlanFinding,
-    /// `analysis.md` stores a waiver for this section's finding, under its
+    /// `analysis.md` stores a person's waiver for this section's finding, under its
     /// key as every stored-decision reader compares keys: prune does not
     /// propose it. A decision kept under an earlier wording is not matched
     /// here; the host matches it by judgment.
@@ -4941,6 +4942,20 @@ pub struct Reopening {
     /// A second or later run of a kind followed a run that left no gating finding.
     pub over_bound: bool,
     /// Stored decisions stamped with one of its runs' times that a person made.
+    pub decisions_by_person: usize,
+    /// That count per run, oldest first within each record (spec 079, AC17).
+    pub run_decisions: Vec<RunDecisions>,
+}
+
+/// How many decisions one run of a reopening put to a person.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RunDecisions {
+    /// The record the run wrote.
+    pub record: DecisionRecord,
+    /// The run's `last-run`.
+    pub last_run: String,
+    /// Stored decisions stamped with this run's time that a person made.
     pub decisions_by_person: usize,
 }
 

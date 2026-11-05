@@ -26,7 +26,7 @@ This spec scopes prune to the session target, and that stays the right default: 
 - **An interrupted run.** Each spec's writes are atomic and each reduction is idempotent, so running `--all` again resumes: sections already removed are simply not found.
 - **A spec with no `tasks.md`** — a `draft` or `clarified` spec. There is no task list to reduce; its plan, if it has one, is still examined.
 - **A session target is set.** The walk ignores it and leaves it as it was.
-- **The first `--all` after the plan advisory ships.** No spec's analysis yet holds a waiver for a plan section, so every design section under another heading is proposed, and declining one keeps it for that run only. The lasting keep is made by running `/{project}:analyze` on those specs and waiving the advisory with its reason, after which later passes list the sections as kept rather than proposing them.
+- **The first `--all` after the plan advisory ships.** No spec's analysis yet holds a waiver for a plan section, so every design section under another heading is proposed, and declining one keeps it for that run only. The lasting keep is folding the section under a design-record heading.
 
 ## What this does not do
 

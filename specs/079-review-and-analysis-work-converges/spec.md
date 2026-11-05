@@ -6,6 +6,7 @@ cross-spec-impact:
   - 020-code-review
   - 022-deterministic-runtime
   - 026-framework-self-audit
+  - 041-task-pruning
   - 050-constitution
   - 058-findings-route-at-discovery
   - 066-audit-records-and-the-completion-gate

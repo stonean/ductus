@@ -20,7 +20,7 @@
 //! Every registration surface is therefore covered by a test. Until 2026-09-12
 //! the clap enum was the exception — deleting a variant and its dispatch arm
 //! left the whole suite green, so a primitive could be absent from the
-//! `ductus <name>` CLI with nothing reporting it, on exactly the surface the
+//! `ductus <name>` CLI with nothing reporting it, on exactly the surface
 //! an agent without the MCP server depends on. That is why [`PRIMITIVE_REGISTRY`] is `pub`
 //! rather than `pub(crate)`: `main.rs` is a separate crate from the library
 //! and has to be able to name the canonical set to be tested against it.

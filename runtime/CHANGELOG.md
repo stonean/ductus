@@ -58,16 +58,16 @@ its version and date.
   run, or a second of either only after the earlier run left a gating finding.
   It reports each reopening closed since a date or a ref, the last 30 days by
   default, each one it could not count and why, how many stored decisions each
-  put to a person, and the `in-progress` specs with no unchecked task, and says so
-  when the history is shallow or nothing closed. `/status` shows the counts on
-  every run through `dashboard`'s new `reopenings` block. `/configure` allows it
-  with the other tools. Spec 079, task 7.
+  of its runs put to a person, and the `in-progress` specs with no unchecked
+  task, and says so when the history is shallow or nothing closed. `/status`
+  shows the counts on every run through `dashboard`'s new `reopenings` block.
+  `/configure` allows it with the other tools. Spec 079, task 7.
 
 ### Changed
 
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes to about 427,000, `framework/reference/review.md` from 67,168 to 43,198
+  bytes to about 424,000, `framework/reference/review.md` from 67,168 to about 43,300
   and `framework/reference/analyze.md` from 78,632 to about 47,700, each within one
   read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
@@ -108,7 +108,8 @@ its version and date.
   waived with its reason, by a rule, and the host marks what the rule decided
   `by-rule`, which `write-review` and `write-analysis` record as `decided-by:
   rule`, needing no `decided-by`, and refuse on anything but a fix or a waiver. A
-  person's stored decision wins. An observation showing the spec's own code breaks
+  person's stored decision wins, and only a person's waiver keeps a plan section
+  from `/prune`. An observation showing the spec's own code breaks
   its contract is marked `contract-break`: the rule never waives it, it renders
   with that mark, and unless fixed it counts in `review.md`'s new `contract-breaks`.
   A security or leak observation now renders first. `ductus exec` still writes no
@@ -149,8 +150,9 @@ its version and date.
   holds nothing outside the spec's directory and no scenario or data-model edit,
   and `/review` then reports that and stops, since such a reopening owes an
   analysis and no review. It is true while the record holds `done` until a review
-  runs, and a commit moving a run's record out of `spec.md` does not move the
-  window's start.
+  runs or its digest is stale, and when the reopening deleted code or a contract. A
+  commit moving a run's record out of `spec.md`, and a merge carrying one in, do not
+  move the window's start.
 - **The error envelope's home is `specs/errors.md`.** `api-backend.md`'s
   `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` read the project's error
   envelope from `specs/errors.md`, where the shipped `errors.md` template

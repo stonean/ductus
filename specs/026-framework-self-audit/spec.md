@@ -21,7 +21,7 @@ A maintainer-grade slash command that audits `ductus`'s own framework artifacts 
 > it. Family 19 and the `analyze-record` family are unaffected and were
 > re-pointed at `review.md` in the same change.
 >
-> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed what two families pin: `scripts/audit/cross-doc-consistency.sh` holds the back-edge text that leaves a correction `done`, and `scripts/audit/marker-list-parity.sh` follows the analyze reference's shorter sentences.
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) left what two families pin as it was: a correction adds no back-edge, so `scripts/audit/cross-doc-consistency.sh`'s `BACK_EDGES` still match §spec-lifecycle, and the analyze reference's cuts kept the sentences `scripts/audit/marker-list-parity.sh` matches.
 
 ## Motivation
 

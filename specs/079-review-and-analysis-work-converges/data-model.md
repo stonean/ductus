@@ -6,7 +6,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 
 | Field | Type | Written when | Read by |
 | --- | --- | --- | --- |
-| `fix-rounds-open` | `true`, or absent | The first `write-review` of a run with a fix-round loop; the last write omits it | `check-review-gate` blocks while it is present |
+| `fix-rounds-open` | `true`, or absent | Every `write-review` of a run with a fix-round loop but the last, which omits it | `check-review-gate` blocks while it is present |
 | `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path by the spec that claimed it |
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run, and `check-review-gate`'s passing notice |
 
@@ -18,7 +18,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope holds no path outside the spec's own directory and no scenario or data-model edit; true with no such record |
+| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside the spec's own directory and no scenario or data-model edit; true with no such record |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it.
 
@@ -26,7 +26,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `loop-open` | boolean, MCP and CLI | Writes `fix-rounds-open`; passed only by the review command's first write, so `ductus exec` never sets it |
+| `loop-open` | boolean, MCP and CLI | Writes `fix-rounds-open`; passed by every review-command write but the last, so `ductus exec` never sets it |
 | `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
 | `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks` |
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
@@ -49,7 +49,7 @@ Arguments: `since` (a ref or date; default the last `REOPENING_WINDOW_DAYS` days
 | --- | --- | --- |
 | `state` | `measured`, `shallow-history` or `nothing-to-compare` | A distinct value for each case the count cannot speak to |
 | `since` | string | The window's start as applied: a date, or a ref's full sha |
-| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
+| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`, and `run-decisions`, that count per run as `record`, `last-run` and `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
 | `not-counted` | list | Each closed reopening that cannot be counted: `feature`, `start` when a pass shows, `end`, `reason` (`no-recorded-run`, `record-unparseable`, or `no-in-progress-commit` for a status reaching `done` from another, as a squashed reopening does) |
 | `waiting` | list of features | `in-progress` specs with no unchecked task at the commit measured |
 | `over-bound-count`, `not-counted-count`, `waiting-count`, `closed-count`, `runs` | integers | The counts `/{project}:status` renders; `closed-count` holds both lists and `runs` only `reopenings` |

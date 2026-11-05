@@ -275,7 +275,7 @@ fn commit_touches(repo: &Repository, oid: git2::Oid, path_rel: &str) -> Result<b
 }
 
 /// The object id at `path_rel` in `tree`, or `None` when absent.
-fn tree_entry_id(tree: &git2::Tree<'_>, path_rel: &str) -> Option<git2::Oid> {
+pub(crate) fn tree_entry_id(tree: &git2::Tree<'_>, path_rel: &str) -> Option<git2::Oid> {
     tree.get_path(Path::new(path_rel)).ok().map(|e| e.id())
 }
 

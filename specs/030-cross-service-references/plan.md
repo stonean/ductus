@@ -46,7 +46,7 @@ The outcome is decided by deterministic predicates — no prose read for intent:
 
 It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`, `ALLOWED_STATUSES`) against the resolved external path. Registered in `primitives/mod.rs`, exposed in `mcp/server.rs`, types in `schema/primitives.rs`.
 
-### D4 — Command integration and the markdown-only fallback
+### D4 — Command integration
 
 - `/{project}:status` gains a reference-status readout per spec: each reference shows its outcome and, on `ok`, the linked lifecycle status. The `resolve-references` classification does the work, and the readout shows it.
 - `/{project}:analyze` reports a `broken` outcome as an **Advisory** finding — surfaced on every run, but non-blocking, because references are informative and non-load-bearing. (`unregistered` / `not-checked-out` are *not* findings; they are informational unknowns — the can't-check vs. provably-broken line from the spec.)
@@ -83,7 +83,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `runtime/src/schema/primitives.rs` | Modify | Args/Result types + outcome enum |
 | `runtime/src/schema/services.rs` | Create | `[services]` registry type (`repo`/`path`/`description`) + parser |
 | `framework/commands/link.md` | Create | `/{project}:link` registration command source |
-| `framework/commands/status.md` | Modify | Surface reference status (both paths) |
+| `framework/commands/status.md` | Modify | Surface reference status |
 | `framework/commands/analyze.md` | Modify | Broken-reference Advisory finding |
 | `framework/bootstrap/configure/*.md` | Modify | Per-agent permission entries for `/{project}:link` |
 | `framework/constitution.md` | Modify | §text-first-artifacts schema row, §spec-lifecycle carve-out, §drift-prevention canonical-source row |

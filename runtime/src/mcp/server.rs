@@ -236,11 +236,12 @@ fn strip_numeric_formats(value: &mut Value) {
 /// `extract-archive` decompresses entire archives — the same
 /// worker-pinning hazard, so they take the same seam. The git-walk tools
 /// (`check-stuck`, `compute-review-scope`, `derive-boundary`,
-/// `diff-cross-spec`) run a full-history `libgit2` revwalk that is likewise
+/// `diff-cross-spec`, `measure-reopenings`) run a full-history `libgit2` revwalk that is likewise
 /// CPU-bound and unbounded in a large adopter repo, so they route here too,
 /// as do `check-review-gate`, which shells out to the markdown linter and
-/// reads history for its rename exemption, and `dashboard`, which blames the
-/// inbox for its oldest item. `write-session`, `resolve-session` and
+/// reads history for its rename exemption, `dashboard`, which blames the
+/// inbox for its oldest item and measures reopenings, and `classify-spec-edit`,
+/// which diffs a tree against the working tree. `write-session`, `resolve-session` and
 /// `retarget-sessions` wait on the sessions lock for up to ten seconds, so
 /// they take the seam as well. The CLI surfaces
 /// (`main.rs` subcommands and the subprocess interpreter) call the
@@ -783,8 +784,8 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<DashboardArgs>,
     ) -> Result<Json<DashboardResult>, String> {
-        // The standing inbox row blames the inbox's history — blocking pool,
-        // like the other history walks.
+        // The inbox row blames the inbox's history and the reopenings row walks
+        // it — blocking pool, like the other history walks.
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::dashboard::run(&params.0, repo.as_path())).await
     }

@@ -631,4 +631,18 @@ MUTATIONS = [
         'if contract_breaks >= 0 {',
         'check_review_gate::tests::a_contract_break_passes_and_the_guidance_names_it',
     ),
+    (
+        'M89 a specs tree that cannot be read counts as no directories',
+        'src/primitives/measure_reopenings.rs',
+        '        let specs = self.repository.find_tree(root)?;\n',
+        '        let Ok(specs) = self.repository.find_tree(root) else { return Ok(Rc::default()); };\n',
+        'measure_reopenings::tests::a_specs_tree_that_cannot_be_read_is_an_error_not_an_empty_history',
+    ),
+    (
+        'M90 the per-run counts drop the analysis',
+        'src/primitives/measure_reopenings.rs',
+        '            run_decisions: run_decisions(DecisionRecord::Review, &reviews)\n                .chain(run_decisions(DecisionRecord::Analysis, &analyses))\n',
+        '            run_decisions: run_decisions(DecisionRecord::Review, &reviews)\n',
+        'measure_reopenings::tests::decisions_by_person_counts_only_a_runs_own_and_never_the_rules',
+    ),
 ]

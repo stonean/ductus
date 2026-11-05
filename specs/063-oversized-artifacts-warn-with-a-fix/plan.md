@@ -82,13 +82,13 @@ The rule gives exactly the spec's behavior: growth into another page fires again
 
 When `analysis.md` is absent, nothing is decided. When its `decisions:` list does not parse, the primitive does **not** fail. `/clarify` must not break on a broken analysis record it does not own. Instead it reports the list as unreadable, leaves every subject undecided, and `/analyze`'s step treats that as step 17 (18) already treats a refusal of the list: it dispositions each finding as though nothing were stored. This deliberately differs from `prune-plan`, which errors, because `prune-plan` is only ever invoked by commands that own that record.
 
-`/analyze`'s markdown-only reference lists the `artifact-size` family as advisory in its per-check severity assignment, with its own section stating the subjects, the threshold, the decided rule, and that it stays advisory for good: a size is a heuristic about a host it cannot see, so it is never promoted to blocking.
+`/analyze`'s reference lists the `artifact-size` family as advisory in its per-check severity assignment, with its own section stating the subjects, the threshold, the decided rule, and that it stays advisory for good: a size is a heuristic about a host it cannot see, so it is never promoted to blocking.
 
 ### `/clarify` and `/plan`: a warning, never a gate
 
 `/clarify` gains a step after step 9 (`label-criteria`), so the size is measured after the questions' answers have been written into the spec, and steps 10–13 become 11–14 (AC2). `/plan` gains a step after step 7, the task breakdown, so `plan.md` and `tasks.md` are measured as written, and steps 8–10 become 9–11. Each step prints every warning and notice, and states that the result never blocks the transition; an invalid threshold halts the command instead, as above. `/plan`'s **Validation gate** reference lists the size check as advisory beside markdownlint, the other advisory check there. A scenario-targeted `/clarify` run does not take the step.
 
-### The markdown-only path
+### Without the MCP server
 
 Without the server the host runs `ductus check-artifact-size` (spec 079): a subject it cannot read is listed as not examined, never as under the threshold.
 

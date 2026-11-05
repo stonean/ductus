@@ -234,7 +234,7 @@ The fix and its test landed in `9a256750`. The first item is checked once a `run
 
 ## 29. Analyze the corrections spec 079 made
 
-- [ ] Spec 079 task 10 annotated AC24 and corrected `spec.md` and `plan.md`, since no markdown-only path remains; no code, scenario or data model of this spec changed, so the gate holds no review for it, though `compute-review-scope` reports `review-owed: true` because this spec's plan lists `specs/010-agent-autonomy/spec.md`, which the same commit reopened
+- [ ] Spec 079 task 10 annotated AC24 and corrected `spec.md` and `plan.md`, since no markdown-only path remains; no code, scenario or data model of this spec changed, so the gate holds no review for it, though `compute-review-scope` reports `review-owed: true` because this spec's plan lists `specs/010-agent-autonomy/spec.md`, which the same commit reopened, and an unclaimed commit is in its window
 - [ ] Run `/ductus:analyze`, then the completion gate
 
 - **Done when**: an analysis is recorded on this spec, and `/ductus:implement` has returned it to `done`.

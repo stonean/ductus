@@ -1392,7 +1392,6 @@ fn render_unexamined_governance(repo: &Path) -> String {
         .join("\n")
 }
 
-/// Render skipped passes as a list, or `*None.*` when empty.
 /// Each path the scope left out, by the specs that claimed it, and each path a
 /// fix round left out, by the round.
 fn render_excluded(excluded: &BTreeMap<String, Vec<String>>, rounds: &[FixRound]) -> String {
@@ -1413,6 +1412,7 @@ fn render_excluded(excluded: &BTreeMap<String, Vec<String>>, rounds: &[FixRound]
     lines.join("\n")
 }
 
+/// Render skipped passes as a list, or `*None.*` when empty.
 fn render_skipped(skipped: &[String]) -> String {
     if skipped.is_empty() {
         return "*None.*".to_string();
@@ -2406,7 +2406,7 @@ mod tests {
     #[test]
     fn empty_scope_does_not_suppress_the_derived_denominator() {
         // The flag renders the empty-scope Summary; it must not also decide
-        // the denominator. It used to short-circuit `resolve_scope_size`, so
+        // the denominator. It used to short-circuit `resolve_scope`, so
         // a caller that reached this branch by misreading an over-cap
         // `compute-review-scope` error as "nothing in scope" recorded
         // `scope: 0` beside a zero `examined` — a record byte-identical to an
@@ -3151,8 +3151,8 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.observations = vec![dispositioned(
             "perf: a loop",
-            DispositionOutcome::Waived,
-            Some("a person's reason"),
+            DispositionOutcome::Deferred,
+            Some("specs/001-x/spec.md"),
         )];
         run(&args, dir.path()).unwrap();
 
@@ -3169,6 +3169,7 @@ mod tests {
         let report = review_md(&dir, "001-x");
         assert!(report.contains("decided-by: dev@example.com"), "{report}");
         assert!(!report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("outcome: deferred"), "{report}");
     }
 
     /// A broken contract left for later counts, and one the run fixed left

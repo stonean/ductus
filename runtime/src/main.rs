@@ -934,11 +934,6 @@ mod tests {
 
     use super::{Cli, seed_context};
 
-    /// Every subcommand's summary and every argument's short help prints on
-    /// one line. clap's help renderer replaces a brace-wrapped `n` with a
-    /// newline (`StyledStr::replace_newline_var`), so a doc comment naming a
-    /// criterion label that way once split `label-criteria`'s summary in two
-    /// in both `ductus --help` and `ductus label-criteria --help`.
     /// Each primitive's `about` is the start of its `long_about`, so `-h` and the
     /// `ductus --help` list summarise the text `--help` prints whole (spec 079, AC9),
     /// and a variant that dropped either attribute fails here.
@@ -962,6 +957,11 @@ mod tests {
         }
     }
 
+    /// Every subcommand's summary and every argument's short help prints on
+    /// one line. clap's help renderer replaces a brace-wrapped `n` with a
+    /// newline (`StyledStr::replace_newline_var`), so a doc comment naming a
+    /// criterion label that way once split `label-criteria`'s summary in two
+    /// in both `ductus --help` and `ductus label-criteria --help`.
     #[test]
     fn every_short_help_prints_on_one_line() {
         fn splits(text: &str) -> bool {

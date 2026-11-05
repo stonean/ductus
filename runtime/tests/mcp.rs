@@ -145,9 +145,6 @@ async fn lists_every_manifest_tool_and_canonical_set() {
     );
 }
 
-/// The manifest names each primitive the server does not serve on a
-/// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
-/// `CLI_ONLY_PRIMITIVES` exactly.
 /// What `ductus <subcommand> --help` prints above its usage: its `long_about`.
 fn long_about(subcommand: &str) -> String {
     let output = common::ductus_command(env!("CARGO_BIN_EXE_ductus"))
@@ -197,6 +194,9 @@ fn no_tool_spells_its_description_as_a_literal() {
     );
 }
 
+/// The manifest names each primitive the server does not serve on a
+/// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
+/// `CLI_ONLY_PRIMITIVES` exactly.
 #[test]
 fn the_manifest_names_the_cli_only_primitives() {
     let manifest = fs::read_to_string(workspace_root().join("framework/runtime-tools.txt"))

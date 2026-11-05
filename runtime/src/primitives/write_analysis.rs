@@ -21,7 +21,7 @@
 //! precisely what `write-review` does for the other gate, and precisely why
 //! that gate was enforceable and this one was not. Detection stays read-only;
 //! the fix-and-route step that follows it writes under the disposition rule, with
-//! a gating finding's waiver or deferral confirmed by the operator (spec 079), and
+//! a gating finding's deferral confirmed by the operator (spec 079), and
 //! this record is written after that step and a re-check, so it describes the state
 //! after dispositions (spec 058). What the primitive takes and derives is
 //! `schema::descriptions::WRITE_ANALYSIS`.

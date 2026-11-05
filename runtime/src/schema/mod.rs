@@ -6,6 +6,8 @@
 //!
 //! - [`procedure`] — the AST emitted by the procedure parser.
 //! - [`protocol`] — the JSON-over-stdio envelope and message types.
+//! - [`descriptions`] — one description per primitive, the text of its MCP
+//!   description and its `--help` (spec 079).
 //! - [`primitives`] — per-primitive args/result shapes, whose canonical
 //!   records are split across the owning specs' data models (see that
 //!   module's doc).

@@ -129,13 +129,12 @@ An extension point is a named seam in a slash command's Instructions section whe
 - A unique identifier (e.g., `writeCode`, `writeSpecBody`, `askClarifyQuestion`) declared in an HTML-comment marker on the relevant step.
 - A schema for the request payload prepared at the seam.
 - A schema for the response payload validated at the seam.
-- Surrounding prose in the Instructions section describing what should happen — this is what the LLM reads in the markdown-only and MCP-server cases.
+- Surrounding prose in the Instructions section describing what should happen — this is what the LLM reads in the MCP-server case.
 
 How extension points are invoked depends on the surface:
 
 - **Subprocess interpreter**: the runtime emits a JSON `llm-request` message to stdout and suspends. The agent host calls the LLM with the structured request, validates the response against the schema, and writes a `llm-response` message to stdin. The runtime resumes.
 - **MCP server**: the LLM is already the orchestrator and walks the surrounding prose itself. The HTML-comment marker is advisory — it tells the LLM "this step is the semantic part, do it yourself, don't try to find a primitive." Surrounding prose still names primitives that may be useful before or after the extension point.
-- **Markdown-only**: same as MCP-server — LLM reads the marker as a hint and follows the prose instructions for the semantic work.
 
 The extension point inventory across the initial release and follow-on scenarios:
 
@@ -159,9 +158,9 @@ The extension point inventory across the initial release and follow-on scenarios
 
 > **Signpost:** `routeFold`, and the branch-scoped feature-directory form the shared `parse_feature_dir` recognizes, came from [051 — Branch-scoped spec numbering](../051-branch-scoped-spec-numbering/spec.md).
 
-## Markdown-only path
+## Without the MCP server
 
-A host never performs a primitive's work by hand: since `048-govern-acquired-runtime` the runtime is required, and between acquiring it and the restart that registers its MCP server the host runs `ductus <name>` (§runtime-host-integration). The structural conventions (numbered steps, backtick-quoted primitive names, HTML-comment extension-point markers) stay unobtrusive to a human or LLM reader: primitives read as named operations to perform, and extension points as labelled markers. A primitive's rules are its compiled description (spec 079); the `gen-*.sh` generators `run-generator` invokes stay bash scripts. A command's reference keeps what a step does with the result, host judgment and policy, and the parseability check holds the conventions in place.
+Outside the bootstrap's per-step fallback (029's `state-a-deterministic-path-forcing`), a host never performs a primitive's work by hand: since `048-govern-acquired-runtime` the runtime is required, and between acquiring it and the restart that registers its MCP server the host runs `ductus <name>` (§runtime-host-integration). The structural conventions (numbered steps, backtick-quoted primitive names, HTML-comment extension-point markers) stay unobtrusive to a human or LLM reader: primitives read as named operations to perform, and extension points as labelled markers. A primitive's rules are its compiled description (spec 079); the `gen-*.sh` generators `run-generator` invokes stay bash scripts. A command's reference keeps what a step does with the result, host judgment and policy, and the parseability check holds the conventions in place.
 
 ## Slash command rewiring
 

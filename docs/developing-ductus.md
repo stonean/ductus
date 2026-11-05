@@ -7,7 +7,7 @@ Procedures for changing this repository, each read when doing the job it names. 
 Registering one is six sites, and two of them are found only by tests; removing one is the same six:
 
 - `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
-- its one description, a constant in `runtime/src/schema/descriptions.rs`, which the next two name
+- its one description, a constant in `runtime/src/schema/descriptions.rs`, which the `#[tool]` and the `Command` below name
 - a `#[tool]` in `runtime/src/mcp/server.rs`, or a `CLI_ONLY_PRIMITIVES` entry
 - a `dispatch_primitive` arm in `runtime/src/interpreter/mod.rs`
 - a `Command` in `runtime/src/main.rs`
