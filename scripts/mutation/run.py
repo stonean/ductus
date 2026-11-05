@@ -27,9 +27,10 @@ mutation and compared with the copy after the last.
 
 --check validates every selected anchor and exits without running cargo.
 
-The exit status is 0 only when every anchor is valid, runtime/src is restored
-byte for byte, no mutation errored, and the survivors are exactly the expected
-ones among those selected. Do not edit anything under runtime/ while it runs:
+The exit status is 0 only when at least one mutation is selected, every ID
+names one, every anchor is valid, runtime/src is restored byte for byte, no
+mutation errored, and the survivors are exactly the expected ones among those
+selected. Do not edit anything under runtime/ while it runs:
 each restore writes back the file as it was read before the mutation, so an
 edit made in between is undone (docs/developing-ductus.md, "Proving a test
 fails").
@@ -125,6 +126,11 @@ def main(argv):
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:
         sys.exit(f"duplicate mutation ids: {' '.join(duplicates)}")
+    unknown = [i for i in only if i not in ids]
+    if unknown:
+        sys.exit(f"no mutation has the id: {' '.join(repr(i) for i in unknown)} (pass each id as its own argument)")
+    if not selected:
+        sys.exit(f"{args[0]}: no mutation to run")
 
     bad = [(m[0], anchor_counts(m)) for m in selected if any(c != 1 for c in anchor_counts(m))]
     for name, counts in bad:
