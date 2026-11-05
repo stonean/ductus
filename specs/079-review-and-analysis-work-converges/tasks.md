@@ -95,9 +95,9 @@ Independent of tasks 1–7, and may run beside them, but `runtime/src/mcp/server
 
 Blocked on tasks 2–8, so it states what exists. Steps 10 and 19 now have a host that cannot ask apply the rule and leave each gating finding undispositioned, with only `ductus exec` writing nothing, so §brownfield-inbox's *with no operator, nothing is written* changes with the rest of that bullet.
 
-- [ ] The four edits in the plan, keeping every anchor a `§` reference resolves
-- [ ] `scripts/audit/cross-doc-consistency.sh` and `framework/commands/*.md`'s host-integration pointers follow them
-- [ ] `050-constitution`'s scenario `the-constitution-fits-one-read` records the shape
+- [x] The four edits in the plan, keeping every anchor a `§` reference resolves
+- [x] `scripts/audit/cross-doc-consistency.sh` and `framework/commands/*.md`'s host-integration pointers follow them
+- [x] `050-constitution`'s scenario `the-constitution-fits-one-read` records the shape
 
 - **Done when**: `scripts/lint-governing-size.sh` passes with a smaller constitution than `2abc19aa`'s 49,936 bytes, `scripts/audit/run-all.sh` passes after the commit, and `resolve_anchor.rs`' corpus test passes.
 
