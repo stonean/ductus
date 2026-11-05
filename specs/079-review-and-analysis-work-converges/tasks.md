@@ -134,7 +134,7 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 Blocked on tasks 1–11.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
-- [ ] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
+- [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
 - [ ] Run `/ductus:review` and `/ductus:analyze` on this spec
 - [ ] Note the landing commit, then run `measure-reopenings --since` on it as later specs close: 058 (its task 5), 016, 029, 034, 037, 039, 045, 055, and others, until 10 reopenings holding a run have closed
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
