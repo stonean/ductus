@@ -62,7 +62,7 @@ decisions:
 
 ## Release and lapse — derived on every run, never stored
 
-Release and completion are the behavior of `write-review`, `write-analysis`, `process-decisions` and `check-review-gate`, whose compiled descriptions are canonical (spec 079). [§Deferrals](../../framework/reference/review.md#deferrals) of the review reference (installed as `.ductus/reference/review.md`) describes them for a host: when a deferral releases a gating finding, when its named work is complete — which decides a lapse — and what a target that cannot be read does. `decisions::releases` and `decisions::work_state` implement them.
+Release and completion are the behavior of `write-review`, `write-analysis`, `process-decisions` and `check-review-gate`, whose compiled descriptions are canonical (spec 079). [§Deferrals](../../framework/reference/review.md#deferrals) of the review reference (installed as `.ductus/reference/review.md`) describes them for a host: when a deferral releases a gating finding, and what a target that cannot be read does; `process-decisions`' description says when named work is complete, which decides a lapse. `decisions::releases` and `decisions::work_state` implement them.
 
 ## `Disposition` — writer input
 

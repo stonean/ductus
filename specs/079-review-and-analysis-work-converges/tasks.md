@@ -118,14 +118,14 @@ Blocked on tasks 2–9: read `research.md`, which is a floor, then grep each beh
 
 ## 11. The prose cuts (AC18, AC21)
 
-Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For agent runtimes` pointers, which took `framework/commands/` and `framework/reference/` to 567,487 bytes at `ad4fae5b`, under AC18's total, so what is owed is the two named files and the total staying under while tasks 10 and 11 land; of the two boilerplate blocks, `**Where a named section lives.**` remains. Task 10 left `framework/reference/log.md` restating `framework/commands/log.md`'s step 4 and nothing else, so it can go with its manifest rows. `framework/reference/review.md`'s §Deferrals calls itself the one full statement of when a deferral releases a finding, and `write-review`'s and `write-analysis`' descriptions cite it, which is a primitive's rule in a reference, the inverse of AC21: decide here whether the descriptions state it and the reference drops it, or it stays as policy. An edit to a command source can move its golden, and `runtime/tests/parity.rs`' failure message says how to re-bless it alone. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
+Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For agent runtimes` pointers, which took `framework/commands/` and `framework/reference/` to 567,487 bytes at `ad4fae5b`, under AC18's total, so what is owed is the two named files and the total staying under while tasks 10 and 11 land; of the two boilerplate blocks, `**Where a named section lives.**` remains. Task 10 left `framework/reference/log.md` restating `framework/commands/log.md`'s step 4 and nothing else; it stays, since 071's AC2 and its entry on which commands are split name `log`, and removing about 500 bytes does not justify reversing them. `framework/reference/review.md`'s §Deferrals calls itself the one full statement of when a deferral releases a finding, and `write-review`'s and `write-analysis`' descriptions cite it, which is a primitive's rule in a reference, the inverse of AC21: decide here whether the descriptions state it and the reference drops it, or it stays as policy. An edit to a command source can move its golden, and `runtime/tests/parity.rs`' failure message says how to re-bless it alone. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
 
-- [ ] `framework/reference/review.md` under 50,000 bytes
-- [ ] `framework/reference/analyze.md` under 50,000 bytes, with `scripts/audit/marker-list-parity.sh` following its sentences; if cuts stop short, bring the split to the owner with what it costs
-- [ ] The two boilerplate blocks across commands and references, keeping `scripts/lint-tool-coverage.sh`'s match
-- [ ] Restatement in the largest commands
-- [ ] A finding's message carries what the removed prose explained, wherever a family's rule is no longer stated elsewhere
-- [ ] Close `020-code-review`'s task 16 by pointing at the result
+- [x] `framework/reference/review.md` under 50,000 bytes
+- [x] `framework/reference/analyze.md` under 50,000 bytes, with `scripts/audit/marker-list-parity.sh` following its sentences; if cuts stop short, bring the split to the owner with what it costs
+- [x] The two boilerplate blocks across commands and references, keeping `scripts/lint-tool-coverage.sh`'s match
+- [x] Restatement in the largest commands
+- [x] A finding's message carries what the removed prose explained, wherever a family's rule is no longer stated elsewhere
+- [x] Close `020-code-review`'s task 16 by pointing at the result
 
 - **Done when**: `wc -c` shows `framework/commands/` and `framework/reference/` under 567,705 bytes together and each named file under 50,000, `check-step-references` and `resolve_anchor.rs`' corpus test pass, and `scripts/audit/run-all.sh` passes after the commit.
 
@@ -143,3 +143,14 @@ Blocked on tasks 1–11.
 Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly. Ask the owner at this task whether the outcome entry in Resolved Questions gains the primitive's figure beside the recorded one, or AC20 reads as met by that re-derivation; `spec.md` had 523 bytes of room by `wc -c`, so a longer entry needs a cut, which is also the owner's.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.
+
+## 13. Disposition out-of-spec finding: claims stale before this spec, found checking the cuts
+
+- [x] `specs/054-remove-supersession/spec.md` — AC10's annotation counted nine families against the ten the description lists — fixed
+- [x] `specs/023-govern-refinement/spec.md` — AC21 cited an `AGENTS.md` account that `4eebe91a` removed — fixed
+- [x] `specs/016-cross-cutting-rules/spec.md` and `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — AC3 each named `framework/commands/analyze.md` for a section 071 moved to its reference — fixed
+- [x] `specs/024-rule-loader/spec.md` — AC8 names `framework/commands/review.md` for §Notes for adopters, which 071 moved — waived: the claim holds at the reference, and a criterion edit would reopen a `done` spec for a location alone
+- [x] `specs/071-command-reference-split/spec.md` — AC17, unticked, names `AGENTS.md`'s entry on a new command, now in `docs/developing-ductus.md` — waived: 071's own open criterion, which its implementation settles
+- [x] `specs/000-slash-commands/scenarios/dashboard-dependencies-column.md`, `specs/014-reclarify-backedge/spec.md`, `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`, `specs/066-audit-records-and-the-completion-gate/scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md` and `specs/067-analyze-and-audit-checks/scenarios/frontmatter-severity-tiers-on-both-sides.md` — each Context names command text that has since changed — waived: each describes the state its scenario or spec set out to fix, an account rather than a claim about the file today
+
+- **Done when**: each finding is fixed, deferred, or waived, with a waiver's reason written on the task.

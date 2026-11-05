@@ -127,9 +127,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 16. Bring framework/reference/review.md under the read size
 
-Task 11 of `079-review-and-analysis-work-converges` does this work (owner, 2026-11-04). Tick this task when that lands, without cutting the file separately.
+Task 11 of `079-review-and-analysis-work-converges` did this work (owner, 2026-11-04): `framework/reference/review.md` is 43,198 bytes by `wc -c`, cut without a split, and every citation of its sections resolves.
 
-- [ ] `framework/reference/review.md` is 64,484 bytes (`wc -c`, 2026-11-04, with 078's second review's edits) against the 50,000-byte `[artifacts] read-size-bytes`, so every agent reads it in parts. Deferred by 078's second review from its plan's known limitation
-- [ ] Cut restatement the constitution's §text-first-artifacts rules out, or split the reference by section, keeping every section other commands and artifacts cite resolving
+- [x] `framework/reference/review.md` is 64,484 bytes (`wc -c`, 2026-11-04, with 078's second review's edits) against the 50,000-byte `[artifacts] read-size-bytes`, so every agent reads it in parts. Deferred by 078's second review from its plan's known limitation
+- [x] Cut restatement the constitution's §text-first-artifacts rules out, or split the reference by section, keeping every section other commands and artifacts cite resolving
 
 - **Done when**: `wc -c framework/reference/review.md` is at most 50,000, and every citation of its sections still resolves
