@@ -16,12 +16,12 @@ The derived write boundary held only `AGENTS.md` and spec directories at `b63e99
 
 Blocked on task 1.
 
-- [ ] `compute`: the last qualifying review commit moves the base, and a skipped pass, budget stop, open mark, unparseable or uncommitted record does not; add `base-source`
-- [ ] `compute`: AC6's scope, `excluded` in the bounded lists, an unchanged plan entry only on a first review, and `review-owed`
-- [ ] `write-review`: the denominator follows, frontmatter `excluded`, and the body names each excluded path by its claiming spec
-- [ ] Tests for each Edge Case: no earlier review, `review-owed` true with no record, a review older than the reopen, one path changed by two commits, `--since`, an unclaimed commit, a multi-spec commit with an unplanned path, its subject naming this spec first and naming none, and uncommitted work
-- [ ] State the two rules in `framework/commands/review.md`, `framework/reference/review.md` and `framework/reference/implement.md`, and have the command report `review-owed: false`
-- [ ] Remove the `AGENTS.md` entries AC5 and AC6 retire (the `--since` and window entries), and re-key anything `scripts/audit/run-all.sh` reports
+- [x] `compute`: the last qualifying review commit moves the base, and a skipped pass, budget stop, open mark, unparseable or uncommitted record does not; add `base-source`
+- [x] `compute`: AC6's scope, `excluded` in the bounded lists, an unchanged plan entry only on a first review, and `review-owed`
+- [x] `write-review`: the denominator follows, frontmatter `excluded`, and the body names each excluded path by its claiming spec
+- [x] Tests for each Edge Case: no earlier review, `review-owed` true with no record, a review older than the reopen, one path changed by two commits, `--since`, an unclaimed commit, a multi-spec commit with an unplanned path, its subject naming this spec first and naming none, and uncommitted work
+- [x] State the two rules in `framework/commands/review.md`, `framework/reference/review.md` and `framework/reference/implement.md`, and have the command report `review-owed: false`
+- [x] Remove the `AGENTS.md` entries AC5 and AC6 retire (the `--since` and window entries), and re-key anything `scripts/audit/run-all.sh` reports
 
 - **Done when**: the tests pass, each fails with its behavior removed, and `compute-review-scope` on 058 returns a scope that AC6's rule explains.
 
@@ -29,12 +29,12 @@ Blocked on task 1.
 
 Blocked on task 1.
 
-- [ ] `round_paths`: drop a path only another spec's commits changed, comparing content at both snapshots with their parents
-- [ ] `brief-re-read`: exempt paths leave a mixed round's brief and `round.toml`; return `exempt` and `excluded`
-- [ ] `write-review`: `loop-open`, `fix-rounds[].excluded`; `check-review-gate`: a new block on `fix-rounds-open`
-- [ ] Step 11 of `framework/commands/review.md` passes `loop-open`, and the reference's Fix-round loop says what changed
-- [ ] Tests in `runtime/tests/fix_rounds.rs`: another spec's commit between rounds leaves the round, a path both a fix and that commit changed stays, a commit this spec claims stays, and a run cut off between writes blocks while an exec-shaped record does not
-- [ ] The 078 claims the sweep names, in the same commit, with a signpost back-linking this spec
+- [x] `round_paths`: drop a path only another spec's commits changed, comparing content at both snapshots with their parents
+- [x] `brief-re-read`: exempt paths leave a mixed round's brief and `round.toml`; return `exempt` and `excluded`
+- [x] `write-review`: `loop-open`, `fix-rounds[].excluded`; `check-review-gate`: a new block on `fix-rounds-open`
+- [x] Step 11 of `framework/commands/review.md` passes `loop-open`, and the reference's Fix-round loop says what changed
+- [x] Tests in `runtime/tests/fix_rounds.rs`: another spec's commit between rounds leaves the round, a path both a fix and that commit changed stays, a commit this spec claims stays, and a run cut off between writes blocks while an exec-shaped record does not
+- [x] The 078 claims the sweep names, in the same commit, with a signpost back-linking this spec
 
 - **Done when**: the tests pass, each fails with its behavior removed, and a fixture review cut off after step 11 is blocked by `check-review-gate`.
 

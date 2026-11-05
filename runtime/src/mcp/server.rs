@@ -351,7 +351,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "diff-cross-spec",
-        description = "Compute /ductus:implement's cross-spec impact surface: diff the feature's first spec-dir commit against the working tree, scoped to the spec root and filtered to paths outside the feature's own directory. {specs-root}/inbox.md is excluded: it holds what a person logs, which is no spec's impact. A zero cross-spec-count is the no-impact outcome. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, cross-spec-paths is absent, and lists-file names a JSON file under .ductus/results/ holding the list whole, one entry per line, to read in parts by line offset when it exceeds one read. Read-only but for that file."
+        description = "Compute /ductus:implement's cross-spec impact surface: the paths under the spec root, outside the feature's own directory, that differ from the window's start and that a commit belonging to the spec changed or that carry an uncommitted change, so another spec's commit is absent. The window starts at the parent of the spec's last in-progress commit, HEAD while that move is uncommitted, or for a spec never in-progress its first spec-dir commit, reported as window-base. {specs-root}/inbox.md is excluded: it holds what a person logs, which is no spec's impact. A zero cross-spec-count is the no-impact outcome. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, cross-spec-paths is absent, and lists-file names a JSON file under .ductus/results/ holding the list whole, one entry per line, to read in parts by line offset when it exceeds one read. Read-only but for that file."
     )]
     async fn diff_cross_spec(
         &self,

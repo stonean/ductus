@@ -5181,18 +5181,18 @@ pub struct DiffCrossSpecArgs {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DiffCrossSpecResult {
-    /// First commit touching the feature's spec dir (the diff base;
-    /// shared derivation with `derive-boundary`).
-    pub first_commit: String,
+    /// Where the window starts: the parent of the spec's last `in-progress`
+    /// commit, `HEAD` while that move is uncommitted, or the first commit touching
+    /// the feature's spec dir when it has never been `in-progress`.
+    pub window_base: String,
     /// Current HEAD commit.
     pub current_head: String,
-    /// Changed paths under the spec root but outside the feature's own
-    /// directory (sorted; `{specs-root}/inbox.md` is excluded — it holds
-    /// what a person logs, which is no spec's impact). The diff runs against the
-    /// working tree (index + untracked included), so uncommitted sibling
-    /// edits surface at the per-task summary; on a clean tree this equals
-    /// the documented `git diff <first-commit>..HEAD -- {specs-root}/`.
-    /// Absent in the file form.
+    /// Paths under the spec root but outside the feature's own directory
+    /// (sorted; `{specs-root}/inbox.md` is excluded — it holds what a person
+    /// logs, which is no spec's impact) that differ from the window's start and
+    /// that a commit belonging to the spec changed or that carry an uncommitted
+    /// change, so sibling edits surface at the per-task summary and another
+    /// spec's commit does not. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cross_spec_paths: Option<Vec<String>>,
     /// Where `cross-spec-paths` is: in this result, or, past the read size,
@@ -7949,7 +7949,7 @@ mod tests {
         assert_eq!(round_trip(&args), args);
 
         let result = DiffCrossSpecResult {
-            first_commit: "abc123".into(),
+            window_base: "abc123".into(),
             current_head: "def456".into(),
             cross_spec_paths: Some(vec!["specs/007-sibling/spec.md".into()]),
             form: ListsForm::Inline,

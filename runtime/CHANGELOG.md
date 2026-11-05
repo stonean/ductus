@@ -47,6 +47,12 @@ its version and date.
 
 ### Changed
 
+- **`diff-cross-spec` reports this spec's impact, not the corpus's.** Its window
+  now starts at the spec's last reopen rather than its first spec-directory
+  commit, and it keeps a sibling path only when a commit belonging to the spec
+  changed it or it carries an uncommitted change. A spec never `in-progress` still
+  starts at its first commit. The result's `first-commit` is renamed
+  `window-base`.
 - **A fix round reads only the review's own fixes.** `brief-re-read` now drops
   a path only commits another spec claims changed, found through each snapshot's
   parent with nothing reported by the agent, and returns it as `excluded`, unless

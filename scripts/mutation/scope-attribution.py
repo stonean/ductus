@@ -3,7 +3,7 @@ to each spec whose directory it touches and each spec its subject's scope names
 (`runtime/src/primitives/commit_attribution.rs`), the review window and scope
 built on it (`compute_review_scope.rs`), and a fix round's own use of it with the
 open mark (`fix_rounds.rs`, `brief_re_read.rs`, `check_review_gate.rs`,
-`write_review.rs`).
+`write_review.rs`), and `diff-cross-spec` (`diff_cross_spec.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/scope-attribution.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -562,5 +562,61 @@ MUTATIONS = [
         'from_scope.chain(from_rounds).collect();',
         'from_scope.chain(from_rounds.take(0)).collect();',
         'write_review::tests::the_record_names_each_path_a_fix_round_left_out',
+    ),
+    (
+        'M80 the window starts at the first commit again',
+        'src/primitives/diff_cross_spec.rs',
+        '        Some(sha) => Oid::from_str(&transition_parent(repository, &sha)?)?,\n',
+        '        Some(_) => first,\n',
+        'diff_cross_spec::tests::the_window_starts_at_the_transition_parent diff_cross_spec::tests::a_reopen_leaves_an_earlier_windows_sibling_changes_out',
+    ),
+    (
+        'M81 an uncommitted reopen keeps the last committed window',
+        'src/primitives/diff_cross_spec.rs',
+        '    if transition_is_uncommitted(project, specs_root, feature, feature_dir)? {',
+        '    if transition_is_uncommitted(project, specs_root, feature, feature_dir)? && feature.is_empty() {',
+        'diff_cross_spec::tests::an_uncommitted_reopen_starts_at_head',
+    ),
+    (
+        'M82 a spec never in progress loses its window',
+        'src/primitives/diff_cross_spec.rs',
+        '        None => first,\n',
+        '        None => repository.head()?.peel_to_commit()?.id(),\n',
+        'diff_cross_spec::tests::a_spec_never_in_progress_keeps_its_first_commit',
+    ),
+    (
+        "M83 every commit counts as the spec's",
+        'src/primitives/diff_cross_spec.rs',
+        '            if form.as_ref().is_some_and(|form| claims.is_claimed_by(form)) {',
+        '            if form.is_some() {',
+        'diff_cross_spec::tests::another_specs_commit_is_absent diff_cross_spec::tests::a_commit_no_spec_claims_is_absent',
+    ),
+    (
+        "M84 no commit counts as the spec's",
+        'src/primitives/diff_cross_spec.rs',
+        '            if form.as_ref().is_some_and(|form| claims.is_claimed_by(form)) {',
+        '            if form.is_none() {',
+        'diff_cross_spec::tests::a_commit_belonging_to_the_spec_counts_as_its_impact',
+    ),
+    (
+        'M85 uncommitted sibling work is dropped',
+        'src/primitives/diff_cross_spec.rs',
+        '        .filter(|path| form.is_none() || own.contains(path) || uncommitted.contains(path))',
+        '        .filter(|path| form.is_none() || own.contains(path))',
+        'diff_cross_spec::tests::an_uncommitted_sibling_edit_counts_even_on_another_specs_path',
+    ),
+    (
+        'M86 a change undone inside the window still counts',
+        'src/primitives/diff_cross_spec.rs',
+        '    let cross_spec_paths: Vec<String> = changed\n        .into_iter()',
+        '    let cross_spec_paths: Vec<String> = own\n        .iter()\n        .chain(changed.iter())\n        .filter(|path| is_sibling(path))\n        .cloned()\n        .collect::<BTreeSet<String>>()\n        .into_iter()',
+        'diff_cross_spec::tests::a_change_undone_inside_the_window_is_no_impact',
+    ),
+    (
+        'M87 the result keeps the old field name',
+        'src/schema/primitives.rs',
+        '    pub window_base: String,\n    /// Current HEAD commit.\n    pub current_head: String,\n    /// Paths under the spec root',
+        '    #[serde(rename = "first-commit")]\n    pub window_base: String,\n    /// Current HEAD commit.\n    pub current_head: String,\n    /// Paths under the spec root',
+        'diff_cross_spec::tests::the_wire_form_names_the_window_base',
     ),
 ]

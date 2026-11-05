@@ -3,18 +3,21 @@
 //! The deterministic filter implement steps 7 and 13 previously re-derived
 //! by hand per task (the gate step's prose self-declared "no primitive owns
 //! this filter yet"; spec 022, scenario coverage-expansion-primitives): the
-//! diff from the feature's first spec-dir commit — the same base
-//! `derive-boundary` computes, through the shared
-//! [`first_commit_for_prefix`] walk — scoped to the spec root and filtered
-//! to paths outside the feature's own directory.
+//! sibling-spec paths this spec's own work changed since its last reopen (spec
+//! 079, AC7).
 //!
-//! The diff runs against the working tree (index and untracked files
-//! included), not `HEAD`: the per-task summary (step 7) fires before the
-//! task's commit, when any sibling-spec edits are still uncommitted. On a
-//! clean tree the result equals the documented markdown-only form, `git diff
-//! --name-only --relative <first-commit>..HEAD -- {specs-root}/` run from the
-//! project root (step 13), which names each path from the project root as
-//! this primitive does. Read-only.
+//! The window starts at the same place a review's does, the parent of the
+//! commit that last moved the spec into `in-progress`, or `HEAD` while that move
+//! is uncommitted. A spec never `in-progress` starts at its first spec-directory
+//! commit, through the walk shared with `derive-boundary`, so a planned spec
+//! still gets an answer. Starting from the first commit, it reported 507 paths
+//! for one task of one reopened spec.
+//!
+//! A path counts when it differs between the window's start and the working
+//! tree, and a commit that belongs to the spec changed it or it has an
+//! uncommitted change, since the per-task summary (step 7) fires before the
+//! task's commit, when any sibling-spec edits are still uncommitted. Another
+//! spec's commit is that spec's impact, not this one's. Read-only.
 //!
 //! `{specs-root}/inbox.md` is excluded from the result. It holds only what a
 //! person logs (spec 058), so editing it is not a cross-spec impact, and no
@@ -24,10 +27,13 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use git2::DiffOptions;
+use git2::{DiffOptions, Oid};
 
+use crate::primitives::check_stuck::find_in_progress_commit;
+use crate::primitives::commit_attribution::Attributor;
+use crate::primitives::compute_review_scope::{transition_is_uncommitted, transition_parent};
 use crate::primitives::derive_boundary::first_commit_for_prefix;
-use crate::primitives::{PrimitiveError, ProjectRepository, Result};
+use crate::primitives::{PrimitiveError, ProjectRepository, Result, parse_feature_dir};
 use crate::schema::paths;
 use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult, ListsForm};
 
@@ -43,7 +49,7 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult, ListsFor
 pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
     let cross = compute(args, repo)?;
     let mut result = DiffCrossSpecResult {
-        first_commit: cross.first_commit,
+        window_base: cross.window_base,
         current_head: cross.current_head,
         cross_spec_count: cross.cross_spec_paths.len(),
         cross_spec_paths: Some(cross.cross_spec_paths.clone()),
@@ -66,8 +72,8 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
 /// before its result is bounded.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct ImpactSurface {
-    /// See [`DiffCrossSpecResult::first_commit`].
-    pub(crate) first_commit: String,
+    /// See [`DiffCrossSpecResult::window_base`].
+    pub(crate) window_base: String,
     /// See [`DiffCrossSpecResult::current_head`].
     pub(crate) current_head: String,
     /// See [`DiffCrossSpecResult::cross_spec_paths`].
@@ -112,10 +118,10 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
     let spec_prefix = format!("{}/{}/", layout.specs_root, args.feature);
     let inbox_rel = format!("{}/inbox.md", layout.specs_root);
 
-    let Some(first_commit) = first_commit_for_prefix(repository, &project.to_git(&spec_prefix))?
+    let Some(window_base) = window_base(&project, &layout.specs_root, &args.feature, &feature_dir)?
     else {
         return Ok(ImpactSurface {
-            first_commit: String::new(),
+            window_base: String::new(),
             current_head: String::new(),
             cross_spec_paths: Vec::new(),
             // Empty lists alone would read as "no cross-spec impact". They
@@ -129,22 +135,95 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
             )),
         });
     };
-    let head_oid = repository.head()?.peel_to_commit()?.id();
-    let first_tree = repository.find_commit(first_commit)?.tree()?;
+    let head = repository.head()?.peel_to_commit()?;
+    let is_sibling = |path: &str| {
+        path.starts_with(&root_prefix) && !path.starts_with(&spec_prefix) && path != inbox_rel
+    };
 
-    // One diff, first-commit tree → working tree, scoped to the spec root.
-    // Untracked files (a brand-new sibling scenario) must surface too. The
-    // pathspec is literal: the project's path from the work tree may hold
-    // `*`, `?` or `[`, which as a glob would match no file, and the empty
-    // result would read as no impact (QUAL-CLAIM-001).
+    // What differs across the window, so a change made and undone inside it is
+    // no impact, and what is uncommitted, which nothing can attribute.
+    let changed = sibling_changes(&project, &layout.specs_root, window_base, &is_sibling)?;
+    let uncommitted = sibling_changes(&project, &layout.specs_root, head.id(), &is_sibling)?;
+
+    // The commits that belong to this spec. A feature directory
+    // `parse_feature_dir` does not recognize can be claimed by no commit, so its
+    // window keeps every committed sibling change rather than reading as clean.
+    let mut own: BTreeSet<String> = BTreeSet::new();
+    let form = parse_feature_dir(&args.feature);
+    if form.is_some() && window_base != head.id() {
+        let attributor = Attributor::new(&project, repo, &layout.specs_root);
+        let mut walk = repository.revwalk()?;
+        walk.push(head.id())?;
+        walk.hide(window_base)?;
+        for oid in walk {
+            let claims = attributor.claims(&repository.find_commit(oid?)?)?;
+            if form.as_ref().is_some_and(|form| claims.is_claimed_by(form)) {
+                own.extend(claims.paths);
+            }
+        }
+    }
+
+    let cross_spec_paths: Vec<String> = changed
+        .into_iter()
+        .filter(|path| form.is_none() || own.contains(path) || uncommitted.contains(path))
+        .collect();
+
+    Ok(ImpactSurface {
+        window_base: window_base.to_string(),
+        current_head: head.id().to_string(),
+        cross_spec_paths,
+        guidance: None,
+    })
+}
+
+/// Where the window starts: `HEAD` while the spec's move into `in-progress` is
+/// uncommitted, the parent of the commit that last made that move, or for a spec
+/// never `in-progress` its first spec-directory commit. `None` when no commit
+/// touches the spec directory.
+fn window_base(
+    project: &ProjectRepository,
+    specs_root: &str,
+    feature: &str,
+    feature_dir: &Path,
+) -> Result<Option<Oid>> {
+    let repository = &project.repository;
+    let spec_prefix = format!("{specs_root}/{feature}/");
+    let Some(first) = first_commit_for_prefix(repository, &project.to_git(&spec_prefix))? else {
+        return Ok(None);
+    };
+    if transition_is_uncommitted(project, specs_root, feature, feature_dir)? {
+        return Ok(Some(repository.head()?.peel_to_commit()?.id()));
+    }
+    let spec_rel = project.to_git(&format!("{spec_prefix}spec.md"));
+    Ok(Some(
+        match find_in_progress_commit(repository, &spec_rel)? {
+            Some(sha) => Oid::from_str(&transition_parent(repository, &sha)?)?,
+            None => first,
+        },
+    ))
+}
+
+/// The sibling paths that differ between `base`'s tree and the working tree,
+/// from the project root. Untracked files (a brand-new sibling scenario) surface
+/// too. The pathspec is literal: the project's path from the work tree may hold
+/// `*`, `?` or `[`, which as a glob would match no file, and the empty result
+/// would read as no impact (QUAL-CLAIM-001).
+fn sibling_changes(
+    project: &ProjectRepository,
+    specs_root: &str,
+    base: Oid,
+    is_sibling: &dyn Fn(&str) -> bool,
+) -> Result<BTreeSet<String>> {
+    let repository = &project.repository;
+    let tree = repository.find_commit(base)?.tree()?;
     let mut opts = DiffOptions::new();
-    opts.pathspec(project.to_git(&layout.specs_root))
+    opts.pathspec(project.to_git(specs_root))
         .disable_pathspec_match(true)
         .include_untracked(true)
         .recurse_untracked_dirs(true);
-    let diff = repository.diff_tree_to_workdir_with_index(Some(&first_tree), Some(&mut opts))?;
+    let diff = repository.diff_tree_to_workdir_with_index(Some(&tree), Some(&mut opts))?;
 
-    let mut cross_spec: BTreeSet<String> = BTreeSet::new();
+    let mut paths = BTreeSet::new();
     diff.foreach(
         &mut |delta, _| {
             for path in [delta.old_file().path(), delta.new_file().path()]
@@ -152,14 +231,10 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
                 .flatten()
             {
                 let s = path.to_string_lossy().replace('\\', "/");
-                // Belt and braces over the pathspec: keep spec-root paths
-                // only, and drop the feature's own dir and the inbox.
                 if let Some(inside) = project.to_project(&s)
-                    && inside.starts_with(&root_prefix)
-                    && !inside.starts_with(&spec_prefix)
-                    && inside != inbox_rel
+                    && is_sibling(inside)
                 {
-                    cross_spec.insert(inside.to_string());
+                    paths.insert(inside.to_string());
                 }
             }
             true
@@ -168,13 +243,7 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
         None,
         None,
     )?;
-
-    Ok(ImpactSurface {
-        first_commit: first_commit.to_string(),
-        current_head: head_oid.to_string(),
-        cross_spec_paths: cross_spec.into_iter().collect(),
-        guidance: None,
-    })
+    Ok(paths)
 }
 
 #[cfg(test)]
@@ -241,7 +310,7 @@ mod tests {
             wire.get("inbox-additions").is_none() && wire.get("inbox-standing").is_none(),
             "no inbox field is reported any more: {wire}"
         );
-        assert_ne!(result.first_commit, "");
+        assert_ne!(result.window_base, "");
         assert_ne!(result.current_head, "");
     }
 
@@ -287,7 +356,7 @@ mod tests {
         git_fixture::commit_all(&repo, "feat(020): implement");
 
         let result = compute(&args("020-demo"), &project).unwrap();
-        assert_eq!(result.first_commit, first.to_string());
+        assert_eq!(result.window_base, first.to_string());
         assert_eq!(result.guidance, None);
         assert_eq!(
             result.cross_spec_paths,
@@ -414,7 +483,7 @@ mod tests {
             "---\nstatus: planned\n---\n\n# 030\n",
         );
         let result = compute(&args("030-orphan"), tmp.path()).unwrap();
-        assert_eq!(result.first_commit, "");
+        assert_eq!(result.window_base, "");
         assert_eq!(result.current_head, "");
         assert_eq!(result.cross_spec_paths, [] as [String; 0]);
 
@@ -444,7 +513,7 @@ mod tests {
 
         let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert!(result.guidance.is_none());
-        assert_ne!(result.first_commit, "");
+        assert_ne!(result.window_base, "");
     }
 
     #[test]
@@ -454,5 +523,200 @@ mod tests {
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
         let err = compute(&args("../escape"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
+    }
+
+    // -- spec 079, AC7 --------------------------------------------------------
+
+    fn spec(status: &str) -> String {
+        format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n")
+    }
+
+    /// 020-demo in `in-progress` since a committed transition, with sibling
+    /// 007-sibling. Returns the tree, its repository and the transition's parent.
+    fn in_progress() -> (tempfile::TempDir, Repository, String) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/007-sibling/spec.md"), &spec("done"));
+        write(&tmp.path().join("specs/020-demo/spec.md"), &spec("planned"));
+        let parent = commit_all(&repo, "chore: seed").to_string();
+        write(
+            &tmp.path().join("specs/020-demo/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(020): start");
+        (tmp, repo, parent)
+    }
+
+    fn touch(tmp: &tempfile::TempDir, repo: &Repository, file: &str, subject: &str) {
+        write(&tmp.path().join(file), &format!("{subject}\n"));
+        commit_all(repo, subject);
+    }
+
+    #[test]
+    fn the_window_starts_at_the_transition_parent() {
+        let (tmp, _repo, parent) = in_progress();
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.window_base, parent);
+    }
+
+    /// The figure that named this: 507 paths from an earlier window's work.
+    #[test]
+    fn a_reopen_leaves_an_earlier_windows_sibling_changes_out() {
+        let (tmp, repo, _) = in_progress();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/old.md",
+            "feat(020): the earlier window",
+        );
+        write(&tmp.path().join("specs/020-demo/spec.md"), &spec("done"));
+        let parent = commit_all(&repo, "status(020): done").to_string();
+        write(
+            &tmp.path().join("specs/020-demo/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(020): reopen");
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/new.md",
+            "feat(020): this window",
+        );
+
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.window_base, parent);
+        assert_eq!(result.cross_spec_paths, ["specs/007-sibling/new.md"]);
+    }
+
+    #[test]
+    fn another_specs_commit_is_absent() {
+        let (tmp, repo, _) = in_progress();
+        touch(&tmp, &repo, "specs/007-sibling/a.md", "feat(007): its own");
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/b.md",
+            "chore: claims 007 by its directory",
+        );
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
+    }
+
+    #[test]
+    fn a_commit_no_spec_claims_is_absent() {
+        let (tmp, repo, _) = in_progress();
+        // A subject naming no spec, touching only a file directly under the
+        // spec root: nobody's change, so nobody's impact.
+        touch(&tmp, &repo, "specs/notes.md", "chore: corpus notes");
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
+    }
+
+    #[test]
+    fn a_commit_belonging_to_the_spec_counts_as_its_impact() {
+        let (tmp, repo, _) = in_progress();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/by_name.md",
+            "fix(020): named",
+        );
+        write(&tmp.path().join("specs/020-demo/notes.md"), "n\n");
+        write(&tmp.path().join("specs/007-sibling/by_directory.md"), "d\n");
+        commit_all(&repo, "chore: touches both directories");
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/shared.md",
+            "fix(007, 020): both",
+        );
+
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(
+            result.cross_spec_paths,
+            [
+                "specs/007-sibling/by_directory.md",
+                "specs/007-sibling/by_name.md",
+                "specs/007-sibling/shared.md"
+            ]
+        );
+    }
+
+    #[test]
+    fn an_uncommitted_sibling_edit_counts_even_on_another_specs_path() {
+        let (tmp, repo, _) = in_progress();
+        touch(&tmp, &repo, "specs/007-sibling/a.md", "feat(007): its own");
+        write(&tmp.path().join("specs/007-sibling/a.md"), "edited\n");
+        write(&tmp.path().join("specs/007-sibling/new.md"), "untracked\n");
+
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(
+            result.cross_spec_paths,
+            ["specs/007-sibling/a.md", "specs/007-sibling/new.md"]
+        );
+    }
+
+    #[test]
+    fn a_change_undone_inside_the_window_is_no_impact() {
+        let (tmp, repo, _) = in_progress();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/spec.md",
+            "fix(020): changed",
+        );
+        write(&tmp.path().join("specs/007-sibling/spec.md"), &spec("done"));
+        commit_all(&repo, "fix(020): undone");
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
+    }
+
+    #[test]
+    fn a_spec_never_in_progress_keeps_its_first_commit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/007-sibling/spec.md"), &spec("done"));
+        commit_all(&repo, "chore: seed");
+        write(&tmp.path().join("specs/020-demo/spec.md"), &spec("planned"));
+        let first = commit_all(&repo, "plan(020): a plan").to_string();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/a.md",
+            "plan(020): a sibling note",
+        );
+
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.window_base, first);
+        assert_eq!(result.cross_spec_paths, ["specs/007-sibling/a.md"]);
+    }
+
+    #[test]
+    fn an_uncommitted_reopen_starts_at_head() {
+        let (tmp, repo, _) = in_progress();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/old.md",
+            "feat(020): earlier",
+        );
+        write(&tmp.path().join("specs/020-demo/spec.md"), &spec("done"));
+        let head = commit_all(&repo, "status(020): done").to_string();
+        write(
+            &tmp.path().join("specs/020-demo/spec.md"),
+            &spec("in-progress"),
+        );
+
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.window_base, head);
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
+    }
+
+    #[test]
+    fn the_wire_form_names_the_window_base() {
+        let (tmp, _repo, parent) = in_progress();
+        let wire = serde_json::to_value(run(&args("020-demo"), tmp.path()).unwrap()).unwrap();
+        assert_eq!(wire["window-base"], parent);
+        assert!(wire.get("first-commit").is_none(), "{wire}");
     }
 }

@@ -3313,7 +3313,7 @@ mod tests {
         for path in &siblings {
             write(&tmp.path().join(path), "x\n");
         }
-        commit_all(&repository, "work");
+        commit_all(&repository, "feat(001): work");
         write(
             &tmp.path().join(".ductus/config.toml"),
             "[artifacts]\nread-size-bytes = 300\n",

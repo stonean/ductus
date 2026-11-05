@@ -595,7 +595,7 @@ fn entry_pattern(entry: &str) -> Option<Regex> {
 ///
 /// [`PrimitiveError::Git`] when `HEAD`'s copy of the spec cannot be read —
 /// an unborn `HEAD` among them.
-fn transition_is_uncommitted(
+pub(crate) fn transition_is_uncommitted(
     project: &ProjectRepository,
     specs_root: &str,
     feature: &str,
@@ -627,7 +627,7 @@ fn transition_is_uncommitted(
 /// transition, where the transition commit itself is correctly the origin. A
 /// shared helper returning different commits to its two callers would be the
 /// drift this placement keeps out.
-fn transition_parent(repository: &Repository, sha: &str) -> Result<String> {
+pub(crate) fn transition_parent(repository: &Repository, sha: &str) -> Result<String> {
     let commit = repository.find_commit(Oid::from_str(sha)?)?;
     Ok(match commit.parent(0) {
         Ok(parent) => parent.id().to_string(),

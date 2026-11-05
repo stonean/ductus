@@ -154,8 +154,9 @@ fn zone_glob(path: &str) -> String {
 
 /// Earliest commit (topological, from the root) whose first-parent diff
 /// touches a path under `prefix` — the feature's spec-history diff base.
-/// `pub(crate)`: shared with `diff-cross-spec`, whose window must start
-/// at exactly the commit the boundary derivation starts at.
+/// `pub(crate)`: shared with `diff-cross-spec`, whose window starts here only
+/// for a spec never `in-progress`, and at the spec's last reopen otherwise, so
+/// the two no longer share a window (spec 079, AC7).
 pub(crate) fn first_commit_for_prefix(
     repo: &Repository,
     prefix: &str,
