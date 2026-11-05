@@ -274,12 +274,13 @@ Write the report to `specs/NNN-feature/review.md`. A scenario-targeted run still
 spec: 042-example-feature
 last-run: 2026-05-10T14:32:00Z
 reviewed-against: <sha-of-HEAD>
-diff-base: <sha of the parent of the in-progress transition commit>
+diff-base: <sha compute-review-scope resolved>
 must-violations: 0
 should-violations: 3
 low-confidence: 2
 examined: 38
 scope: 46
+excluded: 4
 skipped-passes: []
 reviewed-digest:
   scenarios/retry.md: 3f2a…
@@ -318,6 +319,10 @@ dispositions:
 ## Skipped passes
 
 <`*None.*` when none>
+
+## Excluded from scope
+
+<one bullet per path only another spec's commits changed, with the spec that claimed it; `*None.*` when none>
 
 ## Unexamined governance
 
@@ -500,6 +505,7 @@ should-violations: 3
 low-confidence: 2
 examined: 38
 scope: 46
+excluded: 4
 skipped-passes: []
 reviewed-digest:
   scenarios/retry.md: 3f2a…
@@ -586,12 +592,14 @@ passes it, and says so.
 The window a review reads and the coverage counts it records, as `/{project}:review` applies them across runs. The record's fields are declared in the constitution's §text-first-artifacts.
 
 - **`examined` counts the in-scope files the review actually read — a file you are confident about by other means is named, never counted.** Believing a file correct — a generated mirror of one you read, say — is not having read it. Count what you opened, and name the rest in the Summary with why you did not open it and what you relied on instead: _generated from a source read in full, generator re-run and reported in sync_ is a complete answer, _it is generated_ is not. Likewise say which parts of a too-large file you read, and name an in-scope path that no longer exists as absent.
-- **A spec's review window is a property of its last reopen, not of the spec.** The diff base is the parent of the commit that last moved the spec into `in-progress`, or `HEAD` while that move is uncommitted, so every back-edge moves it forward, and every change the pass makes afterwards — its own review record included — joins the window. Measure the window rather than quoting an earlier count. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
+- **A spec's review window starts where the last review of this reopening finished.** `compute-review-scope` holds the rule, and `base-source` says which start it took. A first run starts at the reopen, a later one at the last review commit, and a run that recorded a skipped pass or a budget stop does not move the start, so stopping early leaves nothing permanently unread. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
+- **A review reads its own spec's change, and the record names the rest.** A commit belongs to each spec whose directory it touches or whose number its subject scope names, and a path only another spec's commit changed leaves the scope for that spec's review, named under **Excluded from scope**. A path a commit of this spec or of no spec also changed stays, as does uncommitted work, which nothing can attribute: `git worktree` isolates sessions. A plan entry unchanged in the window stays only on the spec's first review, where it may mean missing work.
+- **A reopening that changed no code, scenario or data model owes an analysis and no review.** `compute-review-scope` reports it as `review-owed: false`. The gate compares only a review's durable contracts, so it passes such a reopening with the earlier record; a review run anyway is allowed, only not owed.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** Without `examined` and `scope`, a review that read nothing is byte-identical to one that read everything; without the durable-contract digest, the pre-`done` gate reports freshness as _undeterminable_, which does not block. Nothing backfills these fields: treat such a record as unread and re-run the review, which writes them truthfully only if the passes read the scope. The gap comes in several shapes — all fields absent, a numerator without a digest, a digest without a numerator — so read the record before pricing the work.
 - **A spec with no recorded `in-progress` transition derives an empty diff base, and the review's denominator collapses to zero.** Scope resolution still returns the plan's affected files, so the record reads as files examined over a scope of zero. Pass the current commit as the base: the window is then empty by construction, and numerator and denominator agree. The same answer fits a recorded transition whose base is simply old; measure both before choosing, and say in the Summary which base was passed and why.
 - **Only a spec's durable contracts stale its review — its scenarios and its data model, nothing else — and that is what prices a corpus-wide sweep.** A sweep confined to spec bodies, plans and tasks costs no re-review however many specs it touches, while one changed line in a scenario or data model obliges a full re-review of that spec. Measure a sweep's durable-contract hits first, then decide each: sweep it and accept the re-review, leave it, or defer it into a pass that re-reviews the spec anyway.
 - **The review's denominator is derived at write time, so a count measured earlier and typed into the Summary can contradict the record it is written into.** The primitive computes the scope while the reviewer supplies the Summary, and no check compares the two. Read the returned counts against every number the Summary states, and re-run with corrected prose when they differ; the call is idempotent.
-- **`scope` counts entries, not files.** It is the resolved scope: the plan's Affected Files entries as written, united with the paths modified since `diff-base`. A plan Affected Files pattern such as `src/handlers/*.ts` is one entry however many files it matches, so a Summary that counts files says how its count reconciles with `scope`; `examined` equal to `scope` means fully examined only when no entry is a pattern.
+- **`scope` counts entries, not files.** On a first review it holds the plan's Affected Files entries as written. A pattern such as `src/handlers/*.ts` is one entry however many files it matches, so a Summary that counts files says how its count reconciles with `scope`; `examined` equal to `scope` means fully examined only when no entry is a pattern.
 
 ## Blocking semantics
 

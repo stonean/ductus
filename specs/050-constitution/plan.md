@@ -265,7 +265,6 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | After pushing, read every workflow's run — not the one whose name matches what you changed | **R** — a green *chosen* workflow is evidence about itself; true of any multi-workflow project |
 | Verify what a commit actually contains before reporting it landed — `git show --stat`, not the absence of an error | Git discipline behind every completion claim; `git show --stat` plus `git status --short` answer different questions |
 | Read the clock and read the sha — never write either from recollection | Both values are adopter-written fields on the review and analyze records |
-| A spec's review diff base moves forward on every reopen, so the window shrinks — measure it before reaching for `--since` | `compute-review-scope` ships; every adopter's base moves on every back-edge |
 | `remove-inbox-item` takes the bullet text, so never drive it from line numbers — each removal shifts the lines under you | **R** — match by text and assert uniqueness; never edit by position over a list that shrinks as you walk it |
 | A scenario's link to a sibling spec needs `../../` | Adopters have scenarios and sibling specs, and the corpus link check ships in the pre-commit hook |
 | "Record" spans several destinations in this framework — name the artifact and section, never the verb alone | **R** — the destinations are all adopter-facing commands with different gate semantics |
@@ -357,7 +356,6 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 
 | Entry | Reason |
 | --- | --- |
-| When a scenario is recorded after the fix it describes has landed, review it with `--since` | **R** — stated as *a fix committed before the reopen that records it lies outside the review window*; the window is the pipeline's, so every adopter that fixes before amending meets the same empty review |
 | Read what a push carries before pushing | **R** — stated without this repository's command; sessions sharing a working tree share its commits (§concurrent-features), so one push publishes another session's work in any adopter's checkout |
 
 #### Fourth round — project-only
@@ -472,12 +470,10 @@ The cut to one read moved these universal rules' canonical text out of the const
 | Entry | Reason |
 | --- | --- |
 | `examined` counts the in-scope files the passes *read* | `framework/reference/review.md` §Window and coverage |
-| A spec's review diff base moves forward on every reopen | `framework/reference/review.md` §Window and coverage |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | `framework/reference/review.md` §Window and coverage |
 | A spec with no recorded `in-progress` transition derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
 | Only a spec's durable contracts stale its review | `framework/reference/review.md` §Window and coverage |
 | `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |
-| When a scenario is recorded after the fix it describes has landed, review it with `--since` | `framework/reference/review.md` §Window and coverage |
 | `unexamined` cannot be measured while the spec is `in-progress` | `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory) |
 | `remove-inbox-item` takes the bullet text | `framework/reference/groom.md` §Inbox upkeep |
 | When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |

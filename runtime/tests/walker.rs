@@ -1097,7 +1097,7 @@ fn over_the_read_size(n: usize) -> tempfile::TempDir {
             "x\n",
         );
     }
-    commit_all(&repo, "work");
+    commit_all(&repo, "feat(001): work");
     write_file(
         &tmp.path().join(".ductus/config.toml"),
         "[artifacts]\nread-size-bytes = 300\n",

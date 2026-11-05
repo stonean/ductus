@@ -152,6 +152,11 @@ pub struct ReviewBlock {
     /// The waiver of each un-re-read round that carries one.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub round_waivers: Vec<RoundWaiver>,
+    /// `true` while the run's fix-round loop is open: written by its first
+    /// `write-review`, omitted by its last (spec 079, AC14). A record with no
+    /// such field is an older one or a `ductus exec` run, which has no loop.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fix_rounds_open: Option<bool>,
 }
 
 /// The waiver of a fix round that was not re-read (spec 078): the operator's
@@ -711,9 +716,12 @@ pub struct ComputeReviewScopeArgs {
     /// Feature directory name whose review scope is computed.
     #[arg(long)]
     pub feature: String,
-    /// Optional diff-base override (a git ref or sha), used verbatim. When
-    /// omitted, the base is the parent of the commit the spec advanced to
-    /// `in-progress` at, or `HEAD` when that transition is not committed yet.
+    /// Optional diff-base override (a git ref or sha), used verbatim. It moves
+    /// only the window's start, and the scope rule still applies. When omitted,
+    /// the base is the later of the parent of the commit the spec advanced to
+    /// `in-progress` at and the last review commit since it that recorded no
+    /// skipped pass, budget stop or open fix-round loop, or `HEAD` when that
+    /// transition is not committed yet.
     #[serde(default)]
     #[arg(long)]
     pub since: Option<String>,
@@ -727,6 +735,12 @@ pub struct ComputeReviewScopeResult {
     /// `in-progress` is uncommitted, and empty when the spec never reached
     /// `in-progress` and no `--since` was given.
     pub diff_base: String,
+    /// Where the window starts.
+    pub base_source: BaseSource,
+    /// False when a review record exists and the scope holds no path outside
+    /// the spec's own directory and no scenario or data-model edit; true with
+    /// no record, since the gate holds `done` on a spec's first pass.
+    pub review_owed: bool,
     /// Where the lists are: in this result, or, past the read size, in
     /// the file `lists-file` names (066 scenario
     /// `scope-results-have-a-bounded-size`).
@@ -740,8 +754,14 @@ pub struct ComputeReviewScopeResult {
     pub plan_affected_count: usize,
     /// Entries in `deleted`, in either form.
     pub deleted_count: usize,
-    /// The review scope: the union of `plan-affected` and `modified-since`,
-    /// less `deleted`. Absent in the file form.
+    /// Entries in `excluded`, in either form.
+    pub excluded_count: usize,
+    /// The review scope: the paths of a commit that belongs to the spec alone
+    /// or to no spec; of a commit several specs claim, those in the spec's
+    /// directory or its plan's Affected Files, and a path in none of their plans
+    /// when its subject names this spec first or names none of them; and
+    /// uncommitted work. A plan entry unchanged in the window stays only on the
+    /// spec's first review. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<Vec<String>>,
     /// Files changed between `diff-base` and the working tree inside the
@@ -762,11 +782,33 @@ pub struct ComputeReviewScopeResult {
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted: Option<Vec<String>>,
+    /// The `modified-since` paths the scope left out: changed only by commits
+    /// other specs claim (spec 079, AC3). `write-review`'s record names the spec
+    /// that claimed each. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excluded: Option<Vec<String>>,
     /// In the file form, the file holding the lists whole, from the project
     /// root: a JSON object with `diff-base`, `scope`, `modified-since`,
-    /// `plan-affected` and `deleted`, one entry per line.
+    /// `plan-affected`, `deleted` and `excluded`, one entry per line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
+}
+
+/// Where a review's window starts (spec 079, AC5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum BaseSource {
+    /// The parent of the commit that last moved the spec into `in-progress`.
+    Reopen,
+    /// The last review commit since that move.
+    LastReview,
+    /// A `--since` override, used verbatim.
+    Since,
+    /// `HEAD`, because the move into `in-progress` is not committed yet.
+    UncommittedTransition,
+    /// Nowhere: the spec never reached `in-progress` and no `--since` was given.
+    #[default]
+    None,
 }
 
 /// Where a list-carrying result's lists are (066 scenario

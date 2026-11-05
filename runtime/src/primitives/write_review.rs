@@ -41,6 +41,7 @@
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
 //! and `specs/058-findings-route-at-discovery/spec.md`.
 
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::Path;
 
@@ -485,8 +486,8 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // typo in the project config produced no `review.md` at all, losing the
     // findings this run just computed.
     let governance_section = render_unexamined_governance(repo);
-    // The denominator `examined` is a claim against — see `resolve_scope_size`.
-    let scope = resolve_scope_size(args, repo);
+    // The denominator `examined` is a claim against — see `resolve_scope`.
+    let (scope, excluded) = resolve_scope(args, repo);
     // Read the spec and resolve the surviving waivers BEFORE either render:
     // the report now carries the full record, waivers included, so both homes
     // are rendered from one computation rather than two.
@@ -545,6 +546,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             decisions: &decisions,
             dispositions,
             fix_rounds: loop_record.as_ref(),
+            excluded: &excluded,
         },
         &contracts,
     );
@@ -618,14 +620,23 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
 /// scope still resolves to 0, while a false one now carries the real `scope: N`
 /// beside a zero `examined`, which is exactly the shape Family 31 already
 /// reports as `examined-nothing`.
-fn resolve_scope_size(args: &WriteReviewArgs, repo: &Path) -> u32 {
+///
+/// The paths the scope left out come with it, each with the specs that claimed
+/// it, so the record names what it did not read.
+fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> (u32, BTreeMap<String, Vec<String>>) {
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
-    crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or(0, |result| {
-        u32::try_from(result.scope.len()).unwrap_or(u32::MAX)
-    })
+    crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or_else(
+        |_| (0, BTreeMap::new()),
+        |result| {
+            (
+                u32::try_from(result.scope.len()).unwrap_or(u32::MAX),
+                result.excluded,
+            )
+        },
+    )
 }
 
 /// The spec's analyze-record freshness.
@@ -997,6 +1008,8 @@ struct Record<'a> {
     /// The fix-round loop's fields; `None` when the run passed no
     /// `fix-rounds`, which writes none of them.
     fix_rounds: Option<&'a LoopRecord>,
+    /// Each path the scope left out, with the specs that claimed it.
+    excluded: &'a BTreeMap<String, Vec<String>>,
 }
 
 /// Render the full `review.md` document (frontmatter + fixed skeleton).
@@ -1040,6 +1053,7 @@ fn render_report(
         let _ = writeln!(fm, "examined: {examined}");
     }
     let _ = writeln!(fm, "scope: {scope}");
+    let _ = writeln!(fm, "excluded: {}", record.excluded.len());
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
     if let Some(loop_record) = record.fix_rounds {
         render_loop_record(&mut fm, loop_record);
@@ -1103,6 +1117,10 @@ fn render_report(
             "## Skipped passes\n\n{}",
             render_skipped(&args.skipped_passes)
         ),
+        format!(
+            "## Excluded from scope\n\n{}",
+            render_excluded(record.excluded)
+        ),
         format!("## Unexamined governance\n\n{governance_section}"),
     ];
 
@@ -1133,6 +1151,13 @@ fn report_summary(
     if let Some(loop_record) = record.fix_rounds {
         summary.push(' ');
         summary.push_str(&loop_summary(loop_record));
+    }
+    if !record.excluded.is_empty() {
+        let _ = write!(
+            summary,
+            " {} path(s) only another spec's commits changed are excluded from scope.",
+            record.excluded.len()
+        );
     }
     summary
 }
@@ -1349,6 +1374,24 @@ fn render_unexamined_governance(repo: &Path) -> String {
 }
 
 /// Render skipped passes as a list, or `*None.*` when empty.
+/// Each path the scope left out, by the specs that claimed it.
+fn render_excluded(excluded: &BTreeMap<String, Vec<String>>) -> String {
+    if excluded.is_empty() {
+        return "*None.*".to_string();
+    }
+    excluded
+        .iter()
+        .map(|(path, claimants)| {
+            format!(
+                "- `{}` — {}",
+                crate::primitives::flatten_line(path),
+                claimants.join(", ")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn render_skipped(skipped: &[String]) -> String {
     if skipped.is_empty() {
         return "*None.*".to_string();
@@ -1785,6 +1828,63 @@ mod tests {
                 .contains("examined:"),
             "the spec is not a second home for the claim"
         );
+    }
+
+    /// A spec with a committed transition, then a commit another spec claims
+    /// and one this spec claims. Returns the transition's parent.
+    fn repo_with_another_specs_commit(tmp: &TempDir) -> String {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let spec = |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+        write(&tmp.path().join("specs/002-y/spec.md"), &spec("planned"));
+        let parent = commit_all(&repository, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repository, "status(001): start");
+        write(&tmp.path().join("src/other.rs"), "fn o() {}\n");
+        commit_all(&repository, "feat(002): its work");
+        write(&tmp.path().join("src/mine.rs"), "fn m() {}\n");
+        commit_all(&repository, "feat(001): this spec's work");
+        parent.to_string()
+    }
+
+    #[test]
+    fn the_record_names_each_excluded_path_by_the_spec_that_claimed_it() {
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        let out = run(&args, tmp.path()).unwrap();
+
+        // The transition's spec.md and this spec's one file: the other's left.
+        assert_eq!(out.scope, 2);
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("\nscope: 2\n"), "{report}");
+        assert!(report.contains("\nexcluded: 1\n"), "{report}");
+        assert!(
+            report.contains("## Excluded from scope\n\n- `src/other.rs` — 002-y\n"),
+            "{report}"
+        );
+        assert!(
+            report.contains("1 path(s) only another spec's commits changed"),
+            "{report}"
+        );
+    }
+
+    #[test]
+    fn a_record_that_excluded_nothing_says_so() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&base_args("001-x"), dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("\nexcluded: 0\n"), "{report}");
+        assert!(
+            report.contains("## Excluded from scope\n\n*None.*\n"),
+            "{report}"
+        );
+        assert!(!report.contains("excluded from scope."), "{report}");
     }
 
     /// An unstated claim is **absent**, never rendered as a computed zero —

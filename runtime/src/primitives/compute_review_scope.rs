@@ -1,18 +1,29 @@
 //! `compute-review-scope` — deterministic scope resolution for `/ductus:review`.
 //!
-//! Resolves two things the review command needs, from git history:
+//! Resolves what the review command needs, from git history:
 //!
-//! - **diff-base** — the **parent** of the commit the spec advanced to
-//!   `in-progress` at (the transition itself is found by the lookup shared with
-//!   `check-stuck`), `HEAD` when that transition is not committed yet, or a
-//!   caller-supplied `--since` override used verbatim. The parent, because the
-//!   reopen flow commits the back-edge flip together with the work it
-//!   authorises — see
+//! - **diff-base** — the later of the **parent** of the commit the spec advanced
+//!   to `in-progress` at (the transition itself is found by the lookup shared
+//!   with `check-stuck`) and the last review commit since it; `HEAD` when that
+//!   transition is not committed yet; or a caller-supplied `--since` override
+//!   used verbatim. The parent, because the reopen flow commits the back-edge
+//!   flip together with the work it authorises — see
 //!   `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
-//! - **scope** — the union of the plan's `Affected Files` set and the set of
-//!   files modified since `diff-base`, in the working tree as well as in
-//!   commits. Both, because either alone can omit what the review exists to
-//!   look at.
+//!   A review that recorded a skipped pass, a budget stop or an open fix-round
+//!   loop does not move the start, so stopping early leaves nothing permanently
+//!   unread (spec 079, AC5).
+//! - **scope** — spec 079's AC6: walking `base..HEAD` through
+//!   [`commit_attribution`](super::commit_attribution), the paths of a commit
+//!   that belongs to the spec alone or to no spec; of a commit several specs
+//!   claim, the paths in the spec's directory or its plan's `Affected Files`,
+//!   and a path in none of those specs' plans when its subject names this spec
+//!   first or names none of them; and uncommitted work. A plan entry unchanged
+//!   in the window stays only on the spec's first review, where it may mean
+//!   missing work.
+//! - **excluded** — what the scope left out, by the spec that claimed it.
+//! - **review-owed** — false when a review record exists and the scope holds
+//!   nothing outside the spec's own directory and no scenario or data-model edit
+//!   (AC4).
 //!
 //! The review reads the working tree, so the files modified since the base
 //! are the diff from the base to the working tree, and an uncommitted
@@ -36,17 +47,23 @@
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use git2::{DiffOptions, Oid, Repository};
+use git2::{DiffOptions, Oid, Repository, Sort, Tree};
+use regex::Regex;
 
+use crate::primitives::analyze_subjects::is_review_contract;
 use crate::primitives::check_stuck::find_in_progress_commit;
+use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
-    PrimitiveError, ProjectRepository, Result, frontmatter_status, parse_affected_files,
+    PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text, frontmatter_status,
+    load_review_record, parse_affected_files, parse_feature_dir, split_frontmatter,
 };
 use crate::schema::paths;
-use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm};
+use crate::schema::primitives::{
+    BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm, ReviewBlock,
+};
 
 /// Execute the `compute-review-scope` primitive: [`compute`], returned inline
 /// while it fits `[artifacts] read-size-bytes`, and past it with its lists in
@@ -58,17 +75,22 @@ use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult
 /// for a malformed read size or a list file that cannot be written.
 pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
     let scope = compute(args, repo)?;
+    let excluded: Vec<String> = scope.excluded.keys().cloned().collect();
     let mut result = ComputeReviewScopeResult {
         diff_base: scope.diff_base.clone(),
+        base_source: scope.base_source,
+        review_owed: scope.review_owed,
         form: ListsForm::Inline,
         scope_count: scope.scope.len(),
         modified_since_count: scope.modified_since.len(),
         plan_affected_count: scope.plan_affected.len(),
         deleted_count: scope.deleted.len(),
+        excluded_count: excluded.len(),
         scope: Some(scope.scope.clone()),
         modified_since: Some(scope.modified_since.clone()),
         plan_affected: Some(scope.plan_affected.clone()),
         deleted: Some(scope.deleted.clone()),
+        excluded: Some(excluded.clone()),
         lists_file: None,
     };
     let lists = serde_json::json!({
@@ -77,6 +99,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         "modified-since": scope.modified_since,
         "plan-affected": scope.plan_affected,
         "deleted": scope.deleted,
+        "excluded": excluded,
     });
     if let Some(file) =
         super::bounded_lists::place(repo, "compute-review-scope", &args.feature, &result, &lists)?
@@ -86,6 +109,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         result.modified_since = None;
         result.plan_affected = None;
         result.deleted = None;
+        result.excluded = None;
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -97,7 +121,11 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
 pub(crate) struct ReviewScope {
     /// See [`ComputeReviewScopeResult::diff_base`].
     pub(crate) diff_base: String,
-    /// The union of `plan_affected` and `modified_since`, less `deleted`.
+    /// See [`ComputeReviewScopeResult::base_source`].
+    pub(crate) base_source: BaseSource,
+    /// See [`ComputeReviewScopeResult::review_owed`].
+    pub(crate) review_owed: bool,
+    /// See [`ComputeReviewScopeResult::scope`].
     pub(crate) scope: Vec<String>,
     /// See [`ComputeReviewScopeResult::modified_since`].
     pub(crate) modified_since: Vec<String>,
@@ -105,6 +133,9 @@ pub(crate) struct ReviewScope {
     pub(crate) plan_affected: Vec<String>,
     /// See [`ComputeReviewScopeResult::deleted`].
     pub(crate) deleted: Vec<String>,
+    /// Each path `modified_since` holds that the scope left out, with the specs
+    /// that claimed it.
+    pub(crate) excluded: BTreeMap<String, Vec<String>>,
 }
 
 /// Resolve the review's diff base and scope, every list whole. `write-review`
@@ -134,45 +165,12 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // project in a subdirectory found no transition and reviewed nothing.
     let project = ProjectRepository::discover(repo)?;
     let repository = &project.repository;
-    let spec_rel = project.to_git(&format!("{}/{}/spec.md", layout.specs_root, args.feature));
+    let record_rel = format!(
+        "{}/{}/{REVIEW_RECORD_FILE}",
+        layout.specs_root, args.feature
+    );
 
-    let diff_base = match &args.since {
-        // An explicit base is used verbatim. No parent walk: an operator naming
-        // a commit means that commit, and quietly reviewing one more than they
-        // asked for would be its own scope surprise.
-        Some(reference) => repository
-            .revparse_single(reference)?
-            .peel_to_commit()?
-            .id()
-            .to_string(),
-        // The transition commit is the *boundary* of the work window, and a
-        // boundary belongs inside the window it bounds — so the base is its
-        // parent. `base..HEAD` excludes the base's own changes, which is
-        // harmless when `/ductus:implement` flips `planned -> in-progress` in a
-        // commit holding only the status line, and silently fatal in the reopen
-        // flow: `/ductus:amend`'s `done -> in-progress` back-edge is naturally
-        // committed together with the work it authorises, so the window started
-        // after the work and contained none of it. Two specs recorded 0 MUST /
-        // 0 SHOULD over an empty subject that way on 2026-08-27 before the
-        // operator caught it (scenario
-        // `review-base-includes-the-transition-commit`).
-        None if transition_is_uncommitted(
-            &project,
-            &layout.specs_root,
-            &args.feature,
-            &feature_dir,
-        )? =>
-        {
-            // The transition that opened this window is not in history yet, so
-            // the window starts at `HEAD`. History's newest transition is an
-            // earlier window's — on a reopened spec, its first, months back.
-            repository.head()?.peel_to_commit()?.id().to_string()
-        }
-        None => match find_in_progress_commit(repository, &spec_rel)? {
-            Some(sha) => transition_parent(repository, &sha)?,
-            None => String::new(),
-        },
-    };
+    let (diff_base, base_source) = resolve_base(args, &project, &layout.specs_root, &feature_dir)?;
 
     let modified_since = if diff_base.is_empty() {
         Vec::new()
@@ -194,28 +192,390 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         .cloned()
         .collect();
 
-    // Union, not "whichever set is larger". Choosing one set can exclude the
-    // files the work actually touched: a mature spec's plan lists its whole
-    // surface, so on a small follow-on scenario the plan set wins on size and
-    // the review is scoped to files the change never went near — the gate
-    // reporting on a subject it did not examine. The union is bounded by
-    // |plan| + |modified| and the two overlap heavily in practice.
-    let scope: Vec<String> = plan_affected
-        .iter()
-        .chain(modified_since.iter())
-        .filter(|path| !deleted.contains(*path))
-        .cloned()
-        .collect::<BTreeSet<String>>()
-        .into_iter()
-        .collect();
+    // Uncommitted work cannot be attributed, so it joins whole, even on a path
+    // another spec's commit also changed. An untracked or staged file is part
+    // of it, as `modified_since` takes them.
+    let window = if diff_base.is_empty() {
+        WindowClaims::default()
+    } else {
+        attribute_window(
+            &project,
+            repo,
+            &layout.specs_root,
+            &args.feature,
+            &diff_base,
+            &plan_affected,
+        )?
+    };
+    let uncommitted: BTreeSet<String> = if diff_base.is_empty() {
+        BTreeSet::new()
+    } else {
+        let head = repository.head()?.peel_to_commit()?.id().to_string();
+        diff_since(&project, &head)?.into_iter().collect()
+    };
+
+    let (mut scope, excluded) = split_changes(&modified_since, &deleted, &window, &uncommitted);
+
+    // A plan entry unchanged in the window may mean missing work on a spec's
+    // first review, and on a later one only restates what was read. The record
+    // at `HEAD` decides, so a run's own uncommitted record does not change the
+    // answer between its two writes, and one naming no run (`last-run: null`)
+    // records no review.
+    let head_tree = repository.head()?.peel_to_commit()?.tree()?;
+    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {
+        scope.extend(
+            plan_affected
+                .iter()
+                .filter(|path| !deleted.contains(*path) && !excluded.contains_key(*path))
+                .cloned(),
+        );
+    }
+
+    let own_prefix = format!("{}/{}/", layout.specs_root, args.feature);
+    let has_run = load_review_record(&feature_dir)
+        .as_present()
+        .is_some_and(|record| record.last_run.is_some());
+    let review_owed = !has_run
+        || scope.iter().any(|path| {
+            path.strip_prefix(&own_prefix)
+                .is_none_or(is_review_contract)
+        });
 
     Ok(ReviewScope {
         diff_base,
-        scope,
+        base_source,
+        review_owed,
+        scope: scope.into_iter().collect(),
         modified_since,
         plan_affected,
         deleted: deleted.into_iter().collect(),
+        excluded,
     })
+}
+
+/// Where the review's window starts, and why: a `--since` override used
+/// verbatim, `HEAD` while the spec's move into `in-progress` is uncommitted, the
+/// last review run finished since that move, or the move's parent.
+fn resolve_base(
+    args: &ComputeReviewScopeArgs,
+    project: &ProjectRepository,
+    specs_root: &str,
+    feature_dir: &Path,
+) -> Result<(String, BaseSource)> {
+    let repository = &project.repository;
+    let spec_rel = project.to_git(&format!("{specs_root}/{}/spec.md", args.feature));
+    let record_rel = format!("{specs_root}/{}/{REVIEW_RECORD_FILE}", args.feature);
+    Ok(match &args.since {
+        // An explicit base is used verbatim. No parent walk: an operator naming
+        // a commit means that commit, and quietly reviewing one more than they
+        // asked for would be its own scope surprise.
+        Some(reference) => (
+            repository
+                .revparse_single(reference)?
+                .peel_to_commit()?
+                .id()
+                .to_string(),
+            BaseSource::Since,
+        ),
+        // The transition commit is the *boundary* of the work window, and a
+        // boundary belongs inside the window it bounds — so the base is its
+        // parent. `base..HEAD` excludes the base's own changes, which is
+        // harmless when `/ductus:implement` flips `planned -> in-progress` in a
+        // commit holding only the status line, and silently fatal in the reopen
+        // flow: `/ductus:amend`'s `done -> in-progress` back-edge is naturally
+        // committed together with the work it authorises, so the window started
+        // after the work and contained none of it. Two specs recorded 0 MUST /
+        // 0 SHOULD over an empty subject that way on 2026-08-27 before the
+        // operator caught it (scenario
+        // `review-base-includes-the-transition-commit`).
+        None if transition_is_uncommitted(project, specs_root, &args.feature, feature_dir)? => {
+            // The transition that opened this window is not in history yet, so
+            // the window starts at `HEAD`. History's newest transition is an
+            // earlier window's — on a reopened spec, its first, months back.
+            (
+                repository.head()?.peel_to_commit()?.id().to_string(),
+                BaseSource::UncommittedTransition,
+            )
+        }
+        None => match find_in_progress_commit(repository, &spec_rel)? {
+            Some(sha) => match last_review_commit(project, &record_rel, &sha)? {
+                Some(review) => (review, BaseSource::LastReview),
+                None => (transition_parent(repository, &sha)?, BaseSource::Reopen),
+            },
+            None => (String::new(), BaseSource::None),
+        },
+    })
+}
+
+/// Divide the paths changed since the base between the scope and `excluded`.
+/// Only a path a commit in the walk left to another spec leaves the scope. A
+/// path the walk never met, as when `--since` names a commit off to the side of
+/// `HEAD`, has no claimant to name, so it stays and no path goes unread.
+fn split_changes(
+    modified_since: &[String],
+    deleted: &BTreeSet<String>,
+    window: &WindowClaims,
+    uncommitted: &BTreeSet<String>,
+) -> (BTreeSet<String>, BTreeMap<String, Vec<String>>) {
+    let mut scope = BTreeSet::new();
+    let mut excluded = BTreeMap::new();
+    for path in modified_since
+        .iter()
+        .filter(|path| !deleted.contains(*path))
+    {
+        let claimants = window
+            .others
+            .get(path)
+            .filter(|_| !window.own.contains(path) && !uncommitted.contains(path));
+        match claimants {
+            Some(claimants) => {
+                excluded.insert(path.clone(), claimants.iter().cloned().collect());
+            }
+            None => {
+                scope.insert(path.clone());
+            }
+        }
+    }
+    (scope, excluded)
+}
+
+/// A review run as a committed record states it.
+struct RecordedRun {
+    last_run: String,
+    /// The run recorded a skipped pass, a budget stop or an open fix-round
+    /// loop, so what it did not read stays in the next window.
+    stopped_early: bool,
+    /// The fix-round loop was still open at this write.
+    loop_open: bool,
+}
+
+/// The review run the record at `git_path` in `tree` states: `None` when the
+/// tree holds no record, or one that does not parse or names no run.
+fn recorded_run(
+    repository: &Repository,
+    tree: &Tree<'_>,
+    git_path: &str,
+) -> Result<Option<RecordedRun>> {
+    let Some(text) = blob_text(repository, tree, git_path)? else {
+        return Ok(None);
+    };
+    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
+        return Ok(None);
+    };
+    let Ok(record) = serde_norway::from_str::<ReviewBlock>(frontmatter) else {
+        return Ok(None);
+    };
+    let Some(last_run) = record.last_run else {
+        return Ok(None);
+    };
+    let loop_open = record.fix_rounds_open == Some(true);
+    Ok(Some(RecordedRun {
+        last_run,
+        stopped_early: loop_open
+            || record.budget_stop == Some(true)
+            || !record.skipped_passes.is_empty(),
+        loop_open,
+    }))
+}
+
+/// The newest commit since the transition `transition_sha` at which a review
+/// run finished, one that did not stop early. The transition itself is left
+/// out, since work committed with a reopen belongs to the window it opens.
+///
+/// A commit finishes a run when its record names a run its first parent's does
+/// not, or when its parent's write of the same run still had the loop open: a
+/// run's two writes share one `last-run`, and the fixes committed between them
+/// are the ones its fix rounds re-read.
+fn last_review_commit(
+    project: &ProjectRepository,
+    record_rel: &str,
+    transition_sha: &str,
+) -> Result<Option<String>> {
+    let repository = &project.repository;
+    let git_path = project.to_git(record_rel);
+    let mut walk = repository.revwalk()?;
+    walk.push_head()?;
+    walk.hide(Oid::from_str(transition_sha)?)?;
+    walk.set_sorting(Sort::TOPOLOGICAL)?;
+    for oid in walk {
+        let commit = repository.find_commit(oid?)?;
+        let Some(run) = recorded_run(repository, &commit.tree()?, &git_path)? else {
+            continue;
+        };
+        if run.stopped_early {
+            continue;
+        }
+        let previous = match commit.parent(0) {
+            Ok(parent) => recorded_run(repository, &parent.tree()?, &git_path)?,
+            Err(_) => None,
+        };
+        let finishes_a_run =
+            previous.is_none_or(|prior| prior.last_run != run.last_run || prior.loop_open);
+        if finishes_a_run {
+            return Ok(Some(commit.id().to_string()));
+        }
+    }
+    Ok(None)
+}
+
+/// What the commits in a window leave one spec's review.
+#[derive(Default)]
+struct WindowClaims {
+    /// Paths a commit gave this spec.
+    own: BTreeSet<String>,
+    /// Paths a commit left to other specs, each with the specs that claimed it.
+    others: BTreeMap<String, BTreeSet<String>>,
+}
+
+/// Walk `base..HEAD` and apply AC6's rule to each commit. A feature directory
+/// [`parse_feature_dir`] does not recognize can be claimed by no commit, so
+/// nothing is left to another spec and every changed path stays in scope.
+fn attribute_window(
+    project: &ProjectRepository,
+    repo: &Path,
+    specs_root: &str,
+    feature: &str,
+    base: &str,
+    plan_affected: &[String],
+) -> Result<WindowClaims> {
+    let mut window = WindowClaims::default();
+    let Some(form) = parse_feature_dir(feature) else {
+        return Ok(window);
+    };
+    let repository = &project.repository;
+    let mut walk = repository.revwalk()?;
+    walk.push_head()?;
+    walk.hide(Oid::from_str(base)?)?;
+    let attributor = Attributor::new(project, repo, specs_root);
+    let own_prefix = format!("{specs_root}/{feature}/");
+    let own_plan = PlanEntries::new(plan_affected);
+    let mut plans: BTreeMap<String, PlanEntries> = BTreeMap::new();
+
+    for oid in walk {
+        let commit = repository.find_commit(oid?)?;
+        let claims = attributor.claims(&commit)?;
+        if claims.claimants.is_empty() || claims.claimants == std::slice::from_ref(&form) {
+            window.own.extend(claims.paths);
+            continue;
+        }
+        let others: Vec<String> = claims
+            .claimants
+            .iter()
+            .filter(|claimant| **claimant != form)
+            .map(|claimant| attributor.name_of(claimant))
+            .collect();
+        if !claims.is_claimed_by(&form) {
+            for path in claims.paths {
+                window
+                    .others
+                    .entry(path)
+                    .or_default()
+                    .extend(others.iter().cloned());
+            }
+            continue;
+        }
+
+        // Several specs claim this commit, this one among them.
+        for claimant in &claims.claimants {
+            if let Some(directory) = attributor.directory_of(claimant)
+                && !plans.contains_key(directory)
+            {
+                let entries = read_plan_affected(&repo.join(specs_root).join(directory))?;
+                plans.insert(directory.to_string(), PlanEntries::new(&entries));
+            }
+        }
+        let takes_unplanned = claims
+            .first_named
+            .as_ref()
+            .is_none_or(|first| *first == form);
+        for path in claims.paths {
+            let unplanned = !claims
+                .claimants
+                .iter()
+                .filter_map(|claimant| attributor.directory_of(claimant))
+                .filter_map(|directory| plans.get(directory))
+                .any(|plan| plan.names(&path));
+            if path.starts_with(&own_prefix)
+                || own_plan.names(&path)
+                || (unplanned && takes_unplanned)
+            {
+                window.own.insert(path);
+            } else {
+                window
+                    .others
+                    .entry(path)
+                    .or_default()
+                    .extend(others.iter().cloned());
+            }
+        }
+    }
+    Ok(window)
+}
+
+/// A plan's `Affected Files` entries, as a test of whether one names a path. An
+/// entry may be a literal path, a directory ending in `/`, or a pattern with
+/// `*`, `?`, `**` or `{a, b}`, as the corpus's plans write them.
+struct PlanEntries {
+    literal: BTreeSet<String>,
+    patterns: Vec<Regex>,
+}
+
+impl PlanEntries {
+    fn new(entries: &[String]) -> Self {
+        let mut literal = BTreeSet::new();
+        let mut patterns = Vec::new();
+        for entry in entries {
+            match entry_pattern(entry) {
+                Some(pattern) => patterns.push(pattern),
+                None => {
+                    literal.insert(entry.clone());
+                }
+            }
+        }
+        Self { literal, patterns }
+    }
+
+    fn names(&self, path: &str) -> bool {
+        self.literal.contains(path) || self.patterns.iter().any(|pattern| pattern.is_match(path))
+    }
+}
+
+/// The regular expression an entry stands for: `None` for a literal path, and
+/// for a pattern too malformed to compile, such as an unclosed `{`, which is
+/// then matched only as the text it is.
+fn entry_pattern(entry: &str) -> Option<Regex> {
+    if !entry.ends_with('/') && !entry.contains(['*', '?', '{']) {
+        return None;
+    }
+    let mut pattern = String::from("^");
+    let mut chars = entry.chars().peekable();
+    let mut depth = 0_usize;
+    while let Some(c) = chars.next() {
+        match c {
+            '*' if chars.peek() == Some(&'*') => {
+                chars.next();
+                pattern.push_str(".*");
+            }
+            '*' => pattern.push_str("[^/]*"),
+            '?' => pattern.push_str("[^/]"),
+            '{' => {
+                depth += 1;
+                pattern.push_str("(?:");
+            }
+            '}' if depth > 0 => {
+                depth -= 1;
+                pattern.push(')');
+            }
+            ',' if depth > 0 => pattern.push('|'),
+            ' ' if depth > 0 => {}
+            other => pattern.push_str(&regex::escape(&other.to_string())),
+        }
+    }
+    if entry.ends_with('/') {
+        pattern.push_str(".*");
+    }
+    pattern.push('$');
+    Regex::new(&pattern).ok()
 }
 
 /// Whether the spec's move into `in-progress` is still uncommitted: `spec.md`
@@ -574,6 +934,7 @@ mod tests {
         commit_all(&repo, "feat: plan");
         let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, "");
+        assert_eq!(result.base_source, BaseSource::None);
         assert_eq!(result.scope, [] as [String; 0]);
         assert_eq!(result.modified_since, [] as [String; 0]);
     }
@@ -762,6 +1123,7 @@ mod tests {
         write(&tmp.path().join("src/old.rs"), "fn old() { fixed(); }\n");
         let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, head_sha(&repo));
+        assert_eq!(result.base_source, BaseSource::UncommittedTransition);
         assert_eq!(
             result.modified_since,
             vec!["specs/001-x/spec.md", "src/old.rs"],
@@ -909,7 +1271,9 @@ mod tests {
             ),
             (&None, &None, &None, &None)
         );
+        assert_eq!(bounded.excluded, None);
         assert_eq!(bounded.deleted_count, whole.deleted.len());
+        assert_eq!(bounded.excluded_count, whole.excluded.len());
         assert_eq!(
             (
                 bounded.scope_count,
@@ -927,6 +1291,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(file["diff-base"], serde_json::json!(whole.diff_base));
+        assert_eq!(
+            file["excluded"],
+            serde_json::json!(whole.excluded.keys().collect::<Vec<_>>())
+        );
         assert_eq!(file["scope"], serde_json::json!(whole.scope));
         assert_eq!(
             file["modified-since"],
@@ -938,5 +1306,563 @@ mod tests {
         );
         assert_eq!(file["deleted"], serde_json::json!(whole.deleted));
         assert_eq!(compute(&args("001-x", None), tmp.path()).unwrap(), whole);
+    }
+
+    // -- spec 079: the window, the scope, `excluded` and `review-owed` -------
+
+    /// Specs 001-x and 002-y, with 001-x in `in-progress` at a committed
+    /// transition and 002-y in `in-progress` since the first commit. `planned`
+    /// is the plan each spec's `plan.md` starts with.
+    fn two_specs(plan_x: &[&str], plan_y: &[&str]) -> (tempfile::TempDir, Repository, String) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let plan = |entries: &[&str]| {
+            let rows: Vec<String> = entries
+                .iter()
+                .map(|entry| format!("| `{entry}` | Edit |"))
+                .collect();
+            format!(
+                "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n{}\n",
+                rows.join("\n")
+            )
+        };
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+        write(&tmp.path().join("specs/001-x/plan.md"), &plan(plan_x));
+        write(
+            &tmp.path().join("specs/002-y/spec.md"),
+            &spec("in-progress"),
+        );
+        write(&tmp.path().join("specs/002-y/plan.md"), &plan(plan_y));
+        write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
+        let parent = commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): planned -> in-progress");
+        (tmp, repo, parent)
+    }
+
+    fn record(extra: &str, last_run: &str) -> String {
+        format!(
+            "---\nspec: 001-x\nlast-run: {last_run}\nmust-violations: 0\nblocking: false\n{extra}---\n\n# Review\n"
+        )
+    }
+
+    /// Commit a review record for 001-x; returns the commit.
+    fn commit_record(tmp: &tempfile::TempDir, repo: &Repository, extra: &str, run: &str) -> String {
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(extra, run),
+        );
+        commit_all(repo, "review(001)")
+    }
+
+    fn change(tmp: &tempfile::TempDir, repo: &Repository, file: &str, subject: &str) -> String {
+        write(&tmp.path().join(file), &format!("{subject}\n"));
+        commit_all(repo, subject)
+    }
+
+    fn x(tmp: &tempfile::TempDir) -> ReviewScope {
+        compute(&args("001-x", None), tmp.path()).unwrap()
+    }
+
+    fn y(tmp: &tempfile::TempDir) -> ReviewScope {
+        compute(&args("002-y", None), tmp.path()).unwrap()
+    }
+
+    fn has(scope: &ReviewScope, path: &str) -> bool {
+        scope.scope.iter().any(|entry| entry == path)
+    }
+
+    #[test]
+    fn with_no_earlier_review_the_window_starts_at_the_reopen_and_a_review_is_owed() {
+        let (tmp, _repo, parent) = two_specs(&[], &[]);
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(scope.review_owed);
+    }
+
+    #[test]
+    fn a_review_in_the_reopening_moves_the_start_to_its_commit() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/before.rs", "feat(001): before the review");
+        let review = commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/after.rs", "feat(001): after the review");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert_eq!(scope.modified_since, ["src/after.rs"]);
+        assert_eq!(scope.scope, ["src/after.rs"]);
+    }
+
+    #[test]
+    fn the_result_names_where_the_window_starts_and_whether_a_review_is_owed() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["base-source"], "last-review");
+        assert_eq!(json["review-owed"], false);
+        assert_eq!(json["excluded-count"], 0);
+    }
+
+    #[test]
+    fn a_review_older_than_the_reopen_leaves_the_start_at_the_reopen() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): start");
+        commit_record(&tmp, &repo, "", "2026-10-01T00:00:00Z");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        let parent = commit_all(&repo, "status(001): done");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        change(&tmp, &repo, "src/new.rs", "feat(001): after the reopen");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/new.rs"));
+    }
+
+    /// A review recorded in the same commit as the reopen ran before it, so
+    /// the work committed with that reopen stays in the window.
+    #[test]
+    fn a_record_in_the_transition_commit_leaves_the_start_at_the_reopen() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        let parent = commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record("", "2026-11-01T00:00:00Z"),
+        );
+        write(&tmp.path().join("src/fix.rs"), "fn fix() {}\n");
+        commit_all(&repo, "fix(001): reopen with its work");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/fix.rs"));
+    }
+
+    /// A run that stopped early, by any of its three signs, leaves what it did
+    /// not read in the next window, and a record that does not parse names no
+    /// run at all.
+    #[test]
+    fn a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start() {
+        for extra in [
+            "skipped-passes: [quality]\n",
+            "budget-stop: true\n",
+            "fix-rounds-open: true\n",
+            "skipped-passes: {not: a list}\n",
+        ] {
+            let (tmp, repo, parent) = two_specs(&[], &[]);
+            commit_record(&tmp, &repo, extra, "2026-11-01T00:00:00Z");
+            let scope = x(&tmp);
+            assert_eq!(scope.diff_base, parent, "{extra}");
+            assert_eq!(scope.base_source, BaseSource::Reopen, "{extra}");
+        }
+    }
+
+    #[test]
+    fn a_stopped_run_falls_back_to_the_last_finished_one() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let finished = commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/a.rs", "feat(001): between the runs");
+        commit_record(&tmp, &repo, "budget-stop: true\n", "2026-11-02T00:00:00Z");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, finished);
+        assert!(has(&scope, "src/a.rs"));
+    }
+
+    #[test]
+    fn an_uncommitted_record_does_not_move_the_start() {
+        let (tmp, _repo, parent) = two_specs(&[], &[]);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record("", "2026-11-01T00:00:00Z"),
+        );
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
+    /// A run's two writes carry one `last-run`. The one clearing the open mark
+    /// finishes it, and the fixes committed between them leave the window.
+    #[test]
+    fn the_write_clearing_the_open_mark_finishes_the_run() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let run_at = "2026-11-01T00:00:00Z";
+        commit_record(&tmp, &repo, "fix-rounds-open: true\n", run_at);
+        change(&tmp, &repo, "src/fix.rs", "fix(001): a round's fix");
+        let closed = commit_record(&tmp, &repo, "", run_at);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, closed);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+    }
+
+    /// A later commit carrying the same finished run, such as a re-commit of its
+    /// record, finishes nothing, so the window still starts at the run's commit.
+    #[test]
+    fn a_later_commit_of_a_finished_run_does_not_move_the_start_again() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let run_at = "2026-11-01T00:00:00Z";
+        let finished = commit_record(&tmp, &repo, "", run_at);
+        change(&tmp, &repo, "src/a.rs", "feat(001): after the run");
+        commit_record(&tmp, &repo, "dispositions: {fixed: 1}\n", run_at);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, finished);
+        assert!(has(&scope, "src/a.rs"));
+    }
+
+    #[test]
+    fn another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/other.rs", "feat(002): its work");
+        change(&tmp, &repo, "specs/002-y/tasks.md", "tasks(002): its tasks");
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/other.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "specs/002-y/tasks.md"), "{:?}", scope.scope);
+        assert_eq!(scope.excluded["src/other.rs"], ["002-y"]);
+        assert_eq!(scope.excluded["specs/002-y/tasks.md"], ["002-y"]);
+        // `modified-since` keeps its meaning: every path changed since the base.
+        assert!(scope.modified_since.contains(&"src/other.rs".to_string()));
+    }
+
+    #[test]
+    fn a_claimant_no_longer_on_disk_is_named_by_its_number() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("specs/003-gone/spec.md"), &spec("done"));
+        write(&tmp.path().join("src/gone.rs"), "fn gone() {}\n");
+        commit_all(&repo, "feat(003): its work");
+        fs::remove_dir_all(tmp.path().join("specs/003-gone")).unwrap();
+
+        let scope = x(&tmp);
+        assert_eq!(scope.excluded["src/gone.rs"], ["003"]);
+    }
+
+    #[test]
+    fn a_path_another_specs_commit_also_changed_stays_in_scope() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/shared.rs", "feat(002): its change");
+        change(
+            &tmp,
+            &repo,
+            "src/shared.rs",
+            "feat(001): this spec's change",
+        );
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/shared.rs"));
+        assert!(!scope.excluded.contains_key("src/shared.rs"));
+    }
+
+    #[test]
+    fn an_unclaimed_commit_counts_whole_in_every_window() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/unclaimed.rs", "chore: lint cleanup");
+        change(&tmp, &repo, "src/nine.rs", "fix(999): a number no spec has");
+
+        for scope in [x(&tmp), y(&tmp)] {
+            assert!(has(&scope, "src/unclaimed.rs"), "{:?}", scope.scope);
+            assert!(has(&scope, "src/nine.rs"), "{:?}", scope.scope);
+        }
+    }
+
+    #[test]
+    fn an_unplanned_path_of_a_multi_spec_commit_goes_to_the_spec_named_first() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/first.rs", "feat(001, 002): both");
+        change(&tmp, &repo, "src/second.rs", "feat(002, 001): both");
+
+        let (scope_x, scope_y) = (x(&tmp), y(&tmp));
+        assert!(has(&scope_x, "src/first.rs"), "{:?}", scope_x.scope);
+        assert_eq!(scope_y.excluded["src/first.rs"], ["001-x"]);
+        assert!(has(&scope_y, "src/second.rs"), "{:?}", scope_y.scope);
+        assert_eq!(scope_x.excluded["src/second.rs"], ["002-y"]);
+    }
+
+    #[test]
+    fn an_unplanned_path_of_a_multi_spec_commit_naming_none_goes_to_every_claimant() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("specs/001-x/notes.md"), "x\n");
+        write(&tmp.path().join("specs/002-y/notes.md"), "y\n");
+        write(&tmp.path().join("src/unplanned.rs"), "fn u() {}\n");
+        commit_all(&repo, "chore: touches both specs and names neither");
+
+        for scope in [x(&tmp), y(&tmp)] {
+            assert!(has(&scope, "src/unplanned.rs"), "{:?}", scope.scope);
+            assert!(!scope.excluded.contains_key("src/unplanned.rs"));
+        }
+    }
+
+    #[test]
+    fn a_planned_path_of_a_multi_spec_commit_goes_to_the_plan_naming_it() {
+        let (tmp, repo, _) = two_specs(&["src/x.rs"], &["src/y.rs"]);
+        write(&tmp.path().join("src/x.rs"), "fn x() {}\n");
+        write(&tmp.path().join("src/y.rs"), "fn y() {}\n");
+        commit_all(&repo, "feat(001, 002): both");
+
+        let (scope_x, scope_y) = (x(&tmp), y(&tmp));
+        assert!(has(&scope_x, "src/x.rs"));
+        // Named first, and still not this spec's: its sibling's plan names it.
+        assert_eq!(scope_x.excluded["src/y.rs"], ["002-y"]);
+        assert!(has(&scope_y, "src/y.rs"));
+        assert_eq!(scope_y.excluded["src/x.rs"], ["001-x"]);
+    }
+
+    /// The spec's own directory is its own whatever the subject names first.
+    #[test]
+    fn a_multi_spec_commit_gives_each_spec_its_own_directory() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("specs/001-x/tasks.md"), "x\n");
+        write(&tmp.path().join("specs/002-y/tasks.md"), "y\n");
+        commit_all(&repo, "tasks(002, 001): both");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "specs/001-x/tasks.md"), "{:?}", scope.scope);
+        assert_eq!(scope.excluded["specs/002-y/tasks.md"], ["002-y"]);
+    }
+
+    #[test]
+    fn since_moves_only_the_start_and_the_scope_rule_still_applies() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let start = change(&tmp, &repo, "src/before.rs", "feat(001): before");
+        change(&tmp, &repo, "src/other.rs", "feat(002): its work");
+        change(&tmp, &repo, "src/mine.rs", "feat(001): this spec");
+
+        let scope = compute(&args("001-x", Some(&start)), tmp.path()).unwrap();
+        assert_eq!(scope.diff_base, start);
+        assert_eq!(scope.base_source, BaseSource::Since);
+        assert!(has(&scope, "src/mine.rs"));
+        assert_eq!(scope.excluded["src/other.rs"], ["002-y"]);
+        assert!(!has(&scope, "src/before.rs"));
+    }
+
+    /// `--since` naming a commit off to the side of `HEAD`: a path only that
+    /// side changed differs from the base, and no walked commit names it, so it
+    /// has no claimant to leave it to and stays in scope.
+    #[test]
+    fn a_changed_path_no_walked_commit_names_stays_in_scope() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let main_tip = repo.head().unwrap().target().unwrap();
+        let main_ref = repo.head().unwrap().name().unwrap().to_string();
+        let side = change(&tmp, &repo, "src/old.rs", "feat(002): on a side branch");
+
+        let mut checkout = git2::build::CheckoutBuilder::new();
+        checkout.force().remove_untracked(true);
+        repo.set_head_detached(main_tip).unwrap();
+        repo.checkout_head(Some(&mut checkout)).unwrap();
+        repo.reference(&main_ref, main_tip, true, "rewind").unwrap();
+        repo.set_head(&main_ref).unwrap();
+
+        let scope = compute(&args("001-x", Some(&side)), tmp.path()).unwrap();
+        assert_eq!(scope.modified_since, ["src/old.rs"]);
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
+        assert!(scope.excluded.is_empty(), "{:?}", scope.excluded);
+    }
+
+    #[test]
+    fn uncommitted_work_joins_whole_even_on_another_specs_path() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/other.rs", "feat(002): its work");
+        write(&tmp.path().join("src/other.rs"), "fn edited() {}\n");
+        write(&tmp.path().join("src/untracked.rs"), "fn new() {}\n");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/other.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains_key("src/other.rs"));
+        assert!(has(&scope, "src/untracked.rs"), "{:?}", scope.scope);
+    }
+
+    #[test]
+    fn an_unchanged_plan_entry_stays_only_on_the_first_review() {
+        let (tmp, repo, _) = two_specs(&["src/planned.rs", "src/touched.rs"], &[]);
+        assert!(has(&x(&tmp), "src/planned.rs"));
+
+        commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/touched.rs", "feat(001): the second pass");
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/touched.rs"), "{:?}", scope.scope);
+        assert_eq!(
+            scope.plan_affected,
+            ["src/planned.rs", "src/touched.rs"],
+            "plan-affected keeps its meaning"
+        );
+    }
+
+    /// A record naming no run records no review, as the gate reads it.
+    #[test]
+    fn a_record_with_no_run_is_a_first_review_and_owes_one() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        write(
+            &tmp.path().join("specs/001-x/plan.md"),
+            "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n\
+             | `src/planned.rs` | Edit |\n",
+        );
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: null\nmust-violations: 0\nblocking: false\n---\n",
+        );
+        commit_all(&repo, "chore: seed");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// A run's own uncommitted record does not make its second write a later
+    /// review, or a run's two denominators would disagree.
+    #[test]
+    fn an_uncommitted_record_keeps_a_first_review_a_first_review() {
+        let (tmp, _repo, _) = two_specs(&["src/planned.rs"], &[]);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record("", "2026-11-01T00:00:00Z"),
+        );
+        assert!(has(&x(&tmp), "src/planned.rs"));
+    }
+
+    #[test]
+    fn a_plan_file_only_another_specs_commit_changed_moves_to_that_spec() {
+        let (tmp, repo, _) = two_specs(&["src/planned.rs"], &[]);
+        change(&tmp, &repo, "src/planned.rs", "feat(002): its change");
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert_eq!(scope.excluded["src/planned.rs"], ["002-y"]);
+    }
+
+    /// A spec reopened by `edit`, with a review record from before the reopen.
+    fn reopened_with_a_record(edit: &str) -> ReviewScope {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record("", "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        write(&tmp.path().join(edit), "edited\n");
+        commit_all(&repo, "docs(001): the reopening's edit");
+        x(&tmp)
+    }
+
+    #[test]
+    fn a_reopening_that_changed_only_text_owes_no_review() {
+        for edit in ["specs/001-x/plan.md", "specs/001-x/tasks.md"] {
+            assert!(!reopened_with_a_record(edit).review_owed, "{edit}");
+        }
+    }
+
+    #[test]
+    fn a_reopening_that_changed_code_a_scenario_or_the_data_model_owes_a_review() {
+        for edit in [
+            "src/code.rs",
+            "specs/001-x/scenarios/a.md",
+            "specs/001-x/data-model.md",
+        ] {
+            assert!(reopened_with_a_record(edit).review_owed, "{edit}");
+        }
+    }
+
+    #[test]
+    fn a_review_is_owed_with_no_record_whatever_the_window_holds() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        assert!(x(&tmp).review_owed);
+    }
+
+    #[test]
+    fn a_project_in_a_subdirectory_excludes_by_project_relative_paths() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+        write(&project.join("specs/001-x/spec.md"), &spec("planned"));
+        write(&project.join("specs/002-y/spec.md"), &spec("planned"));
+        commit_all(&repo, "chore: seed");
+        write(&project.join("specs/001-x/spec.md"), &spec("in-progress"));
+        commit_all(&repo, "status(001): start");
+        write(&project.join("specs/002-y/plan.md"), "plan\n");
+        write(&project.join("src/theirs.rs"), "fn t() {}\n");
+        write(&tmp.path().join("other/x.rs"), "fn x() {}\n");
+        commit_all(&repo, "chore: touches 002 and the neighbour");
+
+        let scope = compute(&args("001-x", None), &project).unwrap();
+        assert_eq!(scope.excluded["specs/002-y/plan.md"], ["002-y"]);
+        assert_eq!(scope.excluded["src/theirs.rs"], ["002-y"]);
+        assert!(!scope.modified_since.iter().any(|p| p.contains("other/")));
+    }
+
+    #[test]
+    fn a_plan_entry_names_a_path_as_the_corpus_writes_them() {
+        let plan = PlanEntries::new(&[
+            "src/exact.rs".to_string(),
+            "runtime/tests/".to_string(),
+            "framework/commands/*.md".to_string(),
+            "docs/**".to_string(),
+            "specs/065-x/{plan.md, tasks.md}".to_string(),
+            "scripts/{a,b}-*.sh".to_string(),
+            "file?.txt".to_string(),
+            "src/{unclosed".to_string(),
+        ]);
+        for hit in [
+            "src/exact.rs",
+            "runtime/tests/deep/er.rs",
+            "framework/commands/review.md",
+            "docs/a/b.md",
+            "specs/065-x/tasks.md",
+            "scripts/b-lint.sh",
+            "file1.txt",
+            "src/{unclosed",
+        ] {
+            assert!(plan.names(hit), "{hit}");
+        }
+        for miss in [
+            "src/exact.rs.bak",
+            "src/exactXrs",
+            "runtime/testsuite.rs",
+            "framework/commands/sub/review.md",
+            "specs/065-x/spec.md",
+            "scripts/c-lint.sh",
+            "file12.txt",
+            "dir/file1.txt",
+        ] {
+            assert!(!plan.names(miss), "{miss}");
+        }
     }
 }

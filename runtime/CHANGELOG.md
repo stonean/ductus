@@ -47,6 +47,23 @@ its version and date.
 
 ### Changed
 
+- **A review reads its own spec's change, and a later run starts where the
+  last one finished.** `compute-review-scope`'s default window now starts at the
+  later of the spec's last reopen and its last finished review, reported as
+  `base-source`; a run that recorded a skipped pass, a budget stop or an open
+  fix-round loop does not move it. A commit belongs to each spec whose directory
+  it touches or whose number its subject's leading scope names, and the scope
+  holds the paths of a commit that belongs to the spec alone or to no spec; of a
+  commit several specs claim, the paths in the spec's directory or its plan's
+  Affected Files, and a path in none of their plans when its subject names this
+  spec first or names none of them; and uncommitted work. A plan entry unchanged
+  in the window stays only on the spec's first review. What the scope leaves out
+  is the result's `excluded` list, and `review.md` gains an `excluded` count and
+  an `Excluded from scope` section naming each path by the spec that claimed it.
+  A new `review-owed` is false when a review record names a run and the scope
+  holds nothing outside the spec's directory and no scenario or data-model edit,
+  and `/review` then reports that and stops, since such a reopening owes an
+  analysis and no review.
 - **The error envelope's home is `specs/errors.md`.** `api-backend.md`'s
   `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` read the project's error
   envelope from `specs/errors.md`, where the shipped `errors.md` template

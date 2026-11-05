@@ -762,7 +762,7 @@ async fn compute_review_scope_returns_structured_scope_via_mcp() {
 
 /// The `[artifacts] read-size-bytes` both bounded tests set: small enough
 /// that twelve paths pass it inline, large enough for the file form.
-const SMALL_READ_SIZE: usize = 300;
+const SMALL_READ_SIZE: usize = 400;
 
 /// A repository whose `001-x` went in progress and then gained `n` source
 /// files, and whose sibling `002-y` gained `n` scenarios, with `[artifacts]
@@ -798,7 +798,7 @@ fn over_the_read_size(n: usize) -> tempfile::TempDir {
         write(&format!("src/f{i}.rs"), &format!("fn f{i}() {{}}\n"));
         write(&format!("specs/002-y/scenarios/s{i}.md"), "x\n");
     }
-    commit("work");
+    commit("feat(001): work");
     write(
         ".ductus/config.toml",
         &format!("[artifacts]\nread-size-bytes = {SMALL_READ_SIZE}\n"),

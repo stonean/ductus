@@ -59,22 +59,43 @@ impl CommitClaims {
 pub(crate) struct Attributor<'a> {
     project: &'a ProjectRepository,
     specs_root: &'a str,
-    /// The specs on disk, the only ones a subject alone can claim for.
-    known: Vec<FeatureForm>,
+    /// The specs on disk with their directories, the only ones a subject alone
+    /// can claim for.
+    known: Vec<(FeatureForm, String)>,
 }
 
 impl<'a> Attributor<'a> {
     /// An attributor for the project at `repo`, whose spec root is `specs_root`.
     pub(crate) fn new(project: &'a ProjectRepository, repo: &Path, specs_root: &'a str) -> Self {
         let known = list_feature_dirs(&repo.join(specs_root))
-            .iter()
-            .filter_map(|name| parse_feature_dir(name))
+            .into_iter()
+            .filter_map(|name| parse_feature_dir(&name).map(|form| (form, name)))
             .collect();
         Self {
             project,
             specs_root,
             known,
         }
+    }
+
+    /// The directory of the spec `form`, when it is on disk.
+    pub(crate) fn directory_of(&self, form: &FeatureForm) -> Option<&str> {
+        self.known
+            .iter()
+            .find(|(known, _)| known == form)
+            .map(|(_, directory)| directory.as_str())
+    }
+
+    /// The spec `form`, as a report names it: its directory, or for a spec no
+    /// longer on disk the part of a directory's name before its slug.
+    pub(crate) fn name_of(&self, form: &FeatureForm) -> String {
+        self.directory_of(form).map_or_else(
+            || match form {
+                FeatureForm::Sequential { number } => format!("{number:03}"),
+                FeatureForm::BranchScoped { identifier, n } => format!("{identifier}.{n}"),
+            },
+            str::to_string,
+        )
     }
 
     /// Who `commit` belongs to, and the paths it contributes.
@@ -102,7 +123,7 @@ impl<'a> Attributor<'a> {
         let subject = commit.summary().ok().flatten().unwrap_or_default();
         let named: Vec<FeatureForm> = subject_scope_forms(subject)
             .into_iter()
-            .filter(|form| self.known.contains(form) || touched.contains(form))
+            .filter(|form| self.directory_of(form).is_some() || touched.contains(form))
             .collect();
         let first_named = named.first().cloned();
         let mut claimants: Vec<FeatureForm> = Vec::new();
