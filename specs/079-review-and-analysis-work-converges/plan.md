@@ -50,7 +50,7 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 ### The measurement
 
-`measure-reopenings` lives in `runtime/src/primitives/measure_reopenings.rs`, because AC8 needs it in an adopter's project and AC19 needs it in `dashboard`. One revwalk reads each `specs/*/spec.md`'s `status:` by blob, memoized as `status_of_commit` does (`runtime/src/primitives/check_stuck.rs`), and delimits reopenings. A run is a distinct `last-run` in the committed record inside a reopening. A second run is over the bound unless the previous record of the same kind in that reopening was `blocking`, or counted hard-fail, blocking, MUST, SHOULD or `contract-breaks`. A review's two writes share step 11's `reviewed-at`, so they are one run. A shallow clone is detected through `Repository::is_shallow` and reports `shallow-history`. The default window keeps `/{project}:status` fast and lets old misses age out; `--since` serves AC20.
+`measure-reopenings` lives in `runtime/src/primitives/measure_reopenings.rs`, because AC8 needs it in an adopter's project and AC19 needs it in `dashboard`. One revwalk reads each `specs/*/spec.md`'s `status:` by blob, memoized as `status_of_commit` does (`runtime/src/primitives/check_stuck.rs`), and delimits reopenings. A run is a distinct `last-run` in the committed record inside a reopening. A second run is over the bound unless the previous record of the same kind in that reopening was `blocking`, or counted hard-fail, blocking, MUST, SHOULD or `contract-breaks`. A review's two writes share step 11's `reviewed-at`, so they are one run. `decisions-by-person` counts the record's `decisions:` entries stamped with that run's time whose `decided-by` is not `rule`. A shallow clone is detected through `Repository::is_shallow` and reports `shallow-history`. The default window keeps `/{project}:status` fast and lets old misses age out; `--since` serves AC20.
 
 The baseline check is a recorded command result at `d62e72f3`, not a test, because a test reading real history would need a full-depth checkout to run at all (§design-principles). A fixture repository proves each state in `runtime/tests/measure_reopenings.rs`.
 
@@ -88,6 +88,8 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/primitives/write_review.rs` | Modify | Open mark, `excluded`, `contract-breaks`, `decided-by: rule` |
 | `runtime/src/primitives/write_analysis.rs` | Modify | `decided-by: rule` |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Blocks on an open mark |
+| `runtime/src/primitives/check_prescriptions.rs` | Modify | Shares the round's filter |
+| `runtime/src/primitives/decisions.rs` | Modify | `decided-by: rule`; a person's stored decision wins |
 | `runtime/src/primitives/diff_cross_spec.rs` | Modify | Window and own commits |
 | `runtime/src/primitives/derive_boundary.rs` | Modify | Doc comment no longer claims a shared window |
 | `runtime/src/primitives/classify_spec_edit.rs` | Create | Correction or reopen, from the diff |
@@ -103,6 +105,8 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/main.rs` | Modify | Subcommands and `about` constants |
 | `runtime/tests/measure_reopenings.rs` | Create | Each measurement state |
 | `runtime/tests/fix_rounds.rs` | Modify | Another spec's commit between rounds |
+| `runtime/tests/review_command.rs` | Modify | Only a gating deferral reaches `gate-confirm` |
+| `runtime/tests/walker.rs` | Modify | A bounded-result fixture's commit names its spec |
 | `runtime/tests/mcp.rs` | Modify | A description equals its subcommand's `about` |
 | `runtime/CHANGELOG.md` | Modify | Each change |
 | `scripts/audit/cross-doc-consistency.sh` | Modify | The back-edge text it pins |
@@ -122,6 +126,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `framework/reference/implement.md` | Modify | `diff-cross-spec`, gate check 12 |
 | `framework/reference/groom.md` | Modify | Dispositions |
 | `docs/analyze.md` | Modify | Dispositions |
+| `docs/developing-ductus.md` | Create | Procedures moved out of `AGENTS.md` |
 | `docs/slash-commands.md` | Modify | Dispositions, reopen |
 | `README.md` | Modify | Confirmation claim |
 | `AGENTS.md` | Modify | Retired window and fix-round entries |

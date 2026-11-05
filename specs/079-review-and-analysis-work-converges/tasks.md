@@ -69,7 +69,7 @@ Blocked on task 1.
 
 ## 7. The measurement and `/status` (AC1, AC8, AC17, AC19)
 
-Blocked on tasks 2 and 5: it reads the fields they write.
+Blocked on tasks 2 and 5: it reads the fields they write. `review.md` now carries `contract-breaks`, `fix-rounds-open` and `excluded`, and each stored decision a `decided-by`, with `rule` for what the rule decided (`decisions::RULE_DECIDER`). `ReviewBlock` in `runtime/src/schema/primitives.rs` has `fix_rounds_open` but no `contract_breaks`, so this task adds that field.
 
 The baseline in the spec's outcome entry came from throwaway scripts, so its method there is what to reproduce: closed reopenings by their closing commit's author date. Two traps when re-deriving: `git log --follow --reverse` returned no commits for 007, 064 and 065, so walk without `--follow`; and a grep for `- [ ]` counts the tasks template's example checkboxes, which 026, 052 and 058 keep inside an HTML comment, so `waiting` reads through `read-tasks`. Another walk gives another count (commits adding `status: done` under `--since` gave 119 against 123), so state which walk a figure used.
 
@@ -93,7 +93,7 @@ Independent of tasks 1–7, and may run beside them, but `runtime/src/mcp/server
 
 ## 9. The constitution (AC2, AC14, AC15, AC17, AC21, AC9)
 
-Blocked on tasks 2–8, so it states what exists.
+Blocked on tasks 2–8, so it states what exists. Steps 10 and 19 now have a host that cannot ask apply the rule and leave each gating finding undispositioned, with only `ductus exec` writing nothing, so §brownfield-inbox's *with no operator, nothing is written* changes with the rest of that bullet.
 
 - [ ] The four edits in the plan, keeping every anchor a `§` reference resolves
 - [ ] `scripts/audit/cross-doc-consistency.sh` and `framework/commands/*.md`'s host-integration pointers follow them
@@ -103,7 +103,7 @@ Blocked on tasks 2–8, so it states what exists.
 
 ## 10. Correct the remaining false claims (AC12)
 
-Blocked on tasks 2–9: read `research.md`, which is a floor, then grep each behavior's words again, since the code has moved. A statement made false is corrected, including one that a data model is canonical; a copy that is still true waits until next edited.
+Blocked on tasks 2–9: read `research.md`, which is a floor, then grep each behavior's words again, since the code has moved. A statement made false is corrected, including one that a data model is canonical; a copy that is still true waits until next edited. Tasks 3 and 5 already corrected 078, 058 and 047, so `research.md`'s counts for those are spent, and a search of 050, 063 and 066 for a claim that every disposition is confirmed found none, so their counted claims are other behaviors'. Known still false: 066's data model lists `fix-round-not-re-read` as the gate's last check with no `fix-round-loop-open`, and its scenario `review-scope-union` states the old union.
 
 - [ ] In-progress specs: 000, 016, 017, 020, 022, 041, 045, 047, 050, 054, 063, 066, 075
 - [ ] 011 and 046 (`done`): `classify-spec-edit` returns `correction`, so they stay `done`
