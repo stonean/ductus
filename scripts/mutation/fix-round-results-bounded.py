@@ -27,8 +27,8 @@ MUTATIONS = [
     (
         'M2 a round names its list file but keeps its paths inline',
         'src/primitives/brief_re_read.rs',
-        '        result.paths = None;\n        result.lists_file = Some(file);',
-        '        result.lists_file = Some(file);',
+        '        result.paths = None;\n        result.exempt = None;',
+        '        result.exempt = None;',
         'brief_re_read::tests::a_round_past_the_read_size_names_a_file_holding_its_paths',
     ),
     (

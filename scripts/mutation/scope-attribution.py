@@ -1,6 +1,9 @@
 """Mutation list for 079's commit attribution, window and scope: a commit belongs
 to each spec whose directory it touches and each spec its subject's scope names
-(`runtime/src/primitives/commit_attribution.rs`).
+(`runtime/src/primitives/commit_attribution.rs`), the review window and scope
+built on it (`compute_review_scope.rs`), and a fix round's own use of it with the
+open mark (`fix_rounds.rs`, `brief_re_read.rs`, `check_review_gate.rs`,
+`write_review.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/scope-attribution.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -192,23 +195,16 @@ MUTATIONS = [
     (
         'M26 every commit counts whole, as the old union did',
         'src/primitives/compute_review_scope.rs',
-        'if claims.claimants.is_empty() || claims.claimants == std::slice::from_ref(&form) {',
-        'if !claims.claimants.len() > 0 || claims.claimants.len() < 99 {',
+        '        if claims.claimants.is_empty() {\n            window.own.extend(claims.paths);',
+        '        if claims.claimants.len() < 99 {\n            window.own.extend(claims.paths);',
         'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant',
     ),
     (
         'M27 a commit no spec claims is left out',
         'src/primitives/compute_review_scope.rs',
-        'if claims.claimants.is_empty() || claims.claimants == std::slice::from_ref(&form) {',
-        'if claims.claimants == std::slice::from_ref(&form) {',
+        '        if claims.claimants.is_empty() {\n            window.own.extend(claims.paths);',
+        '        if claims.claimants.len() > 99 {\n            window.own.extend(claims.paths);',
         'compute_review_scope::tests::an_unclaimed_commit_counts_whole_in_every_window',
-    ),
-    (
-        'M28 a commit this spec alone claims goes through the several-specs rule',
-        'src/primitives/compute_review_scope.rs',
-        'if claims.claimants.is_empty() || claims.claimants == std::slice::from_ref(&form) {',
-        'if claims.claimants.is_empty() {',
-        'compute_review_scope::tests::a_path_another_specs_commit_also_changed_stays_in_scope compute_review_scope::tests::a_review_in_the_reopening_moves_the_start_to_its_commit',
     ),
     (
         "M29 another spec's commit is treated as several-specs",
@@ -423,8 +419,8 @@ MUTATIONS = [
     (
         'M59 the record does not name what it excluded',
         'src/primitives/write_review.rs',
-        '    if excluded.is_empty() {\n        return "*None.*".to_string();\n    }\n    excluded\n        .iter()',
-        '    if excluded.len() < 99 {\n        return "*None.*".to_string();\n    }\n    excluded\n        .iter()',
+        '    let from_scope = excluded\n        .iter()',
+        '    let from_scope = excluded\n        .iter()\n        .take(0)',
         'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
     ),
     (
@@ -454,5 +450,117 @@ MUTATIONS = [
         '.is_some_and(|record| record.last_run.is_some());',
         '.is_some();',
         'compute_review_scope::tests::a_record_with_no_run_is_a_first_review_and_owes_one',
+    ),
+    (
+        "M64 another spec's commit stays in the round",
+        'src/primitives/fix_rounds.rs',
+        '.partition(|path| others.contains(path));',
+        '.partition(|_| false);',
+        'brief_re_read::tests::only_another_specs_commit_leaves_the_round_with_nothing_to_re_read brief_re_read::tests::another_specs_commit_leaves_a_round_that_also_holds_a_fix',
+    ),
+    (
+        'M65 a commit this spec claims leaves the round',
+        'src/primitives/fix_rounds.rs',
+        'if claims.claimants.is_empty() || claims.is_claimed_by(&form) {',
+        'if claims.claimants.is_empty() {',
+        'brief_re_read::tests::a_commit_this_spec_or_no_spec_claims_stays_in_the_round',
+    ),
+    (
+        'M66 a commit no spec claims leaves the round',
+        'src/primitives/fix_rounds.rs',
+        'if claims.claimants.is_empty() || claims.is_claimed_by(&form) {',
+        'if claims.is_claimed_by(&form) {',
+        'brief_re_read::tests::a_commit_this_spec_or_no_spec_claims_stays_in_the_round',
+    ),
+    (
+        "M67 a path this spec's commit also changed leaves the round",
+        'src/primitives/fix_rounds.rs',
+        '.filter(|path| !own.contains(path))',
+        '.filter(|_| true)',
+        'brief_re_read::tests::a_path_a_commit_of_this_spec_also_changed_stays_in_the_round',
+    ),
+    (
+        'M68 an uncommitted edit at the new snapshot does not keep the path',
+        'src/primitives/fix_rounds.rs',
+        '            && blob_text(repository, &snapshot_tree, &git_path)?\n                == blob_text(repository, &snapshot_head_tree, &git_path)?;',
+        ';',
+        'brief_re_read::tests::an_uncommitted_edit_on_another_specs_path_stays_in_the_round',
+    ),
+    (
+        'M69 an uncommitted edit at the base does not keep the path',
+        'src/primitives/fix_rounds.rs',
+        '        let unedited = blob_text(repository, &base_tree, &git_path)?\n            == blob_text(repository, &base_head_tree, &git_path)?\n            && blob_text',
+        '        let unedited = blob_text',
+        'brief_re_read::tests::an_uncommitted_edit_at_the_base_on_another_specs_path_stays_in_the_round',
+    ),
+    (
+        "M70 any base's parent is taken as HEAD at its time",
+        'src/primitives/fix_rounds.rs',
+        '    if commit.message().ok() == Some(SNAPSHOT_MESSAGE)\n        && commit.author().name().ok() == Some(SNAPSHOT_NAME)\n        && let Ok(parent) = commit.parent(0)',
+        '    if let Ok(parent) = commit.parent(0)',
+        'brief_re_read::tests::a_base_that_is_no_snapshot_starts_at_itself',
+    ),
+    (
+        "M71 a subdirectory project's content is read by the wrong name",
+        'src/primitives/fix_rounds.rs',
+        '        let git_path = project.to_git(&path);',
+        '        let git_path = path.clone();',
+        'brief_re_read::tests::a_project_in_a_subdirectory_leaves_another_specs_commit_out',
+    ),
+    (
+        "M72 a mixed round's exempt path stays in its brief",
+        'src/primitives/brief_re_read.rs',
+        '    let (exempt, paths) = split_exempt(round.paths, &format!("{feature_rel}/"));',
+        '    let (mut exempt, mut paths) = split_exempt(round.paths, &format!("{feature_rel}/"));\n    if !paths.is_empty() {\n        paths.append(&mut exempt);\n        paths.sort();\n    }',
+        'brief_re_read::tests::an_exempt_path_leaves_a_mixed_rounds_brief_and_record brief_re_read::tests::a_spec_body_edit_with_code_needs_a_re_read',
+    ),
+    (
+        "M73 a round holding only another spec's commit is empty",
+        'src/primitives/brief_re_read.rs',
+        '    } else if exempt.is_empty() && excluded.is_empty() {',
+        '    } else if exempt.is_empty() {',
+        'brief_re_read::tests::only_another_specs_commit_leaves_the_round_with_nothing_to_re_read',
+    ),
+    (
+        'M74 the file form keeps exempt inline',
+        'src/primitives/brief_re_read.rs',
+        '        result.exempt = None;\n',
+        '',
+        'brief_re_read::tests::a_round_past_the_read_size_names_a_file_holding_its_paths',
+    ),
+    (
+        'M75 the file form keeps excluded inline',
+        'src/primitives/brief_re_read.rs',
+        '        result.excluded = None;\n',
+        '',
+        'brief_re_read::tests::a_round_past_the_read_size_names_a_file_holding_its_paths',
+    ),
+    (
+        'M76 an open mark does not hold done',
+        'src/primitives/check_review_gate.rs',
+        '    if review.fix_rounds_open == Some(true) {',
+        '    if review.fix_rounds_open == Some(false) {',
+        'check_review_gate::tests::an_open_fix_round_loop_holds_done',
+    ),
+    (
+        'M77 loop-open writes no mark',
+        'src/primitives/write_review.rs',
+        '    if args.loop_open {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        '    if args.loop_open && args.feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        'write_review::tests::the_open_mark_follows_the_loop_open_argument',
+    ),
+    (
+        'M78 the mark is written whatever the argument says',
+        'src/primitives/write_review.rs',
+        '    if args.loop_open {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        '    if !args.feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        'write_review::tests::the_open_mark_follows_the_loop_open_argument',
+    ),
+    (
+        'M79 the record does not name what a round left out',
+        'src/primitives/write_review.rs',
+        'from_scope.chain(from_rounds).collect();',
+        'from_scope.chain(from_rounds.take(0)).collect();',
+        'write_review::tests::the_record_names_each_path_a_fix_round_left_out',
     ),
 ]

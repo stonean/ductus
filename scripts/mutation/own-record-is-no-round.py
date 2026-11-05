@@ -25,9 +25,9 @@ MUTATIONS = [
     ),
     (
         'M2 brief-re-read diffs every path, the record included',
-        'src/primitives/brief_re_read.rs',
-        '    let paths = fix_rounds::round_paths(&project, &base, &snapshot, &feature_rel)?;',
-        '    let paths = fix_rounds::changed_between(&project, &base, &snapshot)?;',
+        'src/primitives/fix_rounds.rs',
+        '        .filter(|path| *path != record)\n',
+        '        .filter(|_| true)\n',
         'brief_re_read::tests::the_reviews_own_record_is_no_round_path',
     ),
     (

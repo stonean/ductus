@@ -470,6 +470,21 @@ fn fix_round_block(
     rel_dir: &str,
     project: &str,
 ) -> Option<CheckReviewGateResult> {
+    if review.fix_rounds_open == Some(true) {
+        return Some(CheckReviewGateResult {
+            passed: false,
+            blocked_by: Some(ReviewGateBlock::FixRoundLoopOpen),
+            message: Some(format!(
+                "blocked: the fix-round loop in {rel_dir}/review.md is still open, so the review \
+                 stopped before its last write and its fixes may be unread"
+            )),
+            guidance: Some(format!(
+                "Re-run /{project}:review: its last write records the rounds and clears the mark."
+            )),
+            violations: vec![],
+            cross_spec_impact: vec![],
+        });
+    }
     let not_re_read = review.not_re_read?;
     let waived = review
         .round_waivers
@@ -2888,6 +2903,39 @@ mod tests {
             )
         );
         assert!(result.guidance.unwrap().contains("Re-run /ductus:review"));
+    }
+
+    /// A review cut off between its two writes leaves the mark, which holds
+    /// `done` and names the command that clears it (spec 079, AC14).
+    #[test]
+    fn an_open_fix_round_loop_holds_done() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(tmp.path(), "fix-rounds-open: true\n");
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::FixRoundLoopOpen));
+        assert!(
+            result
+                .message
+                .as_deref()
+                .unwrap()
+                .contains("specs/007-gate/review.md is still open"),
+            "{:?}",
+            result.message
+        );
+        assert!(result.guidance.unwrap().contains("Re-run /ductus:review"));
+    }
+
+    /// A record with no mark, older or from `ductus exec`, is unaffected: it
+    /// passes with the notice that it does not say whether fixes were re-read.
+    #[test]
+    fn a_record_with_no_mark_is_unaffected() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{:?}", result.message);
+        assert!(result.guidance.unwrap().contains("`not-re-read` field"));
     }
 
     /// A waiver with a reason releases its round, and the passing gate says

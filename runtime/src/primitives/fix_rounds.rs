@@ -4,14 +4,16 @@
 //!
 //! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
+use std::collections::BTreeSet;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use git2::{IndexAddOption, Oid, Signature};
 
+use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
-use crate::primitives::{PrimitiveError, ProjectRepository, Result};
+use crate::primitives::{PrimitiveError, ProjectRepository, Result, blob_text, parse_feature_dir};
 use crate::schema::paths;
 use crate::schema::primitives::{ReReadFinding, ReReadSeverity};
 
@@ -463,27 +465,125 @@ pub(crate) fn snapshot(project: &ProjectRepository) -> Result<(String, usize)> {
     Ok((commit.to_string(), files))
 }
 
+/// What a round's snapshots say changed, divided.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct RoundPaths {
+    /// The paths that belong to the round.
+    pub(crate) paths: Vec<String>,
+    /// The paths only commits another spec claims changed (spec 079, AC3).
+    pub(crate) excluded: Vec<String>,
+}
+
+/// Which feature a round belongs to, and where its project keeps its specs.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct RoundSubject<'a> {
+    /// The project root.
+    pub(crate) repo: &'a Path,
+    /// The spec root, from the project root.
+    pub(crate) specs_root: &'a str,
+    /// The feature directory's name.
+    pub(crate) feature: &'a str,
+}
+
 /// A round's paths: [`changed_between`] its base and snapshot, less the
 /// reviewed feature's own `review.md` (spec 078, scenario
-/// `a-reviews-own-record-is-no-fix-round`). The record is the command's own
-/// output, regenerated whole on every run, so a round never re-reads it,
-/// whoever wrote it, and a run that fixed and deferred nothing has no round.
-/// `feature_rel` is the feature directory from the project root.
+/// `a-reviews-own-record-is-no-fix-round`), and with what only another spec's
+/// commits changed set apart. The record is the command's own output,
+/// regenerated whole on every run, so a round never re-reads it, whoever wrote
+/// it, and a run that fixed and deferred nothing has no round.
 ///
 /// # Errors
 ///
-/// As [`changed_between`].
+/// As [`changed_between`], and [`PrimitiveError::Git`] when the commits between
+/// the two snapshots cannot be read.
 pub(crate) fn round_paths(
     project: &ProjectRepository,
+    subject: RoundSubject<'_>,
     base: &str,
     snapshot: &str,
-    feature_rel: &str,
-) -> Result<Vec<String>> {
-    let record = format!("{feature_rel}/{}", super::REVIEW_RECORD_FILE);
-    Ok(changed_between(project, base, snapshot)?
+) -> Result<RoundPaths> {
+    let record = format!(
+        "{}/{}/{}",
+        subject.specs_root,
+        subject.feature,
+        super::REVIEW_RECORD_FILE
+    );
+    let others = changed_only_by_other_specs(project, subject, base, snapshot)?;
+    let (excluded, paths) = changed_between(project, base, snapshot)?
         .into_iter()
         .filter(|path| *path != record)
-        .collect())
+        .partition(|path| others.contains(path));
+    Ok(RoundPaths { paths, excluded })
+}
+
+/// The paths a commit between the round's two snapshots changed for another
+/// spec, with nothing else behind the change.
+///
+/// Each snapshot's parent is `HEAD` at its time, so those commits are knowable
+/// with nothing reported by the agent. A path qualifies when a commit only other
+/// specs claim changed it, no commit this spec or no spec claims did, and its
+/// content at each snapshot equals its content at that snapshot's parent, so no
+/// uncommitted edit sits on top. Another session's uncommitted edits cannot be
+/// told apart from the run's own, so they stay in the round.
+fn changed_only_by_other_specs(
+    project: &ProjectRepository,
+    subject: RoundSubject<'_>,
+    base: &str,
+    snapshot: &str,
+) -> Result<BTreeSet<String>> {
+    let Some(form) = parse_feature_dir(subject.feature) else {
+        return Ok(BTreeSet::new());
+    };
+    let repository = &project.repository;
+    let base = repository.find_commit(Oid::from_str(base)?)?;
+    let snapshot = repository.find_commit(Oid::from_str(snapshot)?)?;
+    let (base_head, snapshot_head) = (head_under(&base), head_under(&snapshot));
+    if base_head.id() == snapshot_head.id() {
+        return Ok(BTreeSet::new());
+    }
+
+    let attributor = Attributor::new(project, subject.repo, subject.specs_root);
+    let mut walk = repository.revwalk()?;
+    walk.push(snapshot_head.id())?;
+    walk.hide(base_head.id())?;
+    let mut others = BTreeSet::new();
+    let mut own = BTreeSet::new();
+    for oid in walk {
+        let claims = attributor.claims(&repository.find_commit(oid?)?)?;
+        if claims.claimants.is_empty() || claims.is_claimed_by(&form) {
+            own.extend(claims.paths);
+        } else {
+            others.extend(claims.paths);
+        }
+    }
+
+    let (base_tree, base_head_tree) = (base.tree()?, base_head.tree()?);
+    let (snapshot_tree, snapshot_head_tree) = (snapshot.tree()?, snapshot_head.tree()?);
+    let mut left = BTreeSet::new();
+    for path in others.into_iter().filter(|path| !own.contains(path)) {
+        let git_path = project.to_git(&path);
+        let unedited = blob_text(repository, &base_tree, &git_path)?
+            == blob_text(repository, &base_head_tree, &git_path)?
+            && blob_text(repository, &snapshot_tree, &git_path)?
+                == blob_text(repository, &snapshot_head_tree, &git_path)?;
+        if unedited {
+            left.insert(path);
+        }
+    }
+    Ok(left)
+}
+
+/// The commit `HEAD` named when `commit` was taken: a snapshot's parent, and
+/// any other commit a caller names as a base is that commit itself. A snapshot
+/// taken on an unborn branch has no parent, and is itself the start.
+fn head_under<'r>(commit: &git2::Commit<'r>) -> git2::Commit<'r> {
+    if commit.message().ok() == Some(SNAPSHOT_MESSAGE)
+        && commit.author().name().ok() == Some(SNAPSHOT_NAME)
+        && let Ok(parent) = commit.parent(0)
+    {
+        return parent;
+    }
+    commit.clone()
 }
 
 /// The files inside the project that differ between two snapshots, from the

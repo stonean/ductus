@@ -9,6 +9,8 @@ cross-spec-impact: [020-code-review, 066-audit-records-and-the-completion-gate]
 
 `/{project}:review` gains a fix-round loop: the changes made to address a review's findings are re-read by an independent agent before the record is written, and the loop's scope, its check of prescribed edits, and its length are bounded by what the pipeline derives, not by the fixing agent's diligence. It extends [020's review](../020-code-review/spec.md).
 
+> **Signpost:** `079-review-and-analysis-work-converges` changed this loop: a round drops a path only another spec's commits changed, its brief leaves out exempt paths even in a mixed round, and a first `write-review` marks the loop open until the last clears it. See [079](../079-review-and-analysis-work-converges/spec.md).
+
 ## Motivation
 
 `/{project}:review` had no fix-round loop. The passes produced findings, each was fixed, deferred or waived, and `write-review` recorded the run; a fix made during the run was checked by nobody but the agent that made it. This repository ran the loop by hand under a rule in its own `AGENTS.md`: an independent agent re-read each fix round that changed code or a durable contract, and the loop stopped at a round with no MUST or SHOULD. Adopters had none of it.
@@ -34,7 +36,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 
 ### The scope is derived
 
-- A re-read's scope is the round's changed paths, derived from the repository: the files inside the project that differ between the round's base and a snapshot of the working tree taken as the round is briefed. Its brief carries that list and the severity bar, and no scope the fixer wrote, so a brief cannot widen past its round.
+- A re-read's scope is the round's changed paths, derived from the repository: the files inside the project that differ between the round's base and a snapshot of the working tree taken as the round is briefed, less those only commits another spec claims changed and those the exemption above covers. Its brief carries that list and the severity bar, and no scope the fixer wrote, so a brief cannot widen past its round.
 - A round's base is a **snapshot** of the working tree: a commit object of the whole tree, untracked files included, that moves no ref, index or HEAD. A runtime primitive takes one when the passes end and each time a re-read is briefed, so a snapshot is the tree its re-read reads. `/{project}:review` commits nothing.
 - A finding outside the round's paths is a NOTE: it is dispositioned as an observation and never changes the round.
 
@@ -70,7 +72,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 - A round verified by the diff check is not a re-read and does not count toward the budget. Once the budget is reached, every further round waits for the operator's decision.
 - With no operator to ask and no agent to start — `ductus exec`, among others — a round that needed a re-read is recorded as not re-read with no waiver, so the gate holds `done` until an interactive run re-reads or waives it.
 - A commit made between rounds changes no round's scope, since the diff runs from the snapshot to the working tree.
-- In a tree another session also edits, the derived scope includes that session's changes made since the round's base. Isolating sessions with `git worktree` is the framework's answer (§concurrent-features); a finding on a path no fix in the round touched is an out-of-round NOTE.
+- In a tree another session also edits, the derived scope includes that session's uncommitted changes made since the round's base, while a path only commits another spec claims changed leaves the round. Isolating sessions with `git worktree` is the framework's answer (§concurrent-features); a finding on a path no fix in the round touched is an out-of-round NOTE.
 
 ## Acceptance Criteria
 

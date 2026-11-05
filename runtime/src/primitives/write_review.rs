@@ -1055,6 +1055,9 @@ fn render_report(
     let _ = writeln!(fm, "scope: {scope}");
     let _ = writeln!(fm, "excluded: {}", record.excluded.len());
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
+    if args.loop_open {
+        let _ = writeln!(fm, "fix-rounds-open: true");
+    }
     if let Some(loop_record) = record.fix_rounds {
         render_loop_record(&mut fm, loop_record);
     }
@@ -1119,7 +1122,10 @@ fn render_report(
         ),
         format!(
             "## Excluded from scope\n\n{}",
-            render_excluded(record.excluded)
+            render_excluded(
+                record.excluded,
+                args.fix_rounds.as_deref().unwrap_or_default()
+            )
         ),
         format!("## Unexamined governance\n\n{governance_section}"),
     ];
@@ -1374,22 +1380,24 @@ fn render_unexamined_governance(repo: &Path) -> String {
 }
 
 /// Render skipped passes as a list, or `*None.*` when empty.
-/// Each path the scope left out, by the specs that claimed it.
-fn render_excluded(excluded: &BTreeMap<String, Vec<String>>) -> String {
-    if excluded.is_empty() {
+/// Each path the scope left out, by the specs that claimed it, and each path a
+/// fix round left out, by the round.
+fn render_excluded(excluded: &BTreeMap<String, Vec<String>>, rounds: &[FixRound]) -> String {
+    let flat = crate::primitives::flatten_line;
+    let from_scope = excluded
+        .iter()
+        .map(|(path, claimants)| format!("- `{}` — {}", flat(path), claimants.join(", ")));
+    let from_rounds = (1..=rounds.len()).zip(rounds).flat_map(|(n, round)| {
+        round
+            .excluded
+            .iter()
+            .map(move |path| format!("- `{}` — left out of fix round {n}", flat(path)))
+    });
+    let lines: Vec<String> = from_scope.chain(from_rounds).collect();
+    if lines.is_empty() {
         return "*None.*".to_string();
     }
-    excluded
-        .iter()
-        .map(|(path, claimants)| {
-            format!(
-                "- `{}` — {}",
-                crate::primitives::flatten_line(path),
-                claimants.join(", ")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    lines.join("\n")
 }
 
 fn render_skipped(skipped: &[String]) -> String {
@@ -2199,6 +2207,7 @@ mod tests {
             decided_by: None,
             examined: None,
             fix_rounds: None,
+            loop_open: false,
         }
     }
 
@@ -3078,7 +3087,42 @@ mod tests {
             check,
             result,
             reason: reason.map(str::to_string),
+            excluded: Vec::new(),
         }
+    }
+
+    /// The first write marks the loop open and the last clears it; a run that
+    /// never passes the argument, as under `ductus exec`, writes no mark.
+    #[test]
+    fn the_open_mark_follows_the_loop_open_argument() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        run(&args, dir.path()).unwrap();
+        assert!(!review_md(&dir, "001-x").contains("fix-rounds-open"));
+
+        args.loop_open = true;
+        run(&args, dir.path()).unwrap();
+        assert_eq!(record_of(&dir).fix_rounds_open, Some(true));
+
+        args.loop_open = false;
+        run(&args, dir.path()).unwrap();
+        assert_eq!(record_of(&dir).fix_rounds_open, None);
+    }
+
+    #[test]
+    fn the_record_names_each_path_a_fix_round_left_out() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        let mut second = round(FixRoundCheck::Exempt, None, None);
+        second.excluded = vec!["src/other.rs".to_string()];
+        args.fix_rounds = Some(vec![round(FixRoundCheck::Exempt, None, None), second]);
+        run(&args, dir.path()).unwrap();
+        assert!(
+            review_md(&dir, "001-x")
+                .contains("## Excluded from scope\n\n- `src/other.rs` — left out of fix round 2\n"),
+            "{}",
+            review_md(&dir, "001-x")
+        );
     }
 
     fn record_of(tmp: &TempDir) -> crate::schema::primitives::ReviewBlock {

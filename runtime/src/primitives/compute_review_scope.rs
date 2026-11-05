@@ -454,7 +454,7 @@ fn attribute_window(
     for oid in walk {
         let commit = repository.find_commit(oid?)?;
         let claims = attributor.claims(&commit)?;
-        if claims.claimants.is_empty() || claims.claimants == std::slice::from_ref(&form) {
+        if claims.claimants.is_empty() {
             window.own.extend(claims.paths);
             continue;
         }
@@ -475,7 +475,8 @@ fn attribute_window(
             continue;
         }
 
-        // Several specs claim this commit, this one among them.
+        // This spec claims the commit, alone or with others. Alone, every path
+        // is its own or unplanned, and the unplanned rule gives it those too.
         for claimant in &claims.claimants {
             if let Some(directory) = attributor.directory_of(claimant)
                 && !plans.contains_key(directory)
@@ -1537,12 +1538,18 @@ mod tests {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/other.rs", "feat(002): its work");
         change(&tmp, &repo, "specs/002-y/tasks.md", "tasks(002): its tasks");
+        // Claimed by its directory alone, with a subject naming no spec, so it
+        // is no several-specs commit whose unplanned path could come here.
+        write(&tmp.path().join("specs/002-y/notes.md"), "n\n");
+        write(&tmp.path().join("src/by_directory.rs"), "fn d() {}\n");
+        commit_all(&repo, "chore: touches only 002's directory");
 
         let scope = x(&tmp);
         assert!(!has(&scope, "src/other.rs"), "{:?}", scope.scope);
         assert!(!has(&scope, "specs/002-y/tasks.md"), "{:?}", scope.scope);
         assert_eq!(scope.excluded["src/other.rs"], ["002-y"]);
         assert_eq!(scope.excluded["specs/002-y/tasks.md"], ["002-y"]);
+        assert_eq!(scope.excluded["src/by_directory.rs"], ["002-y"]);
         // `modified-since` keeps its meaning: every path changed since the base.
         assert!(scope.modified_since.contains(&"src/other.rs".to_string()));
     }
@@ -1732,6 +1739,14 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+
+        // With nothing outside the spec's directory, the record is all that
+        // could say no review is owed, and it names no run.
+        write(&tmp.path().join("specs/001-x/plan.md"), "# Plan\n");
+        commit_all(&repo, "docs(001): a plan with no files");
+        let scope = x(&tmp);
+        assert_eq!(scope.scope, ["specs/001-x/plan.md"]);
         assert!(scope.review_owed);
     }
 

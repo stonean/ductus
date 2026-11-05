@@ -47,6 +47,19 @@ its version and date.
 
 ### Changed
 
+- **A fix round reads only the review's own fixes.** `brief-re-read` now drops
+  a path only commits another spec claims changed, found through each snapshot's
+  parent with nothing reported by the agent, and returns it as `excluded`, unless
+  an uncommitted edit sits on top at either snapshot; a commit this spec or no
+  spec claims stays. An exempt path leaves the brief and `round.toml` even in a
+  round that also needs a re-read, and is returned as `exempt`, so a mixed round's
+  re-read reads only its non-exempt paths. `write-review` names each path a round
+  left out, from `fix-rounds[].excluded`.
+- **A review cut off between its writes holds `done`.** `write-review`'s new
+  `loop-open` writes `fix-rounds-open: true`, which the command's first write
+  passes and its last omits, and `check-review-gate` blocks while it is present,
+  as `fix-round-loop-open`. A record with no mark, an older one or one from `ductus
+  exec`, is unaffected.
 - **A review reads its own spec's change, and a later run starts where the
   last one finished.** `compute-review-scope`'s default window now starts at the
   later of the spec's last reopen and its last finished review, reported as

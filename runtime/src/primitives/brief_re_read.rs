@@ -68,11 +68,19 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     // are diffed against.
     let rounds = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
     let (snapshot, _) = fix_rounds::snapshot(&project)?;
-    let paths = fix_rounds::round_paths(&project, &base, &snapshot, &feature_rel)?;
-    let kind = classify(&paths, &format!("{feature_rel}/"));
+    let subject = fix_rounds::RoundSubject {
+        repo,
+        specs_root: &layout.specs_root,
+        feature: &args.feature,
+    };
+    let round = fix_rounds::round_paths(&project, subject, &base, &snapshot)?;
+    let (exempt, paths) = split_exempt(round.paths, &format!("{feature_rel}/"));
+    let kind = classify(&paths, &exempt, &round.excluded);
     let mut result = BriefReReadResult {
         kind,
         paths: Some(paths.clone()),
+        exempt: Some(exempt),
+        excluded: Some(round.excluded),
         re_reads_off,
         ..BriefReReadResult::default()
     };
@@ -118,42 +126,53 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
 
 /// Bound `result` to one read (spec 078, scenario
 /// `fix-round-results-have-a-bounded-size`): inline while it fits `[artifacts]
-/// read-size-bytes`, and past it with `paths` in the file `lists-file` names,
+/// read-size-bytes`, and past it with its lists in the file `lists-file` names,
 /// as `compute-review-scope` bounds its lists. `round.toml` and the brief
-/// already hold every path, whatever the form.
+/// already hold every path of the round, whatever the form.
 fn bounded(repo: &Path, feature: &str, mut result: BriefReReadResult) -> Result<BriefReReadResult> {
     let paths = result.paths.as_deref().unwrap_or_default();
+    let exempt = result.exempt.as_deref().unwrap_or_default();
+    let excluded = result.excluded.as_deref().unwrap_or_default();
     result.paths_count = paths.len();
-    let lists = serde_json::json!({ "paths": paths });
+    result.exempt_count = exempt.len();
+    result.excluded_count = excluded.len();
+    let lists = serde_json::json!({ "paths": paths, "exempt": exempt, "excluded": excluded });
     if let Some(file) =
         super::bounded_lists::place(repo, "brief-re-read", feature, &result, &lists)?
     {
         result.form = ListsForm::File;
         result.paths = None;
+        result.exempt = None;
+        result.excluded = None;
         result.lists_file = Some(file);
     }
     Ok(result)
 }
 
-/// What a round needs, from its changed paths: none is `empty`; every one an
-/// analyze subject of the feature (`feature_prefix` is `{specs-root}/{feature}/`)
-/// that is not a durable contract is `exempt`, since an edit to one stales the
-/// analyze record and `/{project}:analyze` reads it again before `done` (a
-/// criterion's tick, outside that record's digest, is verified against the
-/// tree before the spec closes instead); any other path makes it `re-read`. So `analysis.md`, which is no analyze
-/// subject, and a non-markdown file in the feature directory both need one.
-fn classify(paths: &[String], feature_prefix: &str) -> RoundKind {
-    if paths.is_empty() {
-        return RoundKind::Empty;
-    }
-    let exempt = paths.iter().all(|path| {
+/// Divide a round's paths into those the exemption covers and the rest. A path
+/// is exempt when it is an analyze subject of the feature (`feature_prefix` is
+/// `{specs-root}/{feature}/`) that is not a durable contract, since an edit to
+/// one stales the analyze record and `/{project}:analyze` reads it again before
+/// `done` (a criterion's tick, outside that record's digest, is verified against
+/// the tree before the spec closes instead). So `analysis.md`, which is no
+/// analyze subject, and a non-markdown file in the feature directory are not.
+fn split_exempt(paths: Vec<String>, feature_prefix: &str) -> (Vec<String>, Vec<String>) {
+    paths.into_iter().partition(|path| {
         path.strip_prefix(feature_prefix)
             .is_some_and(|inside| is_analyze_subject(inside) && !is_review_contract(inside))
-    });
-    if exempt {
-        RoundKind::Exempt
-    } else {
+    })
+}
+
+/// What a round needs: any path left to re-read makes it `re-read`, whatever
+/// else changed (spec 079, AC13). Otherwise a change the exemption covers or
+/// another spec's commits made is `exempt`, and no change at all is `empty`.
+fn classify(paths: &[String], exempt: &[String], excluded: &[String]) -> RoundKind {
+    if !paths.is_empty() {
         RoundKind::ReRead
+    } else if exempt.is_empty() && excluded.is_empty() {
+        RoundKind::Empty
+    } else {
+        RoundKind::Exempt
     }
 }
 
@@ -194,7 +213,7 @@ You are re-reading one round of fixes made during a review of `{feature}`. You d
 ## The round
 
 - **What it must satisfy:** {sources}.
-- **The change:** run `git diff --relative {base} {snapshot}` from the project root. Both are commits holding the whole tree, before and after this round, so the diff is exactly the round.
+- **The change:** run `git diff --relative {base} {snapshot}` from the project root. Both are commits holding the whole tree, before and after this round. The diff can also show paths left out of the round, because another check reads them: judge only the paths listed here.
 - **The paths it changed**, from the project root:
 
 ````json
@@ -310,7 +329,9 @@ mod tests {
         );
         let result = brief(&tmp, &base).unwrap();
         assert_eq!(result.kind, RoundKind::Exempt);
-        assert_eq!(result.paths.as_deref().unwrap(), ["specs/001-x/spec.md"]);
+        assert_eq!(result.paths.as_deref().unwrap(), [] as [&str; 0]);
+        assert_eq!(result.exempt.as_deref().unwrap(), ["specs/001-x/spec.md"]);
+        assert_eq!(result.exempt_count, 1);
         assert!(result.snapshot.is_some());
         assert_eq!((result.brief, result.result), (None, None));
     }
@@ -348,14 +369,204 @@ mod tests {
         write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
         let result = brief(&tmp, &base).unwrap();
         assert_eq!(result.kind, RoundKind::ReRead);
-        assert_eq!(
-            result.paths.as_deref().unwrap(),
-            ["specs/001-x/spec.md", "src/a.rs"]
-        );
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
+        assert_eq!(result.exempt.as_deref().unwrap(), ["specs/001-x/spec.md"]);
         assert_eq!(
             (result.form, result.paths_count, result.lists_file),
-            (ListsForm::Inline, 2, None)
+            (ListsForm::Inline, 1, None)
         );
+    }
+
+    /// A mixed round's re-read reads only its non-exempt paths: the exempt one
+    /// reaches neither the brief nor `round.toml`, so a finding on it is out of
+    /// round (spec 079, AC13).
+    #[test]
+    fn an_exempt_path_leaves_a_mixed_rounds_brief_and_record() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Y\n",
+        );
+        write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
+        let result = brief(&tmp, &base).unwrap();
+
+        let text = fs::read_to_string(tmp.path().join(result.brief.unwrap())).unwrap();
+        assert!(text.contains("\"src/a.rs\""), "{text}");
+        let (_, listed) = text.split_once("````json").unwrap();
+        let (listed, _) = listed.split_once("````").unwrap();
+        assert!(!listed.contains("spec.md"), "{listed}");
+
+        let round = fs::read_to_string(
+            tmp.path()
+                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(ROUND_FILE),
+        )
+        .unwrap();
+        let record: RoundRecord = toml::from_str(&round).unwrap();
+        assert_eq!(record.paths, ["src/a.rs"]);
+    }
+
+    /// Commit `file` with `subject` on `HEAD`.
+    fn commit_file(tmp: &tempfile::TempDir, file: &str, subject: &str) {
+        let repository = Repository::discover(tmp.path()).unwrap();
+        write(&tmp.path().join(file), &format!("{subject}\n"));
+        commit_all(&repository, subject);
+    }
+
+    /// `specs/002-y` exists, so a subject's scope can name it.
+    fn fixture_with_a_sibling() -> tempfile::TempDir {
+        let tmp = fixture();
+        let repository = Repository::discover(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/002-y/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Y\n",
+        );
+        commit_all(&repository, "chore: a sibling spec");
+        tmp
+    }
+
+    /// Another spec's landing in a shared checkout does not join the round, and
+    /// the round is still `exempt`, so its snapshot moves the next base past it.
+    #[test]
+    fn only_another_specs_commit_leaves_the_round_with_nothing_to_re_read() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/other.rs", "feat(002): its landing");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::Exempt);
+        assert_eq!(result.paths.as_deref().unwrap(), [] as [&str; 0]);
+        assert_eq!(result.excluded.as_deref().unwrap(), ["src/other.rs"]);
+        assert_eq!(result.excluded_count, 1);
+        assert!(result.snapshot.is_some());
+    }
+
+    #[test]
+    fn another_specs_commit_leaves_a_round_that_also_holds_a_fix() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/other.rs", "feat(002): its landing");
+        write(&tmp.path().join("src/a.rs"), "fn a() { let _ = 1; }\n");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.kind, RoundKind::ReRead);
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), ["src/other.rs"]);
+    }
+
+    /// A commit this spec claims, or no spec does, stays in the round, as does
+    /// a multi-spec commit naming this spec.
+    #[test]
+    fn a_commit_this_spec_or_no_spec_claims_stays_in_the_round() {
+        for subject in ["fix(001): a fix", "chore: a fix", "fix(002, 001): a fix"] {
+            let tmp = fixture_with_a_sibling();
+            let base = start(&tmp);
+            commit_file(&tmp, "src/a.rs", subject);
+
+            let result = brief(&tmp, &base).unwrap();
+            assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"], "{subject}");
+            assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+        }
+    }
+
+    /// One commit of another spec's and one of this spec's on the same path.
+    #[test]
+    fn a_path_a_commit_of_this_spec_also_changed_stays_in_the_round() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/shared.rs", "feat(002): its change");
+        commit_file(&tmp, "src/shared.rs", "fix(001): this spec's change");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/shared.rs"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
+    /// An uncommitted edit on top of another spec's commit, at the new snapshot,
+    /// is a fix: the path stays, even though only that commit touched it.
+    #[test]
+    fn an_uncommitted_edit_on_another_specs_path_stays_in_the_round() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/other.rs", "feat(002): its landing");
+        write(&tmp.path().join("src/other.rs"), "fn fixed() {}\n");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/other.rs"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
+    /// The same at the base's snapshot: the round started with an uncommitted
+    /// edit there, so what the commit replaced was not the commit's alone.
+    #[test]
+    fn an_uncommitted_edit_at_the_base_on_another_specs_path_stays_in_the_round() {
+        let tmp = fixture_with_a_sibling();
+        write(
+            &tmp.path().join("src/a.rs"),
+            "fn edited_before_the_base() {}\n",
+        );
+        let base = start(&tmp);
+        commit_file(&tmp, "src/a.rs", "feat(002): its landing");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
+    /// A `base` that is an ordinary commit and not a snapshot starts the walk at
+    /// that commit, since its parent was not `HEAD` when it was taken. Here a
+    /// commit of this spec's is the base: read as a snapshot, its own change
+    /// would count as between the two, and keep the path in the round.
+    #[test]
+    fn a_base_that_is_no_snapshot_starts_at_itself() {
+        let tmp = fixture_with_a_sibling();
+        let repository = Repository::discover(tmp.path()).unwrap();
+        commit_file(&tmp, "src/shared.rs", "fix(001): this spec's commit");
+        let head = repository.head().unwrap().target().unwrap().to_string();
+        commit_file(&tmp, "src/shared.rs", "feat(002): its landing");
+
+        let result = brief(&tmp, &head).unwrap();
+        assert_eq!(result.excluded.as_deref().unwrap(), ["src/shared.rs"]);
+    }
+
+    /// A project in a subdirectory attributes by paths from the project root.
+    #[test]
+    fn a_project_in_a_subdirectory_leaves_another_specs_commit_out() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        for feature in ["001-x", "002-y"] {
+            write(
+                &project.join("specs").join(feature).join("spec.md"),
+                "---\nstatus: in-progress\ndependencies: []\n---\n\n# X\n",
+            );
+        }
+        commit_all(&repository, "init");
+        let base = start_fix_rounds::run(
+            &StartFixRoundsArgs {
+                feature: FEATURE.to_string(),
+            },
+            &project,
+        )
+        .unwrap()
+        .base;
+        write(&project.join("src/other.rs"), "fn o() {}\n");
+        write(&project.join("src/fixed.rs"), "fn f() {}\n");
+        commit_all(&repository, "feat(002): its landing");
+        // Read by the wrong name, both sides hold no such file and compare equal.
+        write(&project.join("src/fixed.rs"), "fn fixed() {}\n");
+
+        let result = run(
+            &BriefReReadArgs {
+                feature: FEATURE.to_string(),
+                base,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.excluded.as_deref().unwrap(), ["src/other.rs"]);
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/fixed.rs"]);
     }
 
     /// Past the read size a round's paths are in the file `lists-file`
@@ -374,6 +585,7 @@ mod tests {
         assert_eq!(result.kind, RoundKind::ReRead);
         assert_eq!((result.form, result.paths_count), (ListsForm::File, 1));
         assert_eq!(result.paths, None);
+        assert_eq!((result.exempt, result.excluded), (None, None));
         let file = result
             .lists_file
             .expect("a file-form result names its file");

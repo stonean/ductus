@@ -23,11 +23,14 @@ use std::path::Path;
 
 use git2::{IndexAddOption, Repository, Signature};
 
-use ductus::primitives::{brief_re_read, check_prescriptions, read_re_read, start_fix_rounds};
+use ductus::primitives::{
+    brief_re_read, check_prescriptions, check_review_gate, read_re_read, start_fix_rounds,
+    write_review,
+};
 use ductus::schema::primitives::{
     BriefReReadArgs, BriefReReadResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
-    PrescriptionVerdict, ReReadState, ReadReReadArgs, ReadReReadResult, RoundKind,
-    StartFixRoundsArgs,
+    CheckReviewGateArgs, PrescriptionVerdict, ReReadState, ReadReReadArgs, ReadReReadResult,
+    ReviewGateBlock, RoundKind, StartFixRoundsArgs, WriteReviewArgs,
 };
 
 const FEATURE: &str = "001-widget";
@@ -251,4 +254,152 @@ fn two_rounds_each_brief_only_their_own_paths() {
 
     // The review committed nothing.
     assert_eq!(untouched_state(dir, &repository), before);
+}
+
+/// A commit of the whole work tree, as a landing in a shared checkout is one.
+fn commit(repository: &Repository, subject: &str) {
+    let mut index = repository.index().unwrap();
+    index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
+    index.write().unwrap();
+    let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+    let signature = Signature::now("Test", "test@example.com").unwrap();
+    let parent = repository.head().unwrap().peel_to_commit().unwrap();
+    repository
+        .commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            subject,
+            &tree,
+            &[&parent],
+        )
+        .unwrap();
+}
+
+/// A commit of what the index holds, leaving the rest of the work tree as it is,
+/// as a session landing only its own files does.
+fn commit_paths(repository: &Repository, subject: &str) {
+    let mut index = repository.index().unwrap();
+    let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+    let signature = Signature::now("Test", "test@example.com").unwrap();
+    let parent = repository.head().unwrap().peel_to_commit().unwrap();
+    repository
+        .commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            subject,
+            &tree,
+            &[&parent],
+        )
+        .unwrap();
+}
+
+/// Spec 079: another spec's landing between rounds leaves the loop, without the
+/// host reporting anything, and a path a fix also touched stays in it.
+#[test]
+fn another_specs_commit_between_rounds_leaves_the_round() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    let repository = fixture(dir);
+    write(
+        &dir.join("specs/002-y/spec.md"),
+        "---\nstatus: draft\ndependencies: []\n---\n",
+    );
+    commit(
+        &repository,
+        "chore: a sibling, and the tree the review starts from",
+    );
+    let start = start_fix_rounds::run(
+        &StartFixRoundsArgs {
+            feature: FEATURE.to_string(),
+        },
+        dir,
+    )
+    .unwrap()
+    .base;
+
+    write(&dir.join("src/landed.rs"), "fn landed() {}\n");
+    write(&dir.join("src/both.rs"), "fn landed() {}\n");
+    commit(&repository, "feat(002): another session's landing");
+    write(&dir.join("src/both.rs"), "fn fixed_on_top() {}\n");
+    write(&dir.join("src/a.rs"), "fn a() -> u8 { 11 }\n");
+
+    let round = brief(dir, &start);
+    assert_eq!(round.kind, RoundKind::ReRead, "{round:?}");
+    assert_eq!(round.paths.as_deref().unwrap(), ["src/a.rs", "src/both.rs"]);
+    assert_eq!(round.excluded.as_deref().unwrap(), ["src/landed.rs"]);
+    let text = fs::read_to_string(dir.join(round.brief.as_ref().unwrap())).unwrap();
+    assert!(!text.contains("src/landed.rs"), "{text}");
+
+    // A landing after the re-read does not spoil the check of its prescribed
+    // edit: it is no change of the round's, prescribed or not.
+    write(
+        &dir.join(round.result.as_ref().unwrap()),
+        r#"{"complete": true, "findings": [
+            {"severity": "SHOULD", "path": "src/a.rs", "text": "the value regressed",
+             "edits": [{"path": "src/a.rs", "old": "{ 11 }", "new": "{ 12 }"}]}]}"#,
+    );
+    write(&dir.join("src/a.rs"), "fn a() -> u8 { 12 }\n");
+    write(&dir.join("src/landed_later.rs"), "fn later() {}\n");
+    repository
+        .index()
+        .and_then(|mut index| {
+            index.add_path(Path::new("src/landed_later.rs"))?;
+            index.write()
+        })
+        .unwrap();
+    commit_paths(&repository, "feat(002): a later landing");
+    let checked = check(dir, &start);
+    assert_eq!(checked.verdict, PrescriptionVerdict::Matched, "{checked:?}");
+}
+
+/// Spec 079, AC14: a review cut off after its first write holds `done`, and its
+/// last write releases it, while a record written with no loop, as `ductus
+/// exec` writes one, was never held.
+#[test]
+fn a_review_cut_off_between_its_writes_holds_done() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    fixture(dir);
+    let gate = || {
+        check_review_gate::run(
+            &CheckReviewGateArgs {
+                feature: FEATURE.to_string(),
+            },
+            dir,
+        )
+        .unwrap()
+    };
+    let write = |loop_open: bool| {
+        write_review::run(
+            &WriteReviewArgs {
+                feature: FEATURE.to_string(),
+                reviewed_at: "2026-11-05T00:00:00Z".to_string(),
+                reviewed_against: "abc".to_string(),
+                diff_base: "HEAD".to_string(),
+                loop_open,
+                ..WriteReviewArgs::default()
+            },
+            dir,
+        )
+        .unwrap()
+    };
+
+    write(true);
+    assert!(
+        fs::read_to_string(dir.join("specs").join(FEATURE).join("review.md"))
+            .unwrap()
+            .contains("fix-rounds-open: true")
+    );
+    assert_ne!(
+        gate().blocked_by,
+        None,
+        "the gate must not pass a run cut off between its writes"
+    );
+
+    write(false);
+    let record = fs::read_to_string(dir.join("specs").join(FEATURE).join("review.md")).unwrap();
+    assert!(!record.contains("fix-rounds-open"), "{record}");
+    assert_ne!(gate().blocked_by, Some(ReviewGateBlock::FixRoundLoopOpen));
 }

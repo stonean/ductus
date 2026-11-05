@@ -216,6 +216,10 @@ pub struct FixRound {
     /// allowed only on a `not-re-read`, and requires `decided-by`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// The paths `brief-re-read` left out of the round, as only another spec's
+    /// commits changed them (spec 079, AC3). The record names each.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excluded: Vec<String>,
 }
 
 /// How a run's findings were dispositioned — the counts both audit records
@@ -894,12 +898,27 @@ pub struct BriefReReadResult {
     /// Entries in `paths`, in either form. `kind`, never an absent list, says
     /// whether the round is empty.
     pub paths_count: usize,
-    /// Files inside the project that differ between the base and a snapshot
-    /// of the working tree this call takes, from the project root, sorted,
-    /// the feature's own `review.md` left out.
-    /// Absent in the file form; `round.toml` and the brief carry every one.
+    /// Entries in `exempt`, in either form.
+    pub exempt_count: usize,
+    /// Entries in `excluded`, in either form.
+    pub excluded_count: usize,
+    /// The round's paths: files inside the project that differ between the
+    /// base and a snapshot of the working tree this call takes, from the project
+    /// root, sorted, without the feature's own `review.md` and the paths `exempt`
+    /// and `excluded` hold. Absent in the file form; `round.toml` and the brief
+    /// carry every one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paths: Option<Vec<String>>,
+    /// The changed paths the round's exemption covers: an analyze subject of the
+    /// feature that is no durable contract, which `/{project}:analyze` reads
+    /// again. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exempt: Option<Vec<String>>,
+    /// The changed paths only commits another spec claims changed, with no
+    /// uncommitted edit on top on either side of the round (spec 079, AC3).
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excluded: Option<Vec<String>>,
     /// The snapshot taken now, the next round's base: present for `exempt`
     /// and `re-read`, unless the loop is switched off.
     pub snapshot: Option<String>,
@@ -912,8 +931,9 @@ pub struct BriefReReadResult {
     /// The `[review] re-reads-off` reason when the loop is switched off; then
     /// no snapshot is returned and no brief is written.
     pub re_reads_off: Option<String>,
-    /// In the file form, the file holding `paths` whole, from the project
-    /// root: a JSON object with `paths`, one entry per line.
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with `paths`, `exempt` and `excluded`, one entry per
+    /// line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -1318,6 +1338,12 @@ pub struct WriteReviewArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(skip)]
     pub fix_rounds: Option<Vec<FixRound>>,
+    /// Marks the run's fix-round loop open in the record, as `fix-rounds-open`
+    /// (spec 079, AC14). The review command's first write passes it and its last
+    /// omits it; `ductus exec`, whose walker has no loop, never passes it.
+    #[serde(default)]
+    #[arg(long)]
+    pub loop_open: bool,
 }
 
 /// Result for `write-review`.
@@ -4928,6 +4954,12 @@ pub enum ReviewGateBlock {
     /// checked, which matters only once the review itself holds nothing. A
     /// record without the loop fields passes, with guidance saying so.
     FixRoundNotReRead,
+    /// The record still carries `fix-rounds-open`: a review's first
+    /// `write-review` marked its fix-round loop open and its last never ran, so
+    /// the run was cut off with fixes that may be unread (spec 079, AC14). A
+    /// record with no mark, an older one or one from `ductus exec`, is
+    /// unaffected.
+    FixRoundLoopOpen,
 }
 
 /// The freshness of a durable record — `review:` or `analyze:` — against the

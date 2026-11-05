@@ -76,9 +76,14 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     let (now, _) = fix_rounds::snapshot(&project)?;
     let (failed, differing) = compare(&project, &record.snapshot, &now, &by_file)?;
     let prescribed: BTreeSet<&str> = by_file.keys().copied().collect();
-    let feature_rel = format!("{}/{}", layout.specs_root, args.feature);
+    let subject = fix_rounds::RoundSubject {
+        repo,
+        specs_root: &layout.specs_root,
+        feature: &args.feature,
+    };
     let unprescribed: Vec<String> =
-        fix_rounds::round_paths(&project, &record.snapshot, &now, &feature_rel)?
+        fix_rounds::round_paths(&project, subject, &record.snapshot, &now)?
+            .paths
             .into_iter()
             .filter(|path| !prescribed.contains(path.as_str()))
             .collect();

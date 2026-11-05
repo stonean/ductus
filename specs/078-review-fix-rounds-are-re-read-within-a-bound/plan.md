@@ -22,7 +22,7 @@ AGENTS.md routes "a feature-specific primitive" to its feature, and these four e
 
 ### Exemption is a path predicate the runtime evaluates
 
-A round is exempt when every path is an analyze subject of the reviewed feature and not a durable contract, reusing `is_analyze_subject` and `is_review_contract` (`runtime/src/primitives/analyze_subjects.rs`). The predicate follows the reason the exemption exists: an edit to an analyze subject stales `analysis.md`, which the gate holds `done` on. So `analysis.md` itself, which is not an analyze subject, is not exempt, and nor is a non-markdown file in the feature directory.
+A path is exempt, and a round with nothing else exempt (spec 079), when it is an analyze subject of the reviewed feature and not a durable contract, reusing `is_analyze_subject` and `is_review_contract` (`runtime/src/primitives/analyze_subjects.rs`). The predicate follows the reason the exemption exists: an edit to an analyze subject stales `analysis.md`, which the gate holds `done` on. So `analysis.md` itself, which is not an analyze subject, is not exempt, and nor is a non-markdown file in the feature directory.
 
 ### The runtime writes the brief
 
