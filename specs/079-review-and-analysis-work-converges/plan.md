@@ -67,7 +67,7 @@ Four edits, net-negative together, since it holds 49,936 of 50,000 bytes:
 - §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
 
-The bytes come from the sentences these replace and from the two-paths text.
+The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description.
 
 ### Prose cuts come last
 
@@ -135,6 +135,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `specs/058-findings-route-at-discovery/spec.md` | Modify | Dispositions, with a back-link |
 | `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` | Modify | Fix-round claims, with a back-link |
 | `specs/{000,011,016,017,023,041,045,046,047,050,054,059,063,075,076}-*/` | Modify | Corrected claims, per `research.md` |
+| `specs/021-runtime-boundary/spec.md` | Modify | The eligibility criterion it quotes |
 
 ## Data Model
 

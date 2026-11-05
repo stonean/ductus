@@ -319,7 +319,7 @@ A citation step 5 resolves is reported in the same way, naming the citing artifa
 
 These are 008's messages too, dropped by the same rewrite and restored with the two above.
 
-**Under `ductus exec` neither message is produced.** The walker checks no rule-file integrity: a rule with no Verification, or whose Statement carries no MUST or SHOULD keyword, is recorded unexamined under `rule-assessments-not-checked`, a file it cannot read is recorded under `rule-file-unreadable`, and a duplicate ID goes unnoticed — each such rule is assessed as though whole. The reduction is stated rather than silent, per the two-paths guarantee in §runtime-host-integration.
+**Under `ductus exec` neither message is produced.** The walker checks no rule-file integrity: a rule with no Verification, or whose Statement carries no MUST or SHOULD keyword, is recorded unexamined under `rule-assessments-not-checked`, a file it cannot read is recorded under `rule-file-unreadable`, and a duplicate ID goes unnoticed — each such rule is assessed as though whole. The reduction is stated rather than silent.
 
 A rule file is **never** unloadable merely for having no introducing spec, or for declaring no format in its header — those conditions select which tier governs, they are not themselves failures. A project-authored rule file has no introducing spec by construction; it is validated on exactly the same terms as a shipped one, at tier 2 when its header declares a format and tier 3 when it does not. Treating the absence of an introducing spec as a validation failure would make a supported adopter extension unloadable, silently dropping its rules from citation resolution and from the fired-rule set that steps 11 and 12 assess.
 

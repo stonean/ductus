@@ -22,8 +22,7 @@
 //! is meaningful at all.
 //!
 //! **Touch body prose.** The edit is confined to the frontmatter block, so it
-//! is case (c) of §spec-lifecycle's mechanical-edit rule and a `done` spec
-//! stays `done`. The body is compared before and after, and a run that finds
+//! is a correction under §spec-lifecycle and a `done` spec stays `done`. The body is compared before and after, and a run that finds
 //! itself having changed it halts — the same stopping condition
 //! `criterion-label-backfill` states for its own sweep.
 //!

@@ -2522,7 +2522,7 @@ pub(crate) fn is_slug_grammar(s: &str) -> bool {
 /// This exists because `tasks.md`'s own template guidance comment embeds
 /// example `## N.` task headings; without comment-awareness the tasks
 /// parsers mis-read a reset (template-state) file as containing phantom
-/// tasks, splitting the runtime/markdown two-paths guarantee.
+/// tasks, where a reader of the file sees none.
 #[derive(Default)]
 pub(crate) struct SkipScanner {
     in_fence: bool,
@@ -3070,7 +3070,7 @@ pub(crate) fn section_lines<'a>(body: &'a str, heading: &str) -> Vec<&'a str> {
 /// This is the single source of truth for "structural lines inside
 /// section X": `read-spec`'s acceptance-criteria walk and
 /// `mark-criterion`'s checkbox addressing both consume it, which keeps
-/// their criterion indexes in lockstep (the two-paths guarantee).
+/// their criterion indexes in lockstep.
 pub(crate) fn section_line_indices(lines: &[&str], heading: &str) -> Vec<usize> {
     let mut out = Vec::new();
     let mut skip = SkipScanner::default();

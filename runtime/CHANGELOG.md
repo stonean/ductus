@@ -65,6 +65,13 @@ its version and date.
 
 ### Changed
 
+- **The constitution makes the binary the source of a primitive's rules.** Without
+  the MCP server, an agent runs `ductus <name>`, or reads its `--help` where the
+  CLI lacks an argument, and a command's reference keeps what a step does with the
+  result, host judgment and policy. A correction to a `done` spec's `spec.md` or
+  `plan.md` leaves it `done`, and a review or analysis run creates work only for a
+  gating finding. `create-scenario`, `append-task` and `set-status` state in their
+  descriptions what the constitution used to. Spec 079, task 9.
 - **Each primitive has one description.** Its MCP description and its `--help`
   are now one compiled text, so `ductus <name> --help` prints everything the tool
   description says, and `ductus --help` and `-h` print its first sentence. The MCP

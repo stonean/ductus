@@ -52,7 +52,7 @@ Scenario-targeted:
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per `.ductus/reference/clarify.md`.
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
 **Where a named section lives.** This command's markdown-only reference — the procedure for the path without the runtime, and the policy these steps apply — is `.ductus/reference/clarify.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

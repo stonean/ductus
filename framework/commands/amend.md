@@ -37,7 +37,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
 ### Confirm target
 

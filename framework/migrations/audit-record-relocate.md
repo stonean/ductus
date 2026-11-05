@@ -25,7 +25,7 @@ After this migration `spec.md` carries neither block. [Spec 057](../../specs/057
 
    The sweep is performed by the primitive, never by hand. A hand edit across 54 spec directories is a silent corruption waiting to happen, and a shell script doing it would have to parse frontmatter, which [§runtime-boundary](../constitution.md#runtime-boundary) principle 3 rules out.
 
-3. **Leave `done` specs at `done`.** The edit is confined to the frontmatter block: no criterion text changes, no body prose changes. That is case (c) of the mechanical-edit rule in [§spec-lifecycle](../constitution.md#spec-lifecycle), so the back-edge does not fire and a `done` spec stays `done`. The primitive enforces this rather than trusting it — it compares the body before and after and refuses to write if they differ. A run that finds itself changing prose is not this migration and must stop.
+3. **Leave `done` specs at `done`.** The edit is confined to the frontmatter block: no criterion text changes, no body prose changes. That is a correction under [§spec-lifecycle](../constitution.md#spec-lifecycle), so the back-edge does not fire and a `done` spec stays `done`. The primitive enforces this rather than trusting it — it compares the body before and after and refuses to write if they differ. A run that finds itself changing prose is not this migration and must stop.
 
 4. **Skip a pinned spec.** A spec listed in `.ductus/config.toml` `[pinned] files` is left untouched, with one line naming it — pinning opts a file out of framework writes, and this is a framework write:
 

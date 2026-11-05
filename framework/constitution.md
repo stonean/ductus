@@ -1,6 +1,6 @@
 # Constitution
 
-A rule only one command applies lives in that command's markdown-only reference, which this document points at.
+A rule only one command applies lives in that command's reference, which this document points at.
 
 <!-- §principles -->
 
@@ -125,7 +125,7 @@ specs/
 
 `specs` is the default name: a project may rename it with `.ductus/config.toml` `[paths] specs-root`.
 
-Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`; the primitives resolve it, and on the markdown-only path the host does.
+Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`; the primitives resolve it.
 
 <!-- §spec-requirements -->
 
@@ -157,9 +157,9 @@ draft ──/clarify──▶ clarified ──/plan──▶ planned ──/impl
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question, in the same write; the next `/clarify` resolves it. `draft` is the only status that tolerates open questions in the spec body.
 - **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario; its task is implemented and the spec returns to `done`. A scenario carrying open questions takes this edge too, and the spec does not reach `done` while any remain.
-- **Backward via meaningful body edit** — `done` → `in-progress` when any artifact under `specs/{feature}/` is edited *meaningfully*. An edit is **mechanical** (no back-edge) when **(a)** every change is the same token substitution, applied uniformly across the live artifacts §drift-prevention enumerates, mapping a deprecated label to its current one; **(b)** every change adds, removes, or rewrites a **cross-service reference** and its regenerated `references:`; or **(c)** every change assigns an `AC{n}:` label and the `next-criterion:` counter, leaving each criterion's text byte-identical. A `plan.md` or `tasks.md` edit adding no unchecked task takes no back-edge either. Anything else — new scope, changed semantics, factual corrections — is **meaningful** and takes the back-edge through the same `/amend` flow.
+- **Backward via meaningful body edit** — `done` → `in-progress`, through the same `/amend` flow, when an edit under `specs/{feature}/` changes a criterion, an open question, an unchecked task, a scenario, a data model or another file; `classify-spec-edit` decides from the diff. Two kinds take no back-edge. A **correction** edits `spec.md`, `plan.md` or `tasks.md` and changes none of those, a label's assignment and a factual correction included. An edit elsewhere is **mechanical** when **(a)** every change is the same token substitution, applied uniformly across the live artifacts §drift-prevention enumerates, mapping a deprecated label to its current one, or **(b)** every change adds, removes, or rewrites a **cross-service reference** and its regenerated `references:`.
 
-The three cases share one test, which decides cases the list does not name: an edit is mechanical when the diff is **determinable without author judgment** *and* **changes no claim the spec makes**. A typo fix or misplaced sweep residue is mechanical; a **factual correction** is not. Spec bodies are living documents that represent current state, and scenarios evolve the existing spec rather than spawning a new one; git history records what was written when.
+Other cases there take one test: an edit is mechanical when the diff is **determinable without author judgment** *and* **changes no claim the spec makes**, so a typo fix or misplaced sweep residue is, and a **factual correction** is not, since a scenario's text is the requirement. Spec bodies are living documents that represent current state, and scenarios evolve the existing spec rather than spawning a new one.
 
 **A branch-scoped spec is a staging form, not a fourth state.** A spec numbered `{identifier}.{n}-{slug}` (§numbering) names in `folds-into:` the upstream spec it stands in for. A pending fold never holds it short of `done`; then fold-back moves its content upstream and removes it, adding **no new back-edge** — a `done` upstream spec reopens by one of the two above.
 
@@ -169,7 +169,6 @@ Operational rules:
 - **Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk.**
 - **Syncing a canonical record that lives on another spec is a mechanical edit** — that spec stays `done`, and a table synced twice moves to the spec owning the behavior.
 - **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole; to separate one from edits on disk, set them aside, commit it, then restore them, or transition first.
-- **A status transition states both ends**, so a stale read fails loudly; read the frontmatter before retrying.
 
 <!-- §plan-phase -->
 
@@ -247,7 +246,7 @@ The first matching condition determines the route:
 
 ### Scenarios
 
-A scenario is a spec at a lower level of abstraction — same format, narrower scope — in a `scenarios/` directory beside its spec: **section** frontmatter (the parent section it elaborates), **Context**, **Behavior**, and optional **Edge Cases**. The scenario-creation primitive writes the frontmatter and question scaffolding, so pass it the body only; the task-append primitive can succeed writing nothing — a task already references the scenario, or a pending one has the same title and items — so read its result, not its exit status.
+A scenario is a spec at a lower level of abstraction — same format, narrower scope — in a `scenarios/` directory beside its spec: **section** frontmatter (the parent section it elaborates), **Context**, **Behavior**, and optional **Edge Cases**.
 
 #### Scenario lifecycle
 
@@ -292,8 +291,9 @@ Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in 
 Every finding a pipeline run produces (a `/{project}:review` observation, a `/{project}:analyze` finding live when detection ends, an issue `/{project}:implement` surfaces outside the task in hand) gets at most one disposition; a gating one MUST have one before its spec can reach `done`.
 
 - **Three dispositions.** **Fixed** — a chore, fixed in the run and on disk. **Deferred** — to pipeline work chosen by `.ductus/reference/groom.md` **§Groom decision tree**, reopening a `done` target, to an external work item, or both. **Waived** — not addressed, with its reason, in the run's own record. The inbox is not a disposition. A question is deferred with its trigger.
-- **Detect, decide, re-check, record.** Detection writes nothing, each write is confirmed first, and the record is written from a re-check; with no operator, nothing is written and undecided findings are recorded undispositioned (`.ductus/reference/analyze.md` **§Finding dispositions**).
-- **Scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it, since an in-progress spec is its defects' home; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
+- **Detect, decide, re-check, record.** Detection writes nothing, each gating write is confirmed first, and the record is written from a re-check; a host that cannot ask leaves each gating finding undispositioned, and `ductus exec` writes nothing (`.ductus/reference/analyze.md` **§Finding dispositions**).
+- **A review or analysis run creates work only for a gating finding**, and an observation showing the spec's own code breaks its contract counts as one. Any other observation is fixed in the run when mechanical and otherwise waived with its reason, recorded as decided by the rule. Only a gating finding's waiver or deferral reaches the operator, one at a time, and a person's stored decision wins.
+- **In `/{project}:implement`, scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
 - **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
 - **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
 - **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
@@ -356,7 +356,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `excluded`, `contract-breaks`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; `fix-rounds-open`: boolean; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
 
 ##### Analyze record — `analysis.md`
 
@@ -382,7 +382,7 @@ Other fields are permitted and ignored by uninterested consumers, except the res
 
 1. **Markdown is source of truth** — the runtime MUST NOT own state the markdown cannot reconstruct. Runtime-owned data (caches, indexes, parsed graphs) is derived and gitignored, per the existing rule on structured derived views.
 2. **Determinism only** — the runtime MUST NOT call an LLM. Work requiring semantic judgment (content quality, `/clarify` resolution, `/specify` sketching, per-rule Verification reads, `/groom` routing) stays in slash commands.
-3. **Required, and acquired by the pipeline** — `/{project}` acquires the pinned runtime as part of adoption, so a bootstrapped project has the binary and pipeline commands MAY assume determinism rather than specifying two executable paths to one result. The runtime is *ductus-owned*: acquired and version-managed by the pipeline into a store it writes, never whatever `PATH` resolves. A project that supplies its own binary declares it (`[runtime] path`) and is equally supported. Acquisition failure halts the run rather than degrading, because a requirement that quietly is not one leaves both paths alive. Shell pipelines that parse frontmatter or markdown structure (`awk`, `sed`, `grep` pipelines, `for` loops over files) are **not** a sanctioned substitute for the runtime primitives or the host's file tools.
+3. **Required, and acquired by the pipeline** — `/{project}` acquires the pinned runtime as part of adoption, so a bootstrapped project has the binary and pipeline commands MAY assume determinism rather than specifying two executable paths to one result. The runtime is *ductus-owned*: acquired and version-managed by the pipeline into a store it writes, never whatever `PATH` resolves. A project that supplies its own binary declares it (`[runtime] path`) and is equally supported. Acquisition failure halts the run rather than degrading, because a requirement that quietly is not one leaves both paths alive. Shell pipelines that parse frontmatter or markdown structure (`awk`, `sed`, `grep` pipelines, `for` loops over files) are **not** a sanctioned substitute for the runtime primitives.
 4. **Schema follows the constitution** — the runtime MUST read frontmatter and artifact structure according to the schemas declared in this document. Schema changes ship through the constitution; the runtime MUST update to match. The constitution MUST NOT import runtime types.
 5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `ductus`-specific coupling. A primitive that, called without a prompt, would run a command the project supplies, write outside the project and its staging directory, or write a host's settings or command files MAY be left off the MCP surface; it stays a `ductus <name>` subcommand and a `ductus exec` step.
 
@@ -390,7 +390,7 @@ Other fields are permitted and ignored by uninterested consumers, except the res
 
 #### Host integration (for agent runtimes)
 
-Backticked primitive names are the runtime's MCP tools, bare `<verb>-<noun>` (one principle 5 leaves off MCP runs through the CLI). Hosts prefix them — Claude Code `mcp__ductus__`; Auggie / Antigravity `mcp:ductus:`; OpenCode a `<server>_<tool>` name under `ductus`; Pi `ductus__`, through the `.pi/extensions/ductus.ts` bridge, since Pi has no MCP client — so match the prefix. With the server registered, **call the tool** for each step, fetching a lazy schema first (`ToolSearch`); without it, walk the same prose with file tools; the shell pipelines principle 3 names stand in for neither. The two paths share one contract, and neither wraps the other. A command's markdown-only reference, `framework/reference/<command>.md` (installed at `.ductus/reference/<command>.md`), is read only where a step points at it; a command's Instructions open with a one-line pointer here.
+Backticked primitive names are the runtime's MCP tools, bare `<verb>-<noun>` (one principle 5 leaves off MCP runs through the CLI). Hosts prefix them — Claude Code `mcp__ductus__`; Auggie / Antigravity `mcp:ductus:`; OpenCode a `<server>_<tool>` name under `ductus`; Pi `ductus__`, through the `.pi/extensions/ductus.ts` bridge, since Pi has no MCP client — so match the prefix. With the server registered, **call the tool** for each step, fetching a lazy schema first (`ToolSearch`); without it, run `ductus <name>`, or read its `--help` where the CLI lacks an argument; the shell pipelines principle 3 names stand in for neither. **The binary is the source of a primitive's rules.** A command's reference, `framework/reference/<command>.md` (installed at `.ductus/reference/<command>.md`), keeps what a step does with the result, host judgment and policy, and is read only where a step points at it; a command's Instructions open with a one-line pointer here.
 
 #### Eligibility criteria
 
@@ -398,7 +398,7 @@ A capability is runtime-eligible only when **all three** hold:
 
 1. **Deterministic** — no semantic judgment required; the same inputs always produce the same outputs.
 2. **Currently mechanical** — already either (a) executed by an LLM following procedural instructions in a slash command body, or (b) implemented as a bash script the framework invokes (pre-commit hooks, generators, CI).
-3. **Specifiable as prose** — the capability can be stated completely enough that the Markdown-only reference documents it, and a primitive mirrors that reference rather than introducing policy of its own.
+3. **Specifiable** — the primitive's compiled description can state its rules completely, and it introduces no policy of its own.
 
 **Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails, since each such parser is a copy of a tested parse that drifts.
 
@@ -434,6 +434,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Constitution section anchors | its `<!-- §<anchor> -->` markers |
 | Command frontmatter (description, argument-hint) | each command's own frontmatter |
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
+| A primitive's behavior | its compiled description (`ductus <name> --help`; `runtime/src/schema/descriptions.rs`) |
 | Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; another prefix: the data-model of the spec that introduced its file, else the file's header |
 | Service registry schema (`.ductus/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
 | A plan's design record | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
@@ -450,7 +451,7 @@ When document B describes content authored in document A, B back-links to A — 
 
 - **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), rules, command sources, scripts, CI, docs, README. The uniform sweep is mechanical (§spec-lifecycle), kept apart from unrelated edits; **keep the sweep's own target list current**.
 - **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime computes which specs a sweep reopens from the diff, so a reworded line is not mechanical.
-- **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning; one in a `done` spec body is a meaningful edit.
+- **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning; one in a `done` spec's scenario or data model is a meaningful edit.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.
 - **An anchor reference resolves by line, and a line wrap alone breaks it.** A `§name` is qualified only when its line names its document, and within a document it matches heading text longest-first; a subsection has no marker, so cite its marked section.
@@ -488,7 +489,7 @@ Knowledge that would help another contributor belongs in git, never in an agent'
 
 ### Concurrent Features
 
-**Each agent process holds its own session target**, identified by `DUCTUS_SESSION`, else the agent's session identifier (Claude Code's `CLAUDE_CODE_SESSION_ID`), in gitignored `.ductus/sessions/`; within a process, one target and a pipeline serial within a feature. Every target write also sets the shared default, `.ductus/session.toml`, which an unidentified process uses and an identified one adopts once; the markdown-only path cannot read the process environment, so it reads and writes the shared default only. Sessions on one feature are told of each other, never blocked.
+**Each agent process holds its own session target**, identified by `DUCTUS_SESSION`, else the agent's session identifier (Claude Code's `CLAUDE_CODE_SESSION_ID`), in gitignored `.ductus/sessions/`; within a process, one target and a pipeline serial within a feature. Every target write also sets the shared default, `.ductus/session.toml`, which an unidentified process uses and an identified one adopts once. Sessions on one feature are told of each other, never blocked.
 
 Per-process targets isolate the target only: agents in one tree share files, index and commits, so `git worktree` and platform isolation remain the answer for isolating edits. A push carries every local commit, so name another session's before pushing. Two bounds stay open: processes with no identity share one target, and with two agent CLIs in one tree the runtime reads command files from the agent `/ductus` last recorded. A command that removes a feature's directory leaves no session in this tree pointing at it: `/{project}:fold` re-targets each to the spec its content moved to, and `/{project}:consolidate` clears each, keeping `cli-config-dir`, since its target is a spec nobody chose to work on; a teammate's session in another clone may still name the removed directory.
 

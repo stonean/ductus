@@ -23,7 +23,7 @@ The framework's own corpus was swept when the primitive landed. Without this ent
 
    The sweep is performed by the primitive, never by hand — 700 criteria across 49 specs in this repository's own backfill, where a hand edit is a silent renumbering waiting to happen.
 
-3. **Leave `done` specs at `done`.** The diff assigns labels and maintains the counter; each labelled criterion's own text is byte-identical either side of it. That is case (c) of the mechanical-edit rule in [§spec-lifecycle](../constitution.md#spec-lifecycle), so the back-edge does not fire and a `done` spec stays `done`. A run that finds itself changing criterion *text* is not this migration and must stop.
+3. **Leave `done` specs at `done`.** The diff assigns labels and maintains the counter; each labelled criterion's own text is byte-identical either side of it. That is a correction under [§spec-lifecycle](../constitution.md#spec-lifecycle), so the back-edge does not fire and a `done` spec stays `done`. A run that finds itself changing criterion *text* is not this migration and must stop.
 
 4. **Skip a pinned spec.** A spec listed in `.ductus/config.toml` `[pinned] files` is left untouched, with one line naming it — pinning opts a file out of framework writes, and this is a framework write:
 
