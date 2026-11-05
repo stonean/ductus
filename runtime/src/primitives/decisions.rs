@@ -1731,10 +1731,18 @@ mod tests {
         }
     }
 
+    /// The rule's outcome differs here, so only the person's standing decision
+    /// keeps it from replacing that one.
     #[test]
     fn a_persons_stored_decision_wins_over_the_rule() {
+        let stored = RawDecision {
+            outcome: Some("deferred".into()),
+            target: Some("specs/031-x/tasks.md".into()),
+            reason: None,
+            ..stored_entry("k", "", "dev@example.com")
+        };
         let merged = merge(
-            vec![stored_entry("k", "a person's reason", "dev@example.com")],
+            vec![stored],
             &[],
             &[by_rule("k", "the rule's reason")],
             "2026-11-05T00:00:00Z",
@@ -1743,7 +1751,7 @@ mod tests {
         .unwrap();
         assert_eq!(merged.len(), 1);
         assert_eq!(merged[0].decided_by.as_deref(), Some("dev@example.com"));
-        assert_eq!(merged[0].reason.as_deref(), Some("a person's reason"));
+        assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
     }
 
     /// Expired, a person's decision stands for nothing, so the rule's replaces it.

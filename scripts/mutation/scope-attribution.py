@@ -660,7 +660,7 @@ MUTATIONS = [
         'src/primitives/decisions.rs',
         '                changed && !a_person_decided\n',
         '                changed || a_person_decided && false\n',
-        'decisions::tests::a_persons_stored_decision_wins_over_the_rule write_review::tests::a_stored_decision_by_a_person_wins_over_the_rule',
+        'decisions::tests::a_persons_stored_decision_wins_over_the_rule',
     ),
     (
         "M94 a stored rule decision reads as a person's",
