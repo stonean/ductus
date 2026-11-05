@@ -279,7 +279,6 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
 | `unexamined` cannot be measured while the spec is `in-progress`, and the gate's own ordering is what hides that | The family is `done`-only and the gate ordering is the shipped one, so the trap is identical in any adopter repo |
 | A spec's own completion commit can destroy content, and a `## Heading` absorbed into an unterminated code span is invisible to every check this project has — including the gate that reads it | **R** — drops the Family-25 scoping note; the blindness is in the shared markdown reader every adopter uses |
-| `set-status` takes `--from` and `--to`, not `--status` — and the refusal is the useful half | **R** — the two-sided form's rationale (a transition computed from a stale read fails loudly) is the general half |
 | `write-review` derives `scope` itself, so a count you measured earlier and typed into the Summary can contradict the record it is written into — and nothing compares the two | One call writes both, so nothing can compare them; true wherever the primitive runs |
 | Removing an embedded copy is a corpus sweep, not a deletion — grep for what pointed at it, including the artifacts that *describe* it | The pointer-not-copy rule already ships; this is what *replacing* one costs, classified by tense |
 | A `data-model.md` that claims "authoritative shapes" drifts from the runtime silently — check it against a record the runtime actually wrote, not against the code | **R** — check a schema table against an artifact the writer actually wrote, not against the code |
@@ -327,7 +326,6 @@ The 9 entries the promotion-coverage notice reported unclassified on 2026-09-28,
 
 | Entry | Reason |
 | --- | --- |
-| `append-task` has two shapes that both return exit 0 while writing nothing, and neither is an error | **R** — stated as reading a primitive's returned fields rather than its exit status; both dedup shapes reach every adopter's task appends through groom, amend and implement |
 
 #### Third round — routes to a rule file, not here
 
@@ -418,7 +416,6 @@ clause rather than as a principle in its own right.
 | Before reporting that a declarative entry misbehaved, read the entry (survey W32) | Adopters run the migration registry and read its gating fields; this is §grounding applied to a data row |
 | Never `git add -A` / `git add .` in this repo (survey G5) | The untracked-draft hazard is created by the pipeline itself, which adopters run |
 | A markdown link in a spec body creates a `dependencies:` edge — cite in prose when you mean a citation (survey G11) | The dependency generator ships; citing versus depending is an adopter distinction |
-| `create-scenario` appends its own Open/Resolved Questions scaffolding — do not author those headings in the body you pass it (survey G12) | An adopter-facing primitive with adopter-facing output |
 | Never edit an installed command file directly — edit the source the generator copies from (survey B2) | **R** — stated as "the installer overwrites it; pin it instead" rather than naming this repo's generator, which is what makes it matter to an adopter |
 | A check that cannot run must never look like one that passed (survey DP1) | Already `QUAL-CLAIM-001` in a shipped rule file; the design-time statement belongs beside it |
 | Never design framework features that depend on human diligence or discipline (survey DP2) | The hardest constraint on any pipeline artifact an adopter authors |
@@ -428,7 +425,7 @@ clause rather than as a principle in its own right.
 | Entry | Reason |
 | --- | --- |
 | Work a recommendation out to its result *before* presenting it (survey W5) | Promoted 2026-08-17 as §recommendations; the entry is already the pointer-shaped mirror this spec generalises |
-| Criterion-label assignment is mechanical-class (non-reopening) (survey W15) | Adopters receive the labelling pass and the same back-edge question |
+| Criterion-label assignment is a correction (non-reopening) (survey W15) | Adopters receive the labelling pass and the same back-edge question |
 | Cross-service reference edits are mechanical-class (non-reopening) (survey W14) | Cross-service references ship to adopters; the non-reopening rule is part of that contract |
 
 ### Project-only
