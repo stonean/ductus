@@ -1,11 +1,9 @@
-//! `check-prescriptions` — the diff check of a fix round against the previous
-//! re-read's prescribed edits (spec 078).
+//! `check-prescriptions` — the diff check of a fix round against the previous re-read's
+//! prescribed edits (spec 078). What it compares and returns is
+//! `schema::descriptions::CHECK_PRESCRIPTIONS`.
 //!
-//! A round that only applies the edits a re-read prescribed is verified by
-//! applying those edits to the tree that re-read read and comparing the result
-//! with the working tree, instead of by another re-read. The edits come from
-//! the re-read's own `result.json`, so no prescription passes through the
-//! fixer.
+//! The edits come from the re-read's own `result.json`, so no prescription passes through
+//! the fixer.
 //!
 //! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 

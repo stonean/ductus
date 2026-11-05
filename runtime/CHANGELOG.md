@@ -65,6 +65,12 @@ its version and date.
 
 ### Changed
 
+- **Each primitive has one description.** Its MCP description and its `--help`
+  are now one compiled text, so `ductus <name> --help` prints everything the tool
+  description says, and `ductus --help` and `-h` print its first sentence. The MCP
+  text is unchanged but for `gate-confirm`, which now says it blocks on the CLI and
+  not over MCP, and `label-criteria` and `check-artifacts`, which write `AC<n>` for
+  `AC{n}`. Spec 079, task 8.
 - **What a fix for an oversized artifact does to a `done` spec follows that
   rule.** `check-artifact-size`'s `on-done` for trimming `spec.md` is now
   `if-requirement-changes`, replacing `if-claim-changes`, and trimming

@@ -1,45 +1,16 @@
-//! `write-review` — render `specs/NNN/review.md` for `/ductus:review`: the
-//! report body and, in that same file's frontmatter, the record of the run.
-//! `spec.md` is not written (spec 057).
+//! `write-review` — render `specs/NNN/review.md` for `/ductus:review`. What it does is
+//! `schema::descriptions::WRITE_REVIEW`.
 //!
-//! Consumes the pass findings as a single `findings` array (the
-//! content-ingestion convention), plus the waiver results from
-//! `process-waivers` and the scope scalars from `compute-review-scope`, and:
+//! A cross-pass dedup breaks a severity tie by the higher confidence, and a
+//! `low`-confidence finding lands in Low-confidence whatever its severity. `blocking` is
+//! true exactly when `must-violations` exceeds zero, and the exit code (0 / 1) is
+//! derivable from it. The empty scope is a branch of this primitive, not a prose special
+//! case. It wrote a second copy into a `review:` block in `spec.md` until spec 057 left
+//! the record one home.
 //!
-//! - applies the deterministic **cross-pass dedup** — same `(rule, file)` with
-//!   overlapping line ranges collapses to one finding, highest-severity-wins
-//!   (tie broken by higher confidence);
-//! - **buckets** the survivors: findings matched by an applied waiver drop out
-//!   of the counts into Waived findings; a `low`-confidence finding lands in
-//!   Low-confidence regardless of severity; the rest split MUST / SHOULD;
-//! - renders the fixed report skeleton into `review.md` and records the run in
-//!   that same file's frontmatter (`last-run`, `reviewed-against`,
-//!   `must-violations`, `should-violations`, `low-confidence`, `blocking`),
-//!   pruning any **expired** waiver entries from its `waivers` list on the
-//!   write (per `process-waivers`' contract). It wrote a second copy into a
-//!   `review:` block in `spec.md` until spec 057 left the record one home;
-//! - **records the disposition of the reviewer's observations** — things the
-//!   reviewer judged real that map to no loaded rule. Each renders beside its
-//!   outcome, the record counts them under `dispositions:`, and a newly
-//!   deferred or waived one is stored under `decisions:` so the next run does
-//!   not ask again (spec 058). Nothing is written to the inbox;
-//! - **records a violation's deferral** — a MUST or SHOULD violation deferred
-//!   to its work is stored under `decisions:` keyed `rule {rule-id} at
-//!   {file}`, and leaves the counts only when its deferral releases it
-//!   ([`decisions::releases`], spec 076);
-//! - **records the fix-round loop** — from the run's `fix-rounds` list it
-//!   derives `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`,
-//!   `budget-stop` and `round-waivers`, applying the `[review] re-reads-off`
-//!   reason to each un-re-read round without its own, and writes none of them
-//!   when the run passed no list (spec 078);
-//! - the empty-scope case is a branch of this primitive, not a prose
-//!   special-case: it emits the 0-findings, `blocking: false` report.
-//!
-//! Both writes are atomic (tempfile + rename). `blocking` is true exactly when
-//! `must-violations` exceeds zero, and the exit code (0 / 1) is derivable from
-//! it. Defined by
-//! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
-//! and `specs/058-findings-route-at-discovery/spec.md`.
+//! Defined by
+//! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` and
+//! `specs/058-findings-route-at-discovery/spec.md`.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

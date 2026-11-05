@@ -1,23 +1,15 @@
-//! `dashboard` — single-call pipeline-state surface for `/{project}:status`.
-//!
-//! Returns everything `/{project}:status` needs to render the full pipeline
-//! view in one MCP round-trip: per-spec inventory (status, deps, tags,
-//! open-question count, artifact existence, scenarios count, blocked-by),
-//! the repo-wide `tags-union`, the review-state summary from the resolved
-//! project config, and the optional session target (with scenario detail when
-//! one is targeted). Both files resolve through [`crate::schema::paths`]'s
-//! three-tier `CONFIG_CHAIN` / `SESSION_CHAIN` ladders (`.ductus/` →
-//! `.govern/` → legacy repo root, newest-wins) — host-agnostic,
+//! `dashboard` — single-call pipeline-state surface for `/{project}:status`. What it
+//! returns is `schema::descriptions::DASHBOARD`. The project config and the session file
+//! resolve through [`crate::schema::paths`]'s three-tier `CONFIG_CHAIN` / `SESSION_CHAIN`
+//! ladders (`.ductus/` → `.govern/` → legacy repo root, newest-wins) — host-agnostic,
 //! project-name-agnostic, no caller-supplied path.
-//! Read-only with respect to filesystem state; no atomic-write concerns.
 //!
-//! The session target is a peek through [`crate::session`] (spec 062): an
-//! identified process sees its own target, with its session label and the
-//! notices its next command will deliver rendered under the target line. The
-//! peek pins no adoption, refreshes no `used-at` and consumes no notice, so
-//! the read-only contract holds for the session too — `dashboard` is also
-//! called for data, and a delivering read there would take the notices from
-//! the command that owns them.
+//! The session target is a peek through [`crate::session`] (spec 062): an identified
+//! process sees its own target, with its session label and the notices its next command
+//! will deliver rendered under the target line. The peek pins no adoption, refreshes no
+//! `used-at` and consumes no notice, so the read-only contract holds for the session too —
+//! `dashboard` is also called for data, and a delivering read there would take the notices
+//! from the command that owns them.
 //!
 //! Defined by `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`.
 

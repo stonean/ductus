@@ -25,6 +25,10 @@ use rmcp::model::CallToolRequestParams;
 use serde_json::{Value, json};
 
 use ductus::mcp::server::{GovRuntimeServer, tool_names};
+use ductus::schema::descriptions;
+use ductus::schema::registry::CLI_ONLY_PRIMITIVES;
+
+mod common;
 
 fn fixture_repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")
@@ -144,6 +148,55 @@ async fn lists_every_manifest_tool_and_canonical_set() {
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.
+/// What `ductus <subcommand> --help` prints above its usage: its `long_about`.
+fn long_about(subcommand: &str) -> String {
+    let output = common::ductus_command(env!("CARGO_BIN_EXE_ductus"))
+        .args([subcommand, "--help"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{subcommand} --help failed");
+    let help = String::from_utf8(output.stdout).unwrap();
+    let (long_about, _) = help
+        .split_once("\n\nUsage:")
+        .unwrap_or_else(|| panic!("no usage in {subcommand} --help: {help}"));
+    long_about.to_string()
+}
+
+/// One description per primitive (spec 079, AC9): each served tool's text and its
+/// subcommand's `--help` are the same text, so neither can drift from the other.
+#[tokio::test]
+async fn each_served_tools_description_is_its_subcommands_long_about() {
+    let client = start_pair(fixture_repo()).await;
+    let tools = client.list_tools(Option::default()).await.unwrap();
+    assert_eq!(tools.tools.len(), tool_names().count());
+    for tool in &tools.tools {
+        let description = tool.description.as_deref().unwrap_or_default();
+        assert!(!description.is_empty(), "{} has no description", tool.name);
+        assert_eq!(long_about(&tool.name), description, "{}", tool.name);
+    }
+    client.cancel().await.unwrap();
+}
+
+/// The one primitive the server does not serve still takes its text from the same
+/// place.
+#[test]
+fn the_cli_only_primitive_takes_its_description_from_the_same_place() {
+    assert_eq!(CLI_ONLY_PRIMITIVES, ["run-generator"]);
+    assert_eq!(long_about("run-generator"), descriptions::RUN_GENERATOR);
+}
+
+/// A literal would pass the test above while a second copy of the text sat beside
+/// the constant it should have named.
+#[test]
+fn no_tool_spells_its_description_as_a_literal() {
+    let server = include_str!("../src/mcp/server.rs");
+    assert_eq!(server.matches("description = \"").count(), 0);
+    assert_eq!(
+        server.matches("description = descriptions::").count(),
+        tool_names().count()
+    );
+}
+
 #[test]
 fn the_manifest_names_the_cli_only_primitives() {
     let manifest = fs::read_to_string(workspace_root().join("framework/runtime-tools.txt"))

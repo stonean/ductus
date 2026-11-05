@@ -9,6 +9,7 @@ use std::io;
 
 use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
+use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
@@ -69,141 +70,143 @@ enum Command {
         emit_schema: bool,
     },
 
-    /// Parse spec frontmatter and body sections.
+    #[command(about = descriptions::summary(descriptions::READ_SPEC), long_about = descriptions::READ_SPEC)]
     ReadSpec(ReadSpecArgs),
-    /// Parse `tasks.md` into a structured task list.
+    #[command(about = descriptions::summary(descriptions::READ_TASKS), long_about = descriptions::READ_TASKS)]
     ReadTasks(ReadTasksArgs),
-    /// Validate frontmatter shape against the pipeline schema.
+    #[command(about = descriptions::summary(descriptions::VALIDATE_FRONTMATTER), long_about = descriptions::VALIDATE_FRONTMATTER)]
     ValidateFrontmatter(ValidateFrontmatterArgs),
-    /// Verify `§anchor` references resolve to `<!-- §anchor -->` markers.
+    #[command(about = descriptions::summary(descriptions::RESOLVE_ANCHOR), long_about = descriptions::RESOLVE_ANCHOR)]
     ResolveAnchor(ResolveAnchorArgs),
-    /// Resolve an identifier (name, number, or partial slug) to a feature directory.
+    #[command(about = descriptions::summary(descriptions::RESOLVE_FEATURE), long_about = descriptions::RESOLVE_FEATURE)]
     ResolveFeature(ResolveFeatureArgs),
-    /// Resolve a consumer feature's `references:` index against the `[services]` registry.
+    #[command(about = descriptions::summary(descriptions::RESOLVE_REFERENCES), long_about = descriptions::RESOLVE_REFERENCES)]
     ResolveReferences(ResolveReferencesArgs),
-    /// Resolve registered shared constitutions to documents on local disk.
+    #[command(about = descriptions::summary(descriptions::RESOLVE_CONSTITUTIONS), long_about = descriptions::RESOLVE_CONSTITUTIONS)]
     ResolveConstitutions(ResolveConstitutionsArgs),
-    /// Traverse spec dependencies and check status compatibility.
+    #[command(about = descriptions::summary(descriptions::TRAVERSE_DEPS), long_about = descriptions::TRAVERSE_DEPS)]
     TraverseDeps(TraverseDepsArgs),
-    /// Verify cited rule IDs exist in rule files and aren't deprecated.
+    #[command(about = descriptions::summary(descriptions::CHECK_RULE_IDS), long_about = descriptions::CHECK_RULE_IDS)]
     CheckRuleIds(CheckRuleIdsArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_PROMOTION_COVERAGE), long_about = descriptions::CHECK_PROMOTION_COVERAGE)]
     CheckPromotionCoverage(CheckPromotionCoverageArgs),
-    /// Count tasks.md commits since the spec entered `in-progress`.
+    #[command(about = descriptions::summary(descriptions::CHECK_STUCK), long_about = descriptions::CHECK_STUCK)]
     CheckStuck(CheckStuckArgs),
-    /// Derive the runtime write boundary from git history.
+    #[command(about = descriptions::summary(descriptions::DERIVE_BOUNDARY), long_about = descriptions::DERIVE_BOUNDARY)]
     DeriveBoundary(DeriveBoundaryArgs),
-    /// Diff the feature's first spec-dir commit against the working tree, filtered to sibling-spec paths.
+    #[command(about = descriptions::summary(descriptions::DIFF_CROSS_SPEC), long_about = descriptions::DIFF_CROSS_SPEC)]
     DiffCrossSpec(DiffCrossSpecArgs),
-    /// Select rule files for /ductus:review (suffix, [rules] surfaces, disabled-rule-files).
+    #[command(about = descriptions::summary(descriptions::DISCOVER_RULE_FILES), long_about = descriptions::DISCOVER_RULE_FILES)]
     DiscoverRuleFiles(DiscoverRuleFilesArgs),
-    /// Classify a spec's recorded waivers in review.md against currently-firing findings.
+    #[command(about = descriptions::summary(descriptions::PROCESS_WAIVERS), long_about = descriptions::PROCESS_WAIVERS)]
     ProcessWaivers(ProcessWaiversArgs),
-    /// Classify a spec's recorded deferred/waived decisions against this run's finding keys.
+    #[command(about = descriptions::summary(descriptions::PROCESS_DECISIONS), long_about = descriptions::PROCESS_DECISIONS)]
     ProcessDecisions(ProcessDecisionsArgs),
-    /// Resolve /ductus:review's diff-base and file scope.
+    #[command(about = descriptions::summary(descriptions::COMPUTE_REVIEW_SCOPE), long_about = descriptions::COMPUTE_REVIEW_SCOPE)]
     ComputeReviewScope(ComputeReviewScopeArgs),
-    /// Render specs/NNN/review.md — the report and its record, in one file.
+    #[command(about = descriptions::summary(descriptions::WRITE_REVIEW), long_about = descriptions::WRITE_REVIEW)]
     WriteReview(WriteReviewArgs),
-    /// Record that analyze ran, in specs/NNN/analysis.md.
+    #[command(about = descriptions::summary(descriptions::WRITE_ANALYSIS), long_about = descriptions::WRITE_ANALYSIS)]
     WriteAnalysis(WriteAnalysisArgs),
-    /// Flip a single subtask checkbox in `tasks.md` (atomic rewrite).
+    #[command(about = descriptions::summary(descriptions::MARK_TASK), long_about = descriptions::MARK_TASK)]
     MarkTask(MarkTaskArgs),
-    /// Flip a single acceptance-criterion checkbox in `spec.md`.
+    #[command(about = descriptions::summary(descriptions::MARK_CRITERION), long_about = descriptions::MARK_CRITERION)]
     MarkCriterion(MarkCriterionArgs),
-    /// Update the `status:` field in spec frontmatter, guarded by `from`.
+    #[command(about = descriptions::summary(descriptions::SET_STATUS), long_about = descriptions::SET_STATUS)]
     SetStatus(SetStatusArgs),
-    /// Invoke a bash generator with `--dry-run`; non-zero exit is drift.
+    #[command(about = descriptions::summary(descriptions::RUN_GENERATOR), long_about = descriptions::RUN_GENERATOR)]
     RunGenerator(RunGeneratorArgs),
-    /// Wrap `npx markdownlint-cli2` and surface violations.
+    #[command(about = descriptions::summary(descriptions::LINT_MARKDOWN), long_about = descriptions::LINT_MARKDOWN)]
     LintMarkdown(LintMarkdownArgs),
-    /// Download an archive plus its sha256 sidecar and verify the hash.
+    #[command(about = descriptions::summary(descriptions::FETCH_ARCHIVE), long_about = descriptions::FETCH_ARCHIVE)]
     FetchArchive(FetchArchiveArgs),
-    /// Extract a local `.tar.gz` / `.zip` archive into a destination directory.
+    #[command(about = descriptions::summary(descriptions::EXTRACT_ARCHIVE), long_about = descriptions::EXTRACT_ARCHIVE)]
     ExtractArchive(ExtractArchiveArgs),
-    /// Strategy-aware bulk substitute + write driven by a manifest.
+    #[command(about = descriptions::summary(descriptions::APPLY_MANIFEST), long_about = descriptions::APPLY_MANIFEST)]
     ApplyManifest(ApplyManifestArgs),
-    /// Remove files in a directory that are not in the expected manifest.
+    #[command(about = descriptions::summary(descriptions::ENFORCE_MANIFEST), long_about = descriptions::ENFORCE_MANIFEST)]
     EnforceManifest(EnforceManifestArgs),
-    /// Idempotently merge a framework-managed block with configurable marker shape.
+    #[command(about = descriptions::summary(descriptions::MERGE_MANAGED_BLOCK), long_about = descriptions::MERGE_MANAGED_BLOCK)]
     MergeManagedBlock(MergeManagedBlockArgs),
-    /// Idempotently merge a canonical permission allow/deny set into a JSON file with dedup.
+    #[command(about = descriptions::summary(descriptions::MERGE_PERMISSIONS), long_about = descriptions::MERGE_PERMISSIONS)]
     MergePermissions(MergePermissionsArgs),
-    /// Translate a pre-0.10.0 legacy session JSON into `.ductus/session.toml` and delete the legacy file.
+    #[command(about = descriptions::summary(descriptions::MIGRATE_SESSION_FILE), long_about = descriptions::MIGRATE_SESSION_FILE)]
     MigrateSessionFile(MigrateSessionFileArgs),
-    /// Move a spec's review/analyze blocks into the artifacts that own them.
+    #[command(about = descriptions::summary(descriptions::RELOCATE_AUDIT_RECORDS), long_about = descriptions::RELOCATE_AUDIT_RECORDS)]
     RelocateAuditRecords(RelocateAuditRecordsArgs),
-    /// Write a new scenarios/{slug}.md file under a feature with frontmatter and body.
+    #[command(about = descriptions::summary(descriptions::CREATE_SCENARIO), long_about = descriptions::CREATE_SCENARIO)]
     CreateScenario(CreateScenarioArgs),
-    /// Assign stable AC<n> labels to a spec's acceptance criteria (idempotent).
+    #[command(about = descriptions::summary(descriptions::LABEL_CRITERIA), long_about = descriptions::LABEL_CRITERIA)]
     LabelCriteria(LabelCriteriaArgs),
-    /// Scaffold the next {specs-root}/{NNN-slug}/ directory with a spec-template copy.
+    #[command(about = descriptions::summary(descriptions::CREATE_FEATURE), long_about = descriptions::CREATE_FEATURE)]
     CreateFeature(CreateFeatureArgs),
-    /// Copy the plan/tasks (and optional data-model) templates into a feature directory.
+    #[command(about = descriptions::summary(descriptions::CREATE_PLAN_ARTIFACTS), long_about = descriptions::CREATE_PLAN_ARTIFACTS)]
     CreatePlanArtifacts(CreatePlanArtifactsArgs),
-    /// Evaluate /ductus:implement's pre-done review gate (markdown lint, scenario questions, fold and cross-spec obligations, then the review and analyze records in review.md and analysis.md).
+    #[command(about = descriptions::summary(descriptions::CHECK_REVIEW_GATE), long_about = descriptions::CHECK_REVIEW_GATE)]
     CheckReviewGate(CheckReviewGateArgs),
-    /// Report whether one feature's review record still describes its durable contracts, as the completion gate compares them.
+    #[command(about = descriptions::summary(descriptions::CHECK_REVIEW_FRESHNESS), long_about = descriptions::CHECK_REVIEW_FRESHNESS)]
     CheckReviewFreshness(CheckReviewFreshnessArgs),
-    /// Classify the edit under a spec's directory as a correction, which leaves a done spec done, or as one that reopens it, from the diff.
+    #[command(about = descriptions::summary(descriptions::CLASSIFY_SPEC_EDIT), long_about = descriptions::CLASSIFY_SPEC_EDIT)]
     ClassifySpecEdit(ClassifySpecEditArgs),
-    /// Measure from history whether reopenings stayed within the bound on review and analysis runs.
+    #[command(about = descriptions::summary(descriptions::MEASURE_REOPENINGS), long_about = descriptions::MEASURE_REOPENINGS)]
     MeasureReopenings(MeasureReopeningsArgs),
-    /// Append a question bullet to a spec or scenario's ## Open Questions (atomic, with back-edge).
+    #[command(about = descriptions::summary(descriptions::APPEND_QUESTION), long_about = descriptions::APPEND_QUESTION)]
     AppendQuestion(AppendQuestionArgs),
-    /// Append a numbered task block to a feature's tasks.md (atomic rewrite).
+    #[command(about = descriptions::summary(descriptions::APPEND_TASK), long_about = descriptions::APPEND_TASK)]
     AppendTask(AppendTaskArgs),
-    /// Append one bullet to {specs-root}/inbox.md (atomic) — the surface behind /log.
+    #[command(about = descriptions::summary(descriptions::APPEND_INBOX), long_about = descriptions::APPEND_INBOX)]
     AppendInbox(AppendInboxArgs),
-    /// Remove the first bullet matching `item` from {specs-root}/inbox.md (atomic).
+    #[command(about = descriptions::summary(descriptions::REMOVE_INBOX_ITEM), long_about = descriptions::REMOVE_INBOX_ITEM)]
     RemoveInboxItem(RemoveInboxItemArgs),
-    /// Derive the existing homes — specs, rule surfaces — proposed work could belong to.
+    #[command(about = descriptions::summary(descriptions::DERIVE_ROUTING_CANDIDATES), long_about = descriptions::DERIVE_ROUTING_CANDIDATES)]
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
-    /// Report relative markdown links in the spec corpus that resolve to nothing.
+    #[command(about = descriptions::summary(descriptions::CHECK_CORPUS_LINKS), long_about = descriptions::CHECK_CORPUS_LINKS)]
     CheckCorpusLinks(CheckCorpusLinksArgs),
-    /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
+    #[command(about = descriptions::summary(descriptions::CHECK_ORPHANED_REFERENCES), long_about = descriptions::CHECK_ORPHANED_REFERENCES)]
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
-    /// Report flags a command's Flags table documents but its `argument-hint` omits.
+    #[command(about = descriptions::summary(descriptions::CHECK_COMMAND_FLAGS), long_about = descriptions::CHECK_COMMAND_FLAGS)]
     CheckCommandFlags(CheckCommandFlagsArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_STEP_REFERENCES), long_about = descriptions::CHECK_STEP_REFERENCES)]
     CheckStepReferences(CheckStepReferencesArgs),
-    /// Report branch-scoped specs still in the tree, with the upstream spec each folds into.
+    #[command(about = descriptions::summary(descriptions::CHECK_UNFOLDED_SPECS), long_about = descriptions::CHECK_UNFOLDED_SPECS)]
     CheckUnfoldedSpecs(CheckUnfoldedSpecsArgs),
-    /// Re-point inbound body links, folds-into fields and root-file references from a feature directory at its fold target.
+    #[command(about = descriptions::summary(descriptions::REWRITE_SPEC_LINKS), long_about = descriptions::REWRITE_SPEC_LINKS)]
     RewriteSpecLinks(RewriteSpecLinksArgs),
-    /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
+    #[command(about = descriptions::summary(descriptions::RETIRE_FEATURE), long_about = descriptions::RETIRE_FEATURE)]
     RetireFeature(RetireFeatureArgs),
-    /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
+    #[command(about = descriptions::summary(descriptions::INVALIDATE_REVIEW), long_about = descriptions::INVALIDATE_REVIEW)]
     InvalidateReview(InvalidateReviewArgs),
-    /// Snapshot the working tree as the base of a review run's first fix round, clearing the feature's earlier rounds.
+    #[command(about = descriptions::summary(descriptions::START_FIX_ROUNDS), long_about = descriptions::START_FIX_ROUNDS)]
     StartFixRounds(StartFixRoundsArgs),
-    /// Open a review fix round: derive its paths, classify it, and write the re-read's brief.
+    #[command(about = descriptions::summary(descriptions::BRIEF_RE_READ), long_about = descriptions::BRIEF_RE_READ)]
     BriefReRead(BriefReReadArgs),
-    /// Read a fix round's re-read result: finished or not, and its findings by severity.
+    #[command(about = descriptions::summary(descriptions::READ_RE_READ), long_about = descriptions::READ_RE_READ)]
     ReadReRead(ReadReReadArgs),
-    /// Check a fix round against the previous re-read's prescribed edits.
+    #[command(about = descriptions::summary(descriptions::CHECK_PRESCRIPTIONS), long_about = descriptions::CHECK_PRESCRIPTIONS)]
     CheckPrescriptions(CheckPrescriptionsArgs),
-    /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
+    #[command(about = descriptions::summary(descriptions::DERIVE_DEPENDENCIES), long_about = descriptions::DERIVE_DEPENDENCIES)]
     DeriveDependencies(DeriveDependenciesArgs),
-    /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
+    #[command(about = descriptions::summary(descriptions::DERIVE_REFERENCES), long_about = descriptions::DERIVE_REFERENCES)]
     DeriveReferences(DeriveReferencesArgs),
-    /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
+    #[command(about = descriptions::summary(descriptions::CHECK_ARTIFACTS), long_about = descriptions::CHECK_ARTIFACTS)]
     CheckArtifacts(CheckArtifactsArgs),
-    /// Measure a feature's spec artifacts against the configured read size; report each over it.
+    #[command(about = descriptions::summary(descriptions::CHECK_ARTIFACT_SIZE), long_about = descriptions::CHECK_ARTIFACT_SIZE)]
     CheckArtifactSize(CheckArtifactSizeArgs),
-    /// Reduce a feature's tasks.md — drop spent task sections or reset to template state.
+    #[command(about = descriptions::summary(descriptions::PRUNE_TASKS), long_about = descriptions::PRUNE_TASKS)]
     PruneTasks(PruneTasksArgs),
-    /// Report a feature's plan.md sections outside the design record; remove the listed ones.
+    #[command(about = descriptions::summary(descriptions::PRUNE_PLAN), long_about = descriptions::PRUNE_PLAN)]
     PrunePlan(PrunePlanArgs),
-    /// Segment the four project files into entries; remove, replace or create the listed ones.
+    #[command(about = descriptions::summary(descriptions::PRUNE_PROJECT), long_about = descriptions::PRUNE_PROJECT)]
     PruneProject(PruneProjectArgs),
-    /// Emit a `gate-confirm` envelope on stdout and block for a response.
+    #[command(about = descriptions::summary(descriptions::GATE_CONFIRM), long_about = descriptions::GATE_CONFIRM)]
     GateConfirm(GateConfirmArgs),
-    /// Single-call pipeline-state surface for `/{project}:status`.
+    #[command(about = descriptions::summary(descriptions::DASHBOARD), long_about = descriptions::DASHBOARD)]
     Dashboard(DashboardArgs),
-    /// Atomically rewrite the active session file (`.ductus/session.toml`, falling back to `.govern/session.toml` then the legacy root pre-migration) with the session-target record.
+    #[command(about = descriptions::summary(descriptions::WRITE_SESSION), long_about = descriptions::WRITE_SESSION)]
     WriteSession(WriteSessionArgs),
-    /// Resolve this process's session target: its own, an adopted default, or the shared default when unidentified.
+    #[command(about = descriptions::summary(descriptions::RESOLVE_SESSION), long_about = descriptions::RESOLVE_SESSION)]
     ResolveSession(ResolveSessionArgs),
-    /// Re-point (fold) or clear (consolidate) every session in the working tree that names a removed feature.
+    #[command(about = descriptions::summary(descriptions::RETARGET_SESSIONS), long_about = descriptions::RETARGET_SESSIONS)]
     RetargetSessions(RetargetSessionsArgs),
 }
 
@@ -936,6 +939,29 @@ mod tests {
     /// newline (`StyledStr::replace_newline_var`), so a doc comment naming a
     /// criterion label that way once split `label-criteria`'s summary in two
     /// in both `ductus --help` and `ductus label-criteria --help`.
+    /// Each primitive's `about` is the start of its `long_about`, so `-h` and the
+    /// `ductus --help` list summarise the text `--help` prints whole (spec 079, AC9),
+    /// and a variant that dropped either attribute fails here.
+    #[test]
+    fn each_primitives_about_summarises_its_long_about() {
+        let command = Cli::command();
+        for name in PRIMITIVE_REGISTRY {
+            let sub = command
+                .find_subcommand(name)
+                .unwrap_or_else(|| panic!("no subcommand for {name}"));
+            let about = sub.get_about().map(ToString::to_string).unwrap_or_default();
+            let long_about = sub
+                .get_long_about()
+                .map(ToString::to_string)
+                .unwrap_or_default();
+            assert!(!about.is_empty(), "{name} has no about");
+            assert!(
+                long_about.starts_with(&about),
+                "{name}: {about:?} does not start {long_about:?}"
+            );
+        }
+    }
+
     #[test]
     fn every_short_help_prints_on_one_line() {
         fn splits(text: &str) -> bool {

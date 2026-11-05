@@ -29,6 +29,19 @@ pub fn ductus_command(bin: impl AsRef<std::ffi::OsStr>) -> Command {
     command
 }
 
+/// Where a `cargo build --release` run from the crate puts the runtime. It follows
+/// `CARGO_TARGET_DIR` as that build does: with the path fixed, a run under another
+/// target directory built one binary and tested the one a previous build left behind,
+/// so a change to the runtime's output passed until the next plain build.
+pub fn release_binary() -> std::path::PathBuf {
+    let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let target = std::env::var_os("CARGO_TARGET_DIR")
+        .map_or_else(|| manifest.join("target"), |dir| manifest.join(dir));
+    target
+        .join("release")
+        .join(format!("ductus{}", std::env::consts::EXE_SUFFIX))
+}
+
 /// A `git` command with the variables a git hook exports removed, so a test
 /// that runs git in a fixture repository acts on the fixture and never on the
 /// repository whose hook is running the suite. A commit from a linked

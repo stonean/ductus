@@ -1,26 +1,19 @@
-//! `measure-reopenings` — whether a spec's review and analysis converged, from
-//! the repository's history (spec 079, AC1, AC17, AC19).
+//! `measure-reopenings` — whether a spec's review and analysis converged, from the
+//! repository's history (spec 079, AC1, AC17, AC19). Its method is
+//! `schema::descriptions::MEASURE_REOPENINGS`.
 //!
-//! A **reopening** is one pass into `in-progress` and on to `done`, delimited by
-//! the `status:` of `{specs-root}/{feature}/spec.md` at each commit. It starts at
-//! the last commit entering `in-progress` before the closing commit, the one that
-//! makes the spec `done`, and it counts when that closing commit's author date, or
-//! its place after a `--since` ref, falls in the window. A commit is judged against
-//! its own parents, never its walk-order neighbours, as `check-stuck` does, so a
-//! merged side branch adds no transition.
+//! A commit is judged against its own parents, never its walk-order neighbours, as
+//! `check-stuck` does, so a merged side branch adds no transition. Every commit is walked,
+//! since `git log -- path`'s history simplification drops a closing on a branch whose
+//! merge kept the other side, and an adopter's work lives on branches. Every directory
+//! seen counts, so a fold or a consolidation cannot erase a miss.
 //!
-//! A **run** is a distinct `last-run` in the committed `review.md` or `analysis.md`
-//! inside the reopening, so a run's two writes are one, two runs in one commit are
-//! one, an uncommitted run is none, and a value carried in from before the reopening
-//! is none. A second run of a kind is **over the bound** unless the previous run of
-//! that kind left a gating finding, read from that run's last write.
-//!
-//! The walk goes newest first and stops once it is past the window with no closing
-//! commit waiting for its start, so `/{project}:status` pays for the window and the
-//! reopenings closed in it, not for the whole history. A path is followed by name,
-//! so a renamed spec's history starts at the rename. A reopening squashed into one
-//! commit shows no pass: when its status moves to `done` from another status it is
-//! reported as not counted, and from `done` to `done` nothing can show it.
+//! The walk goes newest first and stops once it is past the window with no closing commit
+//! waiting for its start, so `/{project}:status` pays for the window and the reopenings
+//! closed in it, not for the whole history. A path is followed by name, so a renamed
+//! spec's history starts at the rename. A reopening squashed into one commit shows no
+//! pass: when its status moves to `done` from another status it is reported as not
+//! counted, and from `done` to `done` nothing can show it.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -383,7 +376,7 @@ fn review_fields(record: &ReviewBlock) -> (Option<&str>, bool) {
     let gating = record.blocking
         || record.must_violations > 0
         || record.should_violations > 0
-        || record.contract_breaks > 0;
+        || record.contract_breaks.is_some_and(|breaks| breaks > 0);
     (record.last_run.as_deref(), gating)
 }
 

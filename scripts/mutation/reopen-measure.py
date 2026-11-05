@@ -305,15 +305,15 @@ MUTATIONS = [
     (
         'M42 a contract break is no gating finding',
         'src/primitives/measure_reopenings.rs',
-        '        || record.should_violations > 0\n        || record.contract_breaks > 0;',
+        '        || record.should_violations > 0\n        || record.contract_breaks.is_some_and(|breaks| breaks > 0);',
         '        || record.should_violations > 0;',
         'measure_reopenings::tests::a_second_run_after_a_gating_finding_is_within_the_bound',
     ),
     (
         'M43 a low-confidence finding is a gating one',
         'src/primitives/measure_reopenings.rs',
-        '        || record.contract_breaks > 0;',
-        '        || record.contract_breaks > 0\n        || record.low_confidence > 0;',
+        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0);',
+        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0)\n        || record.low_confidence > 0;',
         'measure_reopenings::tests::a_non_gating_count_does_not_excuse_a_second_run',
     ),
     (

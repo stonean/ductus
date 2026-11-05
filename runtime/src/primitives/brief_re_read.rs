@@ -1,10 +1,8 @@
-//! `brief-re-read` — open a fix round of a `/{project}:review` run (spec 078).
+//! `brief-re-read` — open a fix round of a `/{project}:review` run (spec 078). What it
+//! returns and writes is `schema::descriptions::BRIEF_RE_READ`.
 //!
-//! Derives what changed since the round's base, classifies it, and, when it
-//! needs a re-read, snapshots the tree and writes the re-read's brief whole:
-//! the paths, the command that shows the change, the severity bar and the
-//! result file's contract. The host supplies only the feature and the base,
-//! so no scope the fixer wrote can reach the brief.
+//! The host supplies only the feature and the base, so no scope the fixer wrote can
+//! reach the brief.
 //!
 //! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 

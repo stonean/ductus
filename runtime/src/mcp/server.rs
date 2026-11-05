@@ -34,6 +34,7 @@ use serde_json::Value;
 
 use crate::primitives;
 use crate::primitives::gate_confirm::GatePromptPayload;
+use crate::schema::descriptions;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
@@ -274,7 +275,7 @@ fn node_is_numeric(map: &JsonObject) -> bool {
 impl GovRuntimeServer {
     #[tool(
         name = "read-spec",
-        description = "Parse spec frontmatter and body sections."
+        description = descriptions::READ_SPEC
     )]
     async fn read_spec(
         &self,
@@ -287,7 +288,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "read-tasks",
-        description = "Parse `tasks.md` into a structured task list."
+        description = descriptions::READ_TASKS
     )]
     async fn read_tasks(
         &self,
@@ -300,7 +301,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "mark-task",
-        description = "Flip a single subtask checkbox in `tasks.md` (atomic rewrite)."
+        description = descriptions::MARK_TASK
     )]
     async fn mark_task(
         &self,
@@ -313,7 +314,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "mark-criterion",
-        description = "Flip a single acceptance-criterion checkbox in `spec.md`."
+        description = descriptions::MARK_CRITERION
     )]
     async fn mark_criterion(
         &self,
@@ -326,7 +327,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "set-status",
-        description = "Update the `status:` field in spec frontmatter, guarded by `from`."
+        description = descriptions::SET_STATUS
     )]
     async fn set_status(
         &self,
@@ -339,7 +340,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "derive-boundary",
-        description = "Derive the runtime write boundary from git history."
+        description = descriptions::DERIVE_BOUNDARY
     )]
     async fn derive_boundary(
         &self,
@@ -351,7 +352,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "diff-cross-spec",
-        description = "Compute /ductus:implement's cross-spec impact surface: the paths under the spec root, outside the feature's own directory, that differ from the window's start and that a commit belonging to the spec changed or that carry an uncommitted change, so another spec's commit is absent. The window starts at the parent of the spec's last in-progress commit, HEAD while that move is uncommitted, or for a spec never in-progress its first spec-dir commit, reported as window-base. {specs-root}/inbox.md is excluded: it holds what a person logs, which is no spec's impact. A zero cross-spec-count is the no-impact outcome. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, cross-spec-paths is absent, and lists-file names a JSON file under .ductus/results/ holding the list whole, one entry per line, to read in parts by line offset when it exceeds one read. Read-only but for that file."
+        description = descriptions::DIFF_CROSS_SPEC
     )]
     async fn diff_cross_spec(
         &self,
@@ -364,7 +365,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-stuck",
-        description = "Count `tasks.md` commits since status entered `in-progress`."
+        description = descriptions::CHECK_STUCK
     )]
     async fn check_stuck(
         &self,
@@ -376,7 +377,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "validate-frontmatter",
-        description = "Validate frontmatter shape against the pipeline schema."
+        description = descriptions::VALIDATE_FRONTMATTER
     )]
     async fn validate_frontmatter(
         &self,
@@ -389,7 +390,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-anchor",
-        description = "Verify `§anchor` references resolve to `<!-- §anchor -->` markers. Markers come from `path` itself by default (self-consistency); pass `markers-path` to resolve one file's references against another file's markers (e.g. a spec's references against the constitution)."
+        description = descriptions::RESOLVE_ANCHOR
     )]
     async fn resolve_anchor(
         &self,
@@ -402,7 +403,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "traverse-deps",
-        description = "Traverse spec dependencies and check status compatibility."
+        description = descriptions::TRAVERSE_DEPS
     )]
     async fn traverse_deps(
         &self,
@@ -415,7 +416,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-rule-ids",
-        description = "Verify cited rule IDs exist in rule files and aren't deprecated."
+        description = descriptions::CHECK_RULE_IDS
     )]
     async fn check_rule_ids(
         &self,
@@ -428,7 +429,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-promotion-coverage",
-        description = "How much of a rules file is routed to its canonical source: rule-bearing minus (table-keyed union pointer-citing). A notice, never a gate."
+        description = descriptions::CHECK_PROMOTION_COVERAGE
     )]
     async fn check_promotion_coverage(
         &self,
@@ -441,7 +442,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "lint-markdown",
-        description = "Wrap `npx markdownlint-cli2` and surface violations."
+        description = descriptions::LINT_MARKDOWN
     )]
     async fn lint_markdown(
         &self,
@@ -453,7 +454,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "gate-confirm",
-        description = "Return the gate prompt payload (non-blocking). The orchestrator routes the prompt to the user and supplies the confirmed decision out-of-band; this tool never blocks waiting for input."
+        description = descriptions::GATE_CONFIRM
     )]
     async fn gate_confirm(
         &self,
@@ -468,7 +469,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "fetch-archive",
-        description = "Download an archive plus its sha256 sidecar and verify the hash."
+        description = descriptions::FETCH_ARCHIVE
     )]
     async fn fetch_archive(
         &self,
@@ -480,7 +481,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "extract-archive",
-        description = "Extract a local `.tar.gz` / `.zip` archive into a destination directory."
+        description = descriptions::EXTRACT_ARCHIVE
     )]
     async fn extract_archive(
         &self,
@@ -492,7 +493,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "apply-manifest",
-        description = "Strategy-aware bulk substitute + write driven by a manifest."
+        description = descriptions::APPLY_MANIFEST
     )]
     async fn apply_manifest(
         &self,
@@ -505,7 +506,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "enforce-manifest",
-        description = "Remove files in a directory that are not in the expected manifest."
+        description = descriptions::ENFORCE_MANIFEST
     )]
     async fn enforce_manifest(
         &self,
@@ -518,7 +519,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "merge-managed-block",
-        description = "Idempotently merge a framework-managed block with configurable marker shape."
+        description = descriptions::MERGE_MANAGED_BLOCK
     )]
     async fn merge_managed_block(
         &self,
@@ -531,7 +532,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "merge-permissions",
-        description = "Idempotently merge a canonical permission allow/deny set into a JSON file with exact-match dedup."
+        description = descriptions::MERGE_PERMISSIONS
     )]
     async fn merge_permissions(
         &self,
@@ -544,7 +545,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "relocate-audit-records",
-        description = "Move a spec's `review:` and `analyze:` frontmatter blocks into the artifacts that own them (review.md / analysis.md) and remove them from spec.md \u{2014} the sweep behind spec 057's migration. Idempotent: a spec carrying no block is a no-op reporting `changed: false`, so a re-run over a partially migrated corpus completes the remainder. Never invents a record for a spec that has none, never rewrites body prose (the edit is frontmatter-only, so \u{a7}spec-lifecycle's mechanical-edit rule applies and a `done` spec stays `done`), and never overwrites an artifact that already exists \u{2014} that conflict is reported with both copies left intact, since which record is current is a judgement the primitive cannot date."
+        description = descriptions::RELOCATE_AUDIT_RECORDS
     )]
     async fn relocate_audit_records(
         &self,
@@ -557,7 +558,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "migrate-session-file",
-        description = "Translate a pre-0.10.0 legacy session JSON (`.claude/{project}-session.json`) into the consolidated `.ductus/session.toml`, applying camelCase→kebab-case key renames (`scenarioPath`→`scenario-path`, `setAt`→`set-at`), and delete the legacy file. Idempotent: no-op when no legacy file is present; preserves any existing `.ductus/session.toml`."
+        description = descriptions::MIGRATE_SESSION_FILE
     )]
     async fn migrate_session_file(
         &self,
@@ -570,7 +571,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "label-criteria",
-        description = "Assign stable AC{n} labels to a spec's acceptance criteria and maintain the next-criterion counter (idempotent; already-labelled criteria are left byte-identical)."
+        description = descriptions::LABEL_CRITERIA
     )]
     async fn label_criteria(
         &self,
@@ -583,7 +584,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "create-scenario",
-        description = "Write a new scenarios/{slug}.md file under a feature with frontmatter and prose body."
+        description = descriptions::CREATE_SCENARIO
     )]
     async fn create_scenario(
         &self,
@@ -596,7 +597,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "discover-rule-files",
-        description = "Select rule files for /ductus:review by suffix, [rules] surfaces, and disabled-rule-files, with the notice lines to emit, among them one per unknown key in [rules] or [review]."
+        description = descriptions::DISCOVER_RULE_FILES
     )]
     async fn discover_rule_files(
         &self,
@@ -609,7 +610,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "process-waivers",
-        description = "Classify the waivers recorded in a spec's review.md against currently-firing findings (apply/expire/retain/dedup). Pass skipped-pass for each dimension not run this pass: on a dimension-restricted run a non-firing waiver is retained (kept in frontmatter), never expired, so a partial run cannot prune a waiver anchored to a skipped dimension."
+        description = descriptions::PROCESS_WAIVERS
     )]
     async fn process_waivers(
         &self,
@@ -622,7 +623,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "process-decisions",
-        description = "Classify the deferred and waived decisions recorded in a spec's review.md or analysis.md against this run's finding keys (matched/lapsed/expired/retained/dedup), before the host proposes dispositions, so a settled finding is counted under its stored outcome and not asked about again. A firing deferral whose pipeline work is complete — its task checked or gone, its spec done or gone, or a rule file — is lapsed: the host passes it to the writer to drop and asks again; one naming only an external work item never lapses (spec 076). Pass restricted when the run did not evaluate every source: a non-firing decision is then retained, never expired. Each list's count is inline; when the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, no list is inline, and lists-file names a JSON file under .ductus/results/ holding all five whole, one entry per line, to read in parts by line offset when it exceeds one read. Read-only but for that file; malformed entries are reported and never pruned."
+        description = descriptions::PROCESS_DECISIONS
     )]
     async fn process_decisions(
         &self,
@@ -635,7 +636,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "compute-review-scope",
-        description = "Resolve /ductus:review's diff-base (the later of the parent of the commit the spec entered in-progress at and the last review commit since then that recorded no skipped pass, budget stop or open fix-round loop; HEAD while that move is uncommitted, empty when it never happened, or a --since override, which moves only the start), where it came from (base-source), its file scope, and whether a review is owed. A commit belongs to each spec whose directory it touches or whose number its subject scope names. The scope holds the paths of a commit that belongs to the spec alone or to no spec; of a commit several specs claim, those in the spec's directory or its plan's Affected Files, and a path in none of their plans when its subject names this spec first or names none of them; and uncommitted work. A plan entry unchanged in the window stays only on the spec's first review. What the scope leaves out is in excluded, and the files deleted since the base are in deleted. review-owed is false when a review record exists and the scope holds no path outside the spec's directory and no scenario or data-model edit. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the scope, modified-since, plan-affected, deleted and excluded lists are absent, and lists-file names a JSON file under .ductus/results/ holding all five whole, one entry per line, to read in parts by line offset when it exceeds one read. Each list's count is inline in both forms; a zero scope-count, never an absent list, is an empty scope."
+        description = descriptions::COMPUTE_REVIEW_SCOPE
     )]
     async fn compute_review_scope(
         &self,
@@ -648,7 +649,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "start-fix-rounds",
-        description = "Start a /ductus:review run's fix rounds (spec 078): clear the feature's earlier rounds under .ductus/review-rounds/{feature}/ — a directory that ignores itself — and snapshot the whole working tree as the first round's base. The snapshot is a commit object holding every tracked file as it is on disk, every untracked file that is not ignored, and no deleted one, with HEAD as its parent; it moves no ref, writes no index file and changes no working-tree file. `files` counts what it holds, and `budget` is the re-read budget: after that many re-reads that found a MUST or SHOULD, start no round without the operator's decision. Call it when the passes end and before any fix; an error is never a base, so the run's first round is then recorded as not re-read."
+        description = descriptions::START_FIX_ROUNDS
     )]
     async fn start_fix_rounds(
         &self,
@@ -661,7 +662,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "brief-re-read",
-        description = "Open a /ductus:review fix round (spec 078). It snapshots the working tree, and the files inside the project that differ between `base` and that snapshot, tree to tree, the feature's own review.md left out, are divided in three. `excluded` holds what only commits another spec claims changed, with no uncommitted edit on top at either snapshot (spec 079). `exempt` holds each analyze subject of the feature that is not a durable contract (spec.md, plan.md, tasks.md and the like, which /ductus:analyze reads again before done, but for a criterion's tick, outside the analysis digest). `paths` holds the rest, all the brief names. `kind` is `re-read` when `paths` is not empty, `empty` when all three are, and `exempt` otherwise. `exempt` and `re-read` return that snapshot as `snapshot`, the next round's base. A `re-read` also writes `round.toml` and the re-read's whole brief under .ductus/review-rounds/{feature}/{base}/ — the paths, the diff command, the severity bar and the result-file contract, nothing from the caller — and names the `result` file the re-read writes. With `[review] re-reads-off` set, `re-reads-off` carries the reason, no snapshot is returned and no brief is written. Briefing a base again replaces its round. Past [artifacts] read-size-bytes (50,000 by default) form is `file`, `paths` is absent, and lists-file names a JSON file under .ductus/results/ holding it whole, one entry per line; `kind` and paths-count stay inline in both forms. An error is never an empty round."
+        description = descriptions::BRIEF_RE_READ
     )]
     async fn brief_re_read(
         &self,
@@ -673,7 +674,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "read-re-read",
-        description = "Read a /ductus:review fix round's re-read result (spec 078): the result.json the re-read wrote under .ductus/review-rounds/{feature}/{base}/, where `base` is the one the round was briefed at. `state` is `complete` only for a file that parses and says \"complete\": true; `incomplete` for no file or one whose `complete` is not true — a re-read that did not finish, never a clean one; `unparseable` for a file not of the result file's shape (unknown fields, a severity outside MUST/SHOULD/NOTE, a multi-line text, an empty `old`), with `problem` naming why. A complete result counts its findings by severity and counts apart the MUST and SHOULD findings carrying no `edits`, which no diff check can close. A MUST or SHOULD on a path outside the round's round.toml counts as a NOTE, and `demoted` says how many; a complete result whose round.toml is absent or does not parse is `unparseable`. A re-read is clean when it is complete with no MUST and no SHOULD. Past [artifacts] read-size-bytes (50,000 by default) form is `file`, `findings` is absent, and lists-file names a JSON file under .ductus/results/ holding it whole, one entry per line; `state` and every count stay inline in both forms. Past the read size it also writes .ductus/results/.gitignore and removes the feature's stale list files; read-only otherwise."
+        description = descriptions::READ_RE_READ
     )]
     async fn read_re_read(
         &self,
@@ -685,7 +686,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-prescriptions",
-        description = "The diff check of a /ductus:review fix round (spec 078). `base` names the PREVIOUS round: its round.toml gives the snapshot that re-read read, and its result.json the edits it prescribed. Each prescribed file is taken from that snapshot, its edits applied in order — each `old` replaced only where it occurs at exactly one position, overlapping ones counted — and compared, as git stores both, with a fresh snapshot of the working tree, returned as `snapshot` on a match alone, as the next round's base. A file matches with every edit applied, or with only its MUST and SHOULD findings' edits, so its NOTE edits may be declined, all of them or none. `failed` lists, for a file that matches neither, each edit whose `old` occurred zero times or more than once; `differing` the prescribed files that match neither; `unprescribed` the files changed since the re-read's snapshot that no edit names, the feature's own review.md left out. A MUST or SHOULD on a path outside the round counts as a NOTE. `verdict` is `matched` when all three are empty, `differs` otherwise, and `could-not-run` — never a match — when no round was briefed at the base, the result file is missing, incomplete or unparseable, it prescribes no edit, or an edit names a path outside the project, with `problem` saying which. `open` counts the re-read's MUST and SHOULD findings with no edits: a match ends the loop only when it is zero. Past [artifacts] read-size-bytes (50,000 by default) form is `file`, the three lists are absent, and lists-file names a JSON file under .ductus/results/ holding them whole, one entry per line; `verdict` and every count stay inline in both forms. Writes git objects and, past the read size, that file, .ductus/results/.gitignore and the removal of the feature's stale list files, only."
+        description = descriptions::CHECK_PRESCRIPTIONS
     )]
     async fn check_prescriptions(
         &self,
@@ -698,7 +699,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "write-review",
-        description = "Render specs/NNN/review.md — the review report and, in that same file's frontmatter, the record of the run. `spec.md` is not written: each audit record has one home (spec 057). Consumes the pass findings as a single array (plus waiver results, scope scalars, and skipped-pass flags), applies the cross-pass dedup (highest-severity-wins on rule-id + file + overlapping range) before counting, buckets survivors into MUST / SHOULD / low-confidence / waived / deferred — a violation its deferral releases leaves the counts (.ductus/reference/review.md §Deferrals; spec 076) — prunes expired waivers, and emits the 0-findings / blocking:false report for empty scope. Each observation carries its disposition (fixed, deferred with its work, waived with its reason, or undispositioned by default), by-rule when the disposition rule decided it, and contract-break when it shows the spec's own code breaks its contract, which the rule never waives and which counts in contract-breaks unless fixed (spec 079), and a violation may carry a deferral; the record counts the observations in a derived dispositions: map, a newly deferred or waived observation, or newly deferred violation, is stored under decisions:, stamped decided-by: rule when by-rule and otherwise by decided-by, which is then required, a person's stored decision winning over the rule, a deferral that releases nothing is marked gating: true, and expired-decisions from process-decisions are pruned. A fix-rounds list, one entry per fix round with its check, derives the record's fix-rounds, re-reads, diff-checked, not-re-read, budget-stop and round-waivers, waiving an un-re-read round with its own reason (decided-by required) or the [review] re-reads-off reason; without the list none of them is written (spec 078). loop-open writes fix-rounds-open: true, which the review command's first write passes and its last omits (spec 079). The record's excluded count and Excluded from scope section name each path the scope left out, by the spec that claimed it, and each path a round's excluded list left out, by the round. Nothing is written to the inbox. Atomic."
+        description = descriptions::WRITE_REVIEW
     )]
     async fn write_review(
         &self,
@@ -711,7 +712,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "write-analysis",
-        description = "Record that /ductus:analyze ran, by writing specs/NNN/analysis.md — the record in its frontmatter, the findings in a fixed body skeleton. The durable counterpart to review.md, and what `check-review-gate` reads to hold a spec out of `done` until the second gate has actually run. Takes the run's hard-fail / blocking / advisory counts (from the re-check after the fix-and-route step) plus `unexamined` (the skipped-target count, so a clean record cannot be read as a fully-examined one), and `findings`, each with its tier and disposition. Records the two gating tiers net of the findings their deferral releases (.ductus/reference/review.md §Deferrals), sets `blocking` from them, and derives a dispositions: map in which a live finding the caller did not itemize counts as undispositioned; refuses a waiver on a hard-fail or blocking finding; stores deferred and waived decisions under decisions: (decided-by required), marking a gating deferral that releases nothing gating: true, and prunes expired-decisions (spec 076). Nothing is written to the inbox. Refuses a spec whose frontmatter does not parse rather than recording a clean run into it. Atomic."
+        description = descriptions::WRITE_ANALYSIS
     )]
     async fn write_analysis(
         &self,
@@ -724,7 +725,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "append-task",
-        description = "Append a numbered task block to a feature's tasks.md (atomic rewrite)."
+        description = descriptions::APPEND_TASK
     )]
     async fn append_task(
         &self,
@@ -737,7 +738,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "prune-tasks",
-        description = "Reduce a feature's tasks.md — drop spent task sections (keep-pending) or reset to template state; or, with `all`, every spec's, returning one line per spec (gate, status, counts, sizes, path) and the specs skipped for having no tasks.md. `force` overrides the reset gate on one spec and is refused with `all`."
+        description = descriptions::PRUNE_TASKS
     )]
     async fn prune_tasks(
         &self,
@@ -750,7 +751,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "prune-plan",
-        description = "Report a feature's plan.md sections outside the design record (the plan template's own ## headings, compared case-insensitively), each with its size, a digest, the plan-record advisory /{project}:analyze records for it, and whether analysis.md stores a waiver for that advisory. With apply, remove the listed sections by heading and digest, refusing the whole write when any changed since the preview (stale-sections). On a done spec every call reports whether the tree takes the done → in-progress back-edge against HEAD (reopen-required): a preview for the tree as it stands, an apply for the tree it leaves, computed before it writes. With `all`, preview every spec — listing each whose plan holds such a section, or a done spec that already requires a reopen — and refuse `apply`. Never returns a section's text."
+        description = descriptions::PRUNE_PLAN
     )]
     async fn prune_plan(
         &self,
@@ -763,7 +764,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "prune-project",
-        description = "Segment the four project files (AGENTS.md at the project root, and system.md, events.md and errors.md under the spec root) into entries for /{project}:prune --project (spec 041, for spec 075): each file's state (present, absent, unreadable), bytes and whether it is over [artifacts] read-size-bytes, and each entry's path, enclosing ## heading, kind (heading, item, row, block), line range, bytes and digest, never its text. HTML comments and /ductus-managed BEGIN/END regions are never entries. An events.md or errors.md entry carries its identifier (the event type or error code), and a preview searches the project's tracked files outside the spec root for it literally, listing each hit; with no repository the search is unavailable, never zero hits. With apply, remove or replace the listed entries by path and digest, refusing the whole write when any changed since the preview (stale-entries), and create a missing system.md, events.md or errors.md from its compiled-in template."
+        description = descriptions::PRUNE_PROJECT
     )]
     async fn prune_project(
         &self,
@@ -776,7 +777,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "dashboard",
-        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config summary (.ductus/config.toml: disabled rule files, and every key in a ductus-owned section that no reader recognizes), the standing inbox (outstanding count and oldest item's date, rendered as an Inbox: line on every run), the reopenings block (measure-reopenings' counts over its default window, rendered as a Reopenings: line on every run, with state not-measured and a reason when the measurement failed), and the optional session target resolved for this process (spec 062): its own target when it has a session identity (DUCTUS_SESSION or a platform session id), else the shared default (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration). An identified process also gets session-identity, session-source and session-notices, rendered under the target line. The read is a peek: it pins no adoption and consumes no notice, so the notices shown are the ones the process's next command delivers."
+        description = descriptions::DASHBOARD
     )]
     async fn dashboard(
         &self,
@@ -790,7 +791,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "write-session",
-        description = "Atomically merge-write the active session file (`.ductus/session.toml`, falling back to `.govern/session.toml` then the legacy root `.govern.session.toml` pre-migration; gitignored). A target write (supply `feature`+`path`, optional `scenario`) sets the target and preserves the per-contributor `cli-config-dir`; a host-config write (supply only `cli-config-dir`) sets the agent config-dir and preserves the existing target. Since spec 062 an identified process (DUCTUS_SESSION, or a platform session id such as CLAUDE_CODE_SESSION_ID) also writes its own target under .ductus/sessions/, and the result reports other sessions on the same feature (peers), the per-process targets its expiry sweep removed (expired), session files it could not read (unreadable), and any pending removal notice the write replaced (notices). Pairs with `resolve-session`'s read; allowing this MCP tool once suppresses the per-invocation Write permission prompt the host-write path triggers."
+        description = descriptions::WRITE_SESSION
     )]
     async fn write_session(
         &self,
@@ -803,7 +804,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-session",
-        description = "Resolve this process's session target (spec 062). The identity comes from the runtime's own environment: DUCTUS_SESSION, then the agent's platform session id (Claude Code: CLAUDE_CODE_SESSION_ID), else none. An unidentified process reads the shared default (.ductus/session.toml). An identified one gets its own target (.ductus/sessions/{key}.toml), or adopts and pins the shared default when it has none, or no target when it was cleared. Returns identity, source (own / adopted / default / cleared / none), target, notices to display once (adoption, other sessions on the same feature, a fold or consolidation that moved the target), and unreadable: session files that did not parse, so were not checked for the same feature. Commands call this instead of reading the session file by hand."
+        description = descriptions::RESOLVE_SESSION
     )]
     async fn resolve_session(
         &self,
@@ -816,7 +817,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "retarget-sessions",
-        description = "After /{project}:fold or /{project}:consolidate removes a feature directory, re-point or clear every session in the working tree that names it (spec 062): the shared default (.ductus/session.toml) and every per-process target (.ductus/sessions/*.toml). cause=fold with the upstream feature+path (optional scenario) re-targets; cause=consolidate with clear clears. Sessions naming other features are untouched; every affected session other than the caller's gets a notice its next resolve-session delivers. Returns retargeted and cleared session labels, and unreadable files left in place."
+        description = descriptions::RETARGET_SESSIONS
     )]
     async fn retarget_sessions(
         &self,
@@ -830,7 +831,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-references",
-        description = "Resolve a consumer feature's `references:` index against the config's [services] registry (`.ductus/config.toml`, with the `.govern/` and legacy-root fallbacks): for each cross-service reference, read the linked spec's live lifecycle status from its local checkout and classify the outcome (ok / unregistered / not-checked-out / broken / status-unreadable)."
+        description = descriptions::RESOLVE_REFERENCES
     )]
     async fn resolve_references(
         &self,
@@ -843,7 +844,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-constitutions",
-        description = "Resolve the project config's [constitutions] registry (spec 055) to shared-constitution documents on local disk. For each registered alias, resolve its local `path` and look for `constitution.md` inside it; the `repo` URL is identity only and is never fetched, so there is no transport and no network failure mode. Returns `loaded` and `skipped` separately — a missing checkout is `not-checked-out` and a checkout holding no document is `no-constitution-document`, two distinct operator mistakes with distinct messages. Empty `loaded` with empty `skipped` means none registered; empty `loaded` with a non-empty `skipped` means registered and unreadable, and the caller must not collapse them. Aliases sharing a path are reported in `duplicate-paths` (warn and allow; the document is read once). When any entry is registered, each `loaded` record carries its document's `bytes` and `over-limit` against the result's `threshold` (`[artifacts] read-size-bytes`, 50,000 by default; a document at it is not over), plus a `warning` naming the alias, size, limit and owning `repo` as the fix when over; a loaded record without `bytes` and every `skipped` record were not measured, never under the limit. A malformed read size halts the call only when an entry is registered; with none, the result carries no `threshold`. `unmeasured: true` resolves without measuring and reads no `[artifacts]` setting, as `/ductus` calls it."
+        description = descriptions::RESOLVE_CONSTITUTIONS
     )]
     async fn resolve_constitutions(
         &self,
@@ -856,7 +857,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-feature",
-        description = "Resolve an identifier (exact directory name, feature number like 7/007, or partial slug substring) to a feature directory under the configured spec root. Returns the directory name, repo-relative path, spec status, and — when a scenario slug is supplied — the scenario file's existence plus its `section` frontmatter. Ambiguity returns the sorted candidate list and no-match returns not-found, both as domain outcomes for the host to mediate."
+        description = descriptions::RESOLVE_FEATURE
     )]
     async fn resolve_feature(
         &self,
@@ -869,7 +870,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "create-feature",
-        description = "Scaffold the next {specs-root}/{NNN-slug}/ feature directory: compute the next feature number (max existing prefix + 1, zero-padded), derive the kebab-case slug from the title, create the directory, and copy the spec template into it (atomic, mode-preserving). Refuses with created: false when the target directory already exists."
+        description = descriptions::CREATE_FEATURE
     )]
     async fn create_feature(
         &self,
@@ -882,7 +883,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "create-plan-artifacts",
-        description = "Copy the plan/tasks (and, with include-data-model, data-model) templates into an existing feature directory (atomic, mode-preserving) — /ductus:plan's template-copy and existing-artifact-detection step. Pre-existing artifacts are never touched by default: each is reported kept (file, path, action, template — primitive results carry no wall-clock data, so the keep-or-replace prompt stats the file itself for any timestamp); only overwrite: true (the confirmed replace branch) copies fresh templates over them."
+        description = descriptions::CREATE_PLAN_ARTIFACTS
     )]
     async fn create_plan_artifacts(
         &self,
@@ -895,7 +896,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "append-question",
-        description = "Append one `- {question}` bullet to the target artifact's ## Open Questions section — /ductus:amend's question-route write. Targets the feature's spec.md, or scenarios/{slug}.md when `scenario` is passed. Dedup is normalized-whitespace + case-insensitive (a match is a clean appended: false outcome reporting the existing entry); a missing section is created per template order; on a spec target whose status is clarified/planned/in-progress the status reverts to draft in the same atomic write (the back-edge). A `done` spec is excluded (§spec-lifecycle): the question is appended but status stays done, since done reopens via the scenario route, not a question."
+        description = descriptions::APPEND_QUESTION
     )]
     async fn append_question(
         &self,
@@ -908,7 +909,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-review-freshness",
-        description = "Report whether one feature's review record in review.md still describes its durable contracts (scenarios/*.md and data-model.md), by the content comparison check-review-gate makes before done, at any status; /ductus:audit's Family 19 asks it of every done spec. Returns record-present and freshness: current, stale with the changed contract paths, undeterminable for a record with no reviewed-digest or a review.md whose frontmatter does not parse, or never-run. A uniform rename sweep does not stale a record. Read-only (spec 066)."
+        description = descriptions::CHECK_REVIEW_FRESHNESS
     )]
     async fn check_review_freshness(
         &self,
@@ -925,7 +926,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "classify-spec-edit",
-        description = "Classify the edit under one feature's directory, from the diff between base (a ref, HEAD by default) and the working tree, untracked files included. Returns kind and reasons: none when nothing but a run's records differs; correction, which leaves a done spec done (§spec-lifecycle), when it changes no acceptance criterion, open question or unchecked task and touches only spec.md, plan.md and tasks.md; reopens otherwise, with reasons from criterion, open-question, unchecked-task, scenario, data-model and other-file. A criterion compares by its text with its AC label removed, so assigning a label or a tick is a correction; a task edit adding no unchecked item is a correction; a deleted plan.md or tasks.md is other-file. An edit it could not read is an error, never a correction. Read-only (spec 079)."
+        description = descriptions::CLASSIFY_SPEC_EDIT
     )]
     async fn classify_spec_edit(
         &self,
@@ -940,7 +941,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "measure-reopenings",
-        description = "Measure from the repository's history whether reopenings stayed within the bound on review and analysis runs (spec 079). A reopening is one pass into in-progress and on to done, by the status of each spec.md at each commit, counted when its closing commit falls in the window: since, a date by that commit's author date or a ref for what it does not reach, the last 30 days when absent, at the ref at, HEAD when absent. A run is a distinct last-run in the committed review.md or analysis.md inside it, so a run's two writes are one and a value carried in from before it is none. A second run of a kind is over the bound unless the previous run of that kind left a gating finding: blocking, or a MUST, SHOULD or contract-breaks count on a review, or a hard-fail or blocking-findings count on an analysis. Returns state (measured; shallow-history, which cannot measure; nothing-to-compare, no reopening closed in the window), since, reopenings (feature, start, end, reviews, analyses, over-bound, decisions-by-person, the decisions stamped with a run's time that a person made), not-counted (feature, start, end, reason: no-recorded-run, record-unparseable or no-in-progress-commit), waiting (in-progress specs at that commit with no unchecked task), and closed-count, over-bound-count, not-counted-count, waiting-count and runs. A walk that could not finish is an error, never a count. When the result would pass [artifacts] read-size-bytes (50,000 by default), form is `file`, the three lists are absent, and lists-file names a JSON file under .ductus/results/ holding them whole. Read-only but for that file."
+        description = descriptions::MEASURE_REOPENINGS
     )]
     async fn measure_reopenings(
         &self,
@@ -955,7 +956,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-review-gate",
-        description = "Evaluate /ductus:implement's pre-done review gate for one feature, in order: whether the spec is already done, the feature directory's markdown lint (via the lint-markdown machinery), unresolved scenario open questions, an undischarged cross-spec impact, the review record in review.md, whether that review is still current, the analyze record in analysis.md, whether that analysis is still current, whether either record predates finding dispositions (no dispositions: map), and whether an outstanding gating finding remains, in practice a review SHOULD neither waived nor released by its deferral, naming each deferral that holds it with its work reference (spec 076); undispositioned advisory findings and observations never block (spec 058); and last whether review.md still carries fix-rounds-open, its loop cut off between its first and last write (spec 079), or a review fix round that needed a re-read has neither one nor a waiver in round-waivers (spec 078), a record without the loop fields passing with guidance that says so. Neither record lives in spec.md frontmatter (spec 057). A declared folds-into is not checked: a pending fold never holds done, and the fold is run after it (spec 051). Returns the verdict plus, when blocked, the first failing check and the canonical blocked message; a blocked gate is a domain outcome the host halts on, never an error."
+        description = descriptions::CHECK_REVIEW_GATE
     )]
     async fn check_review_gate(
         &self,
@@ -970,7 +971,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "append-inbox",
-        description = "Append one `- [ ] {text}` checkbox bullet to {specs-root}/inbox.md (atomic write), creating the file when missing. The surface behind /ductus:log, the inbox's only producer. Returns item-count, the total inbox bullets (comment/fence-aware) after the call."
+        description = descriptions::APPEND_INBOX
     )]
     async fn append_inbox(
         &self,
@@ -983,7 +984,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "remove-inbox-item",
-        description = "Remove the first bullet from {specs-root}/inbox.md whose text equals `item` (atomic write). The complement of append-inbox; a no-match or missing inbox is a clean outcome (removed: false). Returns the remaining bullet count."
+        description = descriptions::REMOVE_INBOX_ITEM
     )]
     async fn remove_inbox_item(
         &self,
@@ -996,7 +997,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-artifacts",
-        description = "Run /ductus:analyze's residual deterministic check families against one feature: artifact completeness per status tier (plan.md/tasks.md at planned+), task consistency (strictly-increasing numbering, Done-when presence), scenario→task mapping (a scenario any revision of tasks.md named is satisfied, so a §tasks-phase pruned task never counts against it), review-state drift on done specs, disposition drift on done specs (advisory: review.md counting undispositioned findings, which do not hold done; a record predating the dispositions map is silent), scenario open questions (blocking at done, advisory otherwise), link-adjacent decision drift (prose asserting an open state its own sibling link's target contradicts), acceptance-criterion path existence on done specs, body path existence on done specs (a path named in the body, plan, data model or scenarios that existed in the repository and no longer resolves), and acceptance-criterion labels (duplicate AC{n}, a next-criterion that no longer exceeds the body, an unlabelled criterion in a labelled spec). Each finding carries family, severity, message, and path; severity tiers mirror the command's markdown-only reference. Targets a family could not examine are reported separately in `skipped`, so a zero-finding result never reads as assurance the primitive cannot give."
+        description = descriptions::CHECK_ARTIFACTS
     )]
     async fn check_artifacts(
         &self,
@@ -1009,7 +1010,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-artifact-size",
-        description = "Measure a feature's spec artifacts (spec.md, plan.md, tasks.md, data-model.md, and each scenario — never research.md, review.md or analysis.md) by their length on disk against the configured read size, `[artifacts] read-size-bytes` in .ductus/config.toml (default 50000 when unset; a value that is not a positive whole number, or a non-table `artifacts`, is an error naming the setting, the value and the file, never the default). Each artifact over it is reported with its size, read-page count, the fixes for its kind and, on a done spec, whether each reopens it, a warning saying it may not be read in one call, the artifact-size finding message /{project}:analyze records, and whether a stored waiver in analysis.md still covers it (a waiver of the same path at a read-page count at least this one's), with that waiver's key. A missing artifact is not reported; one that cannot be opened is listed in `skipped`, never as clean. A key in `[artifacts]` other than read-size-bytes is named in `notices`. Read-only. Used by /{project}:clarify, /{project}:plan and /{project}:analyze (spec 063)."
+        description = descriptions::CHECK_ARTIFACT_SIZE
     )]
     async fn check_artifact_size(
         &self,
@@ -1022,7 +1023,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "derive-routing-candidates",
-        description = "Derive the existing homes proposed work could belong to, so /ductus:specify runs the routing decision before create-feature writes anything. Three sources: runtime-work (the description names a primitive or a `runtime/` path, routed to the spec whose plan claims `runtime/` — derived from the corpus, never a hardcoded slug), rule-surface (a rule file whose category stem the description shares), and spec-corpus (a spec whose slug it shares vocabulary with). Each candidate names the route it implies (`rule` or `scenario`), the target's status, and whether accepting it implies the done -> in-progress back-edge. Matching is lexical and advisory — the semantic call stays at the routeInboxItem extension point and the decision stays with the operator. Every source lands in `sources-examined` or in `skipped`, so empty candidates with empty skipped means 'examined and matched nothing' while a non-empty `skipped` means 'could not derive' — different answers. `routed-by` marks a tree that already ran and returns gate-required: false."
+        description = descriptions::DERIVE_ROUTING_CANDIDATES
     )]
     async fn derive_routing_candidates(
         &self,
@@ -1035,7 +1036,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "retire-feature",
-        description = "Remove a branch-scoped feature directory (`<identifier>.<n>-<slug>`) once its content has been folded into the upstream spec that receives it — the last step of a fold and the only irreversible one. This is where the fold target's existence is finally enforced: everything earlier treats an absent target as the normal case — validation checks `folds-into` for shape only, and the pre-done gate blocks on a fold only when its target is in this tree — because a branch-scoped spec exists precisely because upstream diverged, so before the merge its target normally lives on the upstream branch. Fold-back runs after the merge, in the first tree holding both, which is the first moment the question has an answer worth refusing on. Refuses when `fold-target` names no feature directory holding a spec.md (a directory with no spec is not a home content can have landed in), and refuses a sequential `NNN-slug` feature unless `allow-sequential` is set — the sequential form is permanent, and the refusal is gated rather than removed so that an irreversible operation stays out of reach of a typo: fold never sets the flag, so a mistyped feature name on a fold still refuses, while consolidation sets it having already named both specs and confirmed the removal. The spec.md guard above is **not** gated — opting in to removing a sequential directory is not opting in to stranding its content. `retired: false` is the domain outcome for a directory already gone, so re-running an interrupted fold converges rather than halting."
+        description = descriptions::RETIRE_FEATURE
     )]
     async fn retire_feature(
         &self,
@@ -1048,7 +1049,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "invalidate-review",
-        description = "Reset a spec's review.md record to the un-reviewed state — `last-run` and `reviewed-against` nulled, counts zeroed, `blocking` cleared — so the pre-`done` gate demands a fresh review before the spec can complete. The gate's staleness check diffs the spec's durable contracts (scenarios/*.md, data-model.md); spec.md is deliberately outside that set, so a fold-back that routes content into the upstream spec's BODY moves no durable contract and leaves a review that never saw the code the fold brought with it. This is how the fold says what the diff cannot see. Waivers survive verbatim, adopter-authored extra fields included: an invalidation says the review is out of date, not that an operator's recorded judgement about a finding was withdrawn. `invalidated: false` is the domain outcome for a spec that records no current review — already in this state — so a re-run of an interrupted fold converges rather than halting."
+        description = descriptions::INVALIDATE_REVIEW
     )]
     async fn invalidate_review(
         &self,
@@ -1061,7 +1062,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "rewrite-spec-links",
-        description = "Re-point every inbound pointer to a retiring or renamed feature directory at its fold target: markdown body links across the spec corpus, the `folds-into` frontmatter field, and the spec-root paths named in the referrers `check-orphaned-references` reads outside it (`CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`). The frontmatter key is included deliberately — it is the one pointer whose job is to survive until the merge, so a rename that repaired body links and left it behind would break exactly the thing the field exists for. `dependencies:` and `references:` are NOT touched: they are derived from body links, and derive-dependencies / derive-references regenerate them from the rewritten bodies on the next commit. Matching is by whole path segment, so a directory whose name merely shares a prefix is left alone, and cross-service URLs are never rewritten. `to` is `<feature>` (each link's tail survives; one naming a file the fold did not write is listed in `kept-tails`) or `<feature>/<scenario>` (a fold into one scenario — a `scenarios/{name}` tail is kept with its fragment, and every other tail becomes the routed scenario). A scenario tail the retiring directory does not hold is listed in `kept-tails` on either target. A link inside the target's own directory that climbs to the spec root is written relative to its file (`scenarios/x.md`, `../spec.md`), never through `../<target>/`, which derive-dependencies would record as a self-cycle. `mentions` lists each line of an examined file that still names the retiring directory, by its name or the number it is cited by, outside the derived `dependencies:` and `references:`. Both halves of `to` are held to the feature-directory and scenario-slug grammar. Every referrer, and every markdown file under the spec root, is read before anything is written: a referrer that cannot be rewritten safely (a symbolic link, a parent resolving outside the project, text that is not UTF-8) is named in `skipped`, as is any other symbolic link under the spec root named `*.md` or to a directory, which is not followed (a spec root that is itself a link is followed), and any other spec-root file that cannot be read as UTF-8 text, or a directory that cannot be listed, stops the run. Empty `rewritten` means examined-and-nothing-pointed-here only when `examined` is non-zero and `skipped` is empty."
+        description = descriptions::REWRITE_SPEC_LINKS
     )]
     async fn rewrite_spec_links(
         &self,
@@ -1074,7 +1075,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-unfolded-specs",
-        description = "Report branch-scoped specs (`<identifier>.<n>-<slug>`) still present in the working tree, each with the upstream spec its `folds-into:` names and its current status. A branch-scoped directory is a staging form discharged by fold-back; nothing runs on the merge itself, so a merged branch leaves its staging directories behind silently — this is what notices. Read-only, and it reports rather than repairs: which upstream section the content belongs in is the operator's judgement at fold-back. A `folds-into` naming a spec absent from this tree is reported as declared, never as broken — that absence is the normal pre-merge state, and existence is enforced at fold-back by retire-feature. Empty `unfolded` means examined-and-clean only when `examined` is non-zero."
+        description = descriptions::CHECK_UNFOLDED_SPECS
     )]
     async fn check_unfolded_specs(
         &self,
@@ -1087,7 +1088,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-corpus-links",
-        description = "Report relative markdown links in the spec corpus that resolve to nothing \u{2014} the failure an adopter creates by deleting or renaming a spec directory, which dangles every inbound pointer with no error and no gate. Fills the gap between three checks that each miss it: check-orphaned-references scopes to adopter-owned bootstrap referrers, /ductus:analyze is bounded to one feature plus its dependencies, and /ductus:audit Family 26 is maintainer-only. Read-only, and reports rather than repairs \u{2014} a depth error is re-pointed while a deliberate removal is named in prose, and a rewrite that guessed wrong is worse than a precise report. Resolution is lexical against the citing file's own directory, never canonicalized, so the answer is a property of the text rather than of the checkout. Inline code spans are stripped before matching (documentation quoting link syntax is not making a link), fenced blocks and frontmatter are skipped, and blockquoted lines are NOT \u{2014} that exemption belongs to derive-dependencies, where it decides whether a link induces an edge. Empty `broken` means clean only when `skipped` is empty and `examined` is non-empty; `guidance` is set when the scan could not establish a subject at all. Targets carrying NNN, a {placeholder}, a `*`, or a bare `...` are counted in `shapes-skipped` rather than tested, and the spec root's templates/ are excluded by construction and counted. With `scope: repository` the subject is every tracked .md file, and every agent's generated command copies, framework/templates/project/, runtime/tests/ and \u{2014} where framework/reference/ holds their sources \u{2014} the generated .ductus/reference/ copies are excluded by construction and counted too."
+        description = descriptions::CHECK_CORPUS_LINKS
     )]
     async fn check_corpus_links(
         &self,
@@ -1100,7 +1101,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-orphaned-references",
-        description = "Report adopter-owned files (CLAUDE.md, AGENTS.md, README.md, .githooks/pre-commit, and the spec root's system.md) whose references to ductus-managed paths no longer resolve — the failure a migration chain leaves behind when a later entry moves a path an earlier entry wrote into a create-strategy file the manifest never overwrites. Read-only, and reports rather than repairs: the adopter may have hand-edited the reference. Attribution has two modes and the result names which ran — `registry` when framework/migrations.toml is readable in the project tree (a framework checkout, where it names the entry whose target_paths covers the missing path), `watermark` otherwise (an adopter checkout, where only .ductus/config.toml's [migrations].last_applied is available and `migration` is empty). An unreadable referrer lands in `skipped`, so empty `findings` means examined-and-clean only when `skipped` is empty; `examined` names the files the result actually describes."
+        description = descriptions::CHECK_ORPHANED_REFERENCES
     )]
     async fn check_orphaned_references(
         &self,
@@ -1113,7 +1114,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-step-references",
-        description = "Report `step N` prose references in a command file that name a numbered step the file does not have. A command numbers its Instructions steps and refers to them in prose; the numbers are the only binding, and removing a step renumbers everything after it while the prose keeps the old numbers. Three findings, because the repairs differ: `unresolved` (names a number the file lacks), `self-reference` (a step referring to its own number \u{2014} it resolves, so an existence check passes it, and it is almost always renumbering residue), and `discontinuous` (steps not running 1..n, which makes every reference after the gap ambiguous rather than wrong). Subject is the Instructions section alone: a numbered list elsewhere in the file restarts at 1 and is a different list, so `references-out-of-subject` counts those mentions rather than resolving them (a command's markdown-only reference, whose sub-procedures restart the same way, is its own file under framework/reference/ and outside the subject), and an empty `findings` is never read as every reference in the file resolving. A qualified reference (groom\u{2019}s step 3) names another file\u{2019}s procedure and is excluded by construction. A file with an Instructions section from which no steps are extracted is a finding, not a pass \u{2014} two empty sets compare equal."
+        description = descriptions::CHECK_STEP_REFERENCES
     )]
     async fn check_step_references(
         &self,
@@ -1126,7 +1127,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-command-flags",
-        description = "Report flags a command's Flags table documents but its `argument-hint:` frontmatter omits. `argument-hint` is the surface a host renders when it offers a command, so an omitted flag is one the operator is never shown \u{2014} the defect an adopter hit when review.md's table listed eight flags and its hint named three. Maintainer scope: the subject is framework/commands/, where the divergence originates, not the generated copies an adopter cannot repair. Only a `Flags` section's table rows count (a command documenting flags in prose is examined and contributes nothing), and only each row's first cell, so behavior prose naming another flag is not a finding; fenced example tables are excluded. Empty `findings` means examined-and-clean over `with-flags-table`, not over `examined`; an unreadable file lands in `skipped`, and `guidance` is set when no Flags table was found at all, which is an extraction failure rather than a clean corpus."
+        description = descriptions::CHECK_COMMAND_FLAGS
     )]
     async fn check_command_flags(
         &self,
@@ -1139,7 +1140,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "derive-dependencies",
-        description = "Regenerate every tracked spec's frontmatter `dependencies:` from the sibling-spec inline links in its body, then report any cycle in the derived graph. Body links are authoritative; the frontmatter is a derived index (spec 017). Links inside frontmatter, fenced code, blockquote-prefixed lines, or a `## See also` section do not induce edges; `## References` does. A spec with no sibling links gets `dependencies: []` — the key present and empty, which is deliberately unlike `derive-references`' absent-when-empty rule. Self-links are recorded rather than stripped so the cycle check surfaces them. `dry-run` reports without writing and pairs with `drift` for a CI check; `staged` limits the rewrite to specs in the pending commit while the cycle check still spans the full graph. Untracked specs are never enumerated and are reported in `untracked-skipped`, so an empty `updated` is not a claim that they are in sync. A spec tracked in the index but missing from the worktree is reported in `absent` and excluded from `examined`, so the count never overstates what was read. A cycle is a domain outcome in `cycles`, not an error — the caller decides whether it blocks."
+        description = descriptions::DERIVE_DEPENDENCIES
     )]
     async fn derive_dependencies(
         &self,
@@ -1152,7 +1153,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "derive-references",
-        description = "Regenerate every tracked spec's frontmatter `references:` from the cross-service spec links in its body (spec 030). Strictly distinct from `dependencies:` — a reference is informative navigation and never enters the blocking dependency graph; this primitive never reads or writes that field, and relative sibling links are never references. Matches absolute http(s) links whose path holds `/<root>/NNN-slug/spec(-and-plan).md`, resolving each repo against the `[services]` registry: a registered service with a reachable checkout matches only that checkout's own `[paths] specs-root`, while an unreachable or unregistered repo accepts any single segment and records `service: null` rather than dropping the reference. Applies the shared body exclusions plus one of its own — a backticked link is an illustrative example, not a reference. Absent-when-empty: a spec with no cross-service links carries no `references:` key and a stale block is removed, deliberately unlike `derive-dependencies`' `dependencies: []`. `registered-services` reports the registry size, so 'no references' is distinguishable from 'no readable config'. `staged` filters the *write*, never the walk: a reference derives from the `[services]` registry as well as the body, so a service rename drifts specs nobody edited and therefore nobody staged. Every tracked spec is examined, and drifted-but-unstaged specs are reported in `unwritten` — neither 'in sync' nor 'not examined'. Untracked specs are never enumerated and appear in `untracked-skipped`. A spec tracked in the index but missing from the worktree is reported in `absent` and excluded from `examined`, so the count never overstates what was read."
+        description = descriptions::DERIVE_REFERENCES
     )]
     async fn derive_references(
         &self,

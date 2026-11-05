@@ -1,29 +1,15 @@
-//! `check-review-gate` — evaluate `/ductus:implement`'s pre-done review gate.
+//! `check-review-gate` — evaluate `/ductus:implement`'s pre-done review gate. Its checks
+//! and their order are `schema::descriptions::CHECK_REVIEW_GATE`.
 //!
-//! The deterministic surface behind the completion gate's step 13 (spec
-//! 022, scenario coverage-expansion-primitives), which the host previously
-//! walked by hand on every completion attempt: first whether the spec is
-//! already `done`, then the feature directory's markdown lint (through the
-//! `lint-markdown` machinery, replacing the raw `npx markdownlint-cli2`
-//! invocation), then unresolved scenario open questions, then an
-//! undischarged `cross-spec-impact`, then the review record in `review.md`
-//! and whether it is still current, then the analyze record in
-//! `analysis.md` and whether it is still current, then the two records'
-//! `dispositions:` maps — a record that predates them — and an outstanding
-//! gating finding, in practice a SHOULD neither waived nor released by its
-//! deferral (specs 058, 076), and last a fix round that needed a re-read and
-//! has neither one nor a waiver (spec 078). The first failing
-//! check wins and produces the canonical `blocked: …` message — with the
-//! adopter's `[host] project` command namespace substituted into the
-//! `/{project}:review` references — plus, on `must-violations`, the
-//! resolve, waive or defer guidance and, on `review-stale`, the re-run guidance.
-//! A blocked gate is a domain outcome the host acts on (halt, do not
-//! propose the transition), never an operational error.
+//! The deterministic surface behind the completion gate (spec 022, scenario
+//! coverage-expansion-primitives), which the host previously walked by hand on every
+//! completion attempt. A `blocked: …` message substitutes the adopter's `[host] project`
+//! command namespace into its `/{project}:review` references.
 //!
-//! A **passing** gate can still carry `guidance`: either record may be
-//! *undeterminable* — carrying no digest, so nothing on disk says what its run
-//! examined — and saying so is not the same as saying it is current. That
-//! notice never changes `passed`; see [`passing_notices`].
+//! A **passing** gate can still carry `guidance`: either record may be *undeterminable*
+//! — carrying no digest, so nothing on disk says what its run examined — and saying so
+//! is not the same as saying it is current. That notice never changes `passed`; see
+//! [`passing_notices`].
 
 use std::collections::BTreeSet;
 use std::path::Path;

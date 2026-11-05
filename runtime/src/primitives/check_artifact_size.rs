@@ -1,23 +1,17 @@
-//! `check-artifact-size` — warn when a spec artifact is larger than an agent
-//! can read in one call (spec 063).
+//! `check-artifact-size` — warn when a spec artifact is larger than an agent can read in
+//! one call (spec 063). What it measures and returns is
+//! `schema::descriptions::CHECK_ARTIFACT_SIZE`.
 //!
-//! An agent's file reader returns only part of a file past a host-specific
-//! cap, and a command that reads a spec artifact once, at setup, then works
-//! from part of it without saying so — the failure §grounding's *A partial
-//! read is not a read* names. This primitive measures a feature's subject
-//! artifacts against a configured threshold and reports each one over it with
-//! the fixes for its kind, so the warning arrives where fixing it is cheapest.
-//! `/{project}:clarify` and `/{project}:plan` print the warnings and never gate
-//! on them; `/{project}:analyze` records each as an advisory `artifact-size`
-//! finding.
+//! An agent's file reader returns only part of a file past a host-specific cap, and a
+//! command that reads a spec artifact once, at setup, then works from part of it without
+//! saying so — the failure §grounding's *A partial read is not a read* names. The warning
+//! arrives where fixing it is cheapest: `/{project}:clarify` and `/{project}:plan` print
+//! it and never gate on it, and `/{project}:analyze` records it as advisory.
 //!
-//! **Bytes, not tokens.** The runtime has no tokenizer, and the cap that
-//! matters differs per host and per host setting, so a file's length on disk
-//! is the measurable proxy and the threshold is a heuristic the project may
-//! set. The warning therefore says a file *may* not be read in one call,
-//! never that it *will* be truncated.
-//!
-//! **Read-only.** Nothing is written in any mode.
+//! **Bytes, not tokens.** The runtime has no tokenizer, and the cap that matters differs
+//! per host and per host setting, so a file's length on disk is the measurable proxy and
+//! the threshold is a heuristic the project may set. The warning therefore says a file
+//! *may* not be read in one call, never that it *will* be truncated.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};

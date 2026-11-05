@@ -1,28 +1,12 @@
-//! `diff-cross-spec` — the cross-spec impact surface for `/ductus:implement`.
+//! `diff-cross-spec` — the cross-spec impact surface for `/ductus:implement`. What it
+//! reports is `schema::descriptions::DIFF_CROSS_SPEC`.
 //!
-//! The deterministic filter implement steps 7 and 13 previously re-derived
-//! by hand per task (the gate step's prose self-declared "no primitive owns
-//! this filter yet"; spec 022, scenario coverage-expansion-primitives): the
-//! sibling-spec paths this spec's own work changed since its last reopen (spec
-//! 079, AC7).
-//!
-//! The window starts at the same place a review's does, the parent of the
-//! commit that last moved the spec into `in-progress`, or `HEAD` while that move
-//! is uncommitted. A spec never `in-progress` starts at its first spec-directory
-//! commit, through the walk shared with `derive-boundary`, so a planned spec
-//! still gets an answer. Starting from the first commit, it reported 507 paths
-//! for one task of one reopened spec.
-//!
-//! A path counts when it differs between the window's start and the working
-//! tree, and a commit that belongs to the spec changed it or it has an
-//! uncommitted change, since the per-task summary (step 7) fires before the
-//! task's commit, when any sibling-spec edits are still uncommitted. Another
-//! spec's commit is that spec's impact, not this one's. Read-only.
-//!
-//! `{specs-root}/inbox.md` is excluded from the result. It holds only what a
-//! person logs (spec 058), so editing it is not a cross-spec impact, and no
-//! inbox window or standing count is reported here any more — the standing
-//! row moved to `dashboard`.
+//! The deterministic filter implement steps 7 and 13 previously re-derived by hand per
+//! task (spec 022, scenario coverage-expansion-primitives). Its window starts where a
+//! review's does (spec 079, AC7): starting from the feature's first commit, it reported
+//! 507 paths for one task of one reopened spec. An uncommitted change counts because the
+//! per-task summary fires before the task's commit, when any sibling-spec edits are
+//! still uncommitted.
 
 use std::collections::BTreeSet;
 use std::path::Path;

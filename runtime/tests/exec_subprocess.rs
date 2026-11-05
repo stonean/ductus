@@ -16,11 +16,7 @@ mod common;
 use common::{copy_dir_recursive, ductus_command};
 
 fn runtime_binary() -> PathBuf {
-    // CARGO_MANIFEST_DIR is the runtime crate. The release binary lives
-    // under target/release/ductus relative to it (ductus.exe on Windows).
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target/release")
-        .join(format!("ductus{}", std::env::consts::EXE_SUFFIX))
+    common::release_binary()
 }
 
 fn write_procedure_repo(tmp: &Path, command_name: &str, body: &str) {

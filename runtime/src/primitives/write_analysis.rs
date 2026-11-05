@@ -20,19 +20,11 @@
 //! **Recording that the audit happened is not mutating the subject** — it is
 //! precisely what `write-review` does for the other gate, and precisely why
 //! that gate was enforceable and this one was not. Detection stays read-only;
-//! the fix-and-route step that follows it writes only with the operator's
-//! per-write confirmation, and this record is written after that step and a
-//! re-check, so it describes the state after dispositions (spec 058).
-//!
-//! Every finding arrives with its disposition, and the record counts them
-//! under `dispositions:`. The tier counts stay host-supplied scalars from the
-//! re-check, and `undispositioned` is derived as the live tier total minus the
-//! live findings deferred or waived — so a finding the caller does not
-//! itemize, including every finding on the exec path, is counted as owed.
-//! The record's `hard-fail` and `blocking-findings` are those tier counts less
-//! the live findings their deferral releases ([`decisions::releases`]), which
-//! render under `## Deferred to other specs` instead (spec 076). Nothing is
-//! written to the inbox.
+//! the fix-and-route step that follows it writes under the disposition rule, with
+//! a gating finding's waiver or deferral confirmed by the operator (spec 079), and
+//! this record is written after that step and a re-check, so it describes the state
+//! after dispositions (spec 058). What the primitive takes and derives is
+//! `schema::descriptions::WRITE_ANALYSIS`.
 //!
 //! The block deliberately is **not** a copy of `review:`:
 //!

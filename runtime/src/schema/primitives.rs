@@ -90,9 +90,9 @@ pub struct ReviewBlock {
     pub low_confidence: u32,
     /// Observations marked as breaking the spec's own contract that the last
     /// review did not fix, each a gating finding left by that run (spec 079).
-    /// Zero on a record written before the field existed.
-    #[serde(default)]
-    pub contract_breaks: u32,
+    /// `None` on a record written before the field existed, which is not zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contract_breaks: Option<u32>,
     /// Whether the last review left blocking findings.
     #[serde(default)]
     pub blocking: bool,

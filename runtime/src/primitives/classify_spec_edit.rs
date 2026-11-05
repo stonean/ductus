@@ -1,20 +1,19 @@
-//! `classify-spec-edit` — whether an edit under a spec reopens it (spec 079,
-//! AC15).
+//! `classify-spec-edit` — whether an edit under a spec reopens it (spec 079, AC15). What
+//! it answers is `schema::descriptions::CLASSIFY_SPEC_EDIT`.
 //!
-//! Decided from the diff, since a rule an author must remember is skipped when
-//! it matters most (§design-principles). Each side goes through the parser
-//! `read-spec` or `read-tasks` uses, so this cannot disagree with them about what
-//! a criterion, a question or a task is. Criterion ticks are not compared, as the
-//! digests normalize them (`analyze_subjects::without_criterion_ticks`).
+//! Decided from the diff, since a rule an author must remember is skipped when it matters
+//! most (§design-principles). Each side goes through the parser `read-spec` or
+//! `read-tasks` uses, so this cannot disagree with them about what a criterion, a question
+//! or a task is. Criterion ticks are not compared, as the digests normalize them
+//! (`analyze_subjects::without_criterion_ticks`).
 //!
-//! A run's record is not an edit, since `/{project}:analyze` may run on a `done`
-//! spec and leave it `done`. A `tasks.md` edit adding no unchecked task takes no
-//! back-edge (§spec-lifecycle), so it counts as a correction, while a deleted
-//! `plan.md` or `tasks.md` does not, as analyze reports a missing one as blocking.
+//! A run's record is no edit, since `/{project}:analyze` may run on a `done` spec and leave
+//! it `done`. A deleted `plan.md` or `tasks.md` is no correction, as analyze reports a
+//! missing one as blocking.
 //!
-//! A uniform sweep's edit to a scenario or data model reads as `reopens` here,
-//! since one file's diff cannot show a sweep: `mechanical_sweep`'s repo-wide index
-//! is what exempts one. Read-only.
+//! A uniform sweep's edit to a scenario or data model reads as `reopens` here, since one
+//! file's diff cannot show a sweep: `mechanical_sweep`'s repo-wide index is what exempts
+//! one.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;

@@ -29,6 +29,7 @@
 
 pub mod config_keys;
 pub mod constitutions;
+pub mod descriptions;
 pub mod extensions;
 pub mod paths;
 pub mod primitives;

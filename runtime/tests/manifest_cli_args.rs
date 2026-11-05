@@ -24,9 +24,7 @@ mod common;
 use common::ductus_command;
 
 fn runtime_binary() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target/release")
-        .join(format!("ductus{}", std::env::consts::EXE_SUFFIX))
+    common::release_binary()
 }
 
 fn ensure_binary_built() {

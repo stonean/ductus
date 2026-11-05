@@ -1,48 +1,23 @@
-//! `compute-review-scope` — deterministic scope resolution for `/ductus:review`.
+//! `compute-review-scope` — deterministic scope resolution for `/ductus:review`. What
+//! it resolves is `schema::descriptions::COMPUTE_REVIEW_SCOPE`.
 //!
-//! Resolves what the review command needs, from git history:
+//! The base is the **parent** of the commit the spec moved to `in-progress` at, found
+//! by the lookup shared with `check-stuck`, because the reopen flow commits the
+//! back-edge flip together with the work it authorises — see
+//! `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
+//! A review that stopped early does not move it, so stopping early leaves nothing
+//! permanently unread (spec 079, AC5).
 //!
-//! - **diff-base** — the later of the **parent** of the commit the spec advanced
-//!   to `in-progress` at (the transition itself is found by the lookup shared
-//!   with `check-stuck`) and the last review commit since it; `HEAD` when that
-//!   transition is not committed yet; or a caller-supplied `--since` override
-//!   used verbatim. The parent, because the reopen flow commits the back-edge
-//!   flip together with the work it authorises — see
-//!   `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
-//!   A review that recorded a skipped pass, a budget stop or an open fix-round
-//!   loop does not move the start, so stopping early leaves nothing permanently
-//!   unread (spec 079, AC5).
-//! - **scope** — spec 079's AC6: walking `base..HEAD` through
-//!   [`commit_attribution`](super::commit_attribution), the paths of a commit
-//!   that belongs to the spec alone or to no spec; of a commit several specs
-//!   claim, the paths in the spec's directory or its plan's `Affected Files`,
-//!   and a path in none of those specs' plans when its subject names this spec
-//!   first or names none of them; and uncommitted work. A plan entry unchanged
-//!   in the window stays only on the spec's first review, where it may mean
-//!   missing work.
-//! - **excluded** — what the scope left out, by the spec that claimed it.
-//! - **review-owed** — false when a review record exists and the scope holds
-//!   nothing outside the spec's own directory and no scenario or data-model edit
-//!   (AC4).
-//!
-//! The review reads the working tree, so the files modified since the base
-//! are the diff from the base to the working tree, and an uncommitted
-//! transition starts the window at `HEAD`. Answered from commits alone, a
-//! review run before its work was committed — the pipeline's natural order —
-//! was scoped away from every file the work touched
+//! The review reads the working tree, so the files modified since the base are the
+//! diff from the base to the working tree, and an uncommitted transition starts the
+//! window at `HEAD`. Answered from commits alone, a review run before its work was
+//! committed — the pipeline's natural order — was scoped away from every file the work
+//! touched
 //! (`specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-includes-uncommitted-work.md`).
 //!
-//! The project need not sit at its git repository's root: history is read by
-//! each path from the work tree, and the files modified since the base are
-//! reported from the project root, as the plan names them.
-//!
-//! It no longer reports an inbox window. Nothing captures findings to the
-//! inbox any more (spec 058), so its additions over a review window say
-//! nothing about the work being reviewed.
-//!
-//! Read-only, except that a result past `[artifacts] read-size-bytes` writes
-//! its lists whole to a file it names under `.ductus/results/`
-//! (`bounded_lists`; 066 scenario `scope-results-have-a-bounded-size`).
+//! The project need not sit at its git repository's root: history is read by each path
+//! from the work tree, and the files modified since the base are reported from the
+//! project root, as the plan names them.
 //!
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
