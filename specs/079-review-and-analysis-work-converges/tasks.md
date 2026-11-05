@@ -178,3 +178,40 @@ Subtask 4 cannot finish in one session: once 1–3 are done, record the landing 
 - [x] A review record relocated inside an open reopening counts as a run of it, so `measure-reopenings` can read that one reopening over the bound — waived: one-time, in the direction of over-reporting, and no gate reads it
 
 - **Done when**: each finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 16. What the flow pass found
+
+- [ ] Contract break, the owner's choice first: a committed record with an unfixed MUST or SHOULD moves the window past it, so a re-run sees `scope-count: 0`, takes the empty-scope branch and writes `must-violations: 0` with the file unchanged. Also clears an unread round and a contract break, and leaves `--waive` no finding to act on. Reproduced by hand in this session; absent at `3360dea3`
+- [ ] Contract break: a narrowed window expires each stored waiver and decision on a file the run did not read, a person's included, with the notice that the finding no longer fires. Retain an anchor outside the scope
+- [ ] Contract break, the owner's choice: a code-changing reopening following the gate's own message runs analyze, review, analyze and ends over the bound, or stops where the gate first passes with `review-owed: true` and no review, since the gate names `/analyze` first and never reads `review-owed`
+- [ ] Contract break, the owner's choice: after the draft back-edge the reopening's earlier code leaves the window and the measure, and `review-owed` reads false. Is a pass through draft one reopening
+- [ ] Contract break: a spec renamed while `in-progress` starts its window at the rename, its earlier code in no list, and `diff-cross-spec` reads its own old directory as another spec's. Compare status by `FeatureForm`
+- [ ] Contract break: on a shallow clone `compute-review-scope` and `diff-cross-spec` answer as if history were whole, with `review-owed: false` and zero impact, while `measure-reopenings` detects the same clone
+- [ ] Contract break: reverting a review's commit, or restoring an older record, moves the window's start to that commit
+- [ ] Contract break: `decisions-by-person` reads only `decisions:`, so a person's `--waive` and round waiver count as none, and a declined deferral leaves no trace; the owner chooses for the last
+- [ ] Contract break: `ductus exec` cannot record `contract-break`, missing from `PassObservation`, so the gate's passing notice stays silent
+- [ ] Contract break: a stored rule waiver matched to an observation now judged a contract break stands, with nobody asked
+- [ ] Contract break, the owner's choice of policy or cut: `framework/reference/status.md` keeps `dashboard`'s render rules, and `derive-boundary`, `mark-task` and `check-stuck` keep theirs in prose, each `--help` being one line
+- [ ] Gap, the owner's choice: without the server, `/review` steps 8, 9, 11 and `/analyze` steps 18, 21 cannot pass what they must; CLI `write-review` records a clean run over a MUST and `process-*` read everything as expired
+- [ ] Gap, follows the window: `disposition-drift` says to re-run `/review`, which stops on `review-owed: false`, and a forced run erases the findings undecided
+- [ ] Gap: `--waive` has no write route, predating this spec; `applied-waivers` clears the run and persists nothing
+- [ ] Gap, the owner's choice: the spec says `--waive` and `--defer` override any decision, and both take only a rule ID, so a person cannot replace the rule's waiver of an observation
+- [ ] Gap: `framework/reference/groom.md` and `framework/reference/analyze.md` tell a host to waive a gating finding `write-analysis` refuses
+- [ ] Gap: the gate passes an `analysis.md` whose `decisions:` list does not parse, a hard fail to `validate-frontmatter`
+- [ ] Gap: a review owed because a contract changed does not read that contract when its edit lies outside the window, and the digest then refreshes
+- [ ] Gap, the owner's choice: a record's commit moves the start past code committed after the run, though `reviewed-against` shows where it read
+- [ ] Gap, the owner's choice: a retired or folded spec's commits stay excluded by a claimant that cannot review them, against `invalidate-review`'s stated purpose
+- [ ] Gap: a run that dies in step 10, after its fix and before step 11, leaves no mark
+- [ ] Gap, the owner's choice: the re-run the gate demands after a committed cut-off reads over the bound
+- [ ] Gap: `implement`'s `write-boundary` seed has no route for an interactive host
+- [ ] Gap: a review cut off on a `done` spec leaves the open mark where nothing reads it
+- [ ] Gap: `prune-plan`'s `reopen-required` and `classify-spec-edit` disagree in both directions on the same tree
+- [ ] Gap, the owner's choice: the constitution says `classify-spec-edit` decides and two kinds of edit take no back-edge, and it reads both as `reopens`
+- [ ] Gap: `framework/reference/implement.md` sends a signpost on a `done` spec through `/amend`, whose route there reopens it
+- [ ] Gap, the owner's choice: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction
+- [ ] Gap: `/amend` advertises a criterion route its classifier, record steps and status table lack, predating this spec
+- [ ] Gap: a `cross-spec-impact:` entry added to a `done` spec is a correction nothing then reads
+- [ ] The wording items the flows name, fixed or waived by the rule: a record contradicting itself on a person's deferral, a matched rule waiver losing its label, the constitution reading as if a contract break holds `done`, the record's `scope` counting its own `review.md`, literal namespaces in result strings, and `/groom`'s spec-edit route
+- [ ] Close this run: the last `write-review` lists rounds 1 to 4 as re-read, diff-checked, re-read, diff-checked and round 5, the fold edits, `not-re-read` with the owner's reason; `budget-stop` then derives true, so the next review starts at the reopen. Reconcile `examined` and `scope` in the Summary
+
+- **Done when**: each contract break is fixed with a test shown to fail without it, each gap is fixed, deferred or waived with its reason, the owner's choices are recorded, and AC5 and AC17 are ticked again against the tree.
