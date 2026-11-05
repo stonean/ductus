@@ -65,7 +65,7 @@ decisions:
 | `target` | string (repo-relative path) | when `deferred` without a `work-item` | The scenario, `tasks.md`, spec, or rule file the finding was deferred to. |
 | `reason` | string | when `waived` | Free text; an empty string is invalid. |
 | `decided-at` | ISO 8601 timestamp | yes | The run's own timestamp (`reviewed-at` or `analyzed-at`), stamped by the writer when the decision is new. A re-matched decision keeps its original. |
-| `decided-by` | string (email) | yes | The writer's `decided-by` argument — `git config user.email`, as `waived-by` is. |
+| `decided-by` | string | yes | The writer's `decided-by` argument — `git config user.email`, as `waived-by` is — or `rule` for what the disposition rule decided (`079-review-and-analysis-work-converges`). |
 | (additional fields) | any | no | Open-schema, preserved verbatim on re-render, as waiver extras are. |
 
 **Lifecycle.** The rules mirror review waivers
@@ -141,7 +141,7 @@ Neither writer takes a list of new decisions. Each derives them from the
 dispositioned findings it is handed — every deferred or waived live finding
 not already stored with the same outcome and, for a deferral, the same work
 (076's data model) — and requires `decided-by` only when
-at least one is new. The shared disposition shape is `Disposition`
+at least one is new and no rule decided it. The shared disposition shape is `Disposition`
 (`outcome`, a `DispositionOutcome`, plus `target` and `reason`, and 076's
 `task` and `work-item`).
 
@@ -151,7 +151,7 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `observations` | list of `ReviewObservation` | Each now carries its disposition (below). |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived, or any violation newly deferred (076). |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived other than `by-rule`, or any violation newly deferred (076). |
 
 ### `ReviewObservation` — the `write-review` `observations` entry
 
@@ -170,7 +170,7 @@ at least one is new. The shared disposition shape is `Disposition`
 | --- | --- | --- |
 | `findings` | list of `AnalysisFinding` | Replaces `captured-issues`. |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any live finding is newly deferred or waived. |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any live finding is newly deferred or waived other than `by-rule`. |
 
 The tier counts stay host-supplied scalars from the re-check.
 

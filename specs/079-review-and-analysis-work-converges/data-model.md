@@ -8,7 +8,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | --- | --- | --- | --- |
 | `fix-rounds-open` | `true`, or absent | The first `write-review` of a run with a fix-round loop; the last write omits it | `check-review-gate` blocks while it is present |
 | `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path by the spec that claimed it |
-| `contract-breaks` | integer | Every write, counting observations marked `contract-break` | The measurement, as a gating finding left by that run |
+| `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
 
 An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, and any other value names a person.
 

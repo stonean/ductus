@@ -388,6 +388,15 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
         if let Some(key) = observation.decision_key.as_deref() {
             single_line(&format!("observations[{idx}].decision-key"), key)?;
         }
+        if observation.contract_break
+            && observation.disposition.by_rule
+            && observation.disposition.outcome == DispositionOutcome::Waived
+        {
+            return Err(invalid(
+                format!("observations[{idx}].disposition.by-rule"),
+                "a broken contract is fixed or deferred to the spec's own task; the rule never waives it",
+            ));
+        }
         for (argument, companion) in decisions::require_companion(
             "write-review",
             &format!("observations[{idx}].disposition"),
@@ -785,6 +794,19 @@ fn count_dispositions(observations: &[ReviewObservation]) -> Dispositions {
     counts
 }
 
+/// The observations showing the spec's own code breaks its contract that the
+/// run did not fix: what such a run leaves behind, which the measurement reads
+/// as a gating finding (spec 079, AC2).
+fn contract_breaks(observations: &[ReviewObservation]) -> usize {
+    observations
+        .iter()
+        .filter(|observation| {
+            observation.contract_break
+                && observation.disposition.outcome != DispositionOutcome::Fixed
+        })
+        .count()
+}
+
 /// The deferred and waived observations, as the decisions they store.
 fn decided_observations(observations: &[ReviewObservation]) -> Vec<DecisionRef> {
     observations
@@ -1054,6 +1076,11 @@ fn render_report(
     }
     let _ = writeln!(fm, "scope: {scope}");
     let _ = writeln!(fm, "excluded: {}", record.excluded.len());
+    let _ = writeln!(
+        fm,
+        "contract-breaks: {}",
+        contract_breaks(&args.observations)
+    );
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
     if args.loop_open {
         let _ = writeln!(fm, "fix-rounds-open: true");
@@ -1285,8 +1312,12 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
     if observations.is_empty() {
         return "*None.*".to_string();
     }
-    observations
-        .iter()
+    // A security issue or a leak is surfaced first (§brownfield-inbox, Finding
+    // dispositions). The sort is stable, so the rest keep the run's order.
+    let mut ordered: Vec<&ReviewObservation> = observations.iter().collect();
+    ordered.sort_by_key(|observation| !is_security_first(&observation.text));
+    ordered
+        .into_iter()
         .map(|observation| {
             // Flattened like every other piece of caller text, so a
             // work-item ID, stored as given, never reaches the body raw.
@@ -1294,10 +1325,21 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
                 &observation.disposition,
                 crate::primitives::flatten_line,
             );
-            format!("- {} — {outcome}", observation_line(observation))
+            let mark = if observation.contract_break {
+                " (breaks the spec's contract)"
+            } else {
+                ""
+            };
+            format!("- {}{mark} — {outcome}", observation_line(observation))
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Whether an observation leads with the category a reader must meet first.
+fn is_security_first(text: &str) -> bool {
+    let lead = text.trim_start().to_ascii_lowercase();
+    lead.starts_with("security") || lead.starts_with("leak")
 }
 
 /// Characters of a registered source's `description` a single-line report
@@ -2123,6 +2165,7 @@ mod tests {
             task: None,
             work_item: Some("PROJ-1".into()),
             reason: None,
+            by_rule: false,
         }];
         run(&args, tmp.path()).unwrap();
         let stored =
@@ -2234,6 +2277,7 @@ mod tests {
                 work_item: None,
                 reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
+                by_rule: false,
             },
             ..ReviewObservation::default()
         }
@@ -3091,6 +3135,140 @@ mod tests {
         }
     }
 
+    fn rule_waived(text: &str) -> ReviewObservation {
+        let mut waived = dispositioned(text, DispositionOutcome::Waived, Some("out of scope"));
+        waived.disposition.by_rule = true;
+        waived
+    }
+
+    /// With no operator asked, the rule's waiver records itself as the rule's,
+    /// and needs no `decided-by`.
+    #[test]
+    fn a_by_rule_waiver_records_decided_by_rule() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = None;
+        args.observations = vec![rule_waived("perf: a loop")];
+        run(&args, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("(decided by the rule)"), "{report}");
+    }
+
+    #[test]
+    fn a_persons_waiver_records_the_person() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Waived,
+            Some("out of scope"),
+        )];
+        run(&args, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+        assert!(!report.contains("decided by the rule"), "{report}");
+    }
+
+    /// A person's standing decision wins: the next run's rule-decided waiver of
+    /// the same observation changes nothing in the record.
+    #[test]
+    fn a_stored_decision_by_a_person_wins_over_the_rule() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Waived,
+            Some("a person's reason"),
+        )];
+        run(&args, dir.path()).unwrap();
+
+        let mut next = base_args("001-x");
+        next.decided_by = None;
+        let mut again = dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Waived,
+            Some("the rule's reason"),
+        );
+        again.disposition.by_rule = true;
+        next.observations = vec![again];
+        run(&next, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+        assert!(!report.contains("decided-by: rule"), "{report}");
+    }
+
+    /// A broken contract left for later counts, and one the run fixed left
+    /// nothing, so it does not. An ordinary observation never counts.
+    #[test]
+    fn a_contract_break_the_run_did_not_fix_counts() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        let mut left = dispositioned(
+            "bug: a contract broken",
+            DispositionOutcome::Undispositioned,
+            None,
+        );
+        left.contract_break = true;
+        let mut fixed = dispositioned("bug: another", DispositionOutcome::Fixed, None);
+        fixed.contract_break = true;
+        args.observations = vec![
+            left,
+            fixed,
+            dispositioned("perf: a loop", DispositionOutcome::Undispositioned, None),
+        ];
+        run(&args, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
+        assert!(
+            report.contains("bug: a contract broken (breaks the spec's contract)"),
+            "{report}"
+        );
+    }
+
+    #[test]
+    fn a_record_with_no_contract_break_says_zero() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&base_args("001-x"), dir.path()).unwrap();
+        assert!(review_md(&dir, "001-x").contains("\ncontract-breaks: 0\n"));
+    }
+
+    #[test]
+    fn the_rule_never_waives_a_broken_contract() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        let mut waived = rule_waived("bug: a contract broken");
+        waived.contract_break = true;
+        args.observations = vec![waived];
+        let err = run(&args, dir.path()).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("observations[0].disposition.by-rule"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn a_security_observation_is_listed_first() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.observations = vec![
+            observation("perf: a loop", "src/a.rs"),
+            observation("Security: a token logged", "src/b.rs"),
+            observation("other: noted", ""),
+            observation("leak: a handle kept", "src/c.rs"),
+        ];
+        run(&args, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        let at = |needle: &str| report.find(needle).unwrap();
+        assert!(at("Security: a token") < at("leak: a handle"), "{report}");
+        assert!(at("leak: a handle") < at("perf: a loop"), "{report}");
+        assert!(at("perf: a loop") < at("other: noted"), "{report}");
+    }
+
     /// The first write marks the loop open and the last clears it; a run that
     /// never passes the argument, as under `ductus exec`, writes no mark.
     #[test]
@@ -3464,6 +3642,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: None,
+            by_rule: false,
         }];
         // No `decided-by`: a matched decision is not a new one.
         run(&args, tmp.path()).unwrap();

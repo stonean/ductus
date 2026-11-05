@@ -14,8 +14,10 @@ next-criterion: 36
 
 # 058 — Findings route at discovery
 
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed who decides in a review or analysis run. A finding is fixed when mechanical and otherwise waived with its reason, by a rule that asks nobody, and only a gating finding's waiver or deferral reaches the operator. Where this spec says a run proposes or confirms a disposition, read that of `/{project}:implement`'s disposition task and of a gating finding.
+
 Every finding `/{project}:review`, `/{project}:analyze`, or
-`/{project}:implement` produces is proposed exactly one disposition: fixed,
+`/{project}:implement` produces takes at most one disposition: fixed,
 deferred to the work that will address it, or waived with its reason
 recorded. A gating one must have one before its spec can reach `done`. `specs/inbox.md` stops being a place findings are
 sent. It holds only the todos a person captures with `/{project}:log`.
@@ -76,7 +78,7 @@ the work was not complete, and nothing kept it from looking complete.
 
 ### Three dispositions
 
-Each finding below is proposed exactly one disposition:
+Each finding below takes at most one disposition:
 
 - a `/{project}:review` observation;
 - a `/{project}:analyze` finding still live when detection ends, in any tier;
@@ -129,8 +131,8 @@ instead (076).
 
 ### Order within a run
 
-Detection runs first and writes nothing. Dispositions follow; each fix or deferral
-is confirmed with the operator before it writes. If any disposition wrote,
+Detection runs first and writes nothing. Dispositions follow; each gating
+deferral is confirmed with the operator before it writes. If any disposition wrote,
 detection runs again over what changed. Only then is the run's record written,
 and only then is the report rendered.
 
@@ -142,7 +144,7 @@ out of `done` until it is implemented and reviewed.
 
 `analysis.md` records what the re-check found, not which kind of write
 produced it. A finding the re-check no longer produces is recorded as fixed
-(`live: false`), whether a chore removed it or another confirmed write did. A
+(`live: false`), whether a chore removed it or another write did. A
 body edit on the spec in hand that resolves the finding is the common write of
 that kind. A finding is recorded as deferred only while it still fires, because
 its deferred work has not landed yet: an open task, a scenario, a spec created
@@ -153,14 +155,14 @@ refuses any outcome but fixed for a finding gone from the re-check.
 ### `/{project}:analyze`
 
 Detection stays read-only. The read-only promise is narrowed to detection:
-after detection, a **fix-and-route step** proposes a disposition for each live
-finding and writes each fix or deferral only after `gate-confirm`. When the
-operator declines a proposal, the finding is waived with the operator's
-reason or left undispositioned. The re-check follows the step, so `analysis.md`
+after detection, a **fix-and-route step** gives each live finding its
+disposition and writes a gating finding's deferral only after `gate-confirm`.
+When the operator declines one, the finding is left undispositioned. The
+re-check follows the step, so `analysis.md`
 records the tier counts after dispositions.
 
-- **It runs on every invocation, with no flag.** Every write it makes is
-  confirmed first, so running by default adds no unasked-for write. A flag
+- **It runs on every invocation, with no flag.** It writes only a mechanical fix
+  or a confirmed deferral, so running by default changes no requirement unasked. A flag
   would make "record everything undispositioned" the default, and every
   unflagged run would then leave its findings undecided.
 - **`--fix` keeps its meaning.** It still reverts a drifted `done` spec to
@@ -170,12 +172,10 @@ records the tier counts after dispositions.
   the hard-fail and blocking ones, already surface as analyze-state drift, and
   the rest hold nothing (§Only gating findings hold `done`). Until scenario
   `findings-cost-in-proportion-to-risk` it was a third `--fix` trigger.
-- **With no operator, it writes nothing.** Under `ductus exec`, or on any host
-  that cannot confirm, the step proposes nothing. Each live finding that
-  matches no stored decision is recorded as undispositioned, so the record stays
-  honest for an interactive run to disposition; a hard-fail or blocking one
-  still holds `done` through the record's `blocking: true`.
-  Under `ductus exec` that is every live finding: the walker itemizes no
+- **Under `ductus exec`, it writes nothing.** A host that cannot confirm still
+  applies the rule, and leaves each hard-fail or blocking finding undispositioned,
+  which holds `done` through the record's `blocking: true`. Under `ductus exec`
+  that is every live finding: the walker itemizes no
   finding, so none is matched against the stored decisions either, and every
   stored decision is retained for the next interactive run.
 - **`--all` groups proposals by spec.** Each prompt offers to leave the rest of
@@ -239,18 +239,18 @@ it under the stored outcome without asking. A stored decision whose finding no
 longer fires is pruned on the next run, as an expired review waiver is. For a
 deferred finding, that is the moment its work lands. A deferral whose named
 work is complete while its finding still fires lapses instead, and the
-finding is asked about again (076). A run that did not
+finding is decided again (076). A run that did not
 evaluate a finding's source retains the decision rather than pruning it, as a
 dimension-restricted review retains a waiver. A reworded finding that the
-host does not match to its stored decision is a new finding and is asked about
+host does not match to its stored decision is a new finding and is decided
 again.
 
 ### `/{project}:review`
 
 Observations are no longer written through to the inbox. Each observation is
 fixed, deferred, or waived with its reason, and the Observations section of
-`review.md` records the disposition beside the observation. A chore fix is
-confirmed, and the affected passes re-run before the record is written, as
+`review.md` records the disposition beside the observation. On a chore fix,
+the affected passes re-run before the record is written, as
 `--fix` does today. The **Captured issues** section, and the window diff over
 the inbox that fed it, are retired.
 
@@ -436,8 +436,8 @@ spec's links to it. Each also gets the contract change itself:
   the spec in hand owns becomes a task or scenario on it, and the rest is
   dispositioned on its own.
 - **A chore fix that fails, or turns out not to be mechanical, is not a
-  chore.** The run reverts the attempt and proposes a deferral or a waiver
-  instead. A chore is never counted as fixed while its fix is not on disk.
+  chore.** The run reverts the attempt, and the finding takes another
+  disposition. A chore is never counted as fixed while its fix is not on disk.
 - **A confirmed deferral whose write fails is undispositioned.** For example,
   `create-scenario` refuses a slug that already exists. The failure is reported
   with the finding, and the record never counts a deferral that did not land.
@@ -477,7 +477,7 @@ spec's links to it. Each also gets the contract change itself:
 
 - [x] AC1: `/{project}:log` is the only framework command that invokes `append-inbox`, and no runtime primitive other than `append-inbox` writes an item to `{specs-root}/inbox.md`. A search of `framework/commands/`, `framework/bootstrap/`, and `runtime/src/` finds no other writer.
 - [x] AC2: A `/{project}:review` run with one or more observations appends nothing to the inbox, and `review.md`'s Observations section records each observation with its disposition (fixed, deferred with its work, or waived with its reason).
-- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection proposes one disposition per live finding and performs each fix or deferral only after `gate-confirm` returns a confirmed decision.
+- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection gives each live finding at most one disposition and performs a gating finding's deferral only after `gate-confirm` returns a confirmed decision.
 - [x] AC4: After the fix-and-route step writes anything, `/{project}:analyze` re-runs detection and writes `analysis.md` from the re-check. `check-review-gate` run immediately afterwards does not report that analysis stale.
 - [x] AC5: A `/{project}:implement` run that surfaces an issue outside the targeted spec captures nothing to the inbox. It appends an unchecked `Disposition out-of-spec finding:` task to the targeted spec's `tasks.md` before continuing the task in hand, and its completion summary lists the appended task.
 - [x] AC6: `review.md`, `analyze.md`, and `implement.md` route findings by referencing the Groom decision tree in `groom.md` rather than restating it, as `specify.md` already does.
@@ -506,7 +506,7 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC28: `/{project}:analyze --all` groups fix-and-route proposals by spec, and each prompt offers to leave that spec's remaining findings undispositioned.
 - [x] AC29: `check-review-gate` blocks an `in-progress` spec whose `review.md` or `analysis.md` has no `dispositions:` map, and names the command to re-run. A record written before this change that carries `captured-issues` still parses, and `/{project}:analyze` does not report a `done` spec's map-less record as drift.
 - [x] AC30: `/{project}:analyze` offers no waiver for a hard-fail or blocking finding. Such a finding is fixed or deferred, and it keeps `blocking: true` in the record until the re-check no longer produces it or its deferral releases it.
-- [x] AC31: A confirmed disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or deferred, and the report names the failure beside the finding.
+- [x] AC31: A disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or deferred, and the report names the failure beside the finding.
 - [x] AC32: A deferred or waived decision made in one run is stored with its outcome, its work or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
 - [x] AC33: `/{project}:implement` working a disposition task fixes, defers with confirmation, or waives the finding, and checks the task off only once one of the three has happened. A waiver writes its reason onto the checked task.
 - [x] AC34: A non-blocking finding surfaced while `/{project}:implement` works a disposition task is recorded on that task as a further body item with its own outcome, not appended as a new task, and the task is checked once every finding on it has a disposition; a blocking one becomes its own task.
@@ -563,6 +563,8 @@ spec's links to it. Each also gets the contract change itself:
   a third trigger, a `done` spec whose `analysis.md` records undispositioned
   findings. With no operator, the step writes nothing and records findings as
   undispositioned. `--all` groups proposals by spec (see §`/{project}:analyze`).
+  *Superseded in part by `079-review-and-analysis-work-converges`: a host that
+  cannot confirm applies the rule, and only `ductus exec` writes nothing.*
   Grounded in `framework/commands/analyze.md`: `--fix` already reverts on
   review-state drift, including an outstanding SHOULD on a `done` spec, and on
   unresolved scenario questions. The new trigger follows the SHOULD precedent,

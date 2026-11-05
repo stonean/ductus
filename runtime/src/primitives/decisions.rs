@@ -32,6 +32,11 @@ use crate::schema::primitives::{
 /// The frontmatter key both records store decisions under.
 pub(crate) const DECISIONS_KEY: &str = "decisions";
 
+/// The `decided-by` of a disposition the rule decided rather than a person
+/// (spec 079, AC17), so the measurement can tell how many reached one. Reserved:
+/// a caller cannot name it as an author.
+pub(crate) const RULE_DECIDER: &str = "rule";
+
 /// One stored decision with every known field optional — each a string, the
 /// derived `gating` a bool — so an entry missing a field still deserializes
 /// and [`Self::to_ref`] reports it as a notice, and so a re-render preserves
@@ -127,6 +132,7 @@ impl RawDecision {
             task,
             work_item,
             reason,
+            by_rule: self.decided_by.as_deref().map(str::trim) == Some(RULE_DECIDER),
         })
     }
 }
@@ -162,7 +168,8 @@ pub(crate) fn nonblank(value: Option<&str>) -> Option<&str> {
 /// names neither a target nor a work item; `{at}.work-item` when a work-item
 /// ID spans more than one line; `{at}.task` when a task has no `tasks.md`
 /// target; `{at}.target`, `{at}.task` or `{at}.work-item` when a waiver names
-/// work; and `{at}.reason` when a waiver states no reason.
+/// work; `{at}.reason` when a waiver states no reason; and `{at}.by-rule` when
+/// the rule is said to have decided anything but a fix or a waiver.
 pub(crate) fn require_companion<'a>(
     primitive: &str,
     at: &str,
@@ -177,6 +184,17 @@ pub(crate) fn require_companion<'a>(
     let task = nonblank(disposition.task.as_deref());
     let work_item = nonblank(disposition.work_item.as_deref());
     let reason = nonblank(disposition.reason.as_deref());
+    if disposition.by_rule
+        && !matches!(
+            disposition.outcome,
+            DispositionOutcome::Fixed | DispositionOutcome::Waived
+        )
+    {
+        return Err(refuse(
+            "by-rule",
+            "the rule fixes or waives; a deferral reaches the operator",
+        ));
+    }
     match disposition.outcome {
         DispositionOutcome::Deferred => {
             if target.is_none() && work_item.is_none() {
@@ -534,6 +552,7 @@ pub(crate) fn decision_for(disposition: &Disposition, key: &str) -> Option<Decis
         task: flat(&disposition.task),
         work_item: nonblank(disposition.work_item.as_deref()).map(str::to_string),
         reason: flat(&disposition.reason),
+        by_rule: disposition.by_rule,
     })
 }
 
@@ -581,7 +600,7 @@ pub(crate) fn disposition_suffix(
     plain: impl Fn(&str) -> String,
 ) -> String {
     let companion = |value: &Option<String>| plain(value.as_deref().unwrap_or(""));
-    match disposition.outcome {
+    let suffix = match disposition.outcome {
         DispositionOutcome::Fixed => "**fixed**".to_string(),
         DispositionOutcome::Deferred => format!(
             "**deferred** to {}",
@@ -596,6 +615,11 @@ pub(crate) fn disposition_suffix(
             format!("**waived**: {}", companion(&disposition.reason))
         }
         DispositionOutcome::Undispositioned => "**undispositioned**".to_string(),
+    };
+    if disposition.by_rule {
+        format!("{suffix} (decided by the rule)")
+    } else {
+        suffix
     }
 }
 
@@ -655,7 +679,9 @@ pub(crate) fn read_decisions(feature_dir: &Path, file: &str) -> Result<Vec<RawDe
 /// `process-decisions` applies for that key with the same outcome and, for a
 /// deferral, the same work, kept byte-for-byte with its original companion,
 /// `decided-at`, and `decided-by`; or **new**, stamped with `decided_at` and
-/// `decided_by`, replacing every stored entry for its key. A key this run
+/// `decided_by`, or `decided-by: rule` when the rule made it, replacing every
+/// stored entry for its key. A decision the rule made never replaces one a
+/// person made, unless this run expired that one. A key this run
 /// drops through `expired` is always new. Keys compare through [`same_key`]
 /// throughout. A host that restates a matched waiver's or deferral's reason
 /// has not made a new decision; a deferral naming other work has, because its
@@ -685,19 +711,28 @@ pub(crate) fn merge(
     // swallow a re-decision. An entry this write drops through `expired` — a
     // lapsed deferral among them — stands for nothing, so the decision that
     // replaces it is fresh even with the same outcome (spec 076).
+    //
+    // A person's standing decision wins: the rule does not re-decide it.
     let fresh: Vec<&DecisionRef> = once
         .into_iter()
         .filter(|decision| {
-            expired
+            if expired
                 .iter()
                 .any(|gone| same_key(&gone.key, &decision.key))
-                || stored_decision(&stored, &decision.key).is_none_or(|stored| {
-                    stored.outcome != decision.outcome || !same_work(&stored, decision)
-                })
+            {
+                return true;
+            }
+            stored_decision(&stored, &decision.key).is_none_or(|stored| {
+                let a_person_decided = decision.by_rule && !stored.by_rule;
+                let changed = stored.outcome != decision.outcome || !same_work(&stored, decision);
+                changed && !a_person_decided
+            })
         })
         .collect();
-    let author = decided_by.map(str::trim).filter(|who| !who.is_empty());
-    if !fresh.is_empty() && author.is_none() {
+    let author = decided_by
+        .map(str::trim)
+        .filter(|who| !who.is_empty() && *who != RULE_DECIDER);
+    if author.is_none() && fresh.iter().any(|decision| !decision.by_rule) {
         return Err(DecisionRefusal::DecidedByMissing);
     }
     let dropped = |entry: &RawDecision| {
@@ -726,7 +761,11 @@ pub(crate) fn merge(
             reason: decision.reason.clone(),
             gating: None,
             decided_at: Some(decided_at.to_string()),
-            decided_by: author.map(str::to_string),
+            decided_by: if decision.by_rule {
+                Some(RULE_DECIDER.to_string())
+            } else {
+                author.map(str::to_string)
+            },
             extra: BTreeMap::new(),
         });
     }
@@ -839,6 +878,7 @@ mod tests {
                 task: None,
                 work_item: None,
                 reason: None,
+                by_rule: false,
             })
         );
     }
@@ -898,6 +938,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: (outcome == DecisionOutcome::Waived).then(|| companion.to_string()),
+            by_rule: false,
         }
     }
 
@@ -1239,6 +1280,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: Some("false\u{1b}positive".into()),
+            by_rule: false,
         };
         let decision = decision_for(&disposition, "grounding — split\nmessage").unwrap();
         assert_eq!(decision.key, "grounding — split message");
@@ -1305,6 +1347,7 @@ mod tests {
             task: task.map(str::to_string),
             work_item: work_item.map(str::to_string),
             reason: None,
+            by_rule: false,
         }
     }
 
@@ -1610,5 +1653,171 @@ mod tests {
             )),
             "**deferred** to `specs/001-x/tasks.md` task 7 and work item `PROJ-1`"
         );
+    }
+
+    // -- spec 079, AC2 and AC17 ----------------------------------------------
+
+    fn by_rule(key: &str, reason: &str) -> DecisionRef {
+        DecisionRef {
+            by_rule: true,
+            ..decided(key, DecisionOutcome::Waived, reason)
+        }
+    }
+
+    fn stored_entry(key: &str, reason: &str, by: &str) -> RawDecision {
+        RawDecision {
+            key: Some(key.into()),
+            outcome: Some("waived".into()),
+            reason: Some(reason.into()),
+            decided_at: Some("2026-11-01T00:00:00Z".into()),
+            decided_by: Some(by.into()),
+            ..RawDecision::default()
+        }
+    }
+
+    #[test]
+    fn a_decision_the_rule_made_is_stamped_rule_and_needs_no_author() {
+        let merged = merge(
+            Vec::new(),
+            &[],
+            &[by_rule("k", "out of scope")],
+            "2026-11-05T00:00:00Z",
+            None,
+        )
+        .unwrap();
+        assert_eq!(merged[0].decided_by.as_deref(), Some(RULE_DECIDER));
+        assert_eq!(merged[0].to_ref().map(|r| r.by_rule), Ok(true));
+    }
+
+    #[test]
+    fn the_rule_stamp_wins_over_a_supplied_author() {
+        let merged = merge(
+            Vec::new(),
+            &[],
+            &[by_rule("k", "out of scope")],
+            "2026-11-05T00:00:00Z",
+            Some("dev@example.com"),
+        )
+        .unwrap();
+        assert_eq!(merged[0].decided_by.as_deref(), Some(RULE_DECIDER));
+    }
+
+    #[test]
+    fn a_persons_decision_keeps_its_author_and_still_needs_one() {
+        let person = decided("k", DecisionOutcome::Waived, "not ours");
+        let merged = merge(
+            Vec::new(),
+            &[],
+            std::slice::from_ref(&person),
+            "2026-11-05T00:00:00Z",
+            Some("dev@example.com"),
+        )
+        .unwrap();
+        assert_eq!(merged[0].decided_by.as_deref(), Some("dev@example.com"));
+        assert_eq!(merged[0].to_ref().map(|r| r.by_rule), Ok(false));
+
+        for author in [None, Some(""), Some(RULE_DECIDER)] {
+            assert!(
+                merge(
+                    Vec::new(),
+                    &[],
+                    std::slice::from_ref(&person),
+                    "2026-11-05T00:00:00Z",
+                    author
+                )
+                .is_err(),
+                "{author:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_persons_stored_decision_wins_over_the_rule() {
+        let merged = merge(
+            vec![stored_entry("k", "a person's reason", "dev@example.com")],
+            &[],
+            &[by_rule("k", "the rule's reason")],
+            "2026-11-05T00:00:00Z",
+            None,
+        )
+        .unwrap();
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].decided_by.as_deref(), Some("dev@example.com"));
+        assert_eq!(merged[0].reason.as_deref(), Some("a person's reason"));
+    }
+
+    /// Expired, a person's decision stands for nothing, so the rule's replaces it.
+    #[test]
+    fn the_rule_replaces_a_persons_decision_this_run_expired() {
+        let stored = stored_entry("k", "a person's reason", "dev@example.com");
+        let expired = stored.to_ref().unwrap();
+        let merged = merge(
+            vec![stored],
+            &[expired],
+            &[by_rule("k", "the rule's reason")],
+            "2026-11-05T00:00:00Z",
+            None,
+        )
+        .unwrap();
+        assert_eq!(merged[0].decided_by.as_deref(), Some(RULE_DECIDER));
+    }
+
+    /// A person's new call on what the rule decided is a new decision.
+    #[test]
+    fn a_person_can_replace_what_the_rule_decided() {
+        let merged = merge(
+            vec![stored_entry("k", "the rule's reason", RULE_DECIDER)],
+            &[],
+            &[decided(
+                "k",
+                DecisionOutcome::Deferred,
+                "specs/031-x/tasks.md",
+            )],
+            "2026-11-05T00:00:00Z",
+            Some("dev@example.com"),
+        )
+        .unwrap();
+        assert_eq!(merged[0].decided_by.as_deref(), Some("dev@example.com"));
+        assert_eq!(merged[0].outcome.as_deref(), Some("deferred"));
+    }
+
+    #[test]
+    fn the_rule_fixes_or_waives_and_nothing_else() {
+        let with = |outcome: DispositionOutcome| Disposition {
+            outcome,
+            target: (outcome == DispositionOutcome::Deferred).then(|| "specs/a/tasks.md".into()),
+            reason: (outcome == DispositionOutcome::Waived).then(|| "out of scope".into()),
+            by_rule: true,
+            ..Disposition::default()
+        };
+        assert!(require_companion("w", "o", &with(DispositionOutcome::Fixed)).is_ok());
+        assert!(require_companion("w", "o", &with(DispositionOutcome::Waived)).is_ok());
+        for outcome in [
+            DispositionOutcome::Deferred,
+            DispositionOutcome::Undispositioned,
+        ] {
+            let refused = require_companion("w", "o", &with(outcome)).unwrap_err();
+            assert!(refused.to_string().contains("o.by-rule"), "{refused}");
+        }
+    }
+
+    #[test]
+    fn a_rule_decided_disposition_says_so_beside_its_outcome() {
+        let suffix = |d: &Disposition| disposition_suffix(d, str::to_string);
+        let waived = Disposition {
+            outcome: DispositionOutcome::Waived,
+            reason: Some("out of scope".into()),
+            by_rule: true,
+            ..Disposition::default()
+        };
+        assert_eq!(
+            suffix(&waived),
+            "**waived**: out of scope (decided by the rule)"
+        );
+        let person = Disposition {
+            by_rule: false,
+            ..waived
+        };
+        assert_eq!(suffix(&person), "**waived**: out of scope");
     }
 }

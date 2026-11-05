@@ -876,6 +876,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: None,
+            by_rule: false,
         }];
         next.findings[0].disposition.target = Some("specs/042-demo/scenarios/gone.md".into());
         let err = run(&next, tmp.path()).unwrap_err();
@@ -1029,6 +1030,7 @@ mod tests {
                 work_item: None,
                 reason: (outcome == DispositionOutcome::Waived)
                     .then(|| companion.unwrap_or_default().to_string()),
+                by_rule: false,
             },
             decision_key: None,
         }
@@ -1216,6 +1218,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: Some("future endpoint".into()),
+            by_rule: false,
         }];
         run(&next, tmp.path()).unwrap();
         assert_eq!(
@@ -1965,5 +1968,79 @@ mod tests {
             Some("first@example.com"),
             "a re-matched decision keeps its original stamp"
         );
+    }
+
+    /// Spec 079: analyze's rule-decided waiver needs no author and says whose it
+    /// is; a person's stays theirs.
+    #[test]
+    fn a_by_rule_waiver_of_an_advisory_finding_records_decided_by_rule() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.advisory = 2;
+        let mut ruled = finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Waived,
+            Some("out of scope"),
+        );
+        ruled.disposition.by_rule = true;
+        let person = finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "a person looked",
+            DispositionOutcome::Waived,
+            Some("not ours"),
+        );
+        a.findings = vec![ruled];
+        a.decided_by = None;
+        run(&a, tmp.path()).unwrap();
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
+        assert_eq!(stored[0].decided_by.as_deref(), Some("rule"));
+
+        let mut next = args();
+        next.advisory = 1;
+        next.findings = vec![person];
+        next.decided_by = Some("dev@example.com".into());
+        run(&next, tmp.path()).unwrap();
+        let stored =
+            decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
+        assert!(
+            stored
+                .iter()
+                .any(|d| d.decided_by.as_deref() == Some("dev@example.com")),
+            "{stored:?}"
+        );
+    }
+
+    /// The rule never waives or defers what gates `done`.
+    #[test]
+    fn the_rule_cannot_waive_or_defer_a_blocking_finding() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.blocking_findings = 1;
+        let mut waived = finding(
+            AnalysisTier::Blocking,
+            "grounding",
+            "a blocking finding",
+            DispositionOutcome::Waived,
+            Some("out of scope"),
+        );
+        waived.disposition.by_rule = true;
+        a.findings = vec![waived];
+        assert!(run(&a, tmp.path()).is_err());
+
+        let mut deferred = finding(
+            AnalysisTier::Blocking,
+            "grounding",
+            "a blocking finding",
+            DispositionOutcome::Deferred,
+            Some("specs/042-demo/spec.md"),
+        );
+        deferred.disposition.by_rule = true;
+        a.findings = vec![deferred];
+        let err = run(&a, tmp.path()).unwrap_err();
+        assert!(err.to_string().contains("by-rule"), "{err}");
     }
 }

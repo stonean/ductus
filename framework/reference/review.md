@@ -349,9 +349,12 @@ its own one-line text and, optionally, the path it anchors to. Leading the text
 with a category (`security` / `leak` / `convention` / `bug` / `perf` / `other`)
 helps a reader route it, but nothing parses it.
 
-**Every observation is proposed a disposition before the record is written**
+**Every observation takes a disposition before the record is written**
 (§brownfield-inbox, Finding dispositions), and the section renders it beside
-the observation, the path clause omitted when the observation has none:
+the observation, the path clause omitted when the observation has none, with
+`(decided by the rule)` after what the rule decided and `(breaks the spec's
+contract)` after a text marked `contract-break`. A security or leak observation
+renders first:
 
 ```text
 - {text} — `{path}` — **fixed**
@@ -361,17 +364,29 @@ the observation, the path clause omitted when the observation has none:
 - {text} — `{path}` — **undispositioned**
 ```
 
+**The rule decides, and nobody is asked, except for a broken contract** (spec
+079). An observation showing the spec's own code breaks its contract is marked
+`contract-break` and counts as gating: it is fixed in the run or deferred to the
+spec's own task, whose unchecked box holds `done`, and unless fixed it counts in
+the record's `contract-breaks`. Any other observation, about this spec or
+another, is fixed in the run when mechanical and otherwise waived with its
+reason, both marked `by-rule`, so a run adds no work for what no gate reads. A
+defect that makes this review's own result wrong is never waived. A person's
+stored decision wins, and the rule does not re-decide it. An observation that
+cannot be judged mechanical is waived with its reason, unless it shows a broken
+contract. `/{project}:implement`'s disposition task is unchanged.
+
 - **Fixed** — a chore: mechanical, and adding no durable requirement
-  (§bug-handling's durability test). It is confirmed before it writes, and
-  the affected passes re-run before the record is written, as `--fix` does,
-  so the record describes the fixed tree. A fix that fails, or turns out not
-  to be mechanical, is reverted and is not a chore; a chore is never counted
-  fixed while its fix is not on disk.
-- **Deferred** — to the home the **§Groom decision tree** in `.ductus/reference/groom.md`
+  (§bug-handling's durability test). The affected passes re-run before the
+  record is written, as `--fix` does, so the record describes the fixed tree. A
+  fix that fails, or turns out not to be mechanical, is reverted and is not a
+  chore; a chore is never counted fixed while its fix is not on disk.
+- **Deferred** — a broken contract, with the operator's confirmation, to the
+  spec's own task or the home the **§Groom decision tree** in `.ductus/reference/groom.md`
   chooses; that is its single canonical statement, and this reference does
   not restate it. An external work-item ID may stand beside that home, or in
   its place, as the operator gives it (spec 076); an observation never holds
-  `done`, so either suffices. The homes are a task, a scenario with its task, or a body
+  `done` through the record, so either suffices. The homes are a task, a scenario with its task, or a body
   edit on this spec; a scenario or body edit on another existing spec; a new
   spec, created through `/{project}:specify`'s procedure in the same run; or
   an amendment to a rule file the project owns. A deferral to a `done` spec names
@@ -381,13 +396,14 @@ the observation, the path clause omitted when the observation has none:
   waived or undispositioned, never deferred to a spec that does not exist,
   and a confirmed deferral whose write fails is undispositioned, with the
   failure named beside it.
-- **Waived** — with the reason it is not addressed. It is the disposition
-  that ends a loop: an observation about the pipeline's own machinery rather
-  than the code under review, deferred to a `done` spec, reopens that spec, and
-  that spec's next review produces the next observation.
+- **Waived** — with the reason it is not addressed, stored with `decided-by:
+  rule` when the rule decided it and the person's name when one did. It is the
+  disposition that ends a loop: an observation about the pipeline's own machinery
+  rather than the code under review, deferred to a `done` spec, reopens that
+  spec, and that spec's next review produces the next observation.
 - **Undispositioned** — nobody decided: the operator declined without a
   reason, a deferral's write failed, its stored deferral lapsed with nobody to
-  ask, or nobody could be asked. `ductus exec`'s
+  ask, or a broken contract had nobody to ask. `ductus exec`'s
   walker no-ops steps 9 and 10 of the command's Instructions, so every observation an exec run threads
   through is recorded undispositioned. It stays recorded and visible for a
   later review to decide, and it does not hold `done`: only a gating finding
@@ -412,8 +428,8 @@ stored decision nothing matched is pruned on an unrestricted run and retained
 when a pass did not run, exactly as a waiver is. A stored deferral whose
 named work is complete while its observation still fires is **lapsed** (spec
 076): it is dropped, and the observation is asked about again. A missed match costs one
-repeated question, never a silent waiver, because an unmatched decision is
-pruned rather than applied to something else. A malformed entry is reported,
+repeated decision, never a silent waiver of a person's call, because an unmatched
+decision is pruned rather than applied to something else. A malformed entry is reported,
 applies to nothing, and is kept; an entry with no fields at all holds no
 decision, so a re-render drops it. A duplicate key is reported and ignored,
 and goes when its key expires or is given a new decision, because a new

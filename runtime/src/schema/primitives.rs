@@ -295,6 +295,11 @@ pub struct Disposition {
     /// `waived`; optional on a deferral.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// The disposition rule decided this, no person: a mechanical fix, or a
+    /// waiver of what the rule does not fix (spec 079, AC2 and AC17). Allowed
+    /// only with `fixed` or `waived`, and a waiver records `decided-by: rule`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub by_rule: bool,
 }
 
 /// The outcome a stored decision records. `fixed` is never stored — a fixed
@@ -334,6 +339,10 @@ pub struct DecisionRef {
     /// a deferral.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// The disposition rule made this decision, so it is stamped `decided-by:
+    /// rule`, and a person's stored decision for the same key wins over it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub by_rule: bool,
 }
 
 /// The analyze record, parsed from `analysis.md`'s frontmatter — the durable
@@ -1223,6 +1232,13 @@ pub struct ReviewObservation {
     /// is its key.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision_key: Option<String>,
+    /// The observation shows the spec's own code breaks its contract, so it
+    /// takes a gating finding's dispositions: fixed in the run, or deferred to
+    /// the spec's own task with the operator's confirmation, and never waived by
+    /// the rule. Unless fixed, it counts in the record's `contract-breaks` (spec
+    /// 079, AC2).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub contract_break: bool,
 }
 
 /// Args for `write-review`. Findings cross the runtime boundary as a single
@@ -1441,7 +1457,8 @@ pub struct AnalysisFinding {
     pub live: bool,
     /// What the run did with it. `waived` is refused for a `hard-fail` or
     /// `blocking` finding: those already gate `done`, and a waiver would be a
-    /// bypass the gate does not have.
+    /// bypass the gate does not have. `by-rule` marks what the disposition rule
+    /// decided rather than a person.
     #[serde(default)]
     pub disposition: Disposition,
     /// The key of a stored decision the host matched this finding to via
@@ -8029,6 +8046,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: None,
+            by_rule: false,
         };
         let counts = [
             "matched-count",
@@ -8102,6 +8120,7 @@ mod tests {
             task: None,
             work_item: None,
             reason: None,
+            by_rule: false,
         };
         let v = serde_json::to_value(&decision).unwrap();
         assert_eq!(v["outcome"], "deferred");
@@ -8131,6 +8150,7 @@ mod tests {
                 task: None,
                 work_item: None,
                 reason: None,
+                by_rule: false,
             },
             decision_key: Some("grounding — earlier wording".into()),
         };
@@ -8150,13 +8170,30 @@ mod tests {
                 task: None,
                 work_item: None,
                 reason: Some("noise".into()),
+                by_rule: false,
             },
             decision_key: Some("perf: slow — `a.rs`".into()),
+            contract_break: false,
         };
         let v = serde_json::to_value(&observation).unwrap();
         assert_eq!(v["decision-key"], "perf: slow — `a.rs`");
         assert_eq!(v["disposition"]["outcome"], "waived");
+        assert!(v["disposition"].get("by-rule").is_none(), "{v}");
+        assert!(v.get("contract-break").is_none(), "{v}");
         assert_eq!(round_trip(&observation), observation);
+
+        let ruled = ReviewObservation {
+            contract_break: true,
+            disposition: Disposition {
+                by_rule: true,
+                ..observation.disposition.clone()
+            },
+            ..observation
+        };
+        let v = serde_json::to_value(&ruled).unwrap();
+        assert_eq!(v["disposition"]["by-rule"], true);
+        assert_eq!(v["contract-break"], true);
+        assert_eq!(round_trip(&ruled), ruled);
     }
 
     #[test]

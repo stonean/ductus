@@ -47,6 +47,16 @@ its version and date.
 
 ### Changed
 
+- **A review or analysis run asks a person only about a gating finding's waiver
+  or deferral.** A finding is fixed in the run when mechanical and otherwise
+  waived with its reason, by a rule, and the host marks what the rule decided
+  `by-rule`, which `write-review` and `write-analysis` record as `decided-by:
+  rule`, needing no `decided-by`, and refuse on anything but a fix or a waiver. A
+  person's stored decision wins. An observation showing the spec's own code breaks
+  its contract is marked `contract-break`: the rule never waives it, it renders
+  with that mark, and unless fixed it counts in `review.md`'s new `contract-breaks`.
+  A security or leak observation now renders first. `ductus exec` still writes no
+  disposition at all.
 - **`diff-cross-spec` reports this spec's impact, not the corpus's.** Its window
   now starts at the spec's last reopen rather than its first spec-directory
   commit, and it keeps a sibling path only when a commit belonging to the spec

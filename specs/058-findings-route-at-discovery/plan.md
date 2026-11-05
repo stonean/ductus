@@ -24,8 +24,9 @@ first. Then the session restarts. Only after that are any pipeline commands run
 that consume the new primitives.
 
 Disposition is a host judgment, and the runtime never makes it. The host picks
-fix, defer, or waive by walking the groom decision tree, and confirms each
-write. The runtime does three things with that judgment: it counts the
+fix, defer, or waive, walking the groom decision tree for a deferral, and since
+`079-review-and-analysis-work-converges` confirms only a gating finding's waiver
+or deferral. The runtime does three things with that judgment: it counts the
 dispositions, persists the deferred and waived decisions, and renders them.
 Since scenario `findings-cost-in-proportion-to-risk` the gate no longer reads
 the count; it reads the gating counts the records already carry.

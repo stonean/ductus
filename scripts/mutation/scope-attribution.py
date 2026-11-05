@@ -3,7 +3,8 @@ to each spec whose directory it touches and each spec its subject's scope names
 (`runtime/src/primitives/commit_attribution.rs`), the review window and scope
 built on it (`compute_review_scope.rs`), and a fix round's own use of it with the
 open mark (`fix_rounds.rs`, `brief_re_read.rs`, `check_review_gate.rs`,
-`write_review.rs`), and `diff-cross-spec` (`diff_cross_spec.rs`).
+`write_review.rs`), `diff-cross-spec` (`diff_cross_spec.rs`), and the rule that
+decides a run's dispositions (`decisions.rs`, `write_review.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/scope-attribution.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -618,5 +619,117 @@ MUTATIONS = [
         '    pub window_base: String,\n    /// Current HEAD commit.\n    pub current_head: String,\n    /// Paths under the spec root',
         '    #[serde(rename = "first-commit")]\n    pub window_base: String,\n    /// Current HEAD commit.\n    pub current_head: String,\n    /// Paths under the spec root',
         'diff_cross_spec::tests::the_wire_form_names_the_window_base',
+    ),
+    (
+        "M88 the rule's decision is stamped with the author",
+        'src/primitives/decisions.rs',
+        '            decided_by: if decision.by_rule {\n                Some(RULE_DECIDER.to_string())\n            } else {\n                author.map(str::to_string)\n            },',
+        '            decided_by: author.map(str::to_string),',
+        'decisions::tests::the_rule_stamp_wins_over_a_supplied_author',
+    ),
+    (
+        "M89 a person's decision is stamped with the rule",
+        'src/primitives/decisions.rs',
+        '            decided_by: if decision.by_rule {',
+        '            decided_by: if !decision.by_rule {',
+        'decisions::tests::a_persons_decision_keeps_its_author_and_still_needs_one',
+    ),
+    (
+        'M90 a rule-decided disposition still demands an author',
+        'src/primitives/decisions.rs',
+        '    if author.is_none() && fresh.iter().any(|decision| !decision.by_rule) {',
+        '    if author.is_none() && !fresh.is_empty() {',
+        'decisions::tests::a_decision_the_rule_made_is_stamped_rule_and_needs_no_author',
+    ),
+    (
+        "M91 a person's decision no longer needs an author",
+        'src/primitives/decisions.rs',
+        '    if author.is_none() && fresh.iter().any(|decision| !decision.by_rule) {',
+        '    if author.is_none() && fresh.iter().any(|decision| decision.by_rule && !decision.by_rule) {',
+        'decisions::tests::a_persons_decision_keeps_its_author_and_still_needs_one',
+    ),
+    (
+        'M92 a caller can sign as the rule',
+        'src/primitives/decisions.rs',
+        '        .filter(|who| !who.is_empty() && *who != RULE_DECIDER);',
+        '        .filter(|who| !who.is_empty());',
+        'decisions::tests::a_persons_decision_keeps_its_author_and_still_needs_one',
+    ),
+    (
+        "M93 the rule replaces a person's standing decision",
+        'src/primitives/decisions.rs',
+        '                changed && !a_person_decided\n',
+        '                changed || a_person_decided && false\n',
+        'decisions::tests::a_persons_stored_decision_wins_over_the_rule write_review::tests::a_stored_decision_by_a_person_wins_over_the_rule',
+    ),
+    (
+        "M94 a stored rule decision reads as a person's",
+        'src/primitives/decisions.rs',
+        '            by_rule: self.decided_by.as_deref().map(str::trim) == Some(RULE_DECIDER),',
+        '            by_rule: false,',
+        'decisions::tests::a_decision_the_rule_made_is_stamped_rule_and_needs_no_author',
+    ),
+    (
+        'M95 the rule may defer',
+        'src/primitives/decisions.rs',
+        '            DispositionOutcome::Fixed | DispositionOutcome::Waived\n        )\n    {\n        return Err(refuse(\n            "by-rule",',
+        '            DispositionOutcome::Fixed | DispositionOutcome::Waived | DispositionOutcome::Deferred\n        )\n    {\n        return Err(refuse(\n            "by-rule",',
+        'decisions::tests::the_rule_fixes_or_waives_and_nothing_else',
+    ),
+    (
+        'M96 a rule decision is not marked in the report',
+        'src/primitives/decisions.rs',
+        '    if disposition.by_rule {\n        format!("{suffix} (decided by the rule)")',
+        '    if disposition.by_rule && suffix.is_empty() {\n        format!("{suffix} (decided by the rule)")',
+        'decisions::tests::a_rule_decided_disposition_says_so_beside_its_outcome',
+    ),
+    (
+        'M97 the rule can waive a broken contract',
+        'src/primitives/write_review.rs',
+        '        if observation.contract_break\n            && observation.disposition.by_rule\n            && observation.disposition.outcome == DispositionOutcome::Waived',
+        '        if observation.contract_break\n            && observation.text.is_empty()\n            && observation.disposition.by_rule\n            && observation.disposition.outcome == DispositionOutcome::Waived',
+        'write_review::tests::the_rule_never_waives_a_broken_contract',
+    ),
+    (
+        'M98 a fixed contract break still counts',
+        'src/primitives/write_review.rs',
+        '            observation.contract_break\n                && observation.disposition.outcome != DispositionOutcome::Fixed',
+        '            observation.contract_break',
+        'write_review::tests::a_contract_break_the_run_did_not_fix_counts',
+    ),
+    (
+        'M99 every observation counts as a contract break',
+        'src/primitives/write_review.rs',
+        '            observation.contract_break\n                && observation.disposition.outcome != DispositionOutcome::Fixed',
+        '            observation.disposition.outcome != DispositionOutcome::Fixed',
+        'write_review::tests::a_contract_break_the_run_did_not_fix_counts',
+    ),
+    (
+        'M100 the record leaves contract-breaks out',
+        'src/primitives/write_review.rs',
+        'fm,\n        "contract-breaks: {}",',
+        'fm,\n        "contract-breaks-off: {}",',
+        'write_review::tests::a_record_with_no_contract_break_says_zero',
+    ),
+    (
+        "M101 a security observation keeps the run's order",
+        'src/primitives/write_review.rs',
+        '    ordered.sort_by_key(|observation| !is_security_first(&observation.text));\n',
+        '',
+        'write_review::tests::a_security_observation_is_listed_first',
+    ),
+    (
+        'M102 a leak is not surfaced first',
+        'src/primitives/write_review.rs',
+        '    lead.starts_with("security") || lead.starts_with("leak")',
+        '    lead.starts_with("security")',
+        'write_review::tests::a_security_observation_is_listed_first',
+    ),
+    (
+        'M103 a broken contract is not marked in the report',
+        'src/primitives/write_review.rs',
+        '            let mark = if observation.contract_break {',
+        '            let mark = if observation.text.is_empty() {',
+        'write_review::tests::a_contract_break_the_run_did_not_fix_counts',
     ),
 ]
