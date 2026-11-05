@@ -85,9 +85,9 @@ The baseline in the spec's outcome entry came from throwaway scripts, so its met
 
 Independent of tasks 1–7, and may run beside them, but `runtime/src/mcp/server.rs` and `runtime/src/main.rs` conflict with tasks 6 and 7, so land it after them.
 
-- [ ] Create `runtime/src/schema/descriptions.rs` and point every `#[tool]` and clap subcommand at it, MCP text byte-identical except the claims this spec corrects, with the first sentence as `about` and the whole text as `long_about`, and give the CLI-only primitive one
-- [ ] A test in `runtime/tests/mcp.rs`: each served tool's description equals its subcommand's `long_about`
-- [ ] Remove what restates a description from module docs a task already touches, leaving maintainers' notes
+- [x] Create `runtime/src/schema/descriptions.rs` and point every `#[tool]` and clap subcommand at it, MCP text byte-identical except the claims this spec corrects, with the first sentence as `about` and the whole text as `long_about`, and give the CLI-only primitive one
+- [x] A test in `runtime/tests/mcp.rs`: each served tool's description equals its subcommand's `long_about`
+- [x] Remove what restates a description from module docs a task already touches, leaving maintainers' notes
 
 - **Done when**: the test passes, fails when one description diverges, and no primitive's description appears as a second string in `runtime/src/`.
 
