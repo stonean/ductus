@@ -50,11 +50,11 @@ Blocked on task 1.
 
 ## 5. Rule-decided dispositions (AC2, AC17)
 
-- [ ] `write-review` and `write-analysis`: `by-rule` records `decided-by: rule`; `write-review`: `contract-break` counts in `contract-breaks`
-- [ ] Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze.md`: only a gating finding's waiver or deferral uses `gate-confirm`
-- [ ] The rule in `framework/reference/review.md`, `framework/reference/analyze.md` and `framework/reference/groom.md`, and the claims in `README.md`, `docs/analyze.md`, `docs/slash-commands.md` and `framework/commands/help.md`
-- [ ] The 058 claims the sweep names (16 in `spec.md` and `plan.md`, 2 in its data model and a scenario), with a signpost back-linking this spec, and the 047, 050, 063 and 066 ones
-- [ ] Tests: a by-rule waiver records `decided-by: rule` and a person's stays, a stored decision wins, a contract break counts, and `ductus exec` still writes nothing
+- [x] `write-review` and `write-analysis`: `by-rule` records `decided-by: rule`; `write-review`: `contract-break` counts in `contract-breaks`
+- [x] Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze.md`: only a gating finding's waiver or deferral uses `gate-confirm`
+- [x] The rule in `framework/reference/review.md`, `framework/reference/analyze.md` and `framework/reference/groom.md`, and the claims in `README.md`, `docs/analyze.md`, `docs/slash-commands.md` and `framework/commands/help.md`
+- [x] The 058 claims the sweep names (16 in `spec.md` and `plan.md`, 2 in its data model and a scenario), with a signpost back-linking this spec, and the 047, 050, 063 and 066 ones
+- [x] Tests: a by-rule waiver records `decided-by: rule` and a person's stays, a stored decision wins, a contract break counts, and `ductus exec` still writes nothing
 
 - **Done when**: the tests pass, each fails with its behavior removed, and a fixture review's observations reach `gate-confirm` only when gating.
 
