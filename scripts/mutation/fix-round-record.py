@@ -177,8 +177,8 @@ MUTATIONS = [
     (
         'M23 a record with the loop fields is reported as lacking them',
         'src/primitives/check_review_gate.rs',
-        'passing_notices(&review_freshness, &freshness, review.not_re_read.is_some()),',
-        'passing_notices(&review_freshness, &freshness, false),',
+        '            review.not_re_read.is_some(),\n            review.contract_breaks.unwrap_or(0),',
+        '            false,\n            review.contract_breaks.unwrap_or(0),',
         'check_review_gate::tests::a_record_without_the_loop_fields_passes_and_says_so',
     ),
     (
