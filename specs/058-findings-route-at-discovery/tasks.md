@@ -72,3 +72,10 @@ The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sortin
 - [x] Review with the default window, analyze, and close `done` with the owner's approval
 
 - **Done when**: `review.md` and `analysis.md` are current, `check-review-gate` passes, and the owner approved the transition.
+
+## 5. Close 058 after 079's changes land
+
+This task waits until the changes of `079-review-and-analysis-work-converges` land (owner, 2026-11-04), so it runs under their scope and disposition rules and counts toward that spec's AC20. 058's own change since its reopen is `f47d2b03`'s edit of its spec body and one scenario, which owes a review because it touched a scenario.
+
+- [ ] Run `/ductus:review`, `/ductus:analyze` and the completion gate
+- **Done when**: 058 is `done`
