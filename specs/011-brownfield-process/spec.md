@@ -113,7 +113,7 @@ In each case:
 
 - The change is recorded in the affected spec as a new acceptance criterion, scenario, or signpost note
 - The signpost references the originating spec so the reader understands why the change was made
-- If the affected spec is `done`, adding the change reopens it to `in-progress` per the normal lifecycle
+- If the affected spec is `done`, a change that `classify-spec-edit` reads as reopening returns it to `in-progress` per the normal lifecycle
 
 The originating spec's acceptance criteria include delivering the cross-spec update. This ensures the change is tracked as part of the work that discovered it.
 

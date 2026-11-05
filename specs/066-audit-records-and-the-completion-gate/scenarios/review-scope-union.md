@@ -34,7 +34,8 @@ was the common case rather than the corner one.
 
 ## Behavior
 
-`scope` becomes the **union** of `plan-affected` and `modified-since`,
+`scope` draws on both `plan-affected` and `modified-since`, as
+`compute-review-scope` states (spec 079 narrowed the union chosen here),
 deduplicated and sorted, less the paths the window deleted (scenario
 `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`). Both sets, because either alone can omit what the
 review exists to look at: the plan names the feature's surface, the diff names
@@ -51,20 +52,19 @@ files is slower, and one that omits the changed files is wrong.
 
 ## Edge Cases
 
-- **Neither set is authoritative alone, which is why this is a union and not a
-  swap.** Preferring `modified-since` would fix the case above and break its
+- **Neither set is authoritative alone, which is why the scope draws on both and
+  this is not a swap.** Preferring `modified-since` would fix the case above and break its
   mirror — a spec whose diff base is old enough that the plan names files the
   diff has long since stopped touching. The original rule's tie-break already
   reached for `modified-since` as "authoritative for what the work actually
-  touched"; the union keeps that instinct without discarding the other set.
-- **An empty `plan-affected` leaves `scope` equal to `modified-since`.** A spec
-  with no `plan.md`, or a plan with no Affected Files table, is unchanged by
-  this — the union of a set with the empty set is itself, so the lightweight
-  track behaves exactly as before.
+  touched"; drawing on both keeps that instinct without discarding the other set.
+- **An empty `plan-affected` leaves `scope` drawn from `modified-since` alone.** A spec
+  with no `plan.md`, or a plan with no Affected Files table, adds nothing to it,
+  so the lightweight track follows the same rule.
 - **Empty scope still short-circuits.** When both sets are empty the scope is
   empty and `/{project}:review` writes the nothing-to-review-yet, non-blocking
-  report as it always has. The union cannot manufacture a non-empty scope.
-- **Ordering is deterministic.** The union is collected through a `BTreeSet`,
+  report as it always has. The rule cannot manufacture a non-empty scope.
+- **Ordering is deterministic.** The scope is collected through a `BTreeSet`,
   so `scope` is sorted and deduplicated regardless of the order the two inputs
   arrive in — the idempotency invariant the command documents (same code plus
   same rules produces an identical report) depends on it.

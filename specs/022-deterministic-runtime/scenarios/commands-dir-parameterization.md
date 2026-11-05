@@ -51,7 +51,7 @@ project = "ductus"
 
 ### Markdown-only path
 
-The runtime's parity contract requires the markdown-only fallback to keep working. The hardcoded path is a runtime-only concern — the markdown-only walk reads command files via the LLM, which already follows the natural file-system layout of the adopter's project. No change required on the markdown-only side.
+The hardcoded path is a runtime-only concern.
 
 ## Edge Cases
 

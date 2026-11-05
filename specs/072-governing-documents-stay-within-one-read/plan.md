@@ -254,7 +254,7 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
   - Unreadable (`cat-file` fails on a path the index holds): `{file}: could not be read from the index`.
 
   A ceiling that is not a whole number of bytes is a fourth failure, with its own message. Exit 1 on any failure and 0 only when every file was measured and is at or under its ceiling (AC11). A file exactly at its ceiling passes.
-- **Raising a ceiling** means editing the script. The comment above the table says that is an owner decision, recorded in this spec through its back-edge.
+- **Raising a ceiling** means editing the script. The comment above the table says that is an owner decision, recorded in this spec.
 
 ### Wiring
 

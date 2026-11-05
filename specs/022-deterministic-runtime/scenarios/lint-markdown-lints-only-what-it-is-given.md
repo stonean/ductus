@@ -19,7 +19,6 @@ section: "The primitive library"
 - The config's `ignores` still apply to the given paths.
 - A given glob matching no file: reported as nothing examined, not as clean.
 - An adopter config without `globs`: behavior unchanged.
-- The markdown-only path: the host lints the named files the same way, so the two paths agree.
 
 ## Open Questions
 

@@ -43,6 +43,8 @@ Adds `/ductus:review`, a verb-named slash command that audits implementation cod
 >
 > **Audit Family 31 is gone.** It reconciled the two copies of the record, which
 > is a check with no subject once there is one copy; AC15 is annotated below.
+>
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the review this spec delivered. Its default window starts at the last review of the reopening, its scope holds the spec's own change and names what it leaves out, a run decides a non-gating observation by rule, and a reopening with no code, scenario or data-model change owes no review. `compute-review-scope` and `write-review` state the rules.
 
 ## Summary
 
@@ -317,7 +319,7 @@ authority, and `30e1fbaa` holds the original bytes.
 - **`framework/commands/implement.md`** — the pre-`done` review gate. The
   `in-progress` → `done` transition halts while the review record's `last-run`
   is unset or its `blocking` is `true`. The gate has grown since — it now reads
-  eleven things in order, the analyze record among them — and its live shape is
+  a longer list in order, the analyze record among them — and its live shape is
   the command source's.
 - **`framework/commands/analyze.md`** — the review-drift check, which reports a
   `done` spec whose review record is missing or blocking, and reverts it under

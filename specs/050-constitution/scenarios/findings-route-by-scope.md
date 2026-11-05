@@ -22,8 +22,9 @@ The rule was first written as an `AGENTS.md` entry, which is the failure this sp
 > as a disposition task on the targeted spec. Two claims below no longer hold:
 > a finding outside the spec is not captured, and a chore a run finds is fixed
 > in that run rather than left as an inbox item. The subsection is now
-> §brownfield-inbox Finding dispositions, and its *Scope decides the
-> destination* bullet carries this rule. The chore, no-spec-in-progress, and
+> §brownfield-inbox Finding dispositions, and its *In `/{project}:implement`,
+> scope decides the destination* bullet carries this rule, for that command alone
+> since spec 079. The chore, no-spec-in-progress, and
 > spanning-finding edge cases are annotated in place.
 
 §brownfield-inbox's Automatic issue capture carries a bullet stating that scope decides the destination and that the inbox is only for findings with no home. It names three tiers explicitly: a finding inside the current **task** is fixed in the task; a finding inside the current **spec** but outside the task is written to that spec's `tasks.md` as a new unchecked task; a finding outside the spec is captured to the inbox.

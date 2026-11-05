@@ -10,7 +10,7 @@ Four feature-specific runtime primitives carry every bound the spec derives: `st
 
 ### Four primitives, owned by this feature
 
-AGENTS.md routes "a feature-specific primitive" to its feature, and these four exist only for the loop. Each is registered at the five sites AGENTS.md names (`PRIMITIVE_REGISTRY`, a `#[tool]`, a `dispatch_primitive` arm, a `main.rs` `Command`, a `framework/runtime-tools.txt` line); all four are MCP tools, since each writes only inside the project and its `.git` (§runtime-boundary principle 5). `framework/bootstrap/configure/*.md` allow blocks follow from `scripts/gen-configure-mcp.sh`.
+AGENTS.md routes "a feature-specific primitive" to its feature, and these four exist only for the loop. Each is registered at the six sites `docs/developing-ductus.md` names (`PRIMITIVE_REGISTRY`, its description constant, a `#[tool]`, a `dispatch_primitive` arm, a `main.rs` `Command`, a `framework/runtime-tools.txt` line); all four are MCP tools, since each writes only inside the project and its `.git` (§runtime-boundary principle 5). `framework/bootstrap/configure/*.md` allow blocks follow from `scripts/gen-configure-mcp.sh`.
 
 ### The snapshot is an unreferenced commit object
 

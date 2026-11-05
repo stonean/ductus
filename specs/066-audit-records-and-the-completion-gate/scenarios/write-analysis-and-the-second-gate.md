@@ -30,7 +30,7 @@ A spec whose frontmatter does not deserialize gets **no** record. The value is p
 
 **`check-review-gate`** gains checks 7 and 8, `not-analyzed` and `analyze-findings`, extracted into `analyze_gate_block` (the function was already at clippy's 100-line ceiling; the existing `stale_review_block` seam is the pattern). Two new `ReviewGateBlock` variants, `NotAnalyzed` and `AnalyzeFindings`, ordered after every review-record check.
 
-The primitive keeps its name though it now gates on both commands. Renaming is five registration sites and a breaking MCP change to buy a more accurate noun; the name is documented as historical in `/{project}:implement` instead.
+The primitive keeps its name though it now gates on both commands. Renaming is six registration sites and a breaking MCP change to buy a more accurate noun; the name is documented as historical in `/{project}:implement` instead.
 
 **Analyze-state drift** is judged by `/{project}:analyze` from the record it writes, not by the `check-artifacts` family it began as: read during detection, that family judged the record the run was about to replace, so its finding could never clear (058's `analyze-state-drift-judges-the-record-it-writes`). The new record always carries `last-run`, so the check reports a `done` spec whose new record is blocking. It mirrors `review-state-drift` on that gating state and deliberately not on the advisory count, where its sibling *does* check `should-violations`. That asymmetry is stated in both the check and the block's own documentation, because a reader who notices it will otherwise read it as an omission.
 

@@ -7,7 +7,7 @@ next-criterion: 33
 
 # 022 — Deterministic Runtime
 
-The runtime is the deterministic execution layer for ductus. It interprets slash command procedures, runs the mechanical work each command requires, and invokes the LLM only at named extension points where semantic judgment is genuinely required. Slash command markdown files remain the source of truth and stay LLM-readable; the runtime is an accelerator, not a replacement.
+The runtime is the deterministic execution layer for ductus. It interprets slash command procedures, runs the mechanical work each command requires, and invokes the LLM only at named extension points where semantic judgment is genuinely required. Slash command markdown files remain the source of truth for a procedure and stay LLM-readable; the binary is the source of a primitive's rules.
 
 Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime constitutionally admissible under [§runtime-boundary](../../framework/constitution.md#runtime-boundary). This spec defines what the runtime actually is.
 
@@ -20,6 +20,8 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > `dispositions:` map and a `decisions:` list. The primitives that write and read
 > both records are specified in `066-audit-records-and-the-completion-gate`, and
 > the analyze and audit checks in `067-analyze-and-audit-checks`.
+>
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed surfaces this spec owns. Each primitive has one compiled description, in `runtime/src/schema/descriptions.rs`, that produces its MCP description and `--help`; `diff-cross-spec` starts at the last reopen and lists only the spec's own commits; and the binary is the source of a primitive's rules, so without the server an agent runs `ductus <name>`.
 
 ## Motivation
 
@@ -49,7 +51,7 @@ Slash command markdown files in `framework/commands/*.md` are rewritten so the e
 - **Backtick-quoted primitive names** inside a step (e.g., `` `read-spec` ``, `` `mark-task` ``, `` `derive-boundary` ``) are primitive calls. The full primitive set is enumerated in [The primitive library](#the-primitive-library) below.
 - **HTML-comment extension-point markers** (e.g., `<!-- llm:writeCode -->`, `<!-- llm:askClarifyQuestion -->`) mark the seams where the runtime invokes the LLM. The named identifier matches an entry in [LLM extension points](#llm-extension-points).
 
-A reader walking the prose without the runtime — only in the window [Markdown-only path](#markdown-only-path) states — finds the conventions unobtrusive and the prose human-readable. The runtime reads the same prose and extracts structure. There is no second source of truth to drift from.
+A reader walking the prose finds the conventions unobtrusive and the prose human-readable. The runtime reads the same prose and extracts structure. There is no second source of truth to drift from.
 
 A **parseability check** runs in CI: every slash command's Instructions section must parse cleanly under these conventions, and a parse failure fails the build. It catches the only relevant kind of drift (a prose convention slipped) at PR time, as `scripts/lint-procedure-parseability.sh` in `.github/workflows/framework-checks.yml`.
 
@@ -86,7 +88,7 @@ Primitives are the deterministic operations the interpreter offers procedures. E
 
 The audit-record and completion-gate primitives are specified in `066-audit-records-and-the-completion-gate`, and the analyze and audit checks — `validate-frontmatter`, `resolve-anchor`, `traverse-deps` and `check-rule-ids` among them — in `067-analyze-and-audit-checks`.
 
-Each primitive is deterministic, independently testable, and has a markdown-only fallback (either a bash script or a prose instruction the LLM can execute).
+Each primitive is deterministic, independently testable, and runs as `ductus <name>` with or without the MCP server.
 
 ## Surfaces
 
@@ -116,7 +118,7 @@ This surface drives the entire procedure end-to-end from the runtime, bypassing 
 
 ### Surface choice by adopter
 
-- **Before the MCP server is registered**: neither surface. Since `048-govern-acquired-runtime` every bootstrapped project has the runtime, acquired into a ductus-owned store rather than found on `PATH`, so a host walks the prose only between acquisition and the restart that registers the server.
+- **Before the MCP server is registered**: the CLI. Since `048-govern-acquired-runtime` every bootstrapped project has the runtime, acquired into a ductus-owned store rather than found on `PATH`, so between acquisition and the restart that registers the server a host runs `ductus <name>`.
 - **Auggie or other MCP-only host**: uses the MCP surface. Fast primitives, LLM orchestrates. No host-side integration code.
 - **Claude Code or other JSON-protocol-integrated host**: uses the subprocess interpreter surface for slash commands. May also call individual primitives directly via MCP when convenient.
 
@@ -159,7 +161,7 @@ The extension point inventory across the initial release and follow-on scenarios
 
 ## Markdown-only path
 
-The LLM walks a slash command's prose Instructions when no runtime surface is available, which since `048-govern-acquired-runtime` means only between acquiring the runtime and the restart that registers its MCP server. The structural conventions (numbered steps, backtick-quoted primitive names, HTML-comment extension-point markers) stay unobtrusive to a human or LLM reader: primitives read as named operations to perform, and extension points as labelled markers. The bash scripts under `scripts/` remain authoritative for the primitives that have bash counterparts (the `gen-*.sh` generators `run-generator` invokes, and `lint-frontmatter.sh`). The markdown-only reference sections stay because they specify the policy the primitives implement, and the parseability check holds the conventions in place.
+A host never performs a primitive's work by hand: since `048-govern-acquired-runtime` the runtime is required, and between acquiring it and the restart that registers its MCP server the host runs `ductus <name>` (§runtime-host-integration). The structural conventions (numbered steps, backtick-quoted primitive names, HTML-comment extension-point markers) stay unobtrusive to a human or LLM reader: primitives read as named operations to perform, and extension points as labelled markers. A primitive's rules are its compiled description (spec 079); the `gen-*.sh` generators `run-generator` invokes stay bash scripts. A command's reference keeps what a step does with the result, host judgment and policy, and the parseability check holds the conventions in place.
 
 ## Slash command rewiring
 
@@ -210,7 +212,7 @@ Stable relationships post-rewrite:
 
 - **The two frontmatter derivations are primitives, not scripts.** `dependencies:` and `references:` are derived by `derive-dependencies` and `derive-references`, which replaced `.ductus/scripts/gen-spec-deps.sh`, `gen-cross-service-refs.sh` and their shared `lib/specs-root.sh` (067's `adopter-generator-promotion`). "No LLM in the loop" never disqualified them: §runtime-boundary's eligibility criteria require **determinism**, and criterion 2(b) names "a bash script the framework invokes (pre-commit hooks, generators, CI)" as *currently mechanical*, which is the eligible case. What kept them in bash was principle 3's rule that the runtime must not be a prerequisite for a pipeline gate, which `048-govern-acquired-runtime` retired. (Named, not linked: an inline link would add a dependency edge 022 → 048, and 048 already depends transitively on 022.)
 - **`run-generator`** stays, and its scope narrows to what it was always for: invoking a *project-owned* generator from a procedure — in this repository, `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — with `--dry-run` hardcoded so a walker dispatch can never write. ductus's own two derivations are no longer among its callers.
-- **`lint-frontmatter.sh`** — repositioned as the markdown-only fallback for the runtime's `validate-frontmatter` primitive. Same intent, two implementations, both ship; the prose Instructions invoke whichever is available.
+- **`lint-frontmatter.sh`** — stays a CI lint beside the runtime's `validate-frontmatter` primitive, run by `.github/workflows/framework-checks.yml` and `scripts/audit/check-zero.sh`; no command invokes it.
 - **`lint-tool-coverage.sh`** — stays bash-only, with no runtime counterpart. It runs in `.github/workflows/framework-checks.yml` and in `scripts/audit/check-zero.sh`, where a runtime counterpart would buy nothing.
 
 ## Acceptance Criteria

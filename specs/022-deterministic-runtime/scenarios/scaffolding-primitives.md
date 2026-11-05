@@ -27,7 +27,7 @@ The 2026-07-11 coverage review found four clusters of deterministic scaffold wor
 - `resolve-feature` with an ambiguous partial match returns the candidate list as a domain outcome; choosing stays with the user through the host.
 - `create-feature` refuses when the derived directory already exists (no overwrite path).
 - `append-inbox` carries no dedup guard: its dedup-by-prefix served implement's auto-capture and the bootstrap audit, and 058 removed it with them.
-- The markdown-only path for each rewritten step keeps the current prose as the documented fallback — including the cli-config-dir preservation rule, which must survive verbatim for hosts without the runtime.
+- The cli-config-dir preservation rule is `write-session`'s: a target write keeps an existing value.
 
 ## Open Questions
 

@@ -127,8 +127,7 @@ mechanism; nothing in the pipeline depends on either.
   (re-acquisition); when it fails mid-session, the call returns an error envelope
   saying the same
   ([the-bridge-fails-loudly-and-recovers](scenarios/the-bridge-fails-loudly-and-recovers.md))
-  — no silent markdown fallback: §runtime-boundary principle 3 makes acquisition failure halt, and the
-  two-paths guarantee covers *unwired* hosts, not a wired host that lost its binary.
+  — no silent markdown fallback: §runtime-boundary principle 3 makes acquisition failure halt.
   The one implementation risk — Pi types `registerTool` parameters as typebox
   `TSchema` while the bridge holds plain JSON Schema — is settled by a throwaway
   two-tool probe against the live install before the bridge is written, and the

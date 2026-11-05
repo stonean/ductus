@@ -48,7 +48,7 @@ The constitution gets the same check with a ceiling of its own, no higher than i
 - **What is measured.** The hook measures each file as staged, so an unstaged edit neither fails nor passes a commit; CI measures the checkout. `--no-verify` skips the hook, which is why CI runs the check too.
 - **Order of landing.** The check lands once `AGENTS.md` is already under its ceiling. Landing it first would fail every commit until the cut finished.
 - **Entries added meanwhile.** Other sessions keep adding entries while the guide is cut; 25 `agents:` commits landed in October. Every entry present when the check lands is held to the entry rules and recorded in the plan, not only those present when the work began.
-- **A lesson with nowhere to go.** When a new lesson would take the guide past its ceiling and nothing can be retired, the contributor finds its enforcement point or folds it into an existing entry. Raising a ceiling is an owner decision, recorded in this spec through its back-edge, never a choice made at commit time.
+- **A lesson with nowhere to go.** When a new lesson would take the guide past its ceiling and nothing can be retired, the contributor finds its enforcement point or folds it into an existing entry. Raising a ceiling is an owner decision, recorded in this spec, never a choice made at commit time.
 - **The constitution is imported.** `050-constitution`'s cut brought it within one read, so `CLAUDE.md` imports it as `@framework/constitution.md` above `@AGENTS.md`. The commands still read it where no import loaded it.
 
 ## Out of Scope

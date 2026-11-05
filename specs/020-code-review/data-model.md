@@ -76,7 +76,7 @@ spec: 020-code-review
 scenario: waiver-expiry              # only on a scenario-targeted run
 last-run: 2026-05-10T14:32:00Z
 reviewed-against: <sha-of-HEAD>
-diff-base: <sha of the parent of the in-progress transition commit>
+diff-base: <sha compute-review-scope resolved>
 must-violations: 0
 should-violations: 3
 low-confidence: 2
@@ -108,7 +108,7 @@ decisions:                           # omitted entirely when empty
 | `scenario` | string | no | Written only when the run was scenario-targeted; absent otherwise. |
 | `last-run` | ISO 8601 timestamp or null | yes | Set on each run. Spelled `reviewed-at` here until 057; the spec block called the same instant `last-run`, and one home leaves one spelling. Null only on a record that has never run. |
 | `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for one thing, the mechanical-sweep rename exemption. |
-| `diff-base` | string (Git SHA) | yes | The SHA where the spec advanced to `in-progress`, or the value passed to `--since=<ref>`. |
+| `diff-base` | string (Git SHA) | yes | The window's start `compute-review-scope` resolved (`base-source` names which), or the value passed to `--since=<ref>`. |
 | `must-violations` | integer ≥ 0 | yes | Count after waivers and releasing deferrals (076). |
 | `should-violations` | integer ≥ 0 | yes | SHOULD-tier count, after waivers and releasing deferrals (076), as `must-violations`. |
 | `low-confidence` | integer ≥ 0 | yes | Findings of any pass whose `confidence` is `low`, whatever their severity, after waivers and releasing deferrals (076), as `must-violations`. Excluded from `must-violations` and `should-violations`. |

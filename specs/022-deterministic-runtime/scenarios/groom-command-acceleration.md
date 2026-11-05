@@ -10,13 +10,13 @@ The spec's third deferred follow-on, never shipped: `/ductus:groom` remains lega
 
 ## Behavior
 
-`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore / discard, per the decision tree; a chore is done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly, leaves `legacy-prose-commands.txt`, and the markdown-only reference names the same operations as fallback prose (one contract, two paths).
+`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore / discard, per the decision tree; a chore is done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly and leaves `legacy-prose-commands.txt`; its reference keeps the routing tree.
 
 ## Edge Cases
 
 - A chore item is done in the pass and then removed, as the constitution's inbox rules require; it is left in place only when the fix is blocked or turns out not to be mechanical, and groom says which.
 - An item routing to a spec that does not exist directs the user to `/ductus:specify` and moves on, as today.
-- Inbox item removal is the `remove-inbox-item` primitive (`coverage-expansion-primitives`), which groom step 8 invokes; on the markdown-only path the host removes the line with `Edit`.
+- Inbox item removal is the `remove-inbox-item` primitive (`coverage-expansion-primitives`), which groom step 8 invokes.
 
 ## Open Questions
 

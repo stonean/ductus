@@ -114,7 +114,7 @@ The steps keep their `MUST-tier` and `SHOULD-tier` phrases, which `severity_from
 
 ### 022 is reopened, corrected, and re-reviewed
 
-The edits to 022's data model change a durable contract, and the signpost AC9 requires is a body edit. Neither is a mechanical edit under §spec-lifecycle. The canonical-sources map names 022's data model only for the scenario→task rule, so the sync exemption does not reach the unexamined-reason table. 022 is therefore reopened `done → in-progress` through the status primitive, following 059's discharge of its impact on 018 (`specs/059-project-in-a-repository-subdirectory/tasks.md`, task 14).
+The edits to 022's data model change a durable contract, and the signpost AC9 requires is a body edit. Neither is a mechanical edit under §spec-lifecycle. The canonical-sources map names no data model for the unexamined-reason table, so the sync exemption does not reach it. 022 is therefore reopened `done → in-progress` through the status primitive, following 059's discharge of its impact on 018 (`specs/059-project-in-a-repository-subdirectory/tasks.md`, task 14).
 
 The signpost goes in 022's body beside the extension-point inventory (`specs/022-deterministic-runtime/spec.md:170`), as a **block-quoted** line linking to this spec. The block quote matters. 060 already depends on 022 through its Motivation's link, and `derive-dependencies` induces no edge from a block-quoted line while `check-review-gate`'s discharge test still reads it (066's AC5). An unquoted link would add a `022 → 060` edge and close a cycle.
 

@@ -119,8 +119,7 @@ diff is shas only before committing.
 ### AC8 is a runtime change, not a markdown edit
 
 Discovered during implementation, and recorded because the plan said otherwise.
-`write_review.rs` renders the report's sections in Rust — review.md states that the
-primitive emits them so both paths produce byte-identical reports — so adding an
+`write_review.rs` renders the report's sections in Rust, so adding an
 **Unexamined governance** section is a runtime change. Editing prose alone could
 only have produced a report-contract sentence nothing enforces, which is the
 diligence dependency AC8 exists to prevent.

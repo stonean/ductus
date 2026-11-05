@@ -41,8 +41,8 @@ computed over a good window, here the window itself excludes the work.
 
 ## Behavior
 
-**The default diff base is the parent of the status-transition commit, not the
-transition commit itself.** The commit that moved the spec into `in-progress`
+**A first run's default diff base is the parent of the status-transition commit, not the
+transition commit itself; `compute-review-scope` states when a later run's moves.** The commit that moved the spec into `in-progress`
 is the boundary of the work window, and a boundary belongs inside the window it
 bounds. `find_in_progress_commit` still identifies the transition — the lookup
 is shared with `check-stuck` and is unchanged — and `compute-review-scope`
@@ -64,25 +64,23 @@ rather than erroring, since an unusual history is not a defect to halt on.
 **No transition commit found** — when the spec's move into `in-progress` is
 uncommitted, the base is `HEAD` (`review-scope-includes-uncommitted-work`);
 when the spec never reached `in-progress` and no `--since` was given, the base
-is empty and the scope comes from the plan's `Affected Files` alone.
+is empty and the scope comes from the plan's `Affected Files` alone, on a first review.
 
 ## Edge Cases
 
 - **The transition commit carries unrelated work.** Someone flips the status
   inside a larger commit touching another spec's files. Those files enter
-  `modified-since` and are reviewed. This is deliberate over-inclusion: a
-  review that looks at slightly too much produces noise the reviewer can
-  discard, while one that looks at too little produces a clean verdict nobody
-  can distinguish from a real one. The asymmetry is the whole argument, and it
-  is the same one `review-scope-union` settled in the same direction.
+  `modified-since`, and `compute-review-scope` keeps or excludes each by whose
+  commit it is, naming what it leaves out in `excluded`, so a clean verdict
+  still says what it did not read.
 - **A spec reopened several times** resolves to its most recent transition, as
-  today; the parent of that one is the base. Earlier windows are the earlier
+  today; the parent of that one starts the window until a finished review moves it. Earlier windows are the earlier
   reviews' business and are already recorded in their `review.md`.
 - **`check-stuck` is unaffected.** It consumes `find_in_progress_commit` to
   count commits *on* `tasks.md` since the transition, where the transition
-  commit itself is correctly the origin. Only `compute-review-scope` peels to
-  the parent, and it does so at its own call site rather than by changing the
-  shared lookup — a shared helper that returned different commits to its two
+  commit itself is correctly the origin. `compute-review-scope` and `diff-cross-spec` peel
+  to the parent, each at its own call site rather than by changing the
+  shared lookup — a shared helper that returned different commits to its
   callers would be the drift this keeps out.
 - **The report records the base it used.** `diff-base` in `review.md`'s
   frontmatter is the resolved base, so a reader can always tell which window a

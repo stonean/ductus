@@ -139,8 +139,7 @@ corpus, which is the drift the canonical-source map exists to prevent.
   that assert the ordinary payload stay byte-identical when it is empty.
 - **`data-model.md` records it.** That file currently scopes `unwritten` to
   `derive-dependencies` only; the annotation is removed, since the field now
-  belongs to both result shapes and a markdown-only host reads that file to
-  know what to expect.
+  belongs to both result shapes.
 
 ## Open Questions
 

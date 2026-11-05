@@ -23,7 +23,7 @@ The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive
 - The finding is at the same severity level as the existing dependency-existence and status-compatibility findings (blocking). `/{project}:analyze` treats it as a finding that fails the analyze gate, consistent with how the existing `traverse-deps` findings are surfaced.
 - Cycle detection runs even when other findings (missing-dependency, status-mismatch) are present. The primitive reports the full set; the cycle is not masked by other defects.
 - The primitive's `success` result shape is unchanged when the graph is acyclic — cycle detection adds findings, it does not restructure the output.
-- Parity tests under `runtime/tests/parity/` exercise `/{project}:analyze` against a fixture containing a 2-cycle and assert both the markdown-only walker and the runtime walker surface an equivalent finding.
+- `runtime/tests/parity.rs` and `runtime/tests/mcp.rs` run a 2-cycle fixture through the CLI and MCP surfaces and assert each reports the same finding.
 
 ## Edge Cases
 

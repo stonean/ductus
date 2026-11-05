@@ -235,9 +235,9 @@ keeps the requirement, the constitution amendment and its criteria.
 
 The §drift-prevention canonical-sources row for pipeline command behavior
 names `framework/reference/<command>.md` beside the command source.
-§runtime-host-integration gains one sentence: a command's markdown-only prose
-lives in its reference file, `.ductus/reference/<command>.md` in an adopter,
-read when a step names a section there. Spec 048's AC17 still holds: the
+§runtime-host-integration says what a command's reference file keeps: what a step
+does with the result, host judgment and policy, at `.ductus/reference/<command>.md` in an
+adopter, read only where a step points at it. Spec 048's AC17 still holds: the
 reference sections remain, in another file.
 
 ### The gate is the whole CI surface

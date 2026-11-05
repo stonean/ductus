@@ -161,7 +161,7 @@ families).
 
 The rename introduces no domain entity and no new primitive result shape. It changes two path
 *constants* and adds one registry row. The resolution-order contract is the one structural
-change, and its canonical home is `specs/022-deterministic-runtime/data-model.md`, which the
+change: `runtime/src/schema/paths.rs` declares it and `specs/022-deterministic-runtime/data-model.md` records it, which the
 022 back-edge updates. Adding a second record here would create the divergent-copy problem
 `AGENTS.md`'s canonical-table rule exists to prevent.
 

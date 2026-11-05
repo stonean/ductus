@@ -100,8 +100,8 @@ in a file instead, for example:
 
 The `§name` is a real heading in the named file, so a pointer can be checked
 by tooling and not only by reading it. A pointer at the reference as a whole,
-such as a step's "walk the same prose … per `.ductus/reference/log.md`", names
-the file alone.
+such as a command's "This command's reference … is `.ductus/reference/log.md`",
+names the file alone.
 
 Each reference file opens with a **Where a named section lives** paragraph, as
 `ductus-procedure.md` does: a section name with no heading in the reference
@@ -347,7 +347,7 @@ its schema.
 - [ ] AC13: The installer's pointers at `review.md` §Behavior step 5 name a section that exists in `.ductus/reference/review.md`.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
-- [ ] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/<command>.md`, and §runtime-host-integration says where a command's markdown-only prose lives.
+- [ ] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/<command>.md`, and §runtime-host-integration says what a command's reference keeps.
 - [ ] AC17: `AGENTS.md`'s entry on wiring a new slash command names the reference file and its manifest row.
 - [ ] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
 - [ ] AC19: The whole local gate passes: `npx markdownlint-cli2`, the six `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings` and `cargo test --release --locked`.

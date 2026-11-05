@@ -46,7 +46,7 @@ Merge rules (update in place, **never** replace/truncate):
 - File present, has `mcpServers`, no `ductus` → add `ductus`, preserve all other servers and top-level keys.
 - File present, has `ductus` → no-op (byte-unchanged).
 - File present, no `mcpServers` key → add the key with just `ductus`, preserve other top-level keys.
-- File present, **malformed JSON** → do not touch; skip wiring, warn, degrade to markdown path (treat like State C).
+- File present, **malformed JSON** → do not touch; skip wiring, warn; the run continues through the CLI.
 
 No `merge-mcp-config` primitive is added — State B is runtime-absent by definition, so the write is always host-side. Rationale: spec Resolved Q5 + the user's confirmation that the write updates (not replaces) an existing config.
 

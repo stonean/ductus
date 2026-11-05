@@ -34,7 +34,7 @@ Every runtime surface answering *"does this spec have unresolved questions?"* re
 - A feature with an empty `scenario-open-questions` list sees no change to any clarify branch: the report is suppressed entirely rather than rendered as "0 outstanding", so a clean feature reads exactly as it does today.
 - Clarify's report never mutates. The `already {status}` and `done` branches keep their guarantee of modifying no file, and a feature-targeted run never writes to a scenario even when it names one.
 - Recovery state and outstanding scenario questions together: recovery is the more upstream defect and governs the walk, exactly as it wins the dashboard's Next Action cell. The scenario questions are still reported, and remain to be resolved after the recovery walk returns the spec to `clarified`.
-- On the markdown-only path the host reads each scenario's `## Open Questions` section directly, which the feature-targeted Scope Boundaries must permit as a narrow carve-out — those sections only, never scenario bodies.
+- The host reads no scenario for this: `read-spec`'s `scenario-open-questions` carries the questions, and the feature-targeted Scope Boundaries stay closed to scenario bodies.
 - A scenario that arrived outside `/{project}:amend` is reported like any other. The report is derived from state at read time rather than from the event that created the scenario, so no entry path can bypass it.
 
 ## Open Questions

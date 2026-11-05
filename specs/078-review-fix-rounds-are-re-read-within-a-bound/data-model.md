@@ -29,7 +29,7 @@ Result: `{ "base": "<sha>", "files": 812, "budget": 2 }`
 
 ## `brief-re-read`
 
-Opens a round: derives what changed since its base, classifies it, and, when it needs a re-read, snapshots the tree and writes the brief.
+Opens a round: snapshots the tree, derives what changed since its base, classifies it, and, when it needs a re-read, writes the brief.
 
 Args: `{ "feature": "042-widget", "base": "<sha>" }`
 

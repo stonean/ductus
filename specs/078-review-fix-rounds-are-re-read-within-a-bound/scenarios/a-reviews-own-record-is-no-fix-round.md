@@ -11,7 +11,7 @@ section: "The scope is derived"
 ## Behavior
 
 - **The reviewed feature's own `review.md` is never a fix round's path.** `brief-re-read` and `check-prescriptions` leave it out of the paths they derive, since it is the command's own output, regenerated whole on every run. A run that fixed and deferred nothing therefore finds round 1 `empty` and records `fix-rounds: 0`.
-- **A deferral's write is a round's path like any other write.** It is a written requirement, so it is `exempt` when every path is in the reviewed spec's own directory and not a durable contract, and re-read otherwise — a scenario, or anything in another spec's directory.
+- **A deferral's write is a round's path like any other write.** It is a written requirement, so a path is `exempt` when it is in the reviewed spec's own directory and not a durable contract, and re-read otherwise — a scenario, or anything in another spec's directory.
 - **This spec's Edge Case is restated to match**: a run whose findings were all waived has no fix round; one with deferrals has the rounds their writes make.
 - **The `[review] re-reads-off` reason is printed on every run** (AC14), round 1 `empty` included: `brief-re-read` reports it whatever the round's kind, and the host prints it before it stops.
 

@@ -18,7 +18,7 @@ Found by the 058 review (2026-09-25).
 
 - In step 17 the host reads `analysis.md`'s `decisions:` list and matches each live finding to the stored decision describing the same issue. It passes that decision's key in `fired` instead of the finding's own `{family} — {message}`.
 - `AnalysisFinding` gains an optional `decision-key`. When present, `write-analysis` keys the finding by it, so a re-matched decision keeps its original stamp. When absent, the key is `{family} — {message}`, as now.
-- A finding that matches no stored decision is keyed and asked about as now.
+- A finding that matches no stored decision is keyed as now and goes to the disposition rule.
 
 ## Edge Cases
 

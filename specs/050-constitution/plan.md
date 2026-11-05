@@ -87,7 +87,7 @@ claim about their contents is false is invisible to it. Both halves were
 observed here on 2026-08-17. Adopters run the same pipeline and inherit the same
 blind spot.
 
-**The mechanical-edit test** (AC13) settles what §spec-lifecycle's three
+**The mechanical-edit test** (AC13) settles what §spec-lifecycle's
 enumerated cases leave open: whether an edit that changes no claim is mechanical.
 The list read as closed, so a pure typo repair in a `done` spec's body was
 argued to reopen it — the disproportion a `045` chore held in
@@ -171,7 +171,7 @@ Three kinds of change, by destination:
 
 **What Claude Code makes of the import.** Claude Code warns at session start when an instruction file, or their total, passes a recommended size, and loads every file regardless. Read from the installed 2.1.310 binary on 2026-10-27: a file warns over max(40,000, round(W × 0.05 × r)) characters, where W is the session's context window in tokens and r is 3 for current models (4 for a listed set of older ones), so 150,000 on a 1,000,000-token window and 40,000 on a 200,000-token one. The total warns over max(120,000, that per-file figure), summed over the files under the per-file figure. Characters are counted after HTML comments are stripped: an adopter on 0.59.11 whose own `CLAUDE.md` imports its constitution saw it reported as 115.1k, and 0.59.11's constitution is 115,126 characters stripped (115,890 raw). The shipped constitution is 48,862 characters by that count (49,626 raw) at `54715126`, so by the formula a session on a 200,000-token window warns about it at every start. On a 1,000,000-token window it is a third of the total figure: this repository's three files (`CLAUDE.md` 51, `AGENTS.md` 47,997, the constitution 48,907) came to 96,955 at `3b359742`. Each figure is a count of Unicode code points, with HTML comments stripped except the raw ones.
 
-The review record's `scope` field (task 36) is defined in `framework/reference/review.md` §Window and coverage: the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base`. The constitution's table declares its type, as it does for every audit-record field.
+The review record's `scope` field (task 36) is `compute-review-scope`'s scope, counted as `framework/reference/review.md` §Window and coverage says: an Affected Files entry as written, a pattern counting once. The constitution's table declares its type, as it does for every audit-record field.
 
 ### Memory routing lives in `AGENTS.md`
 

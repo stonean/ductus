@@ -26,7 +26,7 @@ The measurement that settles it is recorded under Resolved Questions: the transp
 These constraints stand, and are what any future proposal on this seam must satisfy — they outlive the decision:
 
 - **Determinism is not traded away.** §runtime-boundary makes the runtime the deterministic layer. Any shape MUST keep anchor *selection* in the runtime; moving the *read* to the host is what both rejected shapes did, and is where the risk sits.
-- **Two-paths parity holds.** A `runtime/tests/parity/` test MUST show the markdown-only walker and the runtime walker put the same constitution content in front of the LLM.
+- **The walker carries the excerpts.** A `runtime/tests/parity/` test MUST show the runtime walker puts the constitution content in front of the LLM.
 - **The cache anchor survives.** `constitution-excerpts` leads the stable prefix; a shape that shortens it is a token win only if the host does not then re-read the same bodies per task.
 - **Adopters without the skill install still work.** Any shape MUST keep serving excerpts to hosts that install commands rather than skills — four of the registry's five agents.
 

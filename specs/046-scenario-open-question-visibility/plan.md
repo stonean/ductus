@@ -80,7 +80,7 @@ Authored as 022 scenarios (each back-linking here):
 
 ## Trade-offs
 
-**Two specs instead of one.** The requirement and its implementation live apart, so a reader of 022's scenarios must follow a back-link to learn why. Accepted: 022 is the canonical owner of primitive behavior, and duplicating the rationale would drift. The back-links are the mitigation.
+**Two specs instead of one.** The requirement and its implementation live apart, so a reader of 022's scenarios must follow a back-link to learn why. Accepted: 022 owned primitive behavior when this was decided, and duplicating the rationale would drift. The back-links are the mitigation.
 
 **046 cannot reach `done` before 022's scenarios do.** Its criteria are verified against behavior 022 produces. This is real coupling, not an artifact of how it was written — and adding those scenarios to a `done` 022 reopens it to `in-progress`, exercising the very back-edge this spec's first resolved question affirms.
 

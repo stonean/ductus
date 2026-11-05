@@ -20,7 +20,7 @@ The 2026-07-11 coverage review found ~22 of 100 parsed command steps are determi
 New primitives, each wired at every site per the AGENTS.md six-site rule (schema Args/Result, primitive module + `mod.rs`, MCP server + `TOOL_NAMES`, `PRIMITIVE_NAMES`, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entry, regenerated configure permission blocks):
 
 - `remove-inbox-item` — dedup-aware removal of one bullet from `specs/inbox.md` (the complement of `append-inbox`, same atomic-write contract); groom step 8 invokes it.
-- `diff-cross-spec` (or a mode on `derive-boundary`) — the `git diff` against the spec dir's first commit filtered to paths outside `specs/{feature}/`, plus the inbox-window additions; implement steps 7/12 and the review captured-issues section invoke it. **058 removed the inbox-window half**: `diff-cross-spec` returns the cross-spec paths alone, and the review has no captured-issues section.
+- `diff-cross-spec` (or a mode on `derive-boundary`) — the `git diff` from the window it reports as `window-base` (spec 079) filtered to paths outside `specs/{feature}/`, plus the inbox-window additions; implement steps 7/12 and the review captured-issues section invoke it. **058 removed the inbox-window half**: `diff-cross-spec` returns the cross-spec paths alone, and the review has no captured-issues section.
 - `check-review-gate` — evaluates the review record plus the feature-dir markdown lint into a verdict and the canonical blocked message (the spec's `review:` block as delivered here, `review.md`'s frontmatter since spec 057); implement's completion gate invokes it, replacing both the hand-walked branch and the raw `npx markdownlint-cli2` call (which becomes `lint-markdown`).
 - `append-question` — appends to `## Open Questions` with normalized-whitespace dedup and the same-write `done|clarified|planned|in-progress → draft` back-edge; amend's question route invokes it.
 - `create-plan-artifacts` — copies the plan/tasks/data-model templates and reports pre-existing files (mirroring `create-feature`, atomic and mode-preserving); plan.md invokes it.
@@ -28,10 +28,10 @@ New primitives, each wired at every site per the AGENTS.md six-site rule (schema
 
 ## Edge Cases
 
-- Each rewritten step keeps its current prose as the documented markdown-only fallback.
+- Each rewritten step names its primitive; without the server an agent runs `ductus <name>`.
 - The `dashboard` render field is returned data the host may restyle, never stdout printing — it stays inside the runtime boundary (no user-facing rendering owned by the runtime).
 - `remove-inbox-item` reports a not-found removal as a domain outcome (no error), mirroring `append-inbox`'s `deduped` (a field 058 later removed with the dedup guard).
-- `append-question`'s dedup uses the same normalized-whitespace comparison amend already specifies, so the runtime and markdown-only paths agree.
+- `append-question`'s dedup uses the same normalized-whitespace comparison amend already specifies.
 
 ## Open Questions
 

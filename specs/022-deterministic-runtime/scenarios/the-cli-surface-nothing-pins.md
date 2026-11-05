@@ -13,7 +13,7 @@ Registering a primitive touches several surfaces, and most of them are pinned by
 - `dispatch_primitive` is pinned by `interpreter::tests::dispatch_handles_every_registry_primitive`.
 - `parser/mod.rs` cannot drift at all — `PRIMITIVE_NAMES` is a direct alias of `PRIMITIVE_REGISTRY` rather than a second list.
 
-The clap subcommand enum in `runtime/src/main.rs` is the exception. With a `Command` variant and its dispatch arm deleted, the **entire suite still passes**. A primitive can therefore be absent from the `ductus <name>` CLI with nothing reporting it, and the markdown-only path — which the two-paths guarantee says must reach the same result as the MCP path — is exactly where that absence bites, since it is the path with no MCP server to fall back on.
+The clap subcommand enum in `runtime/src/main.rs` is the exception. With a `Command` variant and its dispatch arm deleted, the **entire suite still passes**. A primitive can therefore be absent from the `ductus <name>` CLI with nothing reporting it, and an agent without the MCP server, which runs `ductus <name>`, is exactly where that absence bites.
 
 This is [§design-principles](../../../framework/constitution.md#design-principles)' first rule turned on the runtime's own registration: the surfaces that *are* pinned prove themselves on every run, and the one that is not is indistinguishable from them until someone checks by hand. `schema/registry.rs` recorded which was which, and `AGENTS.md` told a contributor to run `cargo run -- <name> --help` — but a documented manual step is the diligence dependency the same section rejects.
 

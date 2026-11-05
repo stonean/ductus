@@ -58,9 +58,9 @@ The primitive computes the fixes from the subject's kind, following the spec's t
 - `data-model.md` — split the spec or trim the file, never into sub-files, because review staleness tracks it by its exact name (`is_review_contract` in `runtime/src/primitives/analyze_subjects.rs`).
 - a scenario — promote it to its own spec.
 
-Every fix carries an `on-done` effect, set only when the spec is `done` (AC8): `never` for pruning `tasks.md` and for trimming `plan.md`, whose edits take no back-edge on a `done` spec (§spec-lifecycle), `always` for split and promote, and `if-claim-changes` for any other trim. Below `done` it is absent, because no fix reopens a spec that is not `done`. The split fix's text describes the manual route (create the new spec with `/{project}:specify`, move the content, link it from the original) and names no split command, since none exists (AC9).
+Every fix carries an `on-done` effect, set only when the spec is `done` (AC8): `never` for pruning `tasks.md` and for trimming `plan.md`, whose edits take no back-edge on a `done` spec (§spec-lifecycle), `always` for split, promote and trimming `data-model.md`, and `if-requirement-changes` for any other trim, which edits `spec.md`. Below `done` it is absent, because no fix reopens a spec that is not `done`. The split fix's text describes the manual route (create the new spec with `/{project}:specify`, move the content, link it from the original) and names no split command, since none exists (AC9).
 
-The waiver is not in this list. It is a disposition only `/analyze` can record, and `/analyze` already offers it for every undecided advisory finding at its fix-and-route step, so a primitive-level flag for it would duplicate that offer and need a per-step argument the exec walker has no way to bind: a dispatched primitive's arguments are the walk's shared context, adjusted only by rebinding hooks keyed on the primitive's name (`runtime/src/interpreter/mod.rs`, the bindings built before the `call!` dispatch). `/analyze`'s step text says the waiver is the further fix, which is how the warning names it in `/analyze` only (AC7).
+The waiver is not in this list. It is a disposition only `/analyze` can record, and `/analyze`'s disposition rule already applies it to an advisory finding that is no chore at its fix-and-route step, so a primitive-level flag for it would duplicate that rule and need a per-step argument the exec walker has no way to bind: a dispatched primitive's arguments are the walk's shared context, adjusted only by rebinding hooks keyed on the primitive's name (`runtime/src/interpreter/mod.rs`, the bindings built before the `call!` dispatch). `/analyze`'s step text says the waiver is the further fix, which is how the warning names it in `/analyze` only (AC7).
 
 Command names are rendered as `/{project}:…`, the placeholder the runtime's existing guidance strings use (for example the `check-review-gate` and `write-review` guidance in `runtime/src/primitives/`).
 
@@ -80,7 +80,7 @@ Stored-decision matching at step 17 (18 after the renumber) is the host's judgme
 
 The rule gives exactly the spec's behavior: growth into another page fires again (AC10); shrinking, or growth within the same page, stays decided; a threshold change recounts the pages and is judged by the same comparison. A subject that drops under the threshold stops firing, and its stored waiver expires the ordinary way.
 
-When `analysis.md` is absent, nothing is decided. When its `decisions:` list does not parse, the primitive does **not** fail. `/clarify` must not break on a broken analysis record it does not own. Instead it reports the list as unreadable, leaves every subject undecided, and `/analyze`'s step treats that as step 17 (18) already treats a refusal of the list: it asks about each finding as though nothing were stored. This deliberately differs from `prune-plan`, which errors, because `prune-plan` is only ever invoked by commands that own that record.
+When `analysis.md` is absent, nothing is decided. When its `decisions:` list does not parse, the primitive does **not** fail. `/clarify` must not break on a broken analysis record it does not own. Instead it reports the list as unreadable, leaves every subject undecided, and `/analyze`'s step treats that as step 17 (18) already treats a refusal of the list: it dispositions each finding as though nothing were stored. This deliberately differs from `prune-plan`, which errors, because `prune-plan` is only ever invoked by commands that own that record.
 
 `/analyze`'s markdown-only reference lists the `artifact-size` family as advisory in its per-check severity assignment, with its own section stating the subjects, the threshold, the decided rule, and that it stays advisory for good: a size is a heuristic about a host it cannot see, so it is never promoted to blocking.
 
@@ -90,7 +90,7 @@ When `analysis.md` is absent, nothing is decided. When its `decisions:` list doe
 
 ### The markdown-only path
 
-Each new step says what the host does without the runtime (AC12): measure each subject's size with its own file tools, render the same warning, and list any subject whose size those tools cannot report as not examined, never as under the threshold.
+Without the server the host runs `ductus check-artifact-size` (spec 079): a subject it cannot read is listed as not examined, never as under the threshold.
 
 ### `/plan` stops placing code in plans
 

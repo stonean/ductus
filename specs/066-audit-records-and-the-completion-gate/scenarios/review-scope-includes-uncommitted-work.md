@@ -36,8 +36,8 @@ The pipeline's natural order is `/{project}:amend` → `/{project}:implement` �
 review runs before anything is committed, so its scope leaves out every file
 the change touched. The record still reads "examined N of M", a complete
 examination of a subject that never contained the change. The workaround was to
-list the changed files under the plan's Affected Files, which the scope always
-includes.
+list the changed files under the plan's Affected Files, which the scope then always
+included.
 
 Two defects, independent of each other:
 
@@ -69,8 +69,9 @@ this window has not been committed yet, so the window starts at `HEAD` and
 status, and a spec that is absent at `HEAD`. This one rule covers both ways a
 spec enters `in-progress`: `/{project}:amend` reopening a `done` spec, and
 `/{project}:implement` starting a `planned` one. In every other case the base
-resolves as it does today: the parent of the newest committed transition, or
-empty when there is none. `find_in_progress_commit` is unchanged, because
+resolves from history, as `compute-review-scope` states: the parent of the newest
+committed transition or a later finished review's commit, or empty when there is no
+transition. `find_in_progress_commit` is unchanged, because
 `check-stuck` shares it.
 
 **The two halves do different jobs.** The first is the correctness fix. Any
@@ -98,7 +99,7 @@ files before and after the work is committed.
   change is wrong. Ignored files stay out.
 - **An uncommitted `in-progress → done` flip leaves the base alone.** The spec
   on disk reads `done`, so the uncommitted-transition rule does not fire, and
-  the base is the committed transition's parent, as before. A rule keyed on
+  the base resolves from the committed transition, as before. A rule keyed on
   "the status differs from `HEAD`" would move that base to `HEAD` and drop the
   committed work from the window.
 - **On-disk and `HEAD` both read `in-progress`:** the ordinary case, and

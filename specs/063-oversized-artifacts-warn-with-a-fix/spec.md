@@ -31,7 +31,7 @@ It runs in three places:
 
 - **`/clarify`**, because splitting a spec is cheapest while it is `draft` or `clarified`, before a plan and tasks exist for the part that moves.
 - **`/plan`'s readiness check**, beside the checks it already runs before proposing `planned`.
-- **`/analyze`**, as an advisory finding, so it is proposed a disposition like any other finding ([058](../058-findings-route-at-discovery/spec.md)): fixed, deferred, or waived with a reason. It never holds `done`, decided or not, since 058's `findings-cost-in-proportion-to-risk`.
+- **`/analyze`**, as an advisory finding, so the disposition rule decides it like any other advisory finding ([058](../058-findings-route-at-discovery/spec.md)): fixed when mechanical, otherwise waived with a reason. It never holds `done`, decided or not, since 058's `findings-cost-in-proportion-to-risk`.
 
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 
@@ -50,7 +50,7 @@ Each warning names the file, its size, the threshold, and its read-page count, t
 The fixes a warning names depend on where it fires and on the spec's status:
 
 - **A waiver is named only in `/analyze`.** `/clarify` and `/plan` keep no findings record, so there is nowhere to record one.
-- **At `done`, the warning says which fixes reopen the spec**, by §spec-lifecycle's rules for an edit under a spec: an edit that changes a claim the spec makes takes the `done → in-progress` back-edge, unless it is confined to the plan or the task list and adds no unchecked task. Splitting the spec and promoting a scenario always reopen it, because each removes requirements from what the original asserts, even though another spec now asserts them. Trimming `plan.md` never reopens it, because a plan edit takes no back-edge on a `done` spec (§spec-lifecycle; `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`); trimming any other artifact reopens it unless the trim changes no claim. Pruning `tasks.md` and a waiver never reopen it.
+- **At `done`, the warning says which fixes reopen the spec**, by §spec-lifecycle's rules for an edit under a spec, which `classify-spec-edit` decides from the diff. Splitting the spec and promoting a scenario always reopen it, because each removes requirements from what the original asserts, even though another spec now asserts them. Trimming `plan.md` never reopens it, because a plan edit takes no back-edge on a `done` spec (§spec-lifecycle; `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`); trimming `spec.md` reopens it only if the trim changes a criterion or an open question, and trimming `data-model.md` always does. Pruning `tasks.md` and a waiver never reopen it.
 - **No warning names a command that does not exist.** No command splits a spec ([/consolidate](../052-spec-supersession-and-consolidation/spec.md) only merges), so a split is described as the manual route it is: create the new spec with `/specify`, move the content into it, and link it from the original.
 
 ## A waiver re-fires on growth
@@ -71,7 +71,6 @@ A waived warning stays waived while its file keeps the read-page count it had wh
 - **An invalid configured threshold** (anything but a positive whole number of bytes, or an `artifacts` that is not a table and so cannot hold the key) halts the command that reads it, naming the setting, the offending value, the file and the accepted form. A fraction or a string does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below the minimum of 1 byte, which is out of range under `CFG-ENV-005`. The default never stands in for a value the project set: only an unset threshold means 50,000 bytes. See [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md).
 - **An unknown key in `[artifacts]`** — `read-size-byte` for `read-size-bytes` — is named in a notice and never halts; the check runs at the threshold the recognized keys give. See [an unknown artifacts key is named](scenarios/an-unknown-artifacts-key-is-named.md).
 - **Changing the threshold recounts every subject's pages.** A waiver recorded at one page count fires again if the new threshold puts its file at a higher count.
-- **The markdown-only path** measures with the host's own file tools. A subject whose size those tools cannot report is reported as not examined, never as under the threshold.
 
 ## Out of scope
 
@@ -90,11 +89,11 @@ These gaps remain after a warning, and each is its own change:
 - [x] AC5: A configured threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command that reads it, naming the setting, the value, the file and the accepted form; the default never replaces a value the project set.
 - [x] AC6: Each warning names the fixes for its artifact kind from the table in [The warning names a fix](#the-warning-names-a-fix).
 - [x] AC7: A waiver is offered in `/analyze` only.
-- [x] AC8: On a `done` spec, the warning says that splitting the spec and promoting a scenario reopen it, that trimming `plan.md` does not and trimming any other artifact reopens it unless the trim changes no claim, and that pruning `tasks.md` and a waiver do not.
+- [x] AC8: On a `done` spec, the warning says that splitting the spec and promoting a scenario reopen it, that trimming `plan.md` does not, that trimming `spec.md` reopens it only if the trim changes a criterion or an open question and trimming `data-model.md` always does, and that pruning `tasks.md` and a waiver do not.
 - [x] AC9: A warning that recommends a split describes the manual route and names no command that does not exist.
 - [x] AC10: A waived finding fires again once its file grows into a higher read-page count than the one recorded with the waiver, and not before.
 - [x] AC11: A subject that cannot be read is reported as not examined.
-- [x] AC12: On the markdown-only path, a subject whose size the host's file tools cannot report is reported as not examined.
+- [x] AC12: On the markdown-only path, a subject whose size the host's file tools cannot report is reported as not examined. **Superseded by spec 079:** no markdown-only path remains, and AC11 covers a subject the primitive cannot read.
 - [x] AC13: `/plan`'s guidance no longer tells the agent that code snippets belong in the plan.
 - [x] AC14: A warning says its file *may* not be read in one call and never claims the file *will* be truncated.
 - [x] AC15: A subject artifact that does not exist is neither reported nor counted as not examined.

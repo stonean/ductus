@@ -30,8 +30,8 @@ and recorded as a low-confidence `QUAL-STUB-001` finding in the 022 review.
   shared `pub(crate)` helper and call it from `read_plan_affected` in place of
   the bullet parser, so `compute-review-scope` and the writeCode plan reader
   agree on one canonical format. For a real table-format plan, `plan_affected`
-  is non-empty and contributes to the scope, which is the union of
-  `plan_affected` and `modified-since` (`review-scope-union`).
+  is non-empty and contributes to the scope, as `compute-review-scope` states
+  (`review-scope-union`).
 - **Fixture realignment.** The `review-basic` exec fixture's `plan.md` switches
   from the bullet list back to the canonical table (dropping the interim
   bullet-form workaround note added in 46b). The fixture's parity golden is
@@ -45,9 +45,9 @@ and recorded as a low-confidence `QUAL-STUB-001` finding in the 022 review.
   canonical format avoids a second divergence. (If a caller ever needs the old
   form, that is a separate, explicitly-scoped change.)
 - **Absent / empty section.** A plan with no `## Affected Files` section, or an
-  empty one, still yields an empty `plan_affected` (unchanged) and scope falls
-  back to `modified-since`.
-- **No tie-break.** The scope is the union of the two sets, so neither wins
+  empty one, still yields an empty `plan_affected` (unchanged) and scope draws on
+  `modified-since` alone.
+- **No tie-break.** The scope draws on both sets by `compute-review-scope`'s rule, so neither wins
   over the other (`review-scope-union`).
 
 ## Tests

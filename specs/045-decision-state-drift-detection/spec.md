@@ -92,7 +92,7 @@ This check reads inside inline code spans, the inverse of the link-adjacent chec
 
 Both checks are **advisory** (non-blocking) at introduction, matching the existing grounding and Applicable-Rules checks, and share one documented promotion criterion.
 
-Both ship as `check-artifacts` families on the runtime path, with the markdown-only path performing the same procedure as prose per §runtime-host-integration. This extends the deterministic check families introduced by [022-deterministic-runtime](../022-deterministic-runtime/spec.md); severity tiers follow [013-text-first-artifacts](../013-text-first-artifacts/spec.md) and introduce no new policy.
+Both ship as `check-artifacts` families. This extends the deterministic check families introduced by [022-deterministic-runtime](../022-deterministic-runtime/spec.md); severity tiers follow [013-text-first-artifacts](../013-text-first-artifacts/spec.md) and introduce no new policy.
 
 ## Acceptance Criteria
 
@@ -110,7 +110,7 @@ Both ship as `check-artifacts` families on the runtime path, with the markdown-o
 - [x] AC12: The scanned unit is the enclosing block-level element (list item, table row, or paragraph), and evaluation is per link so a multi-link block fires only for the contradicting target
 - [x] AC13: A tell inside a fenced code block, an HTML comment, a blockquote, or an inline code span produces no finding
 - [x] AC14: A link targeting a scenario is evaluated on the scenario's open-question count and file existence; a tell requiring a lifecycle status produces no finding
-- [x] AC15: Both checks ship as `check-artifacts` families, with the markdown-only path performing the same procedure as prose
+- [x] AC15: Both checks ship as `check-artifacts` families. As delivered the markdown-only path performed the same procedure as prose; spec 079 retired that path
 - [x] AC16: `/{project}:analyze` emits an advisory finding for each filesystem path named in a `done` spec's acceptance criterion that no longer resolves, reading inside inline code spans
 - [x] AC17: The path-existence check is scoped to `## Acceptance Criteria` and does not scan body prose, so a correct historical mention of a deleted path produces no finding
 - [x] AC18: The path-existence check reproduces the originating case: 026's AC5 naming `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh` after `531e3ea` and `3ff65445` deleted them

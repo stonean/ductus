@@ -102,11 +102,11 @@ Frontmatter schema (constitution §text-first-artifacts) after this spec:
 
 ## Migration
 
-Existing `ductus` repo dogfood specs (000–016) and any adopter projects already on the current schema will have stale `title:`, `tags:`, `spec-ref:`, `track:` fields and `[simple]` task markers. Per constitution §spec-lifecycle, done specs are not rewritten retroactively: a meaningful body edit reopens a spec through the back-edge, so a bulk retroactive migration would reopen every one of them.
+Existing `ductus` repo dogfood specs (000–016) and any adopter projects already on the current schema will have stale `title:`, `tags:`, `spec-ref:`, `track:` fields and `[simple]` task markers. Done specs were not rewritten retroactively: when this landed, a meaningful body edit reopened a spec through the back-edge, so a bulk retroactive migration would have reopened every one of them.
 
 - Existing `done` specs: no migration. Stale fields remain; the open-schema rule (constitution §text-first-artifacts) ignores unknown fields. `/{project}:analyze` stops checking them, so they cause no findings.
 - New specs created after this lands: no longer have the deleted fields.
-- Adopter projects: receive the new templates on next `/ductus`. Existing specs in adopter projects are left alone for the same reason — a bulk rewrite would reopen each one through the back-edge.
+- Adopter projects: receive the new templates on next `/ductus`. Existing specs in adopter projects were left alone for the same reason.
 - In-flight specs that still carry the deleted fields: an author strips them opportunistically; it is not enforced.
 
 This spec's frontmatter carried `title:` and `tags:` at creation, because the templates then required them, and its final implementation task stripped them.

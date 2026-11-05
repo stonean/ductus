@@ -20,7 +20,7 @@ The `implement-basic` parity fixture stages a two-commit history — the initial
 
 - Empty derivation → fall back to any seeded `write-boundary`; with neither, enforcement stays fail-closed (no edit permitted) and the walk halts with `out-of-boundary-edit` rather than writing anywhere.
 - A seed that is *wider* than the derivation: the seed's grant stands — the enforced boundary is seeded ∪ derived, so history never revokes an explicit grant.
-- The markdown-only path is unaffected — the host derives and enforces the boundary itself per the prose.
+- A host walking the command runs `derive-boundary` and keeps its own edits inside the result, per the prose.
 
 ## Open Questions
 

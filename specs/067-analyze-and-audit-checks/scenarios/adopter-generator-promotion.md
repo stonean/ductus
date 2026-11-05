@@ -18,7 +18,7 @@ What remained in bash ran on every adopter's machine on every commit, until this
 - `.ductus/scripts/gen-cross-service-refs.sh` (336, deleted) — harvested cross-service URLs into `references:`, resolved against `[services]`
 - `.ductus/scripts/lib/specs-root.sh` (142, deleted) — the `[paths] specs-root` resolution both shared
 
-All three parsed YAML frontmatter and markdown structure in bash: inline-link extraction outside fenced code blocks, outside blockquote-prefixed lines, and outside `## See also`, followed by a frontmatter rewrite. Principle 3's surviving clause names that shape directly — shell pipelines that parse frontmatter or markdown structure are "**not** a sanctioned substitute for the runtime primitives or the host's file tools."
+All three parsed YAML frontmatter and markdown structure in bash: inline-link extraction outside fenced code blocks, outside blockquote-prefixed lines, and outside `## See also`, followed by a frontmatter rewrite. Principle 3's surviving clause names that shape directly — shell pipelines that parse frontmatter or markdown structure are "**not** a sanctioned substitute for the runtime primitives."
 
 The cost is measured, not projected. Three defects reached adopters through this shell on 2026-08-17, every one silent and exit 0, recorded in `scripts/audit/adopter-shell-behavior.sh`:
 

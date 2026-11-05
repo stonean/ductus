@@ -11,11 +11,11 @@ section: "The warning names a fix"
 ## Behavior
 
 - **A `plan.md` trim on a `done` spec does not reopen it.** The fix's `on-done` effect is `never`, and the warning says "does not reopen this done spec" beside the trim.
-- **Every other effect is unchanged.** Splitting and promoting reopen the spec, pruning `tasks.md` does not, and trimming `spec.md` or `data-model.md` reopens it unless the trim changes no claim, because those files keep §spec-lifecycle's other rules.
+- **Every other effect follows `classify-spec-edit`.** Splitting and promoting reopen the spec, pruning `tasks.md` does not, trimming `spec.md` reopens it only if the trim changes a criterion or an open question, and trimming `data-model.md` always does.
 
 ## Edge Cases
 
-- **An oversized `tasks.md`.** Its trim fix trims `spec.md`, not the task list, so it keeps `if-claim-changes`.
+- **An oversized `tasks.md`.** Its trim fix trims `spec.md`, not the task list, so it takes `if-requirement-changes`.
 - **A spec short of `done`.** No fix carries an `on-done` effect, as before.
 
 ## Open Questions

@@ -18,13 +18,13 @@ The fail-closed rule is correct and is **not** the defect. The defect is twofold
 
 **`derive-boundary` returns an empty-boundary domain outcome instead of erroring.** With no commit touching the spec directory, the boundary is *unknowable*, not *broken* — so the primitive reports an empty boundary plus guidance ("commit the spec directory, or seed a `write-boundary` in the session"), matching how the rest of the runtime treats provable-vs-unknowable states. Enforcement stays fail-closed on the empty result: the first out-of-spec `writeCode` edit halts with `out-of-boundary-edit` and a legible next-step, rather than the walk dying at step 2.
 
-The two fixes are complementary, not alternatives. The gate stops the state from being reached; the domain outcome makes it legible if it is reached another way (a hand-edited status, a markdown-only run, a spec dir committed and then reverted).
+The two fixes are complementary, not alternatives. The gate stops the state from being reached; the domain outcome makes it legible if it is reached another way (a hand-edited status, a spec dir committed and then reverted).
 
 ## Edge Cases
 
 - **Partially committed spec directory** (`spec.md` committed, `tasks.md` untracked) — derivation succeeds as it does today and the gate passes. The gate asserts that at least one commit *touches* the spec directory, not that the working tree is clean; requiring a clean tree would block the ordinary edit-then-plan flow.
 - **Session-seeded `write-boundary` with an uncommitted spec dir** — the empty derivation unions with the seed under the precedence [`writecode-boundary-derivation`](writecode-boundary-derivation.md) settled (seeded ∪ derived), so the seed admits the walk and `/ductus:implement` proceeds. This is the escape hatch the guidance string names.
-- **Markdown-only path** — the host derives the boundary itself per the prose, so the same guidance is what the prose instructs the host to report; the gate check is likewise a prose step in `/ductus:plan`, not a runtime-only behavior.
+- **Without the server** — an agent runs `ductus derive-boundary`, whose result carries the same guidance; the gate check is a prose step in `/ductus:plan`, not a runtime-only behavior.
 - **Back-edge re-entry** — a spec returning `done → in-progress` already has a committed spec directory, so the gate is a no-op on every reopen path.
 
 ## Open Questions

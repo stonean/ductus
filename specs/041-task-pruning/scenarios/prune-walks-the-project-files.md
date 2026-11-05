@@ -33,7 +33,6 @@ section: "Behavior"
 - A project with no `system.md`: prune names the home, and creates it from the template only on confirmation.
 - An entry whose home is in another repository is named, and nothing is written there.
 - `specs/inbox.md` is not a subject.
-- On the markdown-only path, a missing home is created with its `#` heading only, because an adopter's tree holds no copy of the project templates.
 
 ## Open Questions
 

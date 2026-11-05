@@ -123,7 +123,7 @@ parsing frontmatter has already failed.
 ### The migration must not reopen a `done` spec
 
 Moving a frontmatter block changes no criterion text and no body prose, so it is
-case (c) of §spec-lifecycle's mechanical-edit rule and the `done → draft`
+a correction under §spec-lifecycle and the `done → in-progress`
 back-edge does not fire. `criterion-label-backfill.md` step 3 states the same
 rule for the same reason, down to its stopping condition: a run that finds
 itself changing body prose is not this migration and must halt.

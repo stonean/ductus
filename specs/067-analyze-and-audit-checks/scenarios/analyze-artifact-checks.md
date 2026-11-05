@@ -10,13 +10,13 @@ The 2026-07-11 coverage review found that several of `/ductus:analyze`'s determi
 
 ## Behavior
 
-A new `check-artifacts` primitive owns the residual deterministic families: given a feature, it reports findings for artifact completeness per status, task-numbering/done-when consistency, scenario→task mapping (treating a missing task as satisfied when any revision of `tasks.md` named the scenario, so the check never requires a spent task to persist per §tasks-phase — [`scenario-consistency-reads-tasks-history`](scenario-consistency-reads-tasks-history.md)), and review-state drift on done specs (a `review.md` record with `last-run` unset, `blocking: true`, or a non-zero `should-violations`) — each finding carrying the check family, severity tier (matching the markdown-only reference's assignments), and location. `/ductus:analyze`'s Instructions gain a numbered step invoking it, and the markdown-only reference keeps the same families as the fallback prose. Command-frontmatter completeness stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
+A new `check-artifacts` primitive owns the residual deterministic families: given a feature, it reports findings for artifact completeness per status, task-numbering/done-when consistency, scenario→task mapping (treating a missing task as satisfied when any revision of `tasks.md` named the scenario, so the check never requires a spent task to persist per §tasks-phase — [`scenario-consistency-reads-tasks-history`](scenario-consistency-reads-tasks-history.md)), and review-state drift on done specs (a `review.md` record with `last-run` unset, `blocking: true`, or a non-zero `should-violations`) — each finding carrying the check family, severity tier, and location. `/ductus:analyze`'s Instructions gain a numbered step invoking it. Command-frontmatter completeness stays with the host (it reads the host's command directory, which the runtime does not own).
 
 ## Edge Cases
 
 - A `draft` spec with no plan/tasks produces no completeness finding (files are required by status tier, not universally).
 - A scenario whose task was pruned after completion produces no finding (tasks.md is ephemeral; §tasks-phase).
-- Severity tiers mirror the reference exactly — the primitive introduces no new policy, it mechanizes the documented one.
+- Severity tiers are `check-artifacts`' own behavior, canonical in its compiled description; the primitive adds no policy.
 
 ## Open Questions
 

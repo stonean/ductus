@@ -99,7 +99,7 @@ This spec adds no `data-model.md`: each shape belongs to the primitive's owner. 
 - **A separate, unbackticked `/analyze` step for project files** was rejected. The exec path would never run it, while seeding keeps one call and one decision match.
 - **Replacing `scripts/lint-governing-size.sh`** with the staged mode was rejected. It holds the constitution, which is no project file, to a hard ceiling, and 072 owns it.
 - **Measuring shared constitutions in `check-artifact-size`** was rejected. They live outside the project and its index, and `/target` already resolves them through `resolve-constitutions`.
-- **Limitations.** `/prune --project`'s limits (host-judged homes, a literal search, a heading-only home on the markdown-only path) are 041's, in its scenario and `data-model.md`.
+- **Limitations.** `/prune --project`'s limits (host-judged homes, a literal search) are 041's, in its scenario and `data-model.md`.
 
 ## Open Questions Resolved
 

@@ -14,7 +14,7 @@ section: "The completion gate"
 - From the list it derives `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers` into `review.md`'s frontmatter, and renders them in the generated Summary, naming each exempt and each waived round. No count is accepted from the caller.
 - An absent list writes none of those fields; an empty list writes them at zero.
 - When `.ductus/config.toml`'s `[review] re-reads-off` is set, `write-review` reads it itself and waives each un-re-read round without a reason with the switch's reason, naming the config file as `waived-by`.
-- `check-review-gate` gains check 12, `fix-round-not-re-read`, after `undispositioned-findings`: it blocks while `not-re-read` exceeds the number of `round-waivers`, naming the count, with guidance to re-run `/{project}:review`. A record without the loop fields passes and carries guidance that it does not record whether its fixes were re-read.
+- `check-review-gate` gains check 12 after `undispositioned-findings`: `fix-round-loop-open` while `fix-rounds-open` is present (spec 079), then `fix-round-not-re-read`, which blocks while `not-re-read` exceeds the number of `round-waivers`, naming the count, with guidance to re-run `/{project}:review`. A record without the loop fields passes and carries guidance that it does not record whether its fixes were re-read.
 - `framework/constitution.md`'s audit-record table and `framework/reference/review.md`'s field semantics name the new fields; the constitution's addition is matched by a cut, since it sits at its 50,000-byte ceiling.
 
 ## Edge Cases

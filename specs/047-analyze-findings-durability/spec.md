@@ -140,13 +140,13 @@ are unchanged in substance.
 > subsection is now §brownfield-inbox Finding dispositions, and it has no
 > Surface at completion list. It keeps the scope this amendment widened: a
 > `/{project}:analyze` finding still live when detection ends, in any tier, is
-> one of the findings proposed a disposition in the run that finds it; a gating
+> one of the findings given a disposition in the run that finds it; a gating
 > one must have one before its spec can reach `done` (058's
 > `findings-cost-in-proportion-to-risk`).
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/commands/analyze.md` carries a capture step that appends every surviving finding to the inbox via `append-inbox`, ordered before the report-render step, and the markdown-only reference documents the same behavior for the runtime-less path. **Superseded by 058**: the capture step is gone. After detection, a fix-and-route step proposes a disposition for each live finding and writes each fix or deferral only after `gate-confirm`, and the markdown-only reference documents the same for the runtime-less path.
+- [x] AC1: `framework/commands/analyze.md` carries a capture step that appends every surviving finding to the inbox via `append-inbox`, ordered before the report-render step, and the markdown-only reference documents the same behavior for the runtime-less path. **Superseded by 058**: the capture step is gone. After detection, a fix-and-route step gives each live finding a disposition and writes a gating finding's deferral only after `gate-confirm`, and the command's reference states the policy it applies.
 - [x] AC2: Each captured bullet names the finding's category, family, message, and citing artifact path, and marks the capture source as `/{project}:analyze`. **Superseded by 058**: no bullet is written. `analysis.md`'s report lists each finding with its family, message, path, and disposition: the fixed file, the artifact or work item it was deferred to, or the waiver reason.
 - [x] AC3: Re-running `/{project}:analyze` against an unchanged repo appends nothing — every bullet is dedup-guarded on category, family, and message — so `inbox.md` is byte-identical across consecutive runs. **Superseded by 058**: no run touches `inbox.md`. What makes a re-run quiet now is the stored decision: a re-run over an unchanged tree counts each decided finding under its stored outcome without asking again.
 - [x] AC4: Two findings of the same family citing the same `spec.md` but naming different missing paths are captured as two bullets, not merged into one. **Superseded by 058**, with its reason carried over: nothing is captured, and a stored decision's key is `{family} — {message}`, so two such findings are still two decisions.

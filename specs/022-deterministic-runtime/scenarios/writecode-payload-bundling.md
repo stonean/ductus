@@ -24,7 +24,7 @@ The per-task loop of `/ductus:implement` compounds the cost: across N tasks in o
 
 6. **Read-side secret-exfiltration guard.** The `plan-relevant-files` read path adds a new guard analogous to `derive-boundary`'s write guard. Before inlining a file's contents, the interpreter refuses files matching common secret-bearing patterns: `.env`, `.env.*`, `*-secrets.*`, `credentials*`. The guard also respects the repo's `.gitignore`. A matched path triggers a structured `secret-exfiltration-blocked` error envelope; the procedure halts and the plan author resolves by removing or renaming the entry in Affected Files.
 
-7. **Parity discipline.** Every change in this scenario carries a `runtime/tests/parity/` test proving the markdown-only walker and the runtime walker produce equivalent state mutations against a fixture for `/ductus:implement` and `/ductus:plan`. The new bundled fields are exercised against fixtures with realistic plan tables, command `Reference:` lines, and re-run states.
+7. **Parity discipline.** Every change in this scenario carries a `runtime/tests/parity/` test proving the runtime walker produces the recorded state mutations against a fixture for `/ductus:implement` and `/ductus:plan`. The new bundled fields are exercised against fixtures with realistic plan tables, command `Reference:` lines, and re-run states.
 
 ## Edge Cases
 

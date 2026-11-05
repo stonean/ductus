@@ -42,7 +42,7 @@ Semantics:
 - Uses the same tempfile-in-target-directory + atomic rename pattern the runtime's other state-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) already share.
 - TOML encoding: `toml::to_string` with field order matching the struct (feature, path, scenario, scenario-path, set-at, cli-config-dir) so the parity byte-equality check on `.ductus/session.toml` is stable.
 
-[`framework/commands/target.md`](../../../framework/commands/target.md) step 7 invokes this primitive on the deterministic path. [`framework/commands/amend.md`](../../../framework/commands/amend.md) scenario-route step 4 of the record block invokes it the same way. Both keep a markdown-only fallback that writes the TOML document by hand with the same atomic-write semantics.
+[`framework/commands/target.md`](../../../framework/commands/target.md) step 7 invokes this primitive on the deterministic path. [`framework/commands/amend.md`](../../../framework/commands/amend.md) scenario-route step 4 of the record block invokes it the same way.
 
 [`framework/runtime-tools.txt`](../../../framework/runtime-tools.txt) carries the `write-session` line. The runtime version bumps to `0.10.0` for the consolidation (breaking: removes the `session-path` capability the runtime never exposed; changes the on-disk format from JSON to TOML; changes the file location). Parity coverage extends to the target command's deterministic path so the byte-equality check on `.ductus/session.toml` is satisfied by the runtime-written file.
 

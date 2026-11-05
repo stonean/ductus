@@ -53,7 +53,7 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 ### The record
 
 - `write-review` records the loop's outcome in `review.md`'s frontmatter from structured arguments, and renders it in the generated Summary: the fix rounds run, the re-reads finished, the rounds verified by the diff check, the rounds that needed a re-read and have no finished one (declined, or cut off), and whether the budget stopped the loop. The data model names the fields.
-- A record without those fields predates the loop and reads as unexamined, never as zero.
+- A record without those fields predates the loop or comes from `ductus exec`, and reads as unexamined, never as zero.
 - A round that needed a re-read and has none finished is either re-read or **waived** with the operator's reason, which the record carries for that run. `check-review-gate` holds `done` while the latest record counts such a round with no waiver.
 
 ### Hosts

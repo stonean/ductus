@@ -105,8 +105,7 @@ always present, and Data Model, Open Questions Resolved and Cross-spec impact,
 optional. The set is a constant compiled into the primitive, pinned to
 `framework/templates/spec/plan.md` by a unit test that parses the template's
 `##` headings and asserts equality — the same pinning the reset body uses, and
-the same bounded divergence: an adopter who customizes the template sees their
-own set only on the markdown-only path. The template carries Trade-offs and
+the same bounded divergence: an adopter's customized template does not apply. The template carries Trade-offs and
 the three optional sections, each optional one marked to be omitted when it
 does not apply, so it names every section `/{project}:plan` fills, Data Model
 and Trade-offs among them (`framework/commands/plan.md` §Create the plan
@@ -382,7 +381,7 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 - **The literal search runs in the runtime.** Without it, whether a catalog entry is still true would rest on the operator's memory. It reads each tracked file once, outside the spec-root, and reports hits per identifier. A repository that cannot be opened is `unavailable`, never zero hits.
 - **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs them as the files themselves. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
 - **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
-- **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and editing a `done` spec reopens it, named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
+- **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit to a `done` spec that `classify-spec-edit` reads as reopening is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
 
 ### Title and slug
 
@@ -470,9 +469,9 @@ buys nothing here.
   a list of host-chosen removals rather than a mode. Cost: a second pass through
   the seven registration sites, and a second schema. Accepted.
 - **The advisory rides `prune-plan`, not a `check-artifacts` family.** A new
-  family would have to be registered in 022's data model, the canonical
-  registry of check families, which is a durable contract there and would
-  reopen 022 for a full re-review of what were, when this was decided, 105
+  family would, when this was decided, have been registered in 022's data model,
+  then the registry of check families, a durable contract whose edit would have
+  reopened 022 for a full re-review of 105
   scenarios and a 1,529-line data model; feature-specific primitives already
   live with their feature (`prune-tasks` here, 062's session primitives in
   062). Cost: the advisory is documented in `framework/commands/analyze.md`

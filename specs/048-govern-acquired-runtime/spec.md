@@ -31,7 +31,7 @@ This amends [§runtime-boundary](../../framework/constitution.md#runtime-boundar
 Two things this deliberately does **not** change:
 
 - **Artifacts stay markdown, and stay editable by hand.** Text-first governs the *artifacts*, not the tooling that reads them. The runtime parses and writes the same markdown a contributor edits in an editor, which is why the pre-commit hook exists as a backstop at all.
-- **The markdown-only reference sections stay.** They are where policy is specified — `analyze.md`'s check families and their severity tiers, `review.md`'s procedure — and a primitive that "mirrors the reference, introducing no policy of its own" needs that reference to exist. What ends is the obligation to keep two *executable* paths in agreement; what remains is one specification with one implementation.
+- **The reference sections stay.** They keep what a step does with a result, host judgment and policy; since spec 079 the binary is the source of a primitive's rules. What ends is the obligation to keep two *executable* paths in agreement; what remains is one specification with one implementation.
 
 The requirement is what the amendment buys, and the amendment is the cost. Both belong to this spec: a change that makes the runtime mandatory without amending the principle forbidding it would be, in the constitution's own words, "a constitution violation, not a feature".
 

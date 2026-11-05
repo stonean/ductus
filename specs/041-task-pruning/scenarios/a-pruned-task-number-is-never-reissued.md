@@ -11,7 +11,7 @@ section: "Behavior"
 ## Behavior
 
 - After a prune, a task number that was in use before the prune is never assigned to a new task, so a number cited anywhere keeps naming one task.
-- The rule holds on both paths: the runtime's `append-task` and a host appending by hand under the markdown-only reference.
+- The rule is `append-task`'s, with or without the MCP server.
 - A `tasks.md` that was never pruned numbers exactly as today.
 
 ## Edge Cases
