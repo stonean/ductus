@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: []
 next-criterion: 22
 cross-spec-impact:
