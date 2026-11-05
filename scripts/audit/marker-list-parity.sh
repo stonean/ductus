@@ -15,7 +15,7 @@
 #   * `runtime/src/primitives/check_artifacts.rs` — `NON_ASSERTION_MARKERS`,
 #     the implementation;
 #   * `framework/reference/analyze.md` — the adopter-facing restatement, in
-#     `/{project}:analyze`'s markdown-only reference (spec 071 moved it out of
+#     `/{project}:analyze`'s reference (spec 071 moved it out of
 #     the command file). This one cannot be replaced by a pointer: it ships to
 #     adopter projects as `.ductus/reference/analyze.md`, and they have no copy
 #     of 045's data-model;

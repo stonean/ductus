@@ -30,7 +30,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    **Shell commands — read-only operations:**
    - `{ "toolName": "launch-process", "shellInputRegex": "^ls ", "permission": { "type": "allow" } }`
 
-   File-content parsers (`awk`, `grep`, `cat`, `head`, `for` loops over files) are intentionally **not** in the canonical set, matching `configure/claude.md`. The runtime primitives and Auggie's own `view` / `grep-search` / `codebase-retrieval` tools cover those reads on the deterministic and markdown-only paths respectively; shell pipelines are not a sanctioned third path. See `framework/constitution.md` §runtime-boundary. The five that once sat here are retired in step 4.
+   File-content parsers (`awk`, `grep`, `cat`, `head`, `for` loops over files) are intentionally **not** in the canonical set, matching `configure/claude.md`. The runtime primitives and Auggie's own `view` / `grep-search` / `codebase-retrieval` tools cover those reads; shell pipelines are not a sanctioned substitute. See `framework/constitution.md` §runtime-boundary. The five that once sat here are retired in step 4.
 
    **Shell commands — git:**
    - `{ "toolName": "launch-process", "shellInputRegex": "^git add ", "permission": { "type": "allow" } }`

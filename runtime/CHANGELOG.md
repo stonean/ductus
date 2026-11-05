@@ -65,6 +65,18 @@ its version and date.
 
 ### Changed
 
+- **The pre-`done` gate names a contract break nothing holds.** `check-review-gate`
+  still passes a record whose `contract-breaks` is above 0, and its `guidance` now
+  says so, since no gating count holds an observation and a run with no operator
+  leaves such a break with no task (spec 079).
+- **Each primitive's description says what it does without the prose.**
+  `check-artifacts` states its severity tiers rather than pointing at the analyze
+  reference, `resolve-constitutions` states that a malformed entry halts, and
+  `brief-re-read` names the three lists that move to the file. Commands and
+  references no longer describe a hand-walk (spec 079).
+- **A signpost on a `done` spec is a correction.** `check-review-gate`'s
+  cross-spec guidance says it leaves the spec `done`, and that a criterion or
+  scenario there reopens it (spec 079).
 - **The constitution makes the binary the source of a primitive's rules.** Without
   the MCP server, an agent runs `ductus <name>`, or reads its `--help` where the
   CLI lacks an argument, and a command's reference keeps what a step does with the

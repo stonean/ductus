@@ -11,10 +11,7 @@
 //!   custom adopter additions) keep those values.
 //! - Writes via the standard tempfile + rename pattern.
 //!
-//! Backs `framework/migrations/session-file-consolidate.md` on the
-//! runtime path. The markdown-only fallback in the migration body
-//! describes the same translation by hand for adopters without `ductus`
-//! on `PATH`.
+//! Backs `framework/migrations/session-file-consolidate.md`.
 
 #![allow(clippy::expect_used)]
 

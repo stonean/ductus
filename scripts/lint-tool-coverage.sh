@@ -2,8 +2,7 @@
 # Verify that every framework/commands/*.md file naming a runtime tool
 # carries the constitution's host-integration pointer: a reference to
 # §runtime-host-integration, the one line that says how the command's Invoke
-# steps reach the runtime and what the host walks before its server is
-# registered. The pointer replaced the per-step markdown-only fallback this
+# steps reach the runtime, before and after its server is registered. The pointer replaced the per-step markdown-only fallback this
 # lint once paired with each tool reference (spec 048, AC17).
 #
 # Tool names are read from framework/runtime-tools.txt: each non-blank,

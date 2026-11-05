@@ -47,7 +47,7 @@
 # SUBJECT — the Instructions section of `framework/commands/*.md` plus the two
 # bootstrap procedures. A numbered list outside Instructions restarts at 1 and
 # is a different list, so its mentions are counted and not resolved (a
-# command's markdown-only reference is its own file under
+# command's reference is its own file under
 # framework/reference/, outside the subject);
 # a file whose Instructions holds several lists rather than one procedure
 # (`amend.md` restarts under each subsection, `status.md` uses three one-item

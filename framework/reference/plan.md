@@ -1,6 +1,6 @@
-# plan — markdown-only reference
+# plan — reference
 
-The full plan-creation procedure (existing-artifact protection, cross-spec context checklist, plan section contents, task breakdown rules, readiness gate, and cross-spec impact check) is documented below for the markdown-only path. The numbered steps in `plan.md`'s Instructions invoke the mechanical primitives that automate the deterministic phases; the host applies the same procedure against the markdown-only path when the runtime is unavailable.
+The numbered steps in `plan.md`'s Instructions invoke the primitives that automate the deterministic phases; the rest of the procedure (existing-artifact protection, cross-spec context checklist, plan section contents, task breakdown rules, readiness gate, and cross-spec impact check) is below.
 
 **Where a named section lives.** This file is read alongside its command, `plan.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
@@ -56,7 +56,7 @@ Before creating the plan, load only the cross-spec context this feature actually
 
 Before proposing the status transition, run the readiness check. The substantive checks must pass — failures block the transition:
 
-- **The spec directory is committed** — at least one commit touches `{specs-root}/{feature}`. `/{project}:implement` derives its write boundary from that history, so a spec that reaches `planned` with an uncommitted directory provably cannot start: the gap would surface one command later, as a failure to begin work rather than a failure to plan. Evaluate it with `derive-boundary` (a result carrying `guidance` is the no-history signal) or, markdown-only, with `git log -1 -- {specs-root}/{feature}`. On failure, report the guidance — commit the spec directory, or seed a `write-boundary` in the session — and do not advance.
+- **The spec directory is committed** — at least one commit touches `{specs-root}/{feature}`. `/{project}:implement` derives its write boundary from that history, so a spec that reaches `planned` with an uncommitted directory provably cannot start: the gap would surface one command later, as a failure to begin work rather than a failure to plan. Evaluate it with `derive-boundary` (a result carrying `guidance` is the no-history signal). On failure, report the guidance — commit the spec directory, or seed a `write-boundary` in the session — and do not advance.
 - Acceptance criteria are concrete and testable
 - All open questions are resolved
 - Data model exists if the feature introduces or modifies domain entities or data structures
@@ -65,9 +65,9 @@ Before proposing the status transition, run the readiness check. The substantive
 - Event types align with `events.md`
 - Tasks are ordered and each has a clear definition of done
 
-Markdownlint (`npx markdownlint-cli2` over the feature directory's `.md` files) runs as an **advisory** check on both paths — surface any violations for the user to resolve before `/{project}:implement`, but do not block the transition on them (this matches runtime step 11).
+Markdownlint (`npx markdownlint-cli2` over the feature directory's `.md` files) runs as an **advisory** check — surface any violations for the user to resolve before `/{project}:implement`, but do not block the transition on them (this matches runtime step 11).
 
-The artifact-size check (runtime step 8, `check-artifact-size`) is **advisory** on both paths too. It measures `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and each scenario against `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default) and prints a warning, with the fixes for its kind, for each one an agent may not read in one call. Surface the warnings and do not block the transition on them; a threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command instead, as step 8 says.
+The artifact-size check (runtime step 8, `check-artifact-size`) is **advisory** too. It measures `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and each scenario against `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default) and prints a warning, with the fixes for its kind, for each one an agent may not read in one call. Surface the warnings and do not block the transition on them; a threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command instead, as step 8 says.
 
 If any substantive check fails, report the specific failures and do not propose the transition. The user fixes the issues and re-runs the command.
 

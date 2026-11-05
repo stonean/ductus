@@ -374,8 +374,7 @@ async fn traverse_deps_returns_compatibility() {
 #[tokio::test]
 async fn traverse_deps_surfaces_two_cycle_via_mcp() {
     // Parity coverage for spec 067's `traverse-deps-cycle-check` scenario:
-    // the MCP surface (called by adopter hosts in markdown-only mode and
-    // by every slash command host) returns the same `cycles` payload the
+    // the MCP surface (called by every slash command host) returns the same `cycles` payload the
     // primitive's unit tests produce. Asserts the end-to-end wiring from
     // the rmcp tool handler through to the response envelope.
     let tmp = tempfile::tempdir().unwrap();
@@ -994,7 +993,7 @@ async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list
 /// serialization. What it pins is the MCP surface specifically: a result type
 /// that fails to serve (a `JsonSchema` derive that will not generate, a field
 /// the wrapper drops) would be invisible to every other test, and the
-/// markdown-only and MCP paths are supposed to reach the same result.
+/// CLI and MCP surfaces are supposed to reach the same result.
 ///
 /// 0.48.0 added two more, the `inbox-standing` fields on `diff-cross-spec`
 /// and `write-review`; spec 058 removed both, and the standing inbox count now

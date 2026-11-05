@@ -150,8 +150,8 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
 /// rather than one per commit — turning tens of thousands of redundant
 /// frontmatter parses on a big-history repo into a handful.
 ///
-/// Shared with `compute-review-scope`, which uses the same commit as its
-/// default `diff-base`. `spec_rel` is looked up in commit trees, so it names
+/// Shared with `compute-review-scope` and `diff-cross-spec`, whose windows start
+/// no earlier than that commit's parent. `spec_rel` is looked up in commit trees, so it names
 /// the spec from the work tree's root ([`super::ProjectRepository::to_git`]),
 /// not from the project root; a project-relative name finds no history in a
 /// project that is a subdirectory of its repository (spec 059).

@@ -1,6 +1,4 @@
-# consolidate — markdown-only reference
-
-With no ductus runtime registered, the host performs the same walk and the same writes with its own file tools (Read, Edit, Write) — no shell-pipeline substitution — one contract, two paths (§runtime-host-integration).
+# consolidate — reference
 
 **Where a named section lives.** This file is read alongside its command, `consolidate.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
@@ -9,7 +7,7 @@ With no ductus runtime registered, the host performs the same walk and the same 
 Read it as one question: *does the source spec still describe something true?*
 
 - **No** — it overlapped a sibling from the start, was never distinct, or a later spec absorbed what it covered. Consolidate it.
-- **Yes** — some of what it describes still holds. Do not consolidate: reopen it `done → in-progress` and edit the part that stopped being true, which leaves one accurate description where removing it would leave none and re-point every pointer onto a spec that never made those claims.
+- **Yes** — some of what it describes still holds. Do not consolidate: edit the part that stopped being true, reopening it `done → in-progress` when `classify-spec-edit` says the edit does, which leaves one accurate description where removing it would leave none and re-point every pointer onto a spec that never made those claims.
 
 A spec that is not `done` is the common case for consolidation: it delivered nothing, so there is nothing in it that could still be true.
 

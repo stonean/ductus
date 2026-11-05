@@ -1,6 +1,6 @@
-# review — markdown-only reference
+# review — reference
 
-The numbered Instructions in the command file, `review.md`, are the deterministic path — the runtime's primitives own the rule-file selection, waiver arithmetic, scope resolution, and report scaffolding, and the five passes cross the boundary at the `performReview` extension point. When no runtime is available, walk the detailed procedure below by hand, for each targeted feature, in order.
+The numbered Instructions in the command file, `review.md`, are the procedure — the runtime's primitives own the rule-file selection, waiver arithmetic, scope resolution, and report scaffolding, and the five passes cross the boundary at the `performReview` extension point. The detail they apply is below.
 
 **Where a named section lives.** Read from `/{project}:review`, this file has its command, `review.md`, already loaded; a reader arriving from another file — the installer reads **§Resolve target and scope** — opens `review.md` as well when a section it needs is named there. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
@@ -34,7 +34,7 @@ The numbered Instructions in the command file, `review.md`, are the deterministi
      documentation and code, halts the run with the
      [tech-stack-misalignment](#blocking-message) message and exits `1`.
    - On a successful check, prompt the operator once (routing the prompt
-     through `gate-confirm` on the runtime path, as the other
+     through `gate-confirm`, as the other
      confirm-before-write pipeline steps do): _"Tech-stack alignment
      confirmed. Persist this so future runs skip the check? (Y/n)"_. On
      `Y`, write `[review] tech-stack-verified = true` to the active config
@@ -335,7 +335,7 @@ Each bullet carries the entry's `description` when it has one, between the path 
 
 **`examined` and `scope` are what make a clean report mean something.** The counts alone cannot distinguish _the passes read the scope and found nothing_ from _the passes never ran_ — both write `0/0/0`, the same `reviewed-digest`, and `blocking: false`. `write-analysis` has required `unexamined` since spec 047 for exactly this reason, and the review half carried no equivalent until a review was recorded over a scope nothing had read. `scope` is derived by the primitive, so the denominator cannot be shrunk to match whatever was read; `examined` is the reviewer's claim about the numerator, and an **unstated** one is recorded as absent rather than as zero — a claim never made and a claim that came back empty are different facts. No check reads the pair: Family 31 did, and was retired with the record's second home (spec 057), so these are read by a person at the completion gate. Nothing could prove the passes ran anyway — an overstated numerator is as available as an omitted one — so what this buys is that the claim is explicit and re-derivable instead of invisible.
 
-Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it, and the markdown-only path writes the same so the two paths produce byte-identical reports. The **Observations** heading carries no suffix.
+Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it. The **Observations** heading carries no suffix.
 
 The **Observations** section is the home for something the reviewer judged
 real that maps to **no loaded rule**. Inventing a rule for it is not the answer
@@ -406,8 +406,9 @@ contract. `/{project}:implement`'s disposition task is unchanged.
   ask, or a broken contract had nobody to ask. `ductus exec`'s
   walker no-ops steps 9 and 10 of the command's Instructions, so every observation an exec run threads
   through is recorded undispositioned. It stays recorded and visible for a
-  later review to decide, and it does not hold `done`: only a gating finding
-  does, and an observation is never one.
+  later review to decide, and it does not hold `done`: only a gating count does,
+  and none holds an observation. The gate's passing `guidance` names a record
+  whose `contract-breaks` is above 0.
 
 **Nothing reaches the inbox.** Observations were once written through to
 `specs/inbox.md`, the one destination no gate reads, so a spec could reach
@@ -427,7 +428,7 @@ observation counts under its stored outcome and is not asked about again. A
 stored decision nothing matched is pruned on an unrestricted run and retained
 when a pass did not run, exactly as a waiver is. A stored deferral whose
 named work is complete while its observation still fires is **lapsed** (spec
-076): it is dropped, and the observation is asked about again. A missed match costs one
+076): it is dropped, and step 10 gives the observation a new disposition. A missed match costs one
 repeated decision, never a silent waiver of a person's call, because an unmatched
 decision is pruned rather than applied to something else. A malformed entry is reported,
 applies to nothing, and is kept; an entry with no fields at all holds no
@@ -613,7 +614,7 @@ The window a review reads and the coverage counts it records, as `/{project}:rev
 - **A review reads its own spec's change, and the record names the rest.** A commit belongs to each spec whose directory it touches or whose number its subject scope names, and a path only another spec's commit changed leaves the scope for that spec's review, named under **Excluded from scope**. A path a commit of this spec or of no spec also changed stays, as does uncommitted work, which nothing can attribute: `git worktree` isolates sessions. A plan entry unchanged in the window stays only on the spec's first review, where it may mean missing work.
 - **A reopening that changed no code, scenario or data model owes an analysis and no review.** `compute-review-scope` reports it as `review-owed: false`. The gate compares only a review's durable contracts, so it passes such a reopening with the earlier record; a review run anyway is allowed, only not owed.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** Without `examined` and `scope`, a review that read nothing is byte-identical to one that read everything; without the durable-contract digest, the pre-`done` gate reports freshness as _undeterminable_, which does not block. Nothing backfills these fields: treat such a record as unread and re-run the review, which writes them truthfully only if the passes read the scope. The gap comes in several shapes — all fields absent, a numerator without a digest, a digest without a numerator — so read the record before pricing the work.
-- **A spec with no recorded `in-progress` transition derives an empty diff base, and the review's denominator collapses to zero.** Scope resolution still returns the plan's affected files, so the record reads as files examined over a scope of zero. Pass the current commit as the base: the window is then empty by construction, and numerator and denominator agree. The same answer fits a recorded transition whose base is simply old; measure both before choosing, and say in the Summary which base was passed and why.
+- **A spec with no recorded `in-progress` transition derives an empty diff base, and the review's denominator collapses to zero.** On a first review scope resolution still returns the plan's affected files, so the record reads as files examined over a scope of zero. Pass the current commit as the base: the window is then empty by construction, and numerator and denominator agree. The same answer fits a recorded transition whose base is simply old; measure both before choosing, and say in the Summary which base was passed and why.
 - **Only a spec's durable contracts stale its review — its scenarios and its data model, nothing else — and that is what prices a corpus-wide sweep.** A sweep confined to spec bodies, plans and tasks costs no re-review however many specs it touches, while one changed line in a scenario or data model obliges a full re-review of that spec. Measure a sweep's durable-contract hits first, then decide each: sweep it and accept the re-review, leave it, or defer it into a pass that re-reviews the spec anyway.
 - **The review's denominator is derived at write time, so a count measured earlier and typed into the Summary can contradict the record it is written into.** The primitive computes the scope while the reviewer supplies the Summary, and no check compares the two. Read the returned counts against every number the Summary states, and re-run with corrected prose when they differ; the call is idempotent.
 - **`scope` counts entries, not files.** On a first review it holds the plan's Affected Files entries as written. A pattern such as `src/handlers/*.ts` is one entry however many files it matches, so a Summary that counts files says how its count reconciles with `scope`; `examined` equal to `scope` means fully examined only when no entry is a pattern.
@@ -635,8 +636,8 @@ records `blocking: true`. This is enforced as follows:
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
    finding, which for a record the runtime writes is a SHOULD neither waived
    nor released by its deferral ([Deferrals](#deferrals)) — and last the
-   fix-round check: a fix round that needed a re-read with neither one nor a
-   waiver. The two review checks
+   fix-round checks: a fix-round loop still open, then a fix round that needed
+   a re-read with neither one nor a waiver. The two review checks
    read the record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 

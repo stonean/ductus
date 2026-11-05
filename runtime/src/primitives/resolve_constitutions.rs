@@ -13,9 +13,9 @@
 //! error, and reusing that path keeps the two registries legible to each other.
 //!
 //! **A malformed entry halts; an unresolved checkout warns.** The two are
-//! deliberately different severities, stated once in
-//! `framework/bootstrap/ductus.md` §Validating the registry and mirrored here
-//! rather than restated: a malformed entry is a mistake in the project's own
+//! deliberately different severities, and
+//! `framework/bootstrap/ductus.md` §Validating the registry says what `/ductus`
+//! does with each: a malformed entry is a mistake in the project's own
 //! committed config and is always wrong, while a `path` that does not resolve
 //! is a machine-local state that is correct for any contributor who has not
 //! cloned the governance repository yet — blocking on it would make the

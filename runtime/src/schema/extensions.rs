@@ -51,7 +51,7 @@ pub struct AssessSpecQualityRequest {
     /// Basenames of the rule files the walk loaded, in its `rule-files`
     /// order; a listed file it could not read is absent. A Verification's
     /// "where `{file}` is also loaded" yield holds only when `{file}` is
-    /// listed here, so the host applies it as the markdown-only path does
+    /// listed here, so the host applies it
     /// from the files it loaded (spec 060, scenario
     /// `an-assessment-sees-the-loaded-rule-files`).
     pub loaded_rule_files: Vec<String>,

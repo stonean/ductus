@@ -5,7 +5,7 @@
 //! The edits come from the re-read's own `result.json`, so no prescription passes through
 //! the fixer.
 //!
-//! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
+//! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;

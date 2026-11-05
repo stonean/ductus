@@ -1,6 +1,6 @@
-# specify — markdown-only reference
+# specify — reference
 
-The full new-feature-creation procedure (directory creation, template copy, frontmatter conventions, session write, and next-step prompt) is documented below for the markdown-only path. The numbered steps in `specify.md`'s Instructions invoke the mechanical primitives plus the writeSpecBody extension that automate the deterministic phases.
+The numbered steps in `specify.md`'s Instructions invoke the primitives, and the writeSpecBody extension, that automate the deterministic phases; the detail they apply (directory creation, template copy, frontmatter conventions, session write, and next-step prompt) is below.
 
 **Where a named section lives.** This file is read alongside its command, `specify.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
@@ -11,8 +11,7 @@ action the routing rules exist to prevent, so a gate after the write is no gate
 at all.
 
 Derive the homes this work could already have (primitive:
-`derive-routing-candidates`; by hand, read the three sources directly — no
-shell-pipeline substitution):
+`derive-routing-candidates`):
 
 1. **Runtime work.** Does the description name a runtime primitive or a path
    under `runtime/`? If so, the home is the spec whose `plan.md` lists a
@@ -64,7 +63,7 @@ say why. Asking a question that has been answered is friction, not rigor.
 1. Create `specs/{NNN-feature-name}/`.
 2. Copy `specs/templates/spec.md` into the directory as `spec.md`.
 
-Both sections above are what the `create-feature` primitive automates on the runtime path (number scan, slug derivation, directory creation, atomic template copy); walk them by hand only when no runtime is available.
+Both sections above are what the `create-feature` primitive automates (number scan, slug derivation, directory creation, atomic template copy).
 
 ## Settle branch-scoped creation
 
@@ -116,7 +115,7 @@ Fill in the spec following `.ductus/constitution.md` rules (§spec-requirements,
 
 Assign each criterion its stable `AC{n}:` label, written between the checkbox and the criterion's text (`- [ ] AC7: …`), and record `next-criterion` in the frontmatter (primitive: `label-criteria`). A new spec starts at `AC1:` and numbers in body order; `next-criterion` is one past the last label assigned. Leave the section untouched when it holds no criteria — an absent `next-criterion` means "no labels assigned yet", which is a truthful state rather than a defect (§text-first-artifacts).
 
-Write the label rather than leaving it to a later pass: the label is what a criterion is cited by, in prose, across specs, and by tooling, and a criterion discussed in the session that created it needs its identifier during that conversation. On this path the derivation is `max(highest label in body, next-criterion)` — never `max(body) + 1`, which would reissue the label of a criterion that has since been deleted. The rule is arithmetic, so both paths agree by construction (spec 013).
+Write the label rather than leaving it to a later pass: the label is what a criterion is cited by, in prose, across specs, and by tooling, and a criterion discussed in the session that created it needs its identifier during that conversation. The derivation is `max(highest label in body, next-criterion)` — never `max(body) + 1`, which would reissue the label of a criterion that has since been deleted (spec 013).
 
 ## Lint the new file
 
@@ -124,7 +123,7 @@ Run `npx markdownlint-cli2` on the new file (primitive: `lint-markdown`).
 
 ## Write the session target
 
-Write the shared default `.ductus/session.toml` to set this feature as the session target (primitive: `write-session`, gated by `gate-confirm` at step 9 of the command's Instructions). Without the runtime the host cannot read its session identity, so this path writes the shared default only (§concurrent-features). First read any existing `.ductus/session.toml` to capture its cli-config-dir (the per-contributor agent identity written by /ductus) and carry it forward, so creating a new feature never drops the agent identity. Use tempfile + rename atomic-write semantics analogous to the runtime's spec write primitives.
+Set this feature as the session target with `write-session`, gated by `gate-confirm` at step 9 of the command's Instructions. It carries the shared default's cli-config-dir forward, so creating a new feature never drops the agent identity (§concurrent-features).
 
 ## Display the next step
 

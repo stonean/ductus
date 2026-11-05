@@ -5,7 +5,7 @@
 //! cut off — no file, or one that never said `"complete": true` — reads as
 //! not finished, never as clean (`QUAL-CLAIM-001`).
 //!
-//! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
+//! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
 use std::path::Path;
 

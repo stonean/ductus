@@ -3,7 +3,7 @@
 #
 # Verify the spec/plan/tasks/scenario templates under framework/templates/spec/
 # scaffold the fields that /{project}:analyze's blocking checks require, as
-# its markdown-only reference (framework/reference/analyze.md) documents them.
+# its reference (framework/reference/analyze.md) documents them.
 # The field list is HARDCODED below; a guard keeps it from silently falling
 # behind the reference.
 #

@@ -1,14 +1,12 @@
-//! `check-artifacts` — the residual deterministic check families from
-//! `/ductus:analyze`'s markdown-only reference, mechanized for one feature.
+//! `check-artifacts` — `/ductus:analyze`'s residual deterministic check families, for
+//! one feature.
 //!
 //! Owns ten families (spec 067, scenarios analyze-artifact-checks,
 //! link-adjacent-drift-family, criterion-path-existence-family and
 //! body-path-existence-family; spec 022,
 //! scenarios scenario-open-question-signal and criterion-label-assignment;
-//! spec 058 for disposition drift). Each family MIRRORS
-//! `framework/reference/analyze.md`, the command's markdown-only reference — severity
-//! tiers and skip rules come from the reference, the primitive introduces
-//! no policy of its own:
+//! spec 058 for disposition drift). What each does is
+//! `schema::descriptions::CHECK_ARTIFACTS`; these notes are for maintainers:
 //!
 //! - **artifact-completeness** (blocking) — reference §"Artifact
 //!   completeness (blocking)": `plan.md` and
@@ -16,14 +14,13 @@
 //!   (`planned` / `in-progress` / `done`). `data-model.md` is **never**
 //!   required here: the reference conditions it on "feature introduces or
 //!   modifies domain entities" — a semantic judgment the runtime cannot
-//!   make deterministically, so it stays optional (and with the prose
-//!   check on the markdown-only path).
+//!   make deterministically, so it stays optional (and with the host).
 //! - **task-consistency** (blocking) — reference §"Task consistency
 //!   (blocking if tasks exist)": task numbers
 //!   are strictly increasing in declaration order, and every task section
 //!   carries a `Done when` clause. The reference's "tasks reference the
-//!   plan" item is a semantic-link judgment and stays in the
-//!   markdown-only reference. Runs only when `tasks.md` exists.
+//!   plan" item is a semantic-link judgment and stays with the
+//!   host. Runs only when `tasks.md` exists.
 //! - **scenario-consistency** (advisory) — reference §"Scenario
 //!   consistency (advisory)": a `scenarios/*.md` that no task in
 //!   `tasks.md` references is flagged, at every status, only when no

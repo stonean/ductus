@@ -11,8 +11,8 @@
 //!
 //! - **Dedup** uses the normalized-whitespace comparison amend already
 //!   specifies (collapse whitespace runs, trim, case-insensitive) against
-//!   the entries `read-spec`'s question parser reports, so the runtime
-//!   and markdown-only paths agree on question identity. A match is the
+//!   the entries `read-spec`'s question parser reports, so `append-question`
+//!   and `read-spec` agree on question identity. A match is the
 //!   `appended: false` domain outcome (nothing written) reporting the
 //!   existing entry.
 //! - **Same-write back-edge**: on a spec target whose status is
@@ -52,7 +52,7 @@ const RESOLVED_HEADING: &str = "## Resolved Questions";
 /// (`validate-frontmatter` owns flagging corrupt statuses). `done` is
 /// deliberately **excluded**: per the constitution §spec-lifecycle and
 /// spec 014, a new question is not a sanctioned back-edge out of `done` —
-/// a `done` spec reopens only via the scenario route (`done → in-progress`,
+/// a `done` spec reopens via the scenario route or a body edit (`done → in-progress`,
 /// owned by `/ductus:amend`). Appending a question to a `done` spec leaves the
 /// status at `done` (the command layer never routes a question there).
 const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];

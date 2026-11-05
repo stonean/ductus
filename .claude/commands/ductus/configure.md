@@ -15,7 +15,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
 ## Instructions
 
-1. Invoke `merge-permissions` (MCP: `merge-permissions`) to install the canonical `permissions.allow` and `permissions.deny` sets into `.claude/settings.local.json`, dedup exact-match entries from both arrays, and retire the step-4 entries by passing them as `revoke`. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed. The `revoke` pass is allow-side only and runs before the dedup and canonical-presence passes, so every copy of a retired entry is removed and none is re-added; an entry named in both `allow` and `revoke` is rejected as a caller error rather than resolved by pass order. Otherwise (markdown-only path), the host walks the canonical sets below: read the file, remove every exact match for a step-4 retired entry from `permissions.allow`, ensure every canonical entry is present, remove exact-match duplicates from `permissions.allow` and `permissions.deny`, write atomically.
+1. Invoke `merge-permissions` (MCP: `merge-permissions`) to install the canonical `permissions.allow` and `permissions.deny` sets into `.claude/settings.local.json`, dedup exact-match entries from both arrays, and retire the step-4 entries by passing them as `revoke`. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed. The `revoke` pass is allow-side only and runs before the dedup and canonical-presence passes, so every copy of a retired entry is removed and none is re-added; an entry named in both `allow` and `revoke` is rejected as a caller error rather than resolved by pass order.
 
 2. Canonical `permissions.allow` entries. **Only the bulleted entries below are canonical** — a pattern appearing in the surrounding prose is explanation, never an entry to install, and some of it names patterns that must *not* be added:
 
@@ -36,7 +36,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    **Bash commands (read-only shell operations):**
    - `Bash(ls *)`
 
-   File-content parsers (`awk`, `grep`, `cat`, `head`, `for` loops over files) are intentionally **not** in the canonical set. The runtime primitives and the host's `Read` / `Grep` / `Glob` tools cover those reads on the deterministic and markdown-only paths respectively; shell pipelines are not a sanctioned third path. See `framework/constitution.md` §runtime-boundary.
+   File-content parsers (`awk`, `grep`, `cat`, `head`, `for` loops over files) are intentionally **not** in the canonical set. The runtime primitives and the host's `Read` / `Grep` / `Glob` tools cover those reads; shell pipelines are not a sanctioned substitute. See `framework/constitution.md` §runtime-boundary.
 
    **Git commands:**
    - `Bash(git add *)`
@@ -173,7 +173,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Bash(chmod -R 777 *)`
    - `Bash(> *)`
 
-4. Retired `permissions.allow` entries — remove every one of these that is present. Passed to `merge-permissions` as `revoke`; on the markdown-only path, spliced out of the array by exact string match.
+4. Retired `permissions.allow` entries — remove every one of these that is present. Passed to `merge-permissions` as `revoke`.
 
    **Wildcard before the subcommand** (dropped from the canonical set in ductus 0.33.0, spec 023 task 21; the leading `*` spans inserted options, and `-c` / `--exec-path` run arbitrary commands, so each of these approved arbitrary execution with no prompt):
    - `Bash(git -C * add *)`

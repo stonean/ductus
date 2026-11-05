@@ -38,8 +38,8 @@ done
 
 # path | ceiling in bytes | fix named when the file is over
 #
-# Raising a ceiling is an owner decision recorded in spec 072 through its
-# back-edge, never a choice made at commit time.
+# Raising a ceiling is an owner decision recorded in spec 072, never a choice
+# made at commit time.
 #
 # Both ceilings are 50,000, DEFAULT_READ_SIZE_BYTES in
 # runtime/src/primitives/check_artifact_size.rs — the read size spec 063

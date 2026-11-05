@@ -40,7 +40,7 @@
 //!
 //! ## Scope: the Instructions section, and that bound is in the result
 //!
-//! A command's markdown-only reference carries sub-procedures that restart
+//! A command's reference carries sub-procedures that restart
 //! at 1. It lives in its own file under `framework/reference/` (spec 071),
 //! so it is outside this subject, but a numbered list can still sit in a
 //! command file outside its Instructions. Those are separate numbered lists,
@@ -368,7 +368,7 @@ mod tests {
 2. Second.
 3. Third, and this sentence refers to step 3.
 
-## Markdown-only reference
+## A later list
 
 1. Restarts here, mentioning step 9.
 ";
@@ -385,7 +385,7 @@ mod tests {
         assert_eq!(
             steps.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
             vec![1, 2, 3],
-            "the markdown-only list must not join the step set"
+            "a later list must not join the step set"
         );
     }
 

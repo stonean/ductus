@@ -11,7 +11,7 @@ The consolidation moves the file to `.ductus/session.toml` at the repo root: git
 
 ## Procedure
 
-> **For agent runtimes**: the backticked primitive name `migrate-session-file` in this section maps to the MCP tool `mcp__ductus__migrate-session-file` (Claude) or `mcp:ductus:migrate-session-file` (Auggie). When the `ductus` runtime is registered, **call the tool** for each legacy session file — that is the deterministic path. When no `ductus` MCP server is configured, walk the markdown-only fallback below to produce the same result. The two paths share a contract; neither one wraps the other.
+> **For agent runtimes**: the backticked primitive name `migrate-session-file` in this section maps to the MCP tool `mcp__ductus__migrate-session-file` (Claude) or `mcp:ductus:migrate-session-file` (Auggie). When the `ductus` server is registered, **call the tool** for each legacy session file; when it is not, run `.ductus/bin/ductus migrate-session-file` per file.
 
 1. **Locate candidate legacy files.** Iterate every selected agent's `config_dir`. The legacy filename per agent is `{config_dir}/{project}-session.json` after the bootstrap's placeholder substitution (e.g., `.claude/gov-session.json` on Claude with project `gov`, `.augment/acme-session.json` on Auggie with project `acme`).
 
@@ -24,16 +24,6 @@ The consolidation moves the file to `.ductus/session.toml` at the repo root: git
    The runtime resolves the target destination from its own `write-session::SESSION_FILE` constant (always `.ductus/session.toml`), so the migration cannot drift from the runtime's read path.
 
 3. **Summary line.** Report `migrated session state: {legacy-paths-joined-with-commas} → .ductus/session.toml` in the post-scaffolding output. When every result was `no-legacy`, omit the line entirely (nothing to report).
-
-### Markdown-only fallback
-
-When no `ductus` runtime is configured, the host walks the same procedure by hand:
-
-1. For each candidate legacy path under every selected agent's `config_dir`:
-   1. If the file does not exist, continue to the next candidate.
-   2. If `.ductus/session.toml` exists at the repo root, delete the legacy file and continue — the new file is authoritative.
-   3. Otherwise, read the legacy JSON, rename the keys (`scenarioPath` → `scenario-path`, `setAt` → `set-at`; preserve every other top-level key), and write `.ductus/session.toml` via tempfile + rename. Delete the legacy file.
-2. Emit the same summary line as the runtime path.
 
 ## Notes
 

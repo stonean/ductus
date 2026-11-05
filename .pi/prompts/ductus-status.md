@@ -15,23 +15,23 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 ## Scope Boundaries
 
 - This is a read-only command. Do NOT modify any files.
-- The pipeline view is acquired through the single `dashboard` primitive — one runtime call returns the structured payload plus the pre-rendered pipeline view. On the runtime path the procedure does not read individual spec files, list directories, or shell out for that view; the markdown-only fallback (`.ductus/reference/status.md`) necessarily reads the artifacts on disk, but still without shell-pipeline substitution.
-- Cross-service reference resolution is read-only and, on the runtime path, folded into that same call: the runtime resolves each spec's `references:` index internally (the same classification the resolve-references primitive exposes) to render the readout. On the markdown-only path the host reads `.ductus/config.toml` and the linked specs with host file tools (see **§Resolving cross-service references** in `.ductus/reference/status.md`). Both paths read only `.ductus/config.toml` and the registered local checkouts — the canonical repo URL is never fetched.
+- The pipeline view is acquired through the single `dashboard` primitive — one runtime call returns the structured payload plus the pre-rendered pipeline view. The procedure does not read individual spec files, list directories, or shell out for that view.
+- Cross-service reference resolution is read-only and folded into that same call: the runtime resolves each spec's `references:` index internally (the same classification the resolve-references primitive exposes) to render the readout, reading only `.ductus/config.toml` and the registered local checkouts — the canonical repo URL is never fetched.
 - Reference: §text-first-artifacts (the schema is the authoritative source for which fields appear in the payload); [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
 
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 >
-> **For this command specifically**: the single deterministic tool for the pipeline view is `dashboard`. One MCP call returns the session target, the per-spec inventory, the repo-wide tags-union, the `.ductus/config.toml` review-state summary, and the pre-rendered pipeline view. Do not substitute shell utilities (no `ls`, no `for` loops over spec directories, no `cat .ductus/config.toml`) for that call. Cross-service reference resolution for specs that carry a `references:` index is folded into the same call on the runtime path (the runtime resolves each index internally for the readout); on the markdown-only path, use the host file tools documented in **§Resolving cross-service references** in `.ductus/reference/status.md`. Neither substitutes a shell pipeline.
+> **For this command specifically**: the single deterministic tool for the pipeline view is `dashboard`. One MCP call returns the session target, the per-spec inventory, the repo-wide tags-union, the `.ductus/config.toml` review-state summary, and the pre-rendered pipeline view. Do not substitute shell utilities (no `ls`, no `for` loops over spec directories, no `cat .ductus/config.toml`) for that call. Cross-service reference resolution for specs that carry a `references:` index is folded into the same call (the runtime resolves each index internally for the readout).
 
-**Where a named section lives.** This command's markdown-only reference — the procedure for the path without the runtime, and the policy these steps apply — is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference — what its steps do with a result, and the policy they apply — is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
 <!-- audit:ignore-promotion -->
 1. Invoke `dashboard` to load the full pipeline state in one call. Alongside the structured payload (session-target — this process's own when it has a session identity, with session-identity, session-source, session-notices and session-unreadable beside it — specs, tags-union, config, inbox-standing, reopenings), the result carries a `rendered-markdown` field: the preamble, dashboard table, counts and callouts, and cross-service references readout pre-rendered as one markdown fragment (the runtime resolves each spec's `references:` index internally for the readout, so no separate per-spec call is needed on this path).
 
 <!-- audit:ignore-promotion -->
-1. Emit the `rendered-markdown` fragment as the pipeline view. It is returned data the host may restyle — do not recompute the underlying facts from the structured payload when the fragment is present. On the markdown-only path, derive the same facts with host file tools and render the four pieces by hand per **§Rendering reference** in `.ductus/reference/status.md`.
+1. Emit the `rendered-markdown` fragment as the pipeline view. It is returned data the host may restyle — do not recompute the underlying facts from the structured payload when the fragment is present.
 
 <!-- audit:ignore-promotion -->
 1. List any non-done specs (excluding the current target, if any) and prompt the user to run `/ductus:target` to select one.

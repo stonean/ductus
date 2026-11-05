@@ -5395,9 +5395,10 @@ pub struct AppendQuestionResult {
 // -- diff-cross-spec ---------------------------------------------------------
 
 /// Args for `diff-cross-spec`. Computes `/ductus:implement`'s cross-spec
-/// impact surface: the diff from the feature's first spec-dir commit to
-/// the working tree, scoped to the spec root and filtered to paths
-/// outside the feature's own directory. `{specs-root}/inbox.md` is
+/// impact surface: the diff from the start of the spec's window to the
+/// working tree, scoped to the spec root and filtered to paths outside the
+/// feature's own directory that the spec's own work changed, as
+/// `schema::descriptions::DIFF_CROSS_SPEC` states. `{specs-root}/inbox.md` is
 /// excluded (spec 058).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -5563,9 +5564,8 @@ pub struct RemoveInboxItemResult {
 
 // -- check-artifacts -----------------------------------------------------------
 
-/// Args for `check-artifacts`. Runs the residual deterministic check
-/// families from `/ductus:analyze`'s markdown-only reference against one
-/// feature (`--all` stays with the caller looping).
+/// Args for `check-artifacts`. Runs `/ductus:analyze`'s residual deterministic
+/// check families against one feature (`--all` stays with the caller looping).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactsArgs {
@@ -5574,9 +5574,8 @@ pub struct CheckArtifactsArgs {
     pub feature: String,
 }
 
-/// One deterministic artifact finding. Family names and severity tiers
-/// mirror `framework/reference/analyze.md`, the command's markdown-only reference —
-/// the primitive mechanizes the documented policy, it introduces none.
+/// One deterministic artifact finding. What each family and tier means is
+/// `schema::descriptions::CHECK_ARTIFACTS`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ArtifactFinding {
@@ -5587,7 +5586,7 @@ pub struct ArtifactFinding {
     /// `criterion-labels`, or `disposition-drift` — ten, matching the
     /// `family:` literals the primitive emits.
     pub family: String,
-    /// Severity tier per the reference's assignments: `blocking`
+    /// Severity tier: `blocking`
     /// (artifact completeness, task consistency, review state drift, and
     /// scenario open questions at `done`) or `advisory` (scenario
     /// consistency, scenario open questions below `done`, link-adjacent
@@ -6219,7 +6218,7 @@ pub struct CheckStepReferencesResult {
     pub skipped: Vec<StepReferenceSkip>,
     /// `step N` mentions outside the Instructions section, counted but never
     /// resolved: a numbered list elsewhere in the file restarts at 1 and is a
-    /// different list. (A command's markdown-only reference, whose
+    /// different list. (A command's reference, whose
     /// sub-procedures restart the same way, is its own file under
     /// `framework/reference/` and outside this subject.) Present so an empty `findings` is not read as *every
     /// reference in the file resolves* (`QUAL-CLAIM-001`).

@@ -58,7 +58,7 @@ pub const PRIMITIVE_NAMES: &[&str] = crate::schema::registry::PRIMITIVE_REGISTRY
 pub enum ParseError {
     /// The file does not declare a parseable Instructions section, or its
     /// Instructions section contains no recognized primitive or extension
-    /// markers. The markdown-only path may still walk the prose.
+    /// markers. A host may still walk the prose.
     LegacyProse,
     /// The file attempted to declare structure but the structure is
     /// malformed (e.g., a backticked code span looks like a primitive name

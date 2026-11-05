@@ -8,7 +8,7 @@
 # Files in .claude/commands/ductus/ that do not correspond to a current source
 # are removed so renames flow through cleanly.
 #
-# Reference pass (spec 071): each command's markdown-only reference is one
+# Reference pass (spec 071): each command's reference is one
 # file shared by every agent, so it lands at .ductus/reference/<name>.md — the
 # path an adopter's /ductus installs it to — with {project} substituted and no
 # per-agent value. A copy with no source is removed, as above.

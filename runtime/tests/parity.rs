@@ -237,7 +237,7 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
 /// `.ductus/reference/`, and `enforce-manifest`, run against that directory
 /// with its rows as the expected list, prunes one no row produces.
 fn assert_reference_installed_and_pruned(bin: &Path, staged: &Path, project: &Path) {
-    // A command's markdown-only reference installs once, to the shared
+    // A command's reference installs once, to the shared
     // `.ductus/reference/` directory, with `{project}` substituted — the
     // Shared Files row every agent's copy of the command points at (spec 071).
     let reference = fs::read_to_string(project.join(".ductus/reference/specify.md"))
@@ -287,15 +287,11 @@ fn assert_reference_installed_and_pruned(bin: &Path, staged: &Path, project: &Pa
 #[test]
 fn traverse_deps_cycle_check_surfaces_two_cycle_via_cli() {
     // Parity coverage for spec 067's `traverse-deps-cycle-check` scenario:
-    // both the markdown-only walker (the agent reading frontmatter via
-    // host tools and feeding traverse-deps via MCP) and the runtime
-    // walker (`ductus traverse-deps` subprocess used by `/ductus:analyze` step
-    // 3) surface the same finding shape. This test exercises the CLI
+    // the CLI and MCP surfaces report the same finding shape. This test exercises the CLI
     // subprocess surface against a hand-built 2-cycle fixture and
     // asserts the JSON envelope carries the expected `cycles` payload.
     // The companion MCP integration test in `runtime/tests/mcp.rs`
-    // exercises the rmcp tool-handler surface against the same shape,
-    // so both paths an adopter host might use are covered.
+    // exercises the rmcp tool-handler surface against the same shape.
     ensure_binary_built();
     let bin = runtime_binary();
     let tmp = tempfile::tempdir().unwrap();

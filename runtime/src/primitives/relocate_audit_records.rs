@@ -111,8 +111,8 @@ pub fn run(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<RelocateAudit
     );
 
     // The body must survive byte-identical. A relocation that rewrote prose
-    // would be a meaningful edit under §spec-lifecycle, and a `done` spec would
-    // owe a back-edge it is not taking.
+    // could change a criterion, which `classify-spec-edit` reads as reopening, and
+    // a `done` spec would owe a back-edge it is not taking.
     let (_, new_body) = split_frontmatter(&rewritten, &spec_path)?;
     if new_body != body {
         return Err(PrimitiveError::Io {

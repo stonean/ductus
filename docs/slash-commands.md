@@ -87,7 +87,7 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Move what you are keeping into the target first, then run it, and commit the two together: a move alone leaves links dangling, and the pre-commit hook refuses it. To commit the merge before the removal, copy instead of moving. Recovery is git history. Two specs.
 
-Reach for it only when the source spec no longer describes anything true. A spec that still describes live behavior is edited in place instead, through the `done → in-progress` back-edge.
+Reach for it only when the source spec no longer describes anything true. A spec that still describes live behavior is edited in place instead, taking the `done → in-progress` back-edge when the edit changes a requirement.
 
 > **This is the only one of the three that removes a durable artifact.** The other two remove nothing durable: `/prune` drops spent `tasks.md` sections, which are ephemeral work-tracking, and `plan.md` sections outside the design record only once their durable pieces have moved home; a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory.
 

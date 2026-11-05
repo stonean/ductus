@@ -42,7 +42,7 @@ A shared commit-attribution helper gives the review window, scope, fix rounds an
 
 Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze.md` change: a non-gating finding follows the rule, with no `gate-confirm`, and only a gating finding's waiver or deferral reaches the operator. A stored decision by a person still wins (`process-decisions`). Under `ductus exec` nothing changes, since with no operator nothing is written.
 
-"Counts as gating" means a contract-breaking observation takes a gating finding's dispositions: it is fixed in the run or deferred to the spec's own task, its deferral reaches the operator, and the record counts it in `contract-breaks`. `check-review-gate` gains no tier: an unchecked task already keeps a spec from `done`, so the MUST, SHOULD, hard-fail and blocking definitions in the constitution, 058, 076 and 066 stay true.
+"Counts as gating" means a contract-breaking observation takes a gating finding's dispositions: it is fixed in the run or deferred to the spec's own task, its deferral reaches the operator, and the record counts it in `contract-breaks`. `check-review-gate` gains no tier: an unchecked task already keeps a spec from `done`, so the MUST, SHOULD, hard-fail and blocking definitions in the constitution, 058, 076 and 066 stay true. A contract break nobody could disposition has no task, so the gate's passing `guidance` names a record whose `contract-breaks` is above 0, for whoever approves `done` (owner, 2026-11-05).
 
 ### What reopens
 
@@ -177,4 +177,4 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | done | Dispositions; its data model holds a false canonicality claim, so it reopens and owes a review |
 | `078-review-fix-rounds-are-re-read-within-a-bound` | in-progress | The loop; its task 15 waits for this |
 
-Correcting false claims also reopens `023-govern-refinement` (a scenario, owing a review) and `059-project-in-a-repository-subdirectory` (a ticked criterion, owing an analysis), and at most 7 more if AC21's text search proves false lines in a scenario or data model. These owe no back-link; each correction names this spec in its commit.
+Correcting false claims also reopened, each owing a review and an analysis, `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references` and `032-opencode-agent` (a scenario or data model), and, each owing an analysis, `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion). Each holds a task naming what it owes. These owe no back-link; the correction names this spec in its commit.

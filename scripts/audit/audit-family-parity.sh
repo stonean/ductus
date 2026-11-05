@@ -2,7 +2,7 @@
 # scripts/audit/audit-family-parity.sh — Family 28 of /audit.
 #
 # /audit runs the families run-all.sh registers. framework/reference/audit.md,
-# the command's markdown-only reference (spec 071 moved it out of
+# the command's reference (spec 071 moved it out of
 # framework/commands/audit.md), enumerates the families for the maintainer who
 # reads the command.
 # scripts/audit/README.md §Scripts lists the scripts. Nothing held the three

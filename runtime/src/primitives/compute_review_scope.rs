@@ -1,11 +1,11 @@
 //! `compute-review-scope` — deterministic scope resolution for `/ductus:review`. What
 //! it resolves is `schema::descriptions::COMPUTE_REVIEW_SCOPE`.
 //!
-//! The base is the **parent** of the commit the spec moved to `in-progress` at, found
+//! A first run's base is the **parent** of the commit the spec moved to `in-progress` at, found
 //! by the lookup shared with `check-stuck`, because the reopen flow commits the
 //! back-edge flip together with the work it authorises — see
 //! `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
-//! A review that stopped early does not move it, so stopping early leaves nothing
+//! A finished review moves it and one that stopped early does not, so stopping early leaves nothing
 //! permanently unread (spec 079, AC5).
 //!
 //! The review reads the working tree, so the files modified since the base are the
@@ -253,8 +253,8 @@ fn resolve_base(
             BaseSource::Since,
         ),
         // The transition commit is the *boundary* of the work window, and a
-        // boundary belongs inside the window it bounds — so the base is its
-        // parent. `base..HEAD` excludes the base's own changes, which is
+        // boundary belongs inside the window it bounds — so a first run's base is
+        // its parent. `base..HEAD` excludes the base's own changes, which is
         // harmless when `/ductus:implement` flips `planned -> in-progress` in a
         // commit holding only the status line, and silently fatal in the reopen
         // flow: `/ductus:amend`'s `done -> in-progress` back-edge is naturally
@@ -600,7 +600,7 @@ pub(crate) fn transition_is_uncommitted(
 /// Deliberately applied here rather than inside `find_in_progress_commit`:
 /// `check-stuck` shares that lookup and counts `tasks.md` commits *since* the
 /// transition, where the transition commit itself is correctly the origin. A
-/// shared helper returning different commits to its two callers would be the
+/// shared helper returning different commits to its callers would be the
 /// drift this placement keeps out.
 pub(crate) fn transition_parent(repository: &Repository, sha: &str) -> Result<String> {
     let commit = repository.find_commit(Oid::from_str(sha)?)?;

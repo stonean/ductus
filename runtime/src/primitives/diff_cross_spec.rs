@@ -2,8 +2,8 @@
 //! reports is `schema::descriptions::DIFF_CROSS_SPEC`.
 //!
 //! The deterministic filter implement steps 7 and 13 previously re-derived by hand per
-//! task (spec 022, scenario coverage-expansion-primitives). Its window starts where a
-//! review's does (spec 079, AC7): starting from the feature's first commit, it reported
+//! task (spec 022, scenario coverage-expansion-primitives). Its window starts at the
+//! spec's last reopen (spec 079, AC7): starting from the feature's first commit, it reported
 //! 507 paths for one task of one reopened spec. An uncommitted change counts because the
 //! per-task summary fires before the task's commit, when any sibling-spec edits are
 //! still uncommitted.

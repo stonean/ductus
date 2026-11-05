@@ -26,7 +26,7 @@
 # a second prose list.
 #
 # REFERENCE ARM (spec 071). The Shared Files rows that install each
-# command's markdown-only reference are held to `framework/reference/*.md`
+# command's reference are held to `framework/reference/*.md`
 # the same way: a shippable reference with no row, a row with no source, a
 # maintainer-only command's reference shipped, a row installing anywhere but
 # `.ductus/reference/<name>.md`, and a reference file with no command are
@@ -108,7 +108,7 @@ done <<< "$(comm -12 <(printf '%s' "$manifest") <(printf '%s' "$excl"))"
 
 # --- Reference arm (spec 071) ----------------------------------------------
 #
-# Each command's markdown-only reference ships as its own file, through a
+# Each command's reference ships as its own file, through a
 # Shared Files row `framework/reference/<name>.md` -> `.ductus/reference/<name>.md`.
 # The same three directions hold as for the command rows, against the same
 # maintainer-only list: a command that is withheld is withheld with its

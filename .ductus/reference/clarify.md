@@ -1,6 +1,6 @@
-# clarify — markdown-only reference
+# clarify — reference
 
-With no ductus runtime registered, the host walks the same contract with its own file tools (Read, Edit, Write) — no shell-pipeline substitution (§runtime-host-integration). The Gate table in `clarify.md` governs both paths.
+The Gate table in `clarify.md` governs.
 
 **Where a named section lives.** This file is read alongside its command, `clarify.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
@@ -53,7 +53,7 @@ Before mutating anything, surface the inconsistency to the user:
    - The list of files in `specs/{feature}/scenarios/` if that directory exists.
 2. **Prompt the user:**
    > Spec is `{status}` but has {N} unresolved open questions in the body — this state usually arises from a manual frontmatter edit. Revert status to `draft` and walk the questions?
-3. **Confirm** — update the frontmatter `status` field to `draft` (the `set-status` primitive on the runtime path; a direct frontmatter edit otherwise), then run the **Feature-targeted clarify (hot path: `draft` spec)** procedure above (including the dependency-readiness check; the post-revert walk runs the same checks as a normal `draft` clarify). On successful resolution, the spec advances back to `clarified`. Downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are not deleted or rewritten by this command.
+3. **Confirm** — update the frontmatter `status` field to `draft` (the `set-status` primitive), then run the **Feature-targeted clarify (hot path: `draft` spec)** procedure above (including the dependency-readiness check; the post-revert walk runs the same checks as a normal `draft` clarify). On successful resolution, the spec advances back to `clarified`. Downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are not deleted or rewritten by this command.
 4. **Decline** — exit without modifying any file. The spec retains its inconsistent state and open questions remain in `## Open Questions`. The next `/ductus:clarify` invocation offers the same prompt — the system surfaces the inconsistency on every clarify attempt rather than silently advancing.
 
 `## Resolved Questions` is never re-walked even on the recovery path; only items in `## Open Questions` are processed.
@@ -62,7 +62,7 @@ Before mutating anything, surface the inconsistency to the user:
 
 Rendered by a **feature-targeted** run in whichever gate branch it takes, whenever the feature's scenarios carry unresolved questions. It reports; it never resolves, never writes, and never gates.
 
-**Deriving the list.** On the runtime path it is `read-spec`'s `scenario-open-questions` field — already loaded at step 2, so no extra call and no extra read. On the markdown-only path, read the `## Open Questions` section of each file under `specs/{feature}/scenarios/` and count its entries by the same rule the Gate uses (placeholder lines such as `*None — all resolved.*` are not entries). Read those sections only, per the Scope Boundaries carve-out. Enumerate the directory with the shared scenario ordering — case-insensitive with a raw-byte tiebreak — so the two paths list the same scenarios in the same order. A scenario file that cannot be read or parsed contributes nothing and is not escalated into a defect: nothing can be proven about a file that will not parse. It is still named, in both paths — on the runtime path from `read-spec`'s `scenario-files-unreadable`, on the markdown-only path from whichever files you could not read — appended as `(N scenario file(s) could not be read: {slug}, … — these were not examined)`. Reporting zero questions over a scenario nothing could read would assert exactly what was never checked.
+**Deriving the list.** It is `read-spec`'s `scenario-open-questions` field — already loaded at step 2, so no extra call and no extra read. A scenario file that cannot be read or parsed contributes nothing and is not escalated into a defect: nothing can be proven about a file that will not parse. It is still named, from `read-spec`'s `scenario-files-unreadable`, appended as `(N scenario file(s) could not be read: {slug}, … — these were not examined)`. Reporting zero questions over a scenario nothing could read would assert exactly what was never checked.
 
 **Wording.** Name every carrying scenario and its count — no cap, since a truncated list reads as "these are the ones that need attention" while hiding others — then the command that resolves them:
 

@@ -16,7 +16,7 @@ Audit `ductus`'s own framework artifacts for the kinds of drift `/ductus:analyze
 
 `/audit` fills that gap. It loads no rule files — its checks are about *framework consistency*, not spec quality. Each check family produces structured findings on stdout. Exit code is binary: `0` when no findings, `1` when any finding is present. CI uses the exit code as a release gate.
 
-See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/spec.md) for the design and the [026 plan](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown well past the original design — `scripts/audit/run-all.sh` runs exactly the families enumerated in the markdown-only reference at `.ductus/reference/audit.md`, a correspondence Family 28 holds in both directions. No count is stated here on purpose: a number in prose is a third copy of a fact two lists already carry, and it is the copy nothing updates (this sentence said twenty-two while thirty-three ran). Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
+See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/spec.md) for the design and the [026 plan](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown well past the original design — `scripts/audit/run-all.sh` runs exactly the families enumerated in the reference at `.ductus/reference/audit.md`, a correspondence Family 28 holds in both directions. No count is stated here on purpose: a number in prose is a third copy of a fact two lists already carry, and it is the copy nothing updates (this sentence said twenty-two while thirty-three ran). Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
 
 ## Scope Boundaries
 
@@ -28,11 +28,9 @@ See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-s
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools, except step 1's `run-generator`, which is not one and runs through the CLI; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
 
-**Where a named section lives.** This command's markdown-only reference — the procedure for the path without the runtime, and the policy these steps apply — is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference — what its steps do with a result, and the policy they apply — is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
-1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. `run-generator` is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), so on the runtime path invoke it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`; `ductus exec` dispatches it in-process. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
-
-Otherwise, walk the markdown-only path in `.ductus/reference/audit.md`.
+1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. `run-generator` is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), so invoke it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`; `ductus exec` dispatches it in-process. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 
 ## Boundary with `/ductus:analyze`
 

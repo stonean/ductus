@@ -17,9 +17,9 @@
 //! constructor makes a `Constitutions` built from a config document validated
 //! by construction.
 //!
-//! Schema is canonical in `specs/055-shared-constitution/data-model.md`; the
-//! severities are canonical in `framework/bootstrap/ductus.md` §Validating the
-//! registry, which this module mirrors rather than restates.
+//! Schema is canonical in `specs/055-shared-constitution/data-model.md`;
+//! `framework/bootstrap/ductus.md` §Validating the registry says what `/ductus`
+//! does with each severity.
 
 use std::collections::BTreeMap;
 

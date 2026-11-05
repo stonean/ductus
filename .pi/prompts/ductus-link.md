@@ -29,7 +29,7 @@ This command does not require a session target — it edits the project-level `[
 
 ## Instructions
 
-This command is host-driven: it has no runtime primitive, so the same procedure runs whether or not the `ductus` runtime is installed — both the deterministic and the markdown-only paths converge on the host's file tools reading and writing `.ductus/config.toml`. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
+This command is host-driven: it has no runtime primitive, so the host's file tools read and write `.ductus/config.toml`. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
 
 <!-- audit:ignore-promotion -->
 1. Parse the arguments. With `--list`, run the **List the registry** branch (read-only) and stop. With three positional values (alias, repo, path) plus an optional `--description <text>`, take them as pre-supplied field values, validate them, and prompt only for anything missing or invalid. With no arguments, collect every field interactively.

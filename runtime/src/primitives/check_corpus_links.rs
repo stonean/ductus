@@ -175,7 +175,7 @@ fn is_excluded(
                 .iter()
                 .any(|dir| relative.strip_prefix(dir).is_some_and(|rest| rest.starts_with('/')))
                 // Generated reference copies (spec 071), in a framework
-                // checkout only: each command's markdown-only reference,
+                // checkout only: each command's reference,
                 // written here from `framework/reference/`. Their
                 // `../constitution.md` links resolve to the
                 // `.ductus/constitution.md` `/ductus` installs beside them,

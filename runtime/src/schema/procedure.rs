@@ -40,7 +40,8 @@ pub enum Step {
         number: StepNumber,
         /// Primitive name; matches an entry in §The primitive library.
         name: String,
-        /// Surrounding prose preserved for the markdown-only path.
+        /// Surrounding prose: a host walks it, and the walker reads it for a
+        /// `gate-confirm` step.
         prose: String,
         /// Source location of the step body.
         location: SourceRange,
@@ -51,7 +52,8 @@ pub enum Step {
         number: StepNumber,
         /// Extension-point identifier (e.g., "writeCode").
         identifier: String,
-        /// Surrounding prose preserved for the markdown-only path.
+        /// Surrounding prose: a host walks it, and the walker passes it to the
+        /// extension request.
         prose: String,
         /// Source location of the step body.
         location: SourceRange,

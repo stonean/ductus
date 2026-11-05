@@ -497,7 +497,7 @@ Per-process targets isolate the target only: agents in one tree share files, ind
 
 ### Cross-Spec Impact
 
-A change one spec's work finds another spec needs is recorded **in the affected spec** — a criterion, scenario, or signpost back-linking the originating spec — reopening it if `done`. Changing the project configuration file is cross-spec impact only when it modifies a key another spec documented.
+A change one spec's work finds another spec needs is recorded **in the affected spec** — a criterion, scenario, or signpost back-linking the originating spec — reopening it if `done` and `classify-spec-edit` says the edit does. Changing the project configuration file is cross-spec impact only when it modifies a key another spec documented.
 
 #### What the framework enforces, and what it does not
 

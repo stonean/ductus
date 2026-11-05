@@ -2,7 +2,7 @@
 //! record carries against this run's finding keys (specs 058 and 076).
 //!
 //! The host must know which findings already carry a decision **before** it
-//! proposes dispositions, or it asks questions that were answered on an
+//! decides dispositions, or it decides again what was answered on an
 //! earlier run. So classification happens here, ahead of the writer, the way
 //! `process-waivers` classifies waivers ahead of `write-review`:
 //!

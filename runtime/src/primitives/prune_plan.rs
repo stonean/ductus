@@ -36,8 +36,8 @@ use crate::schema::primitives::{
 /// The plan template's `##` headings, in template order — the design record.
 /// A unit test ([`tests::design_record_matches_the_plan_template`]) holds this
 /// to `framework/templates/spec/plan.md`, as `prune-tasks` holds its reset
-/// body to the tasks template, so an adopter who customizes the template sees
-/// their own set only on the markdown-only path.
+/// body to the tasks template, so an adopter's customized template does not
+/// apply.
 const DESIGN_RECORD: [&str; 7] = [
     "Overview",
     "Technical Decisions",

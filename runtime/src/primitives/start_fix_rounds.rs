@@ -5,7 +5,7 @@
 //! feature's earlier rounds and snapshots the working tree, so the first
 //! round's changed paths are exactly the fixes made after the passes.
 //!
-//! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
+//! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
 use std::path::Path;
 

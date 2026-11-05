@@ -4,7 +4,7 @@
 //! The host supplies only the feature and the base, so no scope the fixer wrote can
 //! reach the brief.
 //!
-//! Defined by `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
+//! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
 use std::fmt::Write as _;
 use std::path::Path;

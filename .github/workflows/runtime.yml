@@ -12,7 +12,7 @@ on:
       - 'runtime/**'
       - 'framework/commands/*.md'
       # src/primitives/resolve_anchor.rs holds a corpus test that every
-      # command step's pointer into its markdown-only reference names a
+      # command step's pointer into its reference names a
       # heading that file has (spec 071), so an edit to a reference file is an
       # edit to its subject.
       - 'framework/reference/*.md'

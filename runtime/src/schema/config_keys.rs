@@ -593,9 +593,8 @@ mod tests {
 
     /// The installer's §Project Configuration documents every section and
     /// key the registry recognizes, retired sections and `[host]`'s legacy
-    /// `cli-config-dir` aside, and nothing it does not — so a host reading
-    /// the file by hand on the markdown-only path reports what the runtime
-    /// reports.
+    /// `cli-config-dir` aside, and nothing it does not — so what the installer
+    /// says a section holds is what the runtime reads.
     #[test]
     fn the_installer_documents_the_registry() {
         let installer = std::fs::read_to_string(

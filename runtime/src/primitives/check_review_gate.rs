@@ -186,7 +186,7 @@ pub(crate) fn run_with_lint(
     };
 
     // Gate checks 10 and 11: a record with no `dispositions:` map, then an
-    // outstanding gating finding (spec 058). Last,
+    // outstanding gating finding (spec 058). After the record checks,
     // because every check above names a more upstream defect: a record that
     // is missing, failing, or stale has to be re-run before what it says about
     // its findings means anything.
@@ -200,8 +200,8 @@ pub(crate) fn run_with_lint(
         return Ok(blocked);
     }
 
-    // Gate check 12: a fix round that needed a re-read has neither one nor a
-    // waiver (spec 078). Last, because it says a fix made during the review
+    // Gate check 12: the fix-round loop is still open (spec 079), or a fix round
+    // that needed a re-read has neither one nor a waiver (spec 078). Last, because it says a fix made during the review
     // went unchecked, which matters only once the review holds nothing else.
     if let Some(blocked) = fix_round_block(&review, &rel_dir, &project) {
         return Ok(blocked);
@@ -224,7 +224,12 @@ pub(crate) fn run_with_lint(
         passed: true,
         blocked_by: None,
         message: None,
-        guidance: passing_notices(&review_freshness, &freshness, review.not_re_read.is_some()),
+        guidance: passing_notices(
+            &review_freshness,
+            &freshness,
+            review.not_re_read.is_some(),
+            review.contract_breaks.unwrap_or(0),
+        ),
         violations: vec![],
         // Carried onto the pass, not just onto a block: a discharged
         // obligation is something this gate *examined*, and reporting it only
@@ -443,13 +448,14 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
     }
 }
 
-/// Gate check 12 — `review.md` counts more fix rounds that needed a re-read
-/// and have none (`not-re-read`) than waivers with a reason (spec 078).
+/// Gate check 12 — `review.md` still carries `fix-rounds-open` (spec 079), or
+/// counts more fix rounds that needed a re-read and have none (`not-re-read`)
+/// than waivers with a reason (spec 078).
 ///
 /// Counted rather than matched by round, as the record states it, so a
 /// hand-edited record with fewer waivers than un-re-read rounds blocks
 /// whatever its other counts say, and a waiver whose reason is blank waives
-/// nothing. A record without `not-re-read` does not say whether its fixes
+/// nothing. A record with neither field does not say whether its fixes
 /// were re-read: it passes here, and [`passing_notices`] says so.
 fn fix_round_block(
     review: &crate::schema::primitives::ReviewBlock,
@@ -514,6 +520,7 @@ fn passing_notices(
     review: &RecordFreshness,
     analyze: &RecordFreshness,
     fix_rounds_recorded: bool,
+    contract_breaks: u32,
 ) -> Option<String> {
     let mut notices: Vec<String> = Vec::new();
     if let RecordFreshness::Undeterminable { reason } = review {
@@ -535,6 +542,13 @@ fn passing_notices(
              run stated nothing about its fixes."
                 .to_string(),
         );
+    }
+    if contract_breaks > 0 {
+        notices.push(format!(
+            "The review record counts {contract_breaks} contract break(s) the run did not fix, which no \
+             gating count holds: confirm each was deferred to a task or waived before approving \
+             `done`."
+        ));
     }
     if notices.is_empty() {
         None
@@ -886,7 +900,7 @@ fn already_done_block(status: &str, project: &str) -> Option<CheckReviewGateResu
                 .to_string(),
         ),
         guidance: Some(format!(
-            "Nothing is owed. To change the spec, reopen it first: /{project}:amend records a \
+            "Nothing is owed. To change what the spec requires, reopen it first: /{project}:amend records a \
              scenario and takes the done → in-progress back-edge."
         )),
         violations: vec![],
@@ -1063,7 +1077,7 @@ fn cross_spec_impact_block(
     let mut guidance = Vec::new();
     if !undischarged.is_empty() {
         guidance.push(format!(
-            "Record the change in each affected spec with a signpost linking back to {feature}, then re-run this gate — discharge is the reciprocal link, not the key's removal. Run /{project}:amend against a spec that is already done to take the back-edge."
+            "Record the change in each affected spec with a signpost linking back to {feature}, then re-run this gate — discharge is the reciprocal link, not the key's removal. A signpost on a done spec is a correction and leaves it done; a criterion or scenario there reopens it through /{project}:amend."
         ));
     }
     if !missing.is_empty() {
@@ -3002,6 +3016,44 @@ mod tests {
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert!(result.passed, "{result:?}");
         assert!(!result.guidance.unwrap_or_default().contains("re-read"));
+    }
+
+    /// No gating count holds a contract break, so a record with one passes and
+    /// the guidance names it for whoever approves `done` (spec 079); zero, or a
+    /// record with no such field, says nothing about it.
+    #[test]
+    fn a_contract_break_passes_and_the_guidance_names_it() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        with_review_fields(
+            tmp.path(),
+            &format!("{LOOP_FIELDS}not-re-read: 0\ncontract-breaks: 1\n"),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(
+            result
+                .guidance
+                .unwrap()
+                .contains("counts 1 contract break(s) the run did not fix"),
+        );
+
+        for fields in ["contract-breaks: 0\n", ""] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            with_review_fields(
+                tmp.path(),
+                &format!("{LOOP_FIELDS}not-re-read: 0\n{fields}"),
+            );
+            let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+            assert!(result.passed, "{result:?}");
+            assert!(
+                !result
+                    .guidance
+                    .unwrap_or_default()
+                    .contains("contract break"),
+            );
+        }
     }
 
     /// Check 12 follows check 11: an outstanding SHOULD is reported first.
