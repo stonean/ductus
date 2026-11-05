@@ -73,7 +73,7 @@ The bytes come from the sentences these replace, the two-paths text, and sentenc
 
 ### Prose cuts come last
 
-`research.md` holds the section-by-section estimate. Cuts follow AC21, so a reference drops a primitive's rules, and they drop text rather than move it. Neither `framework/reference/review.md` nor `framework/reference/analyze.md` needed a split. Every heading keeps its exact text. `framework/reference/log.md` stays though it only restates its command's step 4, since 071's AC2 and its entry on which commands are split name `log`. This took over `020-code-review`'s task 16, closed by a pointer to the result.
+`research.md` holds the section-by-section estimate. Cuts follow AC21, so a reference drops a primitive's rules, and they drop text rather than move it. Neither `framework/reference/review.md` nor `framework/reference/analyze.md` needed a split. What stays beyond a step's result is what an author or operator acts on and no description states, which counts as policy (owner, 2026-11-05): `framework/reference/analyze.md`'s closed phrase lists, which Family 18 holds to the code, and `framework/reference/review.md`'s rule-file selection and waiver lifecycle. Every heading keeps its exact text. `framework/reference/log.md` stays though it only restates its command's step 4, since 071's AC2 and its entry on which commands are split name `log`. This took over `020-code-review`'s task 16, closed by a pointer to the result.
 
 ### `AGENTS.md`
 
