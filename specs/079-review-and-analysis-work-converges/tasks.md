@@ -105,20 +105,20 @@ Blocked on tasks 2–8, so it states what exists. Steps 10 and 19 now have a hos
 
 Blocked on tasks 2–9: read `research.md`, which is a floor, then grep each behavior's words again, since the code has moved. A statement made false is corrected, including one that a data model is canonical; a copy that is still true waits until next edited. Tasks 3 and 5 already corrected 078, 058 and 047, so `research.md`'s counts for those are spent, and a search of 050, 063 and 066 for a claim that every disposition is confirmed found none, so their counted claims are other behaviors'. Known still false: 066's data model lists `fix-round-not-re-read` as the gate's last check with no `fix-round-loop-open`, and its scenario `review-scope-union` states the old union. Task 6 renamed `check-artifact-size`'s `if-claim-changes` to `if-requirement-changes` and moved a `data-model.md` trim to `always`, so 063's `spec.md` (its behavior line and ticked AC8), `plan.md`, `data-model.md` and scenario `a-plan-trim-does-not-reopen-a-done-spec` state the old hints. Task 9's sweep caught only the exact phrases, so AC21 leaves the no-server wording standing in other forms: the opening lines of `framework/reference/{consolidate,groom,fold}.md`, `framework/reference/clarify.md`'s *Deriving the list*, `framework/reference/review.md`'s empty-section line, `framework/reference/audit.md`, `framework/commands/audit.md`, and the migration `session-file-consolidate`. `framework/bootstrap/ductus.md`'s pointer also says the two paths share a contract, though the bootstrap runs before acquisition, so whether that stays as its own contract is decided here, with 029's scenario `state-a-deterministic-path-forcing` read first.
 
-- [ ] In-progress specs: 000, 016, 017, 020, 022, 041, 045, 047, 050, 054, 063, 066, 075
-- [ ] 011 and 046 (`done`): `classify-spec-edit` returns `correction`, so they stay `done`
-- [ ] 023 and 076 (`done`): reopen by `set-status`, correct the scenario and the data model, and each owes a review and an analysis
-- [ ] 059 (`done`): reopen, correct ticked AC3 by the back-edge, and it owes an analysis
-- [ ] Read AC21's 112 lines in context, and correct those that prove false, reopening any `done` spec whose scenario or data model holds one (at most 7); name the count in the commit
-- [ ] Signposts back-linking this spec on 020, 022, 026, 050, 066 and 076, so `cross-spec-impact:` is discharged
-- [ ] Runtime doc comments and MCP text the sweep names, with `scripts/` and the tests and fixtures that assert the old behavior
-- [ ] `scripts/mutation/run.py` exits non-zero when the ids it is given select no mutation: an unsplit id list once selected none and reported success, which §design-principles rules out
+- [x] In-progress specs: 000, 016, 017, 020, 022, 041, 045, 047, 050, 054, 063, 066, 075
+- [x] 011 and 046 (`done`): `classify-spec-edit` returns `correction`, so they stay `done`
+- [x] 023 and 076 (`done`): reopen by `set-status`, correct the scenario and the data model, and each owes a review and an analysis
+- [x] 059 (`done`): reopen, correct ticked AC3 by the back-edge, and it owes an analysis
+- [x] Read AC21's 112 lines in context, and correct those that prove false, reopening any `done` spec whose scenario or data model holds one (at most 7); name the count in the commit
+- [x] Signposts back-linking this spec on 020, 022, 026, 050, 066 and 076, so `cross-spec-impact:` is discharged
+- [x] Runtime doc comments and MCP text the sweep names, with `scripts/` and the tests and fixtures that assert the old behavior
+- [x] `scripts/mutation/run.py` exits non-zero when the ids it is given select no mutation: an unsplit id list once selected none and reported success, which §design-principles rules out
 
 - **Done when**: re-running the sweep's searches finds no false claim, `check-review-gate` reports `cross-spec-impact:` discharged, and the corrected specs' reviews and analyses are recorded or named as owed on their own tasks.
 
 ## 11. The prose cuts (AC18, AC21)
 
-Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For agent runtimes` pointers, which took `framework/commands/` and `framework/reference/` to 567,487 bytes at `ad4fae5b`, under AC18's total, so what is owed is the two named files and the total staying under while tasks 10 and 11 land; of the two boilerplate blocks, `**Where a named section lives.**` remains. An edit to a command source can move its golden, and `runtime/tests/parity.rs`' failure message says how to re-bless it alone. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
+Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For agent runtimes` pointers, which took `framework/commands/` and `framework/reference/` to 567,487 bytes at `ad4fae5b`, under AC18's total, so what is owed is the two named files and the total staying under while tasks 10 and 11 land; of the two boilerplate blocks, `**Where a named section lives.**` remains. Task 10 left `framework/reference/log.md` restating `framework/commands/log.md`'s step 4 and nothing else, so it can go with its manifest rows. An edit to a command source can move its golden, and `runtime/tests/parity.rs`' failure message says how to re-bless it alone. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
 
 - [ ] `framework/reference/review.md` under 50,000 bytes
 - [ ] `framework/reference/analyze.md` under 50,000 bytes, with `scripts/audit/marker-list-parity.sh` following its sentences; if cuts stop short, bring the split to the owner with what it costs
@@ -140,6 +140,6 @@ Blocked on tasks 1–11.
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
 - [ ] Propose `done` with the completion gate
 
-Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly. Ask the owner at this task whether the outcome entry in Resolved Questions gains the primitive's figure beside the recorded one, or AC20 reads as met by that re-derivation; `spec.md` had 523 bytes of room by `wc -c`, so a longer entry needs a cut, which is also the owner's.
+Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly. Ask the owner at this task whether the outcome entry in Resolved Questions gains the primitive's figure beside the recorded one, or AC20 reads as met by that re-derivation; `spec.md` had 523 bytes of room by `wc -c`, so a longer entry needs a cut, which is also the owner's.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.

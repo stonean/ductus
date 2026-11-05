@@ -279,3 +279,4 @@ step. Pinning via `.ductus/config.toml` and the manifest strategies apply unchan
   merge by hand regardless; which runtime primitive accelerates it (a new generic
   JSON-region merge vs. reusing an existing one) is a plan deliverable decided
   against the runtime-eligibility criteria.
+- **Why split from bootstrap-runtime-autowire:** 029 wires the runtime for every agent in the registry, and this spec adds one agent with its own MCP shape. They share `framework/bootstrap/ductus.md` and `README.md` because every agent edits those, so folding them would give one spec two unrelated deliveries.
