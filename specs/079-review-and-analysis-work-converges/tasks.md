@@ -4,6 +4,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Commit attribution
 
+The derived write boundary held only `AGENTS.md` and spec directories at `b63e992c`, so `/ductus:implement` may refuse this task's first write under `runtime/`. If it does, seed `write-boundary` in the session, as `framework/reference/plan.md`'s Validation gate describes.
+
 - [ ] Create `runtime/src/primitives/commit_attribution.rs`: `claims` per commit, with the first-named spec, resolving through `parse_feature_dir` and `ProjectRepository`
 - [ ] Fixture histories in `runtime/tests/commit_attribution.rs`: a directory touch, a subject scope, both, a number no spec has, a merge, a root commit, a branch-scoped spec, and a project in a subdirectory (`git_fixture::subdirectory_project`)
 - [ ] Add the helper's mutations to `scripts/mutation/scope-attribution.py`
@@ -68,6 +70,8 @@ Blocked on task 1.
 ## 7. The measurement and `/status` (AC1, AC8, AC17, AC19)
 
 Blocked on tasks 2 and 5: it reads the fields they write.
+
+The baseline in the spec's outcome entry came from throwaway scripts, so its method there is what to reproduce: closed reopenings by their closing commit's author date. Two traps when re-deriving: `git log --follow --reverse` returned no commits for 007, 064 and 065, so walk without `--follow`; and a grep for `- [ ]` counts the tasks template's example checkboxes, which 026, 052 and 058 keep inside an HTML comment, so `waiting` reads through `read-tasks`. Another walk gives another count (commits adding `status: done` under `--since` gave 119 against 123), so state which walk a figure used.
 
 - [ ] Create `measure-reopenings` and register it in the five sites
 - [ ] `dashboard` and `framework/commands/status.md`: the counts on every run

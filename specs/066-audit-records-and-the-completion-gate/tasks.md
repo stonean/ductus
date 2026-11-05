@@ -116,6 +116,8 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 ## 16. Disposition out-of-spec finding: the seeds' compute-review-scope CLI allows outlive the step that ran them
 
+066's remaining tasks are paused until tasks 2–5 of `079-review-and-analysis-work-converges` land (owner, 2026-11-04). The session working 066 holds its task 18 gated in its own clone and rebases that work onto them; those tasks change `compute-review-scope`, `write-review` and the gate this spec's scenarios describe, so re-read each scenario first.
+
 **Decided by the owner, 2026-11-04: fix it in this task.** No step in `framework/` runs the command since task 7, and no `configure/{key}.md` canonical set grants a `.ductus/bin/ductus` CLI entry, so the entries retire cleanly. Re-check each edit against the tree before applying it:
 
 - `framework/bootstrap/ductus.md` and `govern.md`, its byte-identical copy. Remove the entries from the `claude` (two), `auggie` (one rule) and `opencode` (two) `settings_template` cells, and append each to that agent's **Retired seed entries** bullet, in the bullet's grammar. In §Permission Setup, drop the `compute-review-scope` clause beside *the eleven*, which the remaining subcommands number (twelve with it, measured on the `claude` cell), and drop the redirected call from the Auggie clause, leaving `--block` alone.
