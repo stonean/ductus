@@ -131,7 +131,7 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 
 ## 12. Verify, land and measure (AC8, AC20)
 
-Blocked on tasks 1–11, and subtask 3 on tasks 14 and 15, which the bootstrap found, since a change after the review reads the tree would stale it.
+Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. No landing commit exists yet for subtask 4: it is the commit that finishes task 16.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
 - [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
@@ -181,7 +181,11 @@ Subtask 4 cannot finish in one session: once 1–3 are done, record the landing 
 
 ## 16. What the flow pass found
 
-- [ ] Contract break, the owner's choice first: a committed record with an unfixed MUST or SHOULD moves the window past it, so a re-run sees `scope-count: 0`, takes the empty-scope branch and writes `must-violations: 0` with the file unchanged. Also clears an unread round and a contract break, and leaves `--waive` no finding to act on. Reproduced by hand in this session; absent at `3360dea3`
+`research.md`'s *What the flow pass found* holds each item's input, result and fix options, in this order. Work the first item, since the gaps after it follow from it, then ask the owner each item marked as their choice, one at a time, with its numbers worked out, then the remaining contract breaks and gaps. Add a test shown to fail without each fix, as `docs/developing-ductus.md` says. A review run's Observations in `review.md` are this run's record; `write-review` regenerates the file whole, so its last write must pass them again.
+
+The last item closes the run. Two ways, the second cheaper: write it as the item says, passing the 66 observations and these findings; or, once the fixes land, run a fresh `/ductus:review --since=6aef0472`, naming the base and why in its Summary, since the passes at `5f67ede2` and the flow pass read what came before it. A fresh run replaces the record whole, keeps stored `decisions:`, and clears the mark on its last write. Its agents follow behaviors, not file kinds (**§Run review passes** in `framework/reference/review.md`).
+
+- [ ] Contract break, the owner chose (2026-11-05) that a record the gate holds does not move the start, so add `holds_done_until_reviewed` to `recorded_run`'s `stopped_early`, and AC5's text already says so: a committed record with an unfixed MUST or SHOULD moves the window past it, so a re-run sees `scope-count: 0`, takes the empty-scope branch and writes `must-violations: 0` with the file unchanged. Also clears an unread round and a contract break, and leaves `--waive` no finding to act on. Reproduced by hand in this session; absent at `3360dea3`
 - [ ] Contract break: a narrowed window expires each stored waiver and decision on a file the run did not read, a person's included, with the notice that the finding no longer fires. Retain an anchor outside the scope
 - [ ] Contract break, the owner's choice: a code-changing reopening following the gate's own message runs analyze, review, analyze and ends over the bound, or stops where the gate first passes with `review-owed: true` and no review, since the gate names `/analyze` first and never reads `review-owed`
 - [ ] Contract break, the owner's choice: after the draft back-edge the reopening's earlier code leaves the window and the measure, and `review-owed` reads false. Is a pass through draft one reopening
@@ -215,3 +219,13 @@ Subtask 4 cannot finish in one session: once 1–3 are done, record the landing 
 - [ ] Close this run: the last `write-review` lists rounds 1 to 4 as re-read, diff-checked, re-read, diff-checked and round 5, the fold edits, `not-re-read` with the owner's reason; `budget-stop` then derives true, so the next review starts at the reopen. Reconcile `examined` and `scope` in the Summary
 
 - **Done when**: each contract break is fixed with a test shown to fail without it, each gap is fixed, deferred or waived with its reason, the owner's choices are recorded, and AC5 and AC17 are ticked again against the tree.
+
+## 17. Disposition out-of-spec finding: a suffixed task number is invisible to every `tasks.md` consumer
+
+Reported by an adopter on 0.59.11 and reproduced there and at `35a2ed11`, on a `tasks.md` with `### 11. Spent task` and `### 11a. Spent task with a suffixed number` under `## Phase 1`, each fully ticked. `prune-tasks` returns `removed-count: 1`, `kept-count: 0`; `apply` removes `## Phase 1` and task 11, leaving `### 11a.` directly under the `#` title, which fails MD001. With an unticked box under `11a` on a `done` spec, `read-tasks` lists no such task, so `/implement`'s tally misses pending work; `classify-spec-edit` and `measure-reopenings`' `waiting` use the same parser (`parse_tasks`), which was read and not run. `check-artifacts` stays silent, since its numbering check sees only parsed tasks. The cause is `split_numbered_heading` in `runtime/src/primitives/mod.rs`, which takes only digits before the dot. This repository has the form too: `specs/023-govern-refinement/tasks.md` holds `### 1b.`, `### 7b.` and `### 12b.`, and 6 other level-3 headings in `tasks.md` files are unnumbered.
+
+The bug decision tree's route 3: the spec is ambiguous on the form. The decision is the owner's, and is whether a suffixed number is valid. If valid, widen `split_numbered_heading` and every consumer, including `check-artifacts`' `u32` parse and `next_task_number`. If not, `check-artifacts` reports the section, `prune-tasks` accounts for every section at the task level rather than reading zero kept and keeps a `##` phase while a section remains under it, and 023 renumbers. Either way the shared parser is 022's surface and the requirement lands in 041, which is `in-progress`, by a scenario and a task, with a mutation proving the regression test fails before the fix, as the reporter asked.
+
+- [ ] A suffixed number is valid or not, the owner's choice, then a scenario and task on `041-task-pruning` naming this spec's finding — deferred or waived here
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.

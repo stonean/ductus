@@ -52,7 +52,7 @@ Same order as Instructions steps 9–16, which carry the procedure; these items 
 
 1. **Task tally**: step 9. If any checkbox remains unchecked, the gate ends there, before criteria verification.
 2. **Load acceptance criteria**: step 10.
-3. **Verify each criterion**: steps 11 and 12, one criterion at a time.
+3. **Verify each criterion**: steps 11 and 12, one criterion at a time, by running its behavior on an input, including one its tests do not name, since a test's name proves only that the test exists.
 4. **Cross-spec impact check**: step 13. This detects the cross-spec update you **made**; the one you **owe** is the `cross-spec-impact:` declaration the pre-done gate checks in step 5. An empty result here says nothing about that: the two answer opposite questions.
 5. **Pre-done gate** (primitive: `check-review-gate`, step 14; the name is historical, since it gates both `/ductus:review` and `/ductus:analyze`). Its description states the checks in order, first failure wins, and each blocked result carries that check's canonical message and guidance: halt with them and do not propose the transition. A markdown-lint block also carries `violations`: report each one.
 

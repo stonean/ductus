@@ -90,7 +90,7 @@ introduce review criteria from outside the project.
 
 ## Run review passes
 
-Run the five passes below. When a flag restricts dimensions (`--security`,
+Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
 produced.
