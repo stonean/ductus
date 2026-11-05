@@ -10,7 +10,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path by the spec that claimed it |
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` | The measurement, as a gating finding left by that run |
 
-An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, and any other value names a person.
+An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, and any other value names a person.
 
 ## `compute-review-scope` result
 
@@ -18,7 +18,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when the scope holds no path outside the spec's own directory and no scenario or data-model edit |
+| `review-owed` | boolean | False when a review record exists and the scope holds no path outside the spec's own directory and no scenario or data-model edit; true with no record |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it.
 
@@ -48,7 +48,7 @@ Arguments: `since` (a ref or date; default the last `REOPENING_WINDOW_DAYS` days
 | Result field | Type | Meaning |
 | --- | --- | --- |
 | `state` | `measured`, `shallow-history` or `nothing-to-compare` | A distinct value for each case the count cannot speak to |
-| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person` |
+| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
 | `not-counted` | list | Each closed reopening holding no recorded run or a record that does not parse, with its reason |
 | `waiting` | list of features | `in-progress` specs with no unchecked task |
 | `over-bound-count`, `not-counted-count`, `waiting-count`, `closed-count`, `runs` | integers | The counts `/{project}:status` renders |

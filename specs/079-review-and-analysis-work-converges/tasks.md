@@ -17,7 +17,7 @@ Blocked on task 1.
 - [ ] `compute`: the last qualifying review commit moves the base, and a skipped pass, budget stop, open mark, unparseable or uncommitted record does not; add `base-source`
 - [ ] `compute`: AC6's scope, `excluded` in the bounded lists, an unchanged plan entry only on a first review, and `review-owed`
 - [ ] `write-review`: the denominator follows, frontmatter `excluded`, and the body names each excluded path by its claiming spec
-- [ ] Tests for each Edge Case: no earlier review, a review older than the reopen, one path changed by two commits, `--since`, an unclaimed commit, a multi-spec commit with an unplanned path, its subject naming this spec first and naming none, and uncommitted work
+- [ ] Tests for each Edge Case: no earlier review, `review-owed` true with no record, a review older than the reopen, one path changed by two commits, `--since`, an unclaimed commit, a multi-spec commit with an unplanned path, its subject naming this spec first and naming none, and uncommitted work
 - [ ] State the two rules in `framework/commands/review.md`, `framework/reference/review.md` and `framework/reference/implement.md`, and have the command report `review-owed: false`
 - [ ] Remove the `AGENTS.md` entries AC5 and AC6 retire (the `--since` and window entries), and re-key anything `scripts/audit/run-all.sh` reports
 
@@ -40,7 +40,7 @@ Blocked on task 1.
 
 Blocked on task 1.
 
-- [ ] Start at the transition parent, keep sibling paths only from commits belonging to the spec, keep uncommitted ones, and rename the result field to `window-base`
+- [ ] Start at the transition parent, keep sibling paths only from commits belonging to the spec, keep uncommitted ones, and rename the result field to `window-base`, updating the schema tests and `runtime/tests/golden/*.jsonl`, and reading every bless diff
 - [ ] Steps 7 and 13 of `framework/commands/implement.md`, `framework/reference/implement.md`, and the doc comment in `runtime/src/primitives/derive_boundary.rs`
 - [ ] Tests: another spec's commit is absent, a never-`in-progress` spec keeps its first commit, and the no-commit guidance stays
 
@@ -71,7 +71,7 @@ Blocked on tasks 2 and 5: it reads the fields they write.
 
 - [ ] Create `measure-reopenings` and register it in the five sites
 - [ ] `dashboard` and `framework/commands/status.md`: the counts on every run
-- [ ] `runtime/tests/measure_reopenings.rs`: `measured`, `shallow-history` and `nothing-to-compare`, within the bound, over it, a second run after a gating finding, a reopening with no recorded run, and a record that does not parse
+- [ ] `runtime/tests/measure_reopenings.rs`: `measured`, `shallow-history` and `nothing-to-compare`, within the bound, over it, a second run after a gating finding, a reopening with no recorded run, a record that does not parse, and a review's two writes counting as one run
 - [ ] Run it at `d62e72f3` over the window since 2026-10-01 and record in the commit whether it reproduces 123 reopenings and 255 runs; explain any difference by method (AC20)
 - [ ] Time `dashboard` before and after, and narrow `REOPENING_WINDOW_DAYS` if the difference is noticeable; state the times in the commit
 
@@ -81,8 +81,8 @@ Blocked on tasks 2 and 5: it reads the fields they write.
 
 Independent of tasks 1–7, and may run beside them, but `runtime/src/mcp/server.rs` and `runtime/src/main.rs` conflict with tasks 6 and 7, so land it after them.
 
-- [ ] Create `runtime/src/schema/descriptions.rs` and point every `#[tool]` and clap subcommand at it, MCP text byte-identical except the claims this spec corrects
-- [ ] A test in `runtime/tests/mcp.rs`: each served tool's description equals its subcommand's `about`
+- [ ] Create `runtime/src/schema/descriptions.rs` and point every `#[tool]` and clap subcommand at it, MCP text byte-identical except the claims this spec corrects, with the first sentence as `about` and the whole text as `long_about`, and give the CLI-only primitive one
+- [ ] A test in `runtime/tests/mcp.rs`: each served tool's description equals its subcommand's `long_about`
 - [ ] Remove what restates a description from module docs a task already touches, leaving maintainers' notes
 
 - **Done when**: the test passes, fails when one description diverges, and no primitive's description appears as a second string in `runtime/src/`.
