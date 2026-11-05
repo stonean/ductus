@@ -42,9 +42,9 @@ Blocked on task 1.
 
 Blocked on task 1.
 
-- [ ] Start at the transition parent, keep sibling paths only from commits belonging to the spec, keep uncommitted ones, and rename the result field to `window-base`, updating the schema tests and `runtime/tests/golden/*.jsonl`, and reading every bless diff
-- [ ] Steps 7 and 13 of `framework/commands/implement.md`, `framework/reference/implement.md`, and the doc comment in `runtime/src/primitives/derive_boundary.rs`
-- [ ] Tests: another spec's commit is absent, a never-`in-progress` spec keeps its first commit, and the no-commit guidance stays
+- [x] Start at the transition parent, keep sibling paths only from commits belonging to the spec, keep uncommitted ones, and rename the result field to `window-base`, updating the schema tests and `runtime/tests/golden/*.jsonl`, and reading every bless diff
+- [x] Steps 7 and 13 of `framework/commands/implement.md`, `framework/reference/implement.md`, and the doc comment in `runtime/src/primitives/derive_boundary.rs`
+- [x] Tests: another spec's commit is absent, a never-`in-progress` spec keeps its first commit, and the no-commit guidance stays
 
 - **Done when**: the tests pass, each fails with its behavior removed, and `diff-cross-spec` on 066 no longer lists another spec's commits.
 
