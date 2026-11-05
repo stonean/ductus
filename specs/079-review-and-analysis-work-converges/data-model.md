@@ -61,10 +61,10 @@ Arguments: `feature`, and `base` (a ref; default `HEAD`, compared to the working
 
 | Result field | Type | Meaning |
 | --- | --- | --- |
-| `kind` | `none`, `correction` or `reopens` | `correction` leaves a `done` spec `done` |
+| `kind` | `none`, `correction` or `reopens` | `correction` leaves a `done` spec `done`; `none` means nothing but a run's records differs |
 | `reasons` | list of `criterion`, `open-question`, `unchecked-task`, `scenario`, `data-model`, `other-file` | Why it reopens; empty otherwise |
 
-A criterion compares by its text with the `AC{n}:` label removed, so labelling alone stays a correction.
+A criterion compares by its text with the `AC{n}:` label removed, so labelling or a tick alone stays a correction. `other-file` also holds a `spec.md` absent on either side and a deleted `plan.md` or `tasks.md`.
 
 ## Constants
 

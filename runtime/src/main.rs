@@ -14,18 +14,19 @@ use ductus::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
     CheckOrphanedReferencesArgs, CheckPrescriptionsArgs, CheckPromotionCoverageArgs,
     CheckReviewFreshnessArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
-    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
-    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
-    ReadReReadArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
+    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
+    FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -143,6 +144,8 @@ enum Command {
     CheckReviewGate(CheckReviewGateArgs),
     /// Report whether one feature's review record still describes its durable contracts, as the completion gate compares them.
     CheckReviewFreshness(CheckReviewFreshnessArgs),
+    /// Classify the edit under a spec's directory as a correction, which leaves a done spec done, or as one that reopens it, from the diff.
+    ClassifySpecEdit(ClassifySpecEditArgs),
     /// Append a question bullet to a spec or scenario's ## Open Questions (atomic, with back-edge).
     AppendQuestion(AppendQuestionArgs),
     /// Append a numbered task block to a feature's tasks.md (atomic rewrite).
@@ -799,6 +802,9 @@ fn main() -> ExitCode {
         }
         Command::CheckReviewFreshness(args) => {
             emit_result(primitives::check_review_freshness::run(&args, &repo))
+        }
+        Command::ClassifySpecEdit(args) => {
+            emit_result(primitives::classify_spec_edit::run(&args, &repo))
         }
         Command::CheckReviewGate(args) => {
             emit_result(primitives::check_review_gate::run(&args, &repo))

@@ -44,8 +44,21 @@ its version and date.
   `undeterminable` for a record with no `reviewed-digest` or a `review.md`
   that does not parse, or `never-run`, with whether `review.md` exists.
   Read-only; `/configure` allows it with the other tools. Spec 066, task 11.
+- **`classify-spec-edit`: whether an edit reopens a `done` spec, from the
+  diff.** A new primitive, an MCP tool and CLI subcommand, comparing `base`
+  (`HEAD` by default) with the working tree, untracked files included. It
+  answers `correction` when an edit to `spec.md`, `plan.md` or `tasks.md`
+  changes no criterion, open question or unchecked task, and `reopens` with its
+  reasons otherwise; a label or a tick alone is a correction, and a run's record
+  is no edit. `/amend` calls it before offering to reopen a spec, and stays
+  quiet on a correction. Spec 079, task 6.
 
 ### Changed
+
+- **What a fix for an oversized artifact does to a `done` spec follows that
+  rule.** `check-artifact-size`'s `on-done` for trimming `spec.md` is now
+  `if-requirement-changes`, replacing `if-claim-changes`, and trimming
+  `data-model.md` is `always`. Spec 079, task 6.
 
 - **A review or analysis run asks a person only about a gating finding's waiver
   or deferral.** A finding is fixed in the run when mechanical and otherwise

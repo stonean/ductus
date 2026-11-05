@@ -424,16 +424,19 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
     }
 }
 
-/// What `fix` on `kind` does to a `done` spec (§spec-lifecycle): pruning
-/// `tasks.md` changes no claim; splitting and promoting remove requirements
-/// from what the spec asserts; trimming `plan.md` is a plan edit, which takes
-/// no back-edge whatever it changes (§spec-lifecycle's plan rule); any other trim reopens the spec
-/// only when it changes a claim.
+/// What `fix` on `kind` does to a `done` spec, as `classify-spec-edit` would read
+/// the result: pruning `tasks.md` adds no unchecked task; splitting and promoting
+/// remove requirements from what the spec asserts; trimming `plan.md` is a plan
+/// edit, which takes no back-edge whatever it changes; trimming `data-model.md`
+/// edits a contract; and trimming `spec.md`, `tasks.md`'s last fix too, reopens
+/// the spec only when it changes a criterion or an open question.
 fn on_done(kind: ArtifactKind, fix: FixKind) -> OnDone {
     match (kind, fix) {
         (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,
-        (_, FixKind::Split | FixKind::Promote) => OnDone::Always,
-        (_, FixKind::Trim) => OnDone::IfClaimChanges,
+        (_, FixKind::Split | FixKind::Promote) | (ArtifactKind::DataModel, FixKind::Trim) => {
+            OnDone::Always
+        }
+        (_, FixKind::Trim) => OnDone::IfRequirementChanges,
     }
 }
 
@@ -441,7 +444,9 @@ fn effect_text(effect: OnDone) -> &'static str {
     match effect {
         OnDone::Never => "does not reopen this done spec",
         OnDone::Always => "reopens this done spec",
-        OnDone::IfClaimChanges => "reopens this done spec unless the trim changes no claim",
+        OnDone::IfRequirementChanges => {
+            "reopens this done spec only if the trim changes a criterion or an open question"
+        }
     }
 }
 
@@ -1020,7 +1025,7 @@ mod tests {
                 (FixKind::Trim, Some(OnDone::Never)),
                 (FixKind::Prune, Some(OnDone::Never)),
                 (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::IfClaimChanges)),
+                (FixKind::Trim, Some(OnDone::IfRequirementChanges)),
                 (FixKind::Promote, Some(OnDone::Always)),
             ]
         );
@@ -1036,16 +1041,17 @@ mod tests {
         );
         assert!(tasks.contains("(reopens this done spec)"), "{tasks}");
         assert!(
-            tasks.contains("(reopens this done spec unless the trim changes no claim)"),
+            tasks.contains(
+                "(reopens this done spec only if the trim changes a criterion or an open question)"
+            ),
             "{tasks}"
         );
     }
 
-    /// Only the plan's trim is exempt: trimming any other artifact still
-    /// reopens a `done` spec unless the trim changes no claim (spec 063,
-    /// `a-plan-trim-does-not-reopen-a-done-spec`).
+    /// A data model is a contract, so trimming one reopens a `done` spec, as
+    /// `classify-spec-edit` reads the edit (spec 079).
     #[test]
-    fn a_data_model_trim_still_reopens_a_done_spec_unless_no_claim_changes() {
+    fn a_data_model_trim_reopens_a_done_spec() {
         let result = check(&sized("done", &[("data-model.md", 500)])).unwrap();
         let effects: Vec<(FixKind, Option<OnDone>)> = result.oversized[0]
             .fixes
@@ -1056,7 +1062,7 @@ mod tests {
             effects,
             [
                 (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::IfClaimChanges)),
+                (FixKind::Trim, Some(OnDone::Always)),
             ]
         );
     }

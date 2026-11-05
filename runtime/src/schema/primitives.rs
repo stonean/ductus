@@ -4809,6 +4809,65 @@ pub struct CheckReviewFreshnessResult {
     pub freshness: RecordFreshness,
 }
 
+// -- classify-spec-edit (spec 079) -------------------------------------------
+
+/// Args for `classify-spec-edit`: whether the edit under one feature's directory
+/// reopens it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ClassifySpecEditArgs {
+    /// Feature directory name under the configured spec root.
+    #[arg(long)]
+    pub feature: String,
+    /// The ref the working tree is compared with. `HEAD` when absent.
+    #[serde(default)]
+    #[arg(long)]
+    pub base: Option<String>,
+}
+
+/// What an edit under a spec is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum SpecEditKind {
+    /// Nothing but a run's records differs from the base.
+    None,
+    /// An edit that leaves a `done` spec `done`.
+    Correction,
+    /// An edit that reopens a `done` spec, for the result's `reasons`.
+    Reopens,
+}
+
+/// Why an edit reopens a spec.
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum SpecEditReason {
+    /// A criterion's text was added, changed or removed.
+    Criterion,
+    /// An open question was added, changed or removed.
+    OpenQuestion,
+    /// An unchecked task item was added, reworded or unticked.
+    UncheckedTask,
+    /// A scenario was added, changed or removed.
+    Scenario,
+    /// The data model changed.
+    DataModel,
+    /// Any other file changed, or `spec.md`, `plan.md` or `tasks.md` is missing
+    /// where a correction would need it.
+    OtherFile,
+}
+
+/// Result for `classify-spec-edit`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ClassifySpecEditResult {
+    /// What the edit is.
+    pub kind: SpecEditKind,
+    /// Why it reopens, in one fixed order. Empty unless `kind` is `reopens`.
+    pub reasons: Vec<SpecEditReason>,
+}
+
 // -- check-review-gate -------------------------------------------------------
 
 /// Args for `check-review-gate`. Evaluates `/ductus:implement`'s pre-done
@@ -5516,11 +5575,12 @@ pub enum OnDone {
     /// Never reopens it: pruning `tasks.md`, or trimming `plan.md`.
     Never,
     /// Always reopens it: splitting the spec and promoting a scenario each
-    /// remove requirements from what it asserts.
+    /// remove requirements from what it asserts, and trimming `data-model.md`
+    /// edits a contract, as `classify-spec-edit` reads one.
     Always,
-    /// Reopens it unless the edit changes no claim: trimming any other
-    /// artifact.
-    IfClaimChanges,
+    /// Reopens it only when the edit changes a criterion or an open question, as
+    /// `classify-spec-edit` decides: trimming `spec.md`.
+    IfRequirementChanges,
 }
 
 /// One fix an oversized artifact's warning names.
@@ -6943,7 +7003,7 @@ mod tests {
                 fixes: vec![ArtifactFix {
                     fix: FixKind::Trim,
                     text: "trim it".into(),
-                    on_done: Some(OnDone::IfClaimChanges),
+                    on_done: Some(OnDone::IfRequirementChanges),
                 }],
                 warning: "w".into(),
                 message: "m".into(),
@@ -6964,7 +7024,7 @@ mod tests {
         assert_eq!(value["oversized"][0]["kind"], "data-model");
         assert_eq!(
             value["oversized"][0]["fixes"][0]["on-done"],
-            "if-claim-changes"
+            "if-requirement-changes"
         );
         assert_eq!(value["oversized"][0]["decision-key"], "artifact-size — m");
         assert_eq!(value["decisions"], "read");

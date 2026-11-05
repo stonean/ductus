@@ -77,6 +77,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "create-plan-artifacts",
     "check-review-freshness",
     "check-review-gate",
+    "classify-spec-edit",
     "append-question",
     "diff-cross-spec",
     "append-inbox",

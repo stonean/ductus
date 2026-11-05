@@ -33,6 +33,7 @@ pub mod check_rule_ids;
 pub mod check_step_references;
 pub mod check_stuck;
 pub mod check_unfolded_specs;
+pub mod classify_spec_edit;
 pub(crate) mod commit_attribution;
 pub mod compute_review_scope;
 pub mod create_feature;

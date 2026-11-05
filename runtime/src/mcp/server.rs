@@ -44,11 +44,11 @@ use crate::schema::primitives::{
     CheckReviewFreshnessArgs, CheckReviewFreshnessResult, CheckReviewGateArgs,
     CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
     CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
-    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
-    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
-    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
-    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
-    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs, ClassifySpecEditResult,
+    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
+    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
+    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -921,6 +921,21 @@ impl GovRuntimeServer {
             primitives::check_review_freshness::run(&params.0, repo.as_path())
         })
         .await
+    }
+
+    #[tool(
+        name = "classify-spec-edit",
+        description = "Classify the edit under one feature's directory, from the diff between base (a ref, HEAD by default) and the working tree, untracked files included. Returns kind and reasons: none when nothing but a run's records differs; correction, which leaves a done spec done (§spec-lifecycle), when it changes no acceptance criterion, open question or unchecked task and touches only spec.md, plan.md and tasks.md; reopens otherwise, with reasons from criterion, open-question, unchecked-task, scenario, data-model and other-file. A criterion compares by its text with its AC label removed, so assigning a label or a tick is a correction; a task edit adding no unchecked item is a correction; a deleted plan.md or tasks.md is other-file. An edit it could not read is an error, never a correction. Read-only (spec 079)."
+    )]
+    async fn classify_spec_edit(
+        &self,
+        params: Parameters<ClassifySpecEditArgs>,
+    ) -> Result<Json<ClassifySpecEditResult>, String> {
+        // Diffs a tree against the working tree — blocking pool, like the other
+        // history readers.
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::classify_spec_edit::run(&params.0, repo.as_path()))
+            .await
     }
 
     #[tool(

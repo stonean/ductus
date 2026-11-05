@@ -40,7 +40,7 @@ MUTATIONS = [
         'analyze_subjects::tests::a_done_specs_deleted_plan_still_stales_its_record',
     ),
     (
-        'M4 trimming a done spec plan reopens it unless the trim changes no claim',
+        'M4 trimming a done spec plan can reopen it',
         'src/primitives/check_artifact_size.rs',
         '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
         '        (_, FixKind::Prune) => OnDone::Never,',
@@ -51,6 +51,6 @@ MUTATIONS = [
         'src/primitives/check_artifact_size.rs',
         '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
         '        (_, FixKind::Prune) | (ArtifactKind::Plan | ArtifactKind::DataModel, FixKind::Trim) => OnDone::Never,',
-        'check_artifact_size::tests::a_data_model_trim_still_reopens_a_done_spec_unless_no_claim_changes',
+        'check_artifact_size::tests::a_data_model_trim_reopens_a_done_spec',
     ),
 ]

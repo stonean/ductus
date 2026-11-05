@@ -32,7 +32,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 - This command reads the target artifact, appends to its `## Open Questions` section or writes a new `scenarios/{slug}.md` file and appends a linked task to `tasks.md`, and — when a back-edge applies — updates the spec's frontmatter `status` field. No other artifact contents are modified. Plan files and source code are never read or written — except the files a confirmed chore fix names (see **Refine the input (scenario route)**), the one case in which this command writes outside the spec directory, and it records nothing on the spec.
 - Spec `status` is read from the YAML frontmatter at the top of the file. It is mutated by this command only on a back-edge (clarified+ → draft or done → in-progress).
 - For the impact display, this command may read sibling specs' frontmatter (only) under `specs/` to detect dependents. It does not read sibling spec bodies.
-- For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits. It does not read the diff bodies or run any other git command. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
+- For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits. It does not read the diff bodies or run any other git command; `classify-spec-edit` reads the diff. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
 - Reference: §spec-requirements, §spec-lifecycle, §scenarios, §text-first-artifacts, §bug-handling, §brownfield-inbox (Finding dispositions), §spec-phase (spec-root resolution) (constitution loaded by `/ductus:target` — do not re-read).
 
 ## Instructions
@@ -90,13 +90,14 @@ Which half runs depends on status and input:
    ```
 
 4. When the reconcile pass appended at least one task to a `done` spec, invoke `set-status` with `from: done`, `to: in-progress` as part of that same action — the prompt in step 3 named the reopen, so it is already consented (§spec-lifecycle, the scenario back-edge). Skip step 5's prompt in that case; the status already reflects the delta. On a `planned` or `in-progress` spec no status mutation occurs.
-5. If no task was appended and the status is `done`, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
+5. If no task was appended and the status is `done`, invoke `classify-spec-edit` against the feature, which decides from the diff whether the delta reopens the spec (§spec-lifecycle). On `correction` or `none`, report that the spec stays `done` because the delta changes no criterion, open question or unchecked task, and continue to **Gather the input**, changing nothing. On `reopens`, or an error, which means the classification did not run and is said so, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
 
    ```text
    Spec is `done` but the feature directory has un-tracked scenario or task edits:
      {path-1}  ({untracked|modified}, mtime {ts})
      {path-2}  ({untracked|modified}, mtime {ts})
      ...
+   They reopen it for: {reasons}     ← omitted when the classification did not run
    Revert status to `in-progress` to reflect the on-disk delta?
    ```
 
@@ -216,7 +217,8 @@ Informational; no separate confirmation prompt.
 | Spec | `draft` / `clarified` / `planned` / `in-progress` | scenario | Show reopen-not-needed impact (the spec is already accepting work), create scenario, append task, update session target. No status mutation. |
 | Spec | `done` | scenario | Show reopen impact, create scenario, append task, revert `status` to `in-progress` in the same write, update session target. |
 | Spec | any | chore (scenario-route guard) | Not spec material — fix it in this run once the user confirms, and exit. No question, scenario, task, or status mutation. |
-| Spec | `done` (on-disk delta, user confirms re-open precondition) | (precondition) | Flip `status` to `in-progress` via `set-status` (otherwise, edit the frontmatter directly). No question, no scenario, no task — the existing on-disk edits already capture the work. |
+| Spec | `done` (on-disk delta `classify-spec-edit` reads as `correction` or `none`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
+| Spec | `done` (on-disk delta that reopens, user confirms re-open precondition) | (precondition) | Flip `status` to `in-progress` via `set-status` (otherwise, edit the frontmatter directly). No question, no scenario, no task — the existing on-disk edits already capture the work. |
 | Spec | `done` (no input, delta scenario with no pending task, user confirms the offer) | (reconcile) | Append a task for the existing scenario via `append-task` and flip `status` to `in-progress` in the same action. No new scenario file, no question; the scenario body is untouched. |
 | Spec | `planned` / `in-progress` (same offer confirmed) | (reconcile) | Append the task only. No status mutation — the spec already accepts work. |
 | Spec | `draft` / `clarified` | (reconcile) | Not reached. `/ductus:plan` regenerates `tasks.md` from the plan, so the pass does not run. |

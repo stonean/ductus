@@ -59,8 +59,16 @@ pub(crate) fn read_checked(
     }
     let tasks_path = feature_dir.join("tasks.md");
     let content = read_text(&tasks_path)?;
+    Ok(ReadTasksResult {
+        tasks: parse_tasks(&content),
+        path: rel_path(&tasks_path, repo),
+    })
+}
 
-    let task_level = match detect_tasks_structure(&content) {
+/// The tasks in a `tasks.md`'s text, in file order: one grammar for the working
+/// tree and for a blob at a commit, which `classify-spec-edit` compares.
+pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
+    let task_level = match detect_tasks_structure(content) {
         TasksStructure::Flat => 2,
         TasksStructure::Phased => 3,
     };
@@ -152,11 +160,7 @@ pub(crate) fn read_checked(
     if let Some(task) = current {
         tasks.push(task);
     }
-
-    Ok(ReadTasksResult {
-        tasks,
-        path: rel_path(&tasks_path, repo),
-    })
+    tasks
 }
 
 #[cfg(test)]
