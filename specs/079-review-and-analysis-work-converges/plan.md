@@ -67,11 +67,13 @@ Four edits, net-negative together, since it holds 49,936 of 50,000 bytes:
 - §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
 
-The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description.
+The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description. §cross-spec-impact also follows AC15: a signpost on a `done` spec is a correction, and `check-review-gate`'s guidance says so.
+
+`framework/bootstrap/ductus.md`'s shell text stays this bootstrap's own contract, since it runs before the binary exists: it carries the steps before acquisition and 029's per-step fallback when a primitive call errors, and everything else runs through the tool or `{pointer-path}` (owner, 2026-11-05). `framework/bootstrap/govern.md` stays byte-identical to it.
 
 ### Prose cuts come last
 
-`research.md` holds the section-by-section estimate. Cuts follow AC21, so a reference can drop a primitive's rules, and they drop text rather than move it. `framework/reference/review.md` is cut first, as it needs the smaller share, and `framework/reference/analyze.md` is re-measured before anything is decided about a split. Every heading keeps its exact text. This takes over `020-code-review`'s task 16, which is closed by a back-link to this spec's result.
+`research.md` holds the section-by-section estimate. Cuts follow AC21, so a reference drops a primitive's rules, and they drop text rather than move it. Neither `framework/reference/review.md` nor `framework/reference/analyze.md` needed a split. Every heading keeps its exact text. `framework/reference/log.md` stays though it only restates its command's step 4, since 071's AC2 and its entry on which commands are split name `log`. This took over `020-code-review`'s task 16, closed by a pointer to the result.
 
 ### `AGENTS.md`
 
@@ -114,6 +116,9 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `scripts/mutation/scope-attribution.py` | Create | Mutation list for attribution, window and scope |
 | `scripts/mutation/reopen-measure.py` | Create | Mutation list for the measurement and the classifier |
 | `scripts/mutation/one-description.py` | Create | Mutation list for a description's summary |
+| `scripts/mutation/run.py` | Modify | Ids that select no mutation fail |
+| `scripts/mutation/fix-round-record.py` | Modify | An anchor follows `passing_notices` |
+| `runtime/tests/cross_service.rs` | Modify | What its second assertion now proves |
 | `scripts/mutation/plan-edit-takes-no-back-edge.py` | Modify | The hints' renamed test and value |
 | `runtime/tests/common/mod.rs` | Modify | One path to the release binary, following its build |
 | `runtime/tests/{parity,exec_subprocess,manifest_cli_args,concurrent_sessions}.rs` | Modify | Use it |
@@ -128,6 +133,9 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `framework/commands/help.md` | Modify | A corrected fact stays `done` |
 | `framework/commands/*.md` | Modify | The host-integration pointer |
 | `framework/migrations/{audit-record-relocate,criterion-label-backfill}.md` | Modify | A label's assignment is a correction |
+| `framework/migrations/session-file-consolidate.md` | Modify | Runs through the CLI, with no hand-walk |
+| `framework/bootstrap/{ductus,govern}.md` | Modify | The shell text is the bootstrap's own contract |
+| `framework/bootstrap/configure/{claude,auggie}.md` | Modify | No hand-walk |
 | `framework/reference/review.md` | Modify | The rules, then the cuts |
 | `framework/reference/analyze.md` | Modify | The rules, then the cuts |
 | `framework/reference/implement.md` | Modify | `diff-cross-spec`, gate check 12 |
@@ -141,7 +149,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | The largest set of corrected claims |
 | `specs/058-findings-route-at-discovery/spec.md` | Modify | Dispositions, with a back-link |
 | `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` | Modify | Fix-round claims, with a back-link |
-| `specs/{000,011,016,017,023,041,045,046,047,050,054,059,063,075,076}-*/` | Modify | Corrected claims, per `research.md` |
+| `specs/{000,010,011,014,016,017,019,020,022,023,026,029,030,032,035,041,045,046,047,048,049,050,051,054,055,057,059,060,062,063,064,067,071,072,075,076}-*/` | Modify | Corrected claims and signposts; `research.md`'s count was a floor |
 | `specs/021-runtime-boundary/spec.md` | Modify | The eligibility criterion it quotes |
 
 ## Data Model
@@ -156,7 +164,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 - **`dashboard` measuring all of history** was rejected for the cost on every `/{project}:status`; a rolling window means an old miss ages out of the count, and `--since` still reaches it.
 - **A new gate tier for contract breaks** was rejected: it falsifies the gating definitions across four specs, and an unchecked task already holds `done`.
 - **Sweeping restatements that are still true** stays out, as the spec resolves. A false statement is corrected under AC12, including one that a data model is canonical, while a true copy waits until next edited.
-- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. The cut estimates are unproven until the text is rewritten, so a split stays possible for `framework/reference/analyze.md`. `research.md`'s claim counts are a floor.
+- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
 
 ## Open Questions Resolved
 

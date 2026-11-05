@@ -48,6 +48,22 @@ Separately, 112 lines in 30 specs name the markdown-only path, by a text search 
 
 Most-read targets: `framework/commands/review.md:127`, `framework/reference/review.md:472` and `:589`, `framework/commands/implement.md:85`, `framework/constitution.md:160`, `:162`, `:295` and `:296`, `runtime/src/mcp/server.rs:638`, `specs/066-audit-records-and-the-completion-gate/data-model.md:42` and `scenarios/review-scope-union.md:37`, and `specs/058-findings-route-at-discovery/spec.md:480`. Commit line numbers rot; grep the quoted claim.
 
+## Task 10's searches
+
+Run at `8bc0b631` by `git grep -nE` over `framework/`, `docs/`, `README.md`, `scripts/`, `runtime/src`, `runtime/tests/*.rs`, `runtime/CHANGELOG.md`, `.github/` and `specs/[0-9]*`, leaving out `specs/079-*` and each spec's `tasks.md`, `review.md` and `analysis.md`: 1,294 lines. Re-running them shows what task 10 read and left; its commits say why. The `noserver` search is case-sensitive, so run it with `-i` too.
+
+```text
+window: last reopen|parent of .*in-progress|in-progress. commit|last `?in-progress|since (its|the spec.s|the feature.s) (last )?(re)?open|window (starts|opens|begins)|diff[- ]base
+scope: review-scope|modified-since|union of|the union|scope union|the scope is|scope holds|resolved scope|Affected Files.{0,40}(union|scope)|(union|scope).{0,60}Affected Files
+fixround: round_paths|mixed round|whole working tree|working tree.{0,40}round|round.{0,40}working tree|exempt round|round.s paths|round is exempt
+crossspec: diff-cross-spec|cross-spec-count|first spec-dir|first-commit|first spec dir|first commit (that )?touch
+dispositions: each write|every write|write is confirmed|is confirmed first|gate-confirm|Scope decides|scope decides|every disposition|each disposition|every finding.{0,60}(confirm|operator|ask)|confirm(s|ed|ation)?.{0,60}(waiv|defer|disposition)|(waiv|defer|disposition).{0,60}confirm
+reopen: factual correction|meaningful (body )?edit|if-claim-changes|if-requirement-changes|a correction|correction.{0,40}(reopen|back-edge)|(reopen|back-edge).{0,40}correction
+gate12: fix-round-not-re-read|fix-round-loop-open|check 12|gate check|last check|twelve checks|12 checks|eleven checks|thirteen
+canonical: (canonical|authoritative).{0,80}(data[- ]model|reference|primitive|description|shapes|behavior|behaviour|rule)|(data[- ]model|reference|description).{0,60}(is|are|as|the) (the )?(canonical|authoritative)|authoritative shape
+noserver: two paths|walk the same|neither wraps|markdown-only path|runtime is unavailable|when no runtime|no ductus runtime|without the runtime|one contract|host file tools|its own file tools|host.s file tools|not on `PATH`|on the runtime path|byte-identical reports
+```
+
 ## Prose to cut (AC18, AC21)
 
 Method: each section read and given a kept fraction; cut = measured paragraph bytes times one minus the fraction, with 75% as the planning yield. No section was trial-rewritten. Strict keeps every rule a walker needs; pointer also drops a primitive's rules, which AC21 allows.
