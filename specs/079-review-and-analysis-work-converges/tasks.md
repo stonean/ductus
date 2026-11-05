@@ -60,10 +60,10 @@ Blocked on task 1.
 
 ## 6. What reopens (AC4, AC15)
 
-- [ ] Create `classify-spec-edit` and register it in the five sites, including `framework/runtime-tools.txt`, with `scripts/gen-configure-mcp.sh` re-run
-- [ ] `/{project}:amend`'s reconcile pass calls it, and `runtime/src/primitives/check_artifact_size.rs`' `OnDone` hints follow it
-- [ ] Tests: spec-body prose is a correction, labelling is a correction, and a changed criterion, an added question, an added unchecked task, a scenario edit and a data-model edit each reopen, named by reason
-- [ ] Add its mutations to `scripts/mutation/reopen-measure.py`
+- [x] Create `classify-spec-edit` and register it in the five sites, including `framework/runtime-tools.txt`, with `scripts/gen-configure-mcp.sh` re-run
+- [x] `/{project}:amend`'s reconcile pass calls it, and `runtime/src/primitives/check_artifact_size.rs`' `OnDone` hints follow it
+- [x] Tests: spec-body prose is a correction, labelling is a correction, and a changed criterion, an added question, an added unchecked task, a scenario edit and a data-model edit each reopen, named by reason
+- [x] Add its mutations to `scripts/mutation/reopen-measure.py`
 
 - **Done when**: the tests pass, each fails with its behavior removed, and `classify-spec-edit` on a fixture `done` spec returns `correction` for a prose edit.
 
