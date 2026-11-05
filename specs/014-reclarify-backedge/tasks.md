@@ -79,3 +79,10 @@ Done when: `npx markdownlint-cli2` exits 0 across all modified files.
 - [x] Run `npx markdownlint-cli2` on every modified file
 
 Done when: the targeted host (agent for A, command for B, or both) re-opens a `done` spec from an on-disk delta without requiring synthetic classifier input and without creating an unwanted scenario file.
+
+## 9. Review and analyze the correction spec 079 made
+
+- [ ] Spec 079 task 10 corrected `scenarios/reopen-after-informal-edits.md`, since `classify-spec-edit` now spares a correction the prompt; a scenario edit stales the review
+- [ ] Run `/ductus:review`, then `/ductus:analyze`, then the completion gate
+
+- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.

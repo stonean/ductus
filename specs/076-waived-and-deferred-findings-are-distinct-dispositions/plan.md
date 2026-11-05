@@ -47,7 +47,7 @@ A deferral releases a gating finding as `framework/reference/review.md` §Deferr
 
 ### Lapse is a `process-decisions` classification
 
-`process-decisions` gains a `lapsed` result. It covers a fired key whose stored deferral names work that is complete: a task read through `read-tasks`' parser, or a spec status read from its frontmatter (AC17). The host passes lapsed refs to the writer's existing `expired-decisions` drop list and asks for a new disposition. Under `ductus exec`, with nobody to ask, the finding is recorded undispositioned, and a gating one blocks.
+`process-decisions` gains a `lapsed` result. It covers a fired key whose stored deferral names work that is complete: a task read through `read-tasks`' parser, or a spec status read from its frontmatter (AC17). The host passes lapsed refs to the writer's existing `expired-decisions` drop list, and the finding takes a new disposition. Under `ductus exec`, with nobody to ask, the finding is recorded undispositioned, and a gating one blocks.
 
 An unreadable target is matched as stored, with a notice, so a check that could not run never looks like a lapse or a hold.
 

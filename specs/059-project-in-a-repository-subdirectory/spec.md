@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [058-findings-route-at-discovery]
 next-criterion: 12
 cross-spec-impact: [018-adopter-owned-pre-commit]
@@ -49,7 +49,7 @@ The prose-claim sweep during implementation found the same defect in two command
 
 - [x] AC1: `check-stuck` finds a subdirectory project's `in-progress` commit and counts the commits touching its `tasks.md` since then, as it does at the repository root
 - [x] AC2: `check-artifacts` finds a pruned task in a subdirectory project's `tasks.md` history and raises no scenario-to-task finding for its scenario
-- [x] AC3: `diff-cross-spec` and `derive-boundary` find a subdirectory project's first spec-directory commit, and report every path project-relative, dropping paths outside the project, as `compute-review-scope` does
+- [x] AC3: `derive-boundary` finds a subdirectory project's first spec-directory commit and `diff-cross-spec` its window's start, and each reports every path project-relative, dropping paths outside the project, as `compute-review-scope` does
 - [x] AC4: Each runtime git reader this spec names converts between project paths and work-tree paths through `workdir_prefix`, keeps its existing behavior when the project is the repository root, and has a test against a project in a subdirectory of its repository
 - [x] AC5: The exec payload's gitignore guard asks git about each Affected Files path named from the work tree, so in a subdirectory project a file the project's own `.gitignore` ignores is refused, and a pattern that does not match the path's location in the work tree does not refuse it
 - [x] AC6: In a subdirectory project, `derive-dependencies` and `derive-references` enumerate only the specs tracked in the git index, never an untracked draft; report untracked specs in `untracked-skipped`; and with `--staged` rewrite the specs staged in the pending commit, as they do at the repository root
@@ -57,7 +57,7 @@ The prose-claim sweep during implementation found the same defect in two command
 - [x] AC8: `check-corpus-links --scope repository` in a subdirectory project examines the tracked markdown files under the project root, names each one project-relative, and leaves out files outside the project
 - [x] AC9: In a subdirectory project, `/ductus` sets `core.hooksPath` to the project's `.githooks` directory named from the work tree, recognizes that value as already wired on a later run, and `framework/bootstrap/hooks/ductus-pre-commit` runs its passes from the project root rather than from `git rev-parse --show-toplevel`
 - [x] AC10: `framework/templates/ci/adopter-generators.yml` carries a commented `defaults.run.working-directory` that a project in a subdirectory sets to its path, so every step runs from the project root
-- [x] AC11: Every git instruction in `framework/commands/` whose output a host parses for paths names them from the project root: `implement.md`'s markdown-only cross-spec check runs `git diff --name-only --relative`, and `amend.md`'s reconcile pass parses `git status --porcelain`, whose shape no user setting changes, and names each path from the project root by dropping whatever precedes the feature's directory
+- [x] AC11: Every git instruction in `framework/commands/` whose output a host parses for paths names them from the project root: **superseded in part:** `implement.md`'s markdown-only cross-spec check, which ran `git diff --name-only --relative`, is gone, since `diff-cross-spec` owns that filter. `amend.md`'s reconcile pass parses `git status --porcelain`, whose shape no user setting changes, and names each path from the project root by dropping whatever precedes the feature's directory
 
 ## Open Questions
 

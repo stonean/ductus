@@ -58,7 +58,7 @@ A reference whose repo matches no registry entry is still recorded (so `/{projec
 
 ## Resolution outcome
 
-Produced by the `resolve-references` primitive (and the markdown-only path) for each reference. The outcome is a closed enum decided by deterministic predicates; `status` is populated only on `ok`.
+Produced by the `resolve-references` primitive for each reference. The outcome is a closed enum decided by deterministic predicates; `status` is populated only on `ok`.
 
 | Outcome | Meaning | `status` |
 | --- | --- | --- |

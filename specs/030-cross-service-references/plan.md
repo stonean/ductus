@@ -8,11 +8,11 @@ Cross-service references are informative links from a spec to a spec in another 
 
 1. **Registry** — a `.ductus/config.toml [services]` table mapping a service alias to its canonical repo and local checkout path.
 2. **Harvest** — the runtime's `derive-references` primitive extracts cross-service URL links from a spec body into a derived `references:` frontmatter index, kept strictly distinct from `dependencies:`.
-3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome. The markdown-only path performs the same work with host file tools.
+3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome.
 4. **Commands** — `/{project}:status` surfaces the resolved status; `/{project}:analyze` reports a provably-broken reference as a finding.
 5. **Constitution** — a §spec-lifecycle carve-out so reference edits don't reopen a `done` spec, plus a `references:` row in the §text-first-artifacts frontmatter schema.
 
-Comprehensive tests are a first-class deliverable (per the planning decision): Rust unit tests per outcome, harvest tests, and markdown-only↔runtime parity with golden output.
+Comprehensive tests are a first-class deliverable (per the planning decision): Rust unit tests per outcome, harvest tests, and golden output.
 
 ## Technical Decisions
 
@@ -44,11 +44,11 @@ The outcome is decided by deterministic predicates — no prose read for intent:
 | `broken` | registered + reachable, but the target spec does not exist (renamed/deleted/mistyped) or the URL is malformed |
 | `status-unreadable` | target file exists but `status` is missing / malformed YAML / out of the allowed set / a scenario (no status) |
 
-It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`, `ALLOWED_STATUSES`) against the resolved external path. Registered in `primitives/mod.rs`, exposed in `mcp/server.rs`, types in `schema/primitives.rs`. The markdown-only fallback (D4) performs the identical classification with host file tools.
+It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`, `ALLOWED_STATUSES`) against the resolved external path. Registered in `primitives/mod.rs`, exposed in `mcp/server.rs`, types in `schema/primitives.rs`.
 
 ### D4 — Command integration and the markdown-only fallback
 
-- `/{project}:status` gains a reference-status readout per spec: each reference shows its outcome and, on `ok`, the linked lifecycle status. The command prose carries the markdown-only procedure (read `.ductus/config.toml`, resolve path, read linked frontmatter `status`, classify) as the runtime-absent path; the `resolve-references` primitive is the runtime path. Neither wraps the other.
+- `/{project}:status` gains a reference-status readout per spec: each reference shows its outcome and, on `ok`, the linked lifecycle status. The `resolve-references` classification does the work, and the readout shows it.
 - `/{project}:analyze` reports a `broken` outcome as an **Advisory** finding — surfaced on every run, but non-blocking, because references are informative and non-load-bearing. (`unregistered` / `not-checked-out` are *not* findings; they are informational unknowns — the can't-check vs. provably-broken line from the spec.)
 
 ### D5 — Constitution and frontmatter schema
@@ -66,7 +66,7 @@ A new slash command registers a service in `[services]` — chosen over hand-edi
 
 - **Flow:** prompts for each field one at a time — alias, then repo URL, then local path, then an optional `description` (enter to skip) — validating as it goes, the same one-at-a-time interaction `/{project}:clarify` uses. Inline args (`/{project}:link <alias> <repo> <path> [--description <text>]`) are accepted as an optional shortcut.
 - **Validation (per field, as entered):** alias is a valid, unique TOML key (no clobber of an existing entry); `repo` is URL-shaped; `path` is recorded as written but *warns* — does not block — when it does not currently resolve, since `not-checked-out` is a valid state.
-- **Write:** additive — adds the `[services.<alias>]` block and leaves every other `.ductus/config.toml` table intact (the additive discipline already used for `.mcp.json` and permission merges). The markdown-only path edits `.ductus/config.toml` with host file tools; a small deterministic write primitive may serve as the fast path, but `ductus` is never required.
+- **Write:** additive — adds the `[services.<alias>]` block and leaves every other `.ductus/config.toml` table intact (the additive discipline already used for `.mcp.json` and permission merges). `/{project}:link` has no primitive: the host edits `.ductus/config.toml` with its file tools.
 - **`--list`:** shows registered services and, when reachable, their resolution health. Removal stays a hand-edit.
 - **Docs:** the command's row lives in the README **Orient** section and `/{project}:help`; the `unregistered` outcome (D4) points the user at `/{project}:link`.
 
@@ -91,7 +91,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `.github/workflows/generators.yml` | Modify | Run the `references:` derivation |
 | `.githooks/pre-commit` | Modify | Run the `references:` derivation on every commit |
 | `runtime/tests/fixtures/cross-service-*` | Create | Consumer spec + fake registered checkouts per outcome |
-| `runtime/tests/parity/cross-service/*` | Create | Markdown-only↔runtime parity |
+| `runtime/tests/parity/cross-service/*` | Create | A recorded capture of the golden's records |
 | `runtime/tests/golden/cross-service-*.jsonl` | Create | Golden resolution records |
 | `README.md` | Modify | Document `[services]`, the `/{project}:link` command (Orient section), and cross-service references |
 | `AGENTS.md` | Modify | Contributor-side notes (generator, §spec-lifecycle interaction) |

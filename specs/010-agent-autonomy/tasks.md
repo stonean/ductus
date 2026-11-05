@@ -205,3 +205,10 @@ Run all checks and walk through 010's acceptance criteria.
 - [x] Implement the behavior described in `scenarios/implement-offers-the-next-step.md`
 
 - **Done when**: A default-mode `/{project}:implement` run completing a task names the next unchecked task (number and heading) and prompts to continue, after the per-task completion summary; yes continues the walk in the same run, no exits cleanly as today, and free-text redirects; the prompt is suppressed when no unchecked task remains, so it never renders as "no next step"; `--auto` behavior is unchanged and the `in-progress → done` gate keeps its own separate confirmation; the offer never advances spec status and never writes; `framework/commands/implement.md` documents it for the markdown-only path with the exec-path round trip named, and the generated command copies are re-rendered; the scenario's open question about offering more than one next step is resolved before the task closes; `npx markdownlint-cli2` and `scripts/lint-procedure-parseability.sh` clean.
+
+## 18. Review and analyze the correction spec 079 made
+
+- [ ] Spec 079 task 10 corrected `scenarios/implement-offers-the-next-step.md`, which cited the two-paths guarantee; a scenario edit stales the review
+- [ ] Run `/ductus:review`, then `/ductus:analyze`, then the completion gate
+
+- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.

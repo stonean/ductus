@@ -18,7 +18,7 @@ The intent of that line is sound — protect user-added entries from being clobb
 - Exact-match equality is string-equal on the rendered permission pattern. No semantic normalization: `Bash(git status)` and `Bash(git status *)` are distinct, and both are preserved if both are present.
 - The dedup pass is mandatory on every `/configure` invocation, not a separate flag — the file's invariant is "no duplicate entries in `permissions.allow` / `permissions.deny`."
 - `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` update their inline instruction: the "do NOT … deduplicate, reorder, or rewrite" prohibition becomes "do NOT reorder or rewrite non-duplicate entries; the primitive deduplicates exact-match entries automatically." The generated `.claude/commands/ductus/configure.md` follows from the source rewrite via the normal command generator; no separate edit required.
-- The markdown-only path (runtime absent) is the existing agent-driven splice: read the JSON, ensure canonical entries are present, then perform the dedup pass as a final step before writing.
+- Without the MCP server the host runs `ductus merge-permissions`. Auggie's `toolPermissions` shape has no primitive, so there the host splices: read the JSON, ensure canonical entries are present, then perform the dedup pass as a final step before writing.
 - `.gitignore` is out of scope for this scenario. Its framework-managed region is already handled deterministically by `merge-managed-block`. If the broader dedup contract should extend to `.gitignore`'s managed block (or across the marker boundary), that is a separate scenario on spec 022 against the `merge-managed-block` primitive — not a `/configure` behavior.
 
 ## Edge Cases

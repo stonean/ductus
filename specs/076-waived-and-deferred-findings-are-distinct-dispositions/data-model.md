@@ -62,7 +62,7 @@ decisions:
 
 ## Release and lapse — derived on every run, never stored
 
-Release and completion are stated once, for adopters and this runtime alike, in [§Deferrals](../../framework/reference/review.md#deferrals) of the review reference (installed as `.ductus/reference/review.md`): when a deferral releases a gating finding, when its named work is complete — which decides a lapse — and what a target that cannot be read does. `decisions::releases` and `decisions::work_state` implement them.
+Release and completion are the behavior of `write-review`, `write-analysis`, `process-decisions` and `check-review-gate`, whose compiled descriptions are canonical (spec 079). [§Deferrals](../../framework/reference/review.md#deferrals) of the review reference (installed as `.ductus/reference/review.md`) describes them for a host: when a deferral releases a gating finding, when its named work is complete — which decides a lapse — and what a target that cannot be read does. `decisions::releases` and `decisions::work_state` implement them.
 
 ## `Disposition` — writer input
 
@@ -104,7 +104,7 @@ A finding with a releasing deferral renders under a **Deferred findings** sectio
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `lapsed` | list of decision refs | New. Stored deferrals whose key fired and whose named work is complete. The host passes them to the writer in `expired-decisions`, which drops them, and asks for a new disposition. |
+| `lapsed` | list of decision refs | New. Stored deferrals whose key fired and whose named work is complete. The host passes them to the writer in `expired-decisions`, which drops them, and the finding takes a new disposition. |
 
 New notices: ``deferral lapsed: {key} — `{target}`[ task {n}] is complete and the finding still fires``, and ``deferral target unreadable: {key} — `{target}` ``.
 

@@ -151,3 +151,10 @@ Handoff, 2026-11-03. 076's review is decided, and its record is written once tas
 - [x] An independent re-read of that change, the sweep's second, found no MUST and two SHOULDs, so the budget stopped the loop; the owner chose to apply its prescribed edits — the unreadable sentence, the `Pending` doc, a test pin for an unreadable status, and four wordings — checked by diff, with no third re-read
 
 - **Done when**: a search of the live artifacts for a deferral to another spec's work that releases, leaves the counts or does not hold `done` finds only §Deferrals, pointers to it, necessary-condition clauses and instructions; `npx markdownlint-cli2` and the task 2 cargo commands pass.
+
+## 15. Review and analyze the corrections spec 079 made
+
+- [ ] Spec 079 task 10 corrected `data-model.md`, which claimed canonicality for a primitive's behavior, and `plan.md`; a data-model edit stales the review
+- [ ] Run `/ductus:review`, then `/ductus:analyze`, then the completion gate
+
+- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.

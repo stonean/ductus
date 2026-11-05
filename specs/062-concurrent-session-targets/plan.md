@@ -12,8 +12,7 @@ Four surfaces route through it: `write-session`, two new primitives
 the `ductus exec` context seed. The shared default, `.ductus/session.toml`,
 keeps its path, keys and resolution chain. Per-process targets are added
 beside it as one file per identity under `.ductus/sessions/`. The command
-files stop reading the session file by hand and invoke `resolve-session`. The
-markdown-only path keeps reading the default and says why. The constitution's
+files stop reading the session file by hand and invoke `resolve-session`. The constitution's
 §concurrent-features is rewritten, and 010 gets its signpost.
 
 ## Technical Decisions
@@ -143,8 +142,8 @@ a throttling hint). A failed `try_lock` changes nothing, which is the
 idempotency basis. The MCP handlers of the three session tools run
 on the blocking pool, so a wait never holds an async worker. Writes inside the
 lock still use the existing tempfile + rename helper (`write_atomic`,
-`runtime/src/primitives/mod.rs:988`), so a reader outside the lock, such as a
-markdown-only host reading the default, never sees a torn file.
+`runtime/src/primitives/mod.rs:988`), so a reader outside the lock never sees a
+torn file.
 
 On the `.ductus/` layout a write or retarget takes the lock on every call,
 the unidentified path included. An exception for a repo nobody had used
@@ -259,8 +258,7 @@ auditable place.
   `resolve-session` delivers them. The payload gains `session-identity`,
   `session-source` and `session-notices`, and `rendered-markdown` renders the
   process label on the target line and each notice beneath it (AC8).
-  `framework/commands/status.md` describes the new line and the markdown-only
-  derivation, which is the default only. A delivering read was tried first
+  `framework/commands/status.md` describes the new line. A delivering read was tried first
   and rejected (task 12): `dashboard` is also called for data —
   `scripts/audit/lib.sh` enumerates the corpus with it — and every such call
   pinned the caller's session and would consume its notices unseen.
@@ -289,9 +287,7 @@ never show up as untracked, whatever state the root `.gitignore` is in.
 ### Command files
 
 Every command that resolves its target by hand switches to "Invoke
-`resolve-session`; display any notices it returns; on the markdown-only path
-read the shared default `.ductus/session.toml`
-([§concurrent-features](../../framework/constitution.md#concurrent-features))".
+`resolve-session`; display any notices it returns".
 That means `amend`, `analyze`, `clarify`, `groom`, `implement`, `plan`,
 `prune`, `review`, `specify` (Context) and `target` (the no-argument display).
 The `target --clear` step keeps `write-session` clear mode (AC20). `fold` and
@@ -315,8 +311,7 @@ cover:
   one-branch-per-worktree limit was dropped by `050-constitution`'s cut to
   one read;
 - the two open bounds: unidentified processes collide, and mixed agent CLIs
-  share one `cli-config-dir` (AC25);
-- the markdown-only reduction (AC24).
+  share one `cli-config-dir` (AC25).
 
 The removal paragraphs extend "the session" to "every session in the working
 tree", and the teammate bound stays. 010's §Parallel milestones verdict and

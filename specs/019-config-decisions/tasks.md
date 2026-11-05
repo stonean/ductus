@@ -49,3 +49,10 @@ Blocked on task 1: the store tests run against the migrated schema.
 - [x] 019's data-model and framework/bootstrap/ductus.md §Project Configuration state the behavior, including for a host reading a ductus-owned section by hand on the markdown-only path
 
 - **Done when**: A mistyped key in a ductus-owned config section is reported by name — on the run that reads it wherever that run has a channel, and by `/status` always — and 019 is re-reviewed back to done.
+
+## 2. Review and analyze the correction spec 079 made
+
+- [ ] Spec 079 task 10 corrected `data-model.md`, which described a host reading a section by hand; a data-model edit stales the review
+- [ ] Run `/ductus:review`, then `/ductus:analyze`, then the completion gate
+
+- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.

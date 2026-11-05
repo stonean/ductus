@@ -18,7 +18,7 @@ The result was a cross-repo gap: a referenced service that renamed its own spec 
   - **Checkout reachable** — for a referenced link whose repo matches a registered `[services]` entry and whose checkout is reachable, it resolves the referenced service's spec-root name the same way the runtime checkout side already does — read the referenced checkout's own `.ductus/config.toml [paths] specs-root` (default `specs` when absent) — and matches `/<that-root>/NNN-slug/` in the URL exactly.
   - **Checkout unreachable** — for a registered service that is not checked out, or an unregistered repo, the referenced root cannot be read, so it falls back to a bounded permissive match of a single well-formed segment, `/<[A-Za-z0-9_-]+>/NNN-slug/spec.md`, and still harvests the reference (with its service alias when registered, null when unregistered). A reference never silently drops from the index; the single-segment bound immediately before `/NNN-slug/spec.md` keeps false positives implausible.
 - A referenced service on the default `specs/` root harvests exactly as today: the common single-root case sees no behavior change.
-- The markdown-only fallback path and the runtime path resolve the referenced root identically (both from the referenced checkout's `.ductus/config.toml`), so the harvested `references:` index is byte-identical between the two paths — preserving 030's parity invariant.
+- `derive-references` resolves the referenced root from the referenced checkout's `.ductus/config.toml`, so the harvested `references:` index does not depend on who runs it.
 - The interpolated root reuses 040's `[A-Za-z0-9_-]` well-formedness guarantee, so it is safe to splice into the matcher's regex without escaping.
 
 ## Edge Cases

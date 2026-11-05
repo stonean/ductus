@@ -76,3 +76,10 @@ Tasks derived from the [plan](plan.md). Complete in order. Tests are first-class
 - [x] Keep the markdown-only fallback and runtime harvest paths producing a byte-identical `references:` index (030 parity invariant).
 
 - **Done when**: shell tests cover a referenced service with a renamed root (harvested), a referenced service on the default `specs/` root (unchanged), and a registered-but-not-checked-out reference (per the resolved open question); `gen-cross-service-refs.sh --dry-run` stays clean on this repo and the cross-service parity goldens still match.
+
+## 14. Review and analyze the corrections spec 079 made
+
+- [ ] Spec 079 task 10 corrected `data-model.md`, scenario `referenced-service-spec-root`, AC10 and the plan, which stated a markdown-only path; a scenario or data-model edit stales the review
+- [ ] Run `/ductus:review`, then `/ductus:analyze`, then the completion gate
+
+- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.

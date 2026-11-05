@@ -28,7 +28,7 @@ The obvious owner is the migration registry — `framework/bootstrap/ductus.md` 
 - An entry present in both the canonical set and the retired list is **rejected** (`ConflictingRevoke`), not resolved by pass order: the two passes would fight, the merge would never reach a fixed point, and the `unchanged` short-circuit that preserves mtime could never fire.
 - `/ductus:audit` Family 32 checks the same disjointness at maintainer time, so the editing slip fails in this repo rather than in every adopter's `/ductus:configure` run. Retiring an entry means deleting it from the canonical set in the same edit.
 - The command reports what it retired, naming each removed entry, so the adopter sees the change to their permission file rather than finding it by diff.
-- The markdown-only path performs the same splice by exact string match, before its own presence and dedup passes — one contract, two paths.
+- Auggie's `toolPermissions` shape has no primitive, so `configure/auggie.md` performs the same splice host-side, by exact string match, before its presence and dedup passes.
 
 ## Edge Cases
 

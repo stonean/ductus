@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review, 058-findings-route-at-discovery]
 cross-spec-impact:
   - 020-code-review
@@ -12,6 +12,8 @@ next-criterion: 19
 # 076 — Waived and deferred findings are distinct dispositions
 
 A **waived** finding is one the pipeline will not address, recorded with the reason it is accepted as it stands. A **deferred** finding is one that will be addressed later, recorded with the work that will address it: pipeline work such as a task, an external work-item ID (a Jira issue key, a GitLab work item), or both. The two terms name different states, so a record never leaves a reader to guess which one it holds.
+
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed who decides in a review or analysis run: only a gating finding's waiver or deferral reaches the operator, and `decided-by: rule` marks a disposition the rule decided. A primitive's behavior is canonical in its compiled description, so this spec's data model holds shapes.
 
 ## Motivation
 

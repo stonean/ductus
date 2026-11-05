@@ -175,3 +175,10 @@ Moved from task 15 so the release carries task 16's runtime fix; number 15 is un
 - [x] Append the outcome to this task's first item
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 22. Analyze the corrections spec 079 made
+
+- [ ] Spec 079 task 10 corrected AC3 and AC11, superseded when `diff-cross-spec` moved its start and the markdown-only check went; `compute-review-scope` reports `review-owed: false`, since no code, scenario or data model changed
+- [ ] Run `/ductus:analyze`, then the completion gate
+
+- **Done when**: an analysis is recorded on this spec, and `/ductus:implement` has returned it to `done`.

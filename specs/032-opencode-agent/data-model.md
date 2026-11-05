@@ -129,7 +129,7 @@ Q5, option A — *not* a `merge-permissions` extension):
 - If a root `opencode.jsonc` already exists, merge into that file rather than
   creating a second `opencode.json`; default to `opencode.json` when neither
   exists.
-- Invalid JSON → do not touch the file (skip wiring, warn, degrade to the
-  markdown path) — a hand-maintained config is never clobbered.
+- Invalid JSON → do not touch the file (skip wiring, warn; the run continues
+  through the CLI) — a hand-maintained config is never clobbered.
 - The merge is host-side (markdown-only path faithful); a generic JSON-region
   merge runtime primitive is a deferred 022 follow-up.

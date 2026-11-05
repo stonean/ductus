@@ -231,3 +231,10 @@ The fix and its test landed in `9a256750`. The first item is checked once a `run
 - [x] The poll also stops at `LOCK_MAX_ATTEMPTS` (1,000), which `BE-RETRY-001`'s Statement asks for beside the deadline (found by the independent re-read of `47e68233`); `the_lock_loop_stops_at_its_attempt_bound` tests it and the plan states it. `python3 scripts/mutation/run.py scripts/mutation/session-lock-backoff.py` ran whole at `77fff147` on 2026-10-28: 8 of 8 killed (M8 is the bound's)
 
 - **Done when**: the poll backs off exponentially with full jitter up to its cap, stops at SESSION_LOCK_TIMEOUT, retries only a held lock, and its mutations are killed
+
+## 29. Analyze the corrections spec 079 made
+
+- [ ] Spec 079 task 10 annotated AC24 and corrected `spec.md` and `plan.md`, since no markdown-only path remains; `compute-review-scope` reports `review-owed: false`, since no code, scenario or data model changed
+- [ ] Run `/ductus:analyze`, then the completion gate
+
+- **Done when**: an analysis is recorded on this spec, and `/ductus:implement` has returned it to `done`.
