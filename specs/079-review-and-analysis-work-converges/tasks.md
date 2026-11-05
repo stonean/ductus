@@ -6,9 +6,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 The derived write boundary held only `AGENTS.md` and spec directories at `b63e992c`, so `/ductus:implement` may refuse this task's first write under `runtime/`. If it does, seed `write-boundary` in the session, as `framework/reference/plan.md`'s Validation gate describes.
 
-- [ ] Create `runtime/src/primitives/commit_attribution.rs`: `claims` per commit, with the first-named spec, resolving through `parse_feature_dir` and `ProjectRepository`
-- [ ] Fixture histories in `runtime/tests/commit_attribution.rs`: a directory touch, a subject scope, both, a number no spec has, a merge, a root commit, a branch-scoped spec, and a project in a subdirectory (`git_fixture::subdirectory_project`)
-- [ ] Add the helper's mutations to `scripts/mutation/scope-attribution.py`
+- [x] Create `runtime/src/primitives/commit_attribution.rs`: `claims` per commit, with the first-named spec, resolving through `parse_feature_dir` and `ProjectRepository`
+- [x] Fixture histories in `runtime/src/primitives/commit_attribution.rs`'s unit tests: a directory touch, a subject scope, both, a number no spec has, a merge, a root commit, a branch-scoped spec, and a project in a subdirectory (`git_fixture::subdirectory_project`)
+- [x] Add the helper's mutations to `scripts/mutation/scope-attribution.py`
 
 - **Done when**: each fixture passes, and each mutation is killed.
 

@@ -33,6 +33,11 @@ pub mod check_rule_ids;
 pub mod check_step_references;
 pub mod check_stuck;
 pub mod check_unfolded_specs;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "spec 079's task 2 is the first caller")
+)]
+pub(crate) mod commit_attribution;
 pub mod compute_review_scope;
 pub mod create_feature;
 pub mod create_plan_artifacts;

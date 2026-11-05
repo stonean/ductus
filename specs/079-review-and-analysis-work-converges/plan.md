@@ -12,7 +12,7 @@ A shared commit-attribution helper gives the review window, scope, fix rounds an
 
 ### One commit-attribution helper
 
-`runtime/src/primitives/commit_attribution.rs` answers `claims(commit)`: the specs whose directory the commit's diff against its first parent touches, plus those its subject's parenthesised scope names, with the first named kept. Directories and scope tokens resolve through `parse_feature_dir`, so a branch-scoped spec counts and a number no spec has claims nothing. A merge commit claims nothing, since its branch's commits are in the walk. History is read through `ProjectRepository`, converting each path with `to_git` and `to_project` (`runtime/src/primitives/mod.rs`). Both tests are needed: 35 commits since 2026-10-01 name a spec without touching a spec directory, and 30 do the reverse. An adopter whose subjects name no spec loses only the first-named step, and AC6 then gives the path to every claimant.
+`runtime/src/primitives/commit_attribution.rs` answers `claims(commit)`: the specs whose directory the commit's diff against its first parent touches, plus those its subject's leading parenthesised scope names, with the first named kept, and the paths the commit contributes. No colon is required after the scope, since `impl(077) task 8 …` is a shape this history holds. Directories and scope tokens resolve through `parse_feature_dir`, so a branch-scoped spec counts and a number no spec has claims nothing. A merge commit claims nothing, since its branch's commits are in the walk, and contributes only the paths differing from every parent, so a clean merge adds none and the branch's work does not return as work no spec claims. History is read through `ProjectRepository`, converting each path with `to_git` and `to_project` (`runtime/src/primitives/mod.rs`). Both tests are needed: 35 commits since 2026-10-01 name a spec without touching a spec directory, and 30 do the reverse. An adopter whose subjects name no spec loses only the first-named step, and AC6 then gives the path to every claimant. Its fixture histories are unit tests, since `git_fixture` is `#[cfg(test)]` and `scripts/mutation/run.py` runs `cargo test --lib`.
 
 ### The window
 
@@ -81,7 +81,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/commit_attribution.rs` | Create | Whose change a commit is |
+| `runtime/src/primitives/commit_attribution.rs` | Create | Whose change a commit is, with its fixture histories |
 | `runtime/src/primitives/compute_review_scope.rs` | Modify | Window, scope, `excluded`, `review-owed` |
 | `runtime/src/primitives/fix_rounds.rs` | Modify | A round drops another spec's commits |
 | `runtime/src/primitives/brief_re_read.rs` | Modify | Exempt paths leave a mixed round's brief |
@@ -101,7 +101,6 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/mcp/server.rs` | Modify | Handlers and description constants |
 | `runtime/src/interpreter/mod.rs` | Modify | `dispatch_primitive` arms |
 | `runtime/src/main.rs` | Modify | Subcommands and `about` constants |
-| `runtime/tests/commit_attribution.rs` | Create | Fixture histories for the helper, window and scope |
 | `runtime/tests/measure_reopenings.rs` | Create | Each measurement state |
 | `runtime/tests/fix_rounds.rs` | Modify | Another spec's commit between rounds |
 | `runtime/tests/mcp.rs` | Modify | A description equals its subcommand's `about` |
