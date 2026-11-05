@@ -148,7 +148,9 @@ its version and date.
   A new `review-owed` is false when a review record names a run and the scope
   holds nothing outside the spec's directory and no scenario or data-model edit,
   and `/review` then reports that and stops, since such a reopening owes an
-  analysis and no review.
+  analysis and no review. It is true while the record holds `done` until a review
+  runs, and a commit moving a run's record out of `spec.md` does not move the
+  window's start.
 - **The error envelope's home is `specs/errors.md`.** `api-backend.md`'s
   `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` read the project's error
   envelope from `specs/errors.md`, where the shipped `errors.md` template

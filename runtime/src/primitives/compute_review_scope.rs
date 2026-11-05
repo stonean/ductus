@@ -29,6 +29,7 @@ use git2::{DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
 
 use crate::primitives::analyze_subjects::is_review_contract;
+use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::find_in_progress_commit;
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
@@ -207,10 +208,11 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     }
 
     let own_prefix = format!("{}/{}/", layout.specs_root, args.feature);
-    let has_run = load_review_record(&feature_dir)
+    let record = load_review_record(&feature_dir);
+    let run = record
         .as_present()
-        .is_some_and(|record| record.last_run.is_some());
-    let review_owed = !has_run
+        .filter(|record| record.last_run.is_some());
+    let review_owed = run.is_none_or(holds_done_until_reviewed)
         || scope.iter().any(|path| {
             path.strip_prefix(&own_prefix)
                 .is_none_or(is_review_contract)
@@ -273,7 +275,7 @@ fn resolve_base(
             )
         }
         None => match find_in_progress_commit(repository, &spec_rel)? {
-            Some(sha) => match last_review_commit(project, &record_rel, &sha)? {
+            Some(sha) => match last_review_commit(project, &record_rel, &spec_rel, &sha)? {
                 Some(review) => (review, BaseSource::LastReview),
                 None => (transition_parent(repository, &sha)?, BaseSource::Reopen),
             },
@@ -353,6 +355,29 @@ fn recorded_run(
     }))
 }
 
+/// The `last-run` a pre-057 `spec.md` states in its `review:` frontmatter block,
+/// which `relocate-audit-records` moves into `review.md`.
+fn run_in_spec_block(
+    repository: &Repository,
+    tree: &Tree<'_>,
+    spec_git_path: &str,
+) -> Result<Option<String>> {
+    let Some(text) = blob_text(repository, tree, spec_git_path)? else {
+        return Ok(None);
+    };
+    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(spec_git_path)) else {
+        return Ok(None);
+    };
+    let Ok(value) = serde_norway::from_str::<serde_norway::Value>(frontmatter) else {
+        return Ok(None);
+    };
+    Ok(value
+        .get("review")
+        .and_then(|block| block.get("last-run"))
+        .and_then(serde_norway::Value::as_str)
+        .map(str::to_string))
+}
+
 /// The newest commit since the transition `transition_sha` at which a review
 /// run finished, one that did not stop early. The transition itself is left
 /// out, since work committed with a reopen belongs to the window it opens.
@@ -360,10 +385,13 @@ fn recorded_run(
 /// A commit finishes a run when its record names a run its first parent's does
 /// not, or when its parent's write of the same run still had the loop open: a
 /// run's two writes share one `last-run`, and the fixes committed between them
-/// are the ones its fix rounds re-read.
+/// are the ones its fix rounds re-read. A commit that only moves a run's record
+/// out of `spec.md`'s frontmatter finishes nothing, or an adopter's upgrade would
+/// leave what was committed before it unread.
 fn last_review_commit(
     project: &ProjectRepository,
     record_rel: &str,
+    spec_git_path: &str,
     transition_sha: &str,
 ) -> Result<Option<String>> {
     let repository = &project.repository;
@@ -380,13 +408,20 @@ fn last_review_commit(
         if run.stopped_early {
             continue;
         }
-        let previous = match commit.parent(0) {
-            Ok(parent) => recorded_run(repository, &parent.tree()?, &git_path)?,
-            Err(_) => None,
+        let (previous, relocated) = match commit.parent(0) {
+            Ok(parent) => {
+                let tree = parent.tree()?;
+                (
+                    recorded_run(repository, &tree, &git_path)?,
+                    run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
+                        == Some(&run.last_run),
+                )
+            }
+            Err(_) => (None, false),
         };
         let finishes_a_run =
             previous.is_none_or(|prior| prior.last_run != run.last_run || prior.loop_open);
-        if finishes_a_run {
+        if finishes_a_run && !relocated {
             return Ok(Some(commit.id().to_string()));
         }
     }
@@ -1377,7 +1412,7 @@ mod tests {
     #[test]
     fn the_result_names_where_the_window_starts_and_whether_a_review_is_owed() {
         let (tmp, repo, _) = two_specs(&[], &[]);
-        commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         let result = run(&args("001-x", None), tmp.path()).unwrap();
         let json = serde_json::to_value(&result).unwrap();
         assert_eq!(json["base-source"], "last-review");
@@ -1495,6 +1530,53 @@ mod tests {
 
     /// A later commit carrying the same finished run, such as a re-commit of its
     /// record, finishes nothing, so the window still starts at the run's commit.
+    /// An upgrade moving a pre-057 record out of `spec.md` is no review, so what
+    /// was committed between that run and the upgrade stays in the window.
+    #[test]
+    fn a_record_relocated_out_of_spec_md_does_not_move_the_start() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        let run_at = "2026-10-01T00:00:00Z";
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &format!(
+                "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: {run_at}\n---\n\n# X\n"
+            ),
+        );
+        commit_all(&repo, "review(001)");
+        change(&tmp, &repo, "src/after.rs", "feat(001): after that run");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_record(&tmp, &repo, "", run_at);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/after.rs"), "{:?}", scope.scope);
+    }
+
+    /// A run recorded in the shape a relocation leaves is still a run once its
+    /// `last-run` is not the one `spec.md` stated.
+    #[test]
+    fn a_new_run_after_a_relocation_moves_the_start() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-10-01T00:00:00Z\n---\n\n# X\n",
+        );
+        commit_all(&repo, "review(001)");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        let review = commit_record(&tmp, &repo, "", "2026-10-02T00:00:00Z");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+    }
+
     #[test]
     fn a_later_commit_of_a_finished_run_does_not_move_the_start_again() {
         let (tmp, repo, _) = two_specs(&[], &[]);
@@ -1708,7 +1790,9 @@ mod tests {
         );
         write(
             &tmp.path().join("specs/001-x/review.md"),
-            "---\nspec: 001-x\nlast-run: null\nmust-violations: 0\nblocking: false\n---\n",
+            &format!(
+                "---\nspec: 001-x\nlast-run: null\nmust-violations: 0\nblocking: false\n{DISPOSITIONS}---\n"
+            ),
         );
         commit_all(&repo, "chore: seed");
 
@@ -1747,14 +1831,22 @@ mod tests {
         assert_eq!(scope.excluded["src/planned.rs"], ["002-y"]);
     }
 
-    /// A spec reopened by `edit`, with a review record from before the reopen.
+    const DISPOSITIONS: &str =
+        "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n";
+
+    /// A spec reopened by `edit`, with a clean review record from before the reopen.
     fn reopened_with_a_record(edit: &str) -> ReviewScope {
+        reopened_with(DISPOSITIONS, edit)
+    }
+
+    /// A spec reopened by `edit`, with a review record carrying `fields`.
+    fn reopened_with(fields: &str, edit: &str) -> ReviewScope {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
         write(
             &tmp.path().join("specs/001-x/review.md"),
-            &record("", "2026-10-01T00:00:00Z"),
+            &record(fields, "2026-10-01T00:00:00Z"),
         );
         commit_all(&repo, "chore: seed");
         write(
@@ -1770,6 +1862,24 @@ mod tests {
     fn a_reopening_that_changed_only_text_owes_no_review() {
         for edit in ["specs/001-x/plan.md", "specs/001-x/tasks.md"] {
             assert!(!reopened_with_a_record(edit).review_owed, "{edit}");
+        }
+    }
+
+    /// The gate holds these until a review runs, so calling none owed would leave
+    /// `/review` stopping on what the gate asks for.
+    #[test]
+    fn a_record_the_gate_holds_owes_a_review_whatever_the_window_holds() {
+        let held = [
+            String::new(),
+            format!("{DISPOSITIONS}fix-rounds-open: true\n"),
+            format!("{DISPOSITIONS}not-re-read: 1\n"),
+            format!("{DISPOSITIONS}should-violations: 1\n"),
+        ];
+        for fields in &held {
+            assert!(
+                reopened_with(fields, "specs/001-x/plan.md").review_owed,
+                "{fields}"
+            );
         }
     }
 

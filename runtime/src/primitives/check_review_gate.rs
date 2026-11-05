@@ -457,6 +457,33 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
 /// whatever its other counts say, and a waiver whose reason is blank waives
 /// nothing. A record with neither field does not say whether its fixes
 /// were re-read: it passes here, and [`passing_notices`] says so.
+/// Whether this record holds `done` until `/review` runs again, whatever the
+/// window holds: a gating count, no `dispositions:` map, the open mark, or a fix
+/// round with neither a re-read nor a waiver. `review-owed` reads it, so it never
+/// says no review is owed while this gate asks for one (spec 079).
+pub(crate) fn holds_done_until_reviewed(review: &crate::schema::primitives::ReviewBlock) -> bool {
+    review.blocking
+        || review
+            .must_violations
+            .saturating_add(review.should_violations)
+            > 0
+        || review.dispositions.is_none()
+        || review.fix_rounds_open == Some(true)
+        || review
+            .not_re_read
+            .is_some_and(|rounds| rounds > waived_rounds(review))
+}
+
+/// The fix rounds a record waives with a reason.
+fn waived_rounds(review: &crate::schema::primitives::ReviewBlock) -> u32 {
+    let waived = review
+        .round_waivers
+        .iter()
+        .filter(|waiver| !waiver.reason.trim().is_empty())
+        .count();
+    u32::try_from(waived).unwrap_or(u32::MAX)
+}
+
 fn fix_round_block(
     review: &crate::schema::primitives::ReviewBlock,
     rel_dir: &str,
@@ -478,12 +505,7 @@ fn fix_round_block(
         });
     }
     let not_re_read = review.not_re_read?;
-    let waived = review
-        .round_waivers
-        .iter()
-        .filter(|waiver| !waiver.reason.trim().is_empty())
-        .count();
-    let waived = u32::try_from(waived).unwrap_or(u32::MAX);
+    let waived = waived_rounds(review);
     if not_re_read <= waived {
         return None;
     }
@@ -2925,6 +2947,103 @@ mod tests {
             result.message
         );
         assert!(result.guidance.unwrap().contains("Re-run /ductus:review"));
+    }
+
+    /// Each state only a review run clears holds `done` at the gate and reads as
+    /// held to `review-owed`, and a record that passes reads as neither, so the
+    /// two cannot disagree (spec 079, AC4).
+    #[test]
+    fn what_the_gate_holds_until_a_review_runs_is_what_review_owed_reads() {
+        for (fields, blocked_by) in [
+            ("fix-rounds-open: true\n", ReviewGateBlock::FixRoundLoopOpen),
+            ("not-re-read: 1\n", ReviewGateBlock::FixRoundNotReRead),
+        ] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            with_review_fields(tmp.path(), fields);
+            let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+            assert_eq!(result.blocked_by, Some(blocked_by), "{fields}");
+            let review = crate::primitives::load_review_record(&tmp.path().join("specs/007-gate"));
+            assert!(
+                holds_done_until_reviewed(review.as_present().unwrap()),
+                "{fields}"
+            );
+        }
+
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{:?}", result.message);
+        let review = crate::primitives::load_review_record(&tmp.path().join("specs/007-gate"));
+        assert!(!holds_done_until_reviewed(review.as_present().unwrap()));
+    }
+
+    /// Each term alone holds the record, so none can be dropped unnoticed.
+    #[test]
+    fn each_state_only_a_review_clears_holds_the_record_alone() {
+        use crate::schema::primitives::{Dispositions, ReviewBlock, RoundWaiver};
+        let clean = ReviewBlock {
+            dispositions: Some(Dispositions::default()),
+            ..ReviewBlock::default()
+        };
+        assert!(!holds_done_until_reviewed(&clean));
+        for (name, held) in [
+            (
+                "blocking",
+                ReviewBlock {
+                    blocking: true,
+                    ..clean.clone()
+                },
+            ),
+            (
+                "a MUST",
+                ReviewBlock {
+                    must_violations: 1,
+                    ..clean.clone()
+                },
+            ),
+            (
+                "a SHOULD",
+                ReviewBlock {
+                    should_violations: 1,
+                    ..clean.clone()
+                },
+            ),
+            (
+                "no map",
+                ReviewBlock {
+                    dispositions: None,
+                    ..clean.clone()
+                },
+            ),
+            (
+                "the open mark",
+                ReviewBlock {
+                    fix_rounds_open: Some(true),
+                    ..clean.clone()
+                },
+            ),
+            (
+                "an unwaived round",
+                ReviewBlock {
+                    not_re_read: Some(1),
+                    ..clean.clone()
+                },
+            ),
+        ] {
+            assert!(holds_done_until_reviewed(&held), "{name}");
+        }
+        let waived = ReviewBlock {
+            not_re_read: Some(1),
+            round_waivers: vec![RoundWaiver {
+                round: 1,
+                reason: "a reason".to_string(),
+                waived_by: "dev@example.invalid".to_string(),
+                waived_at: "2026-07-10T00:00:00Z".to_string(),
+            }],
+            ..clean.clone()
+        };
+        assert!(!holds_done_until_reviewed(&waived));
     }
 
     /// A record with no mark, older or from `ductus exec`, is unaffected: it

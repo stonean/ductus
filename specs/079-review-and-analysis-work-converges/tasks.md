@@ -131,7 +131,7 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 
 ## 12. Verify, land and measure (AC8, AC20)
 
-Blocked on tasks 1–11.
+Blocked on tasks 1–11, and subtask 3 on tasks 14 and 15, which the bootstrap found, since a change after the review reads the tree would stale it.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
 - [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
@@ -156,5 +156,29 @@ Subtask 4 cannot finish in one session: once 1–3 are done, record the landing 
 - [x] `specs/024-rule-loader/spec.md` — AC8 names `framework/commands/review.md` for §Notes for adopters, which 071 moved — waived: the claim holds at the reference, and a criterion edit would reopen a `done` spec for a location alone
 - [x] `specs/071-command-reference-split/spec.md` — AC17, unticked, names `AGENTS.md`'s entry on a new command, now in `docs/developing-ductus.md` — waived: 071's own open criterion, which its implementation settles
 - [x] `specs/000-slash-commands/scenarios/dashboard-dependencies-column.md`, `specs/014-reclarify-backedge/spec.md`, `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`, `specs/066-audit-records-and-the-completion-gate/scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md` and `specs/067-analyze-and-audit-checks/scenarios/frontmatter-severity-tiers-on-both-sides.md` — each Context names command text that has since changed — waived: each describes the state its scenario or spec set out to fix, an account rather than a claim about the file today
+
+- **Done when**: each finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 14. What the adopter bootstrap found in this spec's code
+
+- [x] `review-owed` is true while the record holds `done` until a review runs: a gating count, no `dispositions:` map, the open mark or an unwaived round, read through one predicate the gate shares. In the subject, a text-only reopening read `review-owed: false` and was then blocked at `record-predates-dispositions`, with `/review` stopping on the first and the gate asking for it
+- [x] A commit that only relocates a `review:` block out of `spec.md` finishes no run, so `last_review_commit` leaves the window at the reopen. In the subject, the relocation commit read as `base-source: last-review`, which would leave commits between the real review and the upgrade unread
+- [x] Tests for both, each failing with its behavior removed, and their mutations in `scripts/mutation/scope-attribution.py`
+- [x] The Edge Case, `data-model.md`, the plan, `framework/reference/review.md`, `runtime/CHANGELOG.md` and the compiled description state them
+- [x] Re-run the text-only reopening in the subject: a record with the map owes no review and reaches `done` on an analysis alone, and one without the map owes a review
+
+- **Done when**: the tests pass and each mutation is killed, and the subject's reopening reaches `done` with one analysis and no review.
+
+## 15. Disposition out-of-spec finding: what the adopter bootstrap surfaced outside this spec
+
+- [x] `framework/bootstrap/ductus.md` — §Collect Project Inputs says a re-run prompts for nothing, but a project adopted before `[paths]` existed is asked for it, and only a first scaffold is told to persist the answer — fixed
+- [x] `framework/bootstrap/ductus.md` — §Shared Files' `resolve-constitutions --unmeasured` is refused by the pinned 0.59.11, and a State B run has no shell specification to fall back to — waived: the owner discarded this on 2026-10-30 (058 task 3, option a), since the next tag moves the pin past it
+- [x] `framework/bootstrap/ductus.md` — §Detection mechanism read literally made the test's host State A, since its inventory holds another project's `mcp__ductus__*` names — waived: this is the subagent test's shape, and the brief set State B
+- [x] `framework/bootstrap/ductus.md` and `framework/bootstrap/ductus-procedure.md` — the numbered walker does not place the archive-half sections, step 10 asks for more than the Update-mode text, and `generator-primitives` and `audit-record-relocate` define no report line — waived: pre-existing wording this spec did not change, which blocked nothing and made no run's result wrong, per `AGENTS.md`'s rule on the pipeline's own machinery
+- [x] `framework/bootstrap/ductus.md` — the store's binary mode, and `.ductus/scripts/` left empty after `generator-primitives` — waived: harmless, and git tracks neither
+- [x] The pinned 0.59.11 and the latest `install.sh` — group-writable installed files, and 13 retired permission entries the seed then removes — waived: each is fixed on `main` and clears at the next tag
+- [x] `relocate-audit-records` lands `review.md` at `0600` on disk — waived: every `write_atomic_bytes` record does (`specs/078-review-fix-rounds-are-re-read-within-a-bound/review.md` is `0600` too), and git records `100644`
+- [x] Two builds both report `ductus 0.59.11`, so Branch 1's mismatch check passes while behavior differs — waived: until a version bump a development build reports the pin, as Branch 1 expects
+- [x] A review record relocated inside an open reopening counts as a run of it, so `measure-reopenings` can read that one reopening over the bound — waived: one-time, in the direction of over-reporting, and no gate reads it
 
 - **Done when**: each finding is fixed, deferred, or waived, with a waiver's reason written on the task.
