@@ -112,12 +112,13 @@ Blocked on tasks 2–9: read `research.md`, which is a floor, then grep each beh
 - [ ] Read AC21's 112 lines in context, and correct those that prove false, reopening any `done` spec whose scenario or data model holds one (at most 7); name the count in the commit
 - [ ] Signposts back-linking this spec on 020, 022, 026, 050, 066 and 076, so `cross-spec-impact:` is discharged
 - [ ] Runtime doc comments and MCP text the sweep names, with `scripts/` and the tests and fixtures that assert the old behavior
+- [ ] `scripts/mutation/run.py` exits non-zero when the ids it is given select no mutation: an unsplit id list once selected none and reported success, which §design-principles rules out
 
 - **Done when**: re-running the sweep's searches finds no false claim, `check-review-gate` reports `cross-spec-impact:` discharged, and the corrected specs' reviews and analyses are recorded or named as owed on their own tasks.
 
 ## 11. The prose cuts (AC18, AC21)
 
-Blocked on tasks 2–10: cut what is true after them. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
+Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For agent runtimes` pointers, which took `framework/commands/` and `framework/reference/` to 567,487 bytes at `ad4fae5b`, under AC18's total, so what is owed is the two named files and the total staying under while tasks 10 and 11 land; of the two boilerplate blocks, `**Where a named section lives.**` remains. An edit to a command source can move its golden, and `runtime/tests/parity.rs`' failure message says how to re-bless it alone. Take `research.md`'s sections as a starting estimate, drop text rather than move it into a description, and keep every heading's exact text and `§Resolve target and scope`'s item numbers.
 
 - [ ] `framework/reference/review.md` under 50,000 bytes
 - [ ] `framework/reference/analyze.md` under 50,000 bytes, with `scripts/audit/marker-list-parity.sh` following its sentences; if cuts stop short, bring the split to the owner with what it costs
@@ -139,6 +140,6 @@ Blocked on tasks 1–11.
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
 - [ ] Propose `done` with the completion gate
 
-Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method.
+Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly. Ask the owner at this task whether the outcome entry in Resolved Questions gains the primitive's figure beside the recorded one, or AC20 reads as met by that re-derivation; `spec.md` had 523 bytes of room by `wc -c`, so a longer entry needs a cut, which is also the owner's.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.

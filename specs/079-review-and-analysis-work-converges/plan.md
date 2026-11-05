@@ -113,6 +113,11 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `scripts/audit/marker-list-parity.sh` | Modify | The sentences it matches in `analyze.md` |
 | `scripts/mutation/scope-attribution.py` | Create | Mutation list for attribution, window and scope |
 | `scripts/mutation/reopen-measure.py` | Create | Mutation list for the measurement and the classifier |
+| `scripts/mutation/one-description.py` | Create | Mutation list for a description's summary |
+| `scripts/mutation/plan-edit-takes-no-back-edge.py` | Modify | The hints' renamed test and value |
+| `runtime/tests/common/mod.rs` | Modify | One path to the release binary, following its build |
+| `runtime/tests/{parity,exec_subprocess,manifest_cli_args,concurrent_sessions}.rs` | Modify | Use it |
+| `runtime/tests/golden/implement-basic.jsonl` | Modify | Its fixture's commit shas move with `implement.md` |
 | `framework/runtime-tools.txt` | Modify | Two new tools |
 | `framework/constitution.md` | Modify | The four edits |
 | `framework/commands/review.md` | Modify | Window, scope, rule-decided dispositions, open mark |
@@ -121,6 +126,8 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `framework/commands/amend.md` | Modify | Reconcile calls `classify-spec-edit` |
 | `framework/commands/status.md` | Modify | The counts |
 | `framework/commands/help.md` | Modify | A corrected fact stays `done` |
+| `framework/commands/*.md` | Modify | The host-integration pointer |
+| `framework/migrations/{audit-record-relocate,criterion-label-backfill}.md` | Modify | A label's assignment is a correction |
 | `framework/reference/review.md` | Modify | The rules, then the cuts |
 | `framework/reference/analyze.md` | Modify | The rules, then the cuts |
 | `framework/reference/implement.md` | Modify | `diff-cross-spec`, gate check 12 |
