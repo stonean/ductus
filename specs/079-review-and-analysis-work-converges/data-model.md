@@ -8,7 +8,8 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | --- | --- | --- | --- |
 | `fix-rounds-open` | `true`, or absent | Every `write-review` of a run with a fix-round loop but the last, which omits it | `check-review-gate` blocks while it is present |
 | `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path by the spec that claimed it |
-| `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run, and `check-review-gate`'s passing notice |
+| `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
+| `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD`, and `check-review-gate`, which blocks on a listed break |
 
 An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, and any other value names a person.
 
@@ -20,11 +21,11 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
 | `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model; true with no such record |
 
-`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it.
+`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review and a path the last record lists as open, which need not have changed.
 
 ## `check-review-gate` result
 
-`blocked-by` gains `review-owed`, ahead of every analyze value, and its `message` names what changed.
+`blocked-by` gains `review-owed`, ahead of every analyze value, and its `message` names what changed or was left open.
 
 ## `write-review` arguments
 
@@ -32,10 +33,10 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `loop-open` | boolean, MCP and CLI | Writes `fix-rounds-open`; passed by every review-command write but the last, so `ductus exec` never sets it |
 | `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
-| `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks` |
+| `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings` |
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. `empty-scope` refuses over an earlier record counting a finding, which a run's own earlier write is not.
 
 ## `brief-re-read` result and `round.toml`
 

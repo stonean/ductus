@@ -23,7 +23,7 @@
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Component, Path};
 
 use git2::{DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
@@ -102,7 +102,8 @@ pub(crate) struct ReviewScope {
     pub(crate) base_source: BaseSource,
     /// See [`ComputeReviewScopeResult::review_owed`].
     pub(crate) review_owed: bool,
-    /// The changed paths that make a review owed, which `check-review-gate` names.
+    /// The changed paths, and those the last review left open, that make a review
+    /// owed, which `check-review-gate` names.
     pub(crate) owed_by: Vec<String>,
     /// See [`ComputeReviewScopeResult::scope`].
     pub(crate) scope: Vec<String>,
@@ -193,7 +194,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         diff_since(&project, &head)?.into_iter().collect()
     };
 
-    let (mut scope, excluded) = split_changes(&modified_since, &deleted, &window, &uncommitted);
+    let (mut scope, mut excluded) = split_changes(&modified_since, &deleted, &window, &uncommitted);
 
     // A plan entry unchanged in the window may mean missing work on a spec's
     // first review, and on a later one only restates what was read. The record
@@ -210,7 +211,25 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         );
     }
 
-    let own_prefix = format!("{}/{}/", layout.specs_root, args.feature);
+    // What the record at `HEAD` leaves open is read again wherever the window starts,
+    // or a re-run would clear a finding with its file unread. A path it names that is
+    // gone, or that leaves the project, has nothing to read.
+    let left_open = open_findings_at(repository, &head_tree, &project.to_git(&record_rel))?;
+    for path in left_open
+        .iter()
+        .filter(|path| stays_in_project(path) && repo.join(path).symlink_metadata().is_ok())
+    {
+        excluded.remove(path);
+        scope.insert(path.clone());
+    }
+
+    let owed_by = paths_owing_a_review(
+        (&layout.specs_root, &args.feature),
+        (&scope, &deleted),
+        &window,
+        &uncommitted,
+        left_open,
+    );
     let record = load_review_record(&feature_dir);
     let run = record
         .as_present()
@@ -223,30 +242,6 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
                 RecordFreshness::Stale { .. }
             )
     };
-    // A deletion left the scope because it cannot be read, and is still a change:
-    // this spec's unless only another spec's commit made it, as the scope's own rule.
-    let its_own_deletions = deleted.iter().filter(|path| {
-        window.own.contains(*path)
-            || uncommitted.contains(*path)
-            || !window.others.contains_key(*path)
-    });
-    // A path in another spec's directory is that spec's change, and its own review
-    // reads it: a multi-spec commit carrying that spec's text owes this one nothing.
-    let specs_prefix = format!("{}/", layout.specs_root);
-    let in_another_spec = |path: &str| {
-        path.strip_prefix(&specs_prefix)
-            .and_then(|rest| rest.split_once('/'))
-            .is_some_and(|(dir, _)| parse_feature_dir(dir).is_some())
-    };
-    let owed_by: Vec<String> = scope
-        .iter()
-        .chain(its_own_deletions)
-        .filter(|path| match path.strip_prefix(&own_prefix) {
-            Some(own) => is_review_contract(own),
-            None => !in_another_spec(path.as_str()),
-        })
-        .cloned()
-        .collect();
     let review_owed = run.is_none_or(record_is_held) || !owed_by.is_empty();
 
     Ok(ReviewScope {
@@ -260,6 +255,49 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         deleted: deleted.into_iter().collect(),
         excluded,
     })
+}
+
+/// The paths that make a review owed, whatever else the record holds: each in scope, or
+/// deleted and this spec's by the scope's own rule, that lies outside a spec's directory
+/// or is this spec's contract, and each the record at `HEAD` leaves open.
+fn paths_owing_a_review(
+    (specs_root, feature): (&str, &str),
+    (scope, deleted): (&BTreeSet<String>, &BTreeSet<String>),
+    window: &WindowClaims,
+    uncommitted: &BTreeSet<String>,
+    left_open: Vec<String>,
+) -> Vec<String> {
+    let own_prefix = format!("{specs_root}/{feature}/");
+    // A deletion left the scope because it cannot be read, and is still a change:
+    // this spec's unless only another spec's commit made it, as the scope's own rule.
+    let its_own_deletions = deleted.iter().filter(|path| {
+        window.own.contains(*path)
+            || uncommitted.contains(*path)
+            || !window.others.contains_key(*path)
+    });
+    // A path in another spec's directory is that spec's change, and its own review
+    // reads it: a multi-spec commit carrying that spec's text owes this one nothing.
+    let specs_prefix = format!("{specs_root}/");
+    let in_another_spec = |path: &str| {
+        path.strip_prefix(&specs_prefix)
+            .and_then(|rest| rest.split_once('/'))
+            .is_some_and(|(dir, _)| parse_feature_dir(dir).is_some())
+    };
+    let mut owed_by: Vec<String> = scope
+        .iter()
+        .chain(its_own_deletions)
+        .filter(|path| match path.strip_prefix(&own_prefix) {
+            Some(own) => is_review_contract(own),
+            None => !in_another_spec(path.as_str()),
+        })
+        .cloned()
+        .collect();
+    for path in left_open {
+        if !owed_by.contains(&path) {
+            owed_by.push(path);
+        }
+    }
+    owed_by
 }
 
 /// Where the review's window starts, and why: a `--since` override used
@@ -387,6 +425,31 @@ fn recorded_run(
             || !record.skipped_passes.is_empty(),
         loop_open: record.fix_rounds_open == Some(true),
     }))
+}
+
+/// What the record at `git_path` in `tree` leaves open: empty when the tree holds no
+/// record, or one that does not parse or lists nothing.
+fn open_findings_at(
+    repository: &Repository,
+    tree: &Tree<'_>,
+    git_path: &str,
+) -> Result<Vec<String>> {
+    let Some(text) = blob_text(repository, tree, git_path)? else {
+        return Ok(Vec::new());
+    };
+    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
+        return Ok(Vec::new());
+    };
+    Ok(serde_norway::from_str::<ReviewBlock>(frontmatter)
+        .map(|record| record.open_findings)
+        .unwrap_or_default())
+}
+
+/// Whether a path a record names stays under the project root.
+fn stays_in_project(path: &str) -> bool {
+    Path::new(path)
+        .components()
+        .all(|part| matches!(part, Component::Normal(_) | Component::CurDir))
 }
 
 /// The `last-run` a pre-057 `spec.md` states in its `review:` frontmatter block,
@@ -1551,6 +1614,7 @@ mod tests {
             "should-violations: 1\n",
             "not-re-read: 1\n",
             "not-re-read: 2\nround-waivers:\n  - {round: 1, reason: the owner chose, waived-by: o, waived-at: 2026-11-01T00:00:00Z}\n",
+            "open-findings:\n  - src/a.rs\n",
         ] {
             let (scope, parent) = reviewed_with(&format!("{DISPOSITIONS}{held}"));
             assert_eq!(scope.diff_base, parent, "{held}");
@@ -1573,6 +1637,93 @@ mod tests {
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
+    /// A record leaving `src/old.rs` open, the file committed before the window opens,
+    /// so no window holds it and no later plan entry brings it back.
+    fn left_open(extra: &str) -> (tempfile::TempDir, Repository, String) {
+        let (tmp, repo, parent) = two_specs(&["src/old.rs"], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n{extra}");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
+        (tmp, repo, parent)
+    }
+
+    /// A finding on a file the window left unchanged stays readable, or a clean re-run
+    /// would clear it with the file unread: the scope drops a plan entry once a record
+    /// names a run, and `--since=HEAD` has no window at all.
+    #[test]
+    fn what_the_record_leaves_open_joins_the_scope_wherever_the_window_starts() {
+        let (tmp, _repo, parent) = left_open("");
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
+        let since_head = compute(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
+        assert_eq!(since_head.scope, ["src/old.rs"]);
+    }
+
+    /// With no transition there is no window, and the file is still read.
+    #[test]
+    fn what_the_record_leaves_open_joins_a_scope_with_no_transition() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+        write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
+        commit_all(&repo, "feat: plan");
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
+        let scope = x(&tmp);
+        assert_eq!(scope.base_source, BaseSource::None);
+        assert_eq!(scope.scope, ["src/old.rs"]);
+    }
+
+    /// A path another spec's commit alone changed leaves the scope, unless a finding
+    /// names it: the finding is this spec's, whoever last touched the file.
+    #[test]
+    fn a_path_left_open_comes_back_from_excluded() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/old.rs", "feat(002): theirs");
+        assert!(x(&tmp).excluded.contains_key("src/old.rs"));
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains_key("src/old.rs"));
+    }
+
+    /// A file gone has nothing to read, and a named path leaving the project is not
+    /// followed, though it resolves to a file that exists.
+    #[test]
+    fn a_path_left_open_that_is_gone_or_leaves_the_project_is_not_read() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let fields =
+            format!("{DISPOSITIONS}open-findings:\n  - src/gone.rs\n  - src/../src/old.rs\n");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/gone.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/../src/old.rs"), "{:?}", scope.scope);
+    }
+
+    /// The record at `HEAD` decides, so a run's own uncommitted write does not change
+    /// the scope between its two writes, and `check-review-gate` can name what it left
+    /// open even when the path lies in another spec's directory.
+    #[test]
+    fn a_path_left_open_comes_from_head_and_is_named_as_owing_a_review() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let theirs = "specs/002-y/plan.md";
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n  - {theirs}\n");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
+        let scope = x(&tmp);
+        assert!(scope.review_owed);
+        assert!(scope.owed_by.iter().any(|path| path == theirs));
+
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, "2026-11-02T00:00:00Z"),
+        );
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed, "clears once the record is committed");
     }
 
     /// The other direction: what the gate stopped holding moves the start again, a

@@ -611,27 +611,6 @@ MUTATIONS = [
         'dashboard::tests::the_reopenings_block_carries_the_measurement',
     ),
     (
-        'M86 a contract break gets no notice',
-        'src/primitives/check_review_gate.rs',
-        'if contract_breaks > 0 {',
-        'if contract_breaks > u32::MAX - 1 {',
-        'check_review_gate::tests::a_contract_break_passes_and_the_guidance_names_it',
-    ),
-    (
-        'M87 one contract break is not enough for the notice',
-        'src/primitives/check_review_gate.rs',
-        'if contract_breaks > 0 {',
-        'if contract_breaks > 1 {',
-        'check_review_gate::tests::a_contract_break_passes_and_the_guidance_names_it',
-    ),
-    (
-        'M88 a record with no contract break gets the notice',
-        'src/primitives/check_review_gate.rs',
-        'if contract_breaks > 0 {',
-        'if contract_breaks >= 0 {',
-        'check_review_gate::tests::a_contract_break_passes_and_the_guidance_names_it',
-    ),
-    (
         'M89 a specs tree that cannot be read counts as no directories',
         'src/primitives/measure_reopenings.rs',
         '        let specs = self.repository.find_tree(root)?;\n',

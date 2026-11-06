@@ -295,7 +295,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 - **A review or analysis run creates work only for a gating finding**, and an observation showing the spec's own code breaks its contract counts as one. Any other observation is fixed in the run when mechanical and otherwise waived with its reason, recorded as decided by the rule. Only a gating finding's waiver or deferral reaches the operator, one at a time, and a person's stored decision wins.
 - **In `/{project}:implement`, scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
 - **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
-- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
+- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations and broken contracts are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
 - **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
 
@@ -356,7 +356,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `excluded`, `contract-breaks`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; `fix-rounds-open`: boolean; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `excluded`, `contract-breaks`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; `fix-rounds-open`: boolean; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `open-findings`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
 
 ##### Analyze record — `analysis.md`
 

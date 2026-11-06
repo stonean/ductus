@@ -543,7 +543,8 @@ fn record_unreadable_artifact(
 
 /// (d3) Disposition drift — a `done` spec whose `review.md` counts
 /// undispositioned observations (spec 058), named at the advisory tier with
-/// the command that decides them; they do not hold `done`.
+/// the command that decides them; only a broken contract among them holds `done`,
+/// which review-state drift reports.
 /// A map-less record is silent, and `analysis.md` is judged by
 /// `/{project}:analyze` from the record it writes: see the module doc.
 fn check_disposition_drift(
@@ -567,7 +568,8 @@ fn check_disposition_drift(
         severity: AnalyzeSeverity::Advisory,
         message: format!(
             "disposition drift: done spec's review.md records {} undispositioned finding(s) — \
-             re-run the review command to decide each; they do not hold done",
+             re-run the review command to decide each; only a broken contract among them \
+             holds done",
             counts.undispositioned
         ),
         path: rel_path(spec_path, repo),
@@ -643,6 +645,20 @@ fn check_review_drift(
                  waive it with its rationale, or defer it to pipeline work on another spec, \
                  then re-run the review so the count states what is outstanding",
                 review.should_violations
+            ),
+            path: spec_rel.clone(),
+        });
+    }
+    // A broken contract the review left open holds `done` as those counts do, and
+    // neither of them holds it, so it gets its own line (spec 079).
+    if !review.blocking && review.should_violations == 0 && !review.open_findings.is_empty() {
+        findings.push(ArtifactFinding {
+            family: "review-state-drift".into(),
+            severity: AnalyzeSeverity::Blocking,
+            message: format!(
+                "review drift: done spec has a broken contract its review left open in {} — \
+                 fix it, or have a person waive it, then re-run the review",
+                review.open_findings.join(", ")
             ),
             path: spec_rel,
         });
@@ -3063,6 +3079,38 @@ mod tests {
                 .message
                 .contains("unresolved MUST violations")
         );
+    }
+
+    /// A broken contract left open holds `done` as a gating count does, so reaching
+    /// `done` past it is drift, and it names the file. A SHOULD reports once, its own
+    /// line, though its file is listed too.
+    #[test]
+    fn done_spec_with_a_finding_left_open_yields_blocking_finding() {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", &spec("done"));
+        seed_review(
+            tmp.path(),
+            "  last-run: 2026-07-01T00:00:00Z\n  blocking: false\n  must-violations: 0\n  should-violations: 0\n  open-findings:\n    - src/a.rs",
+        );
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
+        assert!(result.findings[0].message.contains("src/a.rs"));
+
+        seed_review(
+            tmp.path(),
+            "  last-run: 2026-07-01T00:00:00Z\n  blocking: false\n  must-violations: 0\n  should-violations: 1\n  open-findings:\n    - src/a.rs",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
+
+        seed_review(
+            tmp.path(),
+            "  last-run: 2026-07-01T00:00:00Z\n  blocking: true\n  must-violations: 1\n  should-violations: 0\n  open-findings:\n    - src/a.rs",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
     }
 
     #[test]

@@ -209,7 +209,6 @@ pub(crate) fn run_with_lint(
             &review_freshness,
             &freshness,
             review.not_re_read.is_some(),
-            review.contract_breaks.unwrap_or(0),
             owed_unknown.as_deref(),
         ),
         violations: vec![],
@@ -249,6 +248,10 @@ fn review_half_block(
     }
     if let Some(blocked) = fix_round_block(review, rel_dir, project) {
         return Err(blocked);
+    }
+    // Read from the record, so a window that cannot be read does not pass it.
+    if !review.open_findings.is_empty() {
+        return Err(review_owed_block(&review.open_findings, project));
     }
     let window = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: feature.to_string(),
@@ -310,13 +313,15 @@ fn review_owed_block(owed_by: &[String], project: &str) -> CheckReviewGateResult
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewOwed),
         message: Some(format!(
-            "blocked: a review is owed for what changed since the last one: {} — run \
-             /{project}:review and commit its record",
+            "blocked: a review is owed for what changed since the last one or what it left \
+             open: {} — run /{project}:review and commit its record",
             render_paths(owed_by)
         )),
         guidance: Some(format!(
             "A review's window moves only at the commit holding its record, so a review that \
-             has just finished clears this once that record is committed. An uncommitted path \
+             has just finished clears this once that record is committed. A broken contract it \
+             left open clears when a run finds it fixed, a person waives it, or a deferral to \
+             another spec's work releases it. An uncommitted path \
              counts, whoever's it is: commit it, or isolate another session's work with `git \
              worktree`. Run /{project}:analyze after the review, since its record is one of an \
              analysis's subjects."
@@ -394,7 +399,8 @@ fn disposition_block(
              work on another spec (/{project}:review --defer <rule-id> --target <path>), whose \
              gate then holds it — a deferral to this spec's own task, or to an external work \
              item alone, releases nothing. Then re-run /{project}:{command}. Undispositioned \
-             advisory findings and observations do not hold `done`."
+             advisory findings and observations do not hold `done`, a broken contract left \
+             open apart."
         ),
     ))
 }
@@ -482,8 +488,9 @@ fn held_by_deferral(feature_dir: &Path, rel_dir: &str, files: &[&str]) -> String
 }
 
 /// Whether this record holds `done` until `/review` runs again, whatever the
-/// window holds: a gating count, no `dispositions:` map, the open mark, or a fix
-/// round with neither a re-read nor a waiver. `compute-review-scope` reads it, with
+/// window holds: a gating count, no `dispositions:` map, the open mark, a fix
+/// round with neither a re-read nor a waiver, or a finding it leaves open, a broken
+/// contract nobody fixed or waived among them. `compute-review-scope` reads it, with
 /// the digest's freshness that takes files to judge, so `review-owed` never says no
 /// review is owed while this gate asks for one (spec 079).
 pub(crate) fn holds_done_until_reviewed(review: &crate::schema::primitives::ReviewBlock) -> bool {
@@ -497,6 +504,7 @@ pub(crate) fn holds_done_until_reviewed(review: &crate::schema::primitives::Revi
         || review
             .not_re_read
             .is_some_and(|rounds| rounds > waived_rounds(review))
+        || !review.open_findings.is_empty()
 }
 
 /// The fix rounds a record waives with a reason.
@@ -578,7 +586,6 @@ fn passing_notices(
     review: &RecordFreshness,
     analyze: &RecordFreshness,
     fix_rounds_recorded: bool,
-    contract_breaks: u32,
     owed_unknown: Option<&str>,
 ) -> Option<String> {
     let mut notices: Vec<String> = Vec::new();
@@ -607,13 +614,6 @@ fn passing_notices(
              run stated nothing about its fixes."
                 .to_string(),
         );
-    }
-    if contract_breaks > 0 {
-        notices.push(format!(
-            "The review record counts {contract_breaks} contract break(s) the run did not fix, which no \
-             gating count holds: confirm each was deferred to a task or waived before approving \
-             `done`."
-        ));
     }
     if notices.is_empty() {
         None
@@ -3188,27 +3188,29 @@ mod tests {
         assert!(!result.guidance.unwrap_or_default().contains("re-read"));
     }
 
-    /// No gating count holds a contract break, so a record with one passes and
-    /// the guidance names it for whoever approves `done` (spec 079); zero, or a
-    /// record with no such field, says nothing about it.
+    /// A finding the review left open holds `done` from the record itself, naming its
+    /// file, so a window that cannot be read, as here, does not pass it (spec 079).
     #[test]
-    fn a_contract_break_passes_and_the_guidance_names_it() {
+    fn a_finding_left_open_blocks_and_names_its_file() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
         with_review_fields(
             tmp.path(),
-            &format!("{LOOP_FIELDS}not-re-read: 0\ncontract-breaks: 1\n"),
+            &format!(
+                "{LOOP_FIELDS}not-re-read: 0\ncontract-breaks: 1\nopen-findings:\n  - src/a.rs\n"
+            ),
         );
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
-        assert!(
-            result
-                .guidance
-                .unwrap()
-                .contains("counts 1 contract break(s) the run did not fix"),
-        );
+        assert!(!result.passed, "{result:?}");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
+        assert!(result.message.unwrap().contains("src/a.rs"));
+    }
 
-        for fields in ["contract-breaks: 0\n", ""] {
+    /// A break a person waived, or one fixed since, is decided: it may still count, it
+    /// lists nothing, and neither the gate nor its guidance has anything to say.
+    #[test]
+    fn a_contract_break_nothing_lists_as_open_passes_and_says_nothing() {
+        for fields in ["contract-breaks: 1\n", "contract-breaks: 0\n", ""] {
             let tmp = tempdir().unwrap();
             seed(tmp.path(), REVIEWED_CLEAN);
             with_review_fields(
@@ -3216,12 +3218,13 @@ mod tests {
                 &format!("{LOOP_FIELDS}not-re-read: 0\n{fields}"),
             );
             let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-            assert!(result.passed, "{result:?}");
+            assert!(result.passed, "{fields}: {result:?}");
             assert!(
                 !result
                     .guidance
                     .unwrap_or_default()
                     .contains("contract break"),
+                "{fields}"
             );
         }
     }

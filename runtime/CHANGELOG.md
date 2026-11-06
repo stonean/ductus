@@ -73,10 +73,14 @@ its version and date.
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
   from the review reference (spec 079).
-- **The pre-`done` gate names a contract break nothing holds.** `check-review-gate`
-  still passes a record whose `contract-breaks` is above 0, and its `guidance` now
-  says so, since no gating count holds an observation and a run with no operator
-  leaves such a break with no task (spec 079).
+- **A finding a review leaves open stays in reach, and a broken contract left open
+  holds `done`.** `review.md` gains `open-findings`, listing each counted violation's
+  file and each broken contract's that the run did not fix, a person did not waive
+  and no deferral releases. The next review's scope holds each wherever its window
+  starts, so a re-run cannot clear a finding with its file unread, and
+  `check-review-gate` blocks on a listed break, as `review-owed`, naming it. A break a
+  person waived passes, and `write-review --empty-scope` refuses over an earlier
+  record counting a finding (spec 079).
 - **Each primitive's description says what it does without the prose.**
   `check-artifacts` states its severity tiers rather than pointing at the analyze
   reference, `resolve-constitutions` states that a malformed entry halts, and

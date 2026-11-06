@@ -16,7 +16,7 @@ Since this spec, every finding a run produces needs a disposition before `done`.
 
 ## Behavior
 
-- **Only gating findings hold `done`.** Advisory analyze findings and review observations are still recorded, with a disposition whenever one is made. They stop holding `done`: the pre-`done` gate's gating-finding check reads only the gating counts — hard-fail and blocking analyze findings and MUST and SHOULD review violations neither waived nor released by their deferral — never a record's `undispositioned`, and every other gate check is unchanged.
+- **Only gating findings hold `done`.** Advisory analyze findings and review observations are still recorded, with a disposition whenever one is made. They stop holding `done`: the pre-`done` gate's gating-finding check reads only the gating counts — hard-fail and blocking analyze findings and MUST and SHOULD review violations neither waived nor released by their deferral — never a record's `undispositioned`, and every other gate check is unchanged. Since 079 a broken contract left open holds `done` through `review-owed`, which reads the record's `open-findings`, not this count.
 - **Disposition work does not spawn disposition work.** A non-blocking finding surfaced while working a disposition task is recorded on that task, not appended as a new one.
 - **Only a substantive fix round is re-read.** A review fix round gets an independent re-read only when it changed code or a durable contract; a prose-only round is not re-read. `AGENTS.md`'s fix-round entry says so, within that file's ceiling.
 - **The constitution amendment fits under its size ceiling**, either by removing as many bytes as it adds or by landing after `050-constitution`'s cut.

@@ -520,7 +520,7 @@ spec's links to it. Each also gets the contract change itself:
 - **Does an undispositioned finding block `done`?** Yes, as first decided.
   *Superseded in part by scenario `findings-cost-in-proportion-to-risk`
   (owner pre-authorized 2026-10-26): only a gating finding holds `done`, so an
-  undecided advisory finding or observation no longer blocks; decisions still
+  undecided advisory finding or observation, a broken contract apart since 079, no longer blocks; decisions still
   persist (§Only gating findings hold `done`).* Then, `check-review-gate`
   blocked while either record carried an undispositioned finding, and
   decisions persist across runs (§Decisions persist across runs). Clarify persisted discards only. Planning

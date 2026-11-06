@@ -18,7 +18,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > `dispositions:` map counts `deferred` and `waived` where it counted `routed`
 > and `discarded`. [data-model.md](data-model.md) records the renamed keys.
 >
-> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the records and the gate. `review.md` gains `excluded`, `contract-breaks` and `fix-rounds-open`, a stored decision may read `decided-by: rule`, the gate blocks on `fix-round-loop-open` and `review-owed` with every review check ahead of the analyze checks, and `compute-review-scope`'s window and scope replace the union this spec defined.
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the records and the gate. `review.md` gains `excluded`, `contract-breaks`, `open-findings` and `fix-rounds-open`, a stored decision may read `decided-by: rule`, the gate blocks on `fix-round-loop-open` and `review-owed` with every review check ahead of the analyze checks, and `compute-review-scope`'s window and scope replace the union this spec defined.
 
 ## Motivation
 

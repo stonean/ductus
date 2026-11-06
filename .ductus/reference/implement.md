@@ -64,7 +64,7 @@ Same order as Instructions steps 9–16, which carry the procedure; these items 
 
    **A review owed holds `done` ahead of every analyze check**, since `review.md` is one of an analysis's subjects, so an analysis run first is stale when the review writes and the reopening takes two. The message names what changed, and a review clears it once its record is committed, because its window moves only at that commit.
 
-   **Of the findings, only a gating one holds `done`** (§brownfield-inbox, Finding dispositions): an undispositioned advisory finding or observation stays recorded and does not block, while a record with no `dispositions:` map blocks, since absence is not zero. A record still carrying `fix-rounds-open: true` was cut off before its last write, and a fix round that needed a re-read and has neither one nor a reason in `round-waivers` holds `done` too: both are answered by re-running `/ductus:review`.
+   **Of the findings, only a gating one holds `done`** (§brownfield-inbox, Finding dispositions): an undispositioned advisory finding or observation stays recorded and does not block, while a record with no `dispositions:` map blocks, since absence is not zero, and a broken contract the record lists in `open-findings` blocks, since it counts as gating. A record still carrying `fix-rounds-open: true` was cut off before its last write, and a fix round that needed a re-read and has neither one nor a reason in `round-waivers` holds `done` too: both are answered by re-running `/ductus:review`.
 
 6. **Approve the transition**: step 15.
 7. **Set `done`**: step 16.

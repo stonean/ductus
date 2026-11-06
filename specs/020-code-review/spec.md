@@ -240,7 +240,7 @@ it was the copy every gate actually read.
 > `discarded`, `undispositioned`) and stores each routed or discarded decision
 > in a `decisions:` list beside `waivers:`. The pre-done gate blocks an
 > `in-progress` spec while the record has no map at all; an undecided
-> observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`). [data-model.md](data-model.md) records both fields.
+> observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`), a broken contract apart since 079. [data-model.md](data-model.md) records both fields.
 >
 > **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
 > A MUST or SHOULD violation is fixed, waived or deferred. A waiver means it

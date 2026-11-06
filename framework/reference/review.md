@@ -12,7 +12,8 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
    halt with `review only runs against in-progress or done specs`.
 3. Build the file scope per **Inputs** (in the command file). An empty scope
    (no implementation files yet, or none changed since a finished review)
-   records 0 findings across all five passes,
+   records 0 findings across all five passes, unless an earlier record counts a
+   finding, which `write-review` refuses to clear unread,
    `blocking: false`, and exits `0`, skipping items 4–5 and the passes; an
    observation the reviewer supplies is still dispositioned, as
    **Observations** under [Write `review.md`](#write-reviewmd) describes.
@@ -234,8 +235,9 @@ stored decision wins, and the rule does not re-decide it.
 - **Deferred** — a broken contract, with the operator's confirmation, to the
   spec's own task or the home the **§Groom decision tree** in `.ductus/reference/groom.md`
   chooses. An external work-item ID may stand beside that home, or in its place,
-  as the operator gives it (spec 076); an observation never holds `done` through
-  the record, so either suffices. A declined spec creation leaves the observation
+  as the operator gives it (spec 076). Only a deferral to another spec's work still
+  to do releases a broken contract; any other holds `done` until a run finds it
+  fixed. A declined spec creation leaves the observation
   waived or undispositioned, never deferred to a spec that does not exist.
 - **Waived** — with the reason it is not addressed, stored with `decided-by:
   rule` when the rule decided it and the person's name when one did. It is the
@@ -246,9 +248,11 @@ stored decision wins, and the rule does not re-decide it.
   reason, a deferral's write failed, its stored deferral lapsed with nobody to
   ask, a broken contract had nobody to ask, or it came through a `ductus exec`
   run, whose walker no-ops steps 9 and 10. It stays recorded and visible for a
-  later review to decide, and it does not hold `done`: only a gating count does,
-  and none holds an observation.
-  The gate's passing `guidance` names a record whose `contract-breaks` is above 0.
+  later review to decide, and it does not hold `done` unless it is a broken contract.
+  The record lists what it leaves open in `open-findings`, each counted violation's
+  file and each broken contract's nobody fixed or waived and no deferral releases.
+  The next scope reads each again, and a listed break holds `done` until a run finds
+  it fixed or a person waives it.
 
 **Decisions persist.** Each deferred or waived observation is stored in
 `review.md`'s `decisions:` list, beside `waivers:`. Observation text is the
@@ -335,7 +339,7 @@ The window a review reads and the coverage counts it records, as `/{project}:rev
 
 - **`examined` counts the in-scope files the review actually read — a file you are confident about by other means is named, never counted.** Believing a file correct — a generated mirror of one you read, say — is not having read it. Count what you opened, and name the rest in the Summary with why you did not open it and what you relied on instead: _generated from a source read in full, generator re-run and reported in sync_ is a complete answer, _it is generated_ is not. Likewise say which parts of a too-large file you read, and name an in-scope path that no longer exists as absent.
 - **A spec's review window starts where the last review of this reopening finished.** `compute-review-scope` holds the rule, and `base-source` says which start it took. A run that recorded a skipped pass or a budget stop, or whose record the gate holds until a review runs, does not move the start, so stopping early leaves nothing permanently unread and a re-run reads again what a finding names. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
-- **A review reads its own spec's change, and the record names the rest.** A path only another spec's commit changed leaves the scope for that spec's review, named under **Excluded from scope**. Uncommitted work stays, as nothing can attribute it: `git worktree` isolates sessions. A plan entry unchanged in the window stays on the spec's first review, where it may mean missing work.
+- **A review reads its own spec's change, and the record names the rest.** A path only another spec's commit changed leaves the scope for that spec's review, named under **Excluded from scope**. Uncommitted work stays, as nothing can attribute it: `git worktree` isolates sessions. A plan entry unchanged in the window stays on the spec's first review, where it may mean missing work, and what the last record lists as open stays on any review, whoever last changed it.
 - **A reopening that changed no code, scenario or data model owes an analysis and no review.** `compute-review-scope` reports it as `review-owed: false`, a path in another spec's directory being that spec's change. The gate reads it: true holds `done` ahead of every analyze check until a review's record is committed, and false passes the earlier record, unless that record holds `done` until a review runs, which then is owed. A review run anyway is allowed, only not owed.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** Without `examined` and `scope`, a review that read nothing is byte-identical to one that read everything; without the durable-contract digest, the pre-`done` gate reports freshness as _undeterminable_, which does not block. Nothing backfills these fields: treat such a record as unread and re-run the review, which writes them truthfully only if the passes read the scope. The gap comes in several shapes, so read the record before pricing the work.
 - **A spec with no recorded `in-progress` transition derives an empty diff base, and the review's denominator collapses to zero.** On a first review scope resolution still returns the plan's affected files, so the record reads as files examined over a scope of zero. Pass the current commit as the base: the window is then empty by construction, and numerator and denominator agree. The same answer fits a recorded transition whose base is simply old; measure both before choosing, and say in the Summary which base was passed and why.
@@ -564,7 +568,7 @@ returns, as the observation total followed by all four counts — including a
 run with no observations, which renders `observations 0`, because
 examined-and-empty and not-computed must not be the same output. It never
 affects the exit code, and an `undispositioned` count above zero does not hold
-`done`, so the row names it for a later review to decide:
+`done` unless a broken contract is among it, so the row names it for a later review to decide:
 
 ```text
   observations 2 — 0 fixed, 1 deferred, 0 waived, 1 undispositioned — recorded; it does not hold done

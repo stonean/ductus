@@ -93,6 +93,12 @@ pub struct ReviewBlock {
     /// `None` on a record written before the field existed, which is not zero.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contract_breaks: Option<u32>,
+    /// Each file the last review left open: a counted violation's, and a contract
+    /// break's that the run did not fix, a person did not waive and no deferral
+    /// releases (spec 079). The next review's scope holds each, and the record holds
+    /// `done` until a review clears it. Empty on a record from before the field.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub open_findings: Vec<String>,
     /// Whether the last review left blocking findings.
     #[serde(default)]
     pub blocking: bool,
@@ -756,7 +762,8 @@ pub struct ComputeReviewScopeResult {
     /// Where the window starts.
     pub base_source: BaseSource,
     /// False when a review record names a run and holds nothing only a review
-    /// clears, and the scope and the deletions it attributes to the spec hold no
+    /// clears, a finding it leaves open among that, and the scope and the deletions it
+    /// attributes to the spec hold no
     /// path outside a spec's directory and no edit to this spec's scenarios or
     /// data model; true otherwise, since the gate holds `done` while it is.
     pub review_owed: bool,
@@ -1242,8 +1249,9 @@ pub struct ReviewObservation {
     /// The observation shows the spec's own code breaks its contract, so it
     /// takes a gating finding's dispositions: fixed in the run, or deferred to
     /// the spec's own task with the operator's confirmation, and never waived by
-    /// the rule. Unless fixed, it counts in the record's `contract-breaks` (spec
-    /// 079, AC2).
+    /// the rule. Unless fixed, it counts in the record's `contract-breaks`, and
+    /// unless also waived or released its `path`, then required, joins the record's
+    /// `open-findings` (spec 079).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub contract_break: bool,
 }

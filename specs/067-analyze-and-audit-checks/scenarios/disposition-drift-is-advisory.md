@@ -10,7 +10,7 @@ section: "Artifact checks"
 
 ## Behavior
 
-- **`disposition-drift` is `Advisory`.** `check_artifacts` still emits one finding when a `done` spec's `review.md` records `undispositioned` above zero, with `path` = `spec.md`, and its message ends `they do not hold done`.
+- **`disposition-drift` is `Advisory`.** `check_artifacts` still emits one finding when a `done` spec's `review.md` records `undispositioned` above zero, with `path` = `spec.md`, and its message ends `only a broken contract among them holds done`.
 - **A gating finding on a `done` spec is still reported as blocking**, by `review-state-drift` for the review record and by `/{project}:analyze`'s analyze-state drift for its own record; this family adds nothing there.
 - **`/{project}:analyze --fix` does not revert on it.** Its revert triggers are review-state drift and unresolved scenario open questions.
 

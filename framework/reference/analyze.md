@@ -171,7 +171,7 @@ The load-bearing line is **provably broken** (a finding) versus **can't check** 
 
 ## Review state drift (blocking)
 
-For each spec at `status: done`, `check-artifacts` reads the review record from its `review.md` frontmatter and reports an unset `last-run`, `blocking: true`, or a non-zero `should-violations`, each message saying what to do. A `review.md` carrying no parseable record is the hard fail under Frontmatter schema above, never a never-run; the two must never render alike. §implement-phase gives a SHOULD three exits — fixed, waived with its rationale, or deferred where the deferral releases it (**§Deferrals** in `.ductus/reference/review.md`) — and each drops the count, so a non-zero count at `done` means none happened.
+For each spec at `status: done`, `check-artifacts` reads the review record from its `review.md` frontmatter and reports an unset `last-run`, `blocking: true`, a non-zero `should-violations`, or a broken contract left in `open-findings`, each message saying what to do. A `review.md` carrying no parseable record is the hard fail under Frontmatter schema above, never a never-run; the two must never render alike. §implement-phase gives a SHOULD three exits — fixed, waived with its rationale, or deferred where the deferral releases it (**§Deferrals** in `.ductus/reference/review.md`) — and each drops the count, so a non-zero count at `done` means none happened.
 
 **Grandfather rule.** A `done` spec with **no `review.md` at all** predates `/{project}:review`, which writes the file on its first run (§text-first-artifacts), and is exempt. Adopters who want retroactive review run `/{project}:review` against the spec, after which it is subject to this check. The exemption is keyed on the artifact, never a block in `spec.md`, which would exempt every spec in a migrated corpus.
 
@@ -196,7 +196,7 @@ For each spec at `status: done`, judge the `dispositions:` map of each record ag
 - **`review.md`**, during detection, by `check-artifacts`. This command does not rewrite that record, so only `/{project}:review` can clear it.
 - **`analysis.md`**, after step 21, from the record this run just wrote — never during detection, for the reason Analyze state drift gives. A run that leaves a finding undecided reports `disposition drift: done spec's analysis.md records {n} undispositioned finding(s)`; the report is not counted in the record it judges.
 
-A `done` spec whose record still counts an undecided finding is not a contradiction: only a gating finding holds `done` (§brownfield-inbox, Finding dispositions), and a gating one already surfaces as Review state drift or Analyze state drift. For an undecided observation or advisory finding this is the only report, so a later run can decide it.
+A `done` spec whose record still counts an undecided finding is not a contradiction: only a gating finding holds `done` (§brownfield-inbox, Finding dispositions), and a gating one already surfaces as Review state drift or Analyze state drift. For any other undecided observation or advisory finding this is the only report, so a later run can decide it.
 
 - **A record with no `dispositions:` map is not drift.** It predates dispositions, and a backfilled map would assert dispositions nobody made. The pre-done gate blocks the same absence on an `in-progress` spec; on a `done` spec it waits for the command's next run.
 

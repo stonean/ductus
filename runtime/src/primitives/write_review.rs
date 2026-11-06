@@ -368,6 +368,18 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
                 "a broken contract is fixed or deferred to the spec's own task; the rule never waives it",
             ));
         }
+        if observation.contract_break
+            && !matches!(
+                observation.disposition.outcome,
+                DispositionOutcome::Fixed | DispositionOutcome::Waived
+            )
+            && observation.path.trim().is_empty()
+        {
+            return Err(invalid(
+                format!("observations[{idx}].path"),
+                "a broken contract left open names the file the next run reads again",
+            ));
+        }
         for (argument, companion) in decisions::require_companion(
             "write-review",
             &format!("observations[{idx}].disposition"),
@@ -420,9 +432,7 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
-    validate_scalar_fields(args)?;
-    validate_finding_dispositions(args)?;
-    validate_fix_rounds(args)?;
+    validate_arguments(args)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {
@@ -431,6 +441,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             feature: args.feature.clone(),
         });
     }
+    refuse_an_empty_scope_over_a_finding(args, &feature_dir)?;
 
     // Dedup, then bucket the survivors.
     let deduped = dedup_findings(&args.findings);
@@ -509,6 +520,11 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     })?;
     decisions::mark_gating(&mut decisions, &sorted.holding());
     let loop_record = loop_record_of(args, repo)?;
+    let open_findings = open_findings(
+        must.iter().chain(should.iter()).map(|f| f.file.as_str()),
+        &args.observations,
+        (repo, &root, &args.feature),
+    );
     let report = render_report(
         args,
         &Buckets {
@@ -527,6 +543,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             dispositions,
             fix_rounds: loop_record.as_ref(),
             excluded: &excluded,
+            open_findings: &open_findings,
         },
         &contracts,
     );
@@ -570,6 +587,44 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         examined: args.examined,
         scope,
     })
+}
+
+/// Every check of the arguments alone, before anything is read.
+fn validate_arguments(args: &WriteReviewArgs) -> Result<()> {
+    validate_scalar_fields(args)?;
+    validate_finding_dispositions(args)?;
+    validate_fix_rounds(args)
+}
+
+/// An empty scope reads nothing, so its clean record written over one that counts a
+/// finding would clear that finding with its file unread (spec 079). A run's own
+/// earlier write carries its timestamp, so it never refuses itself. A record with no
+/// `open-findings` list, from before the field, is why this reads the counts too.
+fn refuse_an_empty_scope_over_a_finding(args: &WriteReviewArgs, feature_dir: &Path) -> Result<()> {
+    if !args.empty_scope {
+        return Ok(());
+    }
+    let crate::primitives::RecordLoad::Present(record) =
+        crate::primitives::load_review_record(feature_dir)
+    else {
+        return Ok(());
+    };
+    let counts_a_finding = record
+        .must_violations
+        .saturating_add(record.should_violations)
+        > 0
+        || !record.open_findings.is_empty();
+    if counts_a_finding && record.last_run.as_deref() != Some(args.reviewed_at.as_str()) {
+        return Err(PrimitiveError::InvalidArgument {
+            primitive: "write-review".into(),
+            argument: "empty-scope".into(),
+            reason: "the record counts a finding that this run would clear with its file unread; \
+                     review without an empty scope, naming an earlier --since if the window holds \
+                     nothing"
+                .into(),
+        });
+    }
+    Ok(())
 }
 
 /// How many files this review's scope covers — the denominator.
@@ -776,6 +831,51 @@ fn contract_breaks(observations: &[ReviewObservation]) -> usize {
                 && observation.disposition.outcome != DispositionOutcome::Fixed
         })
         .count()
+}
+
+/// The file an observation's `path` names, without the `:line` or `:start-end` a run
+/// may add to it.
+fn path_without_lines(path: &str) -> &str {
+    let path = path.trim();
+    match path.rsplit_once(':') {
+        Some((file, lines))
+            if !file.is_empty()
+                && !lines.is_empty()
+                && lines.chars().all(|c| c.is_ascii_digit() || c == '-') =>
+        {
+            file
+        }
+        _ => path,
+    }
+}
+
+/// Each file the record leaves open, sorted once: every counted violation's, and each
+/// contract break's that the run did not fix, a person did not waive and no deferral
+/// releases, which is what holds `done` until a review clears it (spec 079).
+fn open_findings<'a>(
+    violations: impl Iterator<Item = &'a str>,
+    observations: &'a [ReviewObservation],
+    (repo, root, feature): (&Path, &str, &str),
+) -> Vec<String> {
+    let open_breaks = observations
+        .iter()
+        .filter(|observation| {
+            observation.contract_break
+                && !matches!(
+                    observation.disposition.outcome,
+                    DispositionOutcome::Fixed | DispositionOutcome::Waived
+                )
+                && !decisions::releases(repo, root, feature, &observation.disposition)
+        })
+        .map(|observation| path_without_lines(&observation.path));
+    violations
+        .map(str::trim)
+        .chain(open_breaks)
+        .filter(|path| !path.is_empty())
+        .map(str::to_string)
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 /// The deferred and waived observations, as the decisions they store.
@@ -1003,6 +1103,18 @@ struct Record<'a> {
     fix_rounds: Option<&'a LoopRecord>,
     /// Each path the scope left out, with the specs that claimed it.
     excluded: &'a BTreeMap<String, Vec<String>>,
+    /// Each file the record leaves open; see [`open_findings`].
+    open_findings: &'a [String],
+}
+
+/// The `open-findings` list, absent when the record leaves nothing open.
+fn render_open_findings(fm: &mut String, open_findings: &[String]) {
+    if !open_findings.is_empty() {
+        let _ = writeln!(fm, "open-findings:");
+        for path in open_findings {
+            let _ = writeln!(fm, "  - {}", yaml_string(path));
+        }
+    }
 }
 
 /// Render the full `review.md` document (frontmatter + fixed skeleton).
@@ -1052,6 +1164,7 @@ fn render_report(
         "contract-breaks: {}",
         contract_breaks(&args.observations)
     );
+    render_open_findings(&mut fm, record.open_findings);
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
     if args.loop_open {
         let _ = writeln!(fm, "fix-rounds-open: true");
@@ -1201,7 +1314,7 @@ fn generate_summary(
     if undispositioned > 0 {
         let _ = write!(
             summary,
-            " {undispositioned} observation(s) undispositioned — recorded, and they do not hold `done`."
+            " {undispositioned} observation(s) undispositioned — recorded, and only a broken contract among them holds `done`."
         );
     }
     summary
@@ -3185,6 +3298,7 @@ mod tests {
             None,
         );
         left.contract_break = true;
+        left.path = "src/a.rs".into();
         let mut fixed = dispositioned("bug: another", DispositionOutcome::Fixed, None);
         fixed.contract_break = true;
         args.observations = vec![
@@ -3196,9 +3310,160 @@ mod tests {
         let report = review_md(&dir, "001-x");
         assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
         assert!(
-            report.contains("bug: a contract broken (breaks the spec's contract)"),
+            report.contains("bug: a contract broken — `src/a.rs` (breaks the spec's contract)"),
             "{report}"
         );
+    }
+
+    /// The frontmatter list the record leaves, read back as the gate reads it.
+    fn listed_open(tmp: &TempDir, feature: &str) -> Vec<String> {
+        match crate::primitives::load_review_record(&tmp.path().join("specs").join(feature)) {
+            crate::primitives::RecordLoad::Present(record) => record.open_findings,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    /// A contract break with its file, in the disposition given.
+    fn broken(
+        path: &str,
+        outcome: DispositionOutcome,
+        companion: Option<&str>,
+    ) -> ReviewObservation {
+        let mut observation = dispositioned(&format!("bug: {path}"), outcome, companion);
+        observation.path = path.into();
+        observation.contract_break = true;
+        observation
+    }
+
+    /// Counted violations and open breaks are listed once each, without a line range;
+    /// what a run fixed or a person waived, and a deferral that releases, are not.
+    #[test]
+    fn the_record_lists_what_it_leaves_open() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let other = tmp.path().join("specs/002-y");
+        std::fs::create_dir_all(other.join("scenarios")).unwrap();
+        std::fs::write(
+            other.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 002\n",
+        )
+        .unwrap();
+        std::fs::write(other.join("scenarios/fix.md"), "# Fix\n").unwrap();
+        std::fs::write(
+            tmp.path().join("specs/001-x/tasks.md"),
+            "# Tasks\n\n## 1. Fix\n\n- [ ] a\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            finding("SEC-1", "must", "src/must.rs", "1-2", "high"),
+            finding("SEC-2", "should", "src/should.rs", "1-2", "high"),
+            finding("SEC-3", "should", "src/must.rs", "9-9", "high"),
+        ];
+        let mut own_task = broken(
+            "src/deferred.rs",
+            DispositionOutcome::Deferred,
+            Some("specs/001-x/tasks.md"),
+        );
+        own_task.disposition.task = Some("1".into());
+        args.observations = vec![
+            broken(
+                "src/undecided.rs:12-14",
+                DispositionOutcome::Undispositioned,
+                None,
+            ),
+            broken("src/line.rs:7", DispositionOutcome::Undispositioned, None),
+            own_task,
+            broken("src/fixed.rs", DispositionOutcome::Fixed, None),
+            broken(
+                "src/waived.rs",
+                DispositionOutcome::Waived,
+                Some("a person chose"),
+            ),
+            broken(
+                "src/released.rs",
+                DispositionOutcome::Deferred,
+                Some("specs/002-y/scenarios/fix.md"),
+            ),
+            observation("perf: not a break", "src/perf.rs"),
+        ];
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            listed_open(&tmp, "001-x"),
+            [
+                "src/deferred.rs",
+                "src/line.rs",
+                "src/must.rs",
+                "src/should.rs",
+                "src/undecided.rs",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_record_leaving_nothing_open_writes_no_list() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        assert!(!review_md(&tmp, "001-x").contains("open-findings"));
+    }
+
+    /// With no file the next run could not read it again, so the hold would have no
+    /// way to be cleared by reading. A break a person waived needs none.
+    #[test]
+    fn a_broken_contract_left_open_names_its_file() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.observations = vec![broken("  ", DispositionOutcome::Undispositioned, None)];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(err.to_string().contains("observations[0].path"), "{err}");
+
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![broken(
+            "",
+            DispositionOutcome::Waived,
+            Some("a person chose"),
+        )];
+        run(&args, tmp.path()).unwrap();
+        args.observations = vec![broken("", DispositionOutcome::Fixed, None)];
+        run(&args, tmp.path()).unwrap();
+    }
+
+    /// An empty scope read nothing, so it cannot clear what the record counts: neither
+    /// a count, for a record from before the list, nor a listed break. A clean record,
+    /// no record, and the run's own earlier write are all fine.
+    #[test]
+    fn an_empty_scope_write_refuses_over_a_record_counting_a_finding() {
+        let mut empty = base_args("001-x");
+        empty.empty_scope = true;
+        for held in [
+            "must-violations: 1\nshould-violations: 0\nlow-confidence: 0\nblocking: true\n",
+            "must-violations: 0\nshould-violations: 1\nlow-confidence: 0\nblocking: false\n",
+            "must-violations: 0\nshould-violations: 0\nlow-confidence: 0\nblocking: false\nopen-findings:\n  - src/a.rs\n",
+        ] {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            let record = format!("---\nspec: 001-x\nlast-run: 2020-01-01T00:00:00Z\n{held}---\n");
+            std::fs::write(tmp.path().join("specs/001-x/review.md"), &record).unwrap();
+            let err = run(&empty, tmp.path()).unwrap_err();
+            assert!(err.to_string().contains("empty-scope"), "{held}: {err}");
+            assert_eq!(
+                std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap(),
+                record,
+                "a refusal writes nothing"
+            );
+        }
+
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&empty, tmp.path()).unwrap();
+        run(&empty, tmp.path()).unwrap();
+
+        let mut own = empty.clone();
+        own.observations = vec![broken(
+            "src/a.rs",
+            DispositionOutcome::Undispositioned,
+            None,
+        )];
+        run(&own, tmp.path()).unwrap();
+        run(&own, tmp.path()).unwrap();
     }
 
     #[test]
