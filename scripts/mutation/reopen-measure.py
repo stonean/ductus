@@ -340,8 +340,8 @@ MUTATIONS = [
     (
         "M47 an older decision counts as this run's",
         'src/primitives/measure_reopenings.rs',
-        '            .filter(|decision| decision.decided_at.as_deref().map(str::trim) == Some(last_run))\n',
-        '',
+        '.filter(|decision| at_this_run(&decision.decided_at))',
+        '.filter(|decision| decision.decided_at.is_some())',
         'measure_reopenings::tests::decisions_by_person_counts_only_a_runs_own_and_never_the_rules',
     ),
     (
