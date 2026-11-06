@@ -131,7 +131,7 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 
 ## 12. Verify, land and measure (AC8, AC20)
 
-Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. Subtask 4's count starts at the commit landing AC24, by the owner's choice (2026-11-06), so other specs close while the rest of task 16 lands.
+Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. Subtask 4's count starts at `e7fcde37`, the commit landing AC24, by the owner's choice (2026-11-06), so other specs close while the rest of task 16 lands.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
 - [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
