@@ -48,6 +48,8 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 "Counts as gating" means a contract-breaking observation takes a gating finding's dispositions: it is fixed in the run or deferred to the spec's own task, its deferral reaches the operator, and the record counts it in `contract-breaks`. `check-review-gate` gains no tier, so the MUST, SHOULD, hard-fail and blocking definitions in the constitution, 058, 076 and 066 stay true: a break the run did not fix, a person did not waive and no deferral releases is listed in `open-findings`, and the gate blocks on the list as `review-owed` (owner, 2026-11-06). That holds `holds_done_until_reviewed` true too, so its record does not move the window's start. `contract-breaks` still counts a waived break, which the measurement reads as a gating finding left by that run.
 
+`process-waivers` and `process-decisions` resolve the run's scope once, through `RunScope` in `runtime/src/primitives/compute_review_scope.rs`, when a stored finding on a file did not fire. One on a file still on disk that the scope does not hold is retained, so a narrower window cannot expire a person's decision (AC24). The primitive reads the scope itself rather than taking a host's word for each anchor (§design-principles), and takes `since` only to match a run that took `--since`.
+
 ### What reopens
 
 `classify-spec-edit` decides from the diff, since a rule that depends on an agent remembering it would be skipped (§design-principles). It compares `spec.md`'s criteria and open questions through `read-spec`'s parser, unchecked tasks through `read-tasks`', and the changed path set, and returns `correction` only when the diff touches nothing but `spec.md`, `plan.md` and `tasks.md` and changes no criterion text, question or unchecked task, since a `tasks.md` edit adding no unchecked task takes no back-edge (§spec-lifecycle). A label's assignment stays a correction, and a run's record is no edit. `/{project}:amend`'s reconcile pass calls it before proposing a reopen, and `check_artifact_size.rs`'s `OnDone` hints follow it, so trimming `spec.md` reopens only when a criterion or question changes and trimming `data-model.md` always does. Nothing enforces a reopen today, so this adds no gate. `scripts/audit/cross-doc-consistency.sh` pins only the transitions, so it does not change.
@@ -89,6 +91,8 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | --- | --- | --- |
 | `runtime/src/primitives/commit_attribution.rs` | Create | Whose change a commit is, with its fixture histories |
 | `runtime/src/primitives/invalidate_review.rs` | Modify | Doc comment: the next review's scope holds what a fold below `done` brought |
+| `runtime/src/primitives/process_waivers.rs` | Modify | Retains a waiver on a file the run did not read |
+| `runtime/src/primitives/process_decisions.rs` | Modify | Retains a decision on a file the run did not read |
 | `runtime/src/primitives/check_stuck.rs` | Modify | Where a reopening starts, shared with the window and `diff-cross-spec` |
 | `runtime/src/primitives/compute_review_scope.rs` | Modify | Window, scope, `excluded`, `open-findings`, `review-owed` |
 | `runtime/src/primitives/fix_rounds.rs` | Modify | A round drops another spec's commits |

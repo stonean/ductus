@@ -606,6 +606,11 @@ pub struct ProcessWaiversArgs {
     #[serde(default)]
     #[arg(long = "skipped-pass")]
     pub skipped_passes: Vec<String>,
+    /// The run's `--since`, when it took one, since a waiver on a file the run's
+    /// scope does not hold is retained. Absent, the default window's scope.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub since: Option<String>,
 }
 
 /// Result for `process-waivers`.
@@ -675,6 +680,12 @@ pub struct ProcessDecisionsArgs {
     #[serde(default)]
     #[arg(long)]
     pub restricted: bool,
+    /// The run's `--since`, when it took one, since on the review record a decision
+    /// on a file the run's scope does not hold is retained. Absent, the default
+    /// window's scope.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub since: Option<String>,
 }
 
 /// Result for `process-decisions`.
@@ -8381,6 +8392,7 @@ mod tests {
             record: DecisionRecord::Analysis,
             fired: vec!["grounding — m".into()],
             restricted: true,
+            since: None,
         };
         let v = serde_json::to_value(&args).unwrap();
         assert_eq!(v["record"], "analysis");

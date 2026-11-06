@@ -1680,6 +1680,7 @@ mod tests {
                 record: crate::schema::primitives::DecisionRecord::Analysis,
                 fired: keys.iter().map(|k| (*k).to_string()).collect(),
                 restricted: false,
+                since: None,
             },
             tmp.path(),
         )

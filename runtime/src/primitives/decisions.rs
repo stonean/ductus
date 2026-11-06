@@ -472,6 +472,31 @@ pub(crate) fn mark_gating(merged: &mut [RawDecision], holding: &[String]) {
     }
 }
 
+/// The file a stored review key names, in either shape `write-review` writes one: an
+/// observation's text, an em dash and its path in backticks, or a violation's
+/// `rule {id} at {file}`, without any `:line`. `None` for a key naming no file, as a
+/// hand-chosen one may.
+pub(crate) fn key_anchor(key: &str) -> Option<&str> {
+    let named = key
+        .strip_suffix('`')
+        .and_then(|rest| rest.rsplit_once(" — `"))
+        .map(|(_, path)| path)
+        .or_else(|| {
+            key.strip_prefix("rule ")
+                .and_then(|rest| rest.split_once(" at "))
+                .map(|(_, file)| file)
+        })?;
+    let file = match named.rsplit_once(':') {
+        Some((file, line))
+            if !line.is_empty() && line.chars().all(|c| c.is_ascii_digit() || c == '-') =>
+        {
+            file
+        }
+        _ => named,
+    };
+    (!file.trim().is_empty()).then_some(file)
+}
+
 /// The stored decision a run applies for `key`: the first well-formed entry
 /// carrying it. A later duplicate is reported and ignored by
 /// `process-decisions`, so matching any entry instead would let an ignored
@@ -831,6 +856,24 @@ mod tests {
             format!("---\n{frontmatter}---\n\n# Record\n"),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn a_key_names_its_file_in_either_shape_without_a_line() {
+        assert_eq!(key_anchor("bug: x — `src/a.rs`"), Some("src/a.rs"));
+        assert_eq!(key_anchor("bug: x — `src/a.rs:12`"), Some("src/a.rs"));
+        assert_eq!(key_anchor("bug: x — `src/a.rs:12-30`"), Some("src/a.rs"));
+        assert_eq!(key_anchor("bug: x — `b.rs` — `src/a.rs`"), Some("src/a.rs"));
+        assert_eq!(key_anchor("rule BE-X-001 at src/a.rs"), Some("src/a.rs"));
+        assert_eq!(key_anchor("rule BE-X-001 at src/a.rs:4"), Some("src/a.rs"));
+    }
+
+    #[test]
+    fn a_key_with_no_file_names_none() {
+        assert_eq!(key_anchor("grounding — plan.md cites a path"), None);
+        assert_eq!(key_anchor("bug: `src/a.rs` named mid-sentence"), None);
+        assert_eq!(key_anchor("bug: x — ``"), None);
+        assert_eq!(key_anchor("a rule at src/a.rs"), None);
     }
 
     #[test]

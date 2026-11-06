@@ -158,6 +158,12 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+- **A review no longer expires a person's decision on a file it did not read.**
+  `process-waivers` and `process-decisions` retain a stored waiver or decision that
+  did not fire when its file is still on disk and the run's scope does not hold it,
+  or when that scope cannot be read. As windows narrowed, a run's silence on such a
+  file had come to read as the finding having gone. A file gone from disk, or a run
+  that read the file, still expires it, and both primitives take `since`.
 - **A fold below `done` brings its code to the next review.** A branch-scoped spec
   removed below `done` adds the paths of every commit it claimed to its target's
   `compute-review-scope` scope, wherever the window starts. A fold into a `done`

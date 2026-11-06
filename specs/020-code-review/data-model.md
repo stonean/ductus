@@ -50,7 +50,7 @@ One entry per waiver judgment: one rule, waived at one or more files for one rea
 A waiver anchor expires (its path is dropped from `review.md`'s frontmatter on the next `/ductus:review` run — from the spec's, before 057 — and the entry with its last path) when **either** of the following holds:
 
 - The anchored path no longer exists in the repository (renamed or deleted).
-- The named `rule` no longer fires at that path (rule removed, or the violating code was fixed).
+- The named `rule` no longer fires at that path (rule removed, or the violating code was fixed), in a run whose scope holds it; a run that did not read the path retains the anchor.
 
 When the underlying finding still exists elsewhere in scope after expiry, it re-counts toward its severity's count: a MUST toward `must-violations`, flipping the record's `blocking` flag back to `true`; a SHOULD toward `should-violations`, which holds `done` at the pre-done gate. The detailed edge-case behavior is in [`scenarios/waiver-expiry.md`](scenarios/waiver-expiry.md).
 

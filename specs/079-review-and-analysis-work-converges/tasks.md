@@ -131,7 +131,7 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 
 ## 12. Verify, land and measure (AC8, AC20)
 
-Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. No landing commit exists yet for subtask 4: it is the commit that finishes task 16.
+Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. Subtask 4's count starts at the commit landing AC24, by the owner's choice (2026-11-06), so other specs close while the rest of task 16 lands.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
 - [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
@@ -140,7 +140,7 @@ Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after th
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
 - [ ] Propose `done` with the completion gate
 
-Subtask 4 cannot finish in one session: once 1–3 are done, record the landing commit here and hand off. Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly.
+Subtask 4 cannot finish in one session: once AC24 lands, record its commit here and hand off. Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.
 
@@ -189,7 +189,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 
 - [x] Contract break, the owner chose (2026-11-05) that a record the gate holds does not move the start, so add `holds_done_until_reviewed` to `recorded_run`'s `stopped_early`, and AC5's text already says so: a committed record with an unfixed MUST or SHOULD moves the window past it, so a re-run sees `scope-count: 0`, takes the empty-scope branch and writes `must-violations: 0` with the file unchanged. Also clears an unread round and a contract break, and leaves `--waive` no finding to act on. Reproduced by hand in this session; absent at `3360dea3`
 - [x] Contract break, the owner chose (2026-11-06) that the record lists what it leaves open, the next scope holds it, and a break left open holds `done`: what that fix leaves, on inputs where what a finding names lies outside the next window (`research.md`, *What item 1's fix leaves*). An unfixed contract break the gate does not hold, a held record from before the reopening, a spec with no transition, `--since=HEAD`, and a first review's MUST on a plan file the window left unchanged each still end at a count of 0 with the file unread. An unread fix round from before the reopening stays out of reach, waived: it needs a record past the gate, 0 of 120 at the closings since 2026-10-01
-- [ ] Contract break: a narrowed window expires each stored waiver and decision on a file the run did not read, a person's included, with the notice that the finding no longer fires. Retain an anchor outside the scope
+- [x] Contract break: a narrowed window expires each stored waiver and decision on a file the run did not read, a person's included, with the notice that the finding no longer fires. Retain an anchor outside the scope
 - [x] Contract break, the owner chose (2026-11-06) the gate blocking on an owed review, with a path in another spec's directory owing none: a code-changing reopening following the gate's own message runs analyze, review, analyze and ends over the bound, or stops where the gate first passes with `review-owed: true` and no review, since the gate names `/analyze` first and never reads `review-owed`
 - [x] Contract break, the owner chose (2026-11-06) that a pass through draft is one reopening: after the draft back-edge the reopening's earlier code leaves the window and the measure, and `review-owed` reads false
 - [ ] Contract break: a spec renamed while `in-progress` starts its window at the rename, its earlier code in no list, and `diff-cross-spec` reads its own old directory as another spec's. Compare status by `FeatureForm`

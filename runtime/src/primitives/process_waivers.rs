@@ -6,7 +6,8 @@
 //! anchor, so one entry can land in several of these buckets:
 //!
 //! - **apply** — the anchored file exists AND the rule still fires there.
-//! - **expire** — the file is gone OR the rule no longer fires there. The
+//! - **expire** — the file is gone OR the rule no longer fires in a file the
+//!   run read. The
 //!   path drops on the next frontmatter write, and the entry with its last
 //!   path (write-review's job); this primitive emits the `waiver expired: …`
 //!   notice and reports the anchor.
@@ -14,7 +15,9 @@
 //!   (`skipped-passes` non-empty). The run lacks the full-review picture, so
 //!   the waiver is left untouched (never expired/pruned) — this honors the
 //!   contract that waivers anchored to skipped dimensions apply unchanged.
-//!   Only an unrestricted run can expire a waiver.
+//!   Only an unrestricted run can expire a waiver. So too a non-firing waiver on
+//!   a file still on disk that the run's scope does not hold, which it did not
+//!   read (spec 079).
 //! - **malformed** — a field is missing/empty; warn and skip, and never
 //!   report it expired. `write-review` compares anchors only, so a malformed
 //!   waiver still loses each path whose `(rule, file)` an expired one shares.
@@ -31,10 +34,12 @@
 //! the per-path anchors by
 //! `specs/066-audit-records-and-the-completion-gate/scenarios/process-waivers-file-lists.md`.
 
+use std::cell::OnceCell;
 use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::{PrimitiveError, Result, WaiverPaths};
 use crate::schema::paths;
 use crate::schema::primitives::{ProcessWaiversArgs, ProcessWaiversResult, WaiverRef};
@@ -86,6 +91,9 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
     // list — and the only cost is a provably-dead waiver lingering until the
     // next full run, which then prunes it.
     let restricted = !args.skipped_passes.is_empty();
+    // A file the run did not read says nothing about a rule's firing there either,
+    // so such a waiver stays too, read only when one did not fire (spec 079).
+    let scope: OnceCell<RunScope> = OnceCell::new();
 
     let mut applied: Vec<WaiverRef> = Vec::new();
     let mut expired: Vec<WaiverRef> = Vec::new();
@@ -141,6 +149,14 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
             } else if restricted {
                 notices.push(format!(
                     "waiver retained: rule {shown_rule} at {shown_file} — dimension not evaluated this run ({shown_reason})"
+                ));
+                retained.push(anchor);
+            } else if let Some(why) = scope
+                .get_or_init(|| RunScope::resolve(&args.feature, args.since.as_deref(), repo))
+                .why_unread(file, repo)
+            {
+                notices.push(format!(
+                    "waiver retained: rule {shown_rule} at {shown_file} — {why} ({shown_reason})"
                 ));
                 retained.push(anchor);
             } else {
@@ -209,14 +225,40 @@ mod tests {
     /// (already indented under `waivers:`), and touch each path in
     /// `existing_files` relative to the repo root.
     fn setup(feature: &str, waivers_yaml: &str, existing_files: &[&str]) -> TempDir {
+        setup_after(feature, waivers_yaml, &[], existing_files)
+    }
+
+    /// `setup`, with the spec reopened in a repository: each of `before` is committed
+    /// before its window starts, so the run's scope does not hold it, and each of
+    /// `existing_files` is uncommitted, so the scope does.
+    fn setup_after(
+        feature: &str,
+        waivers_yaml: &str,
+        before: &[&str],
+        existing_files: &[&str],
+    ) -> TempDir {
+        use crate::primitives::git_fixture::commit_all;
         let tmp = TempDir::new().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
         let dir = tmp.path().join("specs").join(feature);
         std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: planned\ndependencies: []\n---\n\n# Spec\n",
+        )
+        .unwrap();
+        for rel in before {
+            let path = tmp.path().join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "code\n").unwrap();
+        }
+        commit_all(&repo, "chore: seed");
         std::fs::write(
             dir.join("spec.md"),
             "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n",
         )
         .unwrap();
+        commit_all(&repo, "status: in-progress");
         // The waivers live in `review.md` now (spec 057 task 5). Callers still
         // pass entries indented for the old nested position, so they are
         // de-indented one level here rather than at eleven call sites — the
@@ -258,6 +300,7 @@ mod tests {
             feature: feature.to_string(),
             fired: fired(fired_pairs),
             skipped_passes: Vec::new(),
+            since: None,
         }
     }
 
@@ -270,6 +313,7 @@ mod tests {
             feature: feature.to_string(),
             fired: fired(fired_pairs),
             skipped_passes: skipped.iter().map(|s| (*s).to_string()).collect(),
+            since: None,
         }
     }
 
@@ -317,6 +361,55 @@ mod tests {
         assert_eq!(result.applied, [] as [WaiverRef; 0]);
         assert_eq!(result.expired.len(), 1);
         assert!(result.notices[0].starts_with("waiver expired: rule SEC-BE-014"));
+    }
+
+    /// The rule did not fire because the run never opened the file, so that says
+    /// nothing about the waiver, and a person's reason stays for the run that reads it.
+    #[test]
+    fn a_waiver_on_a_file_the_run_did_not_read_is_retained() {
+        let tmp = setup_after("001-x", ONE_WAIVER, &["src/api/internal.ts"], &[]);
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
+        assert_eq!(result.retained.len(), 1);
+        assert!(
+            result.notices[0].contains("this run did not read `src/api/internal.ts`"),
+            "{:?}",
+            result.notices
+        );
+    }
+
+    /// A narrowed window reads less, so the same file is unread under it.
+    #[test]
+    fn the_runs_since_decides_what_it_read() {
+        let tmp = setup("001-x", ONE_WAIVER, &[]);
+        let path = tmp.path().join("src/api/internal.ts");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "code\n").unwrap();
+        let repo = git2::Repository::open(tmp.path()).unwrap();
+        crate::primitives::git_fixture::commit_all(&repo, "feat: the file");
+        assert_eq!(
+            run(&args("001-x", &[]), tmp.path()).unwrap().expired.len(),
+            1
+        );
+
+        let mut narrowed = args("001-x", &[]);
+        narrowed.since = Some("HEAD".to_string());
+        let result = run(&narrowed, tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 1, "{:?}", result.notices);
+    }
+
+    /// No window to read is no evidence the file was read, and the notice says which.
+    #[test]
+    fn a_scope_that_cannot_be_read_retains_and_says_so() {
+        let tmp = setup("001-x", ONE_WAIVER, &["src/api/internal.ts"]);
+        std::fs::remove_dir_all(tmp.path().join(".git")).unwrap();
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 1);
+        assert!(
+            result.notices[0].contains("this run's scope could not be read"),
+            "{:?}",
+            result.notices
+        );
     }
 
     #[test]

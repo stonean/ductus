@@ -20,7 +20,8 @@
 //!   drops the entry. For a deferred decision this is the moment the deferred
 //!   work landed.
 //! - **retained** — the key did not fire, but the run did not evaluate every
-//!   source, so absence proves nothing and the entry is kept.
+//!   source, or its scope does not hold the file a review key names, so absence
+//!   proves nothing and the entry is kept (spec 079).
 //! - **malformed** — a required field or an outcome's companion is missing,
 //!   or a field its outcome forbids is present; reported, applied to nothing,
 //!   and never pruned.
@@ -37,8 +38,10 @@
 //! Read-only but for that list file: frontmatter mutation belongs to
 //! `write-review` and `write-analysis`.
 
+use std::cell::OnceCell;
 use std::path::Path;
 
+use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::decisions::{self, Work, read_decisions};
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
@@ -148,6 +151,9 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
 
     let mut result = Classified::default();
     let mut seen: Vec<String> = Vec::new();
+    // Resolved only when a stored finding on a file did not fire, since it walks the
+    // window. A review reads its scope, so only its record can have left a file unread.
+    let scope: OnceCell<RunScope> = OnceCell::new();
     for (index, entry) in stored.iter().enumerate() {
         let decision = match entry.to_ref() {
             Ok(decision) => decision,
@@ -204,6 +210,19 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
         } else if args.restricted {
             result.notices.push(format!(
                 "decision retained: {key} — its source was not evaluated this run ({})",
+                describe(&decision)
+            ));
+            result.retained.push(decision);
+        } else if let Some(why) = decisions::key_anchor(&key)
+            .filter(|_| args.record == DecisionRecord::Review)
+            .and_then(|path| {
+                scope
+                    .get_or_init(|| RunScope::resolve(&args.feature, args.since.as_deref(), repo))
+                    .why_unread(path, repo)
+            })
+        {
+            result.notices.push(format!(
+                "decision retained: {key} — {why} ({})",
                 describe(&decision)
             ));
             result.retained.push(decision);
@@ -285,7 +304,138 @@ mod tests {
             record,
             fired: fired.iter().map(|k| (*k).to_string()).collect(),
             restricted,
+            since: None,
         }
+    }
+
+    /// A stored decision, waived, under `key`.
+    fn waived(key: &str) -> String {
+        format!(
+            "  - key: \"{key}\"\n    outcome: waived\n    reason: a person's reason\n    \
+             decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n"
+        )
+    }
+
+    /// 001-x reopened with `src/old.rs` before its window and `src/new.rs` inside it,
+    /// its record holding `keys` uncommitted, so the window starts at the reopen.
+    fn windowed(keys: &[&str]) -> tempfile::TempDir {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        let spec = tmp.path().join("specs/001-x/spec.md");
+        write(&spec, "---\nstatus: planned\n---\n# 001\n");
+        write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
+        commit_all(&repo, "chore: seed");
+        write(&spec, "---\nstatus: in-progress\n---\n# 001\n");
+        commit_all(&repo, "status(001): in-progress");
+        write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
+        commit_all(&repo, "feat(001): new");
+        let decisions: String = keys.iter().map(|key| waived(key)).collect();
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &format!("---\nlast-run: 2026-09-25T00:00:00Z\ndecisions:\n{decisions}---\n"),
+        );
+        tmp
+    }
+
+    /// A key whose finding did not fire, on a file the run never opened, says nothing
+    /// about that finding, so a person's decision stays for the run that reads it.
+    #[test]
+    fn a_silent_decision_on_a_file_the_run_did_not_read_is_retained() {
+        let tmp = windowed(&["bug: a finding — `src/old.rs:3`"]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired, [] as [DecisionRef; 0]);
+        assert_eq!(result.retained.len(), 1);
+        assert!(
+            result.notices[0].contains("this run did not read `src/old.rs`"),
+            "{:?}",
+            result.notices
+        );
+    }
+
+    #[test]
+    fn a_silent_violation_on_a_file_the_run_did_not_read_is_retained() {
+        let tmp = windowed(&["rule BE-X-001 at src/old.rs"]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 1);
+    }
+
+    /// The run read the file and the finding is gone, so the decision is over.
+    #[test]
+    fn a_silent_decision_on_a_file_the_run_read_expires() {
+        let tmp = windowed(&["bug: a finding — `src/new.rs`"]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired.len(), 1);
+        assert_eq!(result.retained, [] as [DecisionRef; 0]);
+    }
+
+    /// Nothing is left for the finding to fire on, whatever the scope holds.
+    #[test]
+    fn a_silent_decision_on_a_file_gone_from_disk_expires() {
+        let tmp = windowed(&["bug: a finding — `src/gone.rs`"]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired.len(), 1);
+    }
+
+    /// With no file to test, a key behaves as it did: only firing keeps it.
+    #[test]
+    fn a_silent_decision_naming_no_file_expires() {
+        let tmp = windowed(&["bug: a finding with no path"]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired.len(), 1);
+    }
+
+    /// A firing key is matched wherever its file lies.
+    #[test]
+    fn a_firing_decision_outside_the_scope_is_matched() {
+        let key = "bug: a finding — `src/old.rs`";
+        let tmp = windowed(&[key]);
+        let result = compute(&args(DecisionRecord::Review, &[key], false), tmp.path()).unwrap();
+        assert_eq!(result.matched.len(), 1);
+        assert_eq!(result.retained, [] as [DecisionRef; 0]);
+    }
+
+    /// A narrowed window reads less, so the same file is unread under it.
+    #[test]
+    fn the_runs_since_decides_what_it_read() {
+        let tmp = windowed(&["bug: a finding — `src/new.rs`"]);
+        let mut narrowed = args(DecisionRecord::Review, &[], false);
+        narrowed.since = Some("HEAD".to_string());
+        let result = compute(&narrowed, tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 1, "{:?}", result.notices);
+    }
+
+    /// An analysis has no window: it reads its subjects whatever a commit changed.
+    #[test]
+    fn an_analysis_expires_a_silent_decision_wherever_its_file_lies() {
+        use crate::primitives::git_fixture::write;
+        let key = "bug: a finding — `src/old.rs`";
+        let tmp = windowed(&[]);
+        write(
+            &tmp.path().join("specs/001-x/analysis.md"),
+            &format!(
+                "---\nlast-run: 2026-09-25T00:00:00Z\ndecisions:\n{}---\n",
+                waived(key)
+            ),
+        );
+        let result = compute(&args(DecisionRecord::Analysis, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired.len(), 1);
+    }
+
+    /// No window to read is no evidence the file was read, and the notice says which.
+    #[test]
+    fn a_scope_that_cannot_be_read_retains_and_says_so() {
+        let tmp = repo_with(
+            REVIEW_RECORD_FILE,
+            &waived("bug: a finding — `src/absent.rs`"),
+        );
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 1);
+        assert!(
+            result.notices[0].contains("this run's scope could not be read"),
+            "{:?}",
+            result.notices
+        );
     }
 
     #[test]

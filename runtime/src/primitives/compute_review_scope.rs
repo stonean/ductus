@@ -451,6 +451,40 @@ fn open_findings_at(
         .unwrap_or_default())
 }
 
+/// What a review run reads, for a caller weighing a stored finding that did not fire:
+/// a file the run never opened says nothing about whether it still would (spec 079).
+pub(crate) enum RunScope {
+    /// The paths the run's scope holds.
+    Known(BTreeSet<String>),
+    /// The window could not be resolved, so nothing is known to have been read.
+    Unreadable,
+}
+
+impl RunScope {
+    /// The scope of a run over `feature`'s window, or its `--since` when it took one.
+    pub(crate) fn resolve(feature: &str, since: Option<&str>, repo: &Path) -> Self {
+        let args = ComputeReviewScopeArgs {
+            feature: feature.to_string(),
+            since: since.map(str::to_string),
+        };
+        compute(&args, repo).map_or(Self::Unreadable, |scope| {
+            Self::Known(scope.scope.into_iter().collect())
+        })
+    }
+
+    /// Why this run says nothing about a finding at `path`, when it says nothing. A
+    /// file gone from disk has nothing left to fire on, so its finding is over whatever
+    /// the scope holds.
+    pub(crate) fn why_unread(&self, path: &str, repo: &Path) -> Option<String> {
+        match self {
+            Self::Unreadable => Some("this run's scope could not be read".to_string()),
+            Self::Known(scope) => (!scope.contains(path)
+                && repo.join(path).symlink_metadata().is_ok())
+            .then(|| format!("this run did not read `{path}`")),
+        }
+    }
+}
+
 /// Whether a path a record names stays under the project root.
 fn stays_in_project(path: &str) -> bool {
     Path::new(path)

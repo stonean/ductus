@@ -453,14 +453,18 @@ retains those anchored to skipped dimensions rather than expiring them.
    fires there. The finding appears under **Waived findings** with the waiver's
    `reason`, excluded from its severity's count.
 2. **Expire** when the file no longer exists at the anchored path or the rule no
-   longer fires there (IDs are permanent per
+   longer fires there in a file the run read (IDs are permanent per
    `specs/008-security-rules/data-model.md`, so a renamed rule is a different
    rule). The path drops from the entry on the next frontmatter write, the entry
    with its last path, and a `waiver expired:` notice prints: expiry MUST NOT be
    silent. When the same rule still fires anywhere in scope after a drop, the
    finding re-counts toward its severity's count: a MUST flips `review.blocking`
    to `true`, and a SHOULD holds `done` at the pre-done gate.
-3. **Do not extend** a waiver to a file it does not list. If the same rule
+3. **Retain** a waiver whose rule did not fire on a file still on disk that the
+   run's scope does not hold: nothing read that file, so its finding may still
+   stand, and a person's reason must not go on a narrow window's say-so. The same
+   holds for a stored decision naming such a file (`process-decisions`).
+4. **Do not extend** a waiver to a file it does not list. If the same rule
    fires at a path other than the waiver's anchors, that is a separate
    finding; the operator records a fresh `--waive` if it is also intentional.
 
