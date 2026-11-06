@@ -254,6 +254,10 @@ stored decision wins, and the rule does not re-decide it.
   The next scope reads each again, and a listed break holds `done` until a run finds
   it fixed or a person waives it.
 
+**A person overrules the rule on an observation by deferring it or having it fixed.**
+`--waive` and `--defer` take a rule ID, so they act on violations, and a waiver agreeing
+with the rule's makes no new decision, so it stays the rule's.
+
 **Decisions persist.** Each deferred or waived observation is stored in
 `review.md`'s `decisions:` list, beside `waivers:`. Observation text is the
 reviewer's own wording and does not reproduce byte for byte, so the next run

@@ -1225,7 +1225,7 @@ fn render_report(
         ),
         format!(
             "## Observations\n\n{}",
-            render_observations(&args.observations)
+            render_observations(&args.observations, record.decisions)
         ),
         format!(
             "## Skipped passes\n\n{}",
@@ -1392,7 +1392,7 @@ fn finding_block(finding: &ReviewFinding, label: &str, waived_reason: Option<&st
 /// Render the observations as a list, or `*None.*` when empty, each beside
 /// its disposition so the report says what was done with it, not only that it
 /// was seen.
-fn render_observations(observations: &[ReviewObservation]) -> String {
+fn render_observations(observations: &[ReviewObservation], stored: &[RawDecision]) -> String {
     if observations.is_empty() {
         return "*None.*".to_string();
     }
@@ -1405,8 +1405,9 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
         .map(|observation| {
             // Flattened like every other piece of caller text, so a
             // work-item ID, stored as given, never reaches the body raw.
+            let standing = standing_rule_waiver(observation, stored);
             let outcome = decisions::disposition_suffix(
-                &observation.disposition,
+                standing.as_ref().unwrap_or(&observation.disposition),
                 crate::primitives::flatten_line,
             );
             let mark = if observation.contract_break {
@@ -1418,6 +1419,27 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// The rule's stored waiver, when this observation is waived again. A waiver agreeing
+/// with the rule's makes no new decision, so the record keeps the rule's reason and
+/// label, and the body says what the record holds rather than contradict it (spec 079).
+fn standing_rule_waiver(
+    observation: &ReviewObservation,
+    stored: &[RawDecision],
+) -> Option<crate::schema::primitives::Disposition> {
+    if observation.disposition.outcome != DispositionOutcome::Waived {
+        return None;
+    }
+    let decision = decisions::stored_decision(stored, &observation_key(observation))?;
+    decision
+        .by_rule
+        .then(|| crate::schema::primitives::Disposition {
+            outcome: DispositionOutcome::Waived,
+            reason: decision.reason,
+            by_rule: true,
+            ..crate::schema::primitives::Disposition::default()
+        })
 }
 
 /// Whether an observation leads with the category a reader must meet first.
@@ -3464,6 +3486,73 @@ mod tests {
         )];
         run(&own, tmp.path()).unwrap();
         run(&own, tmp.path()).unwrap();
+    }
+
+    /// A person agreeing with the rule's waiver makes no new decision, so the record
+    /// and the body both keep the rule's; deferring it does change the decision. A
+    /// person's own stored waiver is never relabelled the rule's.
+    #[test]
+    fn a_waiver_agreeing_with_the_rules_stays_the_rules_in_the_record_and_the_body() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![rule_waived("perf: a loop")];
+        run(&args, tmp.path()).unwrap();
+        let rule_reason = args.observations[0].disposition.reason.clone().unwrap();
+
+        args.reviewed_at = "2026-11-02T00:00:00Z".into();
+        args.observations = vec![dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Waived,
+            Some("a person agrees"),
+        )];
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("decided-by: rule"), "{report}");
+        assert!(!report.contains("a person agrees"), "{report}");
+        assert!(report.contains(&format!("**waived**: {rule_reason} (decided by the rule)")));
+
+        // Fixed since, its stored waiver standing: the body says what this run did.
+        let fixed = {
+            let mut once = args.clone();
+            once.reviewed_at = "2026-11-02T12:00:00Z".into();
+            once.observations = vec![dispositioned(
+                "perf: a loop",
+                DispositionOutcome::Fixed,
+                None,
+            )];
+            once
+        };
+        run(&fixed, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("— **fixed**"), "{report}");
+
+        args.reviewed_at = "2026-11-03T00:00:00Z".into();
+        args.observations = vec![dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Deferred,
+            Some("specs/001-x/spec.md"),
+        )];
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+        assert!(!report.contains("(decided by the rule)"), "{report}");
+
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![dispositioned(
+            "perf: a loop",
+            DispositionOutcome::Waived,
+            Some("a person chose"),
+        )];
+        run(&args, tmp.path()).unwrap();
+        args.reviewed_at = "2026-11-02T00:00:00Z".into();
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("**waived**: a person chose"), "{report}");
+        assert!(!report.contains("(decided by the rule)"), "{report}");
     }
 
     #[test]

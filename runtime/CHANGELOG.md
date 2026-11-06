@@ -88,6 +88,10 @@ its version and date.
   `mark-task` and `check-stuck` state their rules in `--help`, `dashboard` names
   `rendered-markdown`, and `framework/reference/status.md` no longer restates that
   view line by line. Commands and references no longer describe a hand-walk (spec 079).
+- **A report's body says what its record holds.** A person's waiver agreeing with the
+  rule's makes no new decision, so `write-review` now renders the rule's reason and
+  label rather than the person's words beside a record still naming the rule. Deferring
+  the observation or fixing it is how a person changes the rule's decision (spec 079).
 - **A signpost on a `done` spec is a correction.** `check-review-gate`'s
   cross-spec guidance says it leaves the spec `done`, and that a criterion or
   scenario there reopens it (spec 079).

@@ -1110,4 +1110,25 @@ MUTATIONS = [
         'if review.should_violations == 0 && !review.open_findings.is_empty() {',
         'check_artifacts::tests::done_spec_with_a_finding_left_open_yields_blocking_finding',
     ),
+    (
+        'M158 the body keeps the words the record dropped',
+        'src/primitives/write_review.rs',
+        'standing.as_ref().unwrap_or(&observation.disposition),',
+        '&observation.disposition,',
+        'write_review::tests::a_waiver_agreeing_with_the_rules_stays_the_rules_in_the_record_and_the_body',
+    ),
+    (
+        "M159 a person's stored waiver reads as the rule's",
+        'src/primitives/write_review.rs',
+        'decision\n        .by_rule\n        .then(|| crate::schema::primitives::Disposition {',
+        'true\n        .then(|| crate::schema::primitives::Disposition {',
+        'write_review::tests::a_waiver_agreeing_with_the_rules_stays_the_rules_in_the_record_and_the_body',
+    ),
+    (
+        "M160 a deferral over the rule's reads as the rule's",
+        'src/primitives/write_review.rs',
+        '    if observation.disposition.outcome != DispositionOutcome::Waived {\n        return None;\n    }\n    let decision = decisions::stored_decision',
+        '    let decision = decisions::stored_decision',
+        'write_review::tests::a_waiver_agreeing_with_the_rules_stays_the_rules_in_the_record_and_the_body',
+    ),
 ]

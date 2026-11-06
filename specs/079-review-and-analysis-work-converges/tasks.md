@@ -202,7 +202,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [x] Gap, the owner chose (2026-11-06) that the server is required, so a command stops without it: `/review` steps 8, 9, 11 and `/analyze` steps 18, 21 cannot pass what they must through the CLI; CLI `write-review` records a clean run over a MUST and `process-*` read everything as expired
 - [ ] Gap, follows the window: `disposition-drift` says to re-run `/review`, which stops on `review-owed: false`, and a forced run erases the findings undecided
 - [ ] Gap: `--waive` has no write route, predating this spec; `applied-waivers` clears the run and persists nothing
-- [ ] Gap, the owner's choice: the spec says `--waive` and `--defer` override any decision, and both take only a rule ID, so a person cannot replace the rule's waiver of an observation
+- [x] Gap, the owner chose (2026-11-06) to narrow the sentence to violations: the spec says `--waive` and `--defer` override any decision, and both take only a rule ID, so a person cannot replace the rule's waiver of an observation
 - [ ] Gap: `framework/reference/groom.md` and `framework/reference/analyze.md` tell a host to waive a gating finding `write-analysis` refuses
 - [ ] Gap: the gate passes an `analysis.md` whose `decisions:` list does not parse, a hard fail to `validate-frontmatter`
 - [ ] Gap: a review owed because a contract changed does not read that contract when its edit lies outside the window, and the digest then refreshes
@@ -218,7 +218,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [ ] Gap, the owner's choice: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction
 - [ ] Gap: `/amend` advertises a criterion route its classifier, record steps and status table lack, predating this spec
 - [ ] Gap: a `cross-spec-impact:` entry added to a `done` spec is a correction nothing then reads
-- [ ] The wording items the flows name, fixed or waived by the rule: a record contradicting itself on a person's deferral, a matched rule waiver losing its label, the record's `scope` counting its own `review.md`, literal namespaces in result strings, and `/groom`'s spec-edit route
+- [ ] The wording items the flows name, fixed or waived by the rule: a record contradicting itself on a person's deferral, the record's `scope` counting its own `review.md`, literal namespaces in result strings, and `/groom`'s spec-edit route
 - [ ] Close this run: the last `write-review` lists rounds 1 to 4 as re-read, diff-checked, re-read, diff-checked and round 5, the fold edits, `not-re-read` with the owner's reason; `budget-stop` then derives true, so the next review starts at the reopen. Reconcile `examined` and `scope` in the Summary
 
 - **Done when**: each contract break is fixed with a test shown to fail without it, each gap is fixed, deferred or waived with its reason, the owner's choices are recorded, and AC5 and AC17 are ticked again against the tree.
