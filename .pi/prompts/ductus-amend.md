@@ -88,7 +88,7 @@ Which half runs depends on status and input:
    ```
 
 4. When the reconcile pass appended at least one task to a `done` spec, invoke `set-status` with `from: done`, `to: in-progress` as part of that same action — the prompt in step 3 named the reopen, so it is already consented (§spec-lifecycle). Skip step 5's prompt in that case. On a `planned` or `in-progress` spec no status mutation occurs.
-5. If no task was appended and the status is `done`, invoke `classify-spec-edit` against the feature. On `correction` or `none`, report that the spec stays `done` because the delta changes no criterion, open question or unchecked task, and continue to **Gather the input**, changing nothing. On `reopens`, or an error, which means the classification did not run and is said so, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
+5. If no task was appended and the status is `done`, invoke `classify-spec-edit` against the feature. On `correction`, `mechanical` or `none`, report that the spec stays `done` because the delta changes no criterion, open question or unchecked task, and is at most a sweep's or a cross-service reference's in a contract, and continue to **Gather the input**, changing nothing. On `reopens`, or an error, which means the classification did not run and is said so, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
 
    ```text
    Spec is `done` but the feature directory has un-tracked scenario or task edits:
@@ -215,7 +215,7 @@ Informational; no separate confirmation prompt.
 | Spec | `draft` / `clarified` / `planned` / `in-progress` | scenario | Create scenario, append task, update session target. No status mutation. |
 | Spec | `done` | scenario | Show reopen impact, create scenario, append task, revert `status` to `in-progress` in the same write, update session target. |
 | Spec | any | chore (scenario-route guard) | Fix it in this run once the user confirms, and exit. No question, scenario, task, or status mutation. |
-| Spec | `done` (on-disk delta `classify-spec-edit` reads as `correction` or `none`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
+| Spec | `done` (on-disk delta `classify-spec-edit` reads as `correction`, `mechanical` or `none`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
 | Spec | `done` (on-disk delta that reopens, user confirms re-open precondition) | (precondition) | Flip `status` to `in-progress` via `set-status`. No question, no scenario, no task. |
 | Spec | `done` (no input, delta scenario with no pending task, user confirms the offer) | (reconcile) | Append a task via `append-task` and flip `status` to `in-progress` in the same action. No new scenario file, no question. |
 | Spec | `planned` / `in-progress` (same offer confirmed) | (reconcile) | Append the task only. No status mutation — the spec already accepts work. |

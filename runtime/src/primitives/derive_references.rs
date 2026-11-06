@@ -306,38 +306,102 @@ fn is_spec_slug(slug: &str) -> bool {
     super::is_feature_slug(slug) && slug.split('.').all(super::is_slug_grammar)
 }
 
+/// The reference a link target is, when it is one.
+fn reference_of(url: &str, registry: &BTreeMap<String, RegisteredService>) -> Option<Reference> {
+    let (offset, root_seg, slug) = find_spec_segment(url)?;
+    let repo = services::normalize_repo(strip_branch_ref(&url[..offset]));
+    let service = match registry.get(&repo) {
+        Some(entry) => {
+            // Reachable checkout: only that service's real root
+            // matches. Unreachable: any segment.
+            if let Some(required) = &entry.specs_root
+                && *required != root_seg
+            {
+                return None;
+            }
+            Some(entry.alias.clone())
+        }
+        // Unregistered: root unknowable, accept any segment. Still
+        // harvested, so it never silently drops from the index.
+        None => None,
+    };
+    Some((service, slug))
+}
+
 /// Harvest the sorted, deduplicated cross-service references from a body.
 fn harvest(content: &str, registry: &BTreeMap<String, RegisteredService>) -> Vec<Reference> {
     let mut seen: BTreeSet<Reference> = BTreeSet::new();
     for line in harvestable_lines(content) {
         let scrubbed = strip_inline_code(line.text);
         for url in absolute_link_urls(&scrubbed) {
-            let Some((offset, root_seg, slug)) = find_spec_segment(url) else {
-                continue;
-            };
-            let repo = services::normalize_repo(strip_branch_ref(&url[..offset]));
-            let service = match registry.get(&repo) {
-                Some(entry) => {
-                    // Reachable checkout: only that service's real root
-                    // matches. Unreachable: any segment.
-                    if let Some(required) = &entry.specs_root
-                        && *required != root_seg
-                    {
-                        continue;
-                    }
-                    Some(entry.alias.clone())
-                }
-                // Unregistered: root unknowable, accept any segment. Still
-                // harvested, so it never silently drops from the index.
-                None => None,
-            };
-            seen.insert((service, slug));
+            if let Some(reference) = reference_of(url, registry) {
+                seen.insert(reference);
+            }
         }
     }
     // Sort by slug, then service — the shell's ordering.
     let mut records: Vec<Reference> = seen.into_iter().collect();
     records.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
     records
+}
+
+/// What an edit that only adds, removes or rewrites a cross-service reference leaves
+/// unchanged (§spec-lifecycle): text with every link [`harvest`] would record taken out,
+/// whole, label and target.
+pub(crate) struct ReferenceScrub {
+    registry: BTreeMap<String, RegisteredService>,
+}
+
+impl ReferenceScrub {
+    /// A scrub reading the project's `[services]` registry.
+    pub(crate) fn new(repo: &Path) -> Self {
+        Self {
+            registry: load_registry(repo),
+        }
+    }
+
+    /// `content` without its references, line for line.
+    pub(crate) fn without_references(&self, content: &str) -> String {
+        let eligible: BTreeSet<usize> = harvestable_lines(content)
+            .iter()
+            .map(|line| line.line)
+            .collect();
+        let mut out = String::with_capacity(content.len());
+        for (index, line) in content.lines().enumerate() {
+            if eligible.contains(&(index + 1)) {
+                out.push_str(&self.line_without_references(line));
+            } else {
+                out.push_str(line);
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    /// `line` with each `[label](target)` naming a reference removed.
+    fn line_without_references(&self, line: &str) -> String {
+        let scrubbed = strip_inline_code(line);
+        let mut kept = String::new();
+        let mut copied = 0;
+        let mut cursor = 0;
+        while let Some(found) = scrubbed[cursor..].find("](") {
+            let close = cursor + found;
+            cursor = close + 2;
+            let Some(url) = absolute_link_urls(&scrubbed[close..]).first().copied() else {
+                continue;
+            };
+            let Some(open) = scrubbed[copied..close].rfind('[') else {
+                continue;
+            };
+            if reference_of(url, &self.registry).is_some() {
+                kept.push_str(&line[copied..copied + open]);
+                copied = close + 2 + url.len() + 1;
+                cursor = copied;
+            }
+        }
+        kept.push_str(&line[copied..]);
+        kept
+    }
 }
 
 /// Blank out inline-code spans so a backticked link cannot be harvested,
@@ -499,6 +563,42 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    const REFERENCE: &str =
+        "[api](https://example.invalid/acme/api/blob/main/specs/003-user/spec.md)";
+
+    fn scrubbed(content: &str) -> String {
+        ReferenceScrub {
+            registry: BTreeMap::new(),
+        }
+        .without_references(content)
+    }
+
+    #[test]
+    fn the_scrub_takes_a_reference_out_whole() {
+        assert_eq!(
+            scrubbed(&format!("See {REFERENCE} and {REFERENCE}, then more.\n")),
+            "See  and , then more.\n"
+        );
+    }
+
+    #[test]
+    fn a_link_to_no_spec_stays_in_the_scrubbed_text() {
+        let line = "See [site](https://example.invalid/about) here.\n";
+        assert_eq!(scrubbed(line), line);
+    }
+
+    #[test]
+    fn a_backticked_link_stays_in_the_scrubbed_text() {
+        let line = format!("See `{REFERENCE}` here.\n");
+        assert_eq!(scrubbed(&line), line);
+    }
+
+    #[test]
+    fn a_fenced_link_stays_in_the_scrubbed_text() {
+        let content = format!("```text\n{REFERENCE}\n```\n");
+        assert_eq!(scrubbed(&content), content);
+    }
 
     fn registry(entries: &[(&str, &str, Option<&str>)]) -> BTreeMap<String, RegisteredService> {
         entries

@@ -425,7 +425,8 @@ fn review_fields(record: &ReviewBlock) -> (Option<&str>, bool) {
     let gating = record.blocking
         || record.must_violations > 0
         || record.should_violations > 0
-        || record.contract_breaks.is_some_and(|breaks| breaks > 0);
+        || record.contract_breaks.is_some_and(|breaks| breaks > 0)
+        || record.fix_rounds_open == Some(true);
     (record.last_run.as_deref(), gating)
 }
 
@@ -1003,6 +1004,23 @@ mod tests {
         }
     }
 
+    /// A finished run's first write carries the mark and its last clears it, so only a
+    /// run cut off with the mark still set leaves the gate demanding another.
+    #[test]
+    fn a_run_whose_last_write_cleared_the_mark_left_nothing() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        let first = "2026-01-01T00:00:00Z";
+        fixture.commit("review.md", &review(first, "fix-rounds-open: true\n"));
+        fixture.commit("review.md", &review(first, ""));
+        fixture.commit("review.md", &review("2026-01-02T00:00:00Z", ""));
+        fixture.status("done");
+
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.reviews, 2);
+        assert!(reopening.over_bound);
+    }
+
     #[test]
     fn a_second_run_after_a_gating_finding_is_within_the_bound() {
         let cases = [
@@ -1010,6 +1028,7 @@ mod tests {
             ("review.md", "must-violations: 1\n"),
             ("review.md", "should-violations: 1\n"),
             ("review.md", "contract-breaks: 1\n"),
+            ("review.md", "fix-rounds-open: true\n"),
             ("analysis.md", "blocking: true\n"),
             ("analysis.md", "hard-fail: 1\n"),
             ("analysis.md", "blocking-findings: 1\n"),

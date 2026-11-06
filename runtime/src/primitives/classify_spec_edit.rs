@@ -11,16 +11,21 @@
 //! it `done`. A deleted `plan.md` or `tasks.md` is no correction, as analyze reports a
 //! missing one as blocking.
 //!
-//! A uniform sweep's edit to a scenario or data model reads as `reopens` here, since one
-//! file's diff cannot show a sweep: `mechanical_sweep`'s repo-wide index is what exempts
-//! one.
+//! A contract edit is `mechanical` when it only adds, removes or rewrites a cross-service
+//! reference, or is a sweep's: one file's diff cannot show a sweep, so a snapshot of the
+//! working tree goes through `mechanical_sweep`'s repo-wide index, the rule the review
+//! gate's staleness uses, so the two cannot disagree. Its blind spot comes with it: a real
+//! change made with the same token in two files reads as a sweep.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use git2::{Delta, DiffOptions, Tree};
+use git2::{Delta, DiffOptions, Oid, Tree};
 
 use crate::primitives::analyze_subjects::is_review_contract;
+use crate::primitives::derive_references::ReferenceScrub;
+use crate::primitives::fix_rounds::snapshot;
+use crate::primitives::mechanical_sweep::SweepIndex;
 use crate::primitives::read_spec::{parse_checkboxes, parse_open_questions};
 use crate::primitives::read_tasks::parse_tasks;
 use crate::primitives::{
@@ -67,10 +72,12 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
         base: &base,
         repo,
         rel_dir: &rel_dir,
+        scrub: ReferenceScrub::new(repo),
     };
 
     let mut edited = false;
     let mut reasons = BTreeSet::new();
+    let mut contracts = Vec::new();
     for (file, deleted) in changed_files(&project, &rel_dir, &base)? {
         if file == REVIEW_RECORD_FILE || file == ANALYSIS_RECORD_FILE {
             continue;
@@ -83,11 +90,9 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
             }
             "plan.md" => {}
             "tasks.md" => tasks_reasons(&side, &mut reasons)?,
-            "data-model.md" => {
-                reasons.insert(SpecEditReason::DataModel);
-            }
+            "data-model.md" => contracts.push((file, deleted, SpecEditReason::DataModel)),
             other if is_review_contract(other) => {
-                reasons.insert(SpecEditReason::Scenario);
+                contracts.push((file, deleted, SpecEditReason::Scenario));
             }
             _ => {
                 reasons.insert(SpecEditReason::OtherFile);
@@ -95,8 +100,11 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
         }
     }
 
+    let mechanical = contract_reasons(&side, contracts, &mut reasons)?;
     let kind = if !reasons.is_empty() {
         SpecEditKind::Reopens
+    } else if mechanical {
+        SpecEditKind::Mechanical
     } else if edited {
         SpecEditKind::Correction
     } else {
@@ -108,12 +116,42 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
     })
 }
 
+/// Put each contract edit beyond a mechanical one in `reasons`, and say whether any
+/// was mechanical. The sweep index walks the whole diff, so it is built only when an
+/// edit is more than a reference's.
+fn contract_reasons(
+    side: &Side<'_>,
+    contracts: Vec<(String, bool, SpecEditReason)>,
+    reasons: &mut BTreeSet<SpecEditReason>,
+) -> Result<bool> {
+    let mut mechanical = false;
+    let mut sweep: Option<SweepIndex> = None;
+    for (file, deleted, reason) in contracts {
+        if !deleted && side.only_references_differ(&file)? {
+            mechanical = true;
+            continue;
+        }
+        let index = match &sweep {
+            Some(index) => index,
+            None => sweep.insert(side.sweep_index()?),
+        };
+        let git_path = side.project.to_git(&format!("{}/{file}", side.rel_dir));
+        if index.changed_beyond_spelling(&git_path) {
+            reasons.insert(reason);
+        } else {
+            mechanical = true;
+        }
+    }
+    Ok(mechanical)
+}
+
 /// Where one file under the spec directory reads from on each side of the edit.
 struct Side<'a> {
     project: &'a ProjectRepository,
     base: &'a Tree<'a>,
     repo: &'a Path,
     rel_dir: &'a str,
+    scrub: ReferenceScrub,
 }
 
 impl Side<'_> {
@@ -126,6 +164,33 @@ impl Side<'_> {
     /// `file`'s text in the working tree.
     fn now(&self, file: &str) -> Result<String> {
         read_text(&self.repo.join(self.rel_dir).join(file))
+    }
+
+    /// Whether `file` is the same on both sides once its references are out, a line
+    /// left holding nothing or only a list marker counting as none.
+    fn only_references_differ(&self, file: &str) -> Result<bool> {
+        let Some(at_base) = self.at_base(file)? else {
+            return Ok(false);
+        };
+        let now = self.now(file)?;
+        let lines = |text: &str| -> Vec<String> {
+            self.scrub
+                .without_references(text)
+                .lines()
+                .map(str::trim_end)
+                .filter(|line| !matches!(line.trim_start(), "" | "-" | "*" | "+"))
+                .map(str::to_string)
+                .collect()
+        };
+        Ok(lines(&at_base) == lines(&now))
+    }
+
+    /// The sweep rule over the diff from the base to a snapshot of the working tree.
+    fn sweep_index(&self) -> Result<SweepIndex> {
+        let repository = &self.project.repository;
+        let (snapshot, _) = snapshot(self.project)?;
+        let head = repository.find_commit(Oid::from_str(&snapshot)?)?.tree()?;
+        Ok(SweepIndex::build(repository, self.base, &head))
     }
 }
 
@@ -182,10 +247,13 @@ fn spec_reasons(
     let path = Path::new("spec.md");
     let (_, base_body) = split_frontmatter(&at_base, path)?;
     let (_, now_body) = split_frontmatter(&now, path)?;
-    if criterion_texts(base_body) != criterion_texts(now_body) {
+    // A reference is informative, so one in a criterion or question changes neither.
+    let base_body = side.scrub.without_references(base_body);
+    let now_body = side.scrub.without_references(now_body);
+    if criterion_texts(&base_body) != criterion_texts(&now_body) {
         reasons.insert(SpecEditReason::Criterion);
     }
-    if question_texts(base_body) != question_texts(now_body) {
+    if question_texts(&base_body) != question_texts(&now_body) {
         reasons.insert(SpecEditReason::OpenQuestion);
     }
     Ok(())
@@ -316,6 +384,168 @@ mod tests {
         let result = classify(root);
         assert_eq!(result.kind, SpecEditKind::Reopens);
         assert_eq!(result.reasons, expected);
+    }
+
+    fn assert_kind(root: &Path, expected: SpecEditKind) {
+        let result = classify(root);
+        assert_eq!(result.kind, expected, "{:?}", result.reasons);
+    }
+
+    /// A contract and a sibling spec's file holding `old-label`, committed, so a sweep
+    /// can rewrite it across files.
+    fn swept_project(root: &Path) {
+        let repository = Repository::open(root).unwrap();
+        edit(
+            root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nUses `old-label`.\n",
+        );
+        edit(root, "data-model.md", "# Data\n\nUses `old-label`.\n");
+        write(
+            &root.join("specs/034-b/data-model.md"),
+            "# Data\n\nUses `old-label`.\n",
+        );
+        commit_all(&repository, "chore: the label");
+    }
+
+    #[test]
+    fn a_token_swept_across_files_is_mechanical() {
+        let (_dir, root) = fixture();
+        swept_project(&root);
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nUses `new-label`.\n",
+        );
+        edit(&root, "data-model.md", "# Data\n\nUses `new-label`.\n");
+        write(
+            &root.join("specs/034-b/data-model.md"),
+            "# Data\n\nUses `new-label`.\n",
+        );
+        assert_kind(&root, SpecEditKind::Mechanical);
+    }
+
+    /// One file's token edit is how a real change looks, so it needs a second file.
+    #[test]
+    fn a_token_changed_in_one_file_reopens() {
+        let (_dir, root) = fixture();
+        swept_project(&root);
+        edit(&root, "data-model.md", "# Data\n\nUses `new-label`.\n");
+        assert_reopens(&root, &[SpecEditReason::DataModel]);
+    }
+
+    /// A sweep does not excuse the real edit beside it.
+    #[test]
+    fn a_real_contract_edit_beside_a_sweep_reopens() {
+        let (_dir, root) = fixture();
+        swept_project(&root);
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nUses `new-label`.\n",
+        );
+        write(
+            &root.join("specs/034-b/data-model.md"),
+            "# Data\n\nUses `new-label`.\n",
+        );
+        edit(
+            &root,
+            "data-model.md",
+            "# Data\n\nUses `new-label`, and a new claim.\n",
+        );
+        assert_reopens(&root, &[SpecEditReason::DataModel]);
+    }
+
+    /// `mechanical` still gives way to what else the edit reopens.
+    #[test]
+    fn a_sweep_beside_a_changed_criterion_reopens() {
+        let (_dir, root) = fixture();
+        swept_project(&root);
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nUses `new-label`.\n",
+        );
+        edit(&root, "data-model.md", "# Data\n\nUses `new-label`.\n");
+        edit(&root, "spec.md", &SPEC.replace("First thing.", "First."));
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
+    }
+
+    const LINK: &str = "[api](https://example.invalid/acme/api/blob/main/specs/003-user/spec.md)";
+
+    /// A contract holding a line that names a reference, committed.
+    fn linked_project(root: &Path) {
+        let repository = Repository::open(root).unwrap();
+        let body = format!("---\nsection: x\n---\n\n# s\n\nSee {LINK} for it.\n\nProse.\n");
+        edit(root, "scenarios/s.md", &body);
+        commit_all(&repository, "chore: a reference");
+    }
+
+    #[test]
+    fn a_rewritten_reference_is_mechanical() {
+        let (_dir, root) = fixture();
+        linked_project(&root);
+        let moved = LINK.replace("/acme/api/", "/acme/users/");
+        let body = format!("---\nsection: x\n---\n\n# s\n\nSee {moved} for it.\n\nProse.\n");
+        edit(&root, "scenarios/s.md", &body);
+        assert_kind(&root, SpecEditKind::Mechanical);
+    }
+
+    /// Added as its own list item, as a reference usually is, and taken away again.
+    #[test]
+    fn a_reference_added_or_removed_as_a_list_item_is_mechanical() {
+        let (_dir, root) = fixture();
+        linked_project(&root);
+        let with_item =
+            format!("---\nsection: x\n---\n\n# s\n\nSee {LINK} for it.\n\nProse.\n\n- {LINK}\n");
+        edit(&root, "scenarios/s.md", &with_item);
+        assert_kind(&root, SpecEditKind::Mechanical);
+    }
+
+    /// Prose beside the link is a claim, whatever the link does.
+    #[test]
+    fn prose_changed_beside_a_reference_reopens() {
+        let (_dir, root) = fixture();
+        linked_project(&root);
+        let body = format!("---\nsection: x\n---\n\n# s\n\nSee {LINK} for that.\n\nProse.\n");
+        edit(&root, "scenarios/s.md", &body);
+        assert_reopens(&root, &[SpecEditReason::Scenario]);
+    }
+
+    /// A relative link is a sibling spec's, the blocking kind, never a reference.
+    #[test]
+    fn a_relative_link_is_no_reference() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        let body = "---\nsection: x\n---\n\n# s\n\nSee [b](../../034-b/spec.md).\n";
+        edit(&root, "scenarios/s.md", body);
+        commit_all(&repository, "chore: a sibling link");
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nSee [b](../../035-c/spec.md).\n",
+        );
+        assert_reopens(&root, &[SpecEditReason::Scenario]);
+    }
+
+    /// A reference is informative wherever it sits, a criterion included.
+    #[test]
+    fn a_reference_rewritten_in_a_criterion_is_a_correction() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", &format!("First, see {LINK}.")),
+        );
+        commit_all(&repository, "chore: a reference in a criterion");
+        let moved = LINK.replace("/acme/api/", "/acme/users/");
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", &format!("First, see {moved}.")),
+        );
+        assert_correction(&root);
     }
 
     fn assert_correction(root: &Path) {
@@ -660,9 +890,13 @@ mod tests {
     #[test]
     fn reasons_come_in_one_order_without_repeats() {
         let (_dir, root) = fixture();
-        edit(&root, "research.md", "# Research\n\nAnother note.\n");
+        edit(&root, "research.md", "# Research\n\nSome note.\n");
         edit(&root, "data-model.md", "# Data\n\nAnother shape.\n");
-        edit(&root, "scenarios/s.md", "---\nsection: y\n---\n\n# s\n");
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nAdded.\n",
+        );
         edit(&root, "scenarios/t.md", "---\nsection: y\n---\n\n# t\n");
         edit(&root, "tasks.md", &TASKS.replace("- [x]", "- [ ]"));
         let both = SPEC

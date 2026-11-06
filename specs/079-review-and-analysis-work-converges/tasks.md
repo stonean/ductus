@@ -209,11 +209,11 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [x] Gap, the owner waived (2026-11-06, the spec's Resolved Questions): a record's commit moves the start past code committed after the run, though `reviewed-against` shows where it read
 - [x] Gap, the owner chose (2026-11-06) that a fold below `done` passes its commits to its target wherever the window starts: a retired or folded spec's commits stay excluded by a claimant that cannot review them, against `invalidate-review`'s stated purpose, and a fold into a `done` upstream leaves them before the window
 - [ ] Gap: a run that dies in step 10, after its fix and before step 11, leaves no mark
-- [ ] Gap, the owner's choice: the re-run the gate demands after a committed cut-off reads over the bound
+- [x] Gap, the owner chose (2026-11-06) that a run still carrying the mark counts as leaving a gating finding: the re-run the gate demands after a committed cut-off reads over the bound
 - [ ] Gap: `implement`'s `write-boundary` seed has no route for an interactive host
 - [ ] Gap: a review cut off on a `done` spec leaves the open mark where nothing reads it
 - [ ] Gap: `prune-plan`'s `reopen-required` and `classify-spec-edit` disagree in both directions on the same tree
-- [ ] Gap, the owner's choice: the constitution says `classify-spec-edit` decides and two kinds of edit take no back-edge, and it reads both as `reopens`
+- [x] Gap, the owner chose (2026-11-06) teaching it both kinds: the constitution says `classify-spec-edit` decides and two kinds of edit take no back-edge, and it reads both as `reopens`
 - [ ] Gap: `framework/reference/implement.md` sends a signpost on a `done` spec through `/amend`, whose route there reopens it
 - [ ] Gap, the owner's choice: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction
 - [ ] Gap: `/amend` advertises a criterion route its classifier, record steps and status table lack, predating this spec

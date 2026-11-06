@@ -55,8 +55,8 @@ its version and date.
 - **`measure-reopenings`: whether review and analysis converged, from history.**
   A new primitive, an MCP tool and CLI subcommand. A reopening is one pass from
   `in-progress` to `done`, and it holds at most one review run and one analysis
-  run, or a second of either only after the earlier run left a gating finding.
-  It reports each reopening closed since a date or a ref, the last 30 days by
+  run, or a second of either only after the earlier run left a gating finding or
+  was cut off with its fix-round loop still open. It reports each reopening closed since a date or a ref, the last 30 days by
   default, each one it could not count and why, how many stored decisions and waivers
   each of its runs recorded from a person, and the `in-progress` specs with no unchecked
   task, and says so when the history is shallow or nothing closed. `/status`
@@ -158,6 +158,11 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+- **`classify-spec-edit` recognizes a mechanical edit.** A scenario or data-model
+  edit that only adds, removes or rewrites a cross-service reference, or is a sweep's
+  by the rule the review gate's staleness uses, now reads `mechanical`, which leaves
+  a `done` spec `done`, instead of `reopens`. A real change made with the same token
+  in two files reads as a sweep, as it does for staleness.
 - **A review no longer expires a person's decision on a file it did not read.**
   `process-waivers` and `process-decisions` retain a stored waiver or decision that
   did not fire when its file is still on disk and the run's scope does not hold it,

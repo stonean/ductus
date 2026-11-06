@@ -4864,6 +4864,9 @@ pub enum SpecEditKind {
     None,
     /// An edit that leaves a `done` spec `done`.
     Correction,
+    /// A contract edit that is a sweep's, or only a cross-service reference's, which
+    /// leaves a `done` spec `done` too.
+    Mechanical,
     /// An edit that reopens a `done` spec, for the result's `reasons`.
     Reopens,
 }
