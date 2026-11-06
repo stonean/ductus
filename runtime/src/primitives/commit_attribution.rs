@@ -139,6 +139,37 @@ impl<'a> Attributor<'a> {
         })
     }
 
+    /// Whether `commit` belongs to the spec `form`, whose directory `directory`
+    /// may be gone from disk: it touched that directory, or its subject's scope
+    /// names the spec. [`Self::claims`] answers only for a spec on disk, since a
+    /// number in a subject may be anything; a caller naming a spec it read from
+    /// history has no such doubt. The tree's entry answers without a diff, as a
+    /// caller walks all of history.
+    pub(crate) fn belongs_to(
+        &self,
+        commit: &Commit<'_>,
+        form: &FeatureForm,
+        directory: &str,
+    ) -> Result<bool> {
+        let subject = commit.summary().ok().flatten().unwrap_or_default();
+        if subject_scope_forms(subject).contains(form) {
+            return Ok(true);
+        }
+        let git_path = self
+            .project
+            .to_git(&format!("{}/{directory}", self.specs_root));
+        let entry = |tree: &Tree<'_>| {
+            tree.get_path(Path::new(&git_path))
+                .ok()
+                .map(|entry| entry.id())
+        };
+        let parent = match commit.parent(0) {
+            Ok(parent) => entry(&parent.tree()?),
+            Err(_) => None,
+        };
+        Ok(entry(&commit.tree()?) != parent)
+    }
+
     /// The paths `commit` changed itself: for a merge, only those differing
     /// from every parent, so a clean merge contributes none.
     fn own_paths(&self, commit: &Commit<'_>) -> Result<Vec<String>> {
@@ -305,6 +336,40 @@ mod tests {
         assert_eq!(claims.claimants, Vec::<FeatureForm>::new());
         assert_eq!(claims.first_named, None);
         assert_eq!(claims.paths, vec!["src/lib.rs".to_string()]);
+    }
+
+    fn belongs(root: &Path, oid: Oid, form: &FeatureForm, directory: &str) -> bool {
+        let project = ProjectRepository::discover(root).unwrap();
+        let commit = project.repository.find_commit(oid).unwrap();
+        Attributor::new(&project, root, "specs")
+            .belongs_to(&commit, form, directory)
+            .unwrap()
+    }
+
+    /// A subject's number claims nothing for a spec gone from disk, and a caller naming
+    /// that spec from history still gets its answer, by the subject or the directory.
+    #[test]
+    fn a_commit_belongs_to_a_spec_gone_from_disk_by_its_subject_or_its_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = project_with_two_specs(tmp.path());
+        let form = FeatureForm::BranchScoped {
+            identifier: "1234".to_string(),
+            n: 1,
+        };
+        let directory = "1234.1-foo";
+        write(&tmp.path().join("specs/1234.1-foo/spec.md"), "s\n");
+        let touching = commit_all(&repository, "feat: naming nothing");
+        write(&tmp.path().join("src/named.rs"), "n\n");
+        let named = commit_all(&repository, "feat(1234.1): touching nothing of it");
+        write(&tmp.path().join("src/other.rs"), "o\n");
+        let neither = commit_all(&repository, "feat(012): another spec's");
+        std::fs::remove_dir_all(tmp.path().join("specs/1234.1-foo")).unwrap();
+        let removal = commit_all(&repository, "chore: naming nothing either");
+
+        assert!(belongs(tmp.path(), touching, &form, directory));
+        assert!(belongs(tmp.path(), named, &form, directory));
+        assert!(!belongs(tmp.path(), neither, &form, directory));
+        assert!(belongs(tmp.path(), removal, &form, directory));
     }
 
     #[test]

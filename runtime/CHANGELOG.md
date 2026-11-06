@@ -158,6 +158,12 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+- **A fold below `done` brings its code to the next review.** A branch-scoped spec
+  removed below `done` adds the paths of every commit it claimed to its target's
+  `compute-review-scope` scope, wherever the window starts. A fold into a `done`
+  spec reopens it at the fold, so that code lay before the window, in no list, and
+  one review and one analysis passed the gate with it unread. A spec that reached
+  `done` had its code read by its own review, and brings nothing.
 - **A review reads its own spec's change, and a later run starts where the
   last one finished.** `compute-review-scope`'s default window now starts at the
   later of the spec's last reopen and its last finished review, reported as

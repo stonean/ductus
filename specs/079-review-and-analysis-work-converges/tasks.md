@@ -193,7 +193,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [x] Contract break, the owner chose (2026-11-06) the gate blocking on an owed review, with a path in another spec's directory owing none: a code-changing reopening following the gate's own message runs analyze, review, analyze and ends over the bound, or stops where the gate first passes with `review-owed: true` and no review, since the gate names `/analyze` first and never reads `review-owed`
 - [x] Contract break, the owner chose (2026-11-06) that a pass through draft is one reopening: after the draft back-edge the reopening's earlier code leaves the window and the measure, and `review-owed` reads false
 - [ ] Contract break: a spec renamed while `in-progress` starts its window at the rename, its earlier code in no list, and `diff-cross-spec` reads its own old directory as another spec's. Compare status by `FeatureForm`
-- [ ] Contract break: on a shallow clone `compute-review-scope` and `diff-cross-spec` answer as if history were whole, with `review-owed: false` and zero impact, while `measure-reopenings` detects the same clone
+- [ ] Contract break: on a shallow clone `compute-review-scope` and `diff-cross-spec` answer as if history were whole, with `review-owed: false` and zero impact, while `measure-reopenings` detects the same clone. The fold's walk through all of history takes the same check
 - [ ] Contract break: reverting a review's commit, or restoring an older record, moves the window's start to that commit
 - [x] Contract break, the owner chose (2026-11-06) that AC17 counts what a record stores: `decisions-by-person` reads only `decisions:`, so a person's `--waive` and round waiver count as none, and a declined deferral leaves no trace, which stays so
 - [ ] Contract break: `ductus exec` cannot record `contract-break`, missing from `PassObservation`, so the gate's hold on a break left open never fires for it
@@ -207,7 +207,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [ ] Gap: the gate passes an `analysis.md` whose `decisions:` list does not parse, a hard fail to `validate-frontmatter`
 - [ ] Gap: a review owed because a contract changed does not read that contract when its edit lies outside the window, and the digest then refreshes
 - [x] Gap, the owner waived (2026-11-06, the spec's Resolved Questions): a record's commit moves the start past code committed after the run, though `reviewed-against` shows where it read
-- [ ] Gap, the owner's choice: a retired or folded spec's commits stay excluded by a claimant that cannot review them, against `invalidate-review`'s stated purpose
+- [x] Gap, the owner chose (2026-11-06) that a fold below `done` passes its commits to its target wherever the window starts: a retired or folded spec's commits stay excluded by a claimant that cannot review them, against `invalidate-review`'s stated purpose, and a fold into a `done` upstream leaves them before the window
 - [ ] Gap: a run that dies in step 10, after its fix and before step 11, leaves no mark
 - [ ] Gap, the owner's choice: the re-run the gate demands after a committed cut-off reads over the bound
 - [ ] Gap: `implement`'s `write-boundary` seed has no route for an interactive host

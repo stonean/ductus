@@ -13,7 +13,9 @@
 //! spec's **body**. Only `spec.md` changes, no durable contract moves, and
 //! the upstream spec can return to `done` carrying a review that never saw
 //! the code the fold brought with it. The fold knows what the diff cannot,
-//! so it says so here rather than leaving the gate to infer it.
+//! so it says so here rather than leaving the gate to infer it. The next
+//! review's scope is `compute-review-scope`'s, which holds that code when the
+//! spec was folded below `done`, since then no review has read it (spec 079).
 //!
 //! **Waivers survive.** An invalidation says the review is out of date; it
 //! does not withdraw an operator's recorded judgement about a finding, and

@@ -13,6 +13,8 @@ next-criterion: 38
 
 A second numbering form for feature directories, scoped to the branch that creates them: a spec created on a story branch is numbered from a branch identifier (`1234.1-slug`, `1234.2-slug`, …) instead of the sequential three-digit scheme, and the specs so numbered are folded back into their upstream home when the branch merges.
 
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) settled what AC24's review reads: its scope holds the code of a spec folded below `done`, wherever the window starts, since no review has read it, and one that reached `done` had its code read by its own review.
+
 ## Motivation
 
 Feature directories were numbered by a single global sequence: `create-feature` scanned the `NNN-` prefixes under the spec root and took the maximum plus one ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)), and the convention was stated as three-digit zero-padded numbers establishing creation order (constitution §numbering). That sequence was shared by every branch, and nothing coordinated it across them.

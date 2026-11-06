@@ -24,7 +24,7 @@ Folding into a `done` spec sets it to `in-progress` — the back-edge §spec-lif
 - **Only from `done`.** Any other status is left unchanged; the fold never advances a status.
 - **Guarded.** `set-status`'s `from: done` argument surfaces a discrepancy rather than overwriting it.
 - **Named in the one confirmation**, not prompted separately, so the operator consents to the status change before it happens.
-- **The upstream spec cannot return to `done` on the old review.** A folded-in *scenario* is a durable contract the pre-`done` gate's staleness check would catch, but a **body-edit** fold writes only `spec.md`, which that check excludes. Step 10 therefore invalidates the upstream spec's recorded review on **either** route and at **any** status (AC24), and the gate then blocks on *not reviewed*, the accurate reason.
+- **The upstream spec cannot return to `done` on the old review.** A folded-in *scenario* is a durable contract the pre-`done` gate's staleness check would catch, but a **body-edit** fold writes only `spec.md`, which that check excludes. Step 10 therefore invalidates the upstream spec's recorded review on **either** route and at **any** status (AC24), and the gate then blocks on *not reviewed*, the accurate reason. That review's scope holds the code of a staging spec folded below `done`, wherever its window starts, since no review has read it; one that reached `done` had its code read by its own review (`compute-review-scope`).
 
 ## Re-pointing inbound pointers
 

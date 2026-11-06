@@ -25,7 +25,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path};
 
-use git2::{DiffOptions, Oid, Repository, Sort, Tree};
+use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
 
 use crate::primitives::analyze_subjects::{is_review_contract, review_freshness};
@@ -33,13 +33,14 @@ use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::{find_in_progress_commit, reopening_is_open};
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
-    PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text, frontmatter_status,
-    load_review_record, parse_affected_files, parse_feature_dir, split_frontmatter,
+    FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
+    frontmatter_status, load_review_record, parse_affected_files, parse_feature_dir,
+    split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, ListsForm, RecordFreshness,
-    ReviewBlock,
+    BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, Frontmatter, ListsForm,
+    RecordFreshness, ReviewBlock,
 };
 
 /// Execute the `compute-review-scope` primitive: [`compute`], returned inline
@@ -195,6 +196,11 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     };
 
     let (mut scope, mut excluded) = split_changes(&modified_since, &deleted, &window, &uncommitted);
+
+    for path in &window.folded_in {
+        excluded.remove(path);
+        scope.insert(path.clone());
+    }
 
     // A plan entry unchanged in the window may mean missing work on a spec's
     // first review, and on a later one only restates what was read. The record
@@ -533,6 +539,9 @@ struct WindowClaims {
     own: BTreeSet<String>,
     /// Paths a commit left to other specs, each with the specs that claimed it.
     others: BTreeMap<String, BTreeSet<String>>,
+    /// Paths a staging spec folded into this one below `done` brought, wherever
+    /// the window starts, since no review has read them.
+    folded_in: BTreeSet<String>,
 }
 
 /// Walk `base..HEAD` and apply AC6's rule to each commit. A feature directory
@@ -558,10 +567,18 @@ fn attribute_window(
     let own_prefix = format!("{specs_root}/{feature}/");
     let own_plan = PlanEntries::new(plan_affected);
     let mut plans: BTreeMap<String, PlanEntries> = BTreeMap::new();
+    let fold = FoldTest {
+        project,
+        specs_root,
+        attributor: &attributor,
+        target: &form,
+    };
+    let mut folded = fold.uncommitted()?;
 
     for oid in walk {
         let commit = repository.find_commit(oid?)?;
         let claims = attributor.claims(&commit)?;
+        folded.extend(fold.committed(&commit, &claims.paths)?);
         if claims.claimants.is_empty() {
             window.own.extend(claims.paths);
             continue;
@@ -618,7 +635,140 @@ fn attribute_window(
             }
         }
     }
+    window.folded_in = fold.brought(repo, &folded)?;
     Ok(window)
+}
+
+/// Whether a spec was folded into one target below `done`, and what that brought.
+/// `done` says the staging spec's own review read its code, so a fold from there
+/// brings nothing a review has not read, and its commits stay any other spec's. A
+/// fold from below it does, and a target reopened by the fold starts its window
+/// after them, so no claim on a commit in the window could reach them (spec 051's
+/// AC24, spec 079's AC6). A spec whose frontmatter does not parse declares no target.
+struct FoldTest<'a> {
+    project: &'a ProjectRepository,
+    specs_root: &'a str,
+    attributor: &'a Attributor<'a>,
+    target: &'a FeatureForm,
+}
+
+impl FoldTest<'_> {
+    /// Each spec `commit` removed, read at its parent, that this target received.
+    fn committed(&self, commit: &Commit<'_>, paths: &[String]) -> Result<Vec<String>> {
+        let mut folded = Vec::new();
+        for path in paths {
+            let Some(directory) = path
+                .strip_prefix(self.specs_root)
+                .and_then(|rest| rest.strip_prefix('/'))
+                .and_then(|rest| rest.strip_suffix("/spec.md"))
+            else {
+                continue;
+            };
+            let git_path = self.project.to_git(path);
+            if commit.tree()?.get_path(Path::new(&git_path)).is_ok() {
+                continue;
+            }
+            let parent = commit.parent(0)?.tree()?;
+            if self.was_folded(&parent, directory)? {
+                folded.push(directory.to_string());
+            }
+        }
+        Ok(folded)
+    }
+
+    /// Each spec `HEAD` holds and the disk does not, a fold not yet committed. A run
+    /// reading it now commits its record with the fold, which then lies at or before
+    /// the next window's start.
+    fn uncommitted(&self) -> Result<Vec<String>> {
+        let repository = &self.project.repository;
+        let head = repository.head()?.peel_to_commit()?.tree()?;
+        let Ok(root) = head.get_path(Path::new(&self.project.to_git(self.specs_root))) else {
+            return Ok(Vec::new());
+        };
+        let Ok(specs) = root.to_object(repository)?.into_tree() else {
+            return Ok(Vec::new());
+        };
+        let mut folded = Vec::new();
+        for directory in specs
+            .iter()
+            .filter_map(|entry| entry.name().ok().map(str::to_string))
+        {
+            if self.was_folded(&head, &directory)? {
+                folded.push(directory);
+            }
+        }
+        Ok(folded)
+    }
+
+    /// Whether `directory`, as `tree` holds it, is a branch-scoped spec below `done`
+    /// declaring this target, with no spec of its number left on disk. A number
+    /// still there is a rename, not a retirement.
+    fn was_folded(&self, tree: &Tree<'_>, directory: &str) -> Result<bool> {
+        let Some(staging @ FeatureForm::BranchScoped { .. }) = parse_feature_dir(directory) else {
+            return Ok(false);
+        };
+        if self.attributor.directory_of(&staging).is_some() {
+            return Ok(false);
+        }
+        let git_path = self
+            .project
+            .to_git(&format!("{}/{directory}/spec.md", self.specs_root));
+        let Some(text) = blob_text(&self.project.repository, tree, &git_path)? else {
+            return Ok(false);
+        };
+        let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(&git_path)) else {
+            return Ok(false);
+        };
+        let Ok(declared) = serde_norway::from_str::<Frontmatter>(frontmatter) else {
+            return Ok(false);
+        };
+        let names_target = declared
+            .folds_into
+            .as_deref()
+            .and_then(parse_feature_dir)
+            .is_some_and(|form| form == *self.target);
+        Ok(names_target && declared.status != "done")
+    }
+
+    /// The paths of every commit each spec in `folded` claimed, by touching its
+    /// directory or naming it, from all of history: outside any spec's directory,
+    /// which is that spec's text, and still on disk, since a review reads a file. A
+    /// path a commit several specs claimed comes whole, the safe side of a rule that
+    /// reads plans a retired spec no longer has.
+    fn brought(&self, repo: &Path, folded: &[String]) -> Result<BTreeSet<String>> {
+        let mut brought = BTreeSet::new();
+        let staging: Vec<(FeatureForm, &String)> = folded
+            .iter()
+            .filter_map(|directory| Some((parse_feature_dir(directory)?, directory)))
+            .collect();
+        if staging.is_empty() {
+            return Ok(brought);
+        }
+        let repository = &self.project.repository;
+        let specs_prefix = format!("{}/", self.specs_root);
+        let mut walk = repository.revwalk()?;
+        walk.push_head()?;
+        for oid in walk {
+            let commit = repository.find_commit(oid?)?;
+            let mut belongs = false;
+            for (form, directory) in &staging {
+                belongs = belongs || self.attributor.belongs_to(&commit, form, directory)?;
+            }
+            if belongs {
+                brought.extend(
+                    self.attributor
+                        .claims(&commit)?
+                        .paths
+                        .into_iter()
+                        .filter(|path| {
+                            !path.starts_with(&specs_prefix)
+                                && repo.join(path).symlink_metadata().is_ok()
+                        }),
+                );
+            }
+        }
+        Ok(brought)
+    }
 }
 
 /// A plan's `Affected Files` entries, as a test of whether one names a path. An
@@ -2008,6 +2158,339 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.excluded["src/gone.rs"], ["003"]);
+    }
+
+    /// A staging spec's frontmatter, declaring `target` when it has one.
+    fn staging_spec(status: &str, target: Option<&str>) -> String {
+        let declared = target.map_or(String::new(), |target| format!("folds-into: {target}\n"));
+        format!("---\nstatus: {status}\ndependencies: []\n{declared}---\n\n# Staged\n")
+    }
+
+    /// Commit a staging spec at `status` declaring `target`, with `src/s.rs` in a
+    /// commit touching its directory and naming no spec, and `src/t.rs` in one naming
+    /// it and touching nothing else, as `claims` then sees each once it is gone.
+    fn stage(tmp: &tempfile::TempDir, repo: &Repository, status: &str, target: Option<&str>) {
+        let staged = tmp.path().join("specs/1234.1-foo/spec.md");
+        write(&staged, &staging_spec("in-progress", target));
+        commit_all(repo, "spec: staging");
+        write(&tmp.path().join("specs/1234.1-foo/tasks.md"), "- [x] t\n");
+        write(&tmp.path().join("src/s.rs"), "fn s() {}\n");
+        commit_all(repo, "feat: its directory and its code");
+        change(tmp, repo, "src/t.rs", "feat(1234.1): its code alone");
+        if status != "in-progress" {
+            write(&staged, &staging_spec(status, target));
+            commit_all(repo, "status(1234.1)");
+        }
+    }
+
+    /// Remove the staging spec, reopening 001-x from `done` when it is there.
+    fn remove_staging(tmp: &tempfile::TempDir, reopen: bool) {
+        fs::remove_dir_all(tmp.path().join("specs/1234.1-foo")).unwrap();
+        if reopen {
+            write(
+                &tmp.path().join("specs/001-x/spec.md"),
+                &spec("in-progress"),
+            );
+        }
+    }
+
+    /// 001-x `done`, so a fold reopens it and its window starts at the fold.
+    fn done_upstream() -> (tempfile::TempDir, Repository) {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        commit_all(&repo, "status(001): done");
+        (tmp, repo)
+    }
+
+    /// `src/old.rs` predates the staging spec, and `src/u.rs` lands beside it with
+    /// no claim on it: only what the staging spec's commits changed comes along.
+    #[test]
+    fn a_fold_below_done_brings_its_code_into_a_window_starting_at_the_fold() {
+        let (tmp, repo) = done_upstream();
+        change(&tmp, &repo, "src/u.rs", "feat: nobody's");
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        remove_staging(&tmp, true);
+        let fold = commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        let parent = repo
+            .find_commit(Oid::from_str(&fold).unwrap())
+            .unwrap()
+            .parent(0)
+            .unwrap()
+            .id()
+            .to_string();
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/u.rs") && !has(&scope, "src/old.rs"));
+        assert!(scope.owed_by.iter().any(|path| path == "src/s.rs"));
+    }
+
+    /// `done` says its own review read the code, so the fold brings nothing, and the
+    /// window starting at the fold holds neither file.
+    #[test]
+    fn a_fold_from_done_brings_nothing_into_a_window_starting_at_the_fold() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "done", Some("001-x"));
+        remove_staging(&tmp, true);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/s.rs") && !has(&scope, "src/t.rs"));
+        assert!(scope.excluded.is_empty(), "{:?}", scope.excluded);
+    }
+
+    /// A claim on a commit in the window would leave `src/s.rs` to a directory gone.
+    #[test]
+    fn a_fold_below_done_lifts_the_exclusion_in_a_window_spanning_its_commits() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        assert!(x(&tmp).excluded.contains_key("src/s.rs"));
+        remove_staging(&tmp, false);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains_key("src/s.rs"));
+    }
+
+    /// The flip to `done` lies in this window and changed the staging spec's
+    /// `spec.md` from below `done`, so only the commit removing it may count as a fold.
+    /// `src/t.rs` names a spec gone from disk, so it reads as no spec's.
+    #[test]
+    fn a_fold_from_done_leaves_a_window_spanning_its_commits_excluding_them() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        stage(&tmp, &repo, "done", Some("001-x"));
+        remove_staging(&tmp, false);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+        assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+    }
+
+    /// A fold names one target, so another spec's window keeps leaving the commit
+    /// touching the directory to the spec it belonged to.
+    #[test]
+    fn a_fold_brings_nothing_to_a_spec_it_does_not_name() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        stage(&tmp, &repo, "in-progress", Some("002-y"));
+        remove_staging(&tmp, false);
+        commit_all(&repo, "fold(1234.1): into 002-y");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+        let target = compute(&args("002-y", None), tmp.path()).unwrap();
+        assert!(has(&target, "src/s.rs"), "{:?}", target.scope);
+    }
+
+    /// `folds-into` is read by number, so a target whose slug changed still receives.
+    #[test]
+    fn a_fold_finds_a_renamed_target_by_its_number() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-old-slug"));
+        remove_staging(&tmp, true);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        assert!(has(&x(&tmp), "src/s.rs"));
+    }
+
+    /// The working tree decides, as a review reads it, so a run before the fold's
+    /// commit reads the code, and the record it commits with the fold ends the claim.
+    #[test]
+    fn an_uncommitted_fold_brings_its_code() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        remove_staging(&tmp, true);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.base_source, BaseSource::UncommittedTransition);
+        assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+    }
+
+    /// In flight, a staging spec is its own review's, and its target owes it nothing.
+    #[test]
+    fn a_staging_spec_still_on_disk_brings_nothing() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/s.rs"), "{:?}", scope.scope);
+    }
+
+    /// A slug change removes `spec.md` under the old name and leaves the number on disk.
+    #[test]
+    fn a_renamed_staging_spec_is_no_fold() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        fs::rename(
+            tmp.path().join("specs/1234.1-foo"),
+            tmp.path().join("specs/1234.1-bar"),
+        )
+        .unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "spec(1234.1): a new slug");
+
+        assert!(!has(&x(&tmp), "src/s.rs"));
+    }
+
+    /// With nothing declared there is no target, so nothing says this spec received it.
+    #[test]
+    fn a_removed_spec_declaring_no_target_brings_nothing() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", None);
+        remove_staging(&tmp, true);
+        commit_all(&repo, "chore: remove a staging spec");
+
+        assert!(!has(&x(&tmp), "src/s.rs"));
+    }
+
+    /// Only the temporary form folds, so a sequential spec's removal is a consolidation.
+    #[test]
+    fn a_sequential_spec_removed_is_no_fold() {
+        let (tmp, repo) = done_upstream();
+        let gone = tmp.path().join("specs/003-gone/spec.md");
+        write(&gone, &staging_spec("in-progress", Some("001-x")));
+        write(&tmp.path().join("src/g.rs"), "fn g() {}\n");
+        commit_all(&repo, "feat(003): its directory and its code");
+        fs::remove_dir_all(tmp.path().join("specs/003-gone")).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "consolidate(003): into 001");
+
+        assert!(!has(&x(&tmp), "src/g.rs"));
+    }
+
+    /// A file a later commit removed cannot be read, and another spec's text is that
+    /// spec's, so a staging commit carrying either brings its code alone.
+    #[test]
+    fn a_fold_brings_no_path_gone_from_disk_or_in_a_spec() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        write(&tmp.path().join("specs/002-y/notes.md"), "a note\n");
+        commit_all(&repo, "docs(1234.1): a note on another spec");
+        fs::remove_file(tmp.path().join("src/t.rs")).unwrap();
+        commit_all(&repo, "fix(1234.1): drop t");
+        remove_staging(&tmp, true);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/t.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "specs/002-y/notes.md"), "{:?}", scope.scope);
+    }
+
+    /// The upstream's review read the fold's code, so its commit ends the claim.
+    #[test]
+    fn the_review_after_a_fold_ends_what_it_brought() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        remove_staging(&tmp, true);
+        commit_all(&repo, "fold(1234.1): into 001-x");
+        assert!(has(&x(&tmp), "src/s.rs"));
+
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-06T00:00:00Z");
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert!(!has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
+    }
+
+    /// History and the tree name paths from the work tree, and a project need not sit
+    /// at its root.
+    #[test]
+    fn a_fold_in_a_repository_subdirectory_brings_its_code() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+        let upstream = project.join("specs/001-x/spec.md");
+        write(&upstream, &spec("in-progress"));
+        git_fixture::commit_all(&repo, "status(001): in-progress");
+        write(&upstream, &spec("done"));
+        git_fixture::commit_all(&repo, "status(001): done");
+        write(
+            &project.join("specs/1234.1-foo/spec.md"),
+            &staging_spec("in-progress", Some("001-x")),
+        );
+        write(&project.join("src/s.rs"), "fn s() {}\n");
+        git_fixture::commit_all(&repo, "feat: its directory and its code");
+        write(&project.join("src/t.rs"), "fn t() {}\n");
+        git_fixture::commit_all(&repo, "feat(1234.1): its code alone");
+        fs::remove_dir_all(project.join("specs/1234.1-foo")).unwrap();
+        write(&upstream, &spec("in-progress"));
+        git_fixture::commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = compute(&args("001-x", None), &project).unwrap();
+        assert!(
+            scope.scope.iter().any(|path| path == "src/s.rs"),
+            "{:?}",
+            scope.scope
+        );
+        assert!(
+            scope.scope.iter().any(|path| path == "src/t.rs"),
+            "{:?}",
+            scope.scope
+        );
+    }
+
+    /// The commit flipping the staging spec to `done` changed its `spec.md` from below
+    /// `done`, and read by the wrong path it would look removed.
+    #[test]
+    fn a_fold_from_done_in_a_repository_subdirectory_brings_nothing() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+        write(&project.join("specs/001-x/spec.md"), &spec("in-progress"));
+        git_fixture::commit_all(&repo, "status(001): in-progress");
+        let staged = project.join("specs/1234.1-foo/spec.md");
+        write(&staged, &staging_spec("in-progress", Some("001-x")));
+        write(&project.join("src/s.rs"), "fn s() {}\n");
+        git_fixture::commit_all(&repo, "feat: its directory and its code");
+        write(&staged, &staging_spec("done", Some("001-x")));
+        git_fixture::commit_all(&repo, "status(1234.1): done");
+        fs::remove_dir_all(project.join("specs/1234.1-foo")).unwrap();
+        git_fixture::commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = compute(&args("001-x", None), &project).unwrap();
+        assert!(
+            !scope.scope.iter().any(|path| path == "src/s.rs"),
+            "{:?}",
+            scope.scope
+        );
+        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+    }
+
+    /// The tree is read by the path from the work tree too.
+    #[test]
+    fn an_uncommitted_fold_in_a_repository_subdirectory_brings_its_code() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+        let upstream = project.join("specs/001-x/spec.md");
+        write(&upstream, &spec("in-progress"));
+        git_fixture::commit_all(&repo, "status(001): in-progress");
+        write(
+            &project.join("specs/1234.1-foo/spec.md"),
+            &staging_spec("in-progress", Some("001-x")),
+        );
+        write(&project.join("src/s.rs"), "fn s() {}\n");
+        git_fixture::commit_all(&repo, "feat: its directory and its code");
+        fs::remove_dir_all(project.join("specs/1234.1-foo")).unwrap();
+
+        let scope = compute(&args("001-x", None), &project).unwrap();
+        assert!(
+            scope.scope.iter().any(|path| path == "src/s.rs"),
+            "{:?}",
+            scope.scope
+        );
     }
 
     #[test]
