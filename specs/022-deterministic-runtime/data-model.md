@@ -414,7 +414,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 { "scenario-open-question-count": 3, "scenarios-with-questions": ["audit-ci-hard-gate", "family-10-migration-coverage"] }
 ```
 
-`scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only, and the two are never summed. How they render — the Scenarios column's `({n} open)` suffix, the `clarify (scenario)` Next Action and its precedence under `clarify (recovery)`, and the uncapped callout — is `/ductus:status`'s Rendering reference.
+`scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only, and the two are never summed. How they render — the Scenarios column's `({n} open)` suffix, the `clarify (scenario)` Next Action and its precedence under `clarify (recovery)`, and the uncapped callout — is `render_markdown`'s, in `runtime/src/primitives/dashboard.rs`.
 
 `inbox-standing` reports the standing inbox backlog, and `rendered-markdown` renders it as an `Inbox:` line, the last line of the counts-and-callouts block:
 
@@ -424,7 +424,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 
 `state` is `clean` (examined, empty), `outstanding`, or `no-file` (no readable `{specs-root}/inbox.md`), so a project with no inbox never renders as examined-and-clean. `oldest` is `YYYY-MM-DD` from `git blame` over the surviving bullets, so the whole-file rewrites `append-inbox` and `remove-inbox-item` perform do not reset a surviving line's date. It is **absent, not defaulted**, when the oldest item's date cannot be read — an inbox not yet committed, a surviving item behind a shallow clone's cut, or any other blame failure — and a caller reports that as *age undeterminable* rather than as today; an uncommitted item alone never makes it absent, being newer than every committed one. Being a history read, a CI job running it needs `fetch-depth: 0`. Counting uses the shared comment- and fence-aware bullet grammar the append and remove primitives use. It is **a notice, never a gate**: nothing blocks on inbox depth, because §brownfield-inbox's design rests on capture being free.
 
-`rendered-markdown` is the full pipeline view as one markdown fragment, in `/ductus:status`'s documented order — preamble, table, counts and callouts, and the cross-service references readout, resolved the way `resolve-references` resolves them — with `/{project}:…` texts in the adopter's `[host] project` namespace. It is data the host may restyle, never printed; the structured fields stay authoritative, and `/ductus:status`'s Rendering reference holds the piece-by-piece formats.
+`rendered-markdown` is the full pipeline view as one markdown fragment, in `/ductus:status`'s documented order — preamble, table, counts and callouts, and the cross-service references readout, resolved the way `resolve-references` resolves them — with `/{project}:…` texts in the adopter's `[host] project` namespace. It is data the host may restyle, never printed; the structured fields stay authoritative, and `render_markdown`, in `runtime/src/primitives/dashboard.rs`, holds the piece-by-piece formats.
 
 ### `resolve-feature` — resolve an identifier to a feature directory
 

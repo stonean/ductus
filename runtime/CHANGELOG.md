@@ -67,8 +67,8 @@ its version and date.
 
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes to about 424,000, `framework/reference/review.md` from 67,168 to about 43,300
-  and `framework/reference/analyze.md` from 78,632 to about 47,700, each within one
+  bytes to about 416,500, `framework/reference/review.md` from 67,168 to about 44,300
+  and `framework/reference/analyze.md` from 78,632 to about 47,900, each within one
   read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
@@ -84,8 +84,10 @@ its version and date.
 - **Each primitive's description says what it does without the prose.**
   `check-artifacts` states its severity tiers rather than pointing at the analyze
   reference, `resolve-constitutions` states that a malformed entry halts, and
-  `brief-re-read` names the three lists that move to the file. Commands and
-  references no longer describe a hand-walk (spec 079).
+  `brief-re-read` names the three lists that move to the file. `derive-boundary`,
+  `mark-task` and `check-stuck` state their rules in `--help`, `dashboard` names
+  `rendered-markdown`, and `framework/reference/status.md` no longer restates that
+  view line by line. Commands and references no longer describe a hand-walk (spec 079).
 - **A signpost on a `done` spec is a correction.** `check-review-gate`'s
   cross-spec guidance says it leaves the spec `done`, and that a criterion or
   scenario there reopens it (spec 079).
