@@ -199,7 +199,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [ ] Contract break: `ductus exec` cannot record `contract-break`, missing from `PassObservation`, so the gate's hold on a break left open never fires for it
 - [ ] Contract break: a stored rule waiver matched to an observation now judged a contract break stands, with nobody asked
 - [x] Contract break, the owner chose the cut (2026-11-06): `framework/reference/status.md` keeps `dashboard`'s render rules, and `derive-boundary`, `mark-task` and `check-stuck` keep theirs in prose, each `--help` being one line
-- [ ] Gap, the owner's choice: without the server, `/review` steps 8, 9, 11 and `/analyze` steps 18, 21 cannot pass what they must; CLI `write-review` records a clean run over a MUST and `process-*` read everything as expired
+- [x] Gap, the owner chose (2026-11-06) that the server is required, so a command stops without it: `/review` steps 8, 9, 11 and `/analyze` steps 18, 21 cannot pass what they must through the CLI; CLI `write-review` records a clean run over a MUST and `process-*` read everything as expired
 - [ ] Gap, follows the window: `disposition-drift` says to re-run `/review`, which stops on `review-owed: false`, and a forced run erases the findings undecided
 - [ ] Gap: `--waive` has no write route, predating this spec; `applied-waivers` clears the run and persists nothing
 - [ ] Gap, the owner's choice: the spec says `--waive` and `--defer` override any decision, and both take only a rule ID, so a person cannot replace the rule's waiver of an observation

@@ -30,7 +30,7 @@ With no argument, use the session target — resolve it with `resolve-session` a
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
 **Where a named section lives.** This command's reference is `.ductus/reference/fold.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

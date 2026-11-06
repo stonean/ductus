@@ -90,7 +90,7 @@ When `analysis.md` is absent, nothing is decided. When its `decisions:` list doe
 
 ### Without the MCP server
 
-Without the server the host runs `ductus check-artifact-size` (spec 079): a subject it cannot read is listed as not examined, never as under the threshold.
+`check-artifact-size` lists a subject it cannot read as not examined, never as under the threshold; without the server the command stops (spec 079).
 
 ### `/plan` stops placing code in plans
 

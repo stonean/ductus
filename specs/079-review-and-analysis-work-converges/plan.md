@@ -66,7 +66,7 @@ The baseline check is a recorded command result at `d62e72f3`, not a test, becau
 
 Four edits, net-negative together, since it holds 49,936 of 50,000 bytes:
 
-- §runtime-boundary's host integration and eligibility criterion 3: the binary is the source of a primitive's rules (AC21).
+- §runtime-boundary's host integration and eligibility criterion 3: the binary is the source of a primitive's rules, and the server is required, so a command stops without it (AC21; owner, 2026-11-06).
 - §spec-lifecycle's third back-edge and its shared test: a correction reopens nothing (AC15).
 - §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
@@ -175,7 +175,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 - **A new gate tier for contract breaks** was rejected: it falsifies the gating definitions across four specs. A break left open reuses `review-owed` instead, which `/{project}:review` clears.
 - **A gate notice for a contract break**, chosen on 2026-11-05, was replaced (owner, 2026-11-06): it let a known broken contract reach `done` with no decision recorded. The spec's entry holds the options and their numbers.
 - **Sweeping restatements that are still true** stays out, as the spec resolves. A false statement is corrected under AC12, including one that a data model is canonical, while a true copy waits until next edited.
-- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
+- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. A person running `write-review` by hand writes what they give it, since the CLI cannot pass findings. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
 
 ## Open Questions Resolved
 

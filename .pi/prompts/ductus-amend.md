@@ -35,7 +35,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
 ### Confirm target
 

@@ -26,7 +26,7 @@ See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-s
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools, except step 1's `run-generator`, which is not one and runs through the CLI; without the server, run `.ductus/bin/ductus <name>` (§runtime-host-integration).
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools, except step 1's `run-generator`, which is not one and runs through the CLI; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
 **Where a named section lives.** This command's reference is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

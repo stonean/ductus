@@ -28,7 +28,7 @@ New primitives, each wired at every site per the AGENTS.md six-site rule (schema
 
 ## Edge Cases
 
-- Each rewritten step names its primitive; without the server an agent runs `ductus <name>`.
+- Each rewritten step names its primitive; without the server the command stops and says so (spec 079).
 - The `dashboard` render field is returned data the host may restyle, never stdout printing — it stays inside the runtime boundary (no user-facing rendering owned by the runtime).
 - `remove-inbox-item` reports a not-found removal as a domain outcome (no error), mirroring `append-inbox`'s `deduped` (a field 058 later removed with the dedup guard).
 - `append-question`'s dedup uses the same normalized-whitespace comparison amend already specifies.

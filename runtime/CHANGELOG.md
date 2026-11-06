@@ -91,10 +91,10 @@ its version and date.
 - **A signpost on a `done` spec is a correction.** `check-review-gate`'s
   cross-spec guidance says it leaves the spec `done`, and that a criterion or
   scenario there reopens it (spec 079).
-- **The constitution makes the binary the source of a primitive's rules.** Without
-  the MCP server, an agent runs `ductus <name>`, or reads its `--help` where the
-  CLI lacks an argument, and a command's reference keeps what a step does with the
-  result, host judgment and policy. A correction to a `done` spec's `spec.md` or
+- **The constitution makes the binary the source of a primitive's rules, and the MCP
+  server required.** Without the server, a command stops and says to restart or re-run
+  `/ductus`, since the CLI lacks arguments its steps need, and a command's reference
+  keeps what a step does with the result, host judgment and policy. A correction to a `done` spec's `spec.md` or
   `plan.md` leaves it `done`, and a review or analysis run creates work only for a
   gating finding. `create-scenario`, `append-task` and `set-status` state in their
   descriptions what the constitution used to. Spec 079, task 9.

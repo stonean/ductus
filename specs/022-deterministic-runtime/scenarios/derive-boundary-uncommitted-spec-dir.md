@@ -24,7 +24,7 @@ The two fixes are complementary, not alternatives. The gate stops the state from
 
 - **Partially committed spec directory** (`spec.md` committed, `tasks.md` untracked) — derivation succeeds as it does today and the gate passes. The gate asserts that at least one commit *touches* the spec directory, not that the working tree is clean; requiring a clean tree would block the ordinary edit-then-plan flow.
 - **Session-seeded `write-boundary` with an uncommitted spec dir** — the empty derivation unions with the seed under the precedence [`writecode-boundary-derivation`](writecode-boundary-derivation.md) settled (seeded ∪ derived), so the seed admits the walk and `/ductus:implement` proceeds. This is the escape hatch the guidance string names.
-- **Without the server** — an agent runs `ductus derive-boundary`, whose result carries the same guidance; the gate check is a prose step in `/ductus:plan`, not a runtime-only behavior.
+- **Without the server** — the command stops and says to restart or re-run `/ductus` (spec 079); the gate check is a prose step in `/ductus:plan`, not a runtime-only behavior.
 - **Back-edge re-entry** — a spec returning `done → in-progress` already has a committed spec directory, so the gate is a no-op on every reopen path.
 
 ## Open Questions
