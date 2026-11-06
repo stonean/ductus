@@ -148,3 +148,60 @@ Below `done` into a `done` upstream, today, one review of that scope and one ana
 Over all 77 specs at `f2e8c70a`, from clean worktrees, the excluding-nothing and fold-passes-all prototypes read the same base, scope, `review-owed` and gate as the unchanged code; the below-`done` form fires on a subset of the second. The retired numbers are 004, 005 and 053, since 027 and 048 were renamed and stay on disk by number. 0 of the 126 closings since 2026-10-01 hold a commit touching their directories or naming them; the newest is `cc870e18` of 2026-09-15, which also touches live specs, so those keep excluding its paths. No branch-scoped spec is in this repository's history, and the first fix round, on 2026-11-03, postdates every such commit. With a fold in the window, `compute-review-scope` on a clone of this history (3,113 commits) took 1.42 s without the prototype and 2.35 s with it, medians of three, the prototype walking the window twice; the shipped form, which uses the window's own walk, took 1.48 s against 1.46 s.
 
 Not examined by any flow: real agent hosts, Windows, `--all`, `--fix`'s second write, `/fold`, `/consolidate`, the CI template's record check, and the re-read agents' path end to end.
+
+## What the fresh review found
+
+The five passes of `/ductus:review --since=6aef0472` at `1a0623f2`, by three agents following one behavior each with the release binary: what a run records, where a window starts and what the gate holds, and what reopens with every shipped sentence. Scope 116, of which 27 are generated copies not read, each generated from a source read. Rule files: the 12 `discover-rule-files` selects. Each item is an input, what it read, and the fix; the task 18 boxes group them. The stored decisions' fates are on task 18.
+
+**Rule violations.**
+
+- **R1, `QUAL-CLAIM-001`, SHOULD, `runtime/src/primitives/write_review.rs`.** `write-review --empty-scope` over a record the gate calls unreadable wrote `must-violations: 0` and "Zero findings", as if none existed. Refuse on an unreadable record.
+- **R2, `QUAL-CLAIM-001`, SHOULD, `runtime/src/primitives/measure_reopenings.rs`.** A tip dated before the window ended the walk: one closing read `nothing-to-compare`. 0 of 3,122 commits here have a child older than its parent. Skip such a commit rather than stop.
+- **R3, `QUAL-CLAIM-001`, SHOULD, `runtime/src/primitives/check_stuck.rs`.** After a slug rename `since-sha` holds but the count and first-box comparison read the new path: `commit-count: 4, stuck: true` became `1, false`. Resolve each commit's path by number.
+- **R4, `QUAL-TEST-001`, SHOULD, `runtime/src/primitives/classify_spec_edit.rs`.** `a_reference_added_or_removed_as_a_list_item_is_mechanical` never removes one. Add that input.
+- **L1, `QUAL-CLAIM-001`, low confidence, `runtime/src/primitives/compute_review_scope.rs` `was_folded`.** A staging spec whose frontmatter does not parse at removal reads as no fold, with no notice. `/fold`'s `read-spec` should stop on it first, not driven, so it needs a by-hand removal. Recorded low-confidence.
+
+**Contract breaks.**
+
+- **B1, `framework/commands/review.md` step 11 and `write_review.rs`.** One `--waive` through a run's two writes stores two identical entries; `process-waivers` then warns of a duplicate, and `measure-reopenings` reads `decisions-by-person: 2`. Dropping it from the last write brings the finding back, and passing it after a fix cleared the finding is refused, leaving the mark. Reproduced independently. An anchor recorded applies and is not stored again, and a rule this run's earlier write stored asks nothing of the last.
+- **B2, `runtime/src/primitives/decisions.rs`, step 9.** A deferral of a break to a work item alone: run 2's `process-decisions` matches it with no break flag, so written that way `contract-breaks: 0`, no list, and the gate passes with the break unfixed. The hold depended on a host re-marking it. The stored entry carries `contract-break: true`, and `write-review` re-marks a match unless the entry is in `expired-decisions`.
+- **B3, `write_review.rs`, `runtime/src/interpreter/mod.rs`.** `ductus exec review since=HEAD` over a record with `must-violations: 1` and no list writes 0: the walker never sets `empty-scope`, and the refusal read only the flag. Reproduced independently. Refuse on a derived empty scope too.
+- **B4, `decisions.rs`, `write_review.rs`.** `src/b.rs:3:9`: a person's decision reads `expired` with the file unread, and a break lists `src/b.rs:3`, which the next scope cannot stat. One shared stripper, repeating.
+- **B5, `compute_review_scope.rs` `why_unread`.** A plan's `src/*.rs` in scope: a decision on `src/b.rs` reads `retained`, "did not read". Test through `PlanEntries`.
+- **B6, `check_stuck.rs:206`.** Close, reopen, code, a commit with `status: [` or `spec.md` removed, then its repair: the base moves to before the repair, `review-owed: false`, and one analysis passes. Carry the reopening through a status-less commit. 0 of 2,408 pairs here.
+- **B7, `compute_review_scope.rs` `last_review_commit`.** Code with the flip, run B, `git revert` B to the run the reopening carried: base at the revert, scope 0, the gate passes. A stamp held at the transition finished nothing here, so the window stays at the reopen. A record restored from before the one the transition holds still reads as a finish, a limitation to state in `plan.md`.
+- **B8, same function.** Reverting away the only run: base at the reverted run, scope 0, `not-reviewed`, then an empty-scope write and an analysis pass. No record at `HEAD` starts at the reopen. `last-run: null`, which a fold's `invalidate-review` writes, keeps the start, since what the fold brought joins by its own rule.
+- **B9, `runtime/src/primitives/commit_attribution.rs` `belongs_to`.** A staging spec renamed before its fold loses commits touching its old slug. Match the directory entry by `FeatureForm`.
+- **B10, `compute_review_scope.rs` `record_at`.** With an uncommitted rename the gate blocks naming `src/b.rs` while the scope does not hold it. Resolve through `feature_file_in_tree`.
+- **B11, `compute_review_scope.rs` `paths_owing_a_review`.** A rename-only reopening holding a scenario owes a review. A contract whose digest is current owes none, with no digest it still does.
+- **B12, `runtime/src/primitives/mod.rs` `SkipScanner`.** A box in a `~~~` fence counts as owed, against AC27. Recognize both fences, only its own kind closing.
+- **B13, `runtime/src/primitives/derive_references.rs:390`.** `See [b](../../034-b/spec.md), the timeout is 30s, then [api](…)` with `30s` changed reads `mechanical`, as does a `[here](#anchor)` or `![i](a.png)` first; multibyte text between panics, `start byte index 74 is not a char boundary`. Take a URL only when it follows that `](`. 0 such lines here.
+- **B14, `framework/reference/groom.md:62`, `framework/commands/groom.md`.** The spec-edit reopen has no step, no consent, and reads an error as staying `done`. Add a step mirroring `/amend` step 5, naming the reopen before it writes.
+- **B15, retired "without the server the agent runs the CLI".** `specs/000-slash-commands/scenarios/target-names-the-step-the-gate-would-name.md:22`, `specs/022-deterministic-runtime/scenarios/the-cli-surface-nothing-pins.md:16`, `runtime/src/main.rs:1113`, `runtime/src/schema/registry.rs:22`. Every command now says to stop.
+- **B16, `framework/constitution.md`'s "an edit elsewhere".** A sweep through `research.md` in two specs read `reopens` with `other-file`. Route that arm through the same test, keeping a real change `other-file`.
+
+**The owner's call.**
+
+- **O1, a stopped run and the bound.** A record with `budget-stop: true` and no finding: `stopped_early` keeps the window, the gate blocks `review-owed`, and the re-run measures `reviews: 2, analyses: 1, over-bound: true`. A restricted run reads the same. Reproduced independently. `review_fields` reads neither field, while the window treats both as a stop. 3 commits in all history touch a budget stop or a skipped pass in a `review.md`, and `specs/077-security-cross-rules/review.md` is the 1 record at `HEAD` holding one. The count of closings it changes over the 126 since 2026-10-01 is unmeasured: settle it with a prototype before asking. Options: count a stopped run as leaving a gating finding, as the entry on a cut-off does for the open mark, about 3 lines; or leave it a miss, which asks a task on this spec with nothing to fix for each.
+
+**Mechanical.**
+
+- `runtime/src/primitives/invalidate_review.rs`: the record keeps `excluded`, `contract-breaks` and `fix-rounds-open` beside `last-run: null`; `open-findings` stays.
+- `write_review.rs`: the empty-scope Summary omits a break it holds.
+- `framework/reference/review.md`: the `observations` row's sample says "it does not hold done" with a break among them.
+- `framework/commands/analyze.md` step 22: its `--fix` list omits an outstanding SHOULD, a listed break, the open mark, an unticked criterion and an unchecked box.
+- `specs/066-audit-records-and-the-completion-gate/scenarios/the-fix-round-loop-is-recorded-and-gated.md:9` and `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md:45`: "check 12", renamed in 078's data model.
+- Doc comments on the wrong item: `write_review.rs` (`surviving_waivers`), `check_review_gate.rs` (`unreadable_record_block`, `scenario_question_block`).
+- `data-model.md`'s accounting sentence omits what a fold brings; it gains `new-waivers`' two-write rule and `decisions:`' `contract-break`.
+- Enumerations of review-state drift: `CHECK_ARTIFACTS` in `runtime/src/schema/descriptions.rs`, `docs/analyze.md`, `specs/067-analyze-and-audit-checks/data-model.md`, `check_artifacts.rs`' module doc, each omitting a condition, a listed break among them.
+- `classify_spec_edit.rs`' module doc is corrected; `plan.md`'s "What reopens" still says the two agree on a reference-only edit.
+- `runtime/CHANGELOG.md`'s size figures, now 419,612, 45,007 and 48,553 by `wc -c`.
+- M115's name in `scripts/mutation/reopen-measure.py`: "a tick reopens" makes a criterion left unticked reopen.
+
+**Waived by the rule, each with this reason for its observation.**
+
+- `framework/commands/analyze.md` step 8 names no family: it points at the description, as AC9 asks.
+- `1. [ ]`, `> - [ ]`, `* [ ]` and `+ [ ]` are no boxes to `find_checkbox_line`: one documented grammar, `mark-task`'s too, every surface alike, 0 such lines here.
+- A claim carried only in a reference's label reads `mechanical`: the scrub removes label and target by its stated design; add it to `plan.md`'s known limitations.
+- A reference added as an ordered item or table row reads `reopens`: it errs toward reopening.
+- A reference-only edit reads `mechanical` while staleness reads `stale`: exempting references from the digest is a change of its own, with 0 occurrences since no spec here carries `references:`.

@@ -46,6 +46,10 @@ Gate the commit on every check's exit status, mutants included, in one script: a
 
 A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` moves the `implement-basic` golden: re-bless that one alone, as its message says, and read the diff.
 
+## Comparing two builds across the corpus
+
+Copy each binary out of its target directory first, and check the copy holds what it should with `strings <copy> | grep '<a new literal>'`. `cargo test` runs `cargo build --release` in `CARGO_TARGET_DIR` (`runtime/tests/exec_subprocess.rs`, `concurrent_sessions.rs`), so a binary left there is overwritten by the next landing, and a comparison of it against the new one reads 0 differences, which looks like a clean result. Build the old one from a worktree of its commit into its own target directory. Run from a clean worktree of `HEAD`, with `node_modules` linked, since an uncommitted edit joins every spec's scope and the gate lints.
+
 ## Running a second session
 
 Each session needs its own checkout: on a fixture, one session's uncommitted file in a shared tree joined the other's review scope and took its gate from passing to `review-owed` until it was gone (079's Resolved Questions), and the pre-commit hook and `.ductus/bin/ductus` are shared there too. Two clones, each on `main`, rebase past each other cleanly, and a record's `reviewed-against` no longer being an ancestor afterwards changes neither the gate nor the scope.

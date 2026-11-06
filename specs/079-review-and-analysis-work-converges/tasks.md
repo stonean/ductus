@@ -187,7 +187,7 @@ Subtask 4 cannot finish in one session: once AC24 lands, record its commit here 
 
 The remaining contract breaks and gaps follow, each with its reproduction re-run first, since the gate has changed since `research.md` recorded them. Land runtime fixes in batches, as `docs/developing-ductus.md`'s *Landing a runtime change* says. Other specs close alongside this work rather than waiting for it (the spec's Resolved Questions).
 
-The last item closes the run. Two ways, the second cheaper: write it as the item says, passing the 66 observations and these findings; or, once the fixes land, run a fresh `/ductus:review --since=6aef0472`, naming the base and why in its Summary, since the passes at `5f67ede2` and the flow pass read what came before it. A fresh run replaces the record whole, keeps stored `decisions:`, and clears the mark on its last write. Its agents follow behaviors, not file kinds (**§Run review passes** in `framework/reference/review.md`).
+The last item closes the run, by a fresh `/ductus:review --since=6aef0472`, which task 18 carries.
 
 - [x] Contract break, the owner chose (2026-11-05) that a record the gate holds does not move the start, so add `holds_done_until_reviewed` to `recorded_run`'s `stopped_early`, and AC5's text already says so: a committed record with an unfixed MUST or SHOULD moves the window past it, so a re-run sees `scope-count: 0`, takes the empty-scope branch and writes `must-violations: 0` with the file unchanged. Also clears an unread round and a contract break, and leaves `--waive` no finding to act on. Reproduced by hand in this session; absent at `3360dea3`
 - [x] Contract break, the owner chose (2026-11-06) that the record lists what it leaves open, the next scope holds it, and a break left open holds `done`: what that fix leaves, on inputs where what a finding names lies outside the next window (`research.md`, *What item 1's fix leaves*). An unfixed contract break the gate does not hold, a held record from before the reopening, a spec with no transition, `--since=HEAD`, and a first review's MUST on a plan file the window left unchanged each still end at a count of 0 with the file unread. An unread fix round from before the reopening stays out of reach, waived: it needs a record past the gate, 0 of 120 at the closings since 2026-10-01
@@ -223,7 +223,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [x] Gap: a `cross-spec-impact:` entry added to a `done` spec is a correction nothing then reads
 - [x] The wording items the flows name, fixed: a record contradicting itself on a person's deferral (the count and the body now follow the stored decision), the record's `scope` counting its own `review.md`, literal namespaces in 18 descriptions and `check-artifact-size`'s fixes, `/groom`'s spec-edit route (it now asks `classify-spec-edit`), and `AGENTS.md`'s claim that the CLI cannot untick, since omitting `--checked` does
 - [x] Run `scripts/mutation/scope-attribution.py` and `scripts/mutation/reopen-measure.py` whole, from a worktree of a commit, before this run closes: since `68b643c8` only the mutants each landing named have run, and those landings moved anchors and added entries in both lists
-- [ ] Close this run: the last `write-review` lists rounds 1 to 4 as re-read, diff-checked, re-read, diff-checked and round 5, the fold edits, `not-re-read` with the owner's reason; `budget-stop` then derives true, so the next review starts at the reopen. Reconcile `examined` and `scope` in the Summary
+- [ ] Close this run through task 18's fresh review, naming the base and why in its Summary, since the passes at `5f67ede2` and the flow pass read what came before it. It replaces the record whole, keeps stored `decisions:`, and clears the mark on its last write. Reconcile `examined` and `scope` in the Summary
 
 - **Done when**: each contract break is fixed with a test shown to fail without it, each gap is fixed, deferred or waived with its reason, the owner's choices are recorded, and AC5 and AC17 are ticked again against the tree.
 
@@ -236,3 +236,17 @@ The bug decision tree's route 3: the spec is ambiguous on the form. The decision
 - [ ] A suffixed number is valid or not, the owner's choice, then a scenario and task on `041-task-pruning` naming this spec's finding — deferred or waived here
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 18. What the fresh review found
+
+`research.md`'s *What the fresh review found* holds each item's input, result and fix, under these ids. Its passes ran at `1a0623f2` with `--since=6aef0472`. Nothing is recorded yet: `review.md` still holds the cut-off run, with `fix-rounds-open: true`. Each fix needs a test shown to fail without it and a mutant, in `scripts/mutation/scope-attribution.py` or `scripts/mutation/reopen-measure.py`, as *Proving a test fails* says. Land by `docs/developing-ductus.md`'s *Landing a runtime change*. Then finish the run from step 8 of `framework/commands/review.md`, with `process-decisions` firing each stored key that still holds: the first-review plan entries, `check-prescriptions`' exempt path, the rename counting a carried record, `cross_service.rs`' assertion and `/amend`'s delta. The gate-order key does not hold, since every review check now runs ahead of the analyze checks, so let it expire.
+
+- [ ] Code and tests, each with its mutant: R1, R2, R3, R4, B1 to B13, B16, the empty-scope Summary and `invalidate-review`'s fields
+- [ ] The compiled descriptions follow the code: `WRITE_REVIEW` on the derived empty scope, an unreadable record, a run's two writes and a stored break; `COMPUTE_REVIEW_SCOPE` on a record reverted away and a run from before the reopening; `CHECK_STUCK` on a rename; `CLASSIFY_SPEC_EDIT` on another file's sweep; `data-model.md`, the plan and `runtime/CHANGELOG.md` with them
+- [ ] Prose and sweeps: B14, B15 and the mechanical list. A contract edit on another spec stales its review, which is owed anyway on every spec it names here
+- [ ] The owner's call, O1, with its count measured first: settle it by a prototype over the 126 closings since 2026-10-01
+- [ ] Measure the batches against `e6250b77` over all 77 specs, base, scope count, `review-owed`, the gate and the finding families, by `docs/developing-ductus.md`'s comparison: no such run has been valid yet, and the expected difference is specs whose first gate block moves to `unchecked-task`
+- [ ] Finish the run: `process-waivers`, `process-decisions`, `start-fix-rounds` taken before any further fix, `write-review` with `loop-open` passing every observation and finding here with its disposition, `decided-by: rule` on the waived list and L1 low-confidence, then the re-reads within the budget of 2, the last write without `loop-open`, and commit the record
+- [ ] Tick AC5 and AC17 again against the tree, then `/ductus:analyze`, then tick task 12's first open box
+
+- **Done when**: each item here is fixed with a test shown to fail without it, or waived with its reason in the record, the owner has answered O1, the record is committed with no open mark, and `/ductus:analyze` has run.
