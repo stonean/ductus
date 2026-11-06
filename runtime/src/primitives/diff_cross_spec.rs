@@ -102,26 +102,47 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
     let spec_prefix = format!("{}/{}/", layout.specs_root, args.feature);
     let inbox_rel = format!("{}/inbox.md", layout.specs_root);
 
-    let Some(window_base) = window_base(&project, &layout.specs_root, &args.feature, &feature_dir)?
-    else {
-        return Ok(ImpactSurface {
-            window_base: String::new(),
-            current_head: String::new(),
-            cross_spec_paths: Vec::new(),
-            // Empty lists alone would read as "no cross-spec impact". They
-            // carry guidance instead, so the caller reports "unknowable"
-            // rather than a clean bill this primitive cannot vouch for.
-            guidance: Some(format!(
-                "no commit touches {}/{} yet, so there is no window to diff — \
-                 cross-spec impact is unknown, not absent. Commit the spec directory \
-                 to get a real answer.",
-                layout.specs_root, args.feature
-            )),
-        });
+    let unknown = |guidance: String| ImpactSurface {
+        window_base: String::new(),
+        current_head: String::new(),
+        cross_spec_paths: Vec::new(),
+        guidance: Some(guidance),
+    };
+    let window_base = match window_base(&project, &layout.specs_root, &args.feature, &feature_dir) {
+        Ok(base) => base,
+        Err(error @ PrimitiveError::ShallowHistory { .. }) => {
+            return Ok(unknown(format!(
+                "{error} — cross-spec impact is unknown, not absent."
+            )));
+        }
+        Err(error) => return Err(error),
+    };
+    let Some(window_base) = window_base else {
+        // Empty lists alone would read as "no cross-spec impact". They
+        // carry guidance instead, so the caller reports "unknowable"
+        // rather than a clean bill this primitive cannot vouch for.
+        return Ok(unknown(format!(
+            "no commit touches {}/{} yet, so there is no window to diff — \
+             cross-spec impact is unknown, not absent. Commit the spec directory \
+             to get a real answer.",
+            layout.specs_root, args.feature
+        )));
     };
     let head = repository.head()?.peel_to_commit()?;
+    let form = parse_feature_dir(&args.feature);
+    // A directory of this spec's number is this spec under an earlier slug.
+    let own_directory = |path: &str| {
+        form.is_some()
+            && path
+                .strip_prefix(&root_prefix)
+                .and_then(|rest| rest.split_once('/'))
+                .is_some_and(|(directory, _)| parse_feature_dir(directory) == form)
+    };
     let is_sibling = |path: &str| {
-        path.starts_with(&root_prefix) && !path.starts_with(&spec_prefix) && path != inbox_rel
+        path.starts_with(&root_prefix)
+            && !path.starts_with(&spec_prefix)
+            && !own_directory(path)
+            && path != inbox_rel
     };
 
     // What differs across the window, so a change made and undone inside it is
@@ -133,7 +154,6 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
     // `parse_feature_dir` does not recognize can be claimed by no commit, so its
     // window keeps every committed sibling change rather than reading as clean.
     let mut own: BTreeSet<String> = BTreeSet::new();
-    let form = parse_feature_dir(&args.feature);
     if form.is_some() && window_base != head.id() {
         let attributor = Attributor::new(&project, repo, &layout.specs_root);
         let mut walk = repository.revwalk()?;
@@ -242,6 +262,52 @@ mod tests {
         DiffCrossSpecArgs {
             feature: feature.into(),
         }
+    }
+
+    /// 020-demo reopened, its work committed, then its slug changed.
+    fn renamed_repo() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec = tmp.path().join("specs/020-demo/spec.md");
+        write(&spec, "---\nstatus: done\n---\n\n# 020\n");
+        write(&tmp.path().join("specs/020-demo/tasks.md"), "# Tasks\n");
+        commit_all(&repo, "chore: done");
+        write(&spec, "---\nstatus: in-progress\n---\n\n# 020\n");
+        commit_all(&repo, "feat(020): reopen");
+        std::fs::rename(
+            tmp.path().join("specs/020-demo"),
+            tmp.path().join("specs/020-renamed"),
+        )
+        .unwrap();
+        commit_all(&repo, "spec(020): a new slug");
+        tmp
+    }
+
+    /// Its old directory is this spec under another name, not a sibling.
+    #[test]
+    fn a_rename_is_no_cross_spec_impact() {
+        let tmp = renamed_repo();
+        let surface = compute(&args("020-renamed"), tmp.path()).unwrap();
+        assert_eq!(surface.cross_spec_paths, Vec::<String>::new());
+    }
+
+    /// A window that cannot be placed is unknown impact, never none.
+    #[test]
+    fn a_shallow_history_is_unknown_impact() {
+        let tmp = renamed_repo();
+        let repo = Repository::open(tmp.path()).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap().id();
+        std::fs::write(tmp.path().join(".git/shallow"), format!("{head}\n")).unwrap();
+
+        let surface = compute(&args("020-renamed"), tmp.path()).unwrap();
+        assert!(
+            surface
+                .guidance
+                .as_deref()
+                .is_some_and(|g| g.contains("--unshallow")),
+            "{surface:?}"
+        );
+        assert_eq!(surface.cross_spec_paths, Vec::<String>::new());
     }
 
     /// A repo where 020-demo starts, then a sibling spec, the inbox, the

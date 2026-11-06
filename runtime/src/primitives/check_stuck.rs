@@ -18,7 +18,8 @@ use std::path::Path;
 use git2::{Repository, Sort};
 
 use crate::primitives::{
-    PrimitiveError, ProjectRepository, Result, SkipScanner, blob_text, checkbox, frontmatter_status,
+    PrimitiveError, ProjectRepository, Result, SkipScanner, blob_text, checkbox,
+    frontmatter_status, parse_feature_dir,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{CheckStuckArgs, CheckStuckResult};
@@ -49,7 +50,12 @@ pub fn run(args: &CheckStuckArgs, repo: &Path) -> Result<CheckStuckResult> {
     let tasks = format!("{}/{}/tasks.md", layout.specs_root, args.feature);
     let tasks_rel = project.to_git(&tasks);
 
-    let since = find_in_progress_commit(repository, &spec_rel)?;
+    // No start reads as not stuck, so one that history cannot place has to say so.
+    let (since, guidance) = match find_in_progress_commit(repository, &spec_rel) {
+        Ok(since) => (since, None),
+        Err(error @ PrimitiveError::ShallowHistory { .. }) => (None, Some(error.to_string())),
+        Err(error) => return Err(error),
+    };
     let count = count_commits_touching(repository, &tasks_rel, since.as_deref())?;
 
     // Second condition (per scenario check-stuck-tasks-md-advancement):
@@ -70,6 +76,7 @@ pub fn run(args: &CheckStuckArgs, repo: &Path) -> Result<CheckStuckResult> {
         stuck,
         since_sha: since.unwrap_or_default(),
         threshold: args.threshold,
+        guidance,
     })
 }
 
@@ -153,10 +160,20 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
 /// the spec from the work tree's root ([`super::ProjectRepository::to_git`]),
 /// not from the project root; a project-relative name finds no history in a
 /// project that is a subdirectory of its repository (spec 059).
+///
+/// # Errors
+///
+/// [`PrimitiveError::ShallowHistory`] when a shallow clone's history stops at a commit
+/// holding the spec below `done` and no later commit leaves `done`, so the start may lie
+/// before the cut; and any libgit2 failure.
 pub(crate) fn find_in_progress_commit(repo: &Repository, spec_rel: &str) -> Result<Option<String>> {
-    Ok(walk_reopenings(repo, spec_rel)?
-        .newest
-        .map(|start| start.to_string()))
+    let walk = walk_reopenings(repo, spec_rel)?;
+    if walk.cut && walk.newest.is_some() {
+        return Err(PrimitiveError::ShallowHistory {
+            spec: spec_rel.to_string(),
+        });
+    }
+    Ok(walk.newest.map(|start| start.to_string()))
 }
 
 /// Whether `HEAD` lies inside a reopening, so an uncommitted return to `in-progress` is
@@ -169,6 +186,9 @@ pub(crate) fn reopening_is_open(repo: &Repository, spec_rel: &str) -> Result<boo
 struct ReopeningWalk {
     newest: Option<git2::Oid>,
     open_at_head: bool,
+    /// A shallow clone's history stops inside the newest reopening or a pass before
+    /// it, with no later commit leaving `done` to start one afresh.
+    cut: bool,
 }
 
 fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
@@ -176,6 +196,8 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
     walk.push_head()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
 
+    let shallow = repo.is_shallow();
+    let mut cut = false;
     let mut newest = None;
     let mut inside: HashSet<git2::Oid> = HashSet::new();
     let mut status_by_blob: HashMap<git2::Oid, Option<String>> = HashMap::new();
@@ -187,9 +209,11 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
         if status == "done" {
             continue;
         }
+        let commit = repo.find_commit(oid)?;
+        cut |= shallow && commit.parent_count() == 0;
         let mut carried = false;
         let mut left_done = false;
-        for parent in repo.find_commit(oid)?.parent_ids() {
+        for parent in commit.parent_ids() {
             carried |= inside.contains(&parent);
             left_done |= status_of_commit(repo, &mut status_by_blob, parent, spec_rel)?.as_deref()
                 == Some("done");
@@ -197,6 +221,7 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
         if carried {
             inside.insert(oid);
         } else if left_done || status == "in-progress" {
+            cut &= !left_done;
             inside.insert(oid);
             newest = Some(oid);
         }
@@ -205,6 +230,7 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
     Ok(ReopeningWalk {
         newest,
         open_at_head: inside.contains(&head),
+        cut,
     })
 }
 
@@ -222,8 +248,10 @@ fn status_of_commit(
     oid: git2::Oid,
     spec_rel: &str,
 ) -> Result<Option<String>> {
-    let commit = repo.find_commit(oid)?;
-    let Some(blob_id) = tree_entry_id(&commit.tree()?, spec_rel) else {
+    let tree = repo.find_commit(oid)?.tree()?;
+    let Some(blob_id) =
+        feature_file_in_tree(repo, &tree, spec_rel).and_then(|path| tree_entry_id(&tree, &path))
+    else {
         return Ok(None);
     };
     if let Some(cached) = cache.get(&blob_id) {
@@ -239,6 +267,35 @@ fn status_of_commit(
         .and_then(|content| frontmatter_status(content, Path::new(spec_rel)));
     cache.insert(blob_id, status.clone());
     Ok(status)
+}
+
+/// `git_path`, a file directly in a feature's directory, as `tree` names it. A spec
+/// renamed later held it under its old slug, and the number is what stays
+/// (§numbering), so a directory of the same form answers when the name does not.
+pub(crate) fn feature_file_in_tree(
+    repo: &Repository,
+    tree: &git2::Tree<'_>,
+    git_path: &str,
+) -> Option<String> {
+    if tree_entry_id(tree, git_path).is_some() {
+        return Some(git_path.to_string());
+    }
+    let (directory_path, file) = git_path.rsplit_once('/')?;
+    let (root, directory) = directory_path.rsplit_once('/')?;
+    let form = parse_feature_dir(directory)?;
+    let specs = tree
+        .get_path(Path::new(root))
+        .ok()?
+        .to_object(repo)
+        .ok()?
+        .into_tree()
+        .ok()?;
+    let name = specs
+        .iter()
+        .filter_map(|entry| entry.name().ok().map(str::to_string))
+        .find(|name| parse_feature_dir(name).as_ref() == Some(&form))?;
+    let renamed = format!("{root}/{name}/{file}");
+    tree_entry_id(tree, &renamed).map(|_| renamed)
 }
 
 /// Count commits touching `path_rel` in the `since..HEAD` reachability
@@ -582,6 +639,115 @@ mod tests {
     /// `done` (no reopen has occurred) must still produce the correct
     /// count from its single `in-progress` transition. The fix to the
     /// reopen case must not break this routine path.
+    /// Mark `boundary` as where a shallow clone's history stops, and reopen the repository
+    /// so its commits read that way.
+    fn shallow_at(tmp: &tempfile::TempDir, boundary: git2::Oid) -> Repository {
+        std::fs::write(tmp.path().join(".git/shallow"), format!("{boundary}\n")).unwrap();
+        Repository::open(tmp.path()).unwrap()
+    }
+
+    /// A rename leaves the status under the old slug, and the start where it was.
+    #[test]
+    fn a_rename_keeps_where_the_reopening_started() {
+        let (tmp, repo, commits) = walk_statuses(&["done", "in-progress"]);
+        std::fs::rename(
+            tmp.path().join("specs/010-demo"),
+            tmp.path().join("specs/010-renamed"),
+        )
+        .unwrap();
+        commit_all(&repo, "spec(010): a new slug");
+
+        let found = find_in_progress_commit(&repo, "specs/010-renamed/spec.md").unwrap();
+        assert_eq!(found, Some(commits[1].to_string()));
+    }
+
+    /// The name still decides when it is there, and a number no directory holds finds
+    /// nothing.
+    #[test]
+    fn a_file_is_found_by_its_name_then_by_its_number() {
+        let (tmp, repo, _) = walk_statuses(&["in-progress"]);
+        let tree = repo
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .tree()
+            .unwrap();
+        let found = |path: &str| feature_file_in_tree(&repo, &tree, path);
+        assert_eq!(
+            found("specs/010-demo/spec.md").as_deref(),
+            Some("specs/010-demo/spec.md")
+        );
+        assert_eq!(
+            found("specs/010-other/spec.md").as_deref(),
+            Some("specs/010-demo/spec.md")
+        );
+        assert_eq!(found("specs/011-other/spec.md"), None);
+        assert_eq!(found("specs/010-other/plan.md"), None);
+        drop(tmp);
+    }
+
+    /// The start may lie before the cut, and a confident answer would leave work unread.
+    #[test]
+    fn a_shallow_history_stopping_inside_a_reopening_cannot_place_it() {
+        let (tmp, _repo, commits) = walk_statuses(&["done", "in-progress", "in-progress"]);
+        let shallow = shallow_at(&tmp, commits[2]);
+        let found = find_in_progress_commit(&shallow, "specs/010-demo/spec.md");
+        assert!(
+            matches!(found, Err(PrimitiveError::ShallowHistory { .. })),
+            "{found:?}"
+        );
+    }
+
+    /// Leaving `done` is visible from here, so the depth does not matter.
+    #[test]
+    fn a_shallow_history_holding_the_start_still_places_it() {
+        let (tmp, _repo, commits) = walk_statuses(&["done", "done", "in-progress"]);
+        let shallow = shallow_at(&tmp, commits[1]);
+        let found = find_in_progress_commit(&shallow, "specs/010-demo/spec.md").unwrap();
+        assert_eq!(found, Some(commits[2].to_string()));
+    }
+
+    /// A pass the cut went through is over, and a later reopening starts afresh.
+    #[test]
+    fn a_reopening_after_the_cut_is_placed() {
+        let (tmp, _repo, commits) = walk_statuses(&["in-progress", "done", "in-progress"]);
+        let shallow = shallow_at(&tmp, commits[0]);
+        let found = find_in_progress_commit(&shallow, "specs/010-demo/spec.md").unwrap();
+        assert_eq!(found, Some(commits[2].to_string()));
+    }
+
+    /// `is_shallow` says nothing of a complete history.
+    #[test]
+    fn a_complete_history_is_never_cut() {
+        let (_tmp, repo, commits) = walk_statuses(&["in-progress"]);
+        let found = find_in_progress_commit(&repo, "specs/010-demo/spec.md").unwrap();
+        assert_eq!(found, Some(commits[0].to_string()));
+    }
+
+    /// `stuck: false` from a start it could not place is no answer, and says so.
+    #[test]
+    fn check_stuck_says_when_a_shallow_history_cannot_place_the_start() {
+        let (tmp, _repo, commits) = walk_statuses(&["in-progress", "in-progress"]);
+        shallow_at(&tmp, commits[1]);
+        let result = run(
+            &CheckStuckArgs {
+                feature: "010-demo".to_string(),
+                threshold: 3,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(!result.stuck);
+        assert!(
+            result
+                .guidance
+                .as_deref()
+                .is_some_and(|g| g.contains("--unshallow")),
+            "{result:?}"
+        );
+    }
+
     /// The commit each status in turn lands at, with the last one's sha returned.
     fn walk_statuses(statuses: &[&str]) -> (tempfile::TempDir, Repository, Vec<git2::Oid>) {
         let tmp = tempfile::tempdir().unwrap();

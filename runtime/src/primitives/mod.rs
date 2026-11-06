@@ -147,6 +147,17 @@ pub enum PrimitiveError {
         /// Requested feature name.
         feature: String,
     },
+    /// A shallow clone's history stops where a spec's reopening may have started, so a
+    /// window read from it could leave work unread. Distinct from a window that
+    /// resolved, whatever it held.
+    #[error(
+        "history is too shallow to place the start of {spec}'s reopening: run `git fetch \
+         --unshallow`, since a window read from here could leave its work unread"
+    )]
+    ShallowHistory {
+        /// The spec, or the path naming it, as the caller asked.
+        spec: String,
+    },
     /// Git operation failed.
     #[error("git error: {0}")]
     Git(#[from] git2::Error),

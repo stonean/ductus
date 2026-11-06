@@ -2174,6 +2174,10 @@ pub struct CheckStuckResult {
     pub since_sha: String,
     /// Threshold echoed from args.
     pub threshold: u32,
+    /// Why the reopening's start could not be placed, when it could not, so a
+    /// `stuck: false` from there is no answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guidance: Option<String>,
 }
 
 // -- validate-frontmatter ---------------------------------------------------
@@ -7354,6 +7358,7 @@ mod tests {
             stuck: false,
             since_sha: "abcdef0".into(),
             threshold: 10,
+            guidance: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["commit-count"], 3);

@@ -30,7 +30,9 @@ use regex::Regex;
 
 use crate::primitives::analyze_subjects::{is_review_contract, review_freshness};
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
-use crate::primitives::check_stuck::{find_in_progress_commit, reopening_is_open};
+use crate::primitives::check_stuck::{
+    feature_file_in_tree, find_in_progress_commit, reopening_is_open,
+};
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
@@ -411,7 +413,10 @@ fn recorded_run(
     tree: &Tree<'_>,
     git_path: &str,
 ) -> Result<Option<RecordedRun>> {
-    let Some(text) = blob_text(repository, tree, git_path)? else {
+    let Some(path) = feature_file_in_tree(repository, tree, git_path) else {
+        return Ok(None);
+    };
+    let Some(text) = blob_text(repository, tree, &path)? else {
         return Ok(None);
     };
     let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
@@ -499,7 +504,10 @@ fn run_in_spec_block(
     tree: &Tree<'_>,
     spec_git_path: &str,
 ) -> Result<Option<String>> {
-    let Some(text) = blob_text(repository, tree, spec_git_path)? else {
+    let Some(path) = feature_file_in_tree(repository, tree, spec_git_path) else {
+        return Ok(None);
+    };
+    let Some(text) = blob_text(repository, tree, &path)? else {
         return Ok(None);
     };
     let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(spec_git_path)) else {
@@ -539,12 +547,20 @@ fn last_review_commit(
     walk.push_head()?;
     walk.hide(Oid::from_str(transition_sha)?)?;
     walk.set_sorting(Sort::TOPOLOGICAL)?;
-    for oid in walk {
-        let commit = repository.find_commit(oid?)?;
+    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
+    // A record restored by a revert or a checkout carries a run an older commit already
+    // finished, and what lay between has no standing: the window starts at that run.
+    let mut restored: Option<String> = None;
+    for (index, oid) in commits.iter().enumerate() {
+        let commit = repository.find_commit(*oid)?;
         let Some(run) = recorded_run(repository, &commit.tree()?, &git_path)? else {
             continue;
         };
-        if run.stopped_early {
+        if run.stopped_early
+            || restored
+                .as_ref()
+                .is_some_and(|stamp| *stamp != run.last_run)
+        {
             continue;
         }
         let mut finishes_a_run = true;
@@ -559,9 +575,23 @@ fn last_review_commit(
                 break;
             }
         }
-        if finishes_a_run {
+        if !finishes_a_run {
+            continue;
+        }
+        let mut finished_earlier = false;
+        for older in &commits[index + 1..] {
+            let tree = repository.find_commit(*older)?.tree()?;
+            if recorded_run(repository, &tree, &git_path)?
+                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)
+            {
+                finished_earlier = true;
+                break;
+            }
+        }
+        if !finished_earlier {
             return Ok(Some(commit.id().to_string()));
         }
+        restored = Some(run.last_run);
     }
     Ok(None)
 }
@@ -779,6 +809,11 @@ impl FoldTest<'_> {
             return Ok(brought);
         }
         let repository = &self.project.repository;
+        if repository.is_shallow() {
+            return Err(PrimitiveError::ShallowHistory {
+                spec: folded.join(", "),
+            });
+        }
         let specs_prefix = format!("{}/", self.specs_root);
         let mut walk = repository.revwalk()?;
         walk.push_head()?;
@@ -2154,7 +2189,8 @@ mod tests {
         let run_at = "2026-11-01T00:00:00Z";
         let finished = commit_record(&tmp, &repo, DISPOSITIONS, run_at);
         change(&tmp, &repo, "src/a.rs", "feat(001): after the run");
-        commit_record(&tmp, &repo, "dispositions: {fixed: 1}\n", run_at);
+        let edited = format!("{DISPOSITIONS}low-confidence: 1\n");
+        commit_record(&tmp, &repo, &edited, run_at);
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, finished);
@@ -2192,6 +2228,171 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.excluded["src/gone.rs"], ["003"]);
+    }
+
+    /// 001-x under a new slug, the rename committed.
+    fn rename_x(tmp: &tempfile::TempDir, repo: &Repository) -> String {
+        fs::rename(
+            tmp.path().join("specs/001-x"),
+            tmp.path().join("specs/001-renamed"),
+        )
+        .unwrap();
+        commit_all(repo, "spec(001): a new slug")
+    }
+
+    /// A rename in a reopening keeps its window, so the code before it stays in scope.
+    #[test]
+    fn a_rename_keeps_the_window_and_the_code_before_it() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): before the rename");
+        rename_x(&tmp, &repo);
+
+        let scope = compute(&args("001-renamed", None), tmp.path()).unwrap();
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
+    /// The record it moved was finished by a commit before, not by the rename.
+    #[test]
+    fn a_rename_after_a_review_does_not_move_the_start() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): reviewed");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/b.rs", "feat(001): after the review");
+        rename_x(&tmp, &repo);
+
+        let scope = compute(&args("001-renamed", None), tmp.path()).unwrap();
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(has(&scope, "src/b.rs"), "{:?}", scope.scope);
+    }
+
+    /// Reverting a review's commit restores a run an older commit finished, and what the
+    /// reverted run read has no standing, so the window goes back to the restored run.
+    #[test]
+    fn a_restored_record_starts_the_window_at_the_run_it_restores() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let first_run = "2026-11-01T00:00:00Z";
+        let first = commit_record(&tmp, &repo, DISPOSITIONS, first_run);
+        change(&tmp, &repo, "src/between.rs", "feat(001): between the runs");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-02T00:00:00Z");
+        change(
+            &tmp,
+            &repo,
+            "src/after.rs",
+            "feat(001): after the second run",
+        );
+        commit_record(&tmp, &repo, DISPOSITIONS, first_run);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, first);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(has(&scope, "src/between.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/after.rs"), "{:?}", scope.scope);
+    }
+
+    /// 001-x done with `extra` in its record, then reopened, the record unchanged.
+    fn record_from_before_the_reopening(
+        extra: &str,
+        run: &str,
+    ) -> (tempfile::TempDir, Repository, String) {
+        let (tmp, repo) = done_upstream();
+        commit_record(&tmp, &repo, extra, run);
+        let parent = repo
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        (tmp, repo, parent)
+    }
+
+    /// The commit carrying a finished run across the reopening sits outside the window,
+    /// so only its parent can say the run was finished before it.
+    #[test]
+    fn a_run_carried_across_the_reopening_does_not_move_the_start() {
+        let run = "2026-11-01T00:00:00Z";
+        let (tmp, repo, parent) = record_from_before_the_reopening(DISPOSITIONS, run);
+        let edited = format!("{DISPOSITIONS}low-confidence: 1\n");
+        commit_record(&tmp, &repo, &edited, run);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
+    /// Editing a held count away by hand is no run, whichever side of the reopening the
+    /// held record lies on.
+    #[test]
+    fn clearing_a_held_record_from_before_the_reopening_finishes_nothing() {
+        let run = "2026-11-01T00:00:00Z";
+        let held = format!("{DISPOSITIONS}should-violations: 1\n");
+        let (tmp, repo, parent) = record_from_before_the_reopening(&held, run);
+        commit_record(&tmp, &repo, DISPOSITIONS, run);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
+    /// A later run after the restore finishes as any run does.
+    #[test]
+    fn a_new_run_after_a_restored_record_moves_the_start() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let first_run = "2026-11-01T00:00:00Z";
+        commit_record(&tmp, &repo, DISPOSITIONS, first_run);
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-02T00:00:00Z");
+        commit_record(&tmp, &repo, DISPOSITIONS, first_run);
+        let newest = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-03T00:00:00Z");
+
+        assert_eq!(x(&tmp).diff_base, newest);
+    }
+
+    /// A window that cannot be placed is an error, never an empty scope a run would
+    /// record as clean.
+    #[test]
+    fn a_shallow_history_inside_a_reopening_is_an_error() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let head = change(&tmp, &repo, "src/a.rs", "feat(001): the work");
+        fs::write(tmp.path().join(".git/shallow"), format!("{head}\n")).unwrap();
+
+        let result = compute(&args("001-x", None), tmp.path());
+        assert!(
+            matches!(result, Err(PrimitiveError::ShallowHistory { .. })),
+            "{:?}",
+            result.map(|scope| scope.scope)
+        );
+    }
+
+    /// A fold's commits lie through all of history, so part of it cannot say what it
+    /// brought. The start of a `done` upstream's reopening is the fold itself, in view.
+    #[test]
+    fn a_fold_in_a_shallow_history_is_an_error() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        remove_staging(&tmp, true);
+        let fold = commit_all(&repo, "fold(1234.1): into 001-x");
+        let parent = repo
+            .find_commit(Oid::from_str(&fold).unwrap())
+            .unwrap()
+            .parent(0)
+            .unwrap()
+            .id();
+        fs::write(tmp.path().join(".git/shallow"), format!("{parent}\n")).unwrap();
+
+        let result = compute(&args("001-x", None), tmp.path());
+        assert!(
+            matches!(result, Err(PrimitiveError::ShallowHistory { .. })),
+            "{:?}",
+            result.map(|scope| scope.scope)
+        );
     }
 
     /// A staging spec's frontmatter, declaring `target` when it has one.

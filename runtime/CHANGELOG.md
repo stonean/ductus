@@ -158,6 +158,13 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+- **A window no longer goes wrong on a rename, a revert or a shallow clone.** A spec
+  is found through history by its number, so a slug changed mid-reopening keeps its
+  window and `diff-cross-spec` no longer reads its old directory as another spec's.
+  A commit restoring an older review record starts the window at the run it restores,
+  not at itself. A shallow clone whose history stops inside the reopening makes
+  `compute-review-scope` an error, and gives `diff-cross-spec` and `check-stuck`
+  guidance, where each answered as if history were whole.
 - **A `done` spec cannot hold an unticked criterion unreported.** `check-artifacts`
   reports one as blocking `review-state-drift`, which `/analyze --fix` reverts, and
   `classify-spec-edit` reads taking a tick back as `reopens`. Ticking one stays a
