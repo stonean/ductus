@@ -11,7 +11,8 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
 2. Read the spec frontmatter. If `status` is not in `{in-progress, done}`,
    halt with `review only runs against in-progress or done specs`.
 3. Build the file scope per **Inputs** (in the command file). An empty scope
-   (no implementation files yet) records 0 findings across all five passes,
+   (no implementation files yet, or none changed since a finished review)
+   records 0 findings across all five passes,
    `blocking: false`, and exits `0`, skipping items 4–5 and the passes; an
    observation the reviewer supplies is still dispositioned, as
    **Observations** under [Write `review.md`](#write-reviewmd) describes.
@@ -333,7 +334,7 @@ The fix-round fields (spec 078) are derived by `write-review` from the per-round
 The window a review reads and the coverage counts it records, as `/ductus:review` applies them across runs. The record's fields are declared in the constitution's §text-first-artifacts.
 
 - **`examined` counts the in-scope files the review actually read — a file you are confident about by other means is named, never counted.** Believing a file correct — a generated mirror of one you read, say — is not having read it. Count what you opened, and name the rest in the Summary with why you did not open it and what you relied on instead: _generated from a source read in full, generator re-run and reported in sync_ is a complete answer, _it is generated_ is not. Likewise say which parts of a too-large file you read, and name an in-scope path that no longer exists as absent.
-- **A spec's review window starts where the last review of this reopening finished.** `compute-review-scope` holds the rule, and `base-source` says which start it took. A run that recorded a skipped pass, a budget stop or an open fix-round loop does not move the start, so stopping early leaves nothing permanently unread. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
+- **A spec's review window starts where the last review of this reopening finished.** `compute-review-scope` holds the rule, and `base-source` says which start it took. A run that recorded a skipped pass or a budget stop, or whose record the gate holds until a review runs, does not move the start, so stopping early leaves nothing permanently unread and a re-run reads again what a finding names. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
 - **A review reads its own spec's change, and the record names the rest.** A path only another spec's commit changed leaves the scope for that spec's review, named under **Excluded from scope**. Uncommitted work stays, as nothing can attribute it: `git worktree` isolates sessions. A plan entry unchanged in the window stays on the spec's first review, where it may mean missing work.
 - **A reopening that changed no code, scenario or data model owes an analysis and no review.** `compute-review-scope` reports it as `review-owed: false`. The gate compares only a review's durable contracts, so it passes such a reopening with the earlier record, unless that record holds `done` until a review runs, which then is owed. A review run anyway is allowed, only not owed.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** Without `examined` and `scope`, a review that read nothing is byte-identical to one that read everything; without the durable-contract digest, the pre-`done` gate reports freshness as _undeterminable_, which does not block. Nothing backfills these fields: treat such a record as unread and re-run the review, which writes them truthfully only if the passes read the scope. The gap comes in several shapes, so read the record before pricing the work.
@@ -633,9 +634,11 @@ exit code without parsing the report.
 
 ## Idempotency
 
-Re-running `/ductus:review` against an unchanged target reproduces an identical
-`review.md` (modulo `last-run` and `reviewed-against`): review output is a function
-of code + rules, never of session state.
+Re-running `/ductus:review` against an unchanged target whose record the gate
+holds reads the same window, so it reproduces an identical `review.md` (modulo
+`last-run` and `reviewed-against`): review output is a function of code, rules and
+window, never of session state. A finished run has left nothing to read: step 1
+stops on `review-owed: false`, and `--since` names an earlier base to read it again.
 
 ## Notes for adopters
 

@@ -136,8 +136,9 @@ its version and date.
 - **A review reads its own spec's change, and a later run starts where the
   last one finished.** `compute-review-scope`'s default window now starts at the
   later of the spec's last reopen and its last finished review, reported as
-  `base-source`; a run that recorded a skipped pass, a budget stop or an open
-  fix-round loop does not move it. A commit belongs to each spec whose directory
+  `base-source`; a run that recorded a skipped pass or a budget stop, or whose
+  record the gate holds until a review runs, does not move it, so a re-run reads
+  again what a finding names rather than clearing it on an empty scope. A commit belongs to each spec whose directory
   it touches or whose number its subject's leading scope names, and the scope
   holds the paths of a commit that belongs to the spec alone or to no spec; of a
   commit several specs claim, the paths in the spec's directory or its plan's

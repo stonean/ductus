@@ -335,8 +335,10 @@ fn split_changes(
 /// A review run as a committed record states it.
 struct RecordedRun {
     last_run: String,
-    /// The run recorded a skipped pass, a budget stop or an open fix-round
-    /// loop, so what it did not read stays in the next window.
+    /// The run recorded a skipped pass or a budget stop, so what it did not read
+    /// stays in the next window; or the gate holds its record until a review runs,
+    /// so the next run reads again what its findings and unread rounds name, rather
+    /// than finding nothing in scope and clearing them unread.
     stopped_early: bool,
     /// The fix-round loop was still open at this write.
     loop_open: bool,
@@ -358,16 +360,16 @@ fn recorded_run(
     let Ok(record) = serde_norway::from_str::<ReviewBlock>(frontmatter) else {
         return Ok(None);
     };
+    let held = holds_done_until_reviewed(&record);
     let Some(last_run) = record.last_run else {
         return Ok(None);
     };
-    let loop_open = record.fix_rounds_open == Some(true);
     Ok(Some(RecordedRun {
         last_run,
-        stopped_early: loop_open
+        stopped_early: held
             || record.budget_stop == Some(true)
             || !record.skipped_passes.is_empty(),
-        loop_open,
+        loop_open: record.fix_rounds_open == Some(true),
     }))
 }
 
@@ -395,7 +397,8 @@ fn run_in_spec_block(
 }
 
 /// The newest commit since the transition `transition_sha` at which a review
-/// run finished, one that did not stop early. The transition itself is left
+/// run finished, one that did not stop early and whose record the gate does not
+/// hold. The transition itself is left
 /// out, since work committed with a reopen belongs to the window it opens.
 ///
 /// A commit finishes a run when no parent's record already holds that run with its
@@ -1415,7 +1418,7 @@ mod tests {
     fn a_review_in_the_reopening_moves_the_start_to_its_commit() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/before.rs", "feat(001): before the review");
-        let review = commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         change(&tmp, &repo, "src/after.rs", "feat(001): after the review");
 
         let scope = x(&tmp);
@@ -1445,7 +1448,7 @@ mod tests {
             &spec("in-progress"),
         );
         commit_all(&repo, "status(001): start");
-        commit_record(&tmp, &repo, "", "2026-10-01T00:00:00Z");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-01T00:00:00Z");
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
         let parent = commit_all(&repo, "status(001): done");
         write(
@@ -1498,19 +1501,126 @@ mod tests {
             "skipped-passes: {not: a list}\n",
         ] {
             let (tmp, repo, parent) = two_specs(&[], &[]);
-            commit_record(&tmp, &repo, extra, "2026-11-01T00:00:00Z");
+            let fields = format!("{DISPOSITIONS}{extra}");
+            commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
             let scope = x(&tmp);
             assert_eq!(scope.diff_base, parent, "{extra}");
             assert_eq!(scope.base_source, BaseSource::Reopen, "{extra}");
         }
     }
 
+    /// A record the gate holds, with the code it read committed before it.
+    fn reviewed_with(fields: &str) -> (ReviewScope, String) {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        commit_record(&tmp, &repo, fields, "2026-11-01T00:00:00Z");
+        (x(&tmp), parent)
+    }
+
+    /// Each of what the gate holds a record for leaves the file it read in the next
+    /// run's scope, so that run reads it again. Moving the start here gave an empty
+    /// scope, whose record says 0 findings over a MUST on an unchanged file.
+    #[test]
+    fn a_record_the_gate_holds_does_not_move_the_start() {
+        for held in [
+            "blocking: true\n",
+            "should-violations: 1\n",
+            "not-re-read: 1\n",
+            "not-re-read: 2\nround-waivers:\n  - {round: 1, reason: the owner chose, waived-by: o, waived-at: 2026-11-01T00:00:00Z}\n",
+        ] {
+            let (scope, parent) = reviewed_with(&format!("{DISPOSITIONS}{held}"));
+            assert_eq!(scope.diff_base, parent, "{held}");
+            assert_eq!(scope.base_source, BaseSource::Reopen, "{held}");
+            assert!(has(&scope, "src/a.rs"), "{held}: {:?}", scope.scope);
+        }
+        // A record with no dispositions map, and one counting a MUST.
+        let (scope, parent) = reviewed_with("");
+        assert_eq!(
+            (scope.diff_base, scope.base_source),
+            (parent, BaseSource::Reopen)
+        );
+        let must = format!(
+            "---\nspec: 001-x\nlast-run: 2026-11-01T00:00:00Z\nmust-violations: 1\nblocking: false\n{DISPOSITIONS}---\n"
+        );
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        write(&tmp.path().join("specs/001-x/review.md"), &must);
+        commit_all(&repo, "review(001)");
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
+    /// The other direction: what the gate stopped holding moves the start again, a
+    /// round waived with its reason among them, and a blank reason waives nothing.
+    #[test]
+    fn a_record_the_gate_does_not_hold_moves_the_start() {
+        let waived = format!(
+            "{DISPOSITIONS}not-re-read: 1\nround-waivers:\n  - {{round: 1, reason: the owner chose, waived-by: o, waived-at: 2026-11-01T00:00:00Z}}\n"
+        );
+        let (scope, _) = reviewed_with(&waived);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(!has(&scope, "src/a.rs"), "{:?}", scope.scope);
+
+        let blank = waived.replace("the owner chose", "\"  \"");
+        let (scope, parent) = reviewed_with(&blank);
+        assert_eq!(
+            (scope.diff_base, scope.base_source),
+            (parent, BaseSource::Reopen)
+        );
+    }
+
+    /// A run fixing what the last one held finishes, so the fixes leave the window.
+    #[test]
+    fn the_run_after_a_held_one_moves_the_start_to_itself() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let held = format!("{DISPOSITIONS}should-violations: 1\n");
+        commit_record(&tmp, &repo, &held, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/fix.rs", "fix(001): the finding");
+        let finished = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-02T00:00:00Z");
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base, scope.base_source),
+            (finished, BaseSource::LastReview)
+        );
+    }
+
+    /// A held run falls back to the last finished one, not all the way to the reopen.
+    #[test]
+    fn a_held_run_falls_back_to_the_last_finished_one() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let finished = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/a.rs", "feat(001): between the runs");
+        let held = format!("{DISPOSITIONS}should-violations: 1\n");
+        commit_record(&tmp, &repo, &held, "2026-11-02T00:00:00Z");
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, finished);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
+    /// A hand edit clearing a held record's count keeps its `last-run`, so it is no
+    /// run: the window stays where it was, reading more rather than less.
+    #[test]
+    fn clearing_a_held_count_by_hand_is_no_run() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        let run_at = "2026-11-01T00:00:00Z";
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        let held = format!("{DISPOSITIONS}should-violations: 1\n");
+        commit_record(&tmp, &repo, &held, run_at);
+        commit_record(&tmp, &repo, DISPOSITIONS, run_at);
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
     #[test]
     fn a_stopped_run_falls_back_to_the_last_finished_one() {
         let (tmp, repo, _) = two_specs(&[], &[]);
-        let finished = commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        let finished = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         change(&tmp, &repo, "src/a.rs", "feat(001): between the runs");
-        commit_record(&tmp, &repo, "budget-stop: true\n", "2026-11-02T00:00:00Z");
+        let stopped = format!("{DISPOSITIONS}budget-stop: true\n");
+        commit_record(&tmp, &repo, &stopped, "2026-11-02T00:00:00Z");
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, finished);
@@ -1535,9 +1645,10 @@ mod tests {
     fn the_write_clearing_the_open_mark_finishes_the_run() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         let run_at = "2026-11-01T00:00:00Z";
-        commit_record(&tmp, &repo, "fix-rounds-open: true\n", run_at);
+        let open = format!("{DISPOSITIONS}fix-rounds-open: true\n");
+        commit_record(&tmp, &repo, &open, run_at);
         change(&tmp, &repo, "src/fix.rs", "fix(001): a round's fix");
-        let closed = commit_record(&tmp, &repo, "", run_at);
+        let closed = commit_record(&tmp, &repo, DISPOSITIONS, run_at);
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, closed);
@@ -1562,7 +1673,7 @@ mod tests {
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
         );
-        commit_record(&tmp, &repo, "", run_at);
+        commit_record(&tmp, &repo, DISPOSITIONS, run_at);
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
@@ -1584,7 +1695,7 @@ mod tests {
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
         );
-        let review = commit_record(&tmp, &repo, "", "2026-10-02T00:00:00Z");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-02T00:00:00Z");
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, review);
@@ -1598,7 +1709,7 @@ mod tests {
         let (tmp, repo, _) = two_specs(&[], &[]);
         let main_tip = repo.head().unwrap().peel_to_commit().unwrap();
         change(&tmp, &repo, "src/a.rs", "feat(001): the work");
-        let review = commit_record(&tmp, &repo, "", "2026-10-01T00:00:00Z");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-01T00:00:00Z");
         change(&tmp, &repo, "src/b.rs", "fix(001): after the review");
         let branch_tip = repo.head().unwrap().peel_to_commit().unwrap();
         let signature = git2::Signature::now("Test", "test@example.com").unwrap();
@@ -1626,7 +1737,7 @@ mod tests {
     fn a_later_commit_of_a_finished_run_does_not_move_the_start_again() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         let run_at = "2026-11-01T00:00:00Z";
-        let finished = commit_record(&tmp, &repo, "", run_at);
+        let finished = commit_record(&tmp, &repo, DISPOSITIONS, run_at);
         change(&tmp, &repo, "src/a.rs", "feat(001): after the run");
         commit_record(&tmp, &repo, "dispositions: {fixed: 1}\n", run_at);
 
@@ -1807,7 +1918,7 @@ mod tests {
         let (tmp, repo, _) = two_specs(&["src/planned.rs", "src/touched.rs"], &[]);
         assert!(has(&x(&tmp), "src/planned.rs"));
 
-        commit_record(&tmp, &repo, "", "2026-11-01T00:00:00Z");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         change(&tmp, &repo, "src/touched.rs", "feat(001): the second pass");
         let scope = x(&tmp);
         assert!(!has(&scope, "src/planned.rs"), "{:?}", scope.scope);

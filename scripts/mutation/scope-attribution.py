@@ -161,7 +161,7 @@ MUTATIONS = [
     (
         'M21 an open mark is not stopping early',
         'src/primitives/compute_review_scope.rs',
-        '        stopped_early: loop_open\n',
+        '        stopped_early: held\n',
         '        stopped_early: false\n',
         'compute_review_scope::tests::a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start',
     ),
@@ -850,5 +850,26 @@ MUTATIONS = [
         'its fixes may be unread — re-run \\\n                 /{project}:review"',
         'its fixes may be unread"',
         'check_review_gate::tests::an_open_fix_round_loop_holds_done',
+    ),
+    (
+        'M121 a gating count or an unread round moves the start',
+        'src/primitives/compute_review_scope.rs',
+        '    let held = holds_done_until_reviewed(&record);\n',
+        '    let held = record.fix_rounds_open == Some(true);\n',
+        'compute_review_scope::tests::a_record_the_gate_holds_does_not_move_the_start',
+    ),
+    (
+        'M122 a record the gate does not hold does not move the start',
+        'src/primitives/compute_review_scope.rs',
+        '    let held = holds_done_until_reviewed(&record);\n',
+        '    let held = record.last_run.is_some();\n',
+        'compute_review_scope::tests::a_record_the_gate_does_not_hold_moves_the_start',
+    ),
+    (
+        'M123 clearing a held count by hand finishes a run',
+        'src/primitives/compute_review_scope.rs',
+        '.is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)',
+        '.is_some_and(|prior| prior.last_run == run.last_run && !prior.stopped_early)',
+        'compute_review_scope::tests::clearing_a_held_count_by_hand_is_no_run',
     ),
 ]

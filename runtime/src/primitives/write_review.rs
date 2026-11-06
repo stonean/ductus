@@ -1177,7 +1177,7 @@ fn generate_summary(
     undispositioned: u32,
 ) -> String {
     if args.empty_scope {
-        return "Review scope is empty — no implementation files in scope. \
+        return "Review scope is empty — no file changed in this review's window. \
              Zero findings across all passes; blocking: no."
             .to_string();
     }

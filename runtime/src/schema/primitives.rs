@@ -738,8 +738,8 @@ pub struct ComputeReviewScopeArgs {
     /// only the window's start, and the scope rule still applies. When omitted,
     /// the base is the later of the parent of the commit the spec advanced to
     /// `in-progress` at and the last review commit since it that recorded no
-    /// skipped pass, budget stop or open fix-round loop, or `HEAD` when that
-    /// transition is not committed yet.
+    /// skipped pass or budget stop and whose record the gate does not hold until
+    /// a review runs, or `HEAD` when that transition is not committed yet.
     #[serde(default)]
     #[arg(long)]
     pub since: Option<String>,

@@ -16,7 +16,7 @@ The record that produced was `0/0/0`, `scope: 0`, `examined` absent, `blocking: 
 
 **The denominator is always derived.** `resolve_scope_size` no longer consults `empty-scope`; it resolves `compute-review-scope` against the run's own `diff-base` in every case. A genuinely empty window still resolves to `0`, so the honest empty review is unchanged and byte-identical to before. A *false* empty-scope run now carries the real `scope: N` beside a zero `examined` — which was precisely the shape Family 31 reported as `examined-nothing`, so the hole closed with **no new check written**. Spec 057 has since retired Family 31 along with the record's second home, so the shape is still recorded and nothing mechanical reads it: what this scenario fixed — the denominator being derived rather than supplied — holds exactly, and the *reporting* of the resulting divergence is now a reader's job at the completion gate.
 
-**The flag keeps its rendering job.** `empty-scope` still selects the "Review scope is empty — no implementation files in scope" Summary. That is a genuine presentation choice and is untouched; what it may no longer do is decide a number that is supposed to be evidence.
+**The flag keeps its rendering job.** `empty-scope` still selects the "Review scope is empty" Summary. That is a genuine presentation choice and is untouched; what it may no longer do is decide a number that is supposed to be evidence.
 
 ## Edge Cases
 
