@@ -175,7 +175,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 - **A new gate tier for contract breaks** was rejected: it falsifies the gating definitions across four specs. A break left open reuses `review-owed` instead, which `/{project}:review` clears.
 - **A gate notice for a contract break**, chosen on 2026-11-05, was replaced (owner, 2026-11-06): it let a known broken contract reach `done` with no decision recorded. The spec's entry holds the options and their numbers.
 - **Sweeping restatements that are still true** stays out, as the spec resolves. A false statement is corrected under AC12, including one that a data model is canonical, while a true copy waits until next edited.
-- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. A person running `write-review` by hand writes what they give it, since the CLI cannot pass findings. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
+- **Known limitations.** Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. Code committed between a run and its record is read by nothing (spec's Resolved Questions). A person running `write-review` by hand writes what they give it, since the CLI cannot pass findings. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
 
 ## Open Questions Resolved
 

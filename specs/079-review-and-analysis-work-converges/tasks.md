@@ -206,7 +206,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [ ] Gap: `framework/reference/groom.md` and `framework/reference/analyze.md` tell a host to waive a gating finding `write-analysis` refuses
 - [ ] Gap: the gate passes an `analysis.md` whose `decisions:` list does not parse, a hard fail to `validate-frontmatter`
 - [ ] Gap: a review owed because a contract changed does not read that contract when its edit lies outside the window, and the digest then refreshes
-- [ ] Gap, the owner's choice: a record's commit moves the start past code committed after the run, though `reviewed-against` shows where it read
+- [x] Gap, the owner waived (2026-11-06, the spec's Resolved Questions): a record's commit moves the start past code committed after the run, though `reviewed-against` shows where it read
 - [ ] Gap, the owner's choice: a retired or folded spec's commits stay excluded by a claimant that cannot review them, against `invalidate-review`'s stated purpose
 - [ ] Gap: a run that dies in step 10, after its fix and before step 11, leaves no mark
 - [ ] Gap, the owner's choice: the re-run the gate demands after a committed cut-off reads over the bound
