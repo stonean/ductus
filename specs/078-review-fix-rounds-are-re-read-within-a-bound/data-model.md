@@ -140,7 +140,7 @@ The generated Summary renders the counts and names each exempt round and each wa
 
 **`fix-round-loop-open`** (spec 079) — `review.md` still carries `fix-rounds-open`, so the run stopped between its two writes.
 
-**`fix-round-not-re-read`** — `review.md`'s `not-re-read` exceeds its `round-waivers` count: the message names the count, and the guidance is to re-run `/{project}:review`, whose loop re-reads the fix or records the operator's waiver. It follows check 11, `undispositioned-findings`. A record without the loop fields passes and carries `guidance` saying it does not record whether its fixes were re-read, as an undeterminable record does.
+**`fix-round-not-re-read`** — `review.md`'s `not-re-read` exceeds its `round-waivers` count: the message names the count, and the guidance is to re-run `/{project}:review`, whose loop re-reads the fix or records the operator's waiver. It follows `undispositioned-findings`. A record without the loop fields passes and carries `guidance` saying it does not record whether its fixes were re-read, as an undeterminable record does.
 
 ## `[review] re-reads-off`
 

@@ -387,7 +387,13 @@ impl ReferenceScrub {
         while let Some(found) = scrubbed[cursor..].find("](") {
             let close = cursor + found;
             cursor = close + 2;
-            let Some(url) = absolute_link_urls(&scrubbed[close..]).first().copied() else {
+            // The link this `](` closes, not the next one along: a sibling link or an
+            // anchor here would borrow a later reference's target, and cut what is between.
+            let Some(url) = absolute_link_urls(&scrubbed[close..])
+                .first()
+                .copied()
+                .filter(|url| scrubbed[close + 2..].starts_with(url))
+            else {
                 continue;
             };
             let Some(open) = scrubbed[copied..close].rfind('[') else {

@@ -11,7 +11,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
 | `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD`, and `check-review-gate`, which blocks on a listed break |
 
-An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, and any other value names a person.
+An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, any other value names a person, and `contract-break: true` marks a decision on a broken contract, so a later run matching it still counts and lists the break unless it is in `expired-decisions`.
 
 ## `compute-review-scope` result
 
@@ -19,9 +19,9 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model; true with no such record |
+| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model, one its record's digest still describes being no edit; true with no such record |
 
-`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review, a path the last record lists as open and a contract its digest says changed, which need not have changed in the window.
+`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review, a path the last record lists as open, a contract its digest says changed and what a fold brings, which need not have changed in the window.
 
 ## `check-review-gate` result
 
@@ -35,9 +35,9 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
 | `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings`; waived, the rule's stored waiver must be in `expired-decisions`. A `performReview` pass carries it too |
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
-| `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, listing every file the rule fires at this run that no applied waiver holds, stamped from `reviewed-at` and `decided-by` |
+| `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, listing every file the rule fires at this run that no waiver holds, stamped from `reviewed-at` and `decided-by`. A run's two writes pass it alike: an anchor the earlier write stored applies and is not stored again, and a rule it stored asks nothing of the last write |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way. `empty-scope` refuses over an earlier record counting a finding, which a run's own earlier write is not.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. A scope that is empty, by `empty-scope` or by a window holding nothing but the run's own record, refuses over an earlier record counting a finding, which a run's own earlier write is not, or one it cannot read.
 
 ## `brief-re-read` result and `round.toml`
 

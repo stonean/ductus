@@ -907,13 +907,8 @@ enum RecordKind {
     Analyze,
 }
 
-/// The blocked verdict for a record artifact that exists but will not parse.
-///
-/// Deliberately not the never-run message. Absence is an answer; a damaged file
-/// is not, and telling an operator to "run /review" for a spec that may well
-/// have been reviewed sends them to redo work on the strength of something the
-/// gate could not read. The parse error travels with it, so the repair is
-/// actionable rather than a guess.
+/// The blocked verdict for an `analysis.md` whose record reads and whose `decisions:` list
+/// does not: `write-analysis` refuses to record over it, so a re-run is no repair.
 fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> CheckReviewGateResult {
     CheckReviewGateResult {
         passed: false,
@@ -929,6 +924,13 @@ fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> CheckReviewGateRes
     }
 }
 
+/// The blocked verdict for a record artifact that exists but will not parse.
+///
+/// Deliberately not the never-run message. Absence is an answer; a damaged file
+/// is not, and telling an operator to "run /review" for a spec that may well
+/// have been reviewed sends them to redo work on the strength of something the
+/// gate could not read. The parse error travels with it, so the repair is
+/// actionable rather than a guess.
 fn unreadable_record_block(
     rel_dir: &str,
     project: &str,
@@ -1209,26 +1211,8 @@ fn cross_spec_impact_block(
 /// scenario under `feature_dir` carries an unresolved open question,
 /// `None` when the check passes.
 ///
-/// A scenario is an organizational split of the spec — it exists to keep
-/// `spec.md` from becoming one huge document — so its questions are the
-/// spec's questions for the purpose of completeness, and the spec is not
-/// `done` while any remain (spec 046). Resolution stays independent:
-/// the guidance points at scenario-targeted clarify, the only command that
-/// can act on them.
-///
-/// Only `## Open Questions` counts. Per §spec-requirements an open
-/// question is an *undecided blocker*; one deferred pending a condition is
-/// resolved-with-a-condition and belongs in `## Resolved Questions`, which
-/// the parser does not read. That is a convention rather than a skip
-/// marker on purpose — an exemptible section would let anything blocking
-/// be relabelled to ship past this gate.
-///
-/// Ordered ahead of the `review:` checks because an unresolved design
-/// question is the more upstream defect — reviewing a design that is about
-/// to change wastes the review.
-///
-/// Reads through `read-spec`'s collector rather than re-deriving the list,
-/// so the gate blocks on exactly the questions the user was shown.
+/// Gate check 2's second half: `tasks.md` holds an unchecked box under any heading
+/// (spec 079). A file that cannot be read is an error, never a pass.
 fn unchecked_task_block(
     feature_dir: &Path,
     rel_dir: &str,
@@ -1255,6 +1239,26 @@ fn unchecked_task_block(
     )
 }
 
+/// A scenario is an organizational split of the spec — it exists to keep
+/// `spec.md` from becoming one huge document — so its questions are the
+/// spec's questions for the purpose of completeness, and the spec is not
+/// `done` while any remain (spec 046). Resolution stays independent:
+/// the guidance points at scenario-targeted clarify, the only command that
+/// can act on them.
+///
+/// Only `## Open Questions` counts. Per §spec-requirements an open
+/// question is an *undecided blocker*; one deferred pending a condition is
+/// resolved-with-a-condition and belongs in `## Resolved Questions`, which
+/// the parser does not read. That is a convention rather than a skip
+/// marker on purpose — an exemptible section would let anything blocking
+/// be relabelled to ship past this gate.
+///
+/// Ordered ahead of the `review:` checks because an unresolved design
+/// question is the more upstream defect — reviewing a design that is about
+/// to change wastes the review.
+///
+/// Reads through `read-spec`'s collector rather than re-deriving the list,
+/// so the gate blocks on exactly the questions the user was shown.
 fn scenario_question_block(
     feature_dir: &Path,
     repo: &Path,

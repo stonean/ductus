@@ -734,8 +734,11 @@ fn walk(
     for oid in revwalk {
         let commit = repository.find_commit(oid?)?;
         let counts = boundary.holds(&commit);
+        // A commit past the window ends nothing: a child can be dated older than its
+        // parent, as an imported or date-preserving rebase's is, so what lies behind it
+        // may still be inside.
         if !counts && open.is_empty() && boundary.passed(&commit) {
-            break;
+            continue;
         }
         let directories = history.directories_of(&commit)?;
         let parents: Vec<Rc<BTreeMap<String, Oid>>> = commit
@@ -1353,6 +1356,26 @@ mod tests {
         assert_eq!(measurement.state, ReopeningState::ShallowHistory);
         assert_eq!(measurement.reopenings, Vec::new());
         assert_eq!(measurement.waiting, vec![FEATURE.to_string()]);
+    }
+
+    /// A tip dated before the window, as a date-preserving rebase's or an imported
+    /// commit's is, hides nothing behind it, so a closing there still counts.
+    #[test]
+    fn a_commit_dated_before_the_window_ends_nothing() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.commit("analysis.md", &analysis("2026-01-01T00:00:01Z", ""));
+        fixture.status("done");
+        let tip = fixture.head();
+        fixture.commit_at(631_152_000, &[tip], true);
+        let measurement = fixture.measure_since("2000-01-01");
+        assert_eq!(
+            measurement.state,
+            ReopeningState::Measured,
+            "{measurement:?}"
+        );
+        assert_eq!(measurement.reopenings.len(), 1, "{measurement:?}");
     }
 
     #[test]

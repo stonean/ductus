@@ -67,8 +67,8 @@ its version and date.
 
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes to about 416,500, `framework/reference/review.md` from 67,168 to about 44,300
-  and `framework/reference/analyze.md` from 78,632 to about 47,900, each within one
+  bytes to 420,437, `framework/reference/review.md` from 67,168 to 45,037
+  and `framework/reference/analyze.md` from 78,632 to 48,553, each within one
   read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
@@ -420,6 +420,39 @@ its version and date.
   a box added, reworded or unticked reopens a `done` spec, including one in a `tasks.md`
   new since `HEAD`, and a box moved, or a task above it renamed, does not. `/status`'s
   count of specs with no unchecked task reads the same test. Spec 079.
+- **An empty scope clears no finding it did not read.** `write-review` refuses over a
+  record counting a finding whenever the window holds nothing but the run's own record,
+  as a `ductus exec` run's does without the flag, and over a record it cannot read. An
+  empty run's summary names a break it holds. Spec 079.
+- **A run's two writes store one waiver, and a stored break stays one.** A `new-waivers`
+  anchor an earlier write of the run stored applies and is not stored again, and a fix
+  clearing its finding lets the last write finish. A decision on a broken contract is
+  stored with `contract-break: true`, so a later run matching it holds `done` with no
+  host marking it again. A person's decision on `src/b.rs:3:9` now names `src/b.rs`, so
+  it no longer reads as expired, and a plan's pattern in scope holds the file it matches.
+  Spec 079.
+- **The window survives a revert, a damaged status and a rename.** A record reverted away
+  or a restored run the reopening carried in starts the window at the reopen, not at the
+  revert, a commit with no readable status keeps the reopening's start, and a staging
+  spec renamed before its fold brings its earlier commits. A path left open stays in
+  scope under an uncommitted rename, and a rename alone owes no review. `check-stuck`
+  follows a rename, whose count and first box read the old path as absent. Spec 079.
+- **`classify-spec-edit` reads what a line says.** A sibling link, an anchor or an image
+  ahead of a reference no longer borrows its target and cuts the prose between, which
+  read a real change as `mechanical` and panicked on multibyte text there. A sweep
+  through any other file under a spec is `mechanical`, and a real change there still
+  reopens. Spec 079.
+- **A box in a `~~~` fence is no box.** The shared line scanner reads a tilde fence, only
+  its own kind closing it, so the gate, drift and `waiting` no longer count one. Spec 079.
+- **One old commit no longer ends a measurement.** A commit dated before the window, as
+  a date-preserving rebase's is, stopped `measure-reopenings`' walk, so a closing behind
+  it read `nothing-to-compare`. Spec 079.
+- **`/groom` asks before a spec edit reopens a `done` spec.** The route had no step for
+  it, and read a classification that failed as staying `done`. It now classifies the
+  written edit and asks, as `/amend` does, naming the reasons. Spec 079.
+- **`invalidate-review` clears the rest of the run.** The record no longer keeps
+  `excluded`, `contract-breaks` and `fix-rounds-open` beside `last-run: null`, and
+  `open-findings` stays for the next scope. Spec 079.
 
 ## [0.59.11] — 2026-10-17
 

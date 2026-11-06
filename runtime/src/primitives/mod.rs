@@ -2542,6 +2542,8 @@ pub(crate) fn is_slug_grammar(s: &str) -> bool {
 #[derive(Default)]
 pub(crate) struct SkipScanner {
     in_fence: bool,
+    /// The run that opened the fence, since only its own kind closes it.
+    fence_marker: &'static str,
     in_comment: bool,
 }
 
@@ -2556,7 +2558,7 @@ impl SkipScanner {
     /// `<!--` in code font is not mistaken for a comment opener.
     pub(crate) fn skip(&mut self, line: &str) -> bool {
         if self.in_fence {
-            if line.trim_start().starts_with("```") {
+            if line.trim_start().starts_with(self.fence_marker) {
                 self.in_fence = false;
             }
             return true;
@@ -2567,9 +2569,12 @@ impl SkipScanner {
             }
             return true;
         }
-        if line.trim_start().starts_with("```") {
-            self.in_fence = true;
-            return true;
+        for marker in ["```", "~~~"] {
+            if line.trim_start().starts_with(marker) {
+                self.in_fence = true;
+                self.fence_marker = marker;
+                return true;
+            }
         }
         // Comment delimiters inside a backtick inline-code span are inert —
         // prose that merely mentions `<!--` in code font must not open a skip
@@ -3017,6 +3022,22 @@ pub(crate) fn split_numbered_heading(heading: &str) -> Option<(&str, &str)> {
 /// to classify a heading rather than take it apart.
 pub(crate) fn heading_is_numeric(heading: &str) -> bool {
     split_numbered_heading(heading).is_some()
+}
+
+/// The file a stored or reported path names, without the `:line`, `:start-end` or
+/// `:line:column` a run may add to it.
+pub(crate) fn path_without_lines(path: &str) -> &str {
+    let mut file = path.trim();
+    while let Some((before, lines)) = file.rsplit_once(':') {
+        if before.is_empty()
+            || lines.is_empty()
+            || !lines.chars().all(|c| c.is_ascii_digit() || c == '-')
+        {
+            break;
+        }
+        file = before;
+    }
+    file
 }
 
 /// Parse an ATX heading line and return `(level, text)` when the line matches
@@ -4037,6 +4058,34 @@ mod tests {
     // Moved here with the helper (scenario numbered-heading-grammar-single-source).
     // The cases below are the union of what the three former copies each
     // covered, so collapsing them cannot silently drop a contract.
+
+    /// A tilde fence is a fence, and only its own kind closes it.
+    #[test]
+    fn skip_scanner_reads_a_tilde_fence() {
+        let mut scanner = SkipScanner::default();
+        assert!(scanner.skip("~~~"));
+        assert!(scanner.skip("- [ ] inside"));
+        assert!(scanner.skip("```"));
+        assert!(scanner.skip("- [ ] still inside"));
+        assert!(scanner.skip("~~~"));
+        assert!(!scanner.skip("- [ ] outside"));
+    }
+
+    #[test]
+    fn path_without_lines_strips_a_line_a_range_and_a_column() {
+        for (path, file) in [
+            ("src/a.rs", "src/a.rs"),
+            ("src/a.rs:3", "src/a.rs"),
+            ("src/a.rs:3-9", "src/a.rs"),
+            ("src/a.rs:3:9", "src/a.rs"),
+            ("  src/a.rs:3  ", "src/a.rs"),
+            ("note: not a line", "note: not a line"),
+            (":3", ":3"),
+            ("src/a.rs:", "src/a.rs:"),
+        ] {
+            assert_eq!(path_without_lines(path), file, "{path}");
+        }
+    }
 
     #[test]
     fn split_numbered_heading_extracts_number_and_title() {

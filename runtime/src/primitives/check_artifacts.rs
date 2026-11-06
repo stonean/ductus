@@ -30,10 +30,10 @@
 //!   unmapped scenario as skipped. It never requires a pruned spent task to
 //!   persist (constitution §tasks-phase — `tasks.md` is ephemeral).
 //! - **review-state-drift** (blocking) — reference §"Review state drift
-//!   (blocking)": a `done` spec holding an unticked criterion, or whose
-//!   `review.md` record has `last-run`
-//!   unset, `blocking: true`, or a non-zero `should-violations`,
-//!   drifted. The third condition arrived with 045's task 15: §implement-phase
+//!   (blocking)": a `done` spec holding an unticked criterion or an unchecked
+//!   box, or whose `review.md` record has `last-run` unset, `blocking: true`, a
+//!   non-zero `should-violations`, a broken contract in `open-findings` or the
+//!   `fix-rounds-open` mark, drifted. The third condition arrived with 045's task 15: §implement-phase
 //!   forbids reaching `done` over an outstanding SHOULD, and the count is what
 //!   states whether one is outstanding. The grandfather rule applies: a `done`
 //!   spec with no `review.md` at all predates `/ductus:review` and is
@@ -612,8 +612,7 @@ fn check_disposition_drift(
 }
 
 /// (d) Review-state drift — reference §"Review state drift (blocking)":
-/// for a `done` spec, `review.last-run` must be set and `review.blocking`
-/// must be `false`. Grandfather rule: a `done` spec with **no** `review:`
+/// each condition the module doc names, on a `done` spec. Grandfather rule: a `done` spec with **no** `review:`
 /// block at all predates `/ductus:review` and is exempt. Specs not at `done`
 /// are silently exempt (the block populates lazily on first review).
 fn check_review_drift(

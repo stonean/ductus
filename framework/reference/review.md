@@ -580,7 +580,7 @@ affects the exit code, and an `undispositioned` count above zero does not hold
 `done` unless a broken contract is among it, so the row names it for a later review to decide:
 
 ```text
-  observations 2 — 0 fixed, 1 deferred, 0 waived, 1 undispositioned — recorded; it does not hold done
+  observations 2 — 0 fixed, 1 deferred, 0 waived, 1 undispositioned — recorded; it holds done only if a broken contract is among it
 ```
 
 The standing inbox count is not a review row: `/{project}:status` renders it.

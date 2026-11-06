@@ -1111,8 +1111,8 @@ mod tests {
     /// and it was the one nothing pinned: with a `Command` variant and its
     /// dispatch arm deleted the entire suite still passed, so a primitive
     /// could be missing from `ductus <name>` with no test reporting it. That
-    /// absence bites hardest without the MCP server, since an agent then has
-    /// only this surface — [§design-principles]' first rule turned on
+    /// absence bites hardest where no server runs, since hooks, CI and the
+    /// bootstrap have only this surface — [§design-principles]' first rule turned on
     /// the runtime's own registration, where four surfaces prove themselves
     /// on every run and the fifth was indistinguishable from them.
     ///

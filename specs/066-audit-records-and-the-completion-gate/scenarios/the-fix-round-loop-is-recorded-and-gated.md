@@ -6,7 +6,7 @@ section: "The completion gate"
 
 ## Context
 
-[078 — Review fix rounds are re-read within a bound](../../078-review-fix-rounds-are-re-read-within-a-bound/spec.md) adds a fix-round loop to `/{project}:review`: each round of fixes is re-read by an independent agent, verified by a diff check against the previous re-read's prescriptions, or exempt by a path rule. Its outcome must reach `review.md`, and a round that needed a re-read and has none, with no waiver, must hold `done`. The record and the gate are this spec's, so the change lands here. The shapes are in [078's data model](../../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md), **`write-review` — the loop's argument and record fields** and **`check-review-gate` — check 12**.
+[078 — Review fix rounds are re-read within a bound](../../078-review-fix-rounds-are-re-read-within-a-bound/spec.md) adds a fix-round loop to `/{project}:review`: each round of fixes is re-read by an independent agent, verified by a diff check against the previous re-read's prescriptions, or exempt by a path rule. Its outcome must reach `review.md`, and a round that needed a re-read and has none, with no waiver, must hold `done`. The record and the gate are this spec's, so the change lands here. The shapes are in [078's data model](../../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md), **`write-review` — the loop's argument and record fields** and **`check-review-gate` — the fix-round check**.
 
 ## Behavior
 

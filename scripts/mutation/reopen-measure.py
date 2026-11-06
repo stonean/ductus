@@ -60,9 +60,9 @@ MUTATIONS = [
     (
         'M7 another file is a correction',
         'src/primitives/classify_spec_edit.rs',
-        '_ => {\n                reasons.insert(SpecEditReason::OtherFile);\n            }',
+        '_ => contracts.push((file, deleted, SpecEditReason::OtherFile)),',
         '_ => {}',
-        'classify_spec_edit::tests::another_file_reopens',
+        'classify_spec_edit::tests::another_file_reopens classify_spec_edit::tests::a_real_change_to_another_file_reopens',
     ),
     (
         'M8 an edit with no reason reads as nothing',
@@ -772,7 +772,7 @@ MUTATIONS = [
         'classify_spec_edit::tests::an_untick_reopens',
     ),
     (
-        'M115 a tick reopens',
+        'M115 a criterion left unticked reopens',
         'src/primitives/classify_spec_edit.rs',
         '.filter(|criterion| criterion.checked)\n        .map(criterion_text)',
         '.map(criterion_text)',
@@ -875,5 +875,47 @@ MUTATIONS = [
         'String::from_utf8(bytes).is_ok_and(|text| unchecked_lines(&text).is_empty())',
         'String::from_utf8(bytes).is_ok_and(|text| crate::primitives::read_tasks::parse_tasks(&text).iter().all(|task| task.subtasks.iter().all(|subtask| subtask.checked)))',
         'measure_reopenings::tests::waiting_is_the_in_progress_specs_with_no_unchecked_task',
+    ),
+    (
+        'M130 a commit dated before the window ends the walk',
+        'src/primitives/measure_reopenings.rs',
+        '        if !counts && open.is_empty() && boundary.passed(&commit) {\n            continue;\n',
+        '        if !counts && open.is_empty() && boundary.passed(&commit) {\n            break;\n',
+        'measure_reopenings::tests::a_commit_dated_before_the_window_ends_nothing',
+    ),
+    (
+        'M131 a reference removed as a list item reopens',
+        'src/primitives/classify_spec_edit.rs',
+        '        Ok(lines(&at_base) == lines(&now))\n',
+        '        Ok(lines(&at_base) == lines(&now) && now.len() >= at_base.len())\n',
+        'classify_spec_edit::tests::a_reference_added_or_removed_as_a_list_item_is_mechanical',
+    ),
+    (
+        'M132 a tilde fence is no fence',
+        'src/primitives/mod.rs',
+        'for marker in ["```", "~~~"] {',
+        'for marker in ["```"] {',
+        'primitives::tests::skip_scanner_reads_a_tilde_fence',
+    ),
+    (
+        'M133 either fence closes the other',
+        'src/primitives/mod.rs',
+        'if line.trim_start().starts_with(self.fence_marker) {',
+        'if line.trim_start().starts_with("```") || line.trim_start().starts_with("~~~") {',
+        'primitives::tests::skip_scanner_reads_a_tilde_fence',
+    ),
+    (
+        "M134 a link borrows a later reference's target",
+        'src/primitives/derive_references.rs',
+        '                .filter(|url| scrubbed[close + 2..].starts_with(url))\n',
+        '',
+        'classify_spec_edit::tests::prose_changed_between_another_link_and_a_reference_reopens classify_spec_edit::tests::a_reference_rewritten_past_multibyte_text_is_mechanical',
+    ),
+    (
+        'M135 a sweep through another file reopens',
+        'src/primitives/classify_spec_edit.rs',
+        '_ => contracts.push((file, deleted, SpecEditReason::OtherFile)),',
+        '_ => {\n                reasons.insert(SpecEditReason::OtherFile);\n            }',
+        'classify_spec_edit::tests::a_sweep_through_another_file_is_mechanical',
     ),
 ]

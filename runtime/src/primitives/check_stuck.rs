@@ -106,8 +106,11 @@ fn first_incomplete_index_unchanged(
 /// Read the blob at `path_rel` from the tree of the commit named `sha`.
 fn read_blob_at_commit(repo: &Repository, sha: &str, path_rel: &str) -> Result<Option<String>> {
     let oid = git2::Oid::from_str(sha)?;
-    let commit = repo.find_commit(oid)?;
-    blob_text(repo, &commit.tree()?, path_rel)
+    let tree = repo.find_commit(oid)?.tree()?;
+    match feature_file_in_tree(repo, &tree, path_rel) {
+        Some(found) => blob_text(repo, &tree, &found),
+        None => Ok(None),
+    }
 }
 
 /// Return the 0-based line index of the first `- [ ]` group in `content`,
@@ -203,13 +206,18 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
     let mut status_by_blob: HashMap<git2::Oid, Option<String>> = HashMap::new();
     for oid in walk {
         let oid = oid?;
+        let commit = repo.find_commit(oid)?;
         let Some(status) = status_of_commit(repo, &mut status_by_blob, oid, spec_rel)? else {
+            // No readable status says nothing about where the reopening stands, so one
+            // passing through a damaged or removed `spec.md` keeps its start.
+            if commit.parent_ids().any(|parent| inside.contains(&parent)) {
+                inside.insert(oid);
+            }
             continue;
         };
         if status == "done" {
             continue;
         }
-        let commit = repo.find_commit(oid)?;
         cut |= shallow && commit.parent_count() == 0;
         let mut carried = false;
         let mut left_done = false;
@@ -342,16 +350,22 @@ fn count_commits_touching(
 /// once, as it should.
 fn commit_touches(repo: &Repository, oid: git2::Oid, path_rel: &str) -> Result<bool> {
     let commit = repo.find_commit(oid)?;
-    let own = tree_entry_id(&commit.tree()?, path_rel);
+    let own = feature_entry_id(repo, &commit.tree()?, path_rel);
     if commit.parent_count() == 0 {
         return Ok(own.is_some());
     }
     for parent in commit.parents() {
-        if tree_entry_id(&parent.tree()?, path_rel) == own {
+        if feature_entry_id(repo, &parent.tree()?, path_rel) == own {
             return Ok(false);
         }
     }
     Ok(true)
+}
+
+/// The object id of the feature's file in `tree`, found by its spec's number when its
+/// slug differed there, so a rename is no change to it and a reopening keeps its count.
+fn feature_entry_id(repo: &Repository, tree: &git2::Tree<'_>, path_rel: &str) -> Option<git2::Oid> {
+    tree_entry_id(tree, &feature_file_in_tree(repo, tree, path_rel)?)
 }
 
 /// The object id at `path_rel` in `tree`, or `None` when absent.
@@ -659,6 +673,57 @@ mod tests {
 
         let found = find_in_progress_commit(&repo, "specs/010-renamed/spec.md").unwrap();
         assert_eq!(found, Some(commits[1].to_string()));
+    }
+
+    /// A commit with no readable status says nothing about where the reopening stands,
+    /// so a damaged or removed `spec.md` and its repair keep the start.
+    #[test]
+    fn a_commit_with_no_readable_status_keeps_the_start() {
+        for damage in ["---\nstatus: [\n---\n", ""] {
+            let (tmp, repo, commits) = walk_statuses(&["done", "in-progress"]);
+            let spec_file = tmp.path().join("specs/010-demo/spec.md");
+            if damage.is_empty() {
+                std::fs::remove_file(&spec_file).unwrap();
+            } else {
+                std::fs::write(&spec_file, damage).unwrap();
+            }
+            commit_all(&repo, "damage");
+            write(&spec_file, &spec("in-progress"));
+            commit_all(&repo, "repair");
+            assert_eq!(start_of(&repo), Some(commits[1].to_string()), "{damage:?}");
+        }
+    }
+
+    /// A rename is no change to `tasks.md`, and the count and the first box follow it, so
+    /// a first box that never moved still reads stuck.
+    #[test]
+    fn stuck_follows_a_rename() {
+        let (tmp, repo, _) = walk_statuses(&["done"]);
+        let tasks = tmp.path().join("specs/010-demo/tasks.md");
+        write(&tasks, "# T\n\n## 1. A\n\n- [ ] first\n");
+        write(
+            &tmp.path().join("specs/010-demo/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(010): reopen, with its task");
+        write(&tasks, "# T\n\n## 1. A\n\n- [ ] first\n- [x] other\n");
+        commit_all(&repo, "tasks(010): two");
+        std::fs::rename(
+            tmp.path().join("specs/010-demo"),
+            tmp.path().join("specs/010-renamed"),
+        )
+        .unwrap();
+        commit_all(&repo, "spec(010): a new slug");
+        let result = run(
+            &CheckStuckArgs {
+                feature: "010-renamed".to_string(),
+                threshold: 2,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.commit_count, 2, "{result:?}");
+        assert!(result.stuck, "{result:?}");
     }
 
     /// The name still decides when it is there, and a number no directory holds finds

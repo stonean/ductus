@@ -224,7 +224,8 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // gone, or that leaves the project, has nothing to read.
     let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
     let at_head = record_at(repository, &head_tree, &project.to_git(&record_rel))?;
-    let changed_contracts = contracts_changed_since(at_head.as_ref(), repo, &rel_dir);
+    let (changed_contracts, contracts_current) =
+        contracts_against_digest(at_head.as_ref(), repo, &rel_dir);
     let left_open = at_head.map_or_else(Vec::new, |record| record.open_findings);
     let held = left_open.iter().chain(&changed_contracts);
     hold_in_scope(held, repo, &mut scope, &mut excluded);
@@ -234,7 +235,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         (&scope, &deleted),
         &window,
         &uncommitted,
-        left_open,
+        (left_open, contracts_current),
     );
     let record = load_review_record(&feature_dir);
     let run = record
@@ -270,7 +271,7 @@ fn paths_owing_a_review(
     (scope, deleted): (&BTreeSet<String>, &BTreeSet<String>),
     window: &WindowClaims,
     uncommitted: &BTreeSet<String>,
-    left_open: Vec<String>,
+    (left_open, contracts_current): (Vec<String>, bool),
 ) -> Vec<String> {
     let own_prefix = format!("{specs_root}/{feature}/");
     // A deletion left the scope because it cannot be read, and is still a change:
@@ -292,7 +293,9 @@ fn paths_owing_a_review(
         .iter()
         .chain(its_own_deletions)
         .filter(|path| match path.strip_prefix(&own_prefix) {
-            Some(own) => is_review_contract(own),
+            // A contract its record's digest still describes changed nothing a review
+            // reads, as when only the spec's slug moved it.
+            Some(own) => is_review_contract(own) && !contracts_current,
             None => !in_another_spec(path.as_str()),
         })
         .cloned()
@@ -451,16 +454,18 @@ fn hold_in_scope<'a>(
     }
 }
 
-/// Each contract the record's digest says changed: read wherever the window starts, or a
-/// review owed for one edited before the window would refresh the digest with it unread.
-fn contracts_changed_since(
+/// Each contract the record's digest says changed, read wherever the window starts or a
+/// review owed for one edited before the window would refresh the digest with it unread;
+/// and whether the digest still describes them all.
+fn contracts_against_digest(
     record: Option<&ReviewBlock>,
     repo: &Path,
     rel_dir: &str,
-) -> Vec<String> {
+) -> (Vec<String>, bool) {
     match record.map(|record| review_freshness(repo, rel_dir, Some(record))) {
-        Some(RecordFreshness::Stale { paths, .. }) => paths,
-        _ => Vec::new(),
+        Some(RecordFreshness::Stale { paths, .. }) => (paths, false),
+        Some(RecordFreshness::Current { .. }) => (Vec::new(), true),
+        _ => (Vec::new(), false),
     }
 }
 
@@ -471,10 +476,13 @@ fn record_at(
     tree: &Tree<'_>,
     git_path: &str,
 ) -> Result<Option<ReviewBlock>> {
-    let Some(text) = blob_text(repository, tree, git_path)? else {
+    let Some(found) = feature_file_in_tree(repository, tree, git_path) else {
         return Ok(None);
     };
-    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
+    let Some(text) = blob_text(repository, tree, &found)? else {
+        return Ok(None);
+    };
+    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(&found)) else {
         return Ok(None);
     };
     Ok(serde_norway::from_str::<ReviewBlock>(frontmatter).ok())
@@ -483,8 +491,8 @@ fn record_at(
 /// What a review run reads, for a caller weighing a stored finding that did not fire:
 /// a file the run never opened says nothing about whether it still would (spec 079).
 pub(crate) enum RunScope {
-    /// The paths the run's scope holds.
-    Known(BTreeSet<String>),
+    /// The entries the run's scope holds, a plan's pattern among them on a first review.
+    Known(PlanEntries),
     /// The window could not be resolved, so nothing is known to have been read.
     Unreadable,
 }
@@ -497,7 +505,7 @@ impl RunScope {
             since: since.map(str::to_string),
         };
         compute(&args, repo).map_or(Self::Unreadable, |scope| {
-            Self::Known(scope.scope.into_iter().collect())
+            Self::Known(PlanEntries::new(&scope.scope))
         })
     }
 
@@ -507,7 +515,7 @@ impl RunScope {
     pub(crate) fn why_unread(&self, path: &str, repo: &Path) -> Option<String> {
         match self {
             Self::Unreadable => Some("this run's scope could not be read".to_string()),
-            Self::Known(scope) => (!scope.contains(path)
+            Self::Known(scope) => (!scope.names(path)
                 && repo.join(path).symlink_metadata().is_ok())
             .then(|| format!("this run did not read `{path}`")),
         }
@@ -572,6 +580,16 @@ fn last_review_commit(
     walk.hide(Oid::from_str(transition_sha)?)?;
     walk.set_sorting(Sort::TOPOLOGICAL)?;
     let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
+    // A record reverted away leaves no earlier review, whatever history once held. One
+    // whose `last-run` a fold's invalidation nulled still stands: its window keeps its
+    // start, and what the fold brought joins by its own rule.
+    let head_tree = repository.head()?.peel_to_commit()?.tree()?;
+    if feature_file_in_tree(repository, &head_tree, &git_path).is_none() {
+        return Ok(None);
+    }
+    let reopened_with = repository
+        .find_commit(Oid::from_str(transition_sha)?)?
+        .tree()?;
     // A record restored by a revert or a checkout carries a run an older commit already
     // finished, and what lay between has no standing: the window starts at that run.
     let mut restored: Option<String> = None;
@@ -613,7 +631,11 @@ fn last_review_commit(
             }
         }
         if !finished_earlier {
-            return Ok(Some(commit.id().to_string()));
+            // A run the reopening carried in, restored: it is from before the window, so
+            // this commit finished nothing and the window stays at the reopen.
+            let carried = recorded_run(repository, &reopened_with, &git_path)?
+                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
+            return Ok((!carried).then(|| commit.id().to_string()));
         }
         restored = Some(run.last_run);
     }
@@ -825,9 +847,9 @@ impl FoldTest<'_> {
     /// reads plans a retired spec no longer has.
     fn brought(&self, repo: &Path, folded: &[String]) -> Result<BTreeSet<String>> {
         let mut brought = BTreeSet::new();
-        let staging: Vec<(FeatureForm, &String)> = folded
+        let staging: Vec<FeatureForm> = folded
             .iter()
-            .filter_map(|directory| Some((parse_feature_dir(directory)?, directory)))
+            .filter_map(|directory| parse_feature_dir(directory))
             .collect();
         if staging.is_empty() {
             return Ok(brought);
@@ -844,8 +866,8 @@ impl FoldTest<'_> {
         for oid in walk {
             let commit = repository.find_commit(oid?)?;
             let mut belongs = false;
-            for (form, directory) in &staging {
-                belongs = belongs || self.attributor.belongs_to(&commit, form, directory)?;
+            for form in &staging {
+                belongs = belongs || self.attributor.belongs_to(&commit, form)?;
             }
             if belongs {
                 brought.extend(
@@ -867,7 +889,7 @@ impl FoldTest<'_> {
 /// A plan's `Affected Files` entries, as a test of whether one names a path. An
 /// entry may be a literal path, a directory ending in `/`, or a pattern with
 /// `*`, `?`, `**` or `{a, b}`, as the corpus's plans write them.
-struct PlanEntries {
+pub(crate) struct PlanEntries {
     literal: BTreeSet<String>,
     patterns: Vec<Regex>,
 }
@@ -3088,6 +3110,166 @@ mod tests {
 
         commit_all(&repo, "review(001): the next run");
         assert!(!has(&x(&tmp), contract));
+    }
+
+    /// A contract its digest still describes changed nothing a review reads, so a slug
+    /// moving it owes none. With no digest to say so, it still does.
+    #[test]
+    fn a_rename_alone_owes_no_review() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        write(&dir.join("spec.md"), &spec("done"));
+        write(&dir.join("scenarios/s.md"), "# S\n");
+        let sha = commit_all(&repo, "chore: seed");
+        let contracts = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_review_contract,
+        );
+        let mut rows = String::new();
+        for (path, value) in &contracts.digests {
+            rows.extend(["  ", path, ": ", value, "\n"]);
+        }
+        write(
+            &dir.join("review.md"),
+            &record(
+                &format!("{DISPOSITIONS}reviewed-against: {sha}\nreviewed-digest:\n{rows}"),
+                "2026-10-01T00:00:00Z",
+            ),
+        );
+        commit_all(&repo, "review(001): the run");
+        write(&dir.join("spec.md"), &spec("in-progress"));
+        commit_all(&repo, "status(001): reopen");
+        rename_x(&tmp, &repo);
+        let scope = compute(&args("001-renamed", None), tmp.path()).unwrap();
+        assert!(
+            scope
+                .scope
+                .iter()
+                .any(|path| path == "specs/001-renamed/scenarios/s.md"),
+            "{:?}",
+            scope.scope
+        );
+        assert_eq!(scope.owed_by, Vec::<String>::new());
+        assert!(!scope.review_owed, "{:?}", scope.scope);
+    }
+
+    /// The list is read from `HEAD`, under the slug `HEAD` holds, so a rename not yet
+    /// committed keeps what a finding names in scope.
+    #[test]
+    fn a_path_left_open_survives_an_uncommitted_rename() {
+        let (tmp, _repo, _) = left_open("");
+        fs::rename(
+            tmp.path().join("specs/001-x"),
+            tmp.path().join("specs/001-renamed"),
+        )
+        .unwrap();
+        let scope = compute(&args("001-renamed", None), tmp.path()).unwrap();
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
+    }
+
+    /// Reverting the run that replaced the one the reopening carried restores a run from
+    /// before the window, so nothing finished here and the window stays at the reopen.
+    #[test]
+    fn restoring_a_run_from_before_the_reopening_starts_at_the_reopen() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        write(&dir.join("spec.md"), &spec("done"));
+        let carried = "2026-10-01T00:00:00Z";
+        write(&dir.join("review.md"), &record(DISPOSITIONS, carried));
+        let parent = commit_all(&repo, "chore: seed");
+        write(&dir.join("spec.md"), &spec("in-progress"));
+        write(&tmp.path().join("src/a.rs"), "a\n");
+        commit_all(&repo, "feat(001): code with the reopen");
+        write(
+            &dir.join("review.md"),
+            &record(DISPOSITIONS, "2026-11-01T00:00:00Z"),
+        );
+        commit_all(&repo, "review(001): a run");
+        write(&dir.join("review.md"), &record(DISPOSITIONS, carried));
+        commit_all(&repo, "revert: the run");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// A run the reopening carried in with its loop open, and finished here, is a finish
+    /// here, so the window starts at the commit finishing it.
+    #[test]
+    fn a_run_carried_open_and_finished_here_moves_the_start() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        write(&dir.join("spec.md"), &spec("done"));
+        let stamp = "2026-10-01T00:00:00Z";
+        write(
+            &dir.join("review.md"),
+            &record(&format!("{DISPOSITIONS}fix-rounds-open: true\n"), stamp),
+        );
+        commit_all(&repo, "chore: seed");
+        write(&dir.join("spec.md"), &spec("in-progress"));
+        commit_all(&repo, "status(001): reopen");
+        write(&dir.join("review.md"), &record(DISPOSITIONS, stamp));
+        let finished = commit_all(&repo, "review(001): the run's last write");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, finished);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+    }
+
+    /// Reverting away the only run leaves no earlier review, whatever history once held.
+    #[test]
+    fn a_record_reverted_away_starts_at_the_reopen() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the work");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        fs::remove_file(tmp.path().join("specs/001-x/review.md")).unwrap();
+        commit_all(&repo, "revert: the run");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
+    /// A staging spec renamed before its fold is still one spec, so what it committed
+    /// under its old slug comes along.
+    #[test]
+    fn a_staging_spec_renamed_before_its_fold_brings_its_commits() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        fs::rename(
+            tmp.path().join("specs/1234.1-foo"),
+            tmp.path().join("specs/1234.1-bar"),
+        )
+        .unwrap();
+        commit_all(&repo, "spec(1234.1): a new slug");
+        fs::remove_dir_all(tmp.path().join("specs/1234.1-bar")).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "fold(1234.1): into 001");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+    }
+
+    /// A plan's pattern in scope holds the file it matches, so a stored finding there
+    /// did not go unread.
+    #[test]
+    fn a_file_under_a_scope_pattern_reads_as_read() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(&tmp.path().join("src/b.rs"), "b\n");
+        write(&tmp.path().join("lib/c.rs"), "c\n");
+        let scope = RunScope::Known(PlanEntries::new(&["src/*.rs".to_string()]));
+        assert_eq!(scope.why_unread("src/b.rs", tmp.path()), None);
+        assert!(scope.why_unread("lib/c.rs", tmp.path()).is_some());
     }
 
     #[test]

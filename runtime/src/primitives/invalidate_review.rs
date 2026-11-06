@@ -111,7 +111,10 @@ fn invalidate_record_artifact(
     // review. The fix-round fields go too (spec 078): they are that run's
     // outcomes, and a round waiver, unlike a finding's, names a round of that
     // run, so it outlives it as a waiver of nothing.
-    const SCALARS: [&str; 21] = [
+    const SCALARS: [&str; 24] = [
+        "excluded",
+        "contract-breaks",
+        "fix-rounds-open",
         "last-run",
         "reviewed-against",
         "diff-base",
@@ -266,6 +269,26 @@ mod tests {
         assert!(!record.contains("fixed: 1"), "{record}");
         assert!(record.contains("decisions:"), "{record}");
         assert!(record.contains("reason: not this spec"), "{record}");
+    }
+
+    /// The run's other outcomes go too, beside a `last-run: null` that says it never
+    /// happened, while what it left open stays, since the next scope reads it.
+    #[test]
+    fn a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "050-alpha", SPEC);
+        fs::write(
+            tmp.path().join("specs/050-alpha/review.md"),
+            "---\nspec: 050-alpha\nlast-run: 2026-08-01T00:00:00Z\nmust-violations: 0\nblocking: false\n\
+             excluded: 2\ncontract-breaks: 1\nfix-rounds-open: true\nopen-findings:\n  - src/b.rs\n---\n\n# Review — 050-alpha\n",
+        )
+        .unwrap();
+        run(&args("050-alpha"), tmp.path()).unwrap();
+        let record = review_md(tmp.path());
+        assert!(!record.contains("excluded:"), "{record}");
+        assert!(!record.contains("contract-breaks:"), "{record}");
+        assert!(!record.contains("fix-rounds-open:"), "{record}");
+        assert!(record.contains("open-findings:\n  - src/b.rs"), "{record}");
     }
 
     /// A record written before spec 058 still carries its run's

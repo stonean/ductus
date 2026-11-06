@@ -15,8 +15,10 @@
 //! A contract edit is `mechanical` when it only adds, removes or rewrites a cross-service
 //! reference, or is a sweep's: one file's diff cannot show a sweep, so a snapshot of the
 //! working tree goes through `mechanical_sweep`'s repo-wide index, the rule the review
-//! gate's staleness uses, so the two cannot disagree. Its blind spot comes with it: a real
-//! change made with the same token in two files reads as a sweep.
+//! gate's staleness uses, so the two agree on a sweep. Its blind spot comes with it: a real
+//! change made with the same token in two files reads as a sweep. A reference-only edit
+//! they read apart, by a decision: this says `mechanical`, while the digest reads stale.
+//! Any other file under the spec takes the same test (§spec-lifecycle's "an edit elsewhere").
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -95,9 +97,7 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
             other if is_review_contract(other) => {
                 contracts.push((file, deleted, SpecEditReason::Scenario));
             }
-            _ => {
-                reasons.insert(SpecEditReason::OtherFile);
-            }
+            _ => contracts.push((file, deleted, SpecEditReason::OtherFile)),
         }
     }
 
@@ -489,10 +489,80 @@ mod tests {
     fn a_reference_added_or_removed_as_a_list_item_is_mechanical() {
         let (_dir, root) = fixture();
         linked_project(&root);
-        let with_item =
-            format!("---\nsection: x\n---\n\n# s\n\nSee {LINK} for it.\n\nProse.\n\n- {LINK}\n");
+        let plain =
+            "---\nsection: x\n---\n\n# s\n\nSee {LINK} for it.\n\nProse.\n".replace("{LINK}", LINK);
+        let with_item = format!("{plain}\n- {LINK}\n");
         edit(&root, "scenarios/s.md", &with_item);
         assert_kind(&root, SpecEditKind::Mechanical);
+
+        let (_dir, root) = fixture();
+        linked_project(&root);
+        edit(&root, "scenarios/s.md", &with_item);
+        commit_all(&Repository::open(&root).unwrap(), "docs(012): the item");
+        edit(&root, "scenarios/s.md", &plain);
+        assert_kind(&root, SpecEditKind::Mechanical);
+    }
+
+    /// A contract holding `before`, committed, then edited to `after`.
+    fn contract_edited(before: &str, after: &str) -> PathBuf {
+        let (dir, root) = fixture();
+        linked_project(&root);
+        let body = |line: &str| format!("---\nsection: x\n---\n\n# s\n\n{line}\n");
+        edit(&root, "scenarios/s.md", &body(before));
+        commit_all(&Repository::open(&root).unwrap(), "docs(012): the base");
+        edit(&root, "scenarios/s.md", &body(after));
+        std::mem::forget(dir);
+        root
+    }
+
+    /// A sibling link, an anchor or an image ahead of a reference is the link it is: it
+    /// does not borrow the reference's target and cut the prose between the two.
+    #[test]
+    fn prose_changed_between_another_link_and_a_reference_reopens() {
+        for first in ["[b](../../034-b/spec.md)", "[here](#anchor)", "![i](a.png)"] {
+            let before = format!("See {first}, the timeout is 30s, then {LINK}.");
+            let root = contract_edited(&before, &before.replace("30s", "60s"));
+            assert_reopens(&root, &[SpecEditReason::Scenario]);
+        }
+    }
+
+    /// Multibyte text between the links once sent the cut into a character.
+    #[test]
+    fn a_reference_rewritten_past_multibyte_text_is_mechanical() {
+        let before = format!("See [b](../../034-b/spec.md), naïve — é, then {LINK}.");
+        let moved = LINK.replace("/acme/api/", "/acme/users/");
+        let after = format!("See [b](../../034-b/spec.md), naïve — é, then {moved}.");
+        assert_kind(&contract_edited(&before, &after), SpecEditKind::Mechanical);
+    }
+
+    /// Any other file under the spec takes the same test, so a sweep through it is
+    /// mechanical and a real change to it reopens.
+    #[test]
+    fn a_sweep_through_another_file_is_mechanical() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(&root, "research.md", "# R\n\nUses `old-label`.\n");
+        write(
+            &root.join("specs/034-b/research.md"),
+            "# R\n\nUses `old-label`.\n",
+        );
+        commit_all(&repository, "docs: research");
+        edit(&root, "research.md", "# R\n\nUses `new-label`.\n");
+        write(
+            &root.join("specs/034-b/research.md"),
+            "# R\n\nUses `new-label`.\n",
+        );
+        assert_kind(&root, SpecEditKind::Mechanical);
+    }
+
+    #[test]
+    fn a_real_change_to_another_file_reopens() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(&root, "research.md", "# R\n\nUses `old-label`.\n");
+        commit_all(&repository, "docs: research");
+        edit(&root, "research.md", "# R\n\nFound something else.\n");
+        assert_reopens(&root, &[SpecEditReason::OtherFile]);
     }
 
     /// Prose beside the link is a claim, whatever the link does.

@@ -139,28 +139,28 @@ impl<'a> Attributor<'a> {
         })
     }
 
-    /// Whether `commit` belongs to the spec `form`, whose directory `directory`
-    /// may be gone from disk: it touched that directory, or its subject's scope
-    /// names the spec. [`Self::claims`] answers only for a spec on disk, since a
+    /// Whether `commit` belongs to the spec `form`, whose directory may be gone from
+    /// disk, or held another slug then: it touched that directory, or its subject's
+    /// scope names the spec. [`Self::claims`] answers only for a spec on disk, since a
     /// number in a subject may be anything; a caller naming a spec it read from
     /// history has no such doubt. The tree's entry answers without a diff, as a
     /// caller walks all of history.
-    pub(crate) fn belongs_to(
-        &self,
-        commit: &Commit<'_>,
-        form: &FeatureForm,
-        directory: &str,
-    ) -> Result<bool> {
+    pub(crate) fn belongs_to(&self, commit: &Commit<'_>, form: &FeatureForm) -> Result<bool> {
         let subject = commit.summary().ok().flatten().unwrap_or_default();
         if subject_scope_forms(subject).contains(form) {
             return Ok(true);
         }
-        let git_path = self
-            .project
-            .to_git(&format!("{}/{directory}", self.specs_root));
+        let root = self.project.to_git(self.specs_root);
+        // By its number, since a spec whose slug changed is still one spec.
         let entry = |tree: &Tree<'_>| {
-            tree.get_path(Path::new(&git_path))
-                .ok()
+            tree.get_path(Path::new(&root))
+                .ok()?
+                .to_object(&self.project.repository)
+                .ok()?
+                .into_tree()
+                .ok()?
+                .iter()
+                .find(|entry| entry.name().ok().and_then(parse_feature_dir).as_ref() == Some(form))
                 .map(|entry| entry.id())
         };
         let parent = match commit.parent(0) {
@@ -338,11 +338,11 @@ mod tests {
         assert_eq!(claims.paths, vec!["src/lib.rs".to_string()]);
     }
 
-    fn belongs(root: &Path, oid: Oid, form: &FeatureForm, directory: &str) -> bool {
+    fn belongs(root: &Path, oid: Oid, form: &FeatureForm) -> bool {
         let project = ProjectRepository::discover(root).unwrap();
         let commit = project.repository.find_commit(oid).unwrap();
         Attributor::new(&project, root, "specs")
-            .belongs_to(&commit, form, directory)
+            .belongs_to(&commit, form)
             .unwrap()
     }
 
@@ -356,7 +356,6 @@ mod tests {
             identifier: "1234".to_string(),
             n: 1,
         };
-        let directory = "1234.1-foo";
         write(&tmp.path().join("specs/1234.1-foo/spec.md"), "s\n");
         let touching = commit_all(&repository, "feat: naming nothing");
         write(&tmp.path().join("src/named.rs"), "n\n");
@@ -366,10 +365,10 @@ mod tests {
         std::fs::remove_dir_all(tmp.path().join("specs/1234.1-foo")).unwrap();
         let removal = commit_all(&repository, "chore: naming nothing either");
 
-        assert!(belongs(tmp.path(), touching, &form, directory));
-        assert!(belongs(tmp.path(), named, &form, directory));
-        assert!(!belongs(tmp.path(), neither, &form, directory));
-        assert!(belongs(tmp.path(), removal, &form, directory));
+        assert!(belongs(tmp.path(), touching, &form));
+        assert!(belongs(tmp.path(), named, &form));
+        assert!(!belongs(tmp.path(), neither, &form));
+        assert!(belongs(tmp.path(), removal, &form));
     }
 
     #[test]

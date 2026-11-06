@@ -19,7 +19,7 @@ When `/{project}:target` selects a spec whose status is `in-progress`, its next-
 - A `tasks.md` that is absent or in template state on an `in-progress` spec: no unchecked task, so the gate decides.
 - A scenario under the spec with unresolved open questions: the gate's own scenario-question check names `/{project}:clarify` or `/{project}:amend`, and `/{project}:target` repeats it.
 - `/{project}:target` stays read-only: evaluating the gate writes nothing.
-- Without the MCP server: the host runs `ductus check-review-gate`, the same evaluation.
+- Without the MCP server: `/{project}:target` stops and says to restart or re-run `/{project}`, as every command does (spec 079).
 
 ## Open Questions
 

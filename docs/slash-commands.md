@@ -101,7 +101,7 @@ Reach for it only when the source spec no longer describes anything true. A spec
 
 **Reach for it when the inbox has accumulated and you are ready to decide where each item belongs.**
 
-It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore done in the same pass, or a discard. Each route is confirmed before anything is written, and a `done` spec is reopened when an item lands under it.
+It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore done in the same pass, or a discard. Each route is confirmed before anything is written. A `done` spec is reopened when a scenario lands under it, and, once you approve, when a spec edit there changes what it requires.
 
 ## Orient
 

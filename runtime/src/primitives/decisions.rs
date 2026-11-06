@@ -65,6 +65,10 @@ pub(crate) struct RawDecision {
     /// `check-review-gate` reads to name what holds `done`.
     #[serde(default)]
     pub(crate) gating: Option<bool>,
+    /// `true` on a decision about an observation showing the spec's own code breaks its
+    /// contract, so a later run that matches it does not lose the hold (spec 079).
+    #[serde(default, rename = "contract-break")]
+    pub(crate) contract_break: Option<bool>,
     #[serde(default, rename = "decided-at")]
     pub(crate) decided_at: Option<String>,
     #[serde(default, rename = "decided-by")]
@@ -472,6 +476,26 @@ pub(crate) fn mark_gating(merged: &mut [RawDecision], holding: &[String]) {
     }
 }
 
+/// Mark each stored entry a broken contract's decision: one this run judged so, or an
+/// earlier run did, since a decision outlives the run that made it.
+pub(crate) fn mark_breaks(merged: &mut [RawDecision], breaks: &[String]) {
+    for entry in merged.iter_mut() {
+        let key = entry.key.as_deref().unwrap_or_default();
+        if breaks.iter().any(|held| same_key(held, key)) {
+            entry.contract_break = Some(true);
+        }
+    }
+}
+
+/// Whether the entry a run applies for `key` stores the decision of a broken contract.
+pub(crate) fn stored_as_a_break(stored: &[RawDecision], key: &str) -> bool {
+    stored
+        .iter()
+        .filter(|entry| entry.to_ref().is_ok())
+        .find(|entry| same_key(entry.key.as_deref().unwrap_or_default(), key))
+        .is_some_and(|entry| entry.contract_break == Some(true))
+}
+
 /// The file a stored review key names, in either shape `write-review` writes one: an
 /// observation's text, an em dash and its path in backticks, or a violation's
 /// `rule {id} at {file}`, without any `:line`. `None` for a key naming no file, as a
@@ -486,15 +510,8 @@ pub(crate) fn key_anchor(key: &str) -> Option<&str> {
                 .and_then(|rest| rest.split_once(" at "))
                 .map(|(_, file)| file)
         })?;
-    let file = match named.rsplit_once(':') {
-        Some((file, line))
-            if !line.is_empty() && line.chars().all(|c| c.is_ascii_digit() || c == '-') =>
-        {
-            file
-        }
-        _ => named,
-    };
-    (!file.trim().is_empty()).then_some(file)
+    let file = super::path_without_lines(named);
+    (!file.is_empty()).then_some(file)
 }
 
 /// The stored decision a run applies for `key`: the first well-formed entry
@@ -785,6 +802,7 @@ pub(crate) fn merge(
             work_item: decision.work_item.clone(),
             reason: decision.reason.clone(),
             gating: None,
+            contract_break: None,
             decided_at: Some(decided_at.to_string()),
             decided_by: if decision.by_rule {
                 Some(RULE_DECIDER.to_string())
@@ -832,6 +850,10 @@ pub(crate) fn render(block: &mut String, decisions: &[RawDecision]) {
                 ("task", decision.task.as_deref().into()),
                 ("work-item", decision.work_item.as_deref().into()),
                 ("reason", decision.reason.as_deref().into()),
+                (
+                    "contract-break",
+                    super::write_review::EntryValue::Flag(decision.contract_break == Some(true)),
+                ),
                 (
                     "gating",
                     super::write_review::EntryValue::Flag(decision.gating == Some(true)),
@@ -967,6 +989,7 @@ mod tests {
             work_item: None,
             reason: (outcome == "waived").then(|| companion.to_string()),
             gating: None,
+            contract_break: None,
             decided_at: Some("2026-09-01T00:00:00Z".into()),
             decided_by: Some("first@example.com".into()),
             extra: BTreeMap::new(),

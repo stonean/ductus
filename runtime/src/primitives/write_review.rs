@@ -485,9 +485,10 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             feature: args.feature.clone(),
         });
     }
-    refuse_an_empty_scope_over_a_finding(args, &feature_dir)?;
-    let new_waivers = new_waiver_entries(args)?;
-    let settled = settled(args, &new_waivers, &feature_dir)?;
+    refuse_an_empty_scope_over_a_finding(args, &feature_dir, repo)?;
+    let (new_waivers, new_anchors) =
+        new_waiver_entries(args, &surviving_waivers(&feature_dir, args)?)?;
+    let settled = settled(args, new_anchors, &feature_dir)?;
     let args = settled.as_ref();
 
     // Dedup, then bucket the survivors.
@@ -550,6 +551,13 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     one_outcome_per_key(&args.observations, &deduped)?;
     let mut decisions = merged_decisions(&feature_dir, args, repo, &deduped)?;
     decisions::mark_gating(&mut decisions, &sorted.holding());
+    let breaks: Vec<String> = args
+        .observations
+        .iter()
+        .filter(|observation| observation.contract_break)
+        .map(observation_key)
+        .collect();
+    decisions::mark_breaks(&mut decisions, &breaks);
     let loop_record = loop_record_of(args, repo)?;
     let open_findings = open_findings(
         must.iter().chain(should.iter()).map(|f| f.file.as_str()),
@@ -631,31 +639,66 @@ fn validate_arguments(args: &WriteReviewArgs) -> Result<()> {
 /// finding would clear that finding with its file unread (spec 079). A run's own
 /// earlier write carries its timestamp, so it never refuses itself. A record with no
 /// `open-findings` list, from before the field, is why this reads the counts too.
-fn refuse_an_empty_scope_over_a_finding(args: &WriteReviewArgs, feature_dir: &Path) -> Result<()> {
-    if !args.empty_scope {
+fn refuse_an_empty_scope_over_a_finding(
+    args: &WriteReviewArgs,
+    feature_dir: &Path,
+    repo: &Path,
+) -> Result<()> {
+    let counts_a_finding = match crate::primitives::load_review_record(feature_dir) {
+        crate::primitives::RecordLoad::Absent => false,
+        // Nothing can say a damaged record counts no finding, and overwriting it would
+        // collapse undeterminable into a clean run.
+        crate::primitives::RecordLoad::Unreadable(_) => true,
+        crate::primitives::RecordLoad::Present(record) => {
+            record.last_run.as_deref() != Some(args.reviewed_at.as_str())
+                && (record
+                    .must_violations
+                    .saturating_add(record.should_violations)
+                    > 0
+                    || !record.open_findings.is_empty())
+        }
+    };
+    if !counts_a_finding {
         return Ok(());
     }
-    let crate::primitives::RecordLoad::Present(record) =
-        crate::primitives::load_review_record(feature_dir)
-    else {
-        return Ok(());
-    };
-    let counts_a_finding = record
-        .must_violations
-        .saturating_add(record.should_violations)
-        > 0
-        || !record.open_findings.is_empty();
-    if counts_a_finding && record.last_run.as_deref() != Some(args.reviewed_at.as_str()) {
+    // The flag is the caller's word, as the denominator's doc comment below says, and
+    // `ductus exec` never sets it, so an empty window decides too.
+    if args.empty_scope || scope_is_derived_empty(args, repo) {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "write-review".into(),
             argument: "empty-scope".into(),
-            reason: "the record counts a finding that this run would clear with its file unread; \
-                     review without an empty scope, naming an earlier --since if the window holds \
-                     nothing"
+            reason: "the record counts a finding that this run would clear with its file unread, \
+                     or cannot be read to say it does not; review without an empty scope, naming \
+                     an earlier --since if the window holds nothing, or repair the record"
                 .into(),
         });
     }
     Ok(())
+}
+
+/// Whether this run's window holds nothing but its own record. A window that cannot be
+/// read says nothing, so it is no empty one.
+fn scope_is_derived_empty(args: &WriteReviewArgs, repo: &Path) -> bool {
+    let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
+        feature: args.feature.clone(),
+        since: Some(args.diff_base.clone()),
+    };
+    crate::primitives::compute_review_scope::compute(&scope_args, repo).is_ok_and(|result| {
+        !result
+            .scope
+            .iter()
+            .any(|path| !is_own_record(path, args, repo))
+    })
+}
+
+/// Whether `path` is this run's own record, which it writes and does not read.
+fn is_own_record(path: &str, args: &WriteReviewArgs, repo: &Path) -> bool {
+    path == format!(
+        "{}/{}/{}",
+        paths::Paths::load(repo).specs_root,
+        args.feature,
+        super::REVIEW_RECORD_FILE
+    )
 }
 
 /// How many files this review's scope covers — the denominator.
@@ -696,16 +739,13 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> (u32, BTreeMap<String, 
     };
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
-    let own_record = format!(
-        "{}/{}/{}",
-        paths::Paths::load(repo).specs_root,
-        args.feature,
-        super::REVIEW_RECORD_FILE
-    );
     crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or_else(
         |_| (0, BTreeMap::new()),
         |result| {
-            let read = result.scope.iter().filter(|path| **path != own_record);
+            let read = result
+                .scope
+                .iter()
+                .filter(|path| !is_own_record(path, args, repo));
             (
                 u32::try_from(read.count()).unwrap_or(u32::MAX),
                 result.excluded,
@@ -925,22 +965,6 @@ fn contract_breaks(observations: &[ReviewObservation]) -> usize {
         .count()
 }
 
-/// The file an observation's `path` names, without the `:line` or `:start-end` a run
-/// may add to it.
-fn path_without_lines(path: &str) -> &str {
-    let path = path.trim();
-    match path.rsplit_once(':') {
-        Some((file, lines))
-            if !file.is_empty()
-                && !lines.is_empty()
-                && lines.chars().all(|c| c.is_ascii_digit() || c == '-') =>
-        {
-            file
-        }
-        _ => path,
-    }
-}
-
 /// Each file the record leaves open, sorted once: every counted violation's, and each
 /// contract break's that the run did not fix, a person did not waive and no deferral
 /// releases, which is what holds `done` until a review clears it (spec 079).
@@ -959,7 +983,7 @@ fn open_findings<'a>(
                 )
                 && !decisions::releases(repo, root, feature, &observation.disposition)
         })
-        .map(|observation| path_without_lines(&observation.path));
+        .map(|observation| super::path_without_lines(&observation.path));
     violations
         .map(str::trim)
         .chain(open_breaks)
@@ -1382,9 +1406,16 @@ fn generate_summary(
     undispositioned: u32,
 ) -> String {
     if args.empty_scope {
-        return "Review scope is empty — no file changed in this review's window. \
-             Zero findings across all passes; blocking: no."
-            .to_string();
+        let held = if contract_breaks(&args.observations) > 0 {
+            " A broken contract among its observations holds `done` unless fixed, waived by a \
+             person or released by a deferral."
+        } else {
+            ""
+        };
+        return format!(
+            "Review scope is empty — no file changed in this review's window. \
+             Zero findings across all passes; blocking: no.{held}"
+        );
     }
     let mut summary = format!(
         "{must} MUST violation(s), {should} SHOULD violation(s), {low} low-confidence finding(s)"
@@ -1653,64 +1684,94 @@ fn render_skipped(skipped: &[String]) -> String {
 
 // -- spec frontmatter update -------------------------------------------------
 
-/// The waivers that survive this run: every recorded waiver the run did not
-/// expire, with its open-schema extras intact.
-///
-/// Extracted when the report started carrying the whole record: the report is
-/// rendered before the record is assembled, and computing the surviving set
-/// twice would be two chances to prune differently — the class of divergence
-/// the retired `check-review-agreement` was built to catch.
-/// The `waivers:` entry each `new-waivers` item records: every file its rule fires at
-/// in this run that no applied waiver holds, since only the first claim on a
-/// `(rule, file)` applies (spec 079).
+/// What this run's `new-waivers` add: the `waivers:` entries to store, each listing the
+/// files its rule fires at in this run that no waiver holds, and every anchor to apply. A
+/// run writes its record twice with one set of arguments, so an anchor its earlier write
+/// stored applies and is not stored again, and a rule its fix has since cleared asks
+/// nothing of this write (spec 079).
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidArgument`] when the rule fires at no such file.
-fn new_waiver_entries(args: &WriteReviewArgs) -> Result<Vec<RawWaiverFull>> {
-    args.new_waivers
-        .iter()
-        .enumerate()
-        .map(|(idx, waiver)| {
-            let files: std::collections::BTreeSet<&str> = args
-                .findings
+/// [`PrimitiveError::InvalidArgument`] when a rule fires at no such file and no earlier
+/// write of this run stored it.
+fn new_waiver_entries(
+    args: &WriteReviewArgs,
+    surviving: &[RawWaiverFull],
+) -> Result<(
+    Vec<RawWaiverFull>,
+    Vec<crate::schema::primitives::WaiverRef>,
+)> {
+    let mut entries = Vec::new();
+    let mut anchors = Vec::new();
+    for (idx, waiver) in args.new_waivers.iter().enumerate() {
+        let held = |file: &str| {
+            surviving.iter().any(|entry| {
+                entry.rule.as_deref() == Some(waiver.rule.as_str())
+                    && entry
+                        .file
+                        .as_ref()
+                        .is_some_and(|paths| paths.as_slice().iter().any(|path| path == file))
+            })
+        };
+        let firing: std::collections::BTreeSet<&str> = args
+            .findings
+            .iter()
+            .filter(|finding| {
+                finding.rule == waiver.rule
+                    && waiver_reason(finding, &args.applied_waivers).is_none()
+            })
+            .map(|finding| finding.file.as_str())
+            .collect();
+        let stored_by_this_run = surviving.iter().any(|entry| {
+            entry.rule.as_deref() == Some(waiver.rule.as_str())
+                && entry.waived_at.as_deref() == Some(args.reviewed_at.as_str())
+        });
+        if firing.is_empty() && !stored_by_this_run {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("new-waivers[{idx}]"),
+                reason: format!(
+                    "`{}` fires at no file in this run that a waiver does not already hold",
+                    waiver.rule
+                ),
+            });
+        }
+        anchors.extend(
+            firing
                 .iter()
-                .filter(|finding| {
-                    finding.rule == waiver.rule
-                        && waiver_reason(finding, &args.applied_waivers).is_none()
-                })
-                .map(|finding| finding.file.as_str())
-                .collect();
-            if files.is_empty() {
-                return Err(PrimitiveError::InvalidArgument {
-                    primitive: "write-review".into(),
-                    argument: format!("new-waivers[{idx}]"),
-                    reason: format!(
-                        "`{}` fires at no file in this run that a waiver does not already hold",
-                        waiver.rule
-                    ),
-                });
-            }
-            Ok(RawWaiverFull {
+                .map(|file| crate::schema::primitives::WaiverRef {
+                    rule: waiver.rule.clone(),
+                    file: (*file).to_string(),
+                    reason: waiver.reason.clone(),
+                }),
+        );
+        let fresh: Vec<String> = firing
+            .iter()
+            .filter(|file| !held(file))
+            .map(|file| (*file).to_string())
+            .collect();
+        if !fresh.is_empty() {
+            entries.push(RawWaiverFull {
                 rule: Some(waiver.rule.clone()),
-                file: Some(WaiverPaths::of(
-                    files.into_iter().map(str::to_string).collect(),
-                )),
+                file: Some(WaiverPaths::of(fresh)),
                 reason: Some(waiver.reason.clone()),
                 waived_at: Some(args.reviewed_at.clone()),
                 waived_by: args.decided_by.clone(),
                 extra: std::collections::BTreeMap::new(),
-            })
-        })
-        .collect()
+            });
+        }
+    }
+    Ok((entries, anchors))
 }
 
 /// The arguments as this run records them: each new waiver's anchors applied, so its
-/// findings leave the counts as an applied waiver's do, and an observation the rule
-/// waived carrying the decision of the person it cannot replace.
+/// findings leave the counts as an applied waiver's do; an observation the rule waived
+/// carrying the decision of the person it cannot replace; and an observation whose stored
+/// decision says it is a broken contract staying one, since the hold must not depend on a
+/// host marking it again (spec 079).
 fn settled<'a>(
     args: &'a WriteReviewArgs,
-    new_waivers: &[RawWaiverFull],
+    new_anchors: Vec<crate::schema::primitives::WaiverRef>,
     feature_dir: &Path,
 ) -> Result<std::borrow::Cow<'a, WriteReviewArgs>> {
     let stored = decisions::read_decisions(feature_dir, super::REVIEW_RECORD_FILE)?;
@@ -1723,22 +1784,31 @@ fn settled<'a>(
                 .map(|decision| (idx, decision))
         })
         .collect();
-    if new_waivers.is_empty() && overruled.is_empty() {
+    let still_broken: Vec<usize> = args
+        .observations
+        .iter()
+        .enumerate()
+        .filter(|(_, observation)| {
+            let key = observation_key(observation);
+            !observation.contract_break
+                && !args
+                    .expired_decisions
+                    .iter()
+                    .any(|gone| decisions::same_key(&gone.key, &key))
+                && decisions::stored_as_a_break(&stored, &key)
+        })
+        .map(|(idx, _)| idx)
+        .collect();
+    if new_anchors.is_empty() && overruled.is_empty() && still_broken.is_empty() {
         return Ok(std::borrow::Cow::Borrowed(args));
     }
     let mut args = args.clone();
-    for entry in new_waivers {
-        let paths = entry.file.as_ref().map_or(&[][..], WaiverPaths::as_slice);
-        args.applied_waivers.extend(paths.iter().map(|file| {
-            crate::schema::primitives::WaiverRef {
-                rule: entry.rule.clone().unwrap_or_default(),
-                file: file.clone(),
-                reason: entry.reason.clone().unwrap_or_default(),
-            }
-        }));
-    }
+    args.applied_waivers.extend(new_anchors);
     for (idx, decision) in overruled {
         args.observations[idx].disposition = decision;
+    }
+    for idx in still_broken {
+        args.observations[idx].contract_break = true;
     }
     Ok(std::borrow::Cow::Owned(args))
 }
@@ -1776,6 +1846,13 @@ fn standing_decision(
     })
 }
 
+/// The waivers that survive this run: every recorded waiver the run did not
+/// expire, with its open-schema extras intact.
+///
+/// Extracted when the report started carrying the whole record: the report is
+/// rendered before the record is assembled, and computing the surviving set
+/// twice would be two chances to prune differently — the class of divergence
+/// the retired `check-review-agreement` was built to catch.
 fn surviving_waivers(feature_dir: &Path, args: &WriteReviewArgs) -> Result<Vec<RawWaiverFull>> {
     let recorded: Vec<RawWaiverFull> = crate::primitives::read_recorded_waivers(feature_dir)?;
     Ok(recorded
@@ -2251,8 +2328,6 @@ mod tests {
         assert!(!report.contains("excluded from scope."), "{report}");
     }
 
-    /// An unstated claim is **absent**, never rendered as a computed zero —
-    /// the distinction the field exists to preserve.
     /// A run's own record is what it writes, not what it read, so a run's two writes
     /// state one denominator and a committed earlier record is no file in it (spec 079).
     #[test]
@@ -2295,6 +2370,8 @@ mod tests {
         assert!(second.contains("\nscope: 1\n"), "{second}");
     }
 
+    /// An unstated claim is **absent**, never rendered as a computed zero —
+    /// the distinction the field exists to preserve.
     #[test]
     fn unstated_examined_is_absent_rather_than_zero() {
         let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -3771,6 +3848,224 @@ mod tests {
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "new-waivers[1].rule"),
             "{error}"
+        );
+    }
+
+    /// A run writes its record twice with one set of arguments, so its second write
+    /// stores nothing new, and the finding stays waived (spec 079).
+    #[test]
+    fn a_new_waiver_through_both_writes_is_stored_once() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![must_at("SEC-1", "src/a.rs")];
+        args.new_waivers = vec![waive("SEC-1", "internal")];
+        args.loop_open = true;
+        run(&args, tmp.path()).unwrap();
+        args.loop_open = false;
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0);
+        let report = review_md(&tmp, "001-x");
+        assert_eq!(report.matches("rule: SEC-1").count(), 1, "{report}");
+    }
+
+    /// A fix between a run's writes that clears the finding asks nothing of the last,
+    /// or a run could not finish; a later run's has no such standing.
+    #[test]
+    fn a_new_waiver_whose_finding_a_fix_cleared_lets_the_last_write_finish() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![must_at("SEC-1", "src/a.rs")];
+        args.new_waivers = vec![waive("SEC-1", "internal")];
+        run(&args, tmp.path()).unwrap();
+        args.findings = Vec::new();
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(review_md(&tmp, "001-x").matches("rule: SEC-1").count(), 1);
+
+        args.reviewed_at = "2026-07-03T12:00:00Z".into();
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "new-waivers[0]"),
+            "{error}"
+        );
+    }
+
+    /// A stored decision remembers it is a broken contract's, so a run that matches it
+    /// keeps the hold without a host marking it again (spec 079).
+    #[test]
+    fn a_stored_break_stays_one_when_a_later_run_matches_it() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = Some("dev@example.com".into());
+        let mut deferred = broken("src/a.rs", DispositionOutcome::Deferred, None);
+        deferred.disposition.work_item = Some("JIRA-1".into());
+        deferred.disposition.target = None;
+        first.observations = vec![deferred.clone()];
+        run(&first, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("contract-break: true"), "{report}");
+        assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"]);
+
+        let mut next = base_args("001-x");
+        let mut matched = deferred;
+        matched.contract_break = false;
+        next.observations = vec![matched.clone()];
+        run(&next, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
+        assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"]);
+
+        // Expired, the decision stands for nothing, and neither does its mark.
+        let mut after = base_args("001-x");
+        after.decided_by = Some("dev@example.com".into());
+        after.expired_decisions = vec![DecisionRef {
+            key: "bug: src/a.rs — `src/a.rs`".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: None,
+            task: None,
+            work_item: Some("JIRA-1".into()),
+            reason: None,
+            by_rule: false,
+        }];
+        after.observations = vec![matched];
+        run(&after, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("\ncontract-breaks: 0\n"), "{report}");
+        assert!(listed_open(&tmp, "001-x").is_empty(), "{report}");
+    }
+
+    /// A `:line:column` reads as the file, in a list and through a key alike.
+    #[test]
+    fn a_line_and_column_leave_the_file_a_break_names() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.observations = vec![broken(
+            "src/b.rs:3:9",
+            DispositionOutcome::Undispositioned,
+            None,
+        )];
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(listed_open(&tmp, "001-x"), vec!["src/b.rs"]);
+        assert_eq!(
+            decisions::key_anchor("bug: a thing — `src/b.rs:3:9`"),
+            Some("src/b.rs")
+        );
+    }
+
+    /// With a record counting a MUST and listing nothing, as one from before the list does,
+    /// a window holding nothing refuses whether or not the caller said so, as `ductus exec`
+    /// never does, and one holding a file does not.
+    #[test]
+    fn an_empty_window_refuses_over_a_counted_finding_without_the_flag() {
+        let tmp = tempdir().unwrap();
+        repo_with_another_specs_commit(&tmp);
+        let repository = git2::Repository::open(tmp.path()).unwrap();
+        fs::write(
+            tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 1\nblocking: true\n---\n\n# Review\n",
+        )
+        .unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "review(001): the run");
+        let head = repository
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string();
+
+        let mut empty = base_args("001-x");
+        empty.diff_base = head;
+        let before = review_md(&tmp, "001-x");
+        let error = run(&empty, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "empty-scope"),
+            "{error}"
+        );
+        assert_eq!(review_md(&tmp, "001-x"), before);
+
+        std::fs::write(tmp.path().join("src/mine.rs"), "changed\n").unwrap();
+        run(&empty, tmp.path()).unwrap();
+    }
+
+    /// A record the last run left uncommitted is what this run writes over, not a file it
+    /// read, so it keeps no window from holding nothing.
+    #[test]
+    fn an_uncommitted_record_keeps_no_window_from_being_empty() {
+        let tmp = tempdir().unwrap();
+        repo_with_another_specs_commit(&tmp);
+        let head = git2::Repository::open(tmp.path())
+            .unwrap()
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string();
+        fs::write(
+            tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 1\nblocking: true\n---\n\n# Review\n",
+        )
+        .unwrap();
+        let mut empty = base_args("001-x");
+        empty.diff_base = head;
+        let error = run(&empty, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "empty-scope"),
+            "{error}"
+        );
+    }
+
+    /// A window that cannot be read says nothing, so it is no empty one and refuses nothing.
+    #[test]
+    fn a_window_that_cannot_be_read_refuses_nothing() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        fs::write(
+            tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 1\nblocking: true\n---\n\n# Review\n",
+        )
+        .unwrap();
+        run(&base_args("001-x"), tmp.path()).unwrap();
+    }
+
+    /// Nothing can say a damaged record counts no finding, so an empty scope does not
+    /// write over it as a clean run.
+    #[test]
+    fn an_empty_scope_over_an_unreadable_record_refuses() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let file = tmp.path().join("specs/001-x/review.md");
+        std::fs::write(
+            &file,
+            "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nmust-violations: many\nblocking: true\n---\n\n# Review\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "empty-scope"),
+            "{error}"
+        );
+    }
+
+    /// An empty run's summary says what its record holds.
+    #[test]
+    fn an_empty_scope_summary_names_a_break_it_holds() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        args.observations = vec![broken(
+            "src/a.rs",
+            DispositionOutcome::Undispositioned,
+            None,
+        )];
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains("A broken contract among its observations"),
+            "{report}"
         );
     }
 
