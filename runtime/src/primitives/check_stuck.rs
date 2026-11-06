@@ -1,8 +1,8 @@
-//! `check-stuck` — count commits on `tasks.md` since the spec entered
-//! `in-progress`, surfacing cycles where the same task is touched repeatedly.
+//! `check-stuck` — count commits on `tasks.md` since the spec's reopening started,
+//! surfacing cycles where the same task is touched repeatedly.
 //!
 //! History reading is branch-shape tolerant (scenario
-//! `primitive-robustness-hardening`): the `in-progress` transition commit
+//! `primitive-robustness-hardening`): the commit a reopening started at
 //! is found even when it landed on a merged side branch, transitions are
 //! detected by comparing each commit's status against its *own parents'*
 //! blobs (never against walk-order neighbors, which fabricates phantom
@@ -12,7 +12,7 @@
 //! On a repo with no merge commits the results are identical to the
 //! pre-hardening behavior.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use git2::{Repository, Sort};
@@ -125,23 +125,21 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
     None
 }
 
-/// Walk every commit reachable from HEAD looking for the most recent
-/// commit whose `spec.md` transitions `status` *into* `in-progress`.
-/// Returns the sha of that commit, or `None` when no such transition
-/// exists.
+/// The commit the spec's newest reopening started at, or `None` when it has had none:
+/// where it last left `done`, or, on a spec never `done`, where it first entered
+/// `in-progress`. A trip back through `draft` stays in the reopening, since it never
+/// reaches `done`, so the work before it stays in every window that starts here (spec 079).
 ///
 /// Branch-shape tolerance: the walk covers all parents (not just the
-/// first-parent chain), so a transition commit that landed on a merged
-/// side branch is still visited. A commit is a transition exactly when
-/// its own status is `in-progress` and *none of its own parents'* is —
-/// comparing against walk-order neighbors (the pre-hardening behavior)
-/// fabricates phantom transitions when the topological order interleaves
-/// commits from different branches. A merge that simply carries an
-/// already-in-progress parent forward is not a transition; the real
-/// transition lives in that parent's history and is found there.
+/// first-parent chain), so a start that landed on a merged side branch is still
+/// visited. A commit is judged against its own parents, since comparing against
+/// walk-order neighbors (the pre-hardening behavior) fabricates phantom transitions
+/// when the topological order interleaves commits from different branches. A merge
+/// that simply carries a parent's open reopening forward starts nothing; the real
+/// start lives in that parent's history and is found there.
 ///
 /// With `TOPOLOGICAL | REVERSE` sorting parents are always visited
-/// before children, so "most recent" is the last transition seen.
+/// before children, so "most recent" is the last start seen.
 ///
 /// The status-parse memoization is keyed by the spec's tree-entry **blob
 /// OID**, not the commit OID: the `spec.md` blob is byte-identical across
@@ -156,33 +154,58 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
 /// not from the project root; a project-relative name finds no history in a
 /// project that is a subdirectory of its repository (spec 059).
 pub(crate) fn find_in_progress_commit(repo: &Repository, spec_rel: &str) -> Result<Option<String>> {
+    Ok(walk_reopenings(repo, spec_rel)?
+        .newest
+        .map(|start| start.to_string()))
+}
+
+/// Whether `HEAD` lies inside a reopening, so an uncommitted return to `in-progress` is
+/// that reopening's and starts nothing.
+pub(crate) fn reopening_is_open(repo: &Repository, spec_rel: &str) -> Result<bool> {
+    Ok(walk_reopenings(repo, spec_rel)?.open_at_head)
+}
+
+/// What one walk of a spec's status history says about its reopenings.
+struct ReopeningWalk {
+    newest: Option<git2::Oid>,
+    open_at_head: bool,
+}
+
+fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
     let mut walk = repo.revwalk()?;
     walk.push_head()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
 
-    let mut newest_in_progress: Option<String> = None;
+    let mut newest = None;
+    let mut inside: HashSet<git2::Oid> = HashSet::new();
     let mut status_by_blob: HashMap<git2::Oid, Option<String>> = HashMap::new();
     for oid in walk {
         let oid = oid?;
-        let status = status_of_commit(repo, &mut status_by_blob, oid, spec_rel)?;
-        if status.as_deref() != Some("in-progress") {
+        let Some(status) = status_of_commit(repo, &mut status_by_blob, oid, spec_rel)? else {
+            continue;
+        };
+        if status == "done" {
             continue;
         }
-        let commit = repo.find_commit(oid)?;
-        let mut parent_in_progress = false;
-        for parent in commit.parent_ids() {
-            if status_of_commit(repo, &mut status_by_blob, parent, spec_rel)?.as_deref()
-                == Some("in-progress")
-            {
-                parent_in_progress = true;
-                break;
-            }
+        let mut carried = false;
+        let mut left_done = false;
+        for parent in repo.find_commit(oid)?.parent_ids() {
+            carried |= inside.contains(&parent);
+            left_done |= status_of_commit(repo, &mut status_by_blob, parent, spec_rel)?.as_deref()
+                == Some("done");
         }
-        if !parent_in_progress {
-            newest_in_progress = Some(oid.to_string());
+        if carried {
+            inside.insert(oid);
+        } else if left_done || status == "in-progress" {
+            inside.insert(oid);
+            newest = Some(oid);
         }
     }
-    Ok(newest_in_progress)
+    let head = repo.head()?.peel_to_commit()?.id();
+    Ok(ReopeningWalk {
+        newest,
+        open_at_head: inside.contains(&head),
+    })
 }
 
 /// Read (with memoization) the spec's `status:` value at a commit.
@@ -559,6 +582,75 @@ mod tests {
     /// `done` (no reopen has occurred) must still produce the correct
     /// count from its single `in-progress` transition. The fix to the
     /// reopen case must not break this routine path.
+    /// The commit each status in turn lands at, with the last one's sha returned.
+    fn walk_statuses(statuses: &[&str]) -> (tempfile::TempDir, Repository, Vec<git2::Oid>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/010-demo/spec.md");
+        let mut commits = Vec::new();
+        for status in statuses {
+            write(&spec_path, &spec(status));
+            commits.push(commit_all(&repo, &format!("status: {status}")));
+        }
+        (tmp, repo, commits)
+    }
+
+    fn start_of(repo: &Repository) -> Option<String> {
+        find_in_progress_commit(repo, "specs/010-demo/spec.md").unwrap()
+    }
+
+    /// A trip through `draft` never reaches `done`, so it is one reopening, starting
+    /// where the spec left `done`.
+    #[test]
+    fn a_trip_through_draft_stays_in_its_reopening() {
+        let (_tmp, repo, commits) = walk_statuses(&[
+            "done",
+            "in-progress",
+            "draft",
+            "clarified",
+            "planned",
+            "in-progress",
+        ]);
+        assert_eq!(start_of(&repo), Some(commits[1].to_string()));
+    }
+
+    /// Never `done`: its first entry into `in-progress`, though a trip follows it.
+    #[test]
+    fn a_spec_never_done_starts_at_its_first_entry() {
+        let (_tmp, repo, commits) =
+            walk_statuses(&["planned", "in-progress", "draft", "planned", "in-progress"]);
+        assert_eq!(start_of(&repo), Some(commits[1].to_string()));
+    }
+
+    /// The back-edge from `done` itself: the reopening starts where it left `done`.
+    #[test]
+    fn leaving_done_for_draft_starts_the_reopening() {
+        let (_tmp, repo, commits) =
+            walk_statuses(&["done", "draft", "clarified", "planned", "in-progress"]);
+        assert_eq!(start_of(&repo), Some(commits[1].to_string()));
+    }
+
+    /// `done` ends a reopening, so the next one starts afresh.
+    #[test]
+    fn reaching_done_ends_the_reopening() {
+        let (_tmp, repo, commits) =
+            walk_statuses(&["in-progress", "draft", "in-progress", "done", "in-progress"]);
+        assert_eq!(start_of(&repo), Some(commits[4].to_string()));
+    }
+
+    /// `HEAD` on the way back through `draft` is inside the reopening; at `done`, or
+    /// before the first entry, it is not.
+    #[test]
+    fn a_reopening_is_open_until_it_reaches_done() {
+        let spec_rel = "specs/010-demo/spec.md";
+        let (_tmp, repo, _) = walk_statuses(&["done", "in-progress", "draft", "planned"]);
+        assert!(reopening_is_open(&repo, spec_rel).unwrap());
+        let (_tmp, repo, _) = walk_statuses(&["done", "in-progress", "done"]);
+        assert!(!reopening_is_open(&repo, spec_rel).unwrap());
+        let (_tmp, repo, _) = walk_statuses(&["draft", "clarified", "planned"]);
+        assert!(!reopening_is_open(&repo, spec_rel).unwrap());
+    }
+
     #[test]
     fn first_in_progress_works_when_never_reopened() {
         let tmp = tempfile::tempdir().unwrap();

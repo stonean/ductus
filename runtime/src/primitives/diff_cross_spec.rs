@@ -161,7 +161,7 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
 }
 
 /// Where the window starts: `HEAD` while the spec's move into `in-progress` is
-/// uncommitted, the parent of the commit that last made that move, or for a spec
+/// uncommitted, the parent of the commit its reopening started at, or for a spec
 /// never `in-progress` its first spec-directory commit. `None` when no commit
 /// touches the spec directory.
 fn window_base(
@@ -653,6 +653,25 @@ mod tests {
         commit_all(&repo, "fix(020): undone");
         let result = compute(&args("020-demo"), tmp.path()).unwrap();
         assert_eq!(result.cross_spec_paths, [] as [String; 0]);
+    }
+
+    /// A trip through `draft` is one reopening, so the impact made before it stays.
+    #[test]
+    fn a_trip_through_draft_keeps_the_impact_made_before_it() {
+        let (tmp, repo, parent) = in_progress();
+        touch(
+            &tmp,
+            &repo,
+            "specs/007-sibling/before.md",
+            "feat(020): before the trip",
+        );
+        for status in ["draft", "planned", "in-progress"] {
+            write(&tmp.path().join("specs/020-demo/spec.md"), &spec(status));
+            commit_all(&repo, "status(020): back");
+        }
+        let result = compute(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.window_base, parent);
+        assert_eq!(result.cross_spec_paths, ["specs/007-sibling/before.md"]);
     }
 
     #[test]

@@ -133,6 +133,12 @@ its version and date.
   passes and its last omits, and `check-review-gate` blocks while it is present,
   as `fix-round-loop-open`. A record with no mark, an older one or one from `ductus
   exec`, is unaffected.
+- **A trip back through `draft` stays in its reopening.** A spec's reopening now
+  starts where it last left `done` or, never `done`, where it first entered
+  `in-progress`, for the review window, `diff-cross-spec`, `check-stuck` and
+  `measure-reopenings`. A return to `in-progress` used to start a new one, so the
+  earlier code left the window and reached `done` unread; runs on both sides of the
+  trip now count together, so a second clean review is over the bound.
 - **The pre-`done` gate blocks on a review a spec owes, ahead of every analyze
   check.** `check-review-gate`'s `blocked-by` gains `review-owed`, which names what
   changed since the last review and clears once a review's record is committed.

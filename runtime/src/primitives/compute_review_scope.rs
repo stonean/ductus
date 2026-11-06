@@ -30,7 +30,7 @@ use regex::Regex;
 
 use crate::primitives::analyze_subjects::{is_review_contract, review_freshness};
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
-use crate::primitives::check_stuck::find_in_progress_commit;
+use crate::primitives::check_stuck::{find_in_progress_commit, reopening_is_open};
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
     PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text, frontmatter_status,
@@ -264,7 +264,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
 
 /// Where the review's window starts, and why: a `--since` override used
 /// verbatim, `HEAD` while the spec's move into `in-progress` is uncommitted, the
-/// last review run finished since that move, or the move's parent.
+/// last review run finished since its reopening started, or that start's parent.
 fn resolve_base(
     args: &ComputeReviewScopeArgs,
     project: &ProjectRepository,
@@ -626,7 +626,8 @@ fn entry_pattern(entry: &str) -> Option<Regex> {
 
 /// Whether the spec's move into `in-progress` is still uncommitted: `spec.md`
 /// on disk reads `in-progress` and the spec at `HEAD` does not — `done`,
-/// `planned`, any other status, or no spec at all.
+/// `planned`, any other status, or no spec at all — and no reopening is open at
+/// `HEAD`, since a return from a trip through `draft` starts nothing new.
 ///
 /// Keyed on the on-disk status being `in-progress`, not on the two statuses
 /// differing: an uncommitted `in-progress -> done` flip also differs, and
@@ -657,7 +658,14 @@ pub(crate) fn transition_is_uncommitted(
     let head_status = project
         .read_at_head(&rel)?
         .and_then(|content| frontmatter_status(&content, Path::new(&rel)));
-    Ok(head_status.as_deref() != Some("in-progress"))
+    if head_status.as_deref() == Some("in-progress") {
+        return Ok(false);
+    }
+    // Back from a trip through `draft`, the reopening's start is already in history.
+    Ok(!reopening_is_open(
+        &project.repository,
+        &project.to_git(&rel),
+    )?)
 }
 
 /// The first parent of the status-transition commit `sha`, or `sha` itself
@@ -1494,7 +1502,7 @@ mod tests {
         );
         write(
             &tmp.path().join("specs/001-x/review.md"),
-            &record("", "2026-11-01T00:00:00Z"),
+            &record(DISPOSITIONS, "2026-11-01T00:00:00Z"),
         );
         write(&tmp.path().join("src/fix.rs"), "fn fix() {}\n");
         commit_all(&repo, "fix(001): reopen with its work");
@@ -1630,6 +1638,62 @@ mod tests {
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
     }
 
+    /// A spec reopened with code, then taken back through `draft`.
+    fn back_through_draft(tmp: &tempfile::TempDir, repo: &Repository) -> String {
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+        );
+        let reopen_parent = commit_all(repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(repo, "status(001): reopen");
+        change(tmp, repo, "src/a.rs", "feat(001): the code");
+        for status in ["draft", "clarified", "planned"] {
+            write(&tmp.path().join("specs/001-x/spec.md"), &spec(status));
+            commit_all(repo, "status(001): back");
+        }
+        reopen_parent
+    }
+
+    /// A trip through `draft` never reaches `done`, so its earlier code stays in the
+    /// window and a review stays owed.
+    #[test]
+    fn a_trip_through_draft_keeps_its_earlier_code_in_the_window() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let reopen_parent = back_through_draft(&tmp, &repo);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): back in progress");
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, reopen_parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// The return not yet committed is the same reopening, not a new transition.
+    #[test]
+    fn an_uncommitted_return_from_draft_keeps_the_window() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let reopen_parent = back_through_draft(&tmp, &repo);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, reopen_parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
+    }
+
     #[test]
     fn a_stopped_run_falls_back_to_the_last_finished_one() {
         let (tmp, repo, _) = two_specs(&[], &[]);
@@ -1648,7 +1712,7 @@ mod tests {
         let (tmp, _repo, parent) = two_specs(&[], &[]);
         write(
             &tmp.path().join("specs/001-x/review.md"),
-            &record("", "2026-11-01T00:00:00Z"),
+            &record(DISPOSITIONS, "2026-11-01T00:00:00Z"),
         );
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
@@ -1988,7 +2052,7 @@ mod tests {
         let (tmp, _repo, _) = two_specs(&["src/planned.rs"], &[]);
         write(
             &tmp.path().join("specs/001-x/review.md"),
-            &record("", "2026-11-01T00:00:00Z"),
+            &record(DISPOSITIONS, "2026-11-01T00:00:00Z"),
         );
         assert!(has(&x(&tmp), "src/planned.rs"));
     }

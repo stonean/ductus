@@ -481,6 +481,27 @@ impl<'a> History<'a> {
         Ok(status)
     }
 
+    /// Whether the reopening holding this entry into `in-progress` opened earlier: an
+    /// earlier entry, or a `done` it has since left, on the first-parent chain. A trip
+    /// through `draft` never reaches `done`, so it stays in one reopening.
+    fn opened_earlier(&mut self, entry: &Commit<'_>, feature: &str) -> Result<bool> {
+        let mut current = entry.parent(0).ok();
+        while let Some(ancestor) = current {
+            let directories = self.directories_of(&ancestor)?;
+            let Some(directory) = directories.get(feature) else {
+                return Ok(false);
+            };
+            if matches!(
+                self.status_of(*directory)?.as_deref(),
+                Some(IN_PROGRESS | DONE)
+            ) {
+                return Ok(true);
+            }
+            current = ancestor.parent(0).ok();
+        }
+        Ok(false)
+    }
+
     /// Both records of one version of a feature directory, each parsed once per
     /// blob.
     fn records_of(&mut self, directory: Oid) -> Result<Records> {
@@ -720,7 +741,10 @@ fn walk(
                 continue;
             };
             pass.observe(&history.records_of(*directory)?);
-            if status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS) {
+            let entered = status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS);
+            let left_done =
+                status.as_deref() != Some(DONE) && any_parent(DONE) && !any_parent(IN_PROGRESS);
+            if left_done || (entered && !history.opened_earlier(&commit, feature)?) {
                 let mut carried_in = HashSet::new();
                 for parent in &parents {
                     if let Some(earlier) = parent.get(feature) {
@@ -785,6 +809,23 @@ mod tests {
             let dir = tempfile::tempdir().unwrap();
             let root = dir.path().to_path_buf();
             let repository = Repository::init(&root).unwrap();
+            let fixture = Self {
+                _dir: dir,
+                root,
+                repository,
+            };
+            fixture.write("spec.md", &spec("planned"));
+            commit_all(&fixture.repository, "plan(012): plan");
+            fixture
+        }
+
+        /// As [`Self::new`], with an earlier commit the spec is absent from.
+        fn after_an_earlier_commit() -> Self {
+            let dir = tempfile::tempdir().unwrap();
+            let root = dir.path().to_path_buf();
+            let repository = Repository::init(&root).unwrap();
+            write(&root.join("README.md"), "earlier\n");
+            commit_all(&repository, "chore: earlier");
             let fixture = Self {
                 _dir: dir,
                 root,
@@ -1465,21 +1506,79 @@ mod tests {
         assert_eq!(at_start.waiting, vec![FEATURE.to_string()]);
     }
 
-    /// A pass delimited by the last entry into `in-progress`: a question's `draft`
-    /// back-edge ends the earlier stretch, and its run is not this reopening's.
+    /// A trip through `draft` never reaches `done`, so it is one reopening, its runs on
+    /// both sides counted together, and a second clean review is over the bound.
     #[test]
-    fn a_reopening_starts_at_the_last_entry_into_in_progress() {
+    fn a_trip_through_draft_is_one_reopening() {
         let fixture = Fixture::new();
-        fixture.status("in-progress");
+        let start = fixture.status("in-progress");
         fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
         fixture.status("draft");
         fixture.status("planned");
-        let start = fixture.status("in-progress");
+        fixture.status("in-progress");
+        fixture.commit("review.md", &review("2026-01-02T00:00:00Z", ""));
         let end = fixture.status("done");
-        let uncounted = fixture.only_not_counted();
-        assert_eq!(uncounted.start, Some(start.to_string()));
-        assert_eq!(uncounted.end, end.to_string());
-        assert_eq!(uncounted.reason, NotCountedReason::NoRecordedRun);
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.start, start.to_string());
+        assert_eq!(reopening.end, end.to_string());
+        assert_eq!(reopening.reviews, 2);
+        assert!(reopening.over_bound);
+    }
+
+    /// The back-edge from `done` itself: the reopening starts where it left `done`, so
+    /// a run recorded before it returned to `in-progress` is this reopening's.
+    #[test]
+    fn leaving_done_for_draft_starts_the_reopening() {
+        let fixture = Fixture::new();
+        fixture.status("done");
+        let start = fixture.status("draft");
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.status("in-progress");
+        let end = fixture.status("done");
+        let reopenings: Vec<_> = fixture
+            .measure()
+            .reopenings
+            .into_iter()
+            .filter(|r| r.end == end.to_string())
+            .collect();
+        assert_eq!(reopenings.len(), 1, "{reopenings:?}");
+        assert_eq!(reopenings[0].start, start.to_string());
+        assert_eq!(reopenings[0].reviews, 1);
+    }
+
+    /// A merge carrying a side branch's entry starts nothing, though its first parent
+    /// had not entered `in-progress`: the entry on the branch does.
+    #[test]
+    fn a_merge_carrying_an_entry_from_its_second_parent_starts_nothing() {
+        let fixture = Fixture::new();
+        let planned = fixture.repository.head().unwrap().target().unwrap();
+        fixture.write("spec.md", &spec("in-progress"));
+        let start = fixture.commit_at(100, &[planned], false);
+        fixture.write("review.md", &review("2026-01-01T00:00:00Z", ""));
+        let side = fixture.commit_at(101, &[start], false);
+        fixture.write("spec.md", &spec("planned"));
+        fixture.write("notes.md", "main\n");
+        let main = fixture.commit_at(102, &[planned], true);
+        fixture.write("spec.md", &spec("in-progress"));
+        fixture.commit_at(103, &[main, side], true);
+        let end = fixture.status("done");
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.start, start.to_string());
+        assert_eq!(reopening.end, end.to_string());
+        assert_eq!(reopening.reviews, 1);
+    }
+
+    /// A spec never `done` starts at its first entry, whatever preceded it, with the
+    /// scan for an earlier one ending where the spec did not yet exist.
+    #[test]
+    fn a_first_entry_starts_the_reopening_of_a_spec_never_done() {
+        let fixture = Fixture::after_an_earlier_commit();
+        fixture.status("clarified");
+        fixture.status("planned");
+        let start = fixture.status("in-progress");
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.status("done");
+        assert_eq!(fixture.only_reopening().start, start.to_string());
     }
 
     /// A status that reaches `done` from anywhere but `in-progress`, as a squashed

@@ -15,7 +15,7 @@ The numbered steps in `implement.md`'s Instructions invoke the primitives that a
 
 ## Stuck-detection details
 
-When `check-stuck` (step 3) reports stuck — at least 3 commits on `tasks.md` since the spec entered in-progress, with the same task still the first incomplete one — surface the cycle to the user with this message: `Task {N} ({title}) has been touched in {count} prior implement runs without completing. Consider decomposing it into smaller subtasks before continuing.` Pause and wait for user direction; do not auto-decompose. The threshold of 3 is fixed (not configurable in v1) — smallest count that distinguishes routine multi-session work from a cycle.
+When `check-stuck` (step 3) reports stuck — at least 3 commits on `tasks.md` since the spec's reopening started, with the same task still the first incomplete one — surface the cycle to the user with this message: `Task {N} ({title}) has been touched in {count} prior implement runs without completing. Consider decomposing it into smaller subtasks before continuing.` Pause and wait for user direction; do not auto-decompose. The threshold of 3 is fixed (not configurable in v1) — smallest count that distinguishes routine multi-session work from a cycle.
 
 ## Progressive context loading
 

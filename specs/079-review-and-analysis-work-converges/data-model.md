@@ -43,7 +43,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 ## `diff-cross-spec` result
 
-`window-base` replaces `first-commit`: the parent of the spec's last `in-progress` commit, or its first spec-directory commit when it has never been `in-progress`. `cross-spec-paths` holds only what commits belonging to the spec changed, plus uncommitted sibling paths. `derive-boundary` keeps its own `first-commit`.
+`window-base` replaces `first-commit`: the parent of the commit the spec's reopening started at, or its first spec-directory commit when it has never been `in-progress`. `cross-spec-paths` holds only what commits belonging to the spec changed, plus uncommitted sibling paths. `derive-boundary` keeps its own `first-commit`.
 
 ## `measure-reopenings` (new primitive)
 

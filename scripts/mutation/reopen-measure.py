@@ -452,9 +452,9 @@ MUTATIONS = [
     (
         'M63 any commit at in-progress starts the pass',
         'src/primitives/measure_reopenings.rs',
-        'if status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS) {',
-        'if status.as_deref() == Some(IN_PROGRESS) {',
-        'measure_reopenings::tests::one_review_and_one_analysis_are_within_the_bound',
+        'let entered = status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS);',
+        'let entered = status.as_deref() == Some(IN_PROGRESS);',
+        'measure_reopenings::tests::a_merge_carrying_an_entry_from_its_second_parent_starts_nothing',
     ),
     (
         'M64 a closing from another status reaches back',
@@ -644,5 +644,40 @@ MUTATIONS = [
         '            run_decisions: run_decisions(DecisionRecord::Review, &reviews)\n                .chain(run_decisions(DecisionRecord::Analysis, &analyses))\n',
         '            run_decisions: run_decisions(DecisionRecord::Review, &reviews)\n',
         'measure_reopenings::tests::decisions_by_person_counts_only_a_runs_own_and_never_the_rules',
+    ),
+    (
+        'M91 a return from draft closes the reopening',
+        'src/primitives/measure_reopenings.rs',
+        '(entered && !history.opened_earlier(&commit, feature)?)',
+        'entered',
+        'measure_reopenings::tests::a_trip_through_draft_is_one_reopening',
+    ),
+    (
+        'M92 leaving done for draft opens no reopening',
+        'src/primitives/measure_reopenings.rs',
+        'if left_done || (entered && !history.opened_earlier(&commit, feature)?) {',
+        'if false && left_done || (entered && !history.opened_earlier(&commit, feature)?) {',
+        'measure_reopenings::tests::leaving_done_for_draft_starts_the_reopening',
+    ),
+    (
+        'M93 an earlier entry does not hold the reopening open',
+        'src/primitives/measure_reopenings.rs',
+        'Some(IN_PROGRESS | DONE)',
+        'Some(DONE)',
+        'measure_reopenings::tests::a_trip_through_draft_is_one_reopening',
+    ),
+    (
+        'M94 a done it has left does not hold the reopening open',
+        'src/primitives/measure_reopenings.rs',
+        'Some(IN_PROGRESS | DONE)',
+        'Some(IN_PROGRESS)',
+        'measure_reopenings::tests::leaving_done_for_draft_starts_the_reopening',
+    ),
+    (
+        'M95 a first entry never closes a reopening',
+        'src/primitives/measure_reopenings.rs',
+        '            let Some(directory) = directories.get(feature) else {\n                return Ok(false);\n            };\n            if matches!',
+        '            let Some(directory) = directories.get(feature) else {\n                return Ok(true);\n            };\n            if matches!',
+        'measure_reopenings::tests::a_first_entry_starts_the_reopening_of_a_spec_never_done',
     ),
 ]

@@ -736,8 +736,8 @@ pub struct ComputeReviewScopeArgs {
     pub feature: String,
     /// Optional diff-base override (a git ref or sha), used verbatim. It moves
     /// only the window's start, and the scope rule still applies. When omitted,
-    /// the base is the later of the parent of the commit the spec advanced to
-    /// `in-progress` at and the last review commit since it that recorded no
+    /// the base is the later of the parent of the commit the spec's reopening
+    /// started at and the last review commit since it that recorded no
     /// skipped pass or budget stop and whose record the gate does not hold until
     /// a review runs, or `HEAD` when that transition is not committed yet.
     #[serde(default)]
@@ -817,9 +817,10 @@ pub struct ComputeReviewScopeResult {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum BaseSource {
-    /// The parent of the commit that last moved the spec into `in-progress`.
+    /// The parent of the commit the spec's reopening started at: where it last left
+    /// `done` or, never `done`, first entered `in-progress`.
     Reopen,
-    /// The last review commit since that move.
+    /// The last review commit since that start.
     LastReview,
     /// A `--since` override, used verbatim.
     Since,
@@ -2149,7 +2150,7 @@ pub struct CheckStuckResult {
     /// Whether `commit-count >= threshold` and the same task is still
     /// incomplete.
     pub stuck: bool,
-    /// Sha at which the status entered `in-progress` (origin of the count).
+    /// Sha the spec's reopening started at (origin of the count).
     pub since_sha: String,
     /// Threshold echoed from args.
     pub threshold: u32,
@@ -4931,7 +4932,8 @@ pub enum NotCountedReason {
 pub struct Reopening {
     /// Feature directory name.
     pub feature: String,
-    /// The commit that last entered `in-progress`.
+    /// The commit the reopening started at: where the spec left `done` or, never
+    /// `done`, first entered `in-progress`.
     pub start: String,
     /// The commit that made the spec `done`.
     pub end: String,
@@ -4965,7 +4967,7 @@ pub struct RunDecisions {
 pub struct NotCountedReopening {
     /// Feature directory name.
     pub feature: String,
-    /// The commit that last entered `in-progress`. Absent when no pass shows.
+    /// The commit the reopening started at. Absent when no pass shows.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start: Option<String>,
     /// The commit that made the spec `done`.
@@ -5436,8 +5438,8 @@ pub struct DiffCrossSpecArgs {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DiffCrossSpecResult {
-    /// Where the window starts: the parent of the spec's last `in-progress`
-    /// commit, `HEAD` while that move is uncommitted, or the first commit touching
+    /// Where the window starts: the parent of the commit the spec's reopening
+    /// started at, `HEAD` while that move is uncommitted, or the first commit touching
     /// the feature's spec dir when it has never been `in-progress`.
     pub window_base: String,
     /// Current HEAD commit.
