@@ -659,4 +659,32 @@ MUTATIONS = [
         '            let Some(directory) = directories.get(feature) else {\n                return Ok(true);\n            };\n            if matches!',
         'measure_reopenings::tests::a_first_entry_starts_the_reopening_of_a_spec_never_done',
     ),
+    (
+        "M96 a waiver or round waiver is not a person's decision",
+        'src/primitives/measure_reopenings.rs',
+        '.chain(&self.round_waivers)\n            .filter(|waiver| at_this_run(&waiver.waived_at))',
+        '.chain(&self.round_waivers)\n            .filter(|waiver| at_this_run(&waiver.waived_at) && false)',
+        'measure_reopenings::tests::decisions_by_person_counts_a_persons_waivers_at_that_run_and_not_the_configs',
+    ),
+    (
+        'M97 a round waiver is not counted',
+        'src/primitives/measure_reopenings.rs',
+        '            .chain(&self.round_waivers)\n',
+        '',
+        'measure_reopenings::tests::decisions_by_person_counts_a_persons_waivers_at_that_run_and_not_the_configs',
+    ),
+    (
+        'M98 a waiver from an earlier run counts',
+        'src/primitives/measure_reopenings.rs',
+        '.filter(|waiver| at_this_run(&waiver.waived_at))',
+        '.filter(|waiver| waiver.waived_at.is_some())',
+        'measure_reopenings::tests::decisions_by_person_counts_a_persons_waivers_at_that_run_and_not_the_configs',
+    ),
+    (
+        "M99 the config file's round waiver counts",
+        'src/primitives/measure_reopenings.rs',
+        '.any(|file| by.trim().ends_with(file))',
+        '.any(|file| by.trim().ends_with(file) && false)',
+        'measure_reopenings::tests::decisions_by_person_counts_a_persons_waivers_at_that_run_and_not_the_configs',
+    ),
 ]

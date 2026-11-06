@@ -4951,13 +4951,14 @@ pub struct Reopening {
     pub analyses: usize,
     /// A second or later run of a kind followed a run that left no gating finding.
     pub over_bound: bool,
-    /// Stored decisions stamped with one of its runs' times that a person made.
+    /// Stored decisions and waivers stamped with one of its runs' times that a person
+    /// recorded; a decline with no reason stores nothing, so it counts as none.
     pub decisions_by_person: usize,
     /// That count per run, oldest first within each record (spec 079, AC17).
     pub run_decisions: Vec<RunDecisions>,
 }
 
-/// How many decisions one run of a reopening put to a person.
+/// How many decisions one run of a reopening recorded from a person.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RunDecisions {
@@ -4965,7 +4966,7 @@ pub struct RunDecisions {
     pub record: DecisionRecord,
     /// The run's `last-run`.
     pub last_run: String,
-    /// Stored decisions stamped with this run's time that a person made.
+    /// Stored decisions and waivers stamped with this run's time that a person recorded.
     pub decisions_by_person: usize,
 }
 

@@ -341,11 +341,54 @@ struct Records {
     analysis: RecordState,
 }
 
-/// The stored decisions, read beside the record's own block.
+/// The decisions a record stores, read beside its own block.
 #[derive(Deserialize)]
 struct StoredDecisions {
     #[serde(default)]
     decisions: Vec<RawDecision>,
+    #[serde(default)]
+    waivers: Vec<StoredWaiver>,
+    #[serde(default, rename = "round-waivers")]
+    round_waivers: Vec<StoredWaiver>,
+}
+
+/// Who waived a rule or a fix round, and when.
+#[derive(Deserialize)]
+struct StoredWaiver {
+    #[serde(default, rename = "waived-at")]
+    waived_at: Option<String>,
+    #[serde(default, rename = "waived-by")]
+    waived_by: Option<String>,
+}
+
+impl StoredDecisions {
+    /// What a person recorded at the run stamped `last_run`, the one count a record can
+    /// support: a decision the rule made is not a person's, a round `[review]
+    /// re-reads-off` waives is the config file's, and a person's decline with no reason
+    /// leaves no entry at all (spec 079, AC17).
+    fn by_person_at(&self, last_run: &str) -> usize {
+        let at_this_run = |at: &Option<String>| at.as_deref().map(str::trim) == Some(last_run);
+        let decisions = self
+            .decisions
+            .iter()
+            .filter(|decision| at_this_run(&decision.decided_at))
+            .filter(|decision| decision.decided_by.as_deref().map(str::trim) != Some(RULE_DECIDER))
+            .count();
+        let waivers = self
+            .waivers
+            .iter()
+            .chain(&self.round_waivers)
+            .filter(|waiver| at_this_run(&waiver.waived_at))
+            .filter(|waiver| {
+                !waiver.waived_by.as_deref().is_some_and(|by| {
+                    paths::CONFIG_CHAIN
+                        .iter()
+                        .any(|file| by.trim().ends_with(file))
+                })
+            })
+            .count();
+        decisions + waivers
+    }
 }
 
 /// Parse a record's bytes, with `fields` reading its `last-run` and whether it left
@@ -374,12 +417,7 @@ fn record_state<T: DeserializeOwned>(
     RecordState::Run(Run {
         stamp: last_run.to_string(),
         gating,
-        decisions_by_person: stored
-            .decisions
-            .iter()
-            .filter(|decision| decision.decided_at.as_deref().map(str::trim) == Some(last_run))
-            .filter(|decision| decision.decided_by.as_deref().map(str::trim) != Some(RULE_DECIDER))
-            .count(),
+        decisions_by_person: stored.by_person_at(last_run),
     })
 }
 
@@ -1182,6 +1220,28 @@ mod tests {
             fixture.only_not_counted().reason,
             NotCountedReason::NoRecordedRun
         );
+    }
+
+    #[test]
+    fn decisions_by_person_counts_a_persons_waivers_at_that_run_and_not_the_configs() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        let when = "2026-01-01T00:00:00Z";
+        let older = "2025-01-01T00:00:00Z";
+        let waiver = |at: &str, by: &str| format!("    waived-at: {at}\n    waived-by: {by}\n");
+        let fields = format!(
+            "waivers:\n  - rule: R\n    file: f\n    reason: r\n{}  - rule: R\n    file: f\n    reason: r\n{}round-waivers:\n  - round: 1\n    reason: r\n{}  - round: 2\n    reason: r\n{}  - round: 3\n    reason: r\n{}",
+            waiver(when, "owner@example.com"),
+            waiver(older, "owner@example.com"),
+            waiver(when, "owner@example.com"),
+            waiver(when, ".ductus/config.toml"),
+            waiver(older, "owner@example.com"),
+        );
+        fixture.commit("review.md", &review(when, &fields));
+        fixture.status("done");
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.decisions_by_person, 2);
+        assert_eq!(reopening.run_decisions[0].decisions_by_person, 2);
     }
 
     #[test]
