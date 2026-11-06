@@ -15,7 +15,7 @@ When groom's Step 4 routes a scenario to a matched spec whose status is `done`, 
 ## Edge Cases
 
 - When the matched spec is **not** `done` (`draft`, `clarified`, `planned`, or `in-progress`), there is no reopen, so the confirmation is unchanged — it names only the scenario and the target.
-- A Step 3 spec-edit route never reopens (it carries its own §spec-lifecycle back-edge), so its confirmation never names a reopen.
+- A Step 3 spec-edit route carries its own §spec-lifecycle back-edge, decided from the written diff, so this confirmation never names a reopen; `/{project}:groom` asks before that reopen once the edit is written.
 - The Completion summary still names any reopened spec — naming the reopen in the confirmation is additive pre-action transparency, not a replacement for the after-the-fact report.
 
 ## Open Questions

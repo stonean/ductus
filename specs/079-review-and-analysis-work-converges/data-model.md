@@ -77,7 +77,7 @@ A criterion compares by its text with the `AC{n}:` label and any cross-service r
 
 | Constant | Value | Home |
 | --- | --- | --- |
-| `REOPENING_RUN_BOUND` | 1 review and 1 analysis, a second after a gating finding or a run cut off with its open mark | `runtime/src/primitives/measure_reopenings.rs` |
+| `REOPENING_RUN_BOUND` | 1 review and 1 analysis, a second after a gating finding, a run cut off with its open mark, or one recording a skipped pass or a budget stop | `runtime/src/primitives/measure_reopenings.rs` |
 | `REOPENING_WINDOW_DAYS` | 30 | `runtime/src/primitives/measure_reopenings.rs` |
 
 AC20's sample of 10 is verified once, through `measure-reopenings --since`, so it is a criterion and not a constant.

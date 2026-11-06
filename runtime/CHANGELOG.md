@@ -55,8 +55,9 @@ its version and date.
 - **`measure-reopenings`: whether review and analysis converged, from history.**
   A new primitive, an MCP tool and CLI subcommand. A reopening is one pass from
   `in-progress` to `done`, and it holds at most one review run and one analysis
-  run, or a second of either only after the earlier run left a gating finding or
-  was cut off with its fix-round loop still open. It reports each reopening closed since a date or a ref, the last 30 days by
+  run, or a second of either only after the earlier run left a gating finding, was
+  cut off with its fix-round loop still open, or recorded a skipped pass or a budget
+  stop. It reports each reopening closed since a date or a ref, the last 30 days by
   default, each one it could not count and why, how many stored decisions and waivers
   each of its runs recorded from a person, and the `in-progress` specs with no unchecked
   task, and says so when the history is shallow or nothing closed. `/status`

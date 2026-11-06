@@ -209,3 +209,14 @@ The walk proposes homes by the four-part test and the file definitions `050-cons
 - [x] Verify: run `claude -p` of `/ductus:prune --project` over a `/tmp` fixture project (cited in the commit), show each test fails with its behavior removed, and run the full local gate.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+### 24. Implement scenario: a-suffixed-task-number-is-a-task
+
+- [ ] Implement the behavior described in `scenarios/a-suffixed-task-number-is-a-task.md`
+- [ ] Widen `split_numbered_heading`, add the number's order, and read `iter_task_numbers_at_levels`, `heading_task_number`, `task_number_referencing_scenario` and `pending_task_matching` through it
+- [ ] `append-task`'s `task-number` becomes a string, and `check-artifacts`' numbering compares by the number's order
+- [ ] A regression test from the adopter's file for each consumer, a mutation in `scripts/mutation/` proving each fails before the fix, as the reporter asked
+- [ ] State the grammar in `framework/reference/analyze.md`'s *Task consistency*, the wire change in `runtime/CHANGELOG.md`, and each description the change reaches
+- [ ] The parser is `022-deterministic-runtime`'s surface: name it in this spec's `cross-spec-impact:` and write its signpost back-linking this spec
+
+- **Done when**: the scenario's described behavior is implemented, the adopter's tasks.md prunes with no heading stranded and lists its pending `11a`, and each behavior has a test and a mutant shown to fail without it.

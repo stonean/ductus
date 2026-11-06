@@ -426,7 +426,9 @@ fn review_fields(record: &ReviewBlock) -> (Option<&str>, bool) {
         || record.must_violations > 0
         || record.should_violations > 0
         || record.contract_breaks.is_some_and(|breaks| breaks > 0)
-        || record.fix_rounds_open == Some(true);
+        || record.fix_rounds_open == Some(true)
+        || record.budget_stop == Some(true)
+        || !record.skipped_passes.is_empty();
     (record.last_run.as_deref(), gating)
 }
 
@@ -1024,6 +1026,19 @@ mod tests {
         assert!(reopening.over_bound);
     }
 
+    /// A record that says it stopped for neither reason left nothing, so a second clean
+    /// review after it is over the bound.
+    #[test]
+    fn a_finished_run_recording_no_stop_left_nothing() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        let finished = "budget-stop: false\nskipped-passes: []\n";
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", finished));
+        fixture.commit("review.md", &review("2026-01-02T00:00:00Z", ""));
+        fixture.status("done");
+        assert!(fixture.only_reopening().over_bound);
+    }
+
     #[test]
     fn a_second_run_after_a_gating_finding_is_within_the_bound() {
         let cases = [
@@ -1032,6 +1047,8 @@ mod tests {
             ("review.md", "should-violations: 1\n"),
             ("review.md", "contract-breaks: 1\n"),
             ("review.md", "fix-rounds-open: true\n"),
+            ("review.md", "budget-stop: true\n"),
+            ("review.md", "skipped-passes: [security]\n"),
             ("analysis.md", "blocking: true\n"),
             ("analysis.md", "hard-fail: 1\n"),
             ("analysis.md", "blocking-findings: 1\n"),

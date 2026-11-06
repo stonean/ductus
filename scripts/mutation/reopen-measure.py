@@ -669,8 +669,8 @@ MUTATIONS = [
     (
         'M100 a run cut off with the mark left no gating finding',
         'src/primitives/measure_reopenings.rs',
-        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0)\n        || record.fix_rounds_open == Some(true);\n',
-        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0);\n',
+        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0)\n        || record.fix_rounds_open == Some(true)\n',
+        '        || record.contract_breaks.is_some_and(|breaks| breaks > 0)\n',
         'measure_reopenings::tests::a_second_run_after_a_gating_finding_is_within_the_bound',
     ),
     (
@@ -917,5 +917,33 @@ MUTATIONS = [
         '_ => contracts.push((file, deleted, SpecEditReason::OtherFile)),',
         '_ => {\n                reasons.insert(SpecEditReason::OtherFile);\n            }',
         'classify_spec_edit::tests::a_sweep_through_another_file_is_mechanical',
+    ),
+    (
+        'M136 a budget stop leaves nothing',
+        'src/primitives/measure_reopenings.rs',
+        '        || record.budget_stop == Some(true)\n',
+        '',
+        'measure_reopenings::tests::a_second_run_after_a_gating_finding_is_within_the_bound',
+    ),
+    (
+        'M137 a skipped pass leaves nothing',
+        'src/primitives/measure_reopenings.rs',
+        '        || record.budget_stop == Some(true)\n        || !record.skipped_passes.is_empty();',
+        '        || record.budget_stop == Some(true);',
+        'measure_reopenings::tests::a_second_run_after_a_gating_finding_is_within_the_bound',
+    ),
+    (
+        'M138 a recorded false reads as a budget stop',
+        'src/primitives/measure_reopenings.rs',
+        '|| record.budget_stop == Some(true)\n',
+        '|| record.budget_stop.is_some()\n',
+        'measure_reopenings::tests::a_finished_run_recording_no_stop_left_nothing',
+    ),
+    (
+        'M139 an empty list reads as a skipped pass',
+        'src/primitives/measure_reopenings.rs',
+        '|| !record.skipped_passes.is_empty();',
+        '|| record.skipped_passes.is_empty();',
+        'measure_reopenings::tests::a_finished_run_recording_no_stop_left_nothing',
     ),
 ]
