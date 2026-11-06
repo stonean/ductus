@@ -130,8 +130,8 @@ MUTATIONS = [
     (
         'M17 criteria are not compared',
         'src/primitives/classify_spec_edit.rs',
-        'if criterion_texts(&base_body) != criterion_texts(&now_body) {',
-        'if false && criterion_texts(&base_body) != criterion_texts(&now_body) {',
+        'if criterion_texts(&base_body) != criterion_texts(&now_body)\n',
+        'if false && criterion_texts(&base_body) != criterion_texts(&now_body)\n',
         'classify_spec_edit::tests::a_changed_criterion_reopens',
     ),
     (
@@ -151,8 +151,8 @@ MUTATIONS = [
     (
         'M20 a moved criterion reads as changed',
         'src/primitives/classify_spec_edit.rs',
-        '        .collect();\n    texts.sort();\n    texts\n}\n\n/// What the open questions say, sorted.',
-        '        .collect();\n    texts\n}\n\n/// What the open questions say, sorted.',
+        '        .map(criterion_text)\n        .collect();\n    texts.sort();\n',
+        '        .map(criterion_text)\n        .collect();\n',
         'classify_spec_edit::tests::moving_a_criterion_is_a_correction',
     ),
     (
@@ -784,5 +784,47 @@ MUTATIONS = [
         '            if eligible.contains(&(index + 1)) {\n                out.push_str(&self.line_without_references(line));\n            } else {\n                out.push_str(line);\n            }\n',
         '            let _ = &eligible;\n            let _ = index;\n            out.push_str(&self.line_without_references(line));\n',
         'derive_references::tests::a_fenced_link_stays_in_the_scrubbed_text',
+    ),
+    (
+        'M114 an untick is a correction',
+        'src/primitives/classify_spec_edit.rs',
+        '    if criterion_texts(&base_body) != criterion_texts(&now_body)\n        || unticks_a_criterion(&base_body, &now_body)\n    {',
+        '    if criterion_texts(&base_body) != criterion_texts(&now_body) {',
+        'classify_spec_edit::tests::an_untick_reopens',
+    ),
+    (
+        'M115 a tick reopens',
+        'src/primitives/classify_spec_edit.rs',
+        '.filter(|criterion| criterion.checked)\n        .map(criterion_text)',
+        '.map(criterion_text)',
+        'classify_spec_edit::tests::a_criterion_left_unticked_is_no_untick',
+    ),
+    (
+        'M116 an untick compares with its label',
+        'src/primitives/classify_spec_edit.rs',
+        '.any(|criterion| !criterion.checked && ticked.contains(&criterion_text(criterion)))',
+        '.any(|criterion| !criterion.checked && ticked.contains(&criterion.text))',
+        'classify_spec_edit::tests::an_untick_reopens',
+    ),
+    (
+        'M117 an unticked criterion on done is no drift',
+        'src/primitives/check_artifacts.rs',
+        '    check_unticked_criteria(\n        &mut findings,\n        &spec.acceptance_criteria,\n        &status,\n        &spec_path,\n        repo,\n    );\n',
+        '',
+        'check_artifacts::tests::a_done_spec_with_an_unticked_criterion_has_drifted',
+    ),
+    (
+        'M118 an unticked criterion below done is drift',
+        'src/primitives/check_artifacts.rs',
+        '    if status != "done" {\n        return;\n    }\n    let unticked: Vec<&str> = criteria',
+        '    let _ = status;\n    let unticked: Vec<&str> = criteria',
+        'check_artifacts::tests::an_unticked_criterion_below_done_is_work_in_hand',
+    ),
+    (
+        'M119 a ticked criterion reads as unticked',
+        'src/primitives/check_artifacts.rs',
+        '.filter(|criterion| !criterion.checked)\n        .map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))',
+        '.map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))',
+        'check_artifacts::tests::a_done_spec_with_every_criterion_ticked_has_not',
     ),
 ]

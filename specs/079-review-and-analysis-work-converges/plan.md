@@ -56,6 +56,8 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 A contract edit reads `mechanical` when `ReferenceScrub` (`runtime/src/primitives/derive_references.rs`, on the predicate `derive-references` harvests by) leaves both sides equal, or when `SweepIndex` over a snapshot of the working tree finds it a sweep, so the classifier and the gate's staleness share one rule and its blind spot (owner, 2026-11-06). Sweeps committed one spec at a time show the index one file each, and read `reopens`.
 
+Taking a tick back reads `reopens`, and a `done` spec holding an unticked criterion reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows and `--fix` already reverts it (owner, 2026-11-06).
+
 ### The measurement
 
 `measure-reopenings` lives in `runtime/src/primitives/measure_reopenings.rs`, because AC8 needs it in an adopter's project and AC19 needs it in `dashboard`. One revwalk, newest first, reads each feature directory's `status:` by blob, memoized as `status_of_commit` does (`runtime/src/primitives/check_stuck.rs`), judges each commit against its own parents, and delimits reopenings, a trip through `draft` staying in one (`History::opened_earlier`): every commit is walked, so a closing on a merged branch counts, and every directory seen, so a closing survives its spec's retirement. It stops past the window once no closing awaits its start. A run is a distinct `last-run` in the committed record inside a reopening. A second run is over the bound unless the previous record of the same kind in that reopening was `blocking`, or counted hard-fail, blocking, MUST, SHOULD or `contract-breaks`, read from that run's last write. A review's two writes share step 11's `reviewed-at`, so they are one run. `decisions-by-person` counts the record's `decisions:` entries stamped with a run's time whose `decided-by` is not `rule`, and its `waivers:` and `round-waivers:` stamped alike, a round the config file waived aside, and `run-decisions` holds that count per run. A decline with no reason stores nothing, so it counts as none (owner, 2026-11-06). A shallow clone is detected through `Repository::is_shallow` and reports `shallow-history`. The default window keeps `/{project}:status` fast and lets old misses age out; `--since` serves AC20.
@@ -203,6 +205,7 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `050-constitution` | in-progress | The constitution's four edits, under its size ceiling |
 | `051-branch-scoped-spec-numbering` | done | What the review after a fold reads, which its AC24 requires |
 | `058-findings-route-at-discovery` | in-progress | Dispositions; its task 5 waits for this |
+| `067-analyze-and-audit-checks` | in-progress | A condition added to review-state drift |
 | `066-audit-records-and-the-completion-gate` | in-progress | Records, gate, scope; its tasks 17–21 rebase on this |
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | in-progress | Dispositions; its data model held a false canonicality claim, so it reopened and owes a review |
 | `078-review-fix-rounds-are-re-read-within-a-bound` | in-progress | The loop; its task 15 waits for this |

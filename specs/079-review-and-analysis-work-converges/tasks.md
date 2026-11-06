@@ -215,7 +215,7 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [ ] Gap: `prune-plan`'s `reopen-required` and `classify-spec-edit` disagree in both directions on the same tree
 - [x] Gap, the owner chose (2026-11-06) teaching it both kinds: the constitution says `classify-spec-edit` decides and two kinds of edit take no back-edge, and it reads both as `reopens`
 - [ ] Gap: `framework/reference/implement.md` sends a signpost on a `done` spec through `/amend`, whose route there reopens it
-- [ ] Gap, the owner's choice: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction
+- [x] Gap, the owner chose (2026-11-06) both surfaces: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction
 - [ ] Gap: `/amend` advertises a criterion route its classifier, record steps and status table lack, predating this spec
 - [ ] Gap: a `cross-spec-impact:` entry added to a `done` spec is a correction nothing then reads
 - [ ] The wording items the flows name, fixed or waived by the rule: a record contradicting itself on a person's deferral, the record's `scope` counting its own `review.md`, literal namespaces in result strings, and `/groom`'s spec-edit route

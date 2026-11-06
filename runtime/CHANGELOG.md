@@ -158,6 +158,10 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+- **A `done` spec cannot hold an unticked criterion unreported.** `check-artifacts`
+  reports one as blocking `review-state-drift`, which `/analyze --fix` reverts, and
+  `classify-spec-edit` reads taking a tick back as `reopens`. Ticking one stays a
+  `correction`.
 - **`classify-spec-edit` recognizes a mechanical edit.** A scenario or data-model
   edit that only adds, removes or rewrites a cross-service reference, or is a sweep's
   by the rule the review gate's staleness uses, now reads `mechanical`, which leaves

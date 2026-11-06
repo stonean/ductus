@@ -173,6 +173,8 @@ The load-bearing line is **provably broken** (a finding) versus **can't check** 
 
 For each spec at `status: done`, `check-artifacts` reads the review record from its `review.md` frontmatter and reports an unset `last-run`, `blocking: true`, a non-zero `should-violations`, or a broken contract left in `open-findings`, each message saying what to do. A `review.md` carrying no parseable record is the hard fail under Frontmatter schema above, never a never-run; the two must never render alike. §implement-phase gives a SHOULD three exits — fixed, waived with its rationale, or deferred where the deferral releases it (**§Deferrals** in `.ductus/reference/review.md`) — and each drops the count, so a non-zero count at `done` means none happened.
 
+A `done` spec holding an unticked criterion has drifted too, whatever its record says, since `done` says each is verified (§spec-lifecycle).
+
 **Grandfather rule.** A `done` spec with **no `review.md` at all** predates `/{project}:review`, which writes the file on its first run (§text-first-artifacts), and is exempt. Adopters who want retroactive review run `/{project}:review` against the spec, after which it is subject to this check. The exemption is keyed on the artifact, never a block in `spec.md`, which would exempt every spec in a migrated corpus.
 
 Specs not at `status: done` are silently exempt, since `review.md` is written lazily.

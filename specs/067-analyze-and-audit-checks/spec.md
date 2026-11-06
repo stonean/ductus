@@ -8,6 +8,8 @@ next-criterion: 5
 
 The runtime primitives that check a spec corpus without judging it: the artifact families `/{project}:analyze` runs, the frontmatter, dependency, anchor and rule-citation checks beside them, the two derived frontmatter indexes, the link and reference integrity checks, and the two `/{project}:audit` families with a runtime half. The parser, the interpreter and the shared scanners they use are [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md)'s; the records these checks feed are [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md)'s. The argument and result shapes are in [data-model.md](data-model.md).
 
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) added a condition to review-state drift: a `done` spec holding an unticked criterion, with no grandfather rule.
+
 ## Motivation
 
 022's data model had reached 99,953 bytes against a 50,000-byte read size, and trimming could not close the gap: measured by eight-word overlap, only 2 KB of its prose repeated another file. Its content was contract. The deterministic checks were one of its two largest slices with a single subject, so they became a spec of their own.

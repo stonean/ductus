@@ -4,8 +4,9 @@
 //! Decided from the diff, since a rule an author must remember is skipped when it matters
 //! most (§design-principles). Each side goes through the parser `read-spec` or
 //! `read-tasks` uses, so this cannot disagree with them about what a criterion, a question
-//! or a task is. Criterion ticks are not compared, as the digests normalize them
-//! (`analyze_subjects::without_criterion_ticks`).
+//! or a task is. Ticking a criterion is no edit, as the digests normalize it
+//! (`analyze_subjects::without_criterion_ticks`); taking a tick back is, since `done`
+//! says each criterion is verified (§spec-lifecycle).
 //!
 //! A run's record is no edit, since `/{project}:analyze` may run on a `done` spec and leave
 //! it `done`. A deleted `plan.md` or `tasks.md` is no correction, as analyze reports a
@@ -34,7 +35,7 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ClassifySpecEditArgs, ClassifySpecEditResult, SpecEditKind, SpecEditReason,
+    AcceptanceCriterion, ClassifySpecEditArgs, ClassifySpecEditResult, SpecEditKind, SpecEditReason,
 };
 
 /// The ref the working tree is compared with when the caller names none.
@@ -250,7 +251,9 @@ fn spec_reasons(
     // A reference is informative, so one in a criterion or question changes neither.
     let base_body = side.scrub.without_references(base_body);
     let now_body = side.scrub.without_references(now_body);
-    if criterion_texts(&base_body) != criterion_texts(&now_body) {
+    if criterion_texts(&base_body) != criterion_texts(&now_body)
+        || unticks_a_criterion(&base_body, &now_body)
+    {
         reasons.insert(SpecEditReason::Criterion);
     }
     if question_texts(&base_body) != question_texts(&now_body) {
@@ -263,19 +266,34 @@ fn spec_reasons(
 /// `AC{n}:` label removed, so assigning a label stays a correction (AC15).
 fn criterion_texts(body: &str) -> Vec<String> {
     let mut texts: Vec<String> = parse_checkboxes(body, "Acceptance Criteria")
-        .into_iter()
-        .map(|criterion| {
-            let unlabelled = criterion
-                .label
-                .as_deref()
-                .and_then(|label| criterion.text.strip_prefix(label))
-                .and_then(|rest| rest.strip_prefix(':'))
-                .map(str::trim_start);
-            unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)
-        })
+        .iter()
+        .map(criterion_text)
         .collect();
     texts.sort();
     texts
+}
+
+/// A criterion's text without its `AC{n}:` label.
+fn criterion_text(criterion: &AcceptanceCriterion) -> String {
+    let unlabelled = criterion
+        .label
+        .as_deref()
+        .and_then(|label| criterion.text.strip_prefix(label))
+        .and_then(|rest| rest.strip_prefix(':'))
+        .map(str::trim_start);
+    unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)
+}
+
+/// Whether a criterion ticked at the base is unticked now.
+fn unticks_a_criterion(base: &str, now: &str) -> bool {
+    let ticked: BTreeSet<String> = parse_checkboxes(base, "Acceptance Criteria")
+        .iter()
+        .filter(|criterion| criterion.checked)
+        .map(criterion_text)
+        .collect();
+    parse_checkboxes(now, "Acceptance Criteria")
+        .iter()
+        .any(|criterion| !criterion.checked && ticked.contains(&criterion_text(criterion)))
 }
 
 /// What the open questions say, sorted.
@@ -639,10 +657,36 @@ mod tests {
     }
 
     #[test]
-    fn a_tick_either_way_is_a_correction() {
+    fn a_tick_is_a_correction() {
+        let (_dir, root) = committed(&[("spec.md", &SPEC.replace("- [x] AC2", "- [ ] AC2"))]);
+        edit(&root, "spec.md", SPEC);
+        assert_correction(&root);
+    }
+
+    /// Only taking a tick back counts, so one never given reads as before.
+    #[test]
+    fn a_criterion_left_unticked_is_no_untick() {
+        let open = SPEC.replace("- [x] AC2", "- [ ] AC2");
+        let (_dir, root) = committed(&[("spec.md", &open)]);
+        edit(&root, "spec.md", &open.replace("Prose.", "Other prose."));
+        assert_correction(&root);
+    }
+
+    /// `done` says each criterion is verified, so taking a tick back changes that claim.
+    #[test]
+    fn an_untick_reopens() {
         let (_dir, root) = fixture();
         edit(&root, "spec.md", &SPEC.replace("- [x] AC2", "- [ ] AC2"));
-        assert_correction(&root);
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
+    }
+
+    /// A label assigned in the same edit does not hide the untick.
+    #[test]
+    fn an_untick_is_read_across_a_label() {
+        let unlabelled = SPEC.replace("- [x] AC2: ", "- [x] ");
+        let (_dir, root) = committed(&[("spec.md", &unlabelled)]);
+        edit(&root, "spec.md", &SPEC.replace("- [x] AC2", "- [ ] AC2"));
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
     }
 
     #[test]

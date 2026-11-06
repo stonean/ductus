@@ -30,7 +30,8 @@
 //!   unmapped scenario as skipped. It never requires a pruned spent task to
 //!   persist (constitution §tasks-phase — `tasks.md` is ephemeral).
 //! - **review-state-drift** (blocking) — reference §"Review state drift
-//!   (blocking)": a `done` spec whose `review.md` record has `last-run`
+//!   (blocking)": a `done` spec holding an unticked criterion, or whose
+//!   `review.md` record has `last-run`
 //!   unset, `blocking: true`, or a non-zero `should-violations`,
 //!   drifted. The third condition arrived with 045's task 15: §implement-phase
 //!   forbids reaching `done` over an outstanding SHOULD, and the count is what
@@ -211,6 +212,13 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     // twice, in two vocabularies, is how one problem becomes two findings.
     let review_record = spec.review.as_ref();
     check_review_drift(&mut findings, review_record, &status, &spec_path, repo);
+    check_unticked_criteria(
+        &mut findings,
+        &spec.acceptance_criteria,
+        &status,
+        &spec_path,
+        repo,
+    );
     check_disposition_drift(&mut findings, review_record, &status, &spec_path, repo);
 
     check_scenario_open_questions(
@@ -663,6 +671,40 @@ fn check_review_drift(
             path: spec_rel,
         });
     }
+}
+
+/// (d2) A `done` spec holding an unticked criterion: `done` says each is verified
+/// (§spec-lifecycle), so the two cannot both stand. No grandfather rule, as a record's
+/// absence says nothing about this. The criteria name themselves, so a person can tell
+/// a tick never made from one taken back.
+fn check_unticked_criteria(
+    findings: &mut Vec<ArtifactFinding>,
+    criteria: &[crate::schema::primitives::AcceptanceCriterion],
+    status: &str,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    if status != "done" {
+        return;
+    }
+    let unticked: Vec<&str> = criteria
+        .iter()
+        .filter(|criterion| !criterion.checked)
+        .map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))
+        .collect();
+    if unticked.is_empty() {
+        return;
+    }
+    findings.push(ArtifactFinding {
+        family: "review-state-drift".into(),
+        severity: AnalyzeSeverity::Blocking,
+        message: format!(
+            "criterion drift: done spec has unticked acceptance criteria ({}) — verify and \
+             tick each, or reopen the spec and correct it",
+            unticked.join(", ")
+        ),
+        path: rel_path(spec_path, repo),
+    });
 }
 
 /// (e) Scenario open questions — a scenario is an organizational split of
@@ -3789,6 +3831,46 @@ mod tests {
 
     /// A spec at `status` whose Acceptance Criteria section is supplied by the
     /// test, with plan/tasks present so the other families stay quiet.
+    fn unticked_findings(status: &str, criteria: &str) -> Vec<ArtifactFinding> {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_criteria(tmp.path(), status, criteria);
+        run(
+            &CheckArtifactsArgs {
+                feature: FEATURE.to_string(),
+            },
+            tmp.path(),
+        )
+        .unwrap()
+        .findings
+        .into_iter()
+        .filter(|finding| finding.message.starts_with("criterion drift"))
+        .collect()
+    }
+
+    /// `done` says each is verified, whether or not a review record exists.
+    #[test]
+    fn a_done_spec_with_an_unticked_criterion_has_drifted() {
+        let findings = unticked_findings("done", "- [x] AC1: one\n- [ ] AC2: two\n- [ ] three\n");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].family, "review-state-drift");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::Blocking);
+        assert!(
+            findings[0].message.contains("AC2, three"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    #[test]
+    fn a_done_spec_with_every_criterion_ticked_has_not() {
+        assert_eq!(unticked_findings("done", "- [x] AC1: one\n"), []);
+    }
+
+    #[test]
+    fn an_unticked_criterion_below_done_is_work_in_hand() {
+        assert_eq!(unticked_findings("in-progress", "- [ ] AC1: one\n"), []);
+    }
+
     fn seed_with_criteria(repo: &Path, status: &str, criteria: &str) {
         write(
             repo,
