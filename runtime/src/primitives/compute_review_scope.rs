@@ -2205,6 +2205,53 @@ mod tests {
         assert!(has(&scope, "src/b.rs"), "{:?}", scope.scope);
     }
 
+    /// A merge can be what moves a branch's record out of `spec.md`, and its first parent
+    /// holds no such block, so only reading every parent tells it from a review.
+    #[test]
+    fn a_merge_relocating_a_branchs_record_does_not_move_the_start() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        let main_tip = repo.head().unwrap().peel_to_commit().unwrap();
+        let run_at = "2026-10-01T00:00:00Z";
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &format!(
+                "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: {run_at}\n---\n\n# X\n"
+            ),
+        );
+        commit_all(&repo, "review(001)");
+        let branch_tip = repo.head().unwrap().peel_to_commit().unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, run_at),
+        );
+        let mut index = repo.index().unwrap();
+        index
+            .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+            .unwrap();
+        index.write().unwrap();
+        let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+        let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+        let merge = repo
+            .commit(
+                None,
+                &signature,
+                &signature,
+                "Merge branch 'story'",
+                &tree,
+                &[&main_tip, &branch_tip],
+            )
+            .unwrap();
+        repo.set_head_detached(merge).unwrap();
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
     /// A later commit carrying the same finished run, such as a re-commit of its
     /// record, finishes nothing, so the window still starts at the run's commit.
     #[test]

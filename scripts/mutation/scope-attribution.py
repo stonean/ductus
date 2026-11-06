@@ -800,7 +800,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         'for parent in commit.parents() {',
         'for parent in commit.parents().take(1) {',
-        'compute_review_scope::tests::a_merge_carrying_a_finished_run_does_not_move_the_start',
+        'compute_review_scope::tests::a_merge_relocating_a_branchs_record_does_not_move_the_start',
     ),
     (
         'M114 a deletion makes no review owed',
@@ -842,7 +842,7 @@ MUTATIONS = [
         'src/primitives/decisions.rs',
         'let a_person_decided = decision.by_rule && !stored.by_rule;',
         'let a_person_decided = false;',
-        'write_review::tests::a_stored_decision_by_a_person_wins_over_the_rule',
+        'decisions::tests::a_persons_stored_decision_wins_over_the_rule',
     ),
     (
         'M120 the open mark\'s message names no command',
