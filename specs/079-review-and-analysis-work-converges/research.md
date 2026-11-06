@@ -134,4 +134,17 @@ Three agents at `6aef0472`'s tree, plus the fold edits, followed one behavior ea
 
 Of the 11 closed analyze, review, analyze, all over the bound, the new order leaves 1 and 1, so over-bound closings fall from 28 to 17, plus up to 4 of the 6 second reviews, the other 2 being over already; without the refinement, up to 17 of the 28 second reviews. At `fc20a939`, 47 of 47 `in-progress` specs read owed; the gate named `/analyze` first on 11, of which 015 and 061 hold only an unclaimed commit's paths. `compute-review-scope` took a median of 1.31 s and at most 2.13 s per spec over those 47.
 
+**What item 20 measured.** Item 20 is two gaps. A commit touching a staging directory stays excluded by a claimant gone from disk, as it says. And a fold into a `done` upstream reopens it at the fold, so the staging spec's earlier code lies before the window, in no list. Prototypes behind an environment switch at `f2e8c70a`, each input folded through `set-status`, `invalidate-review` and `retire-feature` on a fixture with a real linter and read by `compute-review-scope` from the release build. Each cell is how many of the staging spec's two files, `src/s.rs` touching its directory and `src/t.rs` not, the upstream's scope holds; `src/s.rs` is excluded where it is not held and the commit was in the window.
+
+| Staging spec, upstream | Today (also the description corrected) | No directory excludes nothing | Fold passes commits, in the window | Fold passes commits, all | Fold passes commits, all, below `done` only |
+| --- | --- | --- | --- | --- | --- |
+| `done`, `done` | 0 | 0 | 0 | 2 | 0 |
+| Below `done`, `done` | 0 | 0 | 0 | 2 | 2 |
+| Below `done`, `in-progress` | 1 | 2 | 2 | 2 | 2 |
+| `done`, `in-progress` | 1 | 2 | 2 | 2 | 1 |
+
+Below `done` into a `done` upstream, today, one review of that scope and one analysis pass the gate with neither file in any list. Excluding nothing is the only column that reaches an unrelated spec: a consolidated spec's one commit touching its directory takes a current record's gate from passing to `review-owed`, and a fix round's brief gains that commit's path when it lands in the round. A code-only commit naming a spec reads as unclaimed once its directory is gone, in every column, so a spec overlapping it is owed a review of that path today.
+
+Over all 77 specs at `f2e8c70a`, from clean worktrees, the excluding-nothing and fold-passes-all prototypes read the same base, scope, `review-owed` and gate as the unchanged code; the below-`done` form fires on a subset of the second. The retired numbers are 004, 005 and 053, since 027 and 048 were renamed and stay on disk by number. 0 of the 126 closings since 2026-10-01 hold a commit touching their directories or naming them; the newest is `cc870e18` of 2026-09-15, which also touches live specs, so those keep excluding its paths. No branch-scoped spec is in this repository's history, and the first fix round, on 2026-11-03, postdates every such commit. With a fold in the window, `compute-review-scope` on a clone of this history (3,113 commits) took 1.42 s without the prototype and 2.35 s with it, medians of three, the prototype walking the window twice.
+
 Not examined by any flow: real agent hosts, Windows, `--all`, `--fix`'s second write, `/fold`, `/consolidate`, the CI template's record check, and the re-read agents' path end to end.
