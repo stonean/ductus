@@ -58,6 +58,9 @@
 //!   `/{project}:analyze --fix` does not revert on it. A record without a
 //!   `dispositions:` map produces nothing here: it predates the field, and a
 //!   backfilled map would assert dispositions nobody made.
+//! - **cross-spec-impact-drift** (advisory) — a `done` spec declaring a
+//!   `cross-spec-impact:` entry no back-link discharges, which only the gate
+//!   reads, and only on the way to `done` (spec 079).
 //! - **scenario-open-questions** (blocking at `done`, advisory otherwise)
 //!   — a scenario is an organizational split of the spec, so its
 //!   unresolved questions are the spec's questions for completeness. At
@@ -116,6 +119,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
+use crate::primitives::check_review_gate::cross_spec_impact_states;
 use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::{
     BlockReading, MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans,
@@ -124,8 +128,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, ReadSpecArgs, ReadSpecResult,
-    ReadTasksArgs, SkippedTarget, Task,
+    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, CrossSpecImpactState, ReadSpecArgs,
+    ReadSpecResult, ReadTasksArgs, SkippedTarget, Task,
 };
 use crate::schema::severity::AnalyzeSeverity;
 use crate::schema::status::COMPATIBLE_STATUSES;
@@ -220,6 +224,14 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         repo,
     );
     check_disposition_drift(&mut findings, review_record, &status, &spec_path, repo);
+    check_cross_spec_impact_drift(
+        &mut findings,
+        &frontmatter.cross_spec_impact,
+        (&root, &args.feature),
+        &status,
+        &spec_path,
+        repo,
+    );
 
     check_scenario_open_questions(
         &mut findings,
@@ -565,19 +577,25 @@ fn check_disposition_drift(
     if status != "done" {
         return;
     }
-    let Some(counts) = review.and_then(|r| r.dispositions) else {
+    let Some((review, counts)) = review.and_then(|r| Some((r, r.dispositions?))) else {
         return; // predates dispositions: grandfathered, never backfilled
     };
     if counts.undispositioned == 0 {
         return;
     }
+    // A re-run with no `--since` stops on `review-owed: false`, and forced it reads a
+    // window that may not hold them, then rewrites the record without them.
+    let since = review.diff_base.as_deref().map_or_else(
+        || "--since naming a commit before the reviewed change".to_string(),
+        |base| format!("--since={base}"),
+    );
     findings.push(ArtifactFinding {
         family: "disposition-drift".into(),
         severity: AnalyzeSeverity::Advisory,
         message: format!(
             "disposition drift: done spec's review.md records {} undispositioned finding(s) — \
-             re-run the review command to decide each; only a broken contract among them \
-             holds done",
+             re-run the review command with {since}, so it reads them again and decides each; \
+             only a broken contract among them holds done",
             counts.undispositioned
         ),
         path: rel_path(spec_path, repo),
@@ -657,6 +675,20 @@ fn check_review_drift(
             path: spec_rel.clone(),
         });
     }
+    // The gate blocks on this mark only on the way to `done`, so on a `done` spec a
+    // review cut off in its loop leaves its fixes possibly unread with nothing reading
+    // the mark. The review's last write clears it.
+    if review.fix_rounds_open == Some(true) {
+        findings.push(ArtifactFinding {
+            family: "review-state-drift".into(),
+            severity: AnalyzeSeverity::Blocking,
+            message: "review drift: done spec's review was cut off with its fix-round loop \
+                      open (fix-rounds-open), so its fixes may be unread — run the review \
+                      command, whose last write clears it"
+                .into(),
+            path: spec_rel.clone(),
+        });
+    }
     // A broken contract the review left open holds `done` as those counts do, and
     // neither of them holds it, so it gets its own line (spec 079).
     if !review.blocking && review.should_violations == 0 && !review.open_findings.is_empty() {
@@ -671,6 +703,40 @@ fn check_review_drift(
             path: spec_rel,
         });
     }
+}
+
+/// (d4) A `done` spec declaring a cross-spec impact no back-link discharges: the gate
+/// reads the declaration only on the way to `done`, and an entry added afterwards is a
+/// correction, so nothing else would (spec 079). Advisory: `--fix` does not revert it.
+fn check_cross_spec_impact_drift(
+    findings: &mut Vec<ArtifactFinding>,
+    declared: &[String],
+    (root, feature): (&str, &str),
+    status: &str,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    if status != "done" {
+        return;
+    }
+    let owed: Vec<String> = cross_spec_impact_states(declared, feature, repo, root)
+        .into_iter()
+        .filter(|entry| entry.state != CrossSpecImpactState::Discharged)
+        .map(|entry| entry.spec)
+        .collect();
+    if owed.is_empty() {
+        return;
+    }
+    findings.push(ArtifactFinding {
+        family: "cross-spec-impact-drift".into(),
+        severity: AnalyzeSeverity::Advisory,
+        message: format!(
+            "cross-spec impact drift: done spec declares an impact on {} with no back-link \
+             there — add the signpost, or correct the entry",
+            owed.join(", ")
+        ),
+        path: rel_path(spec_path, repo),
+    });
 }
 
 /// (d2) A `done` spec holding an unticked criterion: `done` says each is verified
@@ -2302,6 +2368,103 @@ mod tests {
                 .findings
                 .iter()
                 .any(|f| f.family == "disposition-drift" && f.severity == AnalyzeSeverity::Blocking)
+        );
+    }
+
+    /// A re-run with no `--since` stops on `review-owed: false`, and forced it reads
+    /// nothing, so the message names the window that reads them again (spec 079).
+    #[test]
+    fn disposition_drift_names_the_window_that_reads_the_findings_again() {
+        let tmp = tempdir().unwrap();
+        seed_done_with(
+            tmp.path(),
+            "done",
+            &format!("{CLEAN_REVIEW}\n{OWED}\n  diff-base: 1234abc"),
+            CLEAN_ANALYZE,
+        );
+        let drift = disposition_families(&run(&args(), tmp.path()).unwrap());
+        assert!(drift[0].contains("--since=1234abc"), "{drift:?}");
+
+        seed_done_with(
+            tmp.path(),
+            "done",
+            &format!("{CLEAN_REVIEW}\n{OWED}"),
+            CLEAN_ANALYZE,
+        );
+        let drift = disposition_families(&run(&args(), tmp.path()).unwrap());
+        assert!(drift[0].contains("--since naming a commit"), "{drift:?}");
+    }
+
+    /// A review cut off on a `done` spec left a mark no gate reads there, its fixes
+    /// possibly unread (spec 079).
+    #[test]
+    fn a_done_spec_holding_the_open_mark_is_review_state_drift() {
+        let tmp = tempdir().unwrap();
+        let mark = format!("{CLEAN_REVIEW}\n  fix-rounds-open: true");
+        seed_done_with(tmp.path(), "done", &mark, CLEAN_ANALYZE);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
+        assert!(result.findings[0].message.contains("cut off"), "{result:?}");
+
+        seed_done_with(tmp.path(), "in-progress", &mark, CLEAN_ANALYZE);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), Vec::<(&str, &str)>::new());
+    }
+
+    fn impact_findings(result: &crate::schema::primitives::CheckArtifactsResult) -> Vec<String> {
+        result
+            .findings
+            .iter()
+            .filter(|f| {
+                f.family == "cross-spec-impact-drift" && f.severity == AnalyzeSeverity::Advisory
+            })
+            .map(|f| f.message.clone())
+            .collect()
+    }
+
+    /// An entry added on `done` is a correction, and the gate that reads it has
+    /// passed, so this is the only reader. Nothing but a back-link clears it, and below
+    /// `done` it stays the gate's (spec 079).
+    #[test]
+    fn a_done_spec_whose_impact_is_undischarged_is_advisory_drift() {
+        let tmp = tempdir().unwrap();
+        seed_done_with(tmp.path(), "done", CLEAN_REVIEW, CLEAN_ANALYZE);
+        let spec = format!("specs/{FEATURE}/spec.md");
+        let with = |status: &str, entries: &str| {
+            format!(
+                "---\nstatus: {status}\ndependencies: []\ncross-spec-impact: [{entries}]\n---\n\n# Demo\n"
+            )
+        };
+        write(
+            tmp.path(),
+            "specs/050-up/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# Up\n",
+        );
+        write(tmp.path(), &spec, &with("done", "050-up, 051-gone"));
+        let drift = impact_findings(&run(&args(), tmp.path()).unwrap());
+        assert_eq!(drift.len(), 1, "{drift:?}");
+        assert!(
+            drift[0].contains("050-up") && drift[0].contains("051-gone"),
+            "{drift:?}"
+        );
+
+        write(tmp.path(), &spec, &with("in-progress", "050-up"));
+        assert_eq!(
+            impact_findings(&run(&args(), tmp.path()).unwrap()),
+            Vec::<String>::new()
+        );
+
+        write(tmp.path(), &spec, &with("done", "050-up"));
+        write(
+            tmp.path(),
+            "specs/050-up/spec.md",
+            &format!(
+                "---\nstatus: done\ndependencies: []\n---\n\n# Up\n\nSee [demo](../{FEATURE}/spec.md).\n"
+            ),
+        );
+        assert_eq!(
+            impact_findings(&run(&args(), tmp.path()).unwrap()),
+            Vec::<String>::new()
         );
     }
 

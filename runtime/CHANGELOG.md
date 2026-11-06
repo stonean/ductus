@@ -382,6 +382,34 @@ its version and date.
   longer reaches the terminal raw. Which waivers apply, expire or are
   retained is unchanged. Spec 066, task 13.
 
+- **What a review finds on the exec path, and what the rule waived earlier, holds
+  `done`.** A `performReview` pass can mark an observation `contract-break`, so an
+  exec run records and lists a broken contract, and the gate's hold fires for it.
+  `write-review` refuses a waived break while the rule's own stored waiver for its
+  key stands, so an observation the rule waived and a later run judged a broken
+  contract is fixed, deferred or waived by a person. Spec 079.
+- **`--waive` writes what it says.** `write-review` takes `new-waivers`, each a rule
+  and a reason, and records the `waivers:` entry from the run's findings, so a waived
+  finding stays waived on the next run. It used to clear only the run it was given
+  in. Spec 079.
+- **The gate reads a damaged `decisions:` list.** An `analysis.md` whose list does not
+  parse blocks, as `validate-frontmatter` says it should. Spec 079.
+- **A contract edited before the review's window is read.** `compute-review-scope`
+  adds each contract the record's digest says changed, so a reopening's review reads
+  a scenario edited while the spec was `done` before refreshing its digest. Spec 079.
+- **`/analyze` reports two states on a `done` spec nothing read.** A review cut off
+  with its fix-round loop open is blocking review-state drift, and a
+  `cross-spec-impact:` entry no back-link discharges is the advisory
+  `cross-spec-impact-drift`. Disposition drift's message names the `--since` that reads
+  the findings again, since a plain re-run stops or reads nothing. Spec 079.
+- **A record says one thing.** A person's stored decision now decides the count and the
+  body as well as the `decisions:` list when the rule waives the observation again,
+  and a run's own `review.md` leaves its `scope`, so its two writes state one
+  denominator. Spec 079.
+- **A command name a project can run.** Primitive descriptions name
+  `/{project}:<command>` rather than `/ductus:<command>`, and `check-artifact-size`'s
+  fixes name the command rather than print a placeholder. Spec 079.
+
 ## [0.59.11] — 2026-10-17
 
 No runtime code change. A framework release: `/{project}:implement` regains

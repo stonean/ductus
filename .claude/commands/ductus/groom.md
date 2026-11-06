@@ -16,7 +16,7 @@ Use the session target if set — invoke `resolve-session` and display any notic
 
 ## Scope Boundaries
 
-- This command grooms inbox items — it creates scenario files, appends tasks, edits a matched spec's body when the operator confirms the spec-edit route (Step 3 of **§Groom decision tree** in `.ductus/reference/groom.md`), sets the session target (this process's own, and the shared default `.ductus/session.toml`) when routing to an existing spec, and reopens a matched spec's frontmatter status `done → in-progress` when it adds a scenario to a `done` spec, but does NOT implement fixes. Do NOT read or modify source code or test files.
+- This command grooms inbox items — it creates scenario files, appends tasks, edits a matched spec's body when the operator confirms the spec-edit route (Step 3 of **§Groom decision tree** in `.ductus/reference/groom.md`), sets the session target (this process's own, and the shared default `.ductus/session.toml`) when routing to an existing spec, and reopens a matched spec's frontmatter status `done → in-progress` when it adds a scenario to a `done` spec or `classify-spec-edit` reads a confirmed spec edit there as `reopens`, but does NOT implement fixes. Do NOT read or modify source code or test files.
 - For each item, read only the spec file of the matching feature (for decision tree evaluation) and its `tasks.md` (for appending). Do NOT read plans, data models, or source code.
 - Reference: §bug-handling, §rules, §scenarios, §brownfield-inbox, §spec-phase (spec-root resolution) (constitution loaded by `/ductus:target` — do not re-read).
 

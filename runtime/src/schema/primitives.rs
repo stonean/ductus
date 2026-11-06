@@ -552,6 +552,16 @@ pub struct WaiverRef {
     pub reason: String,
 }
 
+/// One `--waive` a run takes, in `write-review`'s `new-waivers`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct NewWaiver {
+    /// The waived rule's ID.
+    pub rule: String,
+    /// The operator's justification.
+    pub reason: String,
+}
+
 /// Args for `relocate-audit-records`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -1324,6 +1334,13 @@ pub struct WriteReviewArgs {
     #[serde(default, alias = "expired")]
     #[arg(skip)]
     pub expired_waivers: Vec<WaiverRef>,
+    /// Each `--waive` this run takes. One `waivers:` entry is recorded per item,
+    /// listing every file its rule fires at in this run that no applied waiver
+    /// holds, stamped from `reviewed-at` and `decided-by`, and those findings leave
+    /// the counts as an applied waiver's do (spec 079).
+    #[serde(default)]
+    #[arg(skip)]
+    pub new_waivers: Vec<NewWaiver>,
     /// Reviewer observations that map to no loaded rule, each with its
     /// disposition. Excluded from every violation count and from `blocking`;
     /// counted under `dispositions:`. A deferred or waived observation that
@@ -5635,14 +5652,14 @@ pub struct ArtifactFinding {
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
     /// `criterion-path-existence`, `body-path-existence`,
-    /// `criterion-labels`, or `disposition-drift` — ten, matching the
+    /// `criterion-labels`, `disposition-drift`, or `cross-spec-impact-drift`, matching the
     /// `family:` literals the primitive emits.
     pub family: String,
     /// Severity tier: `blocking`
     /// (artifact completeness, task consistency, review state drift, and
     /// scenario open questions at `done`) or `advisory` (scenario
     /// consistency, scenario open questions below `done`, link-adjacent
-    /// drift, criterion and body path existence, criterion labels
+    /// drift, cross-spec impact drift, criterion and body path existence, criterion labels
     /// reciprocity, and disposition drift).
     pub severity: AnalyzeSeverity,
     /// Human-readable description of the finding.

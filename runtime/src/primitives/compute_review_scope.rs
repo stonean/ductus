@@ -222,14 +222,12 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // What the record at `HEAD` leaves open is read again wherever the window starts,
     // or a re-run would clear a finding with its file unread. A path it names that is
     // gone, or that leaves the project, has nothing to read.
-    let left_open = open_findings_at(repository, &head_tree, &project.to_git(&record_rel))?;
-    for path in left_open
-        .iter()
-        .filter(|path| stays_in_project(path) && repo.join(path).symlink_metadata().is_ok())
-    {
-        excluded.remove(path);
-        scope.insert(path.clone());
-    }
+    let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
+    let at_head = record_at(repository, &head_tree, &project.to_git(&record_rel))?;
+    let changed_contracts = contracts_changed_since(at_head.as_ref(), repo, &rel_dir);
+    let left_open = at_head.map_or_else(Vec::new, |record| record.open_findings);
+    let held = left_open.iter().chain(&changed_contracts);
+    hold_in_scope(held, repo, &mut scope, &mut excluded);
 
     let owed_by = paths_owing_a_review(
         (&layout.specs_root, &args.feature),
@@ -242,7 +240,6 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     let run = record
         .as_present()
         .filter(|record| record.last_run.is_some());
-    let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
     let record_is_held = |record: &ReviewBlock| {
         holds_done_until_reviewed(record)
             || matches!(
@@ -438,22 +435,49 @@ fn recorded_run(
     }))
 }
 
-/// What the record at `git_path` in `tree` leaves open: empty when the tree holds no
-/// record, or one that does not parse or lists nothing.
-fn open_findings_at(
+/// Hold each path in scope whoever changed it, unless it is gone or leaves the project,
+/// which leaves nothing to read.
+fn hold_in_scope<'a>(
+    paths: impl Iterator<Item = &'a String>,
+    repo: &Path,
+    scope: &mut BTreeSet<String>,
+    excluded: &mut BTreeMap<String, Vec<String>>,
+) {
+    for path in
+        paths.filter(|path| stays_in_project(path) && repo.join(path).symlink_metadata().is_ok())
+    {
+        excluded.remove(path);
+        scope.insert(path.clone());
+    }
+}
+
+/// Each contract the record's digest says changed: read wherever the window starts, or a
+/// review owed for one edited before the window would refresh the digest with it unread.
+fn contracts_changed_since(
+    record: Option<&ReviewBlock>,
+    repo: &Path,
+    rel_dir: &str,
+) -> Vec<String> {
+    match record.map(|record| review_freshness(repo, rel_dir, Some(record))) {
+        Some(RecordFreshness::Stale { paths, .. }) => paths,
+        _ => Vec::new(),
+    }
+}
+
+/// The record at `git_path` in `tree`: none when the tree holds no record, or one that
+/// does not parse.
+fn record_at(
     repository: &Repository,
     tree: &Tree<'_>,
     git_path: &str,
-) -> Result<Vec<String>> {
+) -> Result<Option<ReviewBlock>> {
     let Some(text) = blob_text(repository, tree, git_path)? else {
-        return Ok(Vec::new());
+        return Ok(None);
     };
     let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
-        return Ok(Vec::new());
+        return Ok(None);
     };
-    Ok(serde_norway::from_str::<ReviewBlock>(frontmatter)
-        .map(|record| record.open_findings)
-        .unwrap_or_default())
+    Ok(serde_norway::from_str::<ReviewBlock>(frontmatter).ok())
 }
 
 /// What a review run reads, for a caller weighing a stored finding that did not fire:
@@ -2963,6 +2987,62 @@ mod tests {
         x(&tmp)
     }
 
+    /// A contract edited while `done`, then a reopen: the window starts after the edit,
+    /// so without this the run refreshes the digest with the contract unread. The record
+    /// at `HEAD` decides, so a run's two writes agree, and its commit clears it
+    /// (spec 079).
+    #[test]
+    fn a_contract_changed_before_the_window_joins_the_scope() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        write(&dir.join("spec.md"), &spec("done"));
+        write(&dir.join("scenarios/s.md"), "# S\n");
+        let sha = commit_all(&repo, "chore: seed");
+        let digest = |at: &str, sha: &str| {
+            let contracts = crate::primitives::analyze_subjects::subject_digest(
+                &dir,
+                crate::primitives::analyze_subjects::is_review_contract,
+            );
+            let mut rows = String::new();
+            for (path, value) in &contracts.digests {
+                rows.extend(["  ", path, ": ", value, "\n"]);
+            }
+            record(
+                &format!("{DISPOSITIONS}reviewed-against: {sha}\nreviewed-digest:\n{rows}"),
+                at,
+            )
+        };
+        write(
+            &dir.join("review.md"),
+            &digest("2026-10-01T00:00:00Z", &sha),
+        );
+        commit_all(&repo, "review(001): the run");
+        write(&dir.join("scenarios/s.md"), "# S, changed\n");
+        commit_all(&repo, "docs(001): edited while done");
+        write(&dir.join("spec.md"), &spec("in-progress"));
+        let reopen = commit_all(&repo, "status(001): reopen");
+
+        let contract = "specs/001-x/scenarios/s.md";
+        let scope = x(&tmp);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert!(has(&scope, contract), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+        assert!(!scope.modified_since.iter().any(|path| path == contract));
+
+        write(
+            &dir.join("review.md"),
+            &digest("2026-11-01T00:00:00Z", &reopen),
+        );
+        assert!(
+            has(&x(&tmp), contract),
+            "the run's second write reads the same scope"
+        );
+
+        commit_all(&repo, "review(001): the next run");
+        assert!(!has(&x(&tmp), contract));
+    }
+
     #[test]
     fn a_reopening_that_changed_only_text_owes_no_review() {
         for edit in ["specs/001-x/plan.md", "specs/001-x/tasks.md"] {
@@ -3037,7 +3117,7 @@ mod tests {
     }
 
     /// A contract changed before the flip lies outside the window, and the gate still
-    /// reads the digest as stale, so a review is owed.
+    /// reads the digest as stale, so a review is owed, and it reads that contract.
     #[test]
     fn a_stale_digest_owes_a_review_though_the_window_holds_no_contract() {
         let tmp = tempfile::tempdir().unwrap();
@@ -3058,7 +3138,37 @@ mod tests {
         );
         commit_all(&repo, "status(001): reopen");
         let scope = x(&tmp);
+        assert_eq!(
+            scope.scope,
+            ["specs/001-x/scenarios/a.md", "specs/001-x/spec.md"]
+        );
+        assert!(scope.review_owed);
+    }
+
+    /// A contract gone before the flip is in neither the window nor the scope, and the
+    /// gate still reads the digest as stale, so only the digest makes the review owed:
+    /// otherwise `/review` stops on what the gate asks for.
+    #[test]
+    fn a_stale_digest_owes_a_review_though_its_contract_is_gone() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(
+                &format!("{DISPOSITIONS}reviewed-digest:\n  scenarios/gone.md: 0000\n"),
+                "2026-10-01T00:00:00Z",
+            ),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        let scope = x(&tmp);
         assert_eq!(scope.scope, ["specs/001-x/spec.md"]);
+        assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
         assert!(scope.review_owed);
     }
 

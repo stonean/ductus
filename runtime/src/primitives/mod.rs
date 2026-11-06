@@ -761,6 +761,11 @@ pub(crate) fn read_recorded_waivers<T: serde::de::DeserializeOwned>(
 pub(crate) struct WaiverPaths(Vec<String>);
 
 impl WaiverPaths {
+    /// The value listing `paths`.
+    pub(crate) fn of(paths: Vec<String>) -> Self {
+        Self(paths)
+    }
+
     /// The listed paths, in record order.
     pub(crate) fn as_slice(&self) -> &[String] {
         &self.0

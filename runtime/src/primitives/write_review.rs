@@ -338,6 +338,7 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     if let Some(who) = args.decided_by.as_deref() {
         single_line("decided-by", who)?;
     }
+    validate_new_waivers(args)?;
     // An observation renders as one list item and, once decided, becomes a
     // stored decision's key, so an embedded newline would inject structure
     // into the report or the record. Every check runs here, before any
@@ -391,6 +392,46 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     Ok(())
 }
 
+/// Each `new-waivers` item names a rule once and its reason, on one line each, and a
+/// person stands behind it.
+fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
+    for (idx, waiver) in args.new_waivers.iter().enumerate() {
+        let invalid = |argument: String, reason: &str| PrimitiveError::InvalidArgument {
+            primitive: "write-review".into(),
+            argument,
+            reason: reason.into(),
+        };
+        for (field, value) in [("rule", &waiver.rule), ("reason", &waiver.reason)] {
+            let argument = format!("new-waivers[{idx}].{field}");
+            if value.trim().is_empty() {
+                return Err(invalid(argument, "a waiver names its rule and its reason"));
+            }
+            super::validate_single_line("write-review", &argument, value)?;
+        }
+        if args.new_waivers[..idx]
+            .iter()
+            .any(|earlier| earlier.rule == waiver.rule)
+        {
+            return Err(invalid(
+                format!("new-waivers[{idx}].rule"),
+                "one judgment per rule in a run, since its entry lists each file the rule fires at",
+            ));
+        }
+        if args
+            .decided_by
+            .as_deref()
+            .map(str::trim)
+            .is_none_or(|who| who.is_empty() || who == decisions::RULE_DECIDER)
+        {
+            return Err(invalid(
+                "decided-by".into(),
+                "a waiver names the person who decided it",
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Execute the `write-review` primitive.
 ///
 /// # Errors
@@ -411,8 +452,11 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 ///   or its task is in a `tasks.md` that is no feature's; when a waiver names
 ///   work or states no reason; when a finding is both deferred and matched by
 ///   an applied waiver, or is waived while a stored deferral for its key
-///   stands outside `expired-decisions` (argument `expired-decisions`); when
-///   two observations, or two violations, sharing a key are given different
+///   stands outside `expired-decisions`, or when a broken contract is waived
+///   while the rule's stored waiver for its key stands there (argument
+///   `expired-decisions`); when a `new-waivers` item is blank or spans lines,
+///   repeats a rule, has no person in `decided-by`, or its rule fires at no file
+///   a waiver does not already hold; when two observations, or two violations, sharing a key are given different
 ///   outcomes; when a new decision, or a waived fix round, has no
 ///   `decided-by`; or when a `fix-rounds` entry carries a `result` on any
 ///   check but `re-read`, a re-read none, or a `reason` that is blank,
@@ -442,6 +486,9 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         });
     }
     refuse_an_empty_scope_over_a_finding(args, &feature_dir)?;
+    let new_waivers = new_waiver_entries(args)?;
+    let settled = settled(args, &new_waivers, &feature_dir)?;
+    let args = settled.as_ref();
 
     // Dedup, then bucket the survivors.
     let deduped = dedup_findings(&args.findings);
@@ -497,27 +544,11 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             path: spec_path.clone(),
             source,
         })?;
-    let surviving = surviving_waivers(&feature_dir, args)?;
+    let mut surviving = surviving_waivers(&feature_dir, args)?;
+    surviving.extend(new_waivers);
     let dispositions = count_dispositions(&args.observations);
     one_outcome_per_key(&args.observations, &deduped)?;
-    let mut decisions = decisions::merge(
-        stored_decisions(&feature_dir, args, repo)?,
-        &args.expired_decisions,
-        &[
-            decided_observations(&args.observations),
-            decided_violations(&deduped),
-        ]
-        .concat(),
-        &args.reviewed_at,
-        args.decided_by.as_deref(),
-    )
-    .map_err(|refusal| {
-        refusal.into_error(
-            "write-review",
-            "observations",
-            "an observation or violation",
-        )
-    })?;
+    let mut decisions = merged_decisions(&feature_dir, args, repo, &deduped)?;
     decisions::mark_gating(&mut decisions, &sorted.holding());
     let loop_record = loop_record_of(args, repo)?;
     let open_findings = open_findings(
@@ -663,11 +694,20 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> (u32, BTreeMap<String, 
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
+    // The record is what the run writes, not what it read, so a run's two writes state
+    // one denominator.
+    let own_record = format!(
+        "{}/{}/{}",
+        paths::Paths::load(repo).specs_root,
+        args.feature,
+        super::REVIEW_RECORD_FILE
+    );
     crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or_else(
         |_| (0, BTreeMap::new()),
         |result| {
+            let read = result.scope.iter().filter(|path| **path != own_record);
             (
-                u32::try_from(result.scope.len()).unwrap_or(u32::MAX),
+                u32::try_from(read.count()).unwrap_or(u32::MAX),
                 result.excluded,
             )
         },
@@ -735,6 +775,34 @@ fn stored_decisions(
             &args.expired_decisions,
         )?;
     }
+    let replaced = |key: &str| {
+        args.expired_decisions
+            .iter()
+            .any(|gone| decisions::same_key(&gone.key, key))
+    };
+    // The rule never waives a broken contract, so its waiver from before the
+    // observation was judged one disposes of nothing. A person's waiver replaces
+    // it through `expired-decisions`, which `merge` reads as fresh (spec 079).
+    for observation in args.observations.iter().filter(|observation| {
+        observation.contract_break && observation.disposition.outcome == DispositionOutcome::Waived
+    }) {
+        let key = observation_key(observation);
+        if !replaced(&key)
+            && decisions::stored_decision(&stored, &key).is_some_and(|decision| {
+                decision.by_rule && decision.outcome == DecisionOutcome::Waived
+            })
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: "expired-decisions".into(),
+                reason: format!(
+                    "`{key}` is a broken contract, and the rule's stored waiver does not \
+                     dispose of it; pass that waiver in expired-decisions, then fix it, defer \
+                     it, or record a person's waiver"
+                ),
+            });
+        }
+    }
     // A violation this run waives while its stored deferral stands would be
     // recorded twice, in `waivers:` and in `decisions:`; the deferral the
     // waiver replaces arrives in `expired-decisions` (spec 076, AC13).
@@ -744,11 +812,7 @@ fn stored_decisions(
         .filter(|finding| waiver_reason(finding, &args.applied_waivers).is_some())
     {
         let key = violation_key(finding);
-        let replaced = args
-            .expired_decisions
-            .iter()
-            .any(|gone| decisions::same_key(&gone.key, &key));
-        if !replaced
+        if !replaced(&key)
             && decisions::stored_decision(&stored, &key)
                 .is_some_and(|decision| decision.outcome == DecisionOutcome::Deferred)
         {
@@ -764,6 +828,34 @@ fn stored_decisions(
         }
     }
     Ok(stored)
+}
+
+/// The `decisions:` list this run records: what is stored, less what it expired, and
+/// each decision it made.
+fn merged_decisions(
+    feature_dir: &Path,
+    args: &WriteReviewArgs,
+    repo: &Path,
+    deduped: &[ReviewFinding],
+) -> Result<Vec<RawDecision>> {
+    decisions::merge(
+        stored_decisions(feature_dir, args, repo)?,
+        &args.expired_decisions,
+        &[
+            decided_observations(&args.observations),
+            decided_violations(deduped),
+        ]
+        .concat(),
+        &args.reviewed_at,
+        args.decided_by.as_deref(),
+    )
+    .map_err(|refusal| {
+        refusal.into_error(
+            "write-review",
+            "observations",
+            "an observation or violation",
+        )
+    })
 }
 
 /// Refuse two observations, or two violations, that share a key but carry
@@ -1568,6 +1660,122 @@ fn render_skipped(skipped: &[String]) -> String {
 /// rendered before the record is assembled, and computing the surviving set
 /// twice would be two chances to prune differently — the class of divergence
 /// the retired `check-review-agreement` was built to catch.
+/// The `waivers:` entry each `new-waivers` item records: every file its rule fires at
+/// in this run that no applied waiver holds, since only the first claim on a
+/// `(rule, file)` applies (spec 079).
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] when the rule fires at no such file.
+fn new_waiver_entries(args: &WriteReviewArgs) -> Result<Vec<RawWaiverFull>> {
+    args.new_waivers
+        .iter()
+        .enumerate()
+        .map(|(idx, waiver)| {
+            let files: std::collections::BTreeSet<&str> = args
+                .findings
+                .iter()
+                .filter(|finding| {
+                    finding.rule == waiver.rule
+                        && waiver_reason(finding, &args.applied_waivers).is_none()
+                })
+                .map(|finding| finding.file.as_str())
+                .collect();
+            if files.is_empty() {
+                return Err(PrimitiveError::InvalidArgument {
+                    primitive: "write-review".into(),
+                    argument: format!("new-waivers[{idx}]"),
+                    reason: format!(
+                        "`{}` fires at no file in this run that a waiver does not already hold",
+                        waiver.rule
+                    ),
+                });
+            }
+            Ok(RawWaiverFull {
+                rule: Some(waiver.rule.clone()),
+                file: Some(WaiverPaths::of(
+                    files.into_iter().map(str::to_string).collect(),
+                )),
+                reason: Some(waiver.reason.clone()),
+                waived_at: Some(args.reviewed_at.clone()),
+                waived_by: args.decided_by.clone(),
+                extra: std::collections::BTreeMap::new(),
+            })
+        })
+        .collect()
+}
+
+/// The arguments as this run records them: each new waiver's anchors applied, so its
+/// findings leave the counts as an applied waiver's do, and an observation the rule
+/// waived carrying the decision of the person it cannot replace.
+fn settled<'a>(
+    args: &'a WriteReviewArgs,
+    new_waivers: &[RawWaiverFull],
+    feature_dir: &Path,
+) -> Result<std::borrow::Cow<'a, WriteReviewArgs>> {
+    let stored = decisions::read_decisions(feature_dir, super::REVIEW_RECORD_FILE)?;
+    let overruled: Vec<(usize, crate::schema::primitives::Disposition)> = args
+        .observations
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, observation)| {
+            standing_decision(observation, &stored, &args.expired_decisions)
+                .map(|decision| (idx, decision))
+        })
+        .collect();
+    if new_waivers.is_empty() && overruled.is_empty() {
+        return Ok(std::borrow::Cow::Borrowed(args));
+    }
+    let mut args = args.clone();
+    for entry in new_waivers {
+        let paths = entry.file.as_ref().map_or(&[][..], WaiverPaths::as_slice);
+        args.applied_waivers.extend(paths.iter().map(|file| {
+            crate::schema::primitives::WaiverRef {
+                rule: entry.rule.clone().unwrap_or_default(),
+                file: file.clone(),
+                reason: entry.reason.clone().unwrap_or_default(),
+            }
+        }));
+    }
+    for (idx, decision) in overruled {
+        args.observations[idx].disposition = decision;
+    }
+    Ok(std::borrow::Cow::Owned(args))
+}
+
+/// The stored decision, when the rule waives this observation again: the rule never
+/// replaces a person's unless this run expired it, so the count and the body follow it
+/// rather than contradict what the record stores (spec 079).
+fn standing_decision(
+    observation: &ReviewObservation,
+    stored: &[RawDecision],
+    expired: &[DecisionRef],
+) -> Option<crate::schema::primitives::Disposition> {
+    let disposition = &observation.disposition;
+    if !disposition.by_rule || disposition.outcome != DispositionOutcome::Waived {
+        return None;
+    }
+    let key = observation_key(observation);
+    if expired
+        .iter()
+        .any(|gone| decisions::same_key(&gone.key, &key))
+    {
+        return None;
+    }
+    let decision = decisions::stored_decision(stored, &key)?;
+    Some(crate::schema::primitives::Disposition {
+        outcome: match decision.outcome {
+            DecisionOutcome::Deferred => DispositionOutcome::Deferred,
+            DecisionOutcome::Waived => DispositionOutcome::Waived,
+        },
+        target: decision.target,
+        task: decision.task,
+        work_item: decision.work_item,
+        reason: decision.reason,
+        by_rule: decision.by_rule,
+    })
+}
+
 fn surviving_waivers(feature_dir: &Path, args: &WriteReviewArgs) -> Result<Vec<RawWaiverFull>> {
     let recorded: Vec<RawWaiverFull> = crate::primitives::read_recorded_waivers(feature_dir)?;
     Ok(recorded
@@ -2045,6 +2253,48 @@ mod tests {
 
     /// An unstated claim is **absent**, never rendered as a computed zero —
     /// the distinction the field exists to preserve.
+    /// A run's own record is what it writes, not what it read, so a run's two writes
+    /// state one denominator and a committed earlier record is no file in it (spec 079).
+    #[test]
+    fn a_runs_own_record_is_not_in_its_denominator() {
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+        )
+        .unwrap();
+        fs::create_dir_all(tmp.path().join("src")).unwrap();
+        fs::write(tmp.path().join("src/a.rs"), "a\n").unwrap();
+        let commit = |message: &str| {
+            let mut index = repo.index().unwrap();
+            index
+                .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+                .unwrap();
+            index.write().unwrap();
+            let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+            let sig = git2::Signature::now("t", "t@example.com").unwrap();
+            let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+            let parents: Vec<&git2::Commit<'_>> = parent.iter().collect();
+            repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+                .unwrap()
+                .to_string()
+        };
+        let base = commit("seed");
+        fs::write(tmp.path().join("src/a.rs"), "a2\n").unwrap();
+        commit("feat(001): code");
+        let mut args = base_args("001-x");
+        args.diff_base = base;
+        run(&args, tmp.path()).unwrap();
+        let first = review_md(&tmp, "001-x");
+        assert!(first.contains("\nscope: 1\n"), "{first}");
+        run(&args, tmp.path()).unwrap();
+        let second = review_md(&tmp, "001-x");
+        assert!(second.contains("\nscope: 1\n"), "{second}");
+    }
+
     #[test]
     fn unstated_examined_is_absent_rather_than_zero() {
         let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -2351,6 +2601,7 @@ mod tests {
             findings: Vec::new(),
             applied_waivers: Vec::new(),
             expired_waivers: Vec::new(),
+            new_waivers: Vec::new(),
             observations: Vec::new(),
             expired_decisions: Vec::new(),
             decided_by: None,
@@ -3305,6 +3556,25 @@ mod tests {
         assert!(report.contains("decided-by: dev@example.com"), "{report}");
         assert!(!report.contains("decided-by: rule"), "{report}");
         assert!(report.contains("outcome: deferred"), "{report}");
+        // The count and the body say what the record holds rather than contradict it.
+        assert!(report.contains("  deferred: 1\n  waived: 0\n"), "{report}");
+        assert!(!report.contains("decided by the rule"), "{report}");
+        assert!(!report.contains("the rule's reason"), "{report}");
+
+        // Unless this run expired it: then the rule decides afresh.
+        next.expired_decisions = vec![DecisionRef {
+            key: "perf: a loop".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: Some("specs/001-x/spec.md".into()),
+            task: None,
+            work_item: None,
+            reason: None,
+            by_rule: false,
+        }];
+        run(&next, dir.path()).unwrap();
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("  deferred: 0\n  waived: 1\n"), "{report}");
     }
 
     /// A broken contract left for later counts, and one the run fixed left
@@ -3355,6 +3625,242 @@ mod tests {
         observation.path = path.into();
         observation.contract_break = true;
         observation
+    }
+
+    fn must_at(rule: &str, file: &str) -> ReviewFinding {
+        serde_json::from_value(serde_json::json!({
+            "rule": rule, "severity": "must", "file": file, "line-range": "1", "confidence": "high",
+        }))
+        .unwrap()
+    }
+
+    fn waive(rule: &str, reason: &str) -> crate::schema::primitives::NewWaiver {
+        crate::schema::primitives::NewWaiver {
+            rule: rule.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// `--waive`'s write route: the entry lists each file the rule fires at this run,
+    /// stamped from the run, and the next run's `process-waivers` reads it, so the
+    /// finding stays out of the count rather than coming back (spec 079).
+    #[test]
+    fn a_new_waiver_is_stored_and_the_next_run_applies_it() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![must_at("SEC-1", "src/b.rs"), must_at("SEC-1", "src/a.rs")];
+        args.new_waivers = vec![waive("SEC-1", "both are internal")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0);
+        assert_eq!(result.waived, 2);
+        assert!(!result.blocking);
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains(
+                "waivers:\n  - rule: SEC-1\n    file:\n      - src/a.rs\n      - src/b.rs\n    reason: both are internal\n    waived-at: 2026-07-02T12:00:00Z\n    waived-by: dev@example.com\n"
+            ),
+            "{report}"
+        );
+        assert!(listed_open(&tmp, "001-x").is_empty(), "{report}");
+        for path in ["src/a.rs", "src/b.rs"] {
+            let file = tmp.path().join(path);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, "x\n").unwrap();
+        }
+        let next = crate::primitives::process_waivers::run(
+            &crate::schema::primitives::ProcessWaiversArgs {
+                feature: "001-x".into(),
+                fired: vec![
+                    crate::schema::primitives::FiredFinding {
+                        rule: "SEC-1".into(),
+                        file: "src/a.rs".into(),
+                    },
+                    crate::schema::primitives::FiredFinding {
+                        rule: "SEC-1".into(),
+                        file: "src/b.rs".into(),
+                    },
+                ],
+                ..Default::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(next.applied.len(), 2, "{next:?}");
+    }
+
+    /// A file a stored waiver already holds is not listed again, since only the first
+    /// claim on a `(rule, file)` applies.
+    #[test]
+    fn a_new_waiver_lists_only_what_no_applied_waiver_holds() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![must_at("SEC-1", "src/a.rs"), must_at("SEC-1", "src/b.rs")];
+        args.applied_waivers = vec![WaiverRef {
+            rule: "SEC-1".into(),
+            file: "src/a.rs".into(),
+            reason: "earlier".into(),
+        }];
+        args.new_waivers = vec![waive("SEC-1", "this one too")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0);
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains("  - rule: SEC-1\n    file: src/b.rs\n    reason: this one too\n"),
+            "{report}"
+        );
+    }
+
+    /// Each refused `--waive` writes nothing: a waiver with nothing to waive, or nobody
+    /// to attribute it to, is the operator's to correct.
+    #[test]
+    fn a_new_waiver_with_nothing_to_waive_or_nobody_behind_it_is_refused() {
+        let cases: Vec<(&str, Option<&str>, &str, &str, &str)> = vec![
+            (
+                "fires nowhere",
+                Some("dev@example.com"),
+                "SEC-2",
+                "why",
+                "new-waivers[0]",
+            ),
+            (
+                "no reason",
+                Some("dev@example.com"),
+                "SEC-1",
+                "  ",
+                "new-waivers[0].reason",
+            ),
+            (
+                "no rule",
+                Some("dev@example.com"),
+                " ",
+                "why",
+                "new-waivers[0].rule",
+            ),
+            (
+                "two lines",
+                Some("dev@example.com"),
+                "SEC-1",
+                "a\nb",
+                "new-waivers[0].reason",
+            ),
+            ("nobody", None, "SEC-1", "why", "decided-by"),
+            ("the rule", Some("rule"), "SEC-1", "why", "decided-by"),
+        ];
+        for (name, by, rule, reason, argument) in cases {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            let mut args = base_args("001-x");
+            args.decided_by = by.map(str::to_string);
+            args.findings = vec![must_at("SEC-1", "src/a.rs")];
+            args.new_waivers = vec![waive(rule, reason)];
+            let error = run(&args, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&error, PrimitiveError::InvalidArgument { argument: named, .. } if named == argument),
+                "{name}: {error}"
+            );
+            assert!(!tmp.path().join("specs/001-x/review.md").exists(), "{name}");
+        }
+
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![must_at("SEC-1", "src/a.rs")];
+        args.new_waivers = vec![waive("SEC-1", "why"), waive("SEC-1", "again")];
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "new-waivers[1].rule"),
+            "{error}"
+        );
+    }
+
+    /// The refusal over a rule's stored waiver, with the record left as it was.
+    fn refused_over_the_rules_waiver(args: &WriteReviewArgs, tmp: &TempDir, before: &str) {
+        let error = run(args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "expired-decisions" && reason.contains("does not dispose")),
+            "{error}"
+        );
+        assert_eq!(review_md(tmp, "001-x"), before);
+    }
+
+    /// The rule's stored waiver, then the same observation judged a broken contract.
+    /// Carrying that waiver is refused, since nobody decided it, and only a person's
+    /// waiver with the rule's in `expired-decisions` closes it (spec 079, AC2).
+    #[test]
+    fn a_rules_stored_waiver_does_not_dispose_of_a_broken_contract() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = None;
+        let mut waived = rule_waived("bug: src/a.rs");
+        waived.path = "src/a.rs".into();
+        first.observations = vec![waived];
+        run(&first, tmp.path()).unwrap();
+        let before = review_md(&tmp, "001-x");
+        assert!(before.contains("decided-by: rule"), "{before}");
+        let key = "bug: src/a.rs — `src/a.rs`";
+
+        let mut carried = base_args("001-x");
+        carried.decided_by = Some("dev@example.com".into());
+        carried.observations = vec![broken(
+            "src/a.rs",
+            DispositionOutcome::Waived,
+            Some("the rule says so"),
+        )];
+        refused_over_the_rules_waiver(&carried, &tmp, &before);
+
+        carried.expired_decisions = vec![DecisionRef {
+            key: key.into(),
+            outcome: DecisionOutcome::Waived,
+            target: None,
+            task: None,
+            work_item: None,
+            reason: Some("the rule says so".into()),
+            by_rule: true,
+        }];
+        run(&carried, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+        assert!(!report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
+        assert!(listed_open(&tmp, "001-x").is_empty(), "{report}");
+    }
+
+    /// What the refusal leaves alone: a person's stored waiver closes the break with
+    /// nothing expired, and a break fixed or left open over the rule's waiver is not
+    /// disposed of by it.
+    #[test]
+    fn only_a_waived_break_over_the_rules_waiver_is_refused() {
+        let person = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = Some("dev@example.com".into());
+        first.observations = vec![broken(
+            "src/a.rs",
+            DispositionOutcome::Waived,
+            Some("a person's reason"),
+        )];
+        run(&first, person.path()).unwrap();
+        run(&first, person.path()).unwrap();
+        let report = review_md(&person, "001-x");
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+
+        for outcome in [
+            DispositionOutcome::Fixed,
+            DispositionOutcome::Undispositioned,
+        ] {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            let mut first = base_args("001-x");
+            first.decided_by = None;
+            let mut waived = rule_waived("bug: src/a.rs");
+            waived.path = "src/a.rs".into();
+            first.observations = vec![waived];
+            run(&first, tmp.path()).unwrap();
+            let mut next = base_args("001-x");
+            next.decided_by = None;
+            next.observations = vec![broken("src/a.rs", outcome, None)];
+            run(&next, tmp.path()).unwrap();
+        }
     }
 
     /// Counted violations and open breaks are listed once each, without a line range;

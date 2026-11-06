@@ -370,7 +370,7 @@ pub(crate) fn finding_message(path: &str, bytes: u64, pages: u64, threshold: u64
 macro_rules! split_route {
     () => {
         "split the spec by hand, since no command splits one, when a slice can reach done \
-         on its own: create the new spec with /{project}:specify, move the content into it, \
+         on its own: create the new spec with the specify command, move the content into it, \
          and link it from this one"
     };
 }
@@ -390,7 +390,7 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
         ArtifactKind::Tasks => vec![
             (
                 FixKind::Prune,
-                "prune its spent task sections with /{project}:prune",
+                "prune its spent task sections with the prune command",
             ),
             (FixKind::Split, SPLIT_AFTER_PRUNE),
             (FixKind::Trim, "or trim spec.md"),
@@ -413,7 +413,7 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
         ],
         ArtifactKind::Scenario => vec![(
             FixKind::Promote,
-            "promote the scenario to its own spec with /{project}:specify (§scenario-promotion)",
+            "promote the scenario to its own spec with the specify command (§scenario-promotion)",
         )],
     }
 }
@@ -954,7 +954,7 @@ mod tests {
             [FixKind::Promote]
         );
         let tasks = by_kind(ArtifactKind::Tasks);
-        assert!(tasks.fixes[0].text.contains("/{project}:prune"));
+        assert!(tasks.fixes[0].text.contains("the prune command"));
         assert!(
             tasks.fixes[1]
                 .text
@@ -1080,12 +1080,11 @@ mod tests {
                     .map(str::to_lowercase);
                 assert!(words.clone().all(|w| w != "will"), "{warning}");
                 // Every command named is one that exists.
-                for (_, rest) in warning
-                    .match_indices("/{project}:")
-                    .map(|(i, _)| (i, &warning[i + "/{project}:".len()..]))
-                {
+                assert!(!warning.contains("{project}"), "{warning}");
+                for (at, _) in warning.match_indices(" command") {
+                    let named = warning[..at].rsplit(' ').next().unwrap_or_default();
                     assert!(
-                        rest.starts_with("specify") || rest.starts_with("prune"),
+                        ["specify", "prune"].contains(&named) || named == "no",
                         "{warning}"
                     );
                 }

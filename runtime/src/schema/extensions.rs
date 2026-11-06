@@ -282,7 +282,7 @@ pub struct PerformReviewResponse {
 }
 
 /// One observation as a `performReview` pass reports it: what was observed,
-/// and where. A pass does not disposition what it observes — the fix-and-route
+/// where, and whether it breaks the spec's contract. A pass does not disposition what it observes — the fix-and-route
 /// step decides that with the operator, and the exec walker no-ops it — so the
 /// response has no field for a disposition or a matched decision key, and the
 /// walker accumulates observations in this shape alone. An exec run therefore
@@ -297,6 +297,11 @@ pub struct PassObservation {
     /// empty when it is not anchored to one file.
     #[serde(default)]
     pub path: String,
+    /// The observation shows the spec's own code breaks its contract, so the
+    /// record counts it and lists its `path`, then required, in `open-findings`,
+    /// which holds `done` until a review clears it (spec 079).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub contract_break: bool,
 }
 
 // -- askClarifyQuestion --------------------------------------------------------
@@ -1340,6 +1345,7 @@ mod tests {
             observations: vec![PassObservation {
                 text: "perf: config re-read per call".into(),
                 path: "runtime/src/schema/paths.rs".into(),
+                contract_break: false,
             }],
         };
         let r_value: serde_json::Value = serde_json::to_value(&response).unwrap();

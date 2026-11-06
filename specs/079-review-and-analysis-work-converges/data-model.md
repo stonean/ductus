@@ -21,7 +21,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
 | `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model; true with no such record |
 
-`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review and a path the last record lists as open, which need not have changed.
+`modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review, a path the last record lists as open and a contract its digest says changed, which need not have changed in the window.
 
 ## `check-review-gate` result
 
@@ -33,8 +33,9 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `loop-open` | boolean, MCP and CLI | Writes `fix-rounds-open`; passed by every review-command write but the last, so `ductus exec` never sets it |
 | `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
-| `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings` |
+| `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings`; waived, the rule's stored waiver must be in `expired-decisions`. A `performReview` pass carries it too |
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
+| `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, listing every file the rule fires at this run that no applied waiver holds, stamped from `reviewed-at` and `decided-by` |
 
 `write-analysis` takes `by-rule` on a finding's disposition the same way. `empty-scope` refuses over an earlier record counting a finding, which a run's own earlier write is not.
 

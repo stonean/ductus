@@ -58,7 +58,7 @@ Same order as Instructions steps 9–16, which carry the procedure; these items 
 
    A spec already at `status: done` returns `not gated`, deliberately **not** `passed: true`: a gate reporting a pass for a spec it did not examine could be read as authorizing a transition that has already happened. Nothing is owed; changing what the spec requires means reopening it first through `/{project}:amend`.
 
-   **The gate never writes a signpost.** Which section of an affected spec carries a `cross-spec-impact:` back-link is a routing judgment, and a wrong auto-write into another spec is worse than a precise refusal. Record the change in each affected spec, using `/{project}:amend` against one that is already `done`, and re-run.
+   **The gate never writes a signpost.** Which section of an affected spec carries a `cross-spec-impact:` back-link is a routing judgment, and a wrong auto-write into another spec is worse than a precise refusal. Record the change in each affected spec with a signpost linking back to this one, and re-run: on a `done` spec a signpost is a correction and leaves it `done`, while a criterion or scenario there reopens it through `/{project}:amend`.
 
    **Freshness compares content, not commits**, since each run reads the working tree while its recorded sha names a commit: `reviewed-digest` against the spec's durable contracts, `analyzed-digest` against its analyze subjects, `reviewed-against` and `analyzed-against` being provenance read only for the mechanical-sweep rename exemption. A record with no digest is **undeterminable**, not stale and not current: it does not block, the passing verdict's guidance says which, and the next run clears it.
 

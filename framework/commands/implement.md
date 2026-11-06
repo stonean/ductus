@@ -59,7 +59,7 @@ Default is unset — without the flag, the user confirms each task as today.
 
    1. Invoke `derive-dependencies` as the safety net, per the **Recompute dependencies (safety net)** bullet of §Setup details in `.ductus/reference/implement.md`.
 
-2. Invoke `derive-boundary` against the feature to compute the runtime write boundary. The boundary feeding the writeCode validator below is the **union** of this derivation and any session-seeded write-boundary, a deliberate grant the derivation never revokes; with neither, enforcement stays fail-closed and the first out-of-spec edit halts. When the result carries `guidance`, surface it (commit the spec directory, or seed a `write-boundary` in the session) and continue.
+2. Invoke `derive-boundary` against the feature to compute the runtime write boundary. The boundary feeding the writeCode validator below is the **union** of this derivation and any write-boundary in the session file, a deliberate grant the derivation never revokes, which only `ductus exec` reads and the next target write drops; with neither, enforcement stays fail-closed and the first out-of-spec edit halts. When the result carries `guidance`, surface it (commit the spec directory, or under `ductus exec` seed a `write-boundary` in the session file) and continue.
 
 3. Invoke `check-stuck` against the feature with a threshold of 3 to detect stuck cycles before starting work. When the result reports stuck, surface the cycle to the user and pause for direction before proceeding — auto mode does not power through cycles. Surface any `guidance` it carries, since `stuck: false` is then no answer.
 

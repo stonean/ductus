@@ -606,8 +606,8 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         // `write-review` step consumes the union across all passes. An
         // observation is a pass output the reviewer judged real but that
         // matched no loaded rule, and it reaches `write-review` by this same
-        // route — in `PassObservation`'s shape, text and path alone, since
-        // a pass has no disposition to give. Both are taken from the typed
+        // route — in `PassObservation`'s shape, text, path and whether it
+        // breaks the contract, since a pass has no disposition to give. Both are taken from the typed
         // response, so nothing a pass volunteers beyond that shape is
         // carried. The walker has no operator to disposition an observation,
         // so it is recorded undispositioned (spec 058, AC26).
@@ -1584,8 +1584,7 @@ mod tests {
     }
 
     /// An exec run has no operator to disposition an observation, and a pass
-    /// has no disposition to give, so the walker carries an observation's text
-    /// and path alone: one the reviewer's response marks `fixed` is recorded
+    /// has no disposition to give, so the walker carries no disposition: one the reviewer's response marks `fixed` is recorded
     /// undispositioned (spec 058, AC26) — never as `fixed` without a gate —
     /// and a malformed disposition no longer fails the run over a field the
     /// walker would not use.
@@ -1642,6 +1641,75 @@ mod tests {
             ),
             "{review}"
         );
+    }
+
+    /// The walker to a `write-review` step on one `performReview` response.
+    fn walk_one_review_pass(
+        tmp: &std::path::Path,
+        responses: &str,
+    ) -> std::io::Result<WalkOutcome> {
+        let dir = tmp.join("specs/001-x");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+        )
+        .unwrap();
+        let procedure = Procedure {
+            command: "review".into(),
+            steps: vec![
+                Step::Extension {
+                    number: StepNumber(vec![1]),
+                    identifier: "performReview".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+                Step::Primitive {
+                    number: StepNumber(vec![2]),
+                    name: "write-review".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+            ],
+        };
+        let mut context = Map::new();
+        context.insert("feature".into(), Value::String("001-x".into()));
+        context.insert(
+            "reviewed-at".into(),
+            Value::String("2026-07-04T00:00:00Z".into()),
+        );
+        context.insert("reviewed-against".into(), Value::String("abc1234".into()));
+        context.insert("diff-base".into(), Value::String("def5678".into()));
+        let mut reader = Cursor::new(responses.to_string());
+        let mut writer: Vec<u8> = Vec::new();
+        Walker::new(
+            &procedure,
+            tmp.to_path_buf(),
+            context,
+            &mut reader,
+            &mut writer,
+        )
+        .run()
+    }
+
+    /// A pass judging an observation a broken contract reaches the record, so what
+    /// the gate reads from it holds `done` on the exec path too (spec 079). It stays
+    /// undispositioned, since a pass has no disposition to give.
+    #[test]
+    fn perform_review_carries_a_broken_contract_to_the_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[],\"observations\":[{\"text\":\"bug: breaks AC1\",\"path\":\"src/a.rs:4\",\"contract-break\":true},{\"text\":\"perf: slow\",\"path\":\"src/b.rs\"}]}}\n";
+        assert_eq!(
+            walk_one_review_pass(tmp.path(), responses).unwrap(),
+            WalkOutcome::Complete
+        );
+        let review = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
+        assert!(review.contains("\ncontract-breaks: 1\n"), "{review}");
+        assert!(
+            review.contains("open-findings:\n  - src/a.rs\n"),
+            "{review}"
+        );
+        assert!(review.contains("undispositioned: 2\n"), "{review}");
     }
 
     /// An exec `/analyze` records the tier counts its own detection produced

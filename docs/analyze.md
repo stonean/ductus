@@ -30,9 +30,10 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Plan record | Advisory | Each `plan.md` section outside the design record — the plan template's own `##` sections — on a spec at `planned` or later, reported even when a stored waiver decides it, so the waiver is matched rather than expired; `/prune` moves such a section's durable pieces home and removes it |
 | Artifact size | Advisory | Each of `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and every scenario larger than `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), which an agent may not read in one call; the finding names the fixes for its kind and, on a `done` spec, which reopen it, and a stored waiver holds until the file grows into another read page |
 | Rule integrity and citations | Blocking / advisory | Cited rule IDs resolve; deprecated citations and non-firing `## Applicable Rules` entries are advisory |
-| Review state drift | Blocking | A `done` spec holding an unticked criterion, or whose `review.md` record is missing a run or reports `blocking: true` |
+| Review state drift | Blocking | A `done` spec holding an unticked criterion, or whose `review.md` record is missing a run, reports `blocking: true` or still carries a cut-off run's open mark |
 | Analyze state drift | Blocking | A `done` spec whose `analysis.md`, as this run writes it, reports `blocking: true` |
 | Disposition drift | Advisory | A `done` spec whose `review.md` or `analysis.md` records undispositioned findings |
+| Cross-spec impact drift | Advisory | A `done` spec declaring a `cross-spec-impact:` entry no back-link discharges |
 | Scenario open questions | Blocking at `done`, advisory otherwise | Unresolved `## Open Questions` in any `scenarios/*.md` |
 | Scenario consistency | Advisory | Scenario sections present; a still-pending scenario has a task |
 | Grounding | Advisory | Descriptive claims about the existing system are cited or hedged (form, never truth) |

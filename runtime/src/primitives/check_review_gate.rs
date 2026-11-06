@@ -286,6 +286,17 @@ fn analyze_half_block(
         crate::primitives::RecordLoad::Present(record) => Some(record),
         crate::primitives::RecordLoad::Absent => None,
     };
+    // `analysis.md` is no subject of its own analysis, so a list damaged after the run
+    // leaves the record current, and only this reads it. A hard fail to
+    // `validate-frontmatter`, and `write-analysis` refuses to record over it.
+    if analyze_record.is_some()
+        && let Err(error) = crate::primitives::decisions::read_decisions(
+            feature_dir,
+            crate::primitives::ANALYSIS_RECORD_FILE,
+        )
+    {
+        return Err(unreadable_decisions_block(rel_dir, &error.to_string()));
+    }
     let freshness = analyze_gate_block(repo, rel_dir, analyze_record.as_ref(), project)?;
     if let Some(blocked) = disposition_block(
         (crate::primitives::ANALYSIS_RECORD_FILE, "analyze"),
@@ -896,6 +907,21 @@ enum RecordKind {
 /// have been reviewed sends them to redo work on the strength of something the
 /// gate could not read. The parse error travels with it, so the repair is
 /// actionable rather than a guess.
+fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> CheckReviewGateResult {
+    CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::AnalyzeRecordUnreadable),
+        message: Some(format!(
+            "blocked: {rel_dir}/analysis.md's decisions: list could not be read — which findings it decided is undeterminable"
+        )),
+        guidance: Some(format!(
+            "Repair the list in {rel_dir}/analysis.md by hand, since an analysis refuses to record over it. Parse error: {reason}"
+        )),
+        violations: vec![],
+        cross_spec_impact: vec![],
+    }
+}
+
 fn unreadable_record_block(
     rel_dir: &str,
     project: &str,
@@ -1001,7 +1027,7 @@ fn already_done_block(status: &str, project: &str) -> Option<CheckReviewGateResu
 /// inherited rather than introduced, and it is outside what a declaration is
 /// for: a branch-scoped spec's content is folded into its upstream spec, so an
 /// impact on one is declared against the upstream spec it folds into.
-fn cross_spec_impact_states(
+pub(crate) fn cross_spec_impact_states(
     declared: &[String],
     feature: &str,
     repo: &Path,
@@ -2620,6 +2646,43 @@ mod tests {
             format!("---\nspec: 007-gate\n{body}---\n\n# {key} — 007-gate\n"),
         )
         .unwrap();
+    }
+
+    /// `analysis.md` is no subject of its own analysis, so a `decisions:` list damaged
+    /// after the run reads as current. `validate-frontmatter` calls it a hard fail, and
+    /// `write-analysis` refuses to record over it, so the message says to repair it and
+    /// does not name a re-run (spec 079).
+    #[test]
+    fn an_analysis_whose_decisions_do_not_parse_blocks() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_with_current_digest(tmp.path(), &base);
+        git_commit_all(tmp.path(), "the records");
+        let clean = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(clean.passed, "{clean:?}");
+        let file = tmp.path().join("specs/007-gate/analysis.md");
+        let text = fs::read_to_string(&file).unwrap();
+        fs::write(
+            &file,
+            text.replacen(
+                "spec: 007-gate\n",
+                "spec: 007-gate\ndecisions: not-a-list\n",
+                1,
+            ),
+        )
+        .unwrap();
+        let blocked = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!blocked.passed, "{blocked:?}");
+        assert_eq!(
+            blocked.blocked_by,
+            Some(ReviewGateBlock::AnalyzeRecordUnreadable)
+        );
+        let message = blocked.message.unwrap();
+        assert!(message.contains("decisions:"), "{message}");
+        let guidance = blocked.guidance.unwrap();
+        assert!(guidance.contains("Repair"), "{guidance}");
+        assert!(!guidance.contains("re-run"), "{guidance}");
     }
 
     /// The hole this check closes: `review → fix → done` used to pass the gate

@@ -117,12 +117,13 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
 /// Next-step text for a spec dir with no commit touching it. Names both
 /// escapes so the operator does not have to rediscover the derivation rule:
 /// commit the directory (the fix `/{project}:plan`'s gate wants), or seed a
-/// `write-boundary` in the session (the deliberate grant the walker unions
-/// with the derivation).
+/// `write-boundary` in the session file (the deliberate grant the exec walker
+/// unions with the derivation, which no interactive host reads).
 fn uncommitted_guidance(root: &str, feature: &str) -> String {
     format!(
         "no commit touches {root}/{feature} yet, so the write boundary cannot be derived \
-         from history — commit the spec directory, or seed a write-boundary in the session. \
+         from history — commit the spec directory, or under `ductus exec` seed a write-boundary \
+         in the session file. \
          Enforcement stays fail-closed until then: only edits inside {root}/{feature}/ are permitted."
     )
 }
