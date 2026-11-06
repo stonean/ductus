@@ -35,6 +35,32 @@ Run unit tests in the dev profile, and rebuild the release binary after any pari
 
 **Run a large list from `git worktree`s of the commit, not this checkout.** Its `runtime/target` grows without bound and slows every build: each mutant took 34–111 s in a checkout whose `target/debug` held 255 GB, against 3–9 s after one fresh build in a worktree (`run.py`'s per-mutant times, tasks 1 and 5 of spec 079). `run.py` finds its tree from its own path, so `git worktree add --detach <dir> HEAD` per worker and `python3 scripts/mutation/run.py <list> <ids>` from each `<dir>` split a list across workers, while this checkout stays free to edit. Commit the list and the code first, since a worktree holds only what is committed, and `git worktree remove --force` each when done. For work not yet committed, point `CARGO_TARGET_DIR` at a fresh directory instead: mutants took about 4 s each that way, and the suites follow it. The hook and the audit still run `runtime/target/release/ductus`, so build that plainly before committing, and never edit under `runtime/` while `run.py` runs.
 
+## Landing a runtime change
+
+Gate the commit on every check's exit status, mutants included, in one script: a follow-up that assumes a landing passed records a commit that was never made. A landing takes about 8 minutes, so batch fixes rather than land each.
+
+1. From a worktree of `HEAD` with this checkout's diff applied, and its own `CARGO_TARGET_DIR`: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, the whole `cargo test`, and each new or re-anchored mutant by id. An uncommitted edit there joins no other session's scope.
+2. Here: `cargo build --release --locked`, since the hook and the audit run that binary, then `framework-checks.yml`'s and `generators.yml`'s steps.
+3. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
+4. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
+
+A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` moves the `implement-basic` golden: re-bless that one alone, as its message says, and read the diff.
+
+## Running a second session
+
+Each session needs its own checkout: on a fixture, one session's uncommitted file in a shared tree joined the other's review scope and took its gate from passing to `review-owed` until it was gone (079's Resolved Questions), and the pre-commit hook and `.ductus/bin/ductus` are shared there too. Two clones, each on `main`, rebase past each other cleanly, and a record's `reviewed-against` no longer being an ancestor afterwards changes neither the gate nor the scope.
+
+```bash
+git clone https://github.com/stonean/ductus ../ductus-2 && cd ../ductus-2
+npm ci
+(cd runtime && cargo build --release --locked)
+mkdir -p .ductus/bin && ln -s ../../runtime/target/release/ductus .ductus/bin/ductus
+bash scripts/install-hooks.sh
+cp ../ductus/.claude/settings.local.json .claude/
+```
+
+Keep each session on its own specs. `git pull --rebase` before each push, and after pulling runtime changes rebuild and restart the session, since the MCP server keeps the binary it started with.
+
 ## Writing a destination check
 
 A destination check judges where a write lands, not only where its path leads, and compares names as the file system folds them.
