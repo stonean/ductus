@@ -1565,4 +1565,18 @@ MUTATIONS = [
         '    if analyze_record.is_none()\n        && let Err(error)',
         'check_review_gate::tests::an_analysis_whose_decisions_do_not_parse_blocks',
     ),
+    (
+        'M223 the gate does not read an unchecked box',
+        'src/primitives/check_review_gate.rs',
+        'unchecked_task_block(&feature_dir, &rel_dir)? {',
+        'unchecked_task_block(&feature_dir, &rel_dir)?.filter(|_| false) {',
+        'check_review_gate::tests::an_unchecked_box_blocks_wherever_it_sits',
+    ),
+    (
+        'M224 the unchecked-box check runs ahead of the scenario questions',
+        'src/primitives/check_review_gate.rs',
+        '    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {\n        return Ok(blocked);\n    }\n',
+        '    if let Some(blocked) = unchecked_task_block(&feature_dir, &rel_dir)? {\n        return Ok(blocked);\n    }\n    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {\n        return Ok(blocked);\n    }\n',
+        'check_review_gate::tests::an_unchecked_box_blocks_wherever_it_sits',
+    ),
 ]

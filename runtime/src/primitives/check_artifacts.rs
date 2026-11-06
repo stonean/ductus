@@ -121,6 +121,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::check_review_gate::cross_spec_impact_states;
 use crate::primitives::label_criteria::StoredCounter;
+use crate::primitives::read_tasks::describe_unchecked;
 use crate::primitives::{
     BlockReading, MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans,
     label_criteria, list_scenario_files, parse_atx_heading, read_spec, read_tasks, read_text,
@@ -223,6 +224,14 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         &spec_path,
         repo,
     );
+    if status == "done" && tasks.is_some() {
+        check_unchecked_boxes(
+            &mut findings,
+            &feature_dir.join("tasks.md"),
+            &spec_path,
+            repo,
+        )?;
+    }
     check_disposition_drift(&mut findings, review_record, &status, &spec_path, repo);
     check_cross_spec_impact_drift(
         &mut findings,
@@ -703,6 +712,29 @@ fn check_review_drift(
             path: spec_rel,
         });
     }
+}
+
+/// (d3) A `done` spec holding an unchecked box: `done` says the work is complete, and the
+/// gate holds it short of that, so one here got past the gate or arrived after it. No
+/// grandfather rule, as a record's absence says nothing about this (spec 079).
+fn check_unchecked_boxes(
+    findings: &mut Vec<ArtifactFinding>,
+    tasks: &Path,
+    spec_path: &Path,
+    repo: &Path,
+) -> Result<()> {
+    if let Some(owed) = describe_unchecked(&read_text(tasks)?) {
+        findings.push(ArtifactFinding {
+            family: "review-state-drift".into(),
+            severity: AnalyzeSeverity::Blocking,
+            message: format!(
+                "review drift: done spec's tasks.md holds {owed} — finish each and tick it, \
+                 or remove one no longer owed"
+            ),
+            path: rel_path(spec_path, repo),
+        });
+    }
+    Ok(())
 }
 
 /// (d4) A `done` spec declaring a cross-spec impact no back-link discharges: the gate
@@ -2411,6 +2443,50 @@ mod tests {
         assert_eq!(families(&result), Vec::<(&str, &str)>::new());
     }
 
+    /// `done` says the work is complete, so a box left on one is drift, wherever it
+    /// sits, and it names the box. Below `done` a box is ordinary, and a comment's
+    /// example box is none (owner, 2026-11-06).
+    #[test]
+    fn a_done_spec_holding_an_unchecked_box_is_review_state_drift() {
+        let tmp = tempdir().unwrap();
+        for tasks in [
+            "# T\n\n## 1. A\n\n- [x] a\n- [ ] owed\n\n- **Done when**: a.\n",
+            "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n\n## Later\n\n- [ ] owed\n",
+            "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n\n## 1a. B\n\n- [ ] owed\n",
+        ] {
+            seed_done_with(tmp.path(), "done", CLEAN_REVIEW, CLEAN_ANALYZE);
+            write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), tasks);
+            let result = run(&args(), tmp.path()).unwrap();
+            let drift: Vec<&str> = result
+                .findings
+                .iter()
+                .filter(|f| {
+                    f.family == "review-state-drift" && f.severity == AnalyzeSeverity::Blocking
+                })
+                .map(|f| f.message.as_str())
+                .collect();
+            assert_eq!(drift.len(), 1, "{tasks}: {:?}", result.findings);
+            assert!(drift[0].contains("1 unchecked box"), "{drift:?}");
+            assert!(drift[0].contains("owed"), "{drift:?}");
+        }
+
+        let tasks =
+            "# T\n\n<!--\n- [ ] an example\n-->\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n";
+        seed_done_with(tmp.path(), "done", CLEAN_REVIEW, CLEAN_ANALYZE);
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), tasks);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), Vec::<(&str, &str)>::new());
+
+        seed_done_with(tmp.path(), "in-progress", CLEAN_REVIEW, CLEAN_ANALYZE);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/tasks.md"),
+            "# T\n\n## 1. A\n\n- [ ] owed\n\n- **Done when**: a.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), Vec::<(&str, &str)>::new());
+    }
+
     fn impact_findings(result: &crate::schema::primitives::CheckArtifactsResult) -> Vec<String> {
         result
             .findings
@@ -2539,7 +2615,7 @@ mod tests {
         - [x] Implement the behavior described in `scenarios/retry-on-timeout.md`\n\n\
         - **Done when**: retries pass.\n\n\
         ## 2. Wire CLI\n\n\
-        - [ ] sub\n\n\
+        - [x] sub\n\n\
         - **Done when**: CLI works.\n";
 
     fn families(result: &CheckArtifactsResult) -> Vec<(&str, &str)> {

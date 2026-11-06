@@ -25,8 +25,8 @@ use git2::{Commit, ErrorCode, ObjectType, Oid, Repository, Sort, Tree};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-use crate::primitives::classify_spec_edit::unchecked_items;
 use crate::primitives::decisions::{RULE_DECIDER, RawDecision};
+use crate::primitives::read_tasks::unchecked_lines;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, ProjectRepository, REVIEW_RECORD_FILE, Result, flatten_line,
     frontmatter_status, parse_feature_dir, split_frontmatter,
@@ -601,7 +601,7 @@ fn waiting_features(history: &mut History<'_>, at: &Commit<'_>) -> Result<Vec<St
         let no_unchecked_task = match history.file_in(*directory, TASKS_FILE)? {
             None => true,
             Some(bytes) => {
-                String::from_utf8(bytes).is_ok_and(|text| unchecked_items(&text).is_empty())
+                String::from_utf8(bytes).is_ok_and(|text| unchecked_lines(&text).is_empty())
             }
         };
         if no_unchecked_task {
@@ -1384,6 +1384,11 @@ mod tests {
         );
         write_spec("025-done", "done", Some("## 1. A\n\n- [x] a\n"));
         write_spec("026-planned", "planned", None);
+        write_spec(
+            "027-unnumbered",
+            "in-progress",
+            Some("## 1. A\n\n- [x] a\n\n## Later\n\n- [ ] owed\n"),
+        );
         write_spec("rules", "in-progress", None);
         commit_all(&fixture.repository, "chore: seed");
         assert_eq!(

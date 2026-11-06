@@ -14,18 +14,17 @@
 //! judgment. Everything here is deterministic, and no section's text ever
 //! leaves the runtime.
 
-use std::collections::HashMap;
 use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
 use crate::primitives::decisions::{RawDecision, read_decisions, same_key};
 use crate::primitives::prune_tasks::{one_feature_or_all, read_status, size_of};
+use crate::primitives::read_tasks::adds_unchecked_box;
 use crate::primitives::write_analysis::finding_key_of;
 use crate::primitives::{
-    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, SkipScanner, checkbox, hex,
-    join_blocks, line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path,
-    write_atomic,
+    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, SkipScanner, hex, join_blocks,
+    line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -118,32 +117,6 @@ fn segment(content: &str) -> Vec<Block> {
         }
     }
     blocks
-}
-
-/// Each unchecked task-list checkbox line in `content`, outside fenced blocks
-/// and HTML comments, trimmed, with how many times it occurs — the subject of
-/// the reopen trigger.
-fn unchecked_lines(content: &str) -> HashMap<&str, usize> {
-    let mut skip = SkipScanner::default();
-    let mut lines = HashMap::new();
-    for line in content.lines().filter(|line| !skip.skip(line)) {
-        if checkbox::find_checkbox_line(line)
-            .is_some_and(|(_bracket, marker)| line.as_bytes()[marker] == b' ')
-        {
-            *lines.entry(line.trim()).or_insert(0) += 1;
-        }
-    }
-    lines
-}
-
-/// Whether `now` adds an unchecked checkbox to `head`: holds an unchecked
-/// checkbox line more times than `head` does. A line moved, or only
-/// re-indented, adds nothing; a line added, or reworded, does.
-fn adds_unchecked_box(now: &str, head: &str) -> bool {
-    let before = unchecked_lines(head);
-    unchecked_lines(now)
-        .into_iter()
-        .any(|(line, count)| count > before.get(line).copied().unwrap_or(0))
 }
 
 /// Execute the `prune-plan` primitive against the given project root: one
@@ -420,20 +393,19 @@ fn check_removals(args: &PrunePlanArgs) -> Result<()> {
 /// Whether the tree takes a `done` spec's back-edge against HEAD: `tasks.md`
 /// adds an unchecked checkbox to HEAD's, leaving the spec with work owed. An
 /// edit confined to `plan.md` never does, whatever it corrects
-/// (§spec-lifecycle). A `tasks.md` absent at HEAD triggers nothing — a `done` spec's
-/// artifacts are committed.
+/// (§spec-lifecycle). A `tasks.md` absent at HEAD holds no box, as
+/// `classify-spec-edit` reads it, so each one written since is new.
 fn reopen_required(repo: &Path, tasks_rel: &str) -> Result<bool> {
-    let project = ProjectRepository::discover(repo)?;
-    if let Some(head) = project.read_at_head(tasks_rel)? {
-        let tasks = repo.join(tasks_rel);
-        let now = if tasks.is_file() {
-            read_text(&tasks)?
-        } else {
-            String::new()
-        };
-        return Ok(adds_unchecked_box(&now, &head));
-    }
-    Ok(false)
+    let head = ProjectRepository::discover(repo)?
+        .read_at_head(tasks_rel)?
+        .unwrap_or_default();
+    let tasks = repo.join(tasks_rel);
+    let now = if tasks.is_file() {
+        read_text(&tasks)?
+    } else {
+        String::new()
+    };
+    Ok(adds_unchecked_box(&now, &head))
 }
 
 #[cfg(test)]
@@ -967,20 +939,29 @@ mod tests {
         assert_eq!(result.reopen_required, Some(false));
     }
 
+    /// HEAD holds no task list, so each box in one written since is new, as
+    /// `classify-spec-edit` reads it, and one holding none adds nothing.
     #[test]
-    fn an_artifact_absent_at_head_triggers_nothing() {
+    fn a_task_list_absent_at_head_counts_every_box() {
         let tmp = tempdir().unwrap();
         let repository = git2::Repository::init(tmp.path()).unwrap();
         project(tmp.path(), "done", Some(PLAN));
         commit_all(&repository, "done, with no task list");
-        // A task list written since HEAD holds an unchecked box, but HEAD has
-        // no task list to compare it with.
+        write(
+            &feature_dir(tmp.path()).join("tasks.md"),
+            "# Tasks\n\n## 1. Done\n\n- [x] a\n",
+        );
+        assert_eq!(remove_journal(tmp.path()).reopen_required, Some(false));
+
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        project(tmp.path(), "done", Some(PLAN));
+        commit_all(&repository, "done, with no task list");
         write(
             &feature_dir(tmp.path()).join("tasks.md"),
             "# Tasks\n\n## 1. Owed\n\n- [ ] b\n",
         );
-        let result = remove_journal(tmp.path());
-        assert_eq!(result.reopen_required, Some(false));
+        assert_eq!(remove_journal(tmp.path()).reopen_required, Some(true));
     }
 
     #[test]

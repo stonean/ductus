@@ -5130,6 +5130,10 @@ pub enum ReviewGateBlock {
     /// first avoids sending a contributor to review a design that is about
     /// to change (spec 046).
     ScenarioOpenQuestions,
+    /// `tasks.md` holds an unchecked box, under any heading, outside a fence or a
+    /// comment: `done` says the work is complete, and a box on a `done` spec is what
+    /// reopens one, so the two cannot both stand (spec 079).
+    UncheckedTask,
     /// The spec declares `cross-spec-impact` entries that are not yet
     /// discharged — the affected spec does not link back to this one — or
     /// that name no feature directory, or that name the declaring spec

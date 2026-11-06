@@ -186,9 +186,9 @@ disk, and before its own write, so an apply that cannot read HEAD writes
 nothing. Both read HEAD through one shared reader, promoted from the private
 `read_blob_at_head` in `runtime/src/primitives/check_stuck.rs` into `mod.rs`
 and built on `ProjectRepository`, so a project in a repository subdirectory
-resolves correctly (the 059 convention). A `tasks.md` absent at HEAD is not a
-trigger: only a `done` spec is reopened, and a `done` spec's artifacts are
-committed. The command, not the primitive, performs the reopen with
+resolves correctly (the 059 convention). A `tasks.md` absent at HEAD holds no
+box, so each one written since is new, as `classify-spec-edit` reads it
+(spec 079). The command, not the primitive, performs the reopen with
 `set-status` (`from: done`), so status mutation stays in the one primitive
 that guards it.
 

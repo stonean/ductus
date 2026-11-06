@@ -15,6 +15,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
+use crate::primitives::read_tasks::describe_unchecked;
 use crate::primitives::spec_links;
 use crate::primitives::{
     PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
@@ -102,6 +103,12 @@ pub(crate) fn run_with_lint(
     // Gate check 2: no scenario under this feature carries an unresolved
     // open question (spec 046).
     if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {
+        return Ok(blocked);
+    }
+    // Then no box is left unchecked: a spec with work owed is no candidate for `done`,
+    // whatever its review says, and `/{project}:implement`'s count is only a step a host
+    // follows, which sees no box outside a numbered task (spec 079).
+    if let Some(blocked) = unchecked_task_block(&feature_dir, &rel_dir)? {
         return Ok(blocked);
     }
 
@@ -1222,6 +1229,32 @@ fn cross_spec_impact_block(
 ///
 /// Reads through `read-spec`'s collector rather than re-deriving the list,
 /// so the gate blocks on exactly the questions the user was shown.
+fn unchecked_task_block(
+    feature_dir: &Path,
+    rel_dir: &str,
+) -> Result<Option<CheckReviewGateResult>> {
+    let tasks = feature_dir.join("tasks.md");
+    if !tasks.is_file() {
+        return Ok(None);
+    }
+    Ok(
+        describe_unchecked(&read_text(&tasks)?).map(|owed| CheckReviewGateResult {
+            passed: false,
+            blocked_by: Some(ReviewGateBlock::UncheckedTask),
+            message: Some(format!(
+                "blocked: {rel_dir}/tasks.md holds {owed} — finish each before completing"
+            )),
+            guidance: Some(
+                "Tick a box once its work is done, and remove one no longer owed. A step that can \
+             only happen after done, such as a release, is not this spec's task."
+                    .to_string(),
+            ),
+            violations: vec![],
+            cross_spec_impact: vec![],
+        }),
+    )
+}
+
 fn scenario_question_block(
     feature_dir: &Path,
     repo: &Path,
@@ -2646,6 +2679,68 @@ mod tests {
             format!("---\nspec: 007-gate\n{body}---\n\n# {key} — 007-gate\n"),
         )
         .unwrap();
+    }
+
+    /// A spec with work owed is no candidate for `done`, wherever the box sits, and the
+    /// message names it. An unresolved scenario question is more upstream, so it reads
+    /// first (owner, 2026-11-06).
+    #[test]
+    fn an_unchecked_box_blocks_wherever_it_sits() {
+        for tasks in [
+            "# T\n\n## 1. A\n\n- [x] a\n- [ ] owed\n",
+            "# T\n\n## 1. A\n\n- [x] a\n\n## Later\n\n- [ ] owed\n",
+            "# T\n\n## 1. A\n\n- [x] a\n\n## 1a. B\n\n- [ ] owed\n",
+            "# T\n\n- [ ] owed\n\n## 1. A\n\n- [x] a\n",
+        ] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            fs::write(tmp.path().join("specs/007-gate/tasks.md"), tasks).unwrap();
+            let blocked = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+            assert!(!blocked.passed, "{tasks}: {blocked:?}");
+            assert_eq!(blocked.blocked_by, Some(ReviewGateBlock::UncheckedTask));
+            let message = blocked.message.unwrap();
+            assert!(message.contains("1 unchecked box"), "{message}");
+            assert!(message.contains("owed"), "{message}");
+        }
+
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::write(
+            tmp.path().join("specs/007-gate/tasks.md"),
+            "# T\n\n## 1. A\n\n- [ ] owed\n",
+        )
+        .unwrap();
+        seed_scenario(
+            tmp.path(),
+            "retry.md",
+            "---\nsection: x\n---\n\n# R\n\n## Open Questions\n\n- Which?\n",
+        );
+        let blocked = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            blocked.blocked_by,
+            Some(ReviewGateBlock::ScenarioOpenQuestions)
+        );
+    }
+
+    /// A comment's example box is none, and a fully ticked list or no list owes nothing.
+    #[test]
+    fn a_comment_s_box_or_a_ticked_list_passes_the_task_check() {
+        for tasks in [
+            Some("# T\n\n<!--\n- [ ] an example\n-->\n\n## 1. A\n\n- [x] a\n"),
+            Some("# T\n\n## 1. A\n\n- [x] a\n"),
+            None,
+        ] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            if let Some(tasks) = tasks {
+                fs::write(tmp.path().join("specs/007-gate/tasks.md"), tasks).unwrap();
+            }
+            let base = git_commit_all(tmp.path(), "base");
+            seed_with_current_digest(tmp.path(), &base);
+            git_commit_all(tmp.path(), "the records");
+            let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+            assert!(result.passed, "{tasks:?}: {result:?}");
+        }
     }
 
     /// `analysis.md` is no subject of its own analysis, so a `decisions:` list damaged

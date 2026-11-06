@@ -147,7 +147,7 @@ Wherever a command acts on a path under the spec root, substitute the configured
 | `clarified` | All open questions resolved, acceptance criteria are concrete and testable |
 | `planned` | Plan and tasks exist, readiness check passed |
 | `in-progress` | Implementation has started |
-| `done` | All acceptance criteria verified, code merged, and no scenario under the spec carries unresolved open questions |
+| `done` | All acceptance criteria verified, tasks complete, code merged, and no scenario under the spec carries unresolved open questions |
 
 ```text
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done

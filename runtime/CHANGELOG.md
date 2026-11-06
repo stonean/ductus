@@ -410,6 +410,17 @@ its version and date.
   `/{project}:<command>` rather than `/ductus:<command>`, and `check-artifact-size`'s
   fixes name the command rather than print a placeholder. Spec 079.
 
+- **A `done` spec owes nothing in `tasks.md`.** `check-review-gate` blocks `done` over
+  an unchecked box, as `unchecked-task`, and `/analyze` reports a `done` spec holding
+  one as blocking review-state drift. It used to pass, with `/implement`'s count the only
+  guard, which sees no box outside a numbered task. A release step left as a box is
+  ticked or removed before `done`. Spec 079.
+- **One test of what `tasks.md` adds.** `classify-spec-edit` and `prune-plan` disagreed
+  in both directions. Both now compare an unchecked line by its text under any heading:
+  a box added, reworded or unticked reopens a `done` spec, including one in a `tasks.md`
+  new since `HEAD`, and a box moved, or a task above it renamed, does not. `/status`'s
+  count of specs with no unchecked task reads the same test. Spec 079.
+
 ## [0.59.11] — 2026-10-17
 
 No runtime code change. A framework release: `/{project}:implement` regains

@@ -21,8 +21,8 @@ MUTATIONS = [
     (
         'M1 a plan that differs from HEAD reopens a done spec again',
         'src/primitives/prune_plan.rs',
-        '    let project = ProjectRepository::discover(repo)?;\n    if let Some(head) = project.read_at_head(tasks_rel)? {',
-        '    let project = ProjectRepository::discover(repo)?;\n    let plan_rel = tasks_rel.replace("tasks.md", "plan.md");\n    if project.read_at_head(&plan_rel)?.is_some_and(|head| head != read_text(&repo.join(&plan_rel)).unwrap_or_default()) {\n        return Ok(true);\n    }\n    if let Some(head) = project.read_at_head(tasks_rel)? {',
+        '    let tasks = repo.join(tasks_rel);\n    let now = if tasks.is_file() {',
+        '    let plan_rel = tasks_rel.replace("tasks.md", "plan.md");\n    if ProjectRepository::discover(repo)?.read_at_head(&plan_rel)?.is_some_and(|plan| plan != read_text(&repo.join(&plan_rel)).unwrap_or_default()) {\n        return Ok(true);\n    }\n    let tasks = repo.join(tasks_rel);\n    let now = if tasks.is_file() {',
         'prune_plan::tests::a_changed_design_record_section_does_not_reopen',
     ),
     (

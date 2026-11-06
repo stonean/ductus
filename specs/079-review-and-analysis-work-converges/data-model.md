@@ -25,7 +25,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 ## `check-review-gate` result
 
-`blocked-by` gains `review-owed`, ahead of every analyze value, and its `message` names what changed or was left open.
+`blocked-by` gains `review-owed`, ahead of every analyze value, and its `message` names what changed or was left open, and `unchecked-task`, after `scenario-open-questions`, whose `message` names the count and the first few boxes.
 
 ## `write-review` arguments
 

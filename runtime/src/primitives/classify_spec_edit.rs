@@ -28,7 +28,7 @@ use crate::primitives::derive_references::ReferenceScrub;
 use crate::primitives::fix_rounds::snapshot;
 use crate::primitives::mechanical_sweep::SweepIndex;
 use crate::primitives::read_spec::{parse_checkboxes, parse_open_questions};
-use crate::primitives::read_tasks::parse_tasks;
+use crate::primitives::read_tasks::adds_unchecked_box;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
     read_text, split_frontmatter,
@@ -306,40 +306,15 @@ fn question_texts(body: &str) -> Vec<String> {
     texts
 }
 
-/// Why a `tasks.md` edit reopens: an unchecked item the base does not hold, so
-/// one added, reworded or unticked. Ticking or removing one adds none, which is
-/// what `/{project}:prune` does.
+/// Why a `tasks.md` edit reopens: an unchecked box the base does not hold, so one added,
+/// reworded or unticked, under any heading. Ticking, removing or moving one adds none,
+/// the first two being what `/{project}:prune` does (owner, 2026-11-06).
 fn tasks_reasons(side: &Side<'_>, reasons: &mut BTreeSet<SpecEditReason>) -> Result<()> {
-    let at_base = unchecked_items(&side.at_base("tasks.md")?.unwrap_or_default());
-    let now = unchecked_items(&side.now("tasks.md")?);
-    if now
-        .iter()
-        .any(|(item, count)| at_base.get(item).copied().unwrap_or(0) < *count)
-    {
+    let at_base = side.at_base("tasks.md")?.unwrap_or_default();
+    if adds_unchecked_box(&side.now("tasks.md")?, &at_base) {
         reasons.insert(SpecEditReason::UncheckedTask);
     }
     Ok(())
-}
-
-/// Each unchecked box with its task's heading, which carries no number, so
-/// renumbering a task changes nothing. A checkbox-form `Done when` counts, since
-/// a reader sees its box.
-pub(crate) fn unchecked_items(content: &str) -> BTreeMap<(String, String), usize> {
-    let mut items = BTreeMap::new();
-    for task in parse_tasks(content) {
-        let clause = task
-            .done_when
-            .filter(|_| task.done_when_checked == Some(false));
-        let subtasks = task
-            .subtasks
-            .into_iter()
-            .filter(|subtask| !subtask.checked)
-            .map(|subtask| subtask.text);
-        for text in subtasks.chain(clause) {
-            *items.entry((task.heading.clone(), text)).or_insert(0) += 1;
-        }
-    }
-    items
 }
 
 #[cfg(test)]
@@ -805,20 +780,19 @@ mod tests {
         assert_correction(&root);
     }
 
-    /// Pending work reworded, in its item or its heading, is changed work.
+    /// A box reworded is changed work.
     #[test]
     fn a_reworded_pending_task_reopens() {
-        for reworded in [
+        let (_dir, root) = committed(&[
+            ("spec.md", SPEC),
+            ("tasks.md", "# Tasks\n\n## 1. Build\n\n- [ ] The thing\n"),
+        ]);
+        edit(
+            &root,
+            "tasks.md",
             "# Tasks\n\n## 1. Build\n\n- [ ] A thing\n",
-            "# Tasks\n\n## 1. Make\n\n- [ ] The thing\n",
-        ] {
-            let (_dir, root) = committed(&[
-                ("spec.md", SPEC),
-                ("tasks.md", "# Tasks\n\n## 1. Build\n\n- [ ] The thing\n"),
-            ]);
-            edit(&root, "tasks.md", reworded);
-            assert_reopens(&root, &[SpecEditReason::UncheckedTask]);
-        }
+        );
+        assert_reopens(&root, &[SpecEditReason::UncheckedTask]);
     }
 
     #[test]
@@ -826,6 +800,36 @@ mod tests {
         let (_dir, root) = fixture();
         edit(&root, "tasks.md", &TASKS.replace("built.", "it is built."));
         assert_correction(&root);
+    }
+
+    /// A box is its line, so moving it or renaming the task above it adds nothing
+    /// (owner, 2026-11-06).
+    #[test]
+    fn a_box_moved_or_under_a_renamed_task_is_a_correction() {
+        let pending = "# Tasks\n\n## 1. Build\n\n- [ ] The thing\n\n## 2. Ship\n\n- [x] It\n";
+        for edited in [
+            "# Tasks\n\n## 1. Build\n\n## 2. Ship\n\n- [x] It\n- [ ] The thing\n",
+            "# Tasks\n\n## 1. Make\n\n- [ ] The thing\n\n## 2. Ship\n\n- [x] It\n",
+        ] {
+            let (_dir, root) = committed(&[("spec.md", SPEC), ("tasks.md", pending)]);
+            edit(&root, "tasks.md", edited);
+            assert_correction(&root);
+        }
+    }
+
+    /// A box counts wherever it sits, though no numbered task holds it, since a reader
+    /// sees it and the parser does not.
+    #[test]
+    fn a_box_no_numbered_task_holds_reopens() {
+        for edited in [
+            format!("{TASKS}\n## Later\n\n- [ ] Owed\n"),
+            format!("{TASKS}\n## 1a. Suffixed\n\n- [ ] Owed\n"),
+            TASKS.replacen("Tasks\n", "Tasks\n\n- [ ] Owed\n", 1),
+        ] {
+            let (_dir, root) = fixture();
+            edit(&root, "tasks.md", &edited);
+            assert_reopens(&root, &[SpecEditReason::UncheckedTask]);
+        }
     }
 
     #[test]

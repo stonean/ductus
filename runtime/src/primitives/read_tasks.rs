@@ -15,6 +15,7 @@
 //!
 //! [runtime-primitive-structural-bugs]: <https://github.com/stonean/ductus/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::primitives::{
@@ -63,6 +64,52 @@ pub(crate) fn read_checked(
         tasks: parse_tasks(&content),
         path: rel_path(&tasks_path, repo),
     })
+}
+
+/// Each unchecked task-list checkbox line in `content`, outside fenced blocks and HTML
+/// comments, trimmed, sorted, with how many times it occurs. By line, not through
+/// [`parse_tasks`], so a box counts under any heading, as it does to a reader: this is
+/// the one test of what `tasks.md` still owes (owner, 2026-11-06).
+pub(crate) fn unchecked_lines(content: &str) -> BTreeMap<&str, usize> {
+    let mut skip = SkipScanner::default();
+    let mut lines = BTreeMap::new();
+    for line in content.lines().filter(|line| !skip.skip(line)) {
+        if checkbox::find_checkbox_line(line)
+            .is_some_and(|(_bracket, marker)| line.as_bytes()[marker] == b' ')
+        {
+            *lines.entry(line.trim()).or_insert(0) += 1;
+        }
+    }
+    lines
+}
+
+/// Whether `now` adds an unchecked checkbox to `head`: holds an unchecked checkbox line
+/// more times than `head` does. A line moved, re-indented or under a renamed task adds
+/// nothing; a line added, reworded or unticked does.
+pub(crate) fn adds_unchecked_box(now: &str, head: &str) -> bool {
+    let before = unchecked_lines(head);
+    unchecked_lines(now)
+        .into_iter()
+        .any(|(line, count)| count > before.get(line).copied().unwrap_or(0))
+}
+
+/// The unchecked boxes `content` holds, for a message: the count, and the first few.
+pub(crate) fn describe_unchecked(content: &str) -> Option<String> {
+    let lines = unchecked_lines(content);
+    let count: usize = lines.values().sum();
+    if count == 0 {
+        return None;
+    }
+    let named: Vec<&str> = lines.keys().take(3).copied().collect();
+    let more = if lines.len() > named.len() {
+        ", and more"
+    } else {
+        ""
+    };
+    Some(format!(
+        "{count} unchecked box(es): {}{more}",
+        named.join("; ")
+    ))
 }
 
 /// The tasks in a `tasks.md`'s text, in file order: one grammar for the working

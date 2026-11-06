@@ -185,7 +185,7 @@ Subtask 4 cannot finish in one session: once AC24 lands, record its commit here 
 
 `research.md`'s first, third and fourth items landed in `fc20a939`, `9129d914` and `3b5093da`, which added AC22. The owner's choices landed after them: what item 1's fix leaves (`68b643c8`, AC23 and `open-findings`), what the measurement counts (`0e5ff030`), rules left in prose (`46d0dd6e`), running without the server (`bbff7a53`), overriding the rule (`b307b7aa`), code committed between a run and its record (`e03558a0`, waived), what a review reads after a fold (`78db6619`), decisions on an unread file (`e7fcde37`, AC24, which AC20's count starts at), mechanical edits and the cut-off re-run (`aac68028`, AC25), and an untick on `done` (`246b178e`, AC26). Rename, shallow clone and revert landed in `cfae8eb0`. The spec's Resolved Questions hold how each choice was weighed.
 
-The remaining contract breaks and gaps follow, each with its reproduction re-run first, since the gate has changed since `research.md` recorded them. The only choice left on this task is the one item 25 names, whether a moved box reopens. Land runtime fixes in batches, as `docs/developing-ductus.md`'s *Landing a runtime change* says. Other specs close alongside this work rather than waiting for it (the spec's Resolved Questions).
+The remaining contract breaks and gaps follow, each with its reproduction re-run first, since the gate has changed since `research.md` recorded them. Land runtime fixes in batches, as `docs/developing-ductus.md`'s *Landing a runtime change* says. Other specs close alongside this work rather than waiting for it (the spec's Resolved Questions).
 
 The last item closes the run. Two ways, the second cheaper: write it as the item says, passing the 66 observations and these findings; or, once the fixes land, run a fresh `/ductus:review --since=6aef0472`, naming the base and why in its Summary, since the passes at `5f67ede2` and the flow pass read what came before it. A fresh run replaces the record whole, keeps stored `decisions:`, and clears the mark on its last write. Its agents follow behaviors, not file kinds (**§Run review passes** in `framework/reference/review.md`).
 
@@ -214,7 +214,8 @@ The last item closes the run. Two ways, the second cheaper: write it as the item
 - [x] Gap, the owner chose (2026-11-06) that a run still carrying the mark counts as leaving a gating finding: the re-run the gate demands after a committed cut-off reads over the bound
 - [x] Gap: `implement`'s `write-boundary` seed has no route for an interactive host
 - [x] Gap: a review cut off on a `done` spec leaves the open mark where nothing reads it
-- [ ] Gap, the owner picks whether a moved box reopens: `prune-plan`'s `reopen-required` and `classify-spec-edit` disagree in both directions on the same tree
+- [x] Gap, the owner chose (2026-11-06) that a moved box does not reopen, by one line test: `prune-plan`'s `reopen-required` and `classify-spec-edit` disagree in both directions on the same tree
+- [x] Gap, the owner chose (2026-11-06) both surfaces: a `done` spec can hold an unchecked box, with `/implement` step 9 the only guard and blind to a box outside a numbered task
 - [x] Gap, the owner chose (2026-11-06) teaching it both kinds: the constitution says `classify-spec-edit` decides and two kinds of edit take no back-edge, and it reads both as `reopens`
 - [x] Gap: `framework/reference/implement.md` sends a signpost on a `done` spec through `/amend`, whose route there reopens it
 - [x] Gap, the owner chose (2026-11-06) both surfaces: the constitution says a criterion that no longer holds reopens its spec, and the classifier reads the untick as a correction

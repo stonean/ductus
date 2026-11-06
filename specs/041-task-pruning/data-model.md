@@ -339,7 +339,8 @@ Result (a **compact summary — never a section's text**):
   whatever it changes, since §spec-lifecycle gives a plan edit no back-edge
   on a `done` spec (scenario
   `a-plan-edit-does-not-reopen-a-done-spec`). A `tasks.md` absent at HEAD
-  triggers nothing. A preview answers for the tree as it stands, so a reopen
+  holds no box, so each one written since is new, as `classify-spec-edit`
+  reads it (spec 079). A preview answers for the tree as it stands, so a reopen
   from edits made before the run is known before the host writes anything. An apply answers for the tree it leaves, whether or
   not the removal was refused, because the host's moves are already on disk,
   and computes it before its own write, so an apply that cannot read HEAD

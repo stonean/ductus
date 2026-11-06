@@ -54,11 +54,11 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 ### What reopens
 
-`classify-spec-edit` decides from the diff, since a rule that depends on an agent remembering it would be skipped (§design-principles). It compares `spec.md`'s criteria and open questions through `read-spec`'s parser, unchecked tasks through `read-tasks`', and the changed path set, and returns `correction` only when the diff touches nothing but `spec.md`, `plan.md` and `tasks.md` and changes no criterion text, question or unchecked task, since a `tasks.md` edit adding no unchecked task takes no back-edge (§spec-lifecycle). A label's assignment stays a correction, and a run's record is no edit. `/{project}:amend`'s reconcile pass calls it before proposing a reopen, and `check_artifact_size.rs`'s `OnDone` hints follow it, so trimming `spec.md` reopens only when a criterion or question changes and trimming `data-model.md` always does. Nothing enforces a reopen today, so this adds no gate. `scripts/audit/cross-doc-consistency.sh` pins only the transitions, so it does not change.
+`classify-spec-edit` decides from the diff, since a rule that depends on an agent remembering it would be skipped (§design-principles). It compares `spec.md`'s criteria and open questions through `read-spec`'s parser, unchecked boxes through `unchecked_lines` (`runtime/src/primitives/read_tasks.rs`), the one test of what `tasks.md` owes, by a line's text under any heading, which `prune-plan`'s `reopen-required`, `measure-reopenings`' `waiting`, the gate and `check-artifacts` share (owner, 2026-11-06), and the changed path set, and returns `correction` only when the diff touches nothing but `spec.md`, `plan.md` and `tasks.md` and changes no criterion text, question or unchecked task, since a `tasks.md` edit adding no unchecked task takes no back-edge (§spec-lifecycle). A label's assignment stays a correction, and a run's record is no edit. `/{project}:amend`'s reconcile pass calls it before proposing a reopen, and `check_artifact_size.rs`'s `OnDone` hints follow it, so trimming `spec.md` reopens only when a criterion or question changes and trimming `data-model.md` always does. Nothing enforces a reopen today, so this adds no gate. `scripts/audit/cross-doc-consistency.sh` pins only the transitions, so it does not change.
 
 A contract edit reads `mechanical` when `ReferenceScrub` (`runtime/src/primitives/derive_references.rs`, on the predicate `derive-references` harvests by) leaves both sides equal, or when `SweepIndex` over a snapshot of the working tree finds it a sweep, so the classifier and the gate's staleness share one rule and its blind spot (owner, 2026-11-06). Sweeps committed one spec at a time show the index one file each, and read `reopens`.
 
-Taking a tick back reads `reopens`, and a `done` spec holding an unticked criterion reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows and `--fix` already reverts it (owner, 2026-11-06).
+Taking a tick back reads `reopens`, and a `done` spec holding an unticked criterion or an unchecked box reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows and `--fix` already reverts it, and the gate blocks `done` over an unchecked box (owner, 2026-11-06).
 
 ### The measurement
 
@@ -117,7 +117,8 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/primitives/measure_reopenings.rs` | Create | The outcome, from history |
 | `runtime/src/primitives/dashboard.rs` | Modify | The counts `/{project}:status` renders |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule |
-| `runtime/src/primitives/prune_plan.rs` | Modify | Only a person's waiver keeps a plan section |
+| `runtime/src/primitives/prune_plan.rs` | Modify | Only a person's waiver keeps a plan section; `reopen-required` takes the shared test of an added box |
+| `runtime/src/primitives/read_tasks.rs` | Modify | The one test of what `tasks.md` owes |
 | `runtime/src/primitives/mod.rs` | Modify | Module declarations |
 | `runtime/src/schema/descriptions.rs` | Create | One description per primitive |
 | `runtime/src/schema/primitives.rs` | Modify | Args and results |

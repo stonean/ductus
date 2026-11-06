@@ -50,7 +50,7 @@ When `check-stuck` (step 3) reports stuck, surface the cycle to the user with th
 
 Same order as Instructions steps 9–16, which carry the procedure; these items hold what they leave out.
 
-1. **Task tally**: step 9. If any checkbox remains unchecked, the gate ends there, before criteria verification.
+1. **Task tally**: step 9. If any checkbox remains unchecked, the gate ends there, before criteria verification. The tally reads numbered tasks, and step 14's gate blocks on a box under any heading.
 2. **Load acceptance criteria**: step 10.
 3. **Verify each criterion**: steps 11 and 12, one criterion at a time, by running its behavior on an input, including one its tests do not name, since a test's name proves only that the test exists.
 4. **Cross-spec impact check**: step 13. This detects the cross-spec update you **made**; the one you **owe** is the `cross-spec-impact:` declaration the pre-done gate checks in step 5. An empty result here says nothing about that: the two answer opposite questions.
