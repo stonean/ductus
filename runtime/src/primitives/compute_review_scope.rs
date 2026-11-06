@@ -102,6 +102,8 @@ pub(crate) struct ReviewScope {
     pub(crate) base_source: BaseSource,
     /// See [`ComputeReviewScopeResult::review_owed`].
     pub(crate) review_owed: bool,
+    /// The changed paths that make a review owed, which `check-review-gate` names.
+    pub(crate) owed_by: Vec<String>,
     /// See [`ComputeReviewScopeResult::scope`].
     pub(crate) scope: Vec<String>,
     /// See [`ComputeReviewScopeResult::modified_since`].
@@ -228,16 +230,30 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
             || uncommitted.contains(*path)
             || !window.others.contains_key(*path)
     });
-    let review_owed = run.is_none_or(record_is_held)
-        || scope.iter().chain(its_own_deletions).any(|path| {
-            path.strip_prefix(&own_prefix)
-                .is_none_or(is_review_contract)
-        });
+    // A path in another spec's directory is that spec's change, and its own review
+    // reads it: a multi-spec commit carrying that spec's text owes this one nothing.
+    let specs_prefix = format!("{}/", layout.specs_root);
+    let in_another_spec = |path: &str| {
+        path.strip_prefix(&specs_prefix)
+            .and_then(|rest| rest.split_once('/'))
+            .is_some_and(|(dir, _)| parse_feature_dir(dir).is_some())
+    };
+    let owed_by: Vec<String> = scope
+        .iter()
+        .chain(its_own_deletions)
+        .filter(|path| match path.strip_prefix(&own_prefix) {
+            Some(own) => is_review_contract(own),
+            None => !in_another_spec(path.as_str()),
+        })
+        .cloned()
+        .collect();
+    let review_owed = run.is_none_or(record_is_held) || !owed_by.is_empty();
 
     Ok(ReviewScope {
         diff_base,
         base_source,
         review_owed,
+        owed_by,
         scope: scope.into_iter().collect(),
         modified_since,
         plan_affected,
@@ -2119,6 +2135,46 @@ mod tests {
             "src/code.rs",
             "specs/001-x/scenarios/a.md",
             "specs/001-x/data-model.md",
+        ] {
+            assert!(reopened_with_a_record(edit).review_owed, "{edit}");
+        }
+    }
+
+    /// Another spec's directory is that spec's change, whether a multi-spec commit
+    /// or uncommitted work put it in the window, though the scope keeps the path.
+    #[test]
+    fn a_path_in_another_specs_directory_owes_no_review() {
+        for edit in ["specs/002-y/analysis.md", "specs/002-y/scenarios/z.md"] {
+            let scope = reopened_with_a_record(edit);
+            assert!(has(&scope, edit), "{edit}: {:?}", scope.scope);
+            assert!(!scope.review_owed, "{edit}");
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        write(&tmp.path().join("specs/002-y/spec.md"), "uncommitted\n");
+        assert!(!x(&tmp).review_owed);
+    }
+
+    /// Under the spec root is not in a spec: a rule file changes what every review
+    /// reads, and only a feature directory has a review of its own to read it.
+    #[test]
+    fn a_path_under_the_spec_root_that_is_in_no_spec_still_owes_a_review() {
+        for edit in [
+            "specs/rules/x.md",
+            "specs/inbox.md",
+            "specs/not-a-spec/x.md",
         ] {
             assert!(reopened_with_a_record(edit).review_owed, "{edit}");
         }

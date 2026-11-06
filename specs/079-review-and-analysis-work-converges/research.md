@@ -121,4 +121,15 @@ Three agents at `6aef0472`'s tree, plus the fold edits, followed one behavior ea
 
 **What item 1's fix leaves.** Measured on fixtures with the release binary built from the fix, each record counting a MUST unless it says otherwise. `contract-breaks: 1` is not held, so it reads `base-source: last-review`, `review-owed: false` and `scope-count: 0`, and a forced run, or one after an unrelated own commit, writes 0. A record from before the reopening reads `reopen` with only `spec.md` in scope, and so does one before a pass through draft, which is item 4. With no transition it reads `none`, `scope-count: 0`. `--since=HEAD` reads `scope-count: 0`, and `write-review --empty-scope` then writes `must-violations: 0`, `blocking: false`. By `compute-review-scope` and each `review.md`'s frontmatter over all 77 specs at this fix's tree: 0 of 71 records count a MUST, a SHOULD, an unread round, `blocking` or a contract break, and the 5 specs reading `none` have no record, so none of these is reachable in this repository today, and an adopter's records are unknown. Options: a held record's next window starts no later than its own `diff-base`, which reaches the earlier reopening, draft and no-transition cases; a counted contract break also stops the start moving; `--since` stays the operator's narrowing. The owner's.
 
+**What the gate reading `review-owed` costs.** Method: `measure-reopenings --since 2026-10-01` at `fc20a939`, 126 closings holding 112 reviews and 149 analyses, 28 over the bound; then `compute-review-scope` from a worktree at each closing commit, each scope path classed as this spec's contract, another spec's directory, a non-spec path a commit this spec claims changed, or one only unclaimed commits changed, leaving out what only the closing commit changed, since the gate runs before that commit exists. The binary with the refinement read owed at the same 20 closings this classing gives.
+
+| Why a review reads as owed | Closings with no review (28) | Closings with a review (98) |
+| --- | --- | --- |
+| Only another spec's text | 11 | 22 |
+| Only an unclaimed commit | 10 | 0 |
+| The spec's own change | 4 | 6 |
+| Not owed | 3 | 70 |
+
+Of the 11 closed analyze, review, analyze, all over the bound, the new order leaves 1 and 1, so over-bound closings fall from 28 to 17, plus up to 4 of the 6 second reviews, the other 2 being over already; without the refinement, up to 17 of the 28 second reviews. At `fc20a939`, 47 of 47 `in-progress` specs read owed; the gate named `/analyze` first on 11, of which 015 and 061 hold only an unclaimed commit's paths. `compute-review-scope` took a median of 1.31 s and at most 2.13 s per spec over those 47.
+
 Not examined by any flow: real agent hosts, Windows, `--all`, `--fix`'s second write, `/fold`, `/consolidate`, the CI template's record check, and the re-read agents' path end to end.

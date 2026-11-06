@@ -136,7 +136,7 @@ round-waivers:
 
 The generated Summary renders the counts and names each exempt round and each waived one.
 
-## `check-review-gate` — check 12
+## `check-review-gate` — the fix-round check
 
 **`fix-round-loop-open`** (spec 079) — `review.md` still carries `fix-rounds-open`, so the run stopped between its two writes.
 

@@ -84,7 +84,7 @@ The loop step says what to do when the host can start an independent agent and w
 | `scripts/mutation/out-of-round-findings.py` | Create | Mutation list: a finding outside its round is a NOTE |
 | `scripts/mutation/own-record-is-no-round.py` | Create | Mutation list: the review's own record is no round's path |
 | `scripts/mutation/re-read-budget.py` | Create | Mutation list: the re-read budget's one home |
-| `scripts/mutation/fix-round-record.py` | Create | Through 066's scenario task: the record fields' and check 12's mutation list |
+| `scripts/mutation/fix-round-record.py` | Create | Through 066's scenario task: the record fields' and the gate's fix-round check's mutation list |
 | `runtime/tests/line_ending_discipline.rs` | Modify | `brief_re_read.rs` exempt: it writes generated state |
 | `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the changed command |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
@@ -95,7 +95,7 @@ The loop step says what to do when the host can start an independent agent and w
 | `framework/commands/review.md` | Modify | The loop step and the Writes line |
 | `framework/reference/review.md` | Modify | The loop's walk, the host fallback and the record fields' meaning |
 | `runtime/src/primitives/write_review.rs` | Modify | Through 066's scenario task: `fix-rounds` and the record fields |
-| `runtime/src/primitives/check_review_gate.rs` | Modify | Through 066's scenario task: check 12 |
+| `runtime/src/primitives/check_review_gate.rs` | Modify | Through 066's scenario task: the gate's fix-round check |
 | `framework/constitution.md` | Modify | Through 066's scenario task: the audit-record table |
 | `AGENTS.md` | Modify | The re-read rule points at the framework (AC9) |
 | `README.md` | Modify | Documents `[review] re-reads-off` |
@@ -103,7 +103,7 @@ The loop step says what to do when the host can start an independent agent and w
 
 ## Data Model
 
-[data-model.md](data-model.md) defines the round directory, the four primitives' arguments and results, the re-read's `result.json`, `write-review`'s `fix-rounds` argument and the record fields it derives, gate check 12, and the `[review] re-reads-off` key.
+[data-model.md](data-model.md) defines the round directory, the four primitives' arguments and results, the re-read's `result.json`, `write-review`'s `fix-rounds` argument and the record fields it derives, the gate's fix-round check, and the `[review] re-reads-off` key.
 
 ## Trade-offs
 
@@ -116,5 +116,5 @@ The loop step says what to do when the host can start an independent agent and w
 
 ## Cross-spec impact
 
-- **066** owes the record fields and gate check 12, through its scenario `the-fix-round-loop-is-recorded-and-gated` and that scenario's task, which back-link this spec. The task's completion is what this spec's AC12 and AC13 are verified against.
+- **066** owes the record fields and the gate's fix-round check, through its scenario `the-fix-round-loop-is-recorded-and-gated` and that scenario's task, which back-link this spec. The task's completion is what this spec's AC12 and AC13 are verified against.
 - **020** owes its data model's review-record table a pointer to these fields. A blockquoted signpost in 020's spec body is the back-link, since a plain link there would add an edge from 020 to this spec, which already depends on 020.

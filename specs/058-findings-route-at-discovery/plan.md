@@ -238,19 +238,15 @@ the oldest item's date, outstanding with age undeterminable, clean, or no file.
 The `InboxStanding.state` doc still says "three states"
 (`primitives.rs:3554`); it is corrected in passing.
 
-### The gate gains two blocks, checked last, predates before count
+### The gate gains two blocks per record, predates before count
 
-After the analyze checks (`runtime/src/primitives/check_review_gate.rs:182-201`)
-and before the pass (`:216`), a new `disposition_block` checks four things, in
-this order:
+A `disposition_block` checks two things for each record, `review.md`'s ahead of the analyze checks and `analysis.md`'s after them, since 079 moved every review check ahead (`runtime/src/primitives/check_review_gate.rs`):
 
-1. `review.md` has no `dispositions:` map;
-2. `analysis.md` has no `dispositions:` map;
-3. `review.md` has a MUST or SHOULD violation neither waived nor released by its deferral;
-4. `analysis.md` has a hard-fail or blocking finding its deferral does not release.
+1. the record has no `dispositions:` map;
+2. `review.md` has a MUST or SHOULD violation, or `analysis.md` a hard-fail or blocking finding, neither waived nor released by its deferral.
 
-Checks 3 and 4 read the gating counts since scenario
-`findings-cost-in-proportion-to-risk`; until then each read the record's
+The second reads the gating counts since scenario
+`findings-cost-in-proportion-to-risk`; until then it read the record's
 `undispositioned`, which counts every tier.
 
 A missing map comes first, because a count from a record that predates the

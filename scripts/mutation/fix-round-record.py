@@ -2,7 +2,7 @@
 fix-round loop's record and gate (spec 078). `write-review` derives the six
 loop fields from its `fix-rounds` argument, refuses a malformed round, and
 applies the `[review] re-reads-off` reason
-(`runtime/src/primitives/write_review.rs`); `check-review-gate`'s check 12
+(`runtime/src/primitives/write_review.rs`); `check-review-gate`'s check 9
 blocks an un-re-read round without a waiver and its passing notice names a
 record without the fields (`runtime/src/primitives/check_review_gate.rs`);
 `invalidate-review` drops the fields with the run
@@ -149,7 +149,7 @@ MUTATIONS = [
     (
         'M19 an un-re-read round no longer holds done',
         'src/primitives/check_review_gate.rs',
-        '    if let Some(blocked) = fix_round_block(&review, &rel_dir, &project) {\n        return Ok(blocked);\n    }',
+        '    if let Some(blocked) = fix_round_block(review, rel_dir, project) {\n        return Err(blocked);\n    }',
         '    let _ = fix_round_block;',
         'check_review_gate::tests::an_un_re_read_round_without_a_waiver_holds_done check_review_gate::tests::fewer_waivers_than_un_re_read_rounds_block_whatever_else_the_record_says',
     ),
@@ -182,10 +182,10 @@ MUTATIONS = [
         'check_review_gate::tests::a_record_without_the_loop_fields_passes_and_says_so',
     ),
     (
-        'M24 check 12 runs before the outstanding-findings check',
+        'M24 the fix-round check runs before the outstanding-findings check',
         'src/primitives/check_review_gate.rs',
-        '    // Gate checks 10 and 11: a record with no `dispositions:` map, then an',
-        '    if let Some(blocked) = fix_round_block(&review, &rel_dir, &project) {\n        return Ok(blocked);\n    }\n    // Gate checks 10 and 11: a record with no `dispositions:` map, then an',
+        '    let gating = review\n        .must_violations\n',
+        '    if let Some(blocked) = fix_round_block(review, rel_dir, project) {\n        return Err(blocked);\n    }\n    let gating = review\n        .must_violations\n',
         'check_review_gate::tests::an_outstanding_should_is_reported_before_an_un_re_read_round',
     ),
     (

@@ -178,7 +178,7 @@ Moved from task 15 so the release carries task 16's runtime fix; number 15 is un
 
 ## 22. Analyze the corrections spec 079 made
 
-- [ ] Spec 079 task 10 corrected AC3 and AC11, superseded when `diff-cross-spec` moved its start and the markdown-only check went; no code, scenario or data model of this spec changed, so the gate holds no review for it, though `compute-review-scope` reports `review-owed: true` while an unclaimed commit is in its window
+- [ ] Spec 079 task 10 corrected AC3 and AC11, superseded when `diff-cross-spec` moved its start and the markdown-only check went; no code, scenario or data model of this spec changed in it, but `compute-review-scope` reports `review-owed: true`, with earlier commits naming this spec and an unclaimed commit in its window, so the gate holds a review for it
 - [ ] Run `/ductus:analyze`, then the completion gate
 
 - **Done when**: an analysis is recorded on this spec, and `/ductus:implement` has returned it to `done`.

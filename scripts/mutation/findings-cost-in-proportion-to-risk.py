@@ -21,15 +21,15 @@ MUTATIONS = [
     (
         'M1 an undispositioned advisory finding or observation holds done again',
         'src/primitives/check_review_gate.rs',
-        '    let owed: Vec<(&str, &str, u32)> = gating.into_iter().filter(|(_, _, n)| *n > 0).collect();',
-        '    let _ = gating;\n    let owed: Vec<(&str, &str, u32)> = records.iter().filter_map(|(file, command, map)| map.filter(|counts| counts.undispositioned > 0).map(|counts| (*file, *command, counts.undispositioned))).collect();',
+        '    if gating == 0 {\n        return None;\n    }\n',
+        '    if gating.saturating_add(map.map_or(0, |counts| counts.undispositioned)) == 0 {\n        return None;\n    }\n',
         'check_review_gate::tests::undispositioned_advisory_findings_do_not_hold_done',
     ),
     (
         'M2 an outstanding SHOULD no longer holds done',
         'src/primitives/check_review_gate.rs',
-        '                .saturating_add(review.should_violations),',
-        '                .saturating_add(0),',
+        '        .saturating_add(review.should_violations);',
+        '        .saturating_add(0);',
         'check_review_gate::tests::an_outstanding_should_holds_done',
     ),
     (
@@ -42,15 +42,15 @@ MUTATIONS = [
     (
         'M4 a MUST beside a false blocking flag no longer holds done',
         'src/primitives/check_review_gate.rs',
-        '            review\n                .must_violations\n                .saturating_add(review.should_violations),',
-        '            0u32.saturating_add(review.should_violations),',
+        '    let gating = review\n        .must_violations\n        .saturating_add(review.should_violations);',
+        '    let gating = 0u32.saturating_add(review.should_violations);',
         'check_review_gate::tests::a_gating_count_beside_a_false_blocking_flag_still_holds_done',
     ),
     (
         'M5 an analysis whose blocking flag disagrees with its counts no longer holds done',
         'src/primitives/check_review_gate.rs',
-        '                record.hard_fail.saturating_add(record.blocking_findings)',
-        '                let _ = record;\n                0',
+        '            record.hard_fail.saturating_add(record.blocking_findings)',
+        '            let _ = record;\n            0',
         'check_review_gate::tests::a_gating_count_beside_a_false_blocking_flag_still_holds_done',
     ),
 ]

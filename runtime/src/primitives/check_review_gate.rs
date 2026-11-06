@@ -164,48 +164,29 @@ pub(crate) fn run_with_lint(
         return Ok(stale);
     }
 
-    // Gate checks 7, 8 and 9: the analyze record in `analysis.md`. The
-    // freshness it computes is handed back rather than recomputed for the
-    // passing verdict's notice below — the comparison reads and hashes every
-    // `.md` under the feature, so doing it twice is real work for one answer.
-    let analyze_record = match crate::primitives::load_analyze_record(&feature_dir) {
-        crate::primitives::RecordLoad::Unreadable(reason) => {
-            return Ok(unreadable_record_block(
-                &rel_dir,
-                &project,
-                RecordKind::Analyze,
-                &reason,
-            ));
-        }
-        crate::primitives::RecordLoad::Present(record) => Some(record),
-        crate::primitives::RecordLoad::Absent => None,
-    };
-    let freshness = match analyze_gate_block(repo, &rel_dir, analyze_record.as_ref(), &project) {
-        Err(blocked) => return Ok(blocked),
-        Ok(freshness) => freshness,
-    };
-
-    // Gate checks 10 and 11: a record with no `dispositions:` map, then an
-    // outstanding gating finding (spec 058). After the record checks,
-    // because every check above names a more upstream defect: a record that
-    // is missing, failing, or stale has to be re-run before what it says about
-    // its findings means anything.
-    if let Some(blocked) = disposition_block(
+    // Gate checks 7 to 10: the rest of what only a review clears, ahead of every
+    // analyze check. `review.md` is one of an analysis's subjects, so an analysis run
+    // before a review the spec owes is stale when that review writes (spec 079).
+    let owed_unknown = match review_half_block(
         &review,
-        analyze_record.as_ref(),
+        &args.feature,
+        repo,
         &feature_dir,
         &rel_dir,
         &project,
     ) {
-        return Ok(blocked);
-    }
+        Ok(unknown) => unknown,
+        Err(blocked) => return Ok(blocked),
+    };
 
-    // Gate check 12: the fix-round loop is still open (spec 079), or a fix round
-    // that needed a re-read has neither one nor a waiver (spec 078). Last, because it says a fix made during the review
-    // went unchecked, which matters only once the review holds nothing else.
-    if let Some(blocked) = fix_round_block(&review, &rel_dir, &project) {
-        return Ok(blocked);
-    }
+    // Gate checks 11 to 15: the analyze half. The freshness it computes is handed back
+    // rather than recomputed for the passing verdict's notice below — the comparison
+    // reads and hashes every `.md` under the feature, so doing it twice is real work for
+    // one answer.
+    let freshness = match analyze_half_block(repo, &rel_dir, &feature_dir, &project) {
+        Ok(freshness) => freshness,
+        Err(blocked) => return Ok(blocked),
+    };
 
     // The gate passes. Before saying so, name what it could not examine.
     //
@@ -229,6 +210,7 @@ pub(crate) fn run_with_lint(
             &freshness,
             review.not_re_read.is_some(),
             review.contract_breaks.unwrap_or(0),
+            owed_unknown.as_deref(),
         ),
         violations: vec![],
         // Carried onto the pass, not just onto a block: a discharged
@@ -239,8 +221,113 @@ pub(crate) fn run_with_lint(
     })
 }
 
-/// Gate check 10, a record with no `dispositions:` map, and gate check 11, an
-/// outstanding gating finding (spec 058).
+/// Gate checks 7 to 10: `review.md` with no `dispositions:` map, an outstanding
+/// review finding, a fix-round loop left open or a round unread, and a review the
+/// window owes. `Ok` holds why the window could not be read, when it could not: a gate
+/// blocking on its own inability to check is one people route around, so that passes
+/// and [`passing_notices`] says so.
+fn review_half_block(
+    review: &crate::schema::primitives::ReviewBlock,
+    feature: &str,
+    repo: &Path,
+    feature_dir: &Path,
+    rel_dir: &str,
+    project: &str,
+) -> std::result::Result<Option<String>, CheckReviewGateResult> {
+    let gating = review
+        .must_violations
+        .saturating_add(review.should_violations);
+    if let Some(blocked) = disposition_block(
+        (crate::primitives::REVIEW_RECORD_FILE, "review"),
+        review.dispositions,
+        gating,
+        feature_dir,
+        rel_dir,
+        project,
+    ) {
+        return Err(blocked);
+    }
+    if let Some(blocked) = fix_round_block(review, rel_dir, project) {
+        return Err(blocked);
+    }
+    let window = crate::schema::primitives::ComputeReviewScopeArgs {
+        feature: feature.to_string(),
+        since: None,
+    };
+    match crate::primitives::compute_review_scope::compute(&window, repo) {
+        Ok(scope) if scope.review_owed => Err(review_owed_block(&scope.owed_by, project)),
+        Ok(_) => Ok(None),
+        Err(error) => Ok(Some(error.to_string())),
+    }
+}
+
+/// Gate checks 11 to 15: `analysis.md` unreadable, absent, failing or stale, then with
+/// no `dispositions:` map or an outstanding gating finding, after its record checks
+/// because a record that is missing, failing, or stale has to be re-run before what it
+/// says about its findings means anything.
+fn analyze_half_block(
+    repo: &Path,
+    rel_dir: &str,
+    feature_dir: &Path,
+    project: &str,
+) -> std::result::Result<RecordFreshness, CheckReviewGateResult> {
+    let analyze_record = match crate::primitives::load_analyze_record(feature_dir) {
+        crate::primitives::RecordLoad::Unreadable(reason) => {
+            return Err(unreadable_record_block(
+                rel_dir,
+                project,
+                RecordKind::Analyze,
+                &reason,
+            ));
+        }
+        crate::primitives::RecordLoad::Present(record) => Some(record),
+        crate::primitives::RecordLoad::Absent => None,
+    };
+    let freshness = analyze_gate_block(repo, rel_dir, analyze_record.as_ref(), project)?;
+    if let Some(blocked) = disposition_block(
+        (crate::primitives::ANALYSIS_RECORD_FILE, "analyze"),
+        analyze_record
+            .as_ref()
+            .and_then(|record| record.dispositions),
+        analyze_record.as_ref().map_or(0, |record| {
+            record.hard_fail.saturating_add(record.blocking_findings)
+        }),
+        feature_dir,
+        rel_dir,
+        project,
+    ) {
+        return Err(blocked);
+    }
+    Ok(freshness)
+}
+
+/// Gate check 10: the spec's code, scenarios or data model changed since the last
+/// review, or since its reopen when none has run in it. Its window moves only at the
+/// commit holding a finished review's record, so a review just run clears this once
+/// that record is committed.
+fn review_owed_block(owed_by: &[String], project: &str) -> CheckReviewGateResult {
+    CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::ReviewOwed),
+        message: Some(format!(
+            "blocked: a review is owed for what changed since the last one: {} — run \
+             /{project}:review and commit its record",
+            render_paths(owed_by)
+        )),
+        guidance: Some(format!(
+            "A review's window moves only at the commit holding its record, so a review that \
+             has just finished clears this once that record is committed. An uncommitted path \
+             counts, whoever's it is: commit it, or isolate another session's work with `git \
+             worktree`. Run /{project}:analyze after the review, since its record is one of an \
+             analysis's subjects."
+        )),
+        violations: vec![],
+        cross_spec_impact: vec![],
+    }
+}
+
+/// Gate checks 7 and 8 for `review.md`, and 14 and 15 for `analysis.md`: the record
+/// has no `dispositions:` map, then it counts an outstanding gating finding (spec 058).
 ///
 /// **A record without the map predates dispositions, and absence is not
 /// zero.** Before 058 a run's findings were captured to the inbox, which no
@@ -250,7 +337,7 @@ pub(crate) fn run_with_lint(
 /// record predating a *digest*, deliberately — a digest-less record says only
 /// that freshness is unknown, while a map-less one may be hiding owed work.
 ///
-/// Then the gating counts: a review MUST or SHOULD, or an analyze hard-fail
+/// Then the gating count: a review MUST or SHOULD, or an analyze hard-fail
 /// or blocking finding, each neither waived nor released by its deferral
 /// ([`crate::primitives::decisions::releases`], spec 076). Only those hold `done` (spec 058,
 /// `findings-cost-in-proportion-to-risk`). The map's `undispositioned` count
@@ -258,24 +345,16 @@ pub(crate) fn run_with_lint(
 /// recorded and visible, and holds nothing. For a record the runtime writes,
 /// every gating count but the SHOULD one is already caught by an earlier
 /// check, so in practice this is where an outstanding SHOULD blocks, as
-/// §implement-phase requires; the other counts stay in the sum as a guard
-/// against a hand-edited record whose `blocking` disagrees with its counts.
-///
-/// Both classes name every record in them, not just the first, because the
-/// remedy for each record is a different command.
+/// §implement-phase requires; the other counts stay as a guard against a
+/// hand-edited record whose `blocking` disagrees with them.
 fn disposition_block(
-    review: &crate::schema::primitives::ReviewBlock,
-    analyze: Option<&AnalyzeBlock>,
+    (file, command): (&str, &str),
+    map: Option<crate::schema::primitives::Dispositions>,
+    gating: u32,
     feature_dir: &Path,
     rel_dir: &str,
     project: &str,
 ) -> Option<CheckReviewGateResult> {
-    use crate::primitives::{ANALYSIS_RECORD_FILE, REVIEW_RECORD_FILE};
-    let analyze_map = analyze.and_then(|record| record.dispositions);
-    let records = [
-        (REVIEW_RECORD_FILE, "review", review.dispositions),
-        (ANALYSIS_RECORD_FILE, "analyze", analyze_map),
-    ];
     let blocked = |by, message: String, guidance: String| CheckReviewGateResult {
         passed: false,
         blocked_by: Some(by),
@@ -285,72 +364,27 @@ fn disposition_block(
         cross_spec_impact: vec![],
     };
 
-    let predating: Vec<(&str, &str)> = records
-        .iter()
-        .filter(|(_, _, map)| map.is_none())
-        .map(|(file, command, _)| (*file, *command))
-        .collect();
-    if !predating.is_empty() {
-        let files: Vec<String> = predating
-            .iter()
-            .map(|(file, _)| format!("{rel_dir}/{file}"))
-            .collect();
-        let commands: Vec<String> = predating
-            .iter()
-            .map(|(_, command)| format!("/{project}:{command}"))
-            .collect();
+    if map.is_none() {
         return Some(blocked(
             ReviewGateBlock::RecordPredatesDispositions,
             format!(
-                "blocked: {} predate{} finding dispositions — re-run {}",
-                files.join(" and "),
-                if files.len() == 1 { "s" } else { "" },
-                commands.join(" and ")
+                "blocked: {rel_dir}/{file} predates finding dispositions — re-run \
+                 /{project}:{command}"
             ),
             format!(
                 "A record without a `dispositions:` map was written before findings were \
                  dispositioned, so its run's findings may sit in the inbox unrouted. Re-running \
-                 {} writes the map; the gate does not read its absence as zero.",
-                commands.join(" and ")
+                 /{project}:{command} writes the map; the gate does not read its absence as zero."
             ),
         ));
     }
 
-    let gating = [
-        (
-            REVIEW_RECORD_FILE,
-            "review",
-            review
-                .must_violations
-                .saturating_add(review.should_violations),
-        ),
-        (
-            ANALYSIS_RECORD_FILE,
-            "analyze",
-            analyze.map_or(0, |record| {
-                record.hard_fail.saturating_add(record.blocking_findings)
-            }),
-        ),
-    ];
-    let owed: Vec<(&str, &str, u32)> = gating.into_iter().filter(|(_, _, n)| *n > 0).collect();
-    if owed.is_empty() {
+    if gating == 0 {
         return None;
     }
-    let total: u32 = owed.iter().map(|(_, _, n)| n).sum();
-    let detail: Vec<String> = owed
-        .iter()
-        .map(|(file, _, n)| format!("{rel_dir}/{file}: {n}"))
-        .collect();
-    let commands: Vec<String> = owed
-        .iter()
-        .map(|(_, command, _)| format!("/{project}:{command}"))
-        .collect();
-    let mut message = format!(
-        "blocked: {total} outstanding gating finding(s) — {}",
-        detail.join(", ")
-    );
-    let files: Vec<&str> = owed.iter().map(|(file, _, _)| *file).collect();
-    message.push_str(&held_by_deferral(feature_dir, rel_dir, &files));
+    let mut message =
+        format!("blocked: {gating} outstanding gating finding(s) — {rel_dir}/{file}: {gating}");
+    message.push_str(&held_by_deferral(feature_dir, rel_dir, &[file]));
     Some(blocked(
         ReviewGateBlock::UndispositionedFindings,
         message,
@@ -359,9 +393,8 @@ fn disposition_block(
              (/{project}:review --waive <rule-id> --reason \"...\"); or defer it to pipeline \
              work on another spec (/{project}:review --defer <rule-id> --target <path>), whose \
              gate then holds it — a deferral to this spec's own task, or to an external work \
-             item alone, releases nothing. Then re-run {}. Undispositioned advisory findings \
-             and observations do not hold `done`.",
-            commands.join(" and ")
+             item alone, releases nothing. Then re-run /{project}:{command}. Undispositioned \
+             advisory findings and observations do not hold `done`."
         ),
     ))
 }
@@ -476,7 +509,7 @@ fn waived_rounds(review: &crate::schema::primitives::ReviewBlock) -> u32 {
     u32::try_from(waived).unwrap_or(u32::MAX)
 }
 
-/// Gate check 12 — `review.md` still carries `fix-rounds-open` (spec 079), or
+/// Gate check 9 — `review.md` still carries `fix-rounds-open` (spec 079), or
 /// counts more fix rounds that needed a re-read and have none (`not-re-read`)
 /// than waivers with a reason (spec 078).
 ///
@@ -536,7 +569,8 @@ fn fix_round_block(
 /// record carries no digest of what its run read. The third fires for a review
 /// record without the fix-round fields (`fix_rounds_recorded` false), which
 /// does not say whether the fixes made during that review were re-read (spec
-/// 078).
+/// 078). A fourth fires when the window could not be read, so nothing says whether
+/// a review is owed (spec 079).
 ///
 /// `None` — real silence — only when everything examined cleanly, which is
 /// what makes that silence mean something.
@@ -545,8 +579,15 @@ fn passing_notices(
     analyze: &RecordFreshness,
     fix_rounds_recorded: bool,
     contract_breaks: u32,
+    owed_unknown: Option<&str>,
 ) -> Option<String> {
     let mut notices: Vec<String> = Vec::new();
+    if let Some(reason) = owed_unknown {
+        notices.push(format!(
+            "Whether a review is owed could not be determined ({reason}), so what changed since \
+             the last review was not examined."
+        ));
+    }
     if let RecordFreshness::Undeterminable { reason } = review {
         notices.push(format!(
             "Review-record freshness could not be determined ({reason}), so whether the \
@@ -581,7 +622,7 @@ fn passing_notices(
     }
 }
 
-/// Gate checks 7, 8 and 9 — the analyze record in `analysis.md`: a completed analysis,
+/// Gate checks 11, 12 and 13 — the analyze record in `analysis.md`: a completed analysis,
 /// whose findings do not hold the spec out of `done`, still describing the
 /// current artifacts.
 ///
@@ -630,7 +671,7 @@ fn analyze_gate_block(
     };
 
     if !analyze.blocking {
-        // Check 9 last, for the reason `stale_review_block` sits behind the
+        // Check 13 last, for the reason `stale_review_block` sits behind the
         // `review:` presence and blocking checks: it is the weakest of the
         // three claims. The others say the analysis is missing or failing;
         // this one says a passing analysis is out of date.
@@ -2019,8 +2060,10 @@ mod tests {
         .unwrap();
         git_commit_all(tmp.path(), "change a contract");
 
+        // The digest check cannot judge this record, and the window still names the
+        // contract the change touched.
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
     }
 
     #[test]
@@ -2482,7 +2525,7 @@ mod tests {
         assert!(guidance.contains("no reviewed-digest"), "{guidance}");
     }
 
-    // --- gate check 9: analyze staleness ------------------------------------
+    // --- gate check 13: analyze staleness -----------------------------------
     //
     // The *comparison* is tested in `crate::primitives::analyze_subjects` —
     // subject-set membership, the `analyze:`-block exclusion, deleted and
@@ -2869,8 +2912,9 @@ mod tests {
         );
     }
 
+    /// Review first: its run stales the analysis, and the analysis then writes its map.
     #[test]
-    fn both_predating_records_are_named_together() {
+    fn a_review_with_no_map_is_named_before_an_analysis_with_none() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), ANALYZE_ADVISORY_ONLY);
         strip_dispositions(tmp.path(), "review.md");
@@ -2879,17 +2923,13 @@ mod tests {
             .unwrap()
             .message
             .unwrap();
-        assert!(
-            message.contains("review.md and specs/007-gate/analysis.md predate"),
-            "{message}"
-        );
-        assert!(
-            message.contains("/ductus:review and /ductus:analyze"),
-            "{message}"
+        assert_eq!(
+            message,
+            "blocked: specs/007-gate/review.md predates finding dispositions — re-run /ductus:review"
         );
     }
 
-    // --- gate check 12: a fix round not re-read (spec 078) -----------------
+    // --- gate check 9: a fix round not re-read (spec 078) ------------------
 
     /// Add `yaml` to the end of the seeded `review.md`'s frontmatter.
     fn with_review_fields(repo: &Path, yaml: &str) {
@@ -3186,7 +3226,7 @@ mod tests {
         }
     }
 
-    /// Check 12 follows check 11: an outstanding SHOULD is reported first.
+    /// Check 9 follows check 8: an outstanding SHOULD is reported first.
     #[test]
     fn an_outstanding_should_is_reported_before_an_un_re_read_round() {
         let tmp = tempdir().unwrap();
@@ -3436,10 +3476,25 @@ mod tests {
         );
         assert_eq!(
             result.message.as_deref(),
-            Some(
-                "blocked: 4 outstanding gating finding(s) — specs/007-gate/review.md: 1, \
-                 specs/007-gate/analysis.md: 3"
-            )
+            Some("blocked: 1 outstanding gating finding(s) — specs/007-gate/review.md: 1")
+        );
+
+        // The review's count cleared, the analysis's holds in its turn.
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY
+                .replace("hard-fail: 0", "hard-fail: 1")
+                .replace("blocking-findings: 0", "blocking-findings: 2"),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndispositionedFindings)
+        );
+        assert_eq!(
+            result.message.as_deref(),
+            Some("blocked: 3 outstanding gating finding(s) — specs/007-gate/analysis.md: 3")
         );
     }
 
@@ -3459,17 +3514,226 @@ mod tests {
         );
     }
 
+    /// A review's map is the review's to write, so it comes before a stale analysis,
+    /// which that review would stale again. An analysis's own map comes after it: a
+    /// stale record has to be re-run before what it says about its findings means
+    /// anything.
     #[test]
-    fn a_stale_analysis_outranks_a_missing_map() {
-        let tmp = tempdir().unwrap();
-        seed(tmp.path(), REVIEWED_CLEAN);
-        let base = git_commit_all(tmp.path(), "base");
-        seed_with_current_digest(tmp.path(), &base);
-        // Stripping review.md's map edits an analyze subject, so the analysis
-        // is stale too — and staleness is the more upstream defect.
+    fn a_stale_analysis_outranks_only_its_own_missing_map() {
+        let seeded = || {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            let base = git_commit_all(tmp.path(), "base");
+            seed_with_current_digest(tmp.path(), &base);
+            tmp
+        };
+
+        // Stripping review.md's map edits an analyze subject, so the analysis is stale too.
+        let tmp = seeded();
         strip_dispositions(tmp.path(), "review.md");
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::RecordPredatesDispositions)
+        );
+
+        let tmp = seeded();
+        strip_dispositions(tmp.path(), "analysis.md");
+        fs::write(tmp.path().join("specs/007-gate/plan.md"), "# Plan\n").unwrap();
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+    }
+
+    // --- gate check 10: a review owed for what changed (spec 079) -----------
+
+    fn seed_reopened(repo: &Path) {
+        fs::create_dir_all(repo.join("specs/007-gate")).unwrap();
+        fs::write(repo.join(".govern.toml"), "[host]\nproject = \"ductus\"\n").unwrap();
+        fs::write(
+            repo.join("specs/007-gate/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# 007 — Gate\n",
+        )
+        .unwrap();
+        write_records(repo, "2026-10-01T00:00:00Z");
+        git_commit_all(repo, "review(007): and its analysis");
+        set_gate_status(repo, "in-progress");
+    }
+
+    fn set_gate_status(repo: &Path, status: &str) {
+        let path = repo.join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&path).unwrap();
+        let reset = text
+            .replace("status: done", "status: X")
+            .replace("status: in-progress", "status: X");
+        fs::write(
+            &path,
+            reset.replace("status: X", &format!("status: {status}")),
+        )
+        .unwrap();
+    }
+
+    fn write_gate_review(repo: &Path, at: &str) {
+        crate::primitives::write_review::run(
+            &crate::schema::primitives::WriteReviewArgs {
+                feature: "007-gate".into(),
+                reviewed_at: at.into(),
+                reviewed_against: "abc123".into(),
+                diff_base: "abc123".into(),
+                examined: Some(1),
+                ..Default::default()
+            },
+            repo,
+        )
+        .unwrap();
+    }
+
+    fn write_gate_analysis(repo: &Path, at: &str) {
+        crate::primitives::write_analysis::run(
+            &crate::schema::primitives::WriteAnalysisArgs {
+                feature: "007-gate".into(),
+                analyzed_at: at.into(),
+                analyzed_against: "abc123".into(),
+                ..Default::default()
+            },
+            repo,
+        )
+        .unwrap();
+    }
+
+    fn write_records(repo: &Path, at: &str) {
+        write_gate_review(repo, at);
+        write_gate_analysis(repo, at);
+    }
+
+    fn gate(repo: &Path) -> CheckReviewGateResult {
+        run_with_lint(&args(), repo, clean_lint).unwrap()
+    }
+
+    /// The outcome this check exists for: following the gate's own messages, a
+    /// reopening that changed code takes one review and one analysis, and neither
+    /// message sends it to `/analyze` before the review.
+    #[test]
+    fn a_reopening_that_changed_code_takes_one_review_then_one_analysis() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        fs::create_dir_all(repo.join("src")).unwrap();
+        fs::write(repo.join("src/a.rs"), "fn a() {}\n").unwrap();
+        git_commit_all(repo, "feat(007): reopen with its code");
+
+        let first = gate(repo);
+        assert_eq!(first.blocked_by, Some(ReviewGateBlock::ReviewOwed));
+        let message = first.message.unwrap();
+        assert!(message.contains("src/a.rs"), "{message}");
+        assert!(message.contains("/ductus:review"), "{message}");
+
+        // Its window moves only at the commit holding the record.
+        write_gate_review(repo, "2026-11-01T00:00:00Z");
+        assert_eq!(gate(repo).blocked_by, Some(ReviewGateBlock::ReviewOwed));
+        git_commit_all(repo, "review(007)");
+        assert_eq!(gate(repo).blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+
+        write_gate_analysis(repo, "2026-11-01T01:00:00Z");
+        git_commit_all(repo, "analyze(007)");
+        let last = gate(repo);
+        assert!(last.passed, "{last:?}");
+
+        set_gate_status(repo, "done");
+        git_commit_all(repo, "status(007): done");
+        let measured = crate::primitives::measure_reopenings::run(
+            &crate::schema::primitives::MeasureReopeningsArgs {
+                since: Some("2000-01-01".into()),
+                at: None,
+            },
+            repo,
+        )
+        .unwrap();
+        let reopening = measured.reopenings.unwrap();
+        assert_eq!(reopening.len(), 1, "{reopening:?}");
+        assert_eq!((reopening[0].reviews, reopening[0].analyses), (1, 1));
+        assert!(!reopening[0].over_bound);
+    }
+
+    /// Nothing but text, this spec's own or another's, and the earlier record stands:
+    /// the reopening takes one analysis and no review (AC4).
+    #[test]
+    fn a_reopening_that_changed_only_text_passes_on_one_analysis() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        fs::write(repo.join("specs/007-gate/plan.md"), "# Plan\n").unwrap();
+        fs::create_dir_all(repo.join("specs/008-other")).unwrap();
+        fs::write(repo.join("specs/008-other/notes.md"), "notes\n").unwrap();
+        git_commit_all(repo, "docs(007): the reopening's text");
+
+        assert_eq!(gate(repo).blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+        write_gate_analysis(repo, "2026-11-01T00:00:00Z");
+        git_commit_all(repo, "analyze(007)");
+        let result = gate(repo);
+        assert!(result.passed, "{result:?}");
+    }
+
+    #[test]
+    fn an_uncommitted_change_makes_a_review_owed_and_is_named() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        git_commit_all(repo, "status(007): reopen");
+        fs::create_dir_all(repo.join("src")).unwrap();
+        fs::write(repo.join("src/uncommitted.rs"), "fn u() {}\n").unwrap();
+        let result = gate(repo);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
+        assert!(result.message.unwrap().contains("src/uncommitted.rs"));
+        assert!(result.guidance.unwrap().contains("commit"));
+    }
+
+    /// Every review check comes before the analyze checks, so none of them names an
+    /// analysis the review would then stale.
+    #[test]
+    fn what_only_a_review_clears_outranks_a_stale_analysis() {
+        for (old, new, expected) in [
+            (
+                "should-violations: 0\n",
+                "should-violations: 1\n",
+                ReviewGateBlock::UndispositionedFindings,
+            ),
+            (
+                "blocking: false\n",
+                "blocking: false\nfix-rounds-open: true\n",
+                ReviewGateBlock::FixRoundLoopOpen,
+            ),
+            (
+                "blocking: false\n",
+                "blocking: false\nnot-re-read: 1\n",
+                ReviewGateBlock::FixRoundNotReRead,
+            ),
+        ] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), REVIEWED_CLEAN);
+            let base = git_commit_all(tmp.path(), "base");
+            seed_with_current_digest(tmp.path(), &base);
+            let path = tmp.path().join("specs/007-gate/review.md");
+            let record = fs::read_to_string(&path).unwrap();
+            assert!(record.contains(old), "{record}");
+            fs::write(&path, record.replacen(old, new, 1)).unwrap();
+            let result = gate(tmp.path());
+            assert_eq!(result.blocked_by, Some(expected), "{new}");
+        }
+    }
+
+    /// Outside a repository nothing says what changed: the gate says so, rather than
+    /// reading as a window it examined, and it does not block on it.
+    #[test]
+    fn a_passing_gate_says_when_it_could_not_tell_whether_a_review_is_owed() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ANALYZE_ADVISORY_ONLY);
+        let result = gate(tmp.path());
+        assert!(result.passed, "{result:?}");
+        let guidance = result.guidance.unwrap();
+        assert!(
+            guidance.contains("Whether a review is owed could not be determined"),
+            "{guidance}"
+        );
     }
 
     #[test]

@@ -757,8 +757,8 @@ pub struct ComputeReviewScopeResult {
     pub base_source: BaseSource,
     /// False when a review record names a run and holds nothing only a review
     /// clears, and the scope and the deletions it attributes to the spec hold no
-    /// path outside the spec's own directory and no scenario or data-model edit;
-    /// true otherwise, since the gate holds `done` on a spec's first pass.
+    /// path outside a spec's directory and no edit to this spec's scenarios or
+    /// data model; true otherwise, since the gate holds `done` while it is.
     pub review_owed: bool,
     /// Where the lists are: in this result, or, past the read size, in
     /// the file `lists-file` names (066 scenario
@@ -5188,7 +5188,8 @@ pub enum ReviewGateBlock {
     /// record is always writable at the moment a spec is being completed.
     RecordPredatesDispositions,
     /// An outstanding gating finding no earlier check caught: in practice a
-    /// review SHOULD neither waived nor released by its deferral (spec 076).
+    /// review SHOULD neither waived nor released by its deferral (spec 076),
+    /// ahead of the analyze checks, or an analyze count after them.
     /// Only gating findings hold `done` (spec 058,
     /// `findings-cost-in-proportion-to-risk`); the `dispositions:` maps'
     /// `undispositioned` counts of advisory findings and observations are
@@ -5197,9 +5198,9 @@ pub enum ReviewGateBlock {
     UndispositionedFindings,
     /// `review.md` counts more fix rounds that needed a re-read and have none
     /// finished (`not-re-read`) than waivers with a reason in `round-waivers`
-    /// (spec 078). Ordered last: it says a fix made during the review was not
-    /// checked, which matters only once the review itself holds nothing. A
-    /// record without the loop fields passes, with guidance saying so.
+    /// (spec 078). Ordered after the review's findings: it says a fix made during
+    /// the review was not checked, which matters only once the review itself holds
+    /// nothing. A record without the loop fields passes, with guidance saying so.
     FixRoundNotReRead,
     /// The record still carries `fix-rounds-open`: a review's first
     /// `write-review` marked its fix-round loop open and its last never ran, so
@@ -5207,6 +5208,12 @@ pub enum ReviewGateBlock {
     /// record with no mark, an older one or one from `ductus exec`, is
     /// unaffected.
     FixRoundLoopOpen,
+    /// `compute-review-scope` reads `review-owed`: the spec's code, scenarios or
+    /// data model changed since the last review (spec 079). Ordered after every
+    /// other review check and ahead of the analyze checks, since `review.md` is one
+    /// of an analysis's subjects, so an analysis run before an owed review is stale
+    /// when that review writes, and the reopening takes two.
+    ReviewOwed,
 }
 
 /// The freshness of a durable record — `review:` or `analyze:` — against the

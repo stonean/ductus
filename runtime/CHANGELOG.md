@@ -133,6 +133,15 @@ its version and date.
   passes and its last omits, and `check-review-gate` blocks while it is present,
   as `fix-round-loop-open`. A record with no mark, an older one or one from `ductus
   exec`, is unaffected.
+- **The pre-`done` gate blocks on a review a spec owes, ahead of every analyze
+  check.** `check-review-gate`'s `blocked-by` gains `review-owed`, which names what
+  changed since the last review and clears once a review's record is committed.
+  `review.md`'s missing-map, outstanding-finding and fix-round checks move ahead of
+  the analyze checks, since a review stales an analysis run before it, so a
+  reopening that changed code takes one of each; a message no longer names both
+  records together. `compute-review-scope`'s `review-owed` no longer counts a path
+  in another spec's directory, which that spec's review reads. A window that cannot
+  be read passes, with guidance saying so.
 - **A review reads its own spec's change, and a later run starts where the
   last one finished.** `compute-review-scope`'s default window now starts at the
   later of the spec's last reopen and its last finished review, reported as

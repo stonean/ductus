@@ -28,7 +28,7 @@ The field set is the constitution's §text-first-artifacts *Analyze record — `
 
 A spec whose frontmatter does not deserialize gets **no** record. The value is parsed and discarded purely for that guard — the analysis would have hard-failed on such a spec, and writing a clean record into it inverts the mechanism.
 
-**`check-review-gate`** gains checks 7 and 8, `not-analyzed` and `analyze-findings`, extracted into `analyze_gate_block` (the function was already at clippy's 100-line ceiling; the existing `stale_review_block` seam is the pattern). Two new `ReviewGateBlock` variants, `NotAnalyzed` and `AnalyzeFindings`, ordered after every review-record check.
+**`check-review-gate`** gains `not-analyzed` and `analyze-findings`, extracted into `analyze_gate_block` (the function was already at clippy's 100-line ceiling; the existing `stale_review_block` seam is the pattern). Two new `ReviewGateBlock` variants, `NotAnalyzed` and `AnalyzeFindings`, ordered after every review-record check.
 
 The primitive keeps its name though it now gates on both commands. Renaming is six registration sites and a breaking MCP change to buy a more accurate noun; the name is documented as historical in `/{project}:implement` instead.
 

@@ -23,9 +23,9 @@ whether the reviews had been run.
 
 ## Behavior
 
-A gate check ordered last among the review checks because it is the weakest
-claim: the others say a review is missing or failing, this one says a passing
-review is out of date.
+A gate check ordered after the review's presence and blocking checks because it
+is the weaker claim: those say a review is missing or failing, this one says a
+passing review is out of date.
 
 `ReviewGateBlock::ReviewStale` fires when one of the spec's **durable
 contracts** — a `scenarios/*.md` file or `data-model.md` — no longer matches

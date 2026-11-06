@@ -18,9 +18,13 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside the spec's own directory and no scenario or data-model edit; true with no such record |
+| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model; true with no such record |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it.
+
+## `check-review-gate` result
+
+`blocked-by` gains `review-owed`, ahead of every analyze value, and its `message` names what changed.
 
 ## `write-review` arguments
 
