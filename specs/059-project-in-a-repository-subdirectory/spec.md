@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [058-findings-route-at-discovery]
 next-criterion: 12
 cross-spec-impact: [018-adopter-owned-pre-commit]
