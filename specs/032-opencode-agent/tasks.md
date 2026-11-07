@@ -86,3 +86,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 Spec 079 task 10 corrected `data-model.md`, which said a run degrades to the markdown path on invalid JSON; a data-model edit stales the review. It owes `/ductus:review`, then `/ductus:analyze`, then the completion gate, which run once no box in this file is open (spec 079).
 
 - **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.
+
+## 13. The MCP command is the pointer 048 introduced
+
+- [ ] AC3 and `data-model.md` Region 1 quote the `mcp.ductus` command as `["ductus", "mcp"]`, which `a4a33584` (048) changed to the `.ductus/bin/ductus` pointer that `framework/bootstrap/ductus.md` §MCP wiring now writes; correct both, and plan Decisions 3 and 4, naming 048
+
+Found at the completion gate after this reopening's review and analysis had recorded. Correcting the data model stales the review, so once this box is ticked the spec owes `/ductus:review`, then `/ductus:analyze`, then the completion gate, and the reopening closes with a second review, which 079's task 12 records as a miss.
+
+- **Done when**: AC3, the data model and the plan name the pointer command `framework/bootstrap/ductus.md` writes, and the corrected data model has a review and an analysis recorded.
