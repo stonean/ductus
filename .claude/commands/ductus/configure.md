@@ -188,8 +188,11 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Write(.ductus/session.toml)`
    - `Write(.ductus/config.toml)`
 
-   **A tool the server no longer serves** (spec 022 task 14: `run-generator` runs any project file with `bash`, so it is a `ductus run-generator` subcommand and not an MCP tool; the entry names no tool, and is retired so it cannot approve one that takes the name later):
+   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made `run-generator`, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, and spec 054 `read-supersession-pair` and `write-supersession-annotation`):
    - `mcp__ductus__run-generator`
+   - `mcp__ductus__check-review-agreement`
+   - `mcp__ductus__read-supersession-pair`
+   - `mcp__ductus__write-supersession-annotation`
 
    **Why this list lives here and not in a `/ductus` migration.** The registry in `framework/migrations.toml` is the framework's usual home for adopter-side cleanup, and it is the wrong mechanism for this one. Its `[migrations].last_applied` marker lives in the **committed** `.ductus/config.toml`, while this file is **per-contributor and gitignored** — so the first teammate to run `/ductus` would mark the entry applied for the whole repo and every other teammate would keep the retired entries forever. `/ductus` also never writes the full permission set (it seeds only the bootstrap entries and directs the operator here). This command has neither problem: it is the sole owner of this file, it runs per-contributor, and it is idempotent, so retirement simply happens on the next run for each person who runs it.
 

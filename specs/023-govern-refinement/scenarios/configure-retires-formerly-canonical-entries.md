@@ -21,14 +21,14 @@ The obvious owner is the migration registry — `framework/bootstrap/ductus.md` 
 
 ## Behavior
 
-- `/ductus:configure` gains a fourth numbered section: **retired `permissions.allow` entries**, listing the nine entries the framework once shipped and now removes, each grouped under the reason it was retired and the version that retired it.
+- `/ductus:configure` gains a fourth numbered section: **retired `permissions.allow` entries**, listing the entries the framework once shipped and now removes, the nine this scenario retires among them, each grouped under the reason it was retired and the change that retired it.
 - The list is passed to `merge-permissions` as `revoke`. The primitive removes exact matches only, so an entry an adopter authored is never touched however closely it resembles a retired one — shape-matching is deliberately not offered.
 - Retirement is **allow-side only, enforced by the primitive's shape** rather than by prose: `merge-permissions` has no deny-side counterpart. An over-broad *denial* refuses more rather than approving more, so the `Bash(git -C * …)` patterns in the canonical deny set are correct, and an argument that could sweep both arrays would invite narrowing them into holes.
 - The revoke pass runs **before** dedup and canonical-presence, so every copy of a retired entry is removed and none is re-added, and a doubled retired entry is attributed wholly to retirement rather than split across two counters.
 - An entry present in both the canonical set and the retired list is **rejected** (`ConflictingRevoke`), not resolved by pass order: the two passes would fight, the merge would never reach a fixed point, and the `unchanged` short-circuit that preserves mtime could never fire.
 - `/ductus:audit` Family 32 checks the same disjointness at maintainer time, so the editing slip fails in this repo rather than in every adopter's `/ductus:configure` run. Retiring an entry means deleting it from the canonical set in the same edit.
 - The command reports what it retired, naming each removed entry, so the adopter sees the change to their permission file rather than finding it by diff.
-- Auggie's `toolPermissions` shape has no primitive, so `configure/auggie.md` performs the same splice host-side, by exact string match, before its presence and dedup passes.
+- Auggie's `toolPermissions` shape has no primitive, so `configure/auggie.md` retires its own list host-side, in its step 4, matching `toolName` and `shellInputRegex` and ignoring the `permission` value.
 
 ## Edge Cases
 
@@ -37,7 +37,7 @@ The obvious owner is the migration registry — `framework/bootstrap/ductus.md` 
 - A retired entry an adopter has deliberately re-added is removed again on the next run. That is the intended behavior for an arbitrary-execution hole, and the pin is the documented opt-out.
 - The list is append-only across releases. An entry is never removed from it once added, because an adopter arriving from any older version must still be cleaned.
 - A hand-edited `settings.local.json` that is invalid JSON is reported and left alone, never silently rewritten — `merge-permissions` refuses on parse error before writing anything.
-- A non-Claude host has no entry in this list to retire: the seven `git -C` patterns and the two `Write(path)` entries only ever shipped in `configure/claude.md`, and the other three hosts' grammars cannot express them.
+- No other host retires the nine: the seven `git -C` patterns and the two `Write(path)` entries only ever shipped in `configure/claude.md`. A host retires only entries its own canonical set once shipped.
 
 ## Open Questions
 
