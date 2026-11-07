@@ -1,37 +1,30 @@
 ---
 spec: 076-waived-and-deferred-findings-are-distinct-dispositions
-last-run: 2026-11-03T14:15:04Z
-analyzed-against: 104cdf695d51f9bc9fd56e5f634a4b7455ad5c73
+last-run: 2026-11-07T21:33:28Z
+analyzed-against: ec4f265be061b5dcc04c38e4fa663ca230f76c0f
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 2
 analyzed-digest:
-  data-model.md: c36e56e63ab29d0b9217eadf38f2ae9f976fdc6124d193e95e15dcdf82eb7909
-  plan.md: 30c686faac463f4a9234dafdb2a02cc963e41f6b6e022675e33e7b478064b2d6
-  review.md: 1d9fde19ee10239370a1378e7a96af07528c20ad0f13a412165831ed66a2b139
-  spec.md: 8af4561ce0c711179aca1c3057e1113174068456e885e0c098a2287415bdc764
-  tasks.md: eedc4df9dfd594ce2543bc953e16217c0dbc8b3eb0e104ae3f1d2d33e552d10a
+  data-model.md: 6bf5a397676b4bfc9c49161680fb585d9865098a1f18644821c1aff3737b1aae
+  plan.md: d390457cf0d22bd1a811313f8702ff3519495740443b8d9269c78d55c1e4cfb4
+  review.md: dc3c4c2bb4b820d54c68b183af849994031d2f6db9d99c6728781178c05abf72
+  spec.md: a5460ed4bb8843c7c7e10eee4a6b917afc76029e6470c3a04dc626bcd53b6b1b
+  tasks.md: f3e453562894943badcadf103ee26ec1330323b1705bda04d6a97ad4dc3cd7f9
 blocking: false
 dispositions:
-  fixed: 1
-  deferred: 1
+  fixed: 0
+  deferred: 0
   waived: 0
   undispositioned: 0
-decisions:
-  - key: "rule-assessment — BE-PAYLOAD-001: process-decisions' result gains a lapsed list beside matched, expired and retained, and no artifact commits to a maximum response size or pagination"
-    outcome: deferred
-    target: specs/066-audit-records-and-the-completion-gate/tasks.md
-    task: "14"
-    decided-at: 2026-11-03T14:15:04Z
-    decided-by: andy@stone.dev
 ---
 
 # Analysis — 076-waived-and-deferred-findings-are-distinct-dispositions
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 1 fixed, 1 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -47,12 +40,12 @@ decisions:
 
 ## Deferred to other specs
 
-- rule-assessment — BE-PAYLOAD-001: process-decisions' result gains a lapsed list beside matched, expired and retained, and no artifact commits to a maximum response size or pagination — `specs/076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md` — **deferred** to `specs/066-audit-records-and-the-completion-gate/tasks.md` task 14
+*None.*
 
 ## Unexamined targets
 
-*None — every target was examined.*
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- rule-assessment — BE-COMPAT-001: 076 renames the dispositions: keys and outcome values on the MCP tool schemas and the review and analysis records, and neither the spec nor the plan classified the change as additive or breaking — `specs/076-waived-and-deferred-findings-are-distinct-dispositions/plan.md` — **fixed**
+*None.*
