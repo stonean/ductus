@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [006-bug-workflow, 017-derive-dont-ask, 023-govern-refinement]
 next-criterion: 8
 ---
