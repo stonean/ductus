@@ -1,26 +1,23 @@
 ---
 spec: 019-config-decisions
-last-run: 2026-10-20T13:07:37Z
-analyzed-against: 9d4d8c7685d1f1cc3fef5305456500521cbe6c96
+last-run: 2026-11-07T21:13:24Z
+analyzed-against: 64601ad4f6cb948feabf54e7d873f0d9cc5e8287
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 2
 analyzed-digest:
-  data-model.md: d8bdc02dfbb5b9f2b299ece5704f596de6a3ab268008fa7860b9a7deff6cd480
+  data-model.md: e0213df1e6bc4264fad1c781c1b3bc4dcc799903269b591bb4f02579a4b6cf26
   plan.md: 056676c551ef406927b69be8d34f60532e483c5dec87f152c276a46c8d084435
-  review.md: 3fab79562d42da6fe98fe12ab7e7c9ee574e3b57b5c669b963b11bc1a88ac819
+  review.md: bc875f21810d4dbde73a13852232782c8e485ce2a2c94aa5214e8097c9f5128e
   scenarios/an-unknown-config-key-is-named.md: eb41ca8d0c1f6064da2407524a5e8e23a9b043a4a19dd067dd8cf0af6e0f8c34
-  spec.md: a14af857c2be725b8f4ffd70a0515de3e9e514d91f8730a08da6dfeeabe786ad
-  tasks.md: 8b99dc33b0dbdc10fd2d33f57fc39ba3eb8284463d2debb4a54b1b2bdd7362f5
-unexamined-by-reason:
-  not-a-live-claim: 1
-  root-absent: 1
+  spec.md: 8f3531736641e0a4e4ca8c786bc4144622a1bf5fb967e054644a9fda7bf94d1c
+  tasks.md: 86314e9529494f02f2216778675599aa69f620a0d894a429bd89eff1f7f710fd
 blocking: false
 dispositions:
-  fixed: 2
-  routed: 0
-  discarded: 0
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -28,7 +25,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -42,12 +39,14 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-- not-a-live-claim: 1
-- root-absent: 1
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- rule-assessment — BE-INPUT-011: the stderr warning names a registered service checkout's config path, which comes from committed config, but only the key was committed to escaping — `specs/019-config-decisions/plan.md` — **fixed**
-- grounding — plan.md says Paths::load runs on almost every primitive call, citing nothing — `specs/019-config-decisions/plan.md` — **fixed**
+*None.*
