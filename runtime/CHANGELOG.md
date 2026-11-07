@@ -75,7 +75,7 @@ its version and date.
   it is the work the record holds. A spec with no `tasks.md` is unaffected. Spec 079.
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes before these cuts to 420,575, `framework/reference/review.md` from 67,168 to 45,037
+  bytes before these cuts to 421,717, `framework/reference/review.md` from 67,168 to 45,232
   and `framework/reference/analyze.md` from 78,632 to 48,691, each within one
   read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
