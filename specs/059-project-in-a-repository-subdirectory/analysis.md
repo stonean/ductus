@@ -1,21 +1,21 @@
 ---
 spec: 059-project-in-a-repository-subdirectory
-last-run: 2026-09-27T15:44:27Z
-analyzed-against: c7ad37482e601cd6b9f24d1eba636937cefee2f4
+last-run: 2026-11-07T21:21:03Z
+analyzed-against: a7865f83824a178b8b6d1e9b6a58729d9ac8db07
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 2
 analyzed-digest:
-  plan.md: 4b7c06a03b9a63b6007e4d5c31ee3173f67584a6df5098311cc807eb185c879e
-  review.md: f053f9111f8b8862307c64be8f83fcf0459069dcdea246e11afea64c805adc36
-  spec.md: 2d7f1198098c7361f1a89723470e4096f8e80964e112d3edd66e153c56dc67f7
-  tasks.md: 2b4b24f03af4e11c39ec86bbede8ac8d9aac5cfeae6ab4e56f1c915f990647d0
+  plan.md: 747b770bf284a90a3ca0b3c00a202dad67b0a0c7d7252557a9192a7b1de6af3f
+  review.md: e00dc993f0959b85f6499ad90426d0e19e6abcabc27637449d543206fcc113e5
+  spec.md: d9f11e37c5d5c70450fc7d811396f45f843bba215186dd72a5a21fca57bf5b39
+  tasks.md: 7403a681c44ed06001f3eea0ef46dfae441b071605f2f17642735b541dfadd78
 blocking: false
 dispositions:
-  fixed: 9
-  routed: 0
-  discarded: 0
+  fixed: 1
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -23,7 +23,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 9 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -37,18 +37,14 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-*None — every target was examined.*
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- grounding — spec.md states that `Repository::open` does not search upward with no citation of git2's contract — `specs/059-project-in-a-repository-subdirectory/spec.md` — **fixed**
-- grounding — spec.md states that `workdir_prefix` canonicalizes the work tree and the project root with no citation of the code — `specs/059-project-in-a-repository-subdirectory/spec.md` — **fixed**
-- grounding — spec.md states that discovery finds the innermost repository with no citation of libgit2's discovery contract — `specs/059-project-in-a-repository-subdirectory/spec.md` — **fixed**
-- grounding — spec.md states that `pre-commit` installs without setting `core.hooksPath` with no citation of pre-commit's install code — `specs/059-project-in-a-repository-subdirectory/spec.md` — **fixed**
-- grounding — plan.md states that the `open` sites do not search upward with no citation of git2's contract — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed**
-- grounding — plan.md states that the manifest places the inner hook at `{project}/.githooks/ductus-pre-commit` with no citation of the manifest — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed**
-- grounding — plan.md states that `git diff --cached --name-only` names paths from the work-tree root with no citation of git-diff(1) — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed**
-- grounding — plan.md states that `pre-commit` installs into `.git/hooks` without setting `core.hooksPath` with no citation of pre-commit's install code — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed**
-- grounding — plan.md states that `git status --porcelain` reports the whole work tree with no citation of git-status(1) — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed**
+- grounding — plan.md's sweep note says editing 067's adopter-generator-promotion scenario would reopen 022, which held it only until d852b627 moved it to 067 — `specs/059-project-in-a-repository-subdirectory/plan.md` — **fixed** (decided by the rule)
