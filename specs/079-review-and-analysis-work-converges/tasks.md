@@ -261,3 +261,9 @@ This spec's `/ductus:analyze` runs with task 12's, once every box in this file i
 - [x] The task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076, 078 and this spec say in prose what each owes, with no box scheduling a run
 
 - **Done when**: an early write refuses on a fixture through the built binary, and no task list schedules a run.
+
+## 20. Disposition out-of-spec finding: write-review records scope 0 over a diff-base that names no commit
+
+- [ ] `runtime/src/primitives/write_review.rs` — `resolve_scope` maps any `compute-review-scope` error to `scope: 0`, so a `diff-base` naming no commit records an empty window beside any `examined`, which no check reports: reproduced at `dcc1e0d4` on 010, where a mistyped full sha wrote `examined: 8` beside `scope: 0` while `compute-review-scope --since` on the same sha exits 1 with `revspec not found`. The fallback dates from `4cf8fee9` (020, 022) for a spec directory with no commit, and 079's task 2 carried it in `b23b020c`
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
