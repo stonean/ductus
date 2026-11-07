@@ -218,8 +218,9 @@ opencode additions folded in.)
 - **`write-file` automation asymmetry** — OpenCode (like Claude) gets fully
   automated wiring because its config is committable; Auggie/Antigravity still
   surface an instruction. Inherent, not a regression.
-- **Runtime `exec` command resolution deferred** — OpenCode ships on the
-  markdown-only path now; ductus MCP tools are unaffected. Tracked as a 022 follow-up.
+- **Runtime `exec` command resolution deferred** — left to a 022 follow-up,
+  which `7694aadf` delivered: `runtime/src/host.rs` resolves
+  `{dir}/command/{project}/<name>.md` for the `opencode` layout.
 - **Workflow-recommendation deferred for `opencode`** — matches the antigravity
   deferral; the pipeline commands are the adoption surface.
 
