@@ -310,6 +310,25 @@ pub(crate) fn refuse_missing_work(
 /// The feature directory a repo-relative `target` lies in, when it lies under
 /// the spec root `root` at all — its first component below the root, which a
 /// caller confirms is a spec by finding its `spec.md`.
+/// The tasks a run's deferrals name on its own spec, the work it records: their boxes are open
+/// because the run opened them (spec 079).
+pub(crate) fn tasks_deferred_here<'a>(
+    root: &str,
+    feature: &str,
+    dispositions: impl Iterator<Item = &'a Disposition>,
+) -> std::collections::BTreeSet<String> {
+    dispositions
+        .filter(|disposition| disposition.outcome == DispositionOutcome::Deferred)
+        .filter(|disposition| {
+            nonblank(disposition.target.as_deref())
+                .and_then(|target| target_feature(root, target))
+                .is_some_and(|target| target == feature)
+        })
+        .filter_map(|disposition| nonblank(disposition.task.as_deref()))
+        .map(|task| task.trim().to_string())
+        .collect()
+}
+
 pub(crate) fn target_feature<'a>(root: &str, target: &'a str) -> Option<&'a str> {
     Path::new(target.trim())
         .strip_prefix(root)

@@ -133,6 +133,6 @@ The rule is the Workflow bullet beginning "Have an independent agent re-read eac
 
 This task waits until `079-review-and-analysis-work-converges` is `done` (owner, 2026-11-04). Read 079's Resolved Questions first: its answer on whether 078's own loop changes, and every rule it changed, govern this task. `analysis.md` predates tasks 10–14 and the second review, so the completion gate holds at `analyze-findings` until this run rewrites it; the review record itself was current on 2026-11-04. Unless 079 replaced it, the owner's stance for this closing analysis and gate (2026-11-04) applies: fix mechanical findings in the run; waive an observation about machinery outside 078's code, with its reason; defer nothing into 078. If 066 task 17 has edited line 137 of `data-model.md` by then, the review is stale: review only that change, with `--since` set to the commit before it.
 
-- [ ] Run `/ductus:analyze` on 078 and disposition each live finding
+It owes `/ductus:analyze` on 078, each live finding dispositioned, which runs once no box in this file is open (spec 079).
 
 - **Done when**: `analysis.md` is current with no live hard-fail or blocking finding, so `/ductus:implement`'s completion gate can run

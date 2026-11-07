@@ -41,7 +41,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 **Where a named section lives.** This command's reference is `.ductus/reference/analyze.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
-1. Invoke `read-spec` (with `include-body`) against the targeted feature. Its status governs which artifact-completeness checks apply, and its parsed `sections` feed step 14's `## Applicable Rules` scan, so the body needs no re-read.
+1. Invoke `read-spec` (with `include-body`) against the targeted feature. When the spec's `tasks.md` holds an unchecked box under any heading, stop naming the boxes: an analysis runs once implementation is complete, since nothing can say whether a task still open would change what it reads, and the write-analysis primitive refuses before then, but for a box under a task this run's own deferral names. Its status governs which artifact-completeness checks apply, and its parsed `sections` feed step 14's `## Applicable Rules` scan, so the body needs no re-read.
 
 2. Invoke `validate-frontmatter` against the spec path. Each finding carries the severity §text-first-artifacts (Validation Severity) assigns to **that** condition, so render each finding in the tier it names — never map the family to one fixed tier. The rest of the procedure still runs to surface every issue in a single pass. The host judges each scenario's frontmatter (**§Frontmatter schema (hard fail)** in `.ductus/reference/analyze.md`).
 

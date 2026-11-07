@@ -77,5 +77,6 @@ The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sortin
 
 This task waits until the changes of `079-review-and-analysis-work-converges` land (owner, 2026-11-04), so it runs under their scope and disposition rules and counts toward that spec's AC20. 058's own change since its reopen is `f47d2b03`'s edit of its spec body and one scenario, which owes a review because it touched a scenario.
 
-- [ ] Run `/ductus:review`, `/ductus:analyze` and the completion gate
+It owes `/ductus:review`, `/ductus:analyze` and the completion gate, which run once no box in this file is open (spec 079).
+
 - **Done when**: 058 is `done`

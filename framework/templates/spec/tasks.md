@@ -14,7 +14,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
      on the task that must wait, never above the first task or under a
      heading of its own, which outlive every task; and never write a note as
      a checkbox, which would count toward the task's completion. Anything
-     that must outlast the task belongs in its durable home first. Example:
+     that must outlast the task belongs in its durable home first.
+
+     Schedule no review, analysis or completion gate as a task: they run
+     once every box here is ticked, and refuse to record before then, so
+     what a spec owes them is prose on its pending task. Example:
 
 ## 1. Create sessions table migration
 

@@ -68,6 +68,10 @@ The baseline check is a recorded command result at `d62e72f3`, not a test, becau
 
 A run whose last write still carries `fix-rounds-open` counts as leaving a gating finding, since the gate demands the re-run (owner, 2026-11-06). Only the mark is added, not the gate's whole predicate, whose no-map arm would count an older record as gating.
 
+### A run waits for the work
+
+`refuse_while_tasks_are_open` (`runtime/src/primitives/read_tasks.rs`) refuses a record while `tasks.md` holds a box by `describe_unchecked`, the gate's own test, and `write-review` and `write-analysis` call it after resolving the feature, so a run made before implementation is complete cannot record, under `ductus exec` too. `/{project}:review` and `/{project}:analyze` say so at their first step, so a host stops before the passes rather than at the write. The tasks template and `/{project}:plan`'s reference schedule no run, and each task list that did now says in prose what its spec owes (owner, 2026-11-07).
+
 ### One description per primitive
 
 `runtime/src/schema/descriptions.rs` holds one `pub const` per primitive. `#[tool(description = …)]` takes an expression (`rmcp-macros` 3.8.0's `tool.rs`), and clap takes `long_about` and `about` in `runtime/src/main.rs`, so a subcommand's `--help` prints the whole text and the `ductus --help` list its first sentence, or what precedes its first colon when that comes sooner, since some first sentences run to a thousand bytes listing what follows one. The move is byte-identical for MCP but for what one text requires: `gate-confirm`, which behaves differently on each surface, says so, and `AC{n}`, which clap's help renderer turns into a newline, becomes `AC<n>`. The CLI-only primitive gets a constant too, and `--help` adopts them, replacing the separate doc comments. A test holds each served tool's description equal to its subcommand's `long_about`. Module docs lose only what restates the description; a sweep of them is not owed.
@@ -106,7 +110,9 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/primitives/fix_rounds.rs` | Modify | A round drops another spec's commits |
 | `runtime/src/primitives/brief_re_read.rs` | Modify | Exempt paths leave a mixed round's brief |
 | `runtime/src/primitives/write_review.rs` | Modify | Open mark, `excluded`, `contract-breaks`, `open-findings`, `decided-by: rule` |
-| `runtime/src/primitives/write_analysis.rs` | Modify | `decided-by: rule` |
+| `runtime/src/primitives/write_analysis.rs` | Modify | `decided-by: rule`; refuses while a task is open |
+| `framework/templates/spec/tasks.md` | Modify | Schedules no run |
+| `framework/reference/plan.md` | Modify | No task schedules a run |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Blocks on an open mark, a break left open and an owed review, review checks first |
 | `runtime/src/primitives/check_prescriptions.rs` | Modify | Shares the round's filter |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Review-state drift reports a broken contract left open |
@@ -118,7 +124,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `runtime/src/primitives/dashboard.rs` | Modify | The counts `/{project}:status` renders |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule |
 | `runtime/src/primitives/prune_plan.rs` | Modify | Only a person's waiver keeps a plan section; `reopen-required` takes the shared test of an added box |
-| `runtime/src/primitives/read_tasks.rs` | Modify | The one test of what `tasks.md` owes |
+| `runtime/src/primitives/read_tasks.rs` | Modify | The one test of what `tasks.md` owes, and the refusal both writers share |
 | `runtime/src/primitives/mod.rs` | Modify | Module declarations |
 | `runtime/src/schema/descriptions.rs` | Create | One description per primitive |
 | `runtime/src/schema/primitives.rs` | Modify | Args and results |
@@ -213,4 +219,4 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | in-progress | Dispositions; its data model held a false canonicality claim, so it reopened and owes a review |
 | `078-review-fix-rounds-are-re-read-within-a-bound` | in-progress | The loop; its task 15 waits for this |
 
-Correcting false claims also reopened, each owing a review and an analysis, `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032-opencode-agent` and `035-groom-session-target` (a scenario or data model), and, each owing an analysis and a review while `review-owed` reads true, `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion). Each holds a task naming what it owes. These owe no back-link; the correction names this spec in its commit.
+Correcting false claims also reopened, each owing a review and an analysis, `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032-opencode-agent` and `035-groom-session-target` (a scenario or data model), and, each owing an analysis and a review while `review-owed` reads true, `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion). Each holds a task naming what it owes. These owe no back-link; the correction names this spec in its commit. Task 19 rewrote the boxes that scheduled a run, or held a note as a box, in the task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076 and 078 as prose, a correction to each that reopens nothing.

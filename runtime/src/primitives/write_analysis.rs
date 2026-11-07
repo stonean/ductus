@@ -61,6 +61,21 @@ use crate::schema::primitives::{
     WriteAnalysisArgs, WriteAnalysisResult,
 };
 
+/// Refuse the record while implementation is open, but for the work this run's own deferrals
+/// add to its spec (spec 079).
+fn refuse_while_implementation_is_open(
+    args: &WriteAnalysisArgs,
+    root: &str,
+    feature_dir: &Path,
+) -> Result<()> {
+    let deferred_here = super::decisions::tasks_deferred_here(
+        root,
+        &args.feature,
+        args.findings.iter().map(|finding| &finding.disposition),
+    );
+    super::read_tasks::refuse_while_tasks_are_open("write-analysis", feature_dir, &deferred_here)
+}
+
 /// Execute the `write-analysis` primitive against the given repo root.
 ///
 /// # Errors
@@ -106,6 +121,8 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
             feature: args.feature.clone(),
         });
     }
+
+    refuse_while_implementation_is_open(args, &root, &feature_dir)?;
 
     let spec_path = feature_dir.join("spec.md");
     let content = read_text(&spec_path)?;
@@ -694,6 +711,23 @@ mod tests {
         )
         .unwrap();
         tmp
+    }
+
+    /// An analysis records once implementation is complete, so a box still open in
+    /// `tasks.md` refuses the write, and a file with every box ticked does not.
+    #[test]
+    fn an_analysis_records_only_once_every_task_is_done() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let tasks = tmp.path().join("specs/042-demo/tasks.md");
+        fs::write(&tasks, "# T\n\n## 1. A\n\n- [ ] a\n\n- **Done when**: a.\n").unwrap();
+        let error = run(&args(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "feature"),
+            "{error}"
+        );
+        assert!(!tmp.path().join("specs/042-demo/analysis.md").exists());
+        fs::write(&tasks, "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n").unwrap();
+        run(&args(), tmp.path()).unwrap();
     }
 
     /// `analysis.md`'s text, after a run.

@@ -66,6 +66,13 @@ its version and date.
 
 ### Changed
 
+- **A review or an analysis runs once implementation is complete.** `write-review` and
+  `write-analysis` refuse while the spec's `tasks.md` holds an unchecked box under any
+  heading, and `/review` and `/analyze` stop at their first step naming the boxes, since
+  nothing can say whether a task still open would change what a run read. A task list
+  schedules no run: what a spec owes is prose on its pending task, and the tasks template
+  and `/plan` say so. A box under a task the run's own deferral names does not refuse, since
+  it is the work the record holds. A spec with no `tasks.md` is unaffected. Spec 079.
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
   bytes before these cuts to 420,575, `framework/reference/review.md` from 67,168 to 45,037

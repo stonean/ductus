@@ -131,16 +131,14 @@ Blocked on tasks 2–10: cut what is true after them. Task 9 shortened the `For 
 
 ## 12. Verify, land and measure (AC8, AC20)
 
-Blocked on tasks 1–11, and subtask 3 on tasks 14–16, since a change after the review reads the tree would stale it. Subtask 3's review ran and is open: `review.md` is committed with `fix-rounds-open: true`, and `/ductus:analyze` has not run. Subtask 4's count starts at `e7fcde37`, the commit landing AC24, by the owner's choice (2026-11-06), so other specs close while the rest of task 16 lands.
+Blocked on tasks 1–11. The review closed with its record at `347c3f70`, no mark open. `/ductus:analyze`, a review first if one is then owed, and the completion gate proposing `done` run once every box in this file is ticked, as task 19 has every spec do. The count starts at `e7fcde37`, the commit landing AC24, by the owner's choice (2026-11-06), so other specs close while this one waits on them.
 
 - [x] Walk each criterion against the tree, and check each shipped change is in the runtime, `framework/commands/`, `framework/reference/` or the constitution (AC8)
 - [x] A real adopter bootstrap on a subject far enough behind to cross the chain, since this changes `framework/commands/` and adds primitives (`AGENTS.md`)
-- [ ] Run `/ductus:review` and `/ductus:analyze` on this spec
 - [ ] Note the landing commit, then run `measure-reopenings --since` on it as later specs close: 058 (its task 5), 016, 029, 034, 037, 039, 045, 055, and others, until 10 reopenings holding a run have closed
 - [ ] A miss gets a task on this spec before it closes, and the count carries on
-- [ ] Propose `done` with the completion gate
 
-Subtask 4 cannot finish in one session: once AC24 lands, record its commit here and hand off. Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, and task 18 reopened 035, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly.
+The count cannot finish in one session. Task 10 reopened 010, 014, 019, 023, 030, 032, 059, 062 and 076, and task 18 reopened 035, each holding a task naming the runs it owes, so each counts toward the 10 as it closes. Handoff: 078's task 15 waits for this spec to be `done`, and 066's session resumes once tasks 2–5 land, rebasing its held work onto them. AC20's baseline comparison is in `aaa4287f`'s message: 126 closed and 261 runs against the recorded 123 and 255, the difference by method, and a plain per-spec `git log` walk reproduces 123 and 255 exactly.
 
 - **Done when**: the 10 closings are measured within the bound or each miss has a finished task, `check-review-gate` passes, and the owner approved `done`.
 
@@ -250,6 +248,16 @@ Each option was prototyped over `64d0be93`'s code and diffed, its tests included
 - [x] The owner's call, O1, measured, `research.md`'s entry holding the count: count a stopped run as leaving a gating finding (owner, 2026-11-06), which lands with the next batch
 - [x] Measure the batches against `e6250b77` over all 77 specs, base, scope count, `review-owed`, the gate and the finding families, by `docs/developing-ductus.md`'s comparison: no such run has been valid yet, and the expected difference is specs whose first gate block moves to `unchecked-task`
 - [x] Finish the run: `process-waivers`, `process-decisions`, keeping the base `start-fix-rounds` took at `1a0623f2` before this batch, `71e679295323cb200054e8e2effb287819483deb` with a budget of 2, since a round is derived from a base that predates its fixes and a fresh snapshot would brief an empty round and leave the batch unread (`framework/reference/review.md`, *Fix-round loop*), naming that in the Summary, `write-review` with `loop-open` passing every observation and finding here with its disposition, `decided-by: rule` on the waived list and L1 low-confidence, then the re-reads within the budget of 2, the last write without `loop-open`, and commit the record
-- [ ] Tick AC5 and AC17 again against the tree, then `/ductus:analyze`, then tick task 12's first open box
+- [x] Tick AC5 and AC17 again against the tree
 
-- **Done when**: each item here is fixed with a test shown to fail without it, or waived with its reason in the record, the owner has answered O1, the record is committed with no open mark, and `/ductus:analyze` has run.
+This spec's `/ductus:analyze` runs with task 12's, once every box in this file is ticked.
+
+- **Done when**: each item here is fixed with a test shown to fail without it, or waived with its reason in the record, the owner has answered O1, and the record is committed with no open mark.
+
+## 19. A run waits until implementation is complete
+
+- [x] `write-review` and `write-analysis` refuse while `tasks.md` holds an unchecked box, through `refuse_while_tasks_are_open`, each with a test and a mutant
+- [x] `/review` and `/analyze` stop at step 1 naming the boxes, the tasks template and `/plan`'s reference schedule no run, and the descriptions, data model, plan and changelog say so
+- [x] The task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076, 078 and this spec say in prose what each owes, with no box scheduling a run
+
+- **Done when**: an early write refuses on a fixture through the built binary, and no task list schedules a run.

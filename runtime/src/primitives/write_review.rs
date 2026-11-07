@@ -480,6 +480,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             feature: args.feature.clone(),
         });
     }
+    refuse_while_implementation_is_open(args, &root, &feature_dir)?;
     refuse_an_empty_scope_over_a_finding(args, &feature_dir, repo)?;
     let (new_waivers, new_anchors) =
         new_waiver_entries(args, &surviving_waivers(&feature_dir, args)?)?;
@@ -622,6 +623,24 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         examined: args.examined,
         scope,
     })
+}
+
+/// Refuse the record while implementation is open, but for the work this run's own deferrals
+/// add to its spec (spec 079).
+fn refuse_while_implementation_is_open(
+    args: &WriteReviewArgs,
+    root: &str,
+    feature_dir: &Path,
+) -> Result<()> {
+    let deferred_here = decisions::tasks_deferred_here(
+        root,
+        &args.feature,
+        args.observations
+            .iter()
+            .map(|observation| &observation.disposition)
+            .chain(args.findings.iter().map(|finding| &finding.disposition)),
+    );
+    super::read_tasks::refuse_while_tasks_are_open("write-review", feature_dir, &deferred_here)
 }
 
 /// Every check of the arguments alone, before anything is read.
@@ -4157,6 +4176,51 @@ mod tests {
         let error = run(&args, tmp.path()).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "empty-scope"),
+            "{error}"
+        );
+    }
+
+    /// A review records once implementation is complete, so a box still open in
+    /// `tasks.md`, under any heading, refuses the write and leaves the record as it was.
+    #[test]
+    fn a_review_records_only_once_every_task_is_done() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let tasks = tmp.path().join("specs/001-x/tasks.md");
+        std::fs::write(&tasks, "# T\n\n## Notes\n\n- [ ] still owed\n").unwrap();
+        let error = run(&base_args("001-x"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "feature"),
+            "{error}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+        std::fs::write(&tasks, "# T\n\n## Notes\n\n- [x] done\n").unwrap();
+        run(&base_args("001-x"), tmp.path()).unwrap();
+    }
+
+    /// The run's own deferral opens the box it records, so that box does not refuse the
+    /// write, while a box under any other task still does.
+    #[test]
+    fn a_runs_own_deferral_opens_no_refusal_but_other_work_does() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let tasks = tmp.path().join("specs/001-x/tasks.md");
+        let deferred = "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n\n## 2. Fix it\n\n- [ ] fix\n\n- **Done when**: fixed.\n";
+        std::fs::write(&tasks, deferred).unwrap();
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        let mut own = broken("src/a.rs", DispositionOutcome::Deferred, None);
+        own.disposition.target = Some("specs/001-x/tasks.md".into());
+        own.disposition.task = Some("2".into());
+        args.observations = vec![own];
+        run(&args, tmp.path()).unwrap();
+
+        std::fs::write(
+            &tasks,
+            format!("{deferred}\n## 3. Other\n\n- [ ] other\n\n- **Done when**: done.\n"),
+        )
+        .unwrap();
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. } if argument == "feature" && reason.contains("other") && !reason.contains("fix")),
             "{error}"
         );
     }

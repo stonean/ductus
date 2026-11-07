@@ -53,8 +53,7 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 Blocked on 067 task 14 and 071 task 22: both change files in 026's scope.
 
-- [ ] Record 026's review
-- [ ] Analyze 026, then run its completion gate, re-verifying its 26 ticked criteria
+It owes its review recorded, then an analysis and the completion gate, re-verifying its 26 ticked criteria, which run once no box in this file is open (spec 079).
 
 Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse rule: two slices read 026 at `72288af1`; fix rounds `44c0babe` and `d9ac40a3` were re-read and `c16eee54` (prose) was not; the records written at `c1cf51ff` in 002, 017, 050, 051, 052, 062, 064 and 072 cover `af99793c..c1cf51ff`; no record read `70bb4af5`. Carry byte-identically, fired through process-decisions: 10 of the 13 decisions in 071's `review.md` (omit the two on `scripts/gen-claude-commands.sh` and the one on `scripts/audit/marker-list-parity.sh`, outside this scope), the `c1cf51ff` records' in-scope ones, and 026's own `family-19-review-freshness` waiver, which still holds. The Summary states the fixed findings: QUAL-STUB-001 MUST (Family 6 writes a stderr skip line), QUAL-GROUND-001 twice (Families 1b/1c guard the constitution; Family 5 guards analyze's blocking headings), and that Families 28's and 34's findings are recorded in 067's review, whose scope holds those scripts. Observations (owner decisions 2026-10-26):
 

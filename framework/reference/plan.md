@@ -51,6 +51,7 @@ Before creating the plan, load only the cross-spec context this feature actually
    - Each task closes with its completion condition written on its own line as `- **Done when**: <condition>` — this exact marker is what `read-tasks`/`check-artifacts` recognize (a checkbox-nested `- [x] Done when: …` or a bulletless `Done when: …` is tolerated on read, but author the canonical bold form).
    - Tasks respect dependency order.
    - Tasks are derived from the plan, not invented independently.
+   - No task schedules `/{project}:review`, `/{project}:analyze` or the completion gate: they run once every task is done, and `write-review` and `write-analysis` refuse to record before then (spec 079). What a spec owes them is prose on its pending task, as §tasks-phase has handoff state.
 
 ## Validation gate
 

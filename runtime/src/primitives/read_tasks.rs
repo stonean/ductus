@@ -15,7 +15,7 @@
 //!
 //! [runtime-primitive-structural-bugs]: <https://github.com/stonean/ductus/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::primitives::{
@@ -94,6 +94,66 @@ pub(crate) fn adds_unchecked_box(now: &str, head: &str) -> bool {
 }
 
 /// The unchecked boxes `content` holds, for a message: the count, and the first few.
+/// Refuse a review's or an analysis's record while `tasks.md` under `feature_dir` holds an
+/// unchecked box: nothing can say whether a task still open would change what the run read, so
+/// a run records once implementation is complete (spec 079). No `tasks.md` holds no box. A box
+/// under a task numbered in `deferred_here`, which the run's own deferral names, is the work
+/// this record holds, so it does not count.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] on `feature`, naming the open boxes, and the read's
+/// error when `tasks.md` exists and cannot be read.
+pub(crate) fn refuse_while_tasks_are_open(
+    primitive: &str,
+    feature_dir: &Path,
+    deferred_here: &BTreeSet<String>,
+) -> Result<()> {
+    let tasks = feature_dir.join("tasks.md");
+    if !tasks.is_file() {
+        return Ok(());
+    }
+    match describe_unchecked(&without_tasks(&read_text(&tasks)?, deferred_here)) {
+        Some(owed) => Err(PrimitiveError::InvalidArgument {
+            primitive: primitive.into(),
+            argument: "feature".into(),
+            reason: format!(
+                "tasks.md holds {owed}; a run records once every task is done, since one still \
+                 open may change what it read"
+            ),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// `content` without the sections of the tasks numbered in `numbers`, each closed by the next
+/// heading at its level or above, read outside fences and comments as the boxes are.
+fn without_tasks(content: &str, numbers: &BTreeSet<String>) -> String {
+    let mut skip = SkipScanner::default();
+    let mut inside: Option<u8> = None;
+    let mut kept = String::with_capacity(content.len());
+    for line in content.lines() {
+        if !skip.skip(line)
+            && let Some((level, heading)) = parse_atx_heading(line)
+        {
+            if inside.is_some_and(|open| level <= open) {
+                inside = None;
+            }
+            if inside.is_none()
+                && split_numbered_heading(&heading)
+                    .is_some_and(|(number, _)| numbers.contains(number))
+            {
+                inside = Some(level);
+            }
+        }
+        if inside.is_none() {
+            kept.push_str(line);
+            kept.push('\n');
+        }
+    }
+    kept
+}
+
 pub(crate) fn describe_unchecked(content: &str) -> Option<String> {
     let lines = unchecked_lines(content);
     let count: usize = lines.values().sum();

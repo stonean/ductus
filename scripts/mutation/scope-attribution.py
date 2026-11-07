@@ -1824,4 +1824,32 @@ MUTATIONS = [
         '            && let Some(file) = Some(observation_key(observation))\n                .as_deref()\n                .and_then(decisions::key_anchor)\n                .map(str::to_string)\n',
         'write_review::tests::a_stored_key_passed_as_text_fills_no_path',
     ),
+    (
+        'M261 a review records with a task still open',
+        'src/primitives/write_review.rs',
+        '    refuse_while_implementation_is_open(args, &root, &feature_dir)?;\n',
+        '',
+        'write_review::tests::a_review_records_only_once_every_task_is_done',
+    ),
+    (
+        'M262 an analysis records with a task still open',
+        'src/primitives/write_analysis.rs',
+        '    refuse_while_implementation_is_open(args, &root, &feature_dir)?;\n',
+        '',
+        'write_analysis::tests::an_analysis_records_only_once_every_task_is_done',
+    ),
+    (
+        "M263 a run's own deferral refuses its own record",
+        'src/primitives/read_tasks.rs',
+        '    match describe_unchecked(&without_tasks(&read_text(&tasks)?, deferred_here)) {',
+        '    let _ = deferred_here;\n    match describe_unchecked(&read_text(&tasks)?) {',
+        'write_review::tests::a_runs_own_deferral_opens_no_refusal_but_other_work_does',
+    ),
+    (
+        "M264 a deferred task's section swallows the tasks after it",
+        'src/primitives/read_tasks.rs',
+        '            if inside.is_some_and(|open| level <= open) {\n                inside = None;\n            }\n',
+        '',
+        'write_review::tests::a_runs_own_deferral_opens_no_refusal_but_other_work_does',
+    ),
 ]
