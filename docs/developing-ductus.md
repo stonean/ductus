@@ -44,7 +44,7 @@ Gate the commit on every check's exit status, mutants included, in one script: a
 3. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
 4. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
 
-A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` moves the `implement-basic` golden: re-bless that one alone, as its message says, and read the diff.
+A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` or `framework/commands/review.md` moves its `-basic` golden, whose fixture repo's commit shas it records: re-bless that one alone, as its message says, and read the diff.
 
 ## Comparing two builds across the corpus
 

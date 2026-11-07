@@ -29,7 +29,7 @@ No check reads the two fields since spec 057 retired Family 31 with the record's
 
 - **An empty scope.** The scope is derived even when `empty-scope` is passed, so a genuinely empty scope records `scope: 0`, and `examined: 0` beside it is coherent rather than a false claim.
 - **A record written before this field existed.** It carries neither `examined` nor `scope`, and nothing reports the absence; the next `/{project}:review` of that spec writes a `scope`, and a person reads the fields at the completion gate.
-- **An unresolvable window.** A spec whose directory has no commit yet has no scope to compute. The resolution yields zero rather than failing the write — the findings the run computed still have to land, for the reason the governance section is rendered rather than propagated.
+- **An unresolvable window.** A spec that never entered `in-progress` has no window, so `compute-review-scope` returns an empty base and the record states `scope: 0`. Any other base no scope can be derived from refuses the write, naming `diff-base` (079's task 20): the error is in the run's own argument, so its findings are written again over the base the scope came from, as the scenario `an-empty-scope-flag-does-not-decide-the-denominator` resolves.
 
 ## Open Questions
 

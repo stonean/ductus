@@ -481,7 +481,9 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         });
     }
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
-    refuse_an_empty_scope_over_a_finding(args, &feature_dir, repo)?;
+    // The denominator `examined` is a claim against — see `resolve_scope`.
+    let (scope, excluded) = resolve_scope(args, repo)?;
+    refuse_an_empty_scope_over_a_finding(args, &feature_dir, scope)?;
     let (new_waivers, new_anchors) =
         new_waiver_entries(args, &surviving_waivers(&feature_dir, args)?)?;
     let settled = settled(args, new_anchors, &feature_dir)?;
@@ -522,8 +524,6 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // typo in the project config produced no `review.md` at all, losing the
     // findings this run just computed.
     let governance_section = render_unexamined_governance(repo);
-    // The denominator `examined` is a claim against — see `resolve_scope`.
-    let (scope, excluded) = resolve_scope(args, repo);
     // Read the spec and resolve the surviving waivers BEFORE either render:
     // the report now carries the full record, waivers included, so both homes
     // are rendered from one computation rather than two.
@@ -680,7 +680,7 @@ fn an_open_break_names_its_file(args: &WriteReviewArgs) -> Result<()> {
 fn refuse_an_empty_scope_over_a_finding(
     args: &WriteReviewArgs,
     feature_dir: &Path,
-    repo: &Path,
+    scope: u32,
 ) -> Result<()> {
     let counts_a_finding = match crate::primitives::load_review_record(feature_dir) {
         crate::primitives::RecordLoad::Absent => false,
@@ -701,7 +701,7 @@ fn refuse_an_empty_scope_over_a_finding(
     }
     // The flag is the caller's word, as the denominator's doc comment below says, and
     // `ductus exec` never sets it, so an empty window decides too.
-    if args.empty_scope || scope_is_derived_empty(args, repo) {
+    if args.empty_scope || scope == 0 {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "write-review".into(),
             argument: "empty-scope".into(),
@@ -712,18 +712,6 @@ fn refuse_an_empty_scope_over_a_finding(
         });
     }
     Ok(())
-}
-
-/// Whether this run's window holds nothing but its own record. A window that cannot be
-/// read says nothing, so it is no empty one.
-fn scope_is_derived_empty(args: &WriteReviewArgs, repo: &Path) -> bool {
-    let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
-        feature: args.feature.clone(),
-        since: Some(args.diff_base.clone()),
-    };
-    let own_record = own_record_path(args, repo);
-    crate::primitives::compute_review_scope::compute(&scope_args, repo)
-        .is_ok_and(|result| !result.scope.iter().any(|path| *path != own_record))
 }
 
 /// This run's own record, which it writes and does not read.
@@ -746,10 +734,12 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> String {
 ///
 /// Resolved through `compute-review-scope` against the run's own `diff-base`,
 /// so it is the scope the review was told to cover rather than whatever that
-/// base resolves to at some later moment. An unresolvable window (a spec dir
-/// with no commit yet) yields zero rather than an error: the findings this run
-/// computed still have to land, and a zero scope beside a zero `examined` is
-/// the coherent empty-scope state rather than a false claim.
+/// base resolves to at some later moment. An empty base is a spec that never
+/// entered `in-progress`, which `compute-review-scope` reports as one, so its
+/// scope is zero. Any other base the derivation fails on refuses the write: a
+/// mistyped sha once recorded `scope: 0` beside `examined: 8`, a window no
+/// check could tell from an empty one, while the caller still holds its
+/// findings and can write them again over the base the scope came from.
 ///
 /// **`empty-scope` does not short-circuit this.** It used to, so a caller that
 /// passed the flag recorded `scope: 0` without deriving anything — and the
@@ -767,24 +757,36 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> String {
 ///
 /// The paths the scope left out come with it, each with the specs that claimed
 /// it, so the record names what it did not read.
-fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> (u32, BTreeMap<String, Vec<String>>) {
+fn resolve_scope(
+    args: &WriteReviewArgs,
+    repo: &Path,
+) -> Result<(u32, BTreeMap<String, Vec<String>>)> {
+    if args.diff_base.is_empty() {
+        return Ok((0, BTreeMap::new()));
+    }
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
+    let result =
+        crate::primitives::compute_review_scope::compute(&scope_args, repo).map_err(|source| {
+            PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: "diff-base".into(),
+                reason: format!(
+                    "no scope can be derived from it ({source}); pass the diff-base \
+                 compute-review-scope returned"
+                ),
+            }
+        })?;
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
     let own_record = own_record_path(args, repo);
-    crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or_else(
-        |_| (0, BTreeMap::new()),
-        |result| {
-            let read = result.scope.iter().filter(|path| **path != own_record);
-            (
-                u32::try_from(read.count()).unwrap_or(u32::MAX),
-                result.excluded,
-            )
-        },
-    )
+    let read = result.scope.iter().filter(|path| **path != own_record);
+    Ok((
+        u32::try_from(read.count()).unwrap_or(u32::MAX),
+        result.excluded,
+    ))
 }
 
 /// The spec's analyze-record freshness.
@@ -2230,13 +2232,14 @@ mod tests {
     /// comparison that a defaulted field would silently satisfy (spec 057 AC12).
     #[test]
     fn review_md_frontmatter_deserializes_into_the_whole_record() {
-        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let (dir, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         seed_waivers(
             &dir,
             "001-x",
             "waivers:\n  - rule: SEC-001\n    file: src/a.rs\n    reason: Justified.\n    ticket: OPS-42",
         );
         let mut args = base_args("001-x");
+        args.diff_base = base;
         args.examined = Some(7);
         args.skipped_passes = vec!["security".into()];
         let out = run(&args, dir.path()).unwrap();
@@ -2713,7 +2716,7 @@ mod tests {
             feature: feature.into(),
             reviewed_at: "2026-07-02T12:00:00Z".into(),
             reviewed_against: "abc1234".into(),
-            diff_base: "def5678".into(),
+            diff_base: String::new(),
             scenario: None,
             empty_scope: false,
             summary: None,
@@ -2776,6 +2779,17 @@ mod tests {
         )
         .unwrap();
         tmp
+    }
+
+    /// `spec_repo`'s spec committed, with one file changed since the returned base, so
+    /// the run's window holds something and its base names a commit.
+    fn spec_repo_with_a_change(feature: &str, frontmatter: &str) -> (TempDir, String) {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = spec_repo(feature, frontmatter);
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let base = commit_all(&repository, "chore: seed").to_string();
+        write(&tmp.path().join("src/changed.rs"), "fn changed() {}\n");
+        (tmp, base)
     }
 
     /// Seed `review.md` with a prior run's recorded waivers — the home the
@@ -3129,9 +3143,10 @@ mod tests {
 
     #[test]
     fn frontmatter_review_block_replaced_when_present() {
-        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let (tmp, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         seed_waivers(&tmp, "001-x", "must-violations: 9");
-        let args = base_args("001-x");
+        let mut args = base_args("001-x");
+        args.diff_base = base;
         run(&args, tmp.path()).unwrap();
         let spec = review_md(&tmp, "001-x");
         assert!(spec.contains("must-violations: 0"));
@@ -4148,16 +4163,41 @@ mod tests {
         );
     }
 
-    /// A window that cannot be read says nothing, so it is no empty one and refuses nothing.
+    /// A base no scope can be derived from refuses the write, naming it, and leaves the
+    /// record as it was: a mistyped sha once recorded `scope: 0` beside `examined: 8`
+    /// (spec 079, task 20).
     #[test]
-    fn a_window_that_cannot_be_read_refuses_nothing() {
+    fn a_base_that_names_no_commit_refuses_the_write() {
+        let (tmp, _) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
+        let path = tmp.path().join("specs/001-x/review.md");
+        let prior = "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Review\n";
+        fs::write(&path, prior).unwrap();
+        let mut args = base_args("001-x");
+        args.diff_base = "0123456789abcdef0123456789abcdef01234567".into();
+        args.examined = Some(8);
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "diff-base"),
+            "{error:?}"
+        );
+        assert_eq!(fs::read_to_string(&path).unwrap(), prior);
+    }
+
+    /// An empty base is a spec that never entered `in-progress`: its scope is zero, so
+    /// it is an empty one and refuses over a record counting a finding.
+    #[test]
+    fn an_empty_base_is_an_empty_scope() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
-        fs::write(
-            tmp.path().join("specs/001-x/review.md"),
-            "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 1\nblocking: true\n---\n\n# Review\n",
-        )
-        .unwrap();
-        run(&base_args("001-x"), tmp.path()).unwrap();
+        let path = tmp.path().join("specs/001-x/review.md");
+        fs::write(&path, "---\nspec: 001-x\nlast-run: 2026-07-01T00:00:00Z\nmust-violations: 1\nblocking: true\n---\n\n# Review\n").unwrap();
+        let error = run(&base_args("001-x"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "empty-scope"),
+            "{error:?}"
+        );
+        fs::remove_file(&path).unwrap();
+        let out = run(&base_args("001-x"), tmp.path()).unwrap();
+        assert_eq!(out.scope, 0);
     }
 
     /// Nothing can say a damaged record counts no finding, so an empty scope does not
@@ -4438,7 +4478,10 @@ mod tests {
             "must-violations: 0\nshould-violations: 1\nlow-confidence: 0\nblocking: false\n",
             "must-violations: 0\nshould-violations: 0\nlow-confidence: 0\nblocking: false\nopen-findings:\n  - src/a.rs\n",
         ] {
-            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            // A window holding a file, so the flag is what refuses.
+            let (tmp, base) =
+                spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
+            empty.diff_base = base;
             let record = format!("---\nspec: 001-x\nlast-run: 2020-01-01T00:00:00Z\n{held}---\n");
             std::fs::write(tmp.path().join("specs/001-x/review.md"), &record).unwrap();
             let err = run(&empty, tmp.path()).unwrap_err();
@@ -4450,6 +4493,7 @@ mod tests {
             );
         }
 
+        empty.diff_base = String::new();
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         run(&empty, tmp.path()).unwrap();
         run(&empty, tmp.path()).unwrap();
@@ -5483,10 +5527,12 @@ mod tests {
     /// overwrites such an `analysis.md`.
     #[test]
     fn a_prior_review_without_frontmatter_is_overwritten() {
-        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let (tmp, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         let path = tmp.path().join("specs/001-x/review.md");
         fs::write(&path, "# Review — 001-x\n\nhand-edited, no record\n").unwrap();
-        run(&base_args("001-x"), tmp.path()).unwrap();
+        let mut args = base_args("001-x");
+        args.diff_base = base;
+        run(&args, tmp.path()).unwrap();
         assert!(review_md(&tmp, "001-x").starts_with("---\n"));
     }
 
@@ -5495,11 +5541,13 @@ mod tests {
     /// unclosed, and left as it is.
     #[test]
     fn a_prior_review_whose_frontmatter_never_closes_is_refused() {
-        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let (tmp, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         let path = tmp.path().join("specs/001-x/review.md");
         let damaged = "---\nspec: 001-x\nwaivers:\n  - rule: SEC-BE-001\n\n# Review\n";
         fs::write(&path, damaged).unwrap();
-        let error = run(&base_args("001-x"), tmp.path()).unwrap_err();
+        let mut args = base_args("001-x");
+        args.diff_base = base;
+        let error = run(&args, tmp.path()).unwrap_err();
         assert!(error.to_string().contains("never closes"), "{error}");
         assert!(matches!(error, PrimitiveError::UnclosedFrontmatter { .. }));
         assert_eq!(fs::read_to_string(&path).unwrap(), damaged);

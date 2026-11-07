@@ -383,6 +383,14 @@ its version and date.
 
 ### Fixed
 
+- **A review whose `diff-base` names no commit records nothing.** `write-review`
+  refuses a `diff-base` its scope cannot be derived from, naming it, and leaves
+  `review.md` as it was, where it recorded `scope: 0` beside whatever `examined`
+  the run claimed, a window no check could tell from an empty one. An empty
+  `diff-base`, a spec that never entered `in-progress`, still records `scope: 0`,
+  and now counts as an empty scope, so it refuses over an earlier record counting
+  a finding. Spec 079, task 20.
+
 - **A waiver notice prints a stored waiver's text on one line.**
   `process-waivers`' expired, retained and duplicate notices, which `/review`
   prints verbatim, print the waiver's `rule`, `file` and `reason` flattened,

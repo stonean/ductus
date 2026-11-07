@@ -839,7 +839,6 @@ mod tests {
                 feature: "055-x".into(),
                 reviewed_at: "2026-10-29T00:00:00Z".into(),
                 reviewed_against: "abc1234".into(),
-                diff_base: "def5678".into(),
                 ..Default::default()
             },
             dir.path(),

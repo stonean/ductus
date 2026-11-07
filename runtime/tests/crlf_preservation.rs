@@ -299,7 +299,7 @@ fn write_review_preserves_crlf_across_both_halves() {
             feature: "050-alpha".into(),
             reviewed_at: "2026-08-29T00:00:00Z".into(),
             reviewed_against: "deadbeef".into(),
-            diff_base: "cafebabe".into(),
+            diff_base: String::new(),
             ..Default::default()
         },
         repo,

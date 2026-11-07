@@ -3743,7 +3743,6 @@ mod tests {
                 feature: "007-gate".into(),
                 reviewed_at: at.into(),
                 reviewed_against: "abc123".into(),
-                diff_base: "abc123".into(),
                 examined: Some(1),
                 ..Default::default()
             },

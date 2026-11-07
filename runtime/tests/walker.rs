@@ -560,7 +560,7 @@ fn process_waivers_binds_fired_from_accumulated_pass_findings() {
         Value::String("2026-07-07T00:00:00Z".into()),
     );
     context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("diff-base".into(), Value::String("base0000".into()));
+    context.insert("diff-base".into(), Value::String(String::new()));
 
     let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"line-range\":\"1\",\"confidence\":\"high\"}]}}\n";
     let mut reader = Cursor::new(responses.to_string());
@@ -650,7 +650,7 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
         Value::String("2026-07-07T00:00:00Z".into()),
     );
     context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("diff-base".into(), Value::String("base0000".into()));
+    context.insert("diff-base".into(), Value::String(String::new()));
     // The firing finding — in a live exec run the performReview passes supply
     // it; seeded here so process-waivers can classify the waiver as applied.
     context.insert(

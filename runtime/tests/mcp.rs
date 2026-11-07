@@ -1110,7 +1110,7 @@ async fn write_review_reports_examined_against_a_derived_scope_via_mcp() {
         "feature": "001-x",
         "reviewed-at": "2026-09-13T00:00:00Z",
         "reviewed-against": "abc1234",
-        "diff-base": "def5678",
+        "diff-base": "",
     });
 
     // Unstated: absent on the wire and absent from the record.
@@ -1156,7 +1156,7 @@ async fn write_review_renders_report_via_mcp() {
             "feature": "001-x",
             "reviewed-at": "2026-07-06T00:00:00Z",
             "reviewed-against": "abc1234",
-            "diff-base": "def5678",
+            "diff-base": "",
             "findings": [{
                 "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs",
                 "line-range": "1-5", "confidence": "high"

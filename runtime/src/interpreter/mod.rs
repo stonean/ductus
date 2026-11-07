@@ -1554,7 +1554,7 @@ mod tests {
             Value::String("2026-07-04T00:00:00Z".into()),
         );
         context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String("def5678".into()));
+        context.insert("diff-base".into(), Value::String(String::new()));
 
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
@@ -1623,7 +1623,7 @@ mod tests {
             Value::String("2026-07-04T00:00:00Z".into()),
         );
         context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String("def5678".into()));
+        context.insert("diff-base".into(), Value::String(String::new()));
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
         let mut walker = Walker::new(
@@ -1679,7 +1679,7 @@ mod tests {
             Value::String("2026-07-04T00:00:00Z".into()),
         );
         context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String("def5678".into()));
+        context.insert("diff-base".into(), Value::String(String::new()));
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
         Walker::new(

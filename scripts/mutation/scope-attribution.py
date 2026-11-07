@@ -434,8 +434,8 @@ MUTATIONS = [
     (
         'M61 the denominator ignores the scope rule',
         'src/primitives/write_review.rs',
-        '                u32::try_from(read.count()).unwrap_or(u32::MAX),\n',
-        '                u32::try_from(read.count() + result.excluded.len()).unwrap_or(u32::MAX),\n',
+        '        u32::try_from(read.count()).unwrap_or(u32::MAX),\n',
+        '        u32::try_from(read.count() + result.excluded.len()).unwrap_or(u32::MAX),\n',
         'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
     ),
     (
@@ -1538,11 +1538,11 @@ MUTATIONS = [
         'write_review::tests::a_stored_decision_by_a_person_wins_over_the_rule',
     ),
     (
-        "M219 a run's own record counts in its denominator",
+        "M219 a run's own record counts in its denominator, and keeps a window from being empty",
         'src/primitives/write_review.rs',
         '.filter(|path| **path != own_record);',
         '.filter(|_| true);',
-        'write_review::tests::a_runs_own_record_is_not_in_its_denominator',
+        'write_review::tests::a_runs_own_record_is_not_in_its_denominator write_review::tests::an_uncommitted_record_keeps_no_window_from_being_empty',
     ),
     (
         'M220 a contract its digest says changed stays out of scope',
@@ -1589,30 +1589,16 @@ MUTATIONS = [
     (
         'M226 a derived empty window clears a counted finding',
         'src/primitives/write_review.rs',
-        'if args.empty_scope || scope_is_derived_empty(args, repo) {',
+        'if args.empty_scope || scope == 0 {',
         'if args.empty_scope {',
         'write_review::tests::an_empty_window_refuses_over_a_counted_finding_without_the_flag',
     ),
     (
         'M227 the flag alone refuses nothing',
         'src/primitives/write_review.rs',
-        'if args.empty_scope || scope_is_derived_empty(args, repo) {',
-        'if scope_is_derived_empty(args, repo) {',
+        'if args.empty_scope || scope == 0 {',
+        'if scope == 0 {',
         'write_review::tests::an_empty_scope_write_refuses_over_a_record_counting_a_finding',
-    ),
-    (
-        'M228 a window that cannot be read reads as empty',
-        'src/primitives/write_review.rs',
-        '.is_ok_and(|result| !result.scope.iter().any(|path| *path != own_record))',
-        '.map_or(true, |result| !result.scope.iter().any(|path| *path != own_record))',
-        'write_review::tests::a_window_that_cannot_be_read_refuses_nothing',
-    ),
-    (
-        "M229 a run's own record keeps a window from being empty",
-        'src/primitives/write_review.rs',
-        '.any(|path| *path != own_record))',
-        '.any(|_| true))',
-        'write_review::tests::an_uncommitted_record_keeps_no_window_from_being_empty',
     ),
     (
         "M230 a run's last write stores its new waiver again",
@@ -1851,5 +1837,20 @@ MUTATIONS = [
         '            if inside.is_some_and(|open| level <= open) {\n                inside = None;\n            }\n',
         '',
         'write_review::tests::a_runs_own_deferral_opens_no_refusal_but_other_work_does',
+    ),
+    # -- task 20: a base no scope can be derived from refuses the write
+    (
+        'M265 a base no scope can be derived from records scope 0',
+        'src/primitives/write_review.rs',
+        '    if args.diff_base.is_empty() {\n',
+        '    if args.diff_base.is_empty()\n        || crate::primitives::compute_review_scope::compute(\n            &crate::schema::primitives::ComputeReviewScopeArgs {\n                feature: args.feature.clone(),\n                since: Some(args.diff_base.clone()),\n            },\n            repo,\n        )\n        .is_err()\n    {\n',
+        'write_review::tests::a_base_that_names_no_commit_refuses_the_write',
+    ),
+    (
+        'M266 an empty base is derived, and refuses',
+        'src/primitives/write_review.rs',
+        '    if args.diff_base.is_empty() {\n        return Ok((0, BTreeMap::new()));\n    }\n',
+        '',
+        'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
 ]

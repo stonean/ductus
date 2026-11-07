@@ -37,7 +37,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
 | `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, listing every file the rule fires at this run that no waiver holds, stamped from `reviewed-at` and `decided-by`. A run's two writes pass it alike: an anchor the earlier write stored applies and is not stored again, and a rule it stored asks nothing of the last write |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse while the spec's `tasks.md` holds an unchecked box under any heading, on `feature`, by `describe_unchecked`'s test, but for a box under a task the run's own deferral names, which is the work the record holds. A scope that is empty, by `empty-scope` or by a window holding nothing but the run's own record, refuses over an earlier record counting a finding, which a run's own earlier write is not, or one it cannot read.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse while the spec's `tasks.md` holds an unchecked box under any heading, on `feature`, by `describe_unchecked`'s test, but for a box under a task the run's own deferral names, which is the work the record holds. A scope that is empty, by `empty-scope`, by an empty `diff-base` or by a window holding nothing but the run's own record, refuses over an earlier record counting a finding, which a run's own earlier write is not, or one it cannot read. A `diff-base` no scope can be derived from refuses the write.
 
 ## `brief-re-read` result and `round.toml`
 
