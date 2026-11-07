@@ -58,12 +58,14 @@ project-root file and owns exactly two keys; every other key (`$schema`, `model`
 ```json
 {
   "mcp": {
-    "ductus": { "type": "local", "command": ["ductus", "mcp"], "enabled": true }
+    "ductus": { "type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true }
   }
 }
 ```
 
-`type` is required; `command` is an array. Written by the State-B `write-file`
+`type` is required; `command` is an array, its first element the
+`.ductus/bin/ductus` pointer `048-govern-acquired-runtime` introduced, so the
+committed file names no machine-specific path. Written by the State-B `write-file`
 auto-wire (host-side). Idempotent: an existing `mcp.ductus` entry is a no-op.
 
 ### Region 2 — `permission`

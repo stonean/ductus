@@ -164,7 +164,13 @@ step. Pinning via `.ductus/config.toml` and the manifest strategies apply unchan
       project-committed `opencode.json` `mcp` block, `scope: project-committed`,
       `mechanism: write-file`; `/ductus` writes the `ductus` local-stdio server
       (`{ "type": "local", "command": ["ductus", "mcp"], "enabled": true }`)
-      additively, preserving other config keys
+      additively, preserving other config keys — **superseded in part by
+      `048-govern-acquired-runtime`**: `a4a33584` made the server's command the
+      `.ductus/bin/ductus` pointer, so a committed `opencode.json` names no
+      machine-specific path, and `/ductus` now writes
+      `{ "type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true }`.
+      Checked because 032 delivered the descriptor and the additive write as
+      specified; the command is 048's
 - [x] AC4: An OpenCode adoption reaches a loadable `ductus` registration with **no
       surfaced manual instruction** (OpenCode reads the committed file) —
       verifiable by `opencode mcp list` reporting `ductus` connected, as observed

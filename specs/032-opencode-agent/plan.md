@@ -71,7 +71,7 @@ The decisive divergence. OpenCode reads a project-root `opencode.json`
 `mcp` server map and the `permission` set. So OpenCode's **settings file and
 MCP-wiring file are the same target**, and ductus owns exactly two regions of it:
 
-- `mcp.ductus` — `{ "type": "local", "command": ["ductus", "mcp"], "enabled": true }`
+- `mcp.ductus` — `{ "type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true }`, the command being the pointer `048-govern-acquired-runtime` introduced (`a4a33584`)
 - `permission` — the bootstrap shell allows plus `"ductus*": "allow"`
 
 Every write into `opencode.json` is an **additive JSON-object merge** that
