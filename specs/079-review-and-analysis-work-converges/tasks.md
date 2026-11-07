@@ -267,3 +267,9 @@ This spec's `/ductus:analyze` runs with task 12's, once every box in this file i
 - [ ] `runtime/src/primitives/write_review.rs` — `resolve_scope` maps any `compute-review-scope` error to `scope: 0`, so a `diff-base` naming no commit records an empty window beside any `examined`, which no check reports: reproduced at `dcc1e0d4` on 010, where a mistyped full sha wrote `examined: 8` beside `scope: 0` while `compute-review-scope --since` on the same sha exits 1 with `revspec not found`. The fallback dates from `4cf8fee9` (020, 022) for a spec directory with no commit, and 079's task 2 carried it in `b23b020c`
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 21. A miss: 032's reopening closed with two reviews and two analyses
+
+- [ ] `specs/032-opencode-agent` — closed at `3392b2e3` over AC1's bound, with reviews recorded in `76f29984` and `314fbaf2` and analyses in `262331c1` and `0874511b`, and no gating finding between them: the first review read the data model in full but checked only the bullet 079's task 10 had changed, and the completion gate's criterion check then found AC3 and Region 1 quoting the MCP command `a4a33584` (048) had made the `.ductus/bin/ductus` pointer, a sweep 048 missed, so the correction staled the review. Decide whether the cause wants a pipeline change or a waiver with its reason
+
+- **Done when**: the miss's cause is fixed, deferred, or waived, with a waiver's reason written on the task.
