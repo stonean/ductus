@@ -89,7 +89,7 @@ Spec 079 task 10 corrected `data-model.md`, which said a run degrades to the mar
 
 ## 13. The MCP command is the pointer 048 introduced
 
-- [x] AC3 and `data-model.md` Region 1 quote the `mcp.ductus` command as `["ductus", "mcp"]`, which `a4a33584` (048) changed to the `.ductus/bin/ductus` pointer that `framework/bootstrap/ductus.md` §MCP wiring now writes; correct both, and plan Decisions 3 and 4, naming 048
+- [x] AC3 and `data-model.md` Region 1 quote the `mcp.ductus` command as `["ductus", "mcp"]`, which `a4a33584` (048) changed to the `.ductus/bin/ductus` pointer that `framework/bootstrap/ductus.md` §MCP wiring now writes; correct both, and plan Decision 3, naming 048 (Decision 4 states only the shape)
 
 Found at the completion gate after this reopening's review and analysis had recorded. Correcting the data model stales the review, so once this box is ticked the spec owes `/ductus:review`, then `/ductus:analyze`, then the completion gate, and the reopening closes with a second review, which 079's task 12 records as a miss.
 
