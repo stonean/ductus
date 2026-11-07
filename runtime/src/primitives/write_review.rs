@@ -341,7 +341,7 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     validate_new_waivers(args)?;
     // An observation renders as one list item and, once decided, becomes a
     // stored decision's key, so an embedded newline would inject structure
-    // into the report or the record. Every check runs here, before any
+    // into the report or the record. Every check of its arguments alone runs here, before any
     // artifact is touched.
     for (idx, observation) in args.observations.iter().enumerate() {
         let invalid = |argument: String, reason: &str| PrimitiveError::InvalidArgument {
@@ -367,18 +367,6 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
             return Err(invalid(
                 format!("observations[{idx}].disposition.by-rule"),
                 "a broken contract is fixed or deferred to the spec's own task; the rule never waives it",
-            ));
-        }
-        if observation.contract_break
-            && !matches!(
-                observation.disposition.outcome,
-                DispositionOutcome::Fixed | DispositionOutcome::Waived
-            )
-            && observation.path.trim().is_empty()
-        {
-            return Err(invalid(
-                format!("observations[{idx}].path"),
-                "a broken contract left open names the file the next run reads again",
             ));
         }
         for (argument, companion) in decisions::require_companion(
@@ -456,7 +444,13 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 ///   while the rule's stored waiver for its key stands there (argument
 ///   `expired-decisions`); when a `new-waivers` item is blank or spans lines,
 ///   repeats a rule, has no person in `decided-by`, or its rule fires at no file
-///   a waiver does not already hold; when two observations, or two violations, sharing a key are given different
+///   a waiver does not already hold and no earlier write of this run stored it; when a
+///   broken contract left open names no file, nor does a `decision-key` matching a
+///   stored break this run did not expire (argument
+///   `observations[idx].path`); when a
+///   scope that is empty, by `empty-scope` or by a window holding nothing but the run's own
+///   record, would write over a record counting a finding or one it cannot read (argument
+///   `empty-scope`); when two observations, or two violations, sharing a key are given different
 ///   outcomes; when a new decision, or a waived fix round, has no
 ///   `decided-by`; or when a `fix-rounds` entry carries a `result` on any
 ///   check but `re-read`, a re-read none, or a `reason` that is blank,
@@ -468,7 +462,8 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block, and [`PrimitiveError::UnclosedFrontmatter`] when the block in
 ///   `spec.md` or the prior `review.md` never closes. A prior `review.md`
-///   that opens no block records no waivers or decisions and is overwritten.
+///   that opens no block records no waivers or decisions and is overwritten, unless the
+///   scope is empty, which refuses over a record it cannot read.
 /// - [`PrimitiveError::Yaml`] when `spec.md`'s frontmatter fails to parse, or
 ///   the prior `review.md`'s frontmatter, `waivers:`, or `decisions:` list
 ///   does.
@@ -490,6 +485,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         new_waiver_entries(args, &surviving_waivers(&feature_dir, args)?)?;
     let settled = settled(args, new_anchors, &feature_dir)?;
     let args = settled.as_ref();
+    an_open_break_names_its_file(args)?;
 
     // Dedup, then bucket the survivors.
     let deduped = dedup_findings(&args.findings);
@@ -635,6 +631,29 @@ fn validate_arguments(args: &WriteReviewArgs) -> Result<()> {
     validate_fix_rounds(args)
 }
 
+/// A broken contract left open names the file the next run reads again, or nothing would
+/// list it and the gate would pass. Checked after `settled` has applied what is stored,
+/// since a stored decision can make one a break, leave it open, or name its file.
+fn an_open_break_names_its_file(args: &WriteReviewArgs) -> Result<()> {
+    for (idx, observation) in args.observations.iter().enumerate() {
+        if observation.contract_break
+            && !matches!(
+                observation.disposition.outcome,
+                DispositionOutcome::Fixed | DispositionOutcome::Waived
+            )
+            && observation.path.trim().is_empty()
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("observations[{idx}].path"),
+                reason: "a broken contract left open names the file the next run reads again"
+                    .into(),
+            });
+        }
+    }
+    Ok(())
+}
+
 /// An empty scope reads nothing, so its clean record written over one that counts a
 /// finding would clear that finding with its file unread (spec 079). A run's own
 /// earlier write carries its timestamp, so it never refuses itself. A record with no
@@ -683,17 +702,14 @@ fn scope_is_derived_empty(args: &WriteReviewArgs, repo: &Path) -> bool {
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
-    crate::primitives::compute_review_scope::compute(&scope_args, repo).is_ok_and(|result| {
-        !result
-            .scope
-            .iter()
-            .any(|path| !is_own_record(path, args, repo))
-    })
+    let own_record = own_record_path(args, repo);
+    crate::primitives::compute_review_scope::compute(&scope_args, repo)
+        .is_ok_and(|result| !result.scope.iter().any(|path| *path != own_record))
 }
 
-/// Whether `path` is this run's own record, which it writes and does not read.
-fn is_own_record(path: &str, args: &WriteReviewArgs, repo: &Path) -> bool {
-    path == format!(
+/// This run's own record, which it writes and does not read.
+fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> String {
+    format!(
         "{}/{}/{}",
         paths::Paths::load(repo).specs_root,
         args.feature,
@@ -739,13 +755,11 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> (u32, BTreeMap<String, 
     };
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
+    let own_record = own_record_path(args, repo);
     crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or_else(
         |_| (0, BTreeMap::new()),
         |result| {
-            let read = result
-                .scope
-                .iter()
-                .filter(|path| !is_own_record(path, args, repo));
+            let read = result.scope.iter().filter(|path| **path != own_record);
             (
                 u32::try_from(read.count()).unwrap_or(u32::MAX),
                 result.excluded,
@@ -1790,11 +1804,10 @@ fn settled<'a>(
         .enumerate()
         .filter(|(_, observation)| {
             let key = observation_key(observation);
-            !observation.contract_break
-                && !args
-                    .expired_decisions
-                    .iter()
-                    .any(|gone| decisions::same_key(&gone.key, &key))
+            !args
+                .expired_decisions
+                .iter()
+                .any(|gone| decisions::same_key(&gone.key, &key))
                 && decisions::stored_as_a_break(&stored, &key)
         })
         .map(|(idx, _)| idx)
@@ -1808,7 +1821,18 @@ fn settled<'a>(
         args.observations[idx].disposition = decision;
     }
     for idx in still_broken {
-        args.observations[idx].contract_break = true;
+        let observation = &mut args.observations[idx];
+        observation.contract_break = true;
+        // The matched key names the file the break was listed under, so the list does not
+        // depend on a host passing the path again, marked or not.
+        if observation.path.trim().is_empty()
+            && let Some(file) = observation
+                .decision_key
+                .as_deref()
+                .and_then(decisions::key_anchor)
+        {
+            observation.path = file.to_string();
+        }
     }
     Ok(std::borrow::Cow::Owned(args))
 }
@@ -3933,6 +3957,93 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("\ncontract-breaks: 0\n"), "{report}");
         assert!(listed_open(&tmp, "001-x").is_empty(), "{report}");
+    }
+
+    /// A later run matching a stored break by its key, with no path, still lists the file
+    /// that key names, or the gate would pass an open break.
+    #[test]
+    fn a_stored_break_matched_with_no_path_lists_the_file_its_key_names() {
+        for marked in [false, true] {
+            a_stored_break_matched_with_no_path(marked);
+        }
+    }
+
+    fn a_stored_break_matched_with_no_path(marked: bool) {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = Some("dev@example.com".into());
+        let mut deferred = broken("src/a.rs", DispositionOutcome::Deferred, None);
+        deferred.disposition.work_item = Some("JIRA-1".into());
+        deferred.disposition.target = None;
+        first.observations = vec![deferred.clone()];
+        run(&first, tmp.path()).unwrap();
+
+        let mut next = base_args("001-x");
+        let mut matched = deferred;
+        matched.decision_key = Some("bug: src/a.rs — `src/a.rs`".into());
+        matched.path = String::new();
+        matched.contract_break = marked;
+        next.observations = vec![matched];
+        run(&next, tmp.path()).unwrap();
+        assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"], "{marked}");
+    }
+
+    /// Only a matched key names the file: a stored key passed as the observation's text,
+    /// with no path, refuses rather than storing a second key with the path doubled.
+    #[test]
+    fn a_stored_key_passed_as_text_fills_no_path() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = Some("dev@example.com".into());
+        let mut deferred = broken("src/a.rs", DispositionOutcome::Deferred, None);
+        deferred.disposition.work_item = Some("JIRA-1".into());
+        deferred.disposition.target = None;
+        first.observations = vec![deferred.clone()];
+        run(&first, tmp.path()).unwrap();
+
+        let mut next = base_args("001-x");
+        next.decided_by = Some("dev@example.com".into());
+        let mut matched = deferred;
+        matched.text = "bug: src/a.rs — `src/a.rs`".into();
+        matched.path = String::new();
+        matched.contract_break = false;
+        next.observations = vec![matched];
+        let error = run(&next, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "observations[0].path"),
+            "{error}"
+        );
+    }
+
+    /// A stored decision can leave a break open with no file anywhere, which refuses as a
+    /// host's own open break with no path does.
+    #[test]
+    fn a_stored_break_left_open_with_no_file_refuses() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut first = base_args("001-x");
+        first.decided_by = Some("dev@example.com".into());
+        let mut waived = broken(
+            "src/a.rs",
+            DispositionOutcome::Waived,
+            Some("not this spec"),
+        );
+        waived.path = String::new();
+        first.observations = vec![waived.clone()];
+        run(&first, tmp.path()).unwrap();
+
+        let mut next = base_args("001-x");
+        next.decided_by = Some("dev@example.com".into());
+        let mut reopened = broken("src/a.rs", DispositionOutcome::Deferred, None);
+        reopened.path = String::new();
+        reopened.contract_break = false;
+        reopened.disposition.work_item = Some("JIRA-1".into());
+        reopened.disposition.target = None;
+        next.observations = vec![reopened];
+        let error = run(&next, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "observations[0].path"),
+            "{error}"
+        );
     }
 
     /// A `:line:column` reads as the file, in a list and through a key alike.

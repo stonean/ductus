@@ -175,11 +175,11 @@ For each spec at `status: done`, `check-artifacts` reads the review record from 
 
 A `done` spec holding an unticked criterion, or an unchecked box in `tasks.md` under any heading, has drifted too, whatever its record says, since `done` says each is verified and the tasks complete (§spec-lifecycle).
 
-**Grandfather rule.** A `done` spec with **no `review.md` at all** predates `/{project}:review`, which writes the file on its first run (§text-first-artifacts), and is exempt. Adopters who want retroactive review run `/{project}:review` against the spec, after which it is subject to this check. The exemption is keyed on the artifact, never a block in `spec.md`, which would exempt every spec in a migrated corpus.
+**Grandfather rule.** A `done` spec with **no `review.md` at all** predates `/{project}:review`, which writes the file on its first run (§text-first-artifacts), and is exempt from the record's conditions. Adopters who want retroactive review run `/{project}:review` against the spec, after which those conditions apply. The exemption is keyed on the artifact, never a block in `spec.md`, which would exempt every spec in a migrated corpus.
 
 Specs not at `status: done` are silently exempt, since `review.md` is written lazily.
 
-**`--fix` reverts; it never edits the count.** The count is the review's to write, and rewriting it here would erase the finding rather than resolve it. When `--fix` is set, this check additionally reverts affected specs from `done` to `in-progress` — via `set-status` (`from: done`, `to: in-progress`) — and emits a one-line notice for each (`reverted: specs/{feature}/{file} from done to in-progress — re-run /{project}:review`). The revert is never silent. Re-running `/{project}:review` on each is left to the operator. The grandfather rule applies under `--fix` too: a `done` spec with no `review.md` is never reverted.
+**`--fix` reverts; it never edits the count.** The count is the review's to write, and rewriting it here would erase the finding rather than resolve it. When `--fix` is set, this check additionally reverts affected specs from `done` to `in-progress` — via `set-status` (`from: done`, `to: in-progress`) — and emits a one-line notice for each (`reverted: specs/{feature}/{file} from done to in-progress — re-run /{project}:review`). The revert is never silent. Re-running `/{project}:review` on each is left to the operator. The grandfather rule applies under `--fix` too: a `done` spec with no `review.md` is not reverted over its record, though an unticked criterion or an unchecked box, which have no grandfather rule, still reverts it.
 
 ## Analyze state drift (blocking)
 

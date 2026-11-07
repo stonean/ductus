@@ -35,9 +35,9 @@
 //!   non-zero `should-violations`, a broken contract in `open-findings` or the
 //!   `fix-rounds-open` mark, drifted. The third condition arrived with 045's task 15: §implement-phase
 //!   forbids reaching `done` over an outstanding SHOULD, and the count is what
-//!   states whether one is outstanding. The grandfather rule applies: a `done`
-//!   spec with no `review.md` at all predates `/ductus:review` and is
-//!   exempt.
+//!   states whether one is outstanding. The grandfather rule applies to the record's
+//!   conditions: a `done` spec with no `review.md` at all predates `/ductus:review` and is
+//!   exempt from them, and a criterion or a box has no such rule.
 //! - **artifact-unreadable at `done`** (blocking, across families) — an
 //!   artifact a family was meant to scan but could not read is a skipped
 //!   target below `done` and a **blocking finding at it**. The general rule
@@ -612,7 +612,7 @@ fn check_disposition_drift(
 }
 
 /// (d) Review-state drift — reference §"Review state drift (blocking)":
-/// each condition the module doc names, on a `done` spec. Grandfather rule: a `done` spec with **no** `review:`
+/// each condition on the record the module doc names, on a `done` spec. Grandfather rule: a `done` spec with **no** `review:`
 /// block at all predates `/ductus:review` and is exempt. Specs not at `done`
 /// are silently exempt (the block populates lazily on first review).
 fn check_review_drift(

@@ -16,7 +16,7 @@ The spec's third deferred follow-on, never shipped: `/ductus:groom` remains lega
 
 - A chore item is done in the pass and then removed, as the constitution's inbox rules require; it is left in place only when the fix is blocked or turns out not to be mechanical, and groom says which.
 - An item routing to a spec that does not exist directs the user to `/ductus:specify` and moves on, as today.
-- Inbox item removal is the `remove-inbox-item` primitive (`coverage-expansion-primitives`), which groom step 8 invokes.
+- Inbox item removal is the `remove-inbox-item` primitive (`coverage-expansion-primitives`), which groom step 9 invokes.
 
 ## Open Questions
 

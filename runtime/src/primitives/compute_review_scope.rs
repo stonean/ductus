@@ -775,7 +775,9 @@ impl FoldTest<'_> {
                 continue;
             };
             let git_path = self.project.to_git(path);
-            if commit.tree()?.get_path(Path::new(&git_path)).is_ok() {
+            // By its number, since a rename is no removal: the spec is still there.
+            if feature_file_in_tree(&self.project.repository, &commit.tree()?, &git_path).is_some()
+            {
                 continue;
             }
             let parent = commit.parent(0)?.tree()?;
@@ -3258,6 +3260,30 @@ mod tests {
         let scope = x(&tmp);
         assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
         assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+    }
+
+    /// A rename is no removal, so a staging spec renamed, then taken to `done`, then folded
+    /// brings what the same fold with no rename does.
+    #[test]
+    fn a_staging_spec_renamed_then_done_is_a_spec_that_reached_done() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        fs::rename(
+            tmp.path().join("specs/1234.1-foo"),
+            tmp.path().join("specs/1234.1-bar"),
+        )
+        .unwrap();
+        commit_all(&repo, "spec(1234.1): a new slug");
+        write(
+            &tmp.path().join("specs/1234.1-bar/spec.md"),
+            &staging_spec("done", Some("001-x")),
+        );
+        commit_all(&repo, "status(1234.1): done");
+        fs::remove_dir_all(tmp.path().join("specs/1234.1-bar")).unwrap();
+        commit_all(&repo, "fold(1234.1): into 001");
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/s.rs"), "{:?}", scope.scope);
     }
 
     /// A plan's pattern in scope holds the file it matches, so a stored finding there

@@ -92,7 +92,13 @@ fn first_incomplete_index_unchanged(
     tasks: &str,
     since_sha: &str,
 ) -> Result<bool> {
-    let head_content = project.read_at_head(tasks)?;
+    let head = project
+        .repository
+        .head()?
+        .peel_to_commit()?
+        .id()
+        .to_string();
+    let head_content = read_blob_at_commit(&project.repository, &head, &project.to_git(tasks))?;
     let since_content =
         read_blob_at_commit(&project.repository, since_sha, &project.to_git(tasks))?;
     let head_idx = first_incomplete_subtask_index(head_content.as_deref().unwrap_or(""));
@@ -694,10 +700,16 @@ mod tests {
         }
     }
 
-    /// A rename is no change to `tasks.md`, and the count and the first box follow it, so
-    /// a first box that never moved still reads stuck.
+    /// A rename is no change to `tasks.md`, committed or not, and the count and the first
+    /// box follow it, so a first box that never moved still reads stuck.
     #[test]
     fn stuck_follows_a_rename() {
+        for committed in [true, false] {
+            stuck_after_a_rename(committed);
+        }
+    }
+
+    fn stuck_after_a_rename(committed: bool) {
         let (tmp, repo, _) = walk_statuses(&["done"]);
         let tasks = tmp.path().join("specs/010-demo/tasks.md");
         write(&tasks, "# T\n\n## 1. A\n\n- [ ] first\n");
@@ -713,7 +725,9 @@ mod tests {
             tmp.path().join("specs/010-renamed"),
         )
         .unwrap();
-        commit_all(&repo, "spec(010): a new slug");
+        if committed {
+            commit_all(&repo, "spec(010): a new slug");
+        }
         let result = run(
             &CheckStuckArgs {
                 feature: "010-renamed".to_string(),

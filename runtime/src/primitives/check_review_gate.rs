@@ -1207,10 +1207,6 @@ fn cross_spec_impact_block(
     })
 }
 
-/// The scenario-open-questions gate check: `Some(blocked)` when any
-/// scenario under `feature_dir` carries an unresolved open question,
-/// `None` when the check passes.
-///
 /// Gate check 2's second half: `tasks.md` holds an unchecked box under any heading
 /// (spec 079). A file that cannot be read is an error, never a pass.
 fn unchecked_task_block(
@@ -1239,6 +1235,10 @@ fn unchecked_task_block(
     )
 }
 
+/// The scenario-open-questions gate check: `Some(blocked)` when any
+/// scenario under `feature_dir` carries an unresolved open question,
+/// `None` when the check passes.
+///
 /// A scenario is an organizational split of the spec — it exists to keep
 /// `spec.md` from becoming one huge document — so its questions are the
 /// spec's questions for the purpose of completeness, and the spec is not

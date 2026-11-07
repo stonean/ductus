@@ -8,7 +8,7 @@
 //! merge kept the other side, and an adopter's work lives on branches. Every directory
 //! seen counts, so a fold or a consolidation cannot erase a miss.
 //!
-//! The walk goes newest first and stops once it is past the window with no closing commit
+//! The walk goes newest first and skips a commit past the window with no closing commit
 //! waiting for its start, so `/{project}:status` reads trees and records only for the
 //! window and the reopenings closed in it; the sorted walk still parses every commit
 //! header once. A path is followed by name, so a renamed
@@ -228,7 +228,7 @@ fn epoch_seconds(time: SystemTime) -> i64 {
         .unwrap_or(0)
 }
 
-/// Which closing commits count, and when the walk has passed all of them.
+/// Which closing commits count, and which commits the walk can skip.
 enum Boundary {
     /// Closing commits authored at or after this instant.
     Date { text: String, seconds: i64 },
@@ -285,8 +285,8 @@ impl Boundary {
         }
     }
 
-    /// Whether every commit that could close a counted reopening has been visited,
-    /// given the walk has reached `commit`. A commit's committer date is no earlier
+    /// Whether the walk can skip `commit` while no pass is open: it is dated before the
+    /// window, or no commit after a ref is left to visit. A commit's committer date is no earlier
     /// than its author date, so a commit before the date cannot be in the window.
     fn passed(&self, commit: &Commit<'_>) -> bool {
         match self {
@@ -1583,8 +1583,8 @@ mod tests {
         assert_eq!(measurement.since, landing.to_string());
     }
 
-    /// With a ref, the walk stops once every commit after it has been met, and a
-    /// date's own stop does not apply.
+    /// With a ref, the walk skips the rest once every commit after it has been met, and a
+    /// date's own test does not apply.
     #[test]
     fn a_ref_at_head_counts_nothing() {
         let fixture = Fixture::new();

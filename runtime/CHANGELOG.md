@@ -68,8 +68,8 @@ its version and date.
 
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes to 420,437, `framework/reference/review.md` from 67,168 to 45,037
-  and `framework/reference/analyze.md` from 78,632 to 48,553, each within one
+  bytes before these cuts to 420,575, `framework/reference/review.md` from 67,168 to 45,037
+  and `framework/reference/analyze.md` from 78,632 to 48,691, each within one
   read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite

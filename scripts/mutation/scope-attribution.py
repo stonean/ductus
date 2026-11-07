@@ -1155,7 +1155,7 @@ MUTATIONS = [
     (
         'M164 a commit changing a staging spec reads as removing it',
         'src/primitives/compute_review_scope.rs',
-        '            if commit.tree()?.get_path(Path::new(&git_path)).is_ok() {\n                continue;\n            }\n',
+        '            // By its number, since a rename is no removal: the spec is still there.\n            if feature_file_in_tree(&self.project.repository, &commit.tree()?, &git_path).is_some()\n            {\n                continue;\n            }\n',
         '',
         'compute_review_scope::tests::a_fold_from_done_leaves_a_window_spanning_its_commits_excluding_them',
     ),
@@ -1211,8 +1211,8 @@ MUTATIONS = [
     (
         'M172 a removed spec is read by its project path',
         'src/primitives/compute_review_scope.rs',
-        '            let git_path = self.project.to_git(path);\n            if commit.tree()',
-        '            let git_path = path.clone();\n            if commit.tree()',
+        '            let git_path = self.project.to_git(path);\n            // By its number',
+        '            let git_path = path.clone();\n            // By its number',
         'compute_review_scope::tests::a_fold_from_done_in_a_repository_subdirectory_brings_nothing',
     ),
     (
@@ -1540,8 +1540,8 @@ MUTATIONS = [
     (
         "M219 a run's own record counts in its denominator",
         'src/primitives/write_review.rs',
-        '                .filter(|path| !is_own_record(path, args, repo));\n',
-        '                .filter(|_| true);\n',
+        '.filter(|path| **path != own_record);',
+        '.filter(|_| true);',
         'write_review::tests::a_runs_own_record_is_not_in_its_denominator',
     ),
     (
@@ -1603,15 +1603,15 @@ MUTATIONS = [
     (
         'M228 a window that cannot be read reads as empty',
         'src/primitives/write_review.rs',
-        'crate::primitives::compute_review_scope::compute(&scope_args, repo).is_ok_and(|result| {',
-        'crate::primitives::compute_review_scope::compute(&scope_args, repo).map_or(true, |result| {',
+        '.is_ok_and(|result| !result.scope.iter().any(|path| *path != own_record))',
+        '.map_or(true, |result| !result.scope.iter().any(|path| *path != own_record))',
         'write_review::tests::a_window_that_cannot_be_read_refuses_nothing',
     ),
     (
         "M229 a run's own record keeps a window from being empty",
         'src/primitives/write_review.rs',
-        '            .any(|path| !is_own_record(path, args, repo))\n',
-        '            .any(|_| true)\n',
+        '.any(|path| *path != own_record))',
+        '.any(|_| true))',
         'write_review::tests::an_uncommitted_record_keeps_no_window_from_being_empty',
     ),
     (
@@ -1652,15 +1652,15 @@ MUTATIONS = [
     (
         "M235 a later run's match loses the hold",
         'src/primitives/write_review.rs',
-        '        args.observations[idx].contract_break = true;\n',
-        '        let _ = idx;\n',
+        '        let observation = &mut args.observations[idx];\n        observation.contract_break = true;\n',
+        '        let observation = &mut args.observations[idx];\n',
         'write_review::tests::a_stored_break_stays_one_when_a_later_run_matches_it',
     ),
     (
         'M236 an expired break stays a break',
         'src/primitives/write_review.rs',
-        '            !observation.contract_break\n                && !args\n                    .expired_decisions\n                    .iter()\n                    .any(|gone| decisions::same_key(&gone.key, &key))\n                && decisions::stored_as_a_break(&stored, &key)',
-        '            !observation.contract_break && decisions::stored_as_a_break(&stored, &key)',
+        '            !args\n                .expired_decisions\n                .iter()\n                .any(|gone| decisions::same_key(&gone.key, &key))\n                && decisions::stored_as_a_break(&stored, &key)',
+        '            decisions::stored_as_a_break(&stored, &key)',
         'write_review::tests::a_stored_break_stays_one_when_a_later_run_matches_it',
     ),
     (
@@ -1781,5 +1781,47 @@ MUTATIONS = [
         '            if commit.parent_ids().any(|parent| inside.contains(&parent)) {\n                inside.insert(oid);\n            }\n            continue;\n',
         '            let _ = &commit;\n            continue;\n',
         'check_stuck::tests::a_commit_with_no_readable_status_keeps_the_start',
+    ),
+    (
+        'M254 a stored break matched with no path lists nothing',
+        'src/primitives/write_review.rs',
+        '            observation.path = file.to_string();\n',
+        '            let _ = file;\n',
+        'write_review::tests::a_stored_break_matched_with_no_path_lists_the_file_its_key_names',
+    ),
+    (
+        'M255 a stored decision leaves a break open with no file',
+        'src/primitives/write_review.rs',
+        '    let args = settled.as_ref();\n    an_open_break_names_its_file(args)?;\n',
+        '    let args = settled.as_ref();\n',
+        'write_review::tests::a_stored_break_left_open_with_no_file_refuses',
+    ),
+    (
+        'M257 an uncommitted rename moves the first box',
+        'src/primitives/check_stuck.rs',
+        '    let head_content = read_blob_at_commit(&project.repository, &head, &project.to_git(tasks))?;\n',
+        '    let _ = &head;\n    let head_content = project.read_at_head(tasks)?;\n',
+        'check_stuck::tests::stuck_follows_a_rename',
+    ),
+    (
+        'M258 a rename reads as a removal',
+        'src/primitives/compute_review_scope.rs',
+        '            if feature_file_in_tree(&self.project.repository, &commit.tree()?, &git_path).is_some()\n            {\n',
+        '            if commit.tree()?.get_path(Path::new(&git_path)).is_ok() {\n',
+        'compute_review_scope::tests::a_staging_spec_renamed_then_done_is_a_spec_that_reached_done',
+    ),
+    (
+        'M259 a marked break matched with no path refuses',
+        'src/primitives/write_review.rs',
+        '            !args\n                .expired_decisions\n                .iter()\n',
+        '            !observation.contract_break\n                && !args\n                .expired_decisions\n                .iter()\n',
+        'write_review::tests::a_stored_break_matched_with_no_path_lists_the_file_its_key_names',
+    ),
+    (
+        "M260 a key in the observation's text fills the path",
+        'src/primitives/write_review.rs',
+        '            && let Some(file) = observation\n                .decision_key\n                .as_deref()\n                .and_then(decisions::key_anchor)\n',
+        '            && let Some(file) = Some(observation_key(observation))\n                .as_deref()\n                .and_then(decisions::key_anchor)\n                .map(str::to_string)\n',
+        'write_review::tests::a_stored_key_passed_as_text_fills_no_path',
     ),
 ]

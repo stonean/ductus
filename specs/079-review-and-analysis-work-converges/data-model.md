@@ -11,7 +11,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
 | `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD`, and `check-review-gate`, which blocks on a listed break |
 
-An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, any other value names a person, and `contract-break: true` marks a decision on a broken contract, so a later run matching it still counts and lists the break unless it is in `expired-decisions`.
+An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, any other value names a person, and `contract-break: true` marks a decision on a broken contract, so a later run matching it still counts and lists the break, the file its key names when the run passes no path, unless it is in `expired-decisions`.
 
 ## `compute-review-scope` result
 
