@@ -25,6 +25,8 @@ Only after Phase A completes does Phase B begin — the `framework/commands/amen
 
 Rationale: deferring the primitive landing to mid-023 would force the `amend.md` rewrite to ship in lockstep with `ductus` primitives in the same PR, blurring the per-spec scope and making rollback noisy. Two clean releases (the runtime binary first, the framework second) keep each landing independently revertible. The generator-before-primitive ordering inside Phase A means the `runtime-tools.txt` → configure invariant holds at every commit on `main` — no transient window where the canonical allow set lags the published tool list.
 
+Both primitives write only inside the feature directory their caller names (`BE-INPUT-004`): `validate_feature_path` refuses a feature path that traverses or links out of the project before either opens a file, and `create-scenario`'s slug must match `^[a-z0-9]+(?:-[a-z0-9]+)*$` (`validate_slug`, `runtime/src/primitives/mod.rs`), so `scenarios/{slug}.md` cannot name another directory.
+
 ### MCP allow-list generator — `scripts/gen-configure-mcp.sh`
 
 New generator following the same pattern as `gen-help-tables.sh`. Reads `framework/runtime-tools.txt`, emits per-agent permission entries into managed blocks in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`. Marker shape: `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`.

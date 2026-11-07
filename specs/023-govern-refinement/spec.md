@@ -18,7 +18,7 @@ Consolidate the slash command surface so the pipeline feels less like a framewor
 
 ## Motivation
 
-`ductus` exposes 14 user-visible slash commands across 5 categories. Two pairs do nearly the same thing, and one track concept exists because the model was wobbly on a question the framework already answers.
+When this spec was written, `ductus` exposed 14 user-visible slash commands across 5 categories. Two pairs do nearly the same thing, and one track concept exists because the model was wobbly on a question the framework already answers.
 
 **`/specify` and `/capture` are the same artifact, two verbs.** Both create a numbered feature directory from a description and set it as session target. `/specify` asks lightweight-track qualifying questions and pushes for completeness; `/capture` doesn't. The user has to learn when to reach for which — that choice should be a property of the input, not a separate command.
 
@@ -90,7 +90,7 @@ Adopters running pipeline commands are repeatedly prompted to confirm writes to 
 
 ### 6. `/configure` allow statements for runtime MCP tools
 
-`/configure` currently populates `settings.local.json` with bash, file, and web permissions, but has no entries for the optional runtime's MCP tools. Adopters who install `ductus` and register it as an MCP server today hit the per-call permission prompt on every `gov-rt:*` invocation. The fix: extend the canonical allow set in `framework/bootstrap/configure/claude.md` (and the equivalent in `framework/bootstrap/configure/auggie.md`) to include every tool listed in `framework/runtime-tools.txt`.
+Before this change, `/configure` populated `settings.local.json` with bash, file, and web permissions and no entries for the then-optional runtime's MCP tools, so adopters who installed `ductus` and registered it as an MCP server hit the per-call permission prompt on every `gov-rt:*` invocation. The fix: extend the canonical allow set in `framework/bootstrap/configure/claude.md` (and the equivalent in `framework/bootstrap/configure/auggie.md`) to include every tool listed in `framework/runtime-tools.txt`.
 
 Permissions are added unconditionally — `/configure` does not detect whether the runtime is installed. An allow entry for an unregistered MCP tool is a no-op; the alternative (gate by detected presence) adds complexity for no benefit and forces a second `/configure` run after later runtime installation.
 
