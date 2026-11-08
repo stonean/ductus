@@ -1,24 +1,23 @@
 ---
 spec: 036-quality-cross-rules
-last-run: 2026-10-20T15:31:01Z
-analyzed-against: c732fcdfb1ee289576b70c63d66744f0f2fe3ee5
+last-run: 2026-11-08T18:47:48Z
+analyzed-against: 6bde245550fccbd34d03b7a3fc41e6dbcca97388
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 2
 analyzed-digest:
-  data-model.md: 06945d4447d0897ad4339ddb3cabb05d433a5ce46410291828161cf0337874e1
-  plan.md: 084707eca97c5c2502d7d34bb58e8bf5e9e12fbcc20c1769828bc14c388f7231
-  review.md: 9f31fbf2f246cfdfbfade366c63609d978d9aebe612b5c4d1d7d062da2906a39
-  spec.md: 3f15c16a986437456ab701e9c96b96405ed1e50b61c5c97c916bb1bac6f75f19
-  tasks.md: 808050b711f7ddbcc33b3f277a8f7e3aa0f858a9a2bfca736b29043d9c5784a7
-unexamined-by-reason:
-  root-absent: 2
+  data-model.md: 9eee84f8a7bb752114eeab946005594c51cb5abc12339d8bee4831678e5f1499
+  plan.md: 8c5d16d3cf975fc920da66bdb5a41ed481b26d0dc7451f543bac357ce2a1bd0c
+  review.md: 5daaf05521f456aed791d570565dc06924a6cfdb0b85db0d89ba56a6594352b2
+  scenarios/a-bound-test-pins-the-stated-figure.md: c3a43e07760d50fc4acdfb62624cdea16b6fdfc3802722965ee02d729fb85204
+  spec.md: 145275462f88a32403ef8ca1af44237fba9a3b63993d9c2f536c83ed0fef06ee
+  tasks.md: 3dd4c8ec9210c74608b5adc6a6424485b119b696c00dcdce6cea857b5c5ff4f3
 blocking: false
 dispositions:
-  fixed: 0
-  routed: 0
-  discarded: 0
+  fixed: 2
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -26,7 +25,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -40,10 +39,15 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-- root-absent: 2
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-*None.*
+- grounding — spec.md's Motivation says BE-SCHEMA-002 carries a fail-loud rationale, which the cited rule no longer has since 008's rules-are-as-short-as-their-required-content cut — `specs/036-quality-cross-rules/spec.md` — **fixed** (decided by the rule)
+- grounding — plan.md's Cross-spec impact says the canonical-sources table's rule-file-format row carries per-surface registrations, which the cited row no longer holds since 1405eacc — `specs/036-quality-cross-rules/plan.md` — **fixed** (decided by the rule)
