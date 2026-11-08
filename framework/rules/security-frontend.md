@@ -298,7 +298,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Production frontend dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile used for production builds; floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production. A pinned version MUST change only through a documented upgrade process.
 
-**Verification:** Any spec or plan covering a frontend production build, its deployment, or `system.md` where it describes one MUST commit to (a) an authoritative lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) that the production build installs from and (b) a documented upgrade process. `/{project}:analyze` flags such specs that allow floating dependency ranges in the frontend production build, that omit the lockfile question, or that describe a frontend production install able to rewrite the lockfile: `npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, or a Yarn install without `--immutable` (Yarn 1: `--frozen-lockfile`), except where pnpm or Yarn 3+ already applies that behavior by default because it detects a CI environment. **Not flagged:** a package a build step's command runs by a mutable reference, such as `npx tool@latest`, in a spec or plan, which `security-cross.md` `SEC-DEPS-001` owns.
+**Verification:** Any spec or plan covering a frontend production build, its deployment, or `system.md` where it describes one MUST commit to (a) an authoritative lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) that the production build installs from and (b) a documented upgrade process. `/{project}:analyze` flags such specs that allow floating dependency ranges in the frontend production build, that omit the lockfile question, or that describe a frontend production install able to rewrite the lockfile: `npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, or a Yarn install without `--immutable` (Yarn 1: `--frozen-lockfile`), except where pnpm or Yarn 3+ already applies that behavior by default because it detects a CI environment. **Not flagged:** a package a build step's command runs by a mutable reference, such as `npx tool@latest`, which `security-cross.md` `SEC-DEPS-001` owns.
 
 **Source:** OWASP Top 10:2025 (A03:2025 — Software Supply Chain Failures), npm `ci` documentation, pnpm `install` documentation, Yarn `install` documentation
 
@@ -317,6 +317,30 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 **Verification:** Any spec or plan covering frontend dependency management or the frontend's CI configuration SHOULD commit to an automated scan on changes to the frontend dependency set. `/{project}:analyze` emits a warning when such a spec omits it. **Not flagged:** where the scan runs — CI, a pre-commit hook, a dependency bot — which is the project's choice.
 
 **Source:** OWASP Dependency-Check, OWASP Top 10:2025 (A03:2025 — Software Supply Chain Failures)
+
+### FE-DEPS-007
+
+> Every production frontend build artifact MUST be accompanied by a machine-readable Software Bill of Materials (SBOM) in CycloneDX or SPDX format, generated during the build (not after) and retained for the lifetime of the artifact.
+
+**Verification:** Any spec or plan covering a frontend production build, its release, or `system.md` where it describes one MUST name the SBOM tool and format and commit to per-build generation and retention. `/{project}:analyze` flags such specs that omit SBOM generation or that describe one-off SBOM exports separate from the build. **Not flagged:** where `security-backend.md` is also loaded, the SBOM of any production build artifact, the frontend's included, which its `BE-DEPS-003` owns.
+
+**Source:** OWASP Dependency Graph & SBOM Cheat Sheet, CycloneDX / SPDX specifications
+
+### FE-DEPS-008
+
+> Frontend dependencies pulled from a public registry MUST be verified against the registry's signatures and any provenance attestations the packages carry as part of installation, before they are built into a production artifact, such as with `npm audit signatures`, which checks both. A package that fails verification MUST be replaced, vendored, or accompanied by a documented exception with a remediation plan.
+
+**Verification:** Any spec or plan covering frontend dependency management, a frontend production build, or `system.md` where it describes one MUST commit to the verification step in the install. A lockfile integrity hash, which `FE-DEPS-009` (b) requires, is not such a step. `/{project}:analyze` flags such specs that install from a public registry without naming a verification step. **Not flagged:** where `security-backend.md` is also loaded, the verification of any dependency, the frontend's included, which its `BE-DEPS-004` owns.
+
+**Source:** npm documentation — `npm audit` (Audit Signatures) and Generating provenance statements
+
+### FE-DEPS-009
+
+> Frontend builds MUST be configured to prevent dependency-confusion and typosquatting attacks: (a) when private packages share a namespace with a public registry, a private package name MUST resolve only from the private registry, by an npm scope associated with it (`@myco:registry` in `.npmrc`); (b) the production install MUST verify each package against the integrity hash its lockfile commits (`package-lock.json`'s `integrity`); (c) new dependency additions MUST be reviewed against a known-typo list for the project's hot dependencies.
+
+**Verification:** Any spec or plan covering frontend dependency management or a frontend build configuration MUST commit to the Statement's (a) when private packages exist, (b), and (c). `/{project}:analyze` flags such specs that omit any of these when the project uses private packages or has a high dependency-churn rate, and flags a private package name the install can resolve from the public registry. **Not flagged:** where `security-backend.md` is also loaded, any build's dependency-confusion and typosquatting defence, the frontend's included, which its `BE-DEPS-005` owns.
+
+**Source:** OWASP Software Supply Chain Security Cheat Sheet (Threat landscape: dependency confusion); npm documentation — scope and package-lock.json (`integrity`)
 
 ## FE-PII — Sensitive Data Handling
 
