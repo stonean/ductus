@@ -98,9 +98,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > JWT-based authentication MUST (a) declare an explicit algorithm allowlist on the verifier and reject any token whose `alg` header is not in the allowlist; (b) reject the `none` algorithm unconditionally; (c) reject tokens whose `alg` does not match the key type expected for the `kid`; (d) validate `iss`, `aud`, `exp`, and `nbf` claims on every verification; and (e) keep access-token lifetimes short (≤15 minutes for typical web sessions) with refresh-token rotation for longer-lived access.
 
-**Verification:** Any spec or plan that introduces JWT issuance or verification MUST commit to all five requirements. `/{project}:analyze` flags JWT specs that accept tokens without naming an algorithm allowlist, that omit `kid`-to-alg binding, that skip `iss`/`aud`/`exp`/`nbf` validation, or that propose long-lived access tokens without refresh-token rotation.
+**Verification:** Any spec or plan that introduces JWT issuance or verification, an OIDC client's validation of an ID token included, MUST commit to all five requirements, (e) where it issues tokens. `/{project}:analyze` flags JWT specs that accept tokens without naming an algorithm allowlist, that omit `kid`-to-alg binding, that skip `iss`/`aud`/`exp`/`nbf` validation, or that propose long-lived access tokens without refresh-token rotation. **Not flagged:** the protection of a refresh token issued to a public OAuth client, sender-constraining or rotation, which `security-cross.md` `SEC-AUTHN-003` owns; a confidential client's refresh-token rotation stays this rule's.
 
-**Source:** OWASP JSON Web Token Cheat Sheet, RFC 8725 §2.1, §3.1, §3.8, §3.9 (JSON Web Token Best Current Practices)
+**Source:** OWASP JSON Web Token Cheat Sheet, RFC 8725 §2.1, §3.1, §3.8, §3.9 (JSON Web Token Best Current Practices), OpenID Connect Core 1.0 §2 (the ID Token is a JWT)
 
 ### BE-AUTHN-013
 
@@ -156,9 +156,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > JWT verifiers MUST select the verification key only from key material configured in advance (a pinned key, or a JWKS fetched from the issuer's configured URL). Keys or key locations carried in the token header — `jwk`, `jku`, `x5u`, `x5c` — MUST NOT be trusted unless they resolve to that configured material (an allowlisted `jku`/`x5u` URL, or an `x5c` chain validated to a configured trust anchor). The `kid` header MUST be treated as untrusted input: it MAY select among configured keys, and MUST NOT reach a database query, file path, or URL without validation.
 
-**Verification:** Any spec or plan that introduces JWT verification MUST name where verification keys come from (static key, configured JWKS URL, configured trust anchor) and commit to ignoring token-supplied key material outside that set. `/{project}:analyze` flags JWT specs that resolve keys from `jku`/`x5u` without an allowlist, that accept an embedded `jwk` or an `x5c` chain not validated to a configured anchor, or that use `kid` in a query, path, or URL without validation.
+**Verification:** Any spec or plan that introduces JWT verification, an OIDC client's validation of an ID token included, MUST name where verification keys come from (static key, configured JWKS URL, configured trust anchor) and commit to ignoring token-supplied key material outside that set. `/{project}:analyze` flags JWT specs that resolve keys from `jku`/`x5u` without an allowlist, that accept an embedded `jwk` or an `x5c` chain not validated to a configured anchor, or that use `kid` in a query, path, or URL without validation.
 
-**Source:** RFC 8725 §3.10 (Do Not Trust Received Claims), OWASP JSON Web Token Cheat Sheet, PortSwigger Web Security Academy — JWT attacks
+**Source:** RFC 8725 §3.10 (Do Not Trust Received Claims), OWASP JSON Web Token Cheat Sheet, PortSwigger Web Security Academy — JWT attacks, OpenID Connect Core 1.0 §2 (the ID Token is a JWT)
 
 ### BE-AUTHN-020
 

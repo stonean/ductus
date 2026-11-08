@@ -41,8 +41,8 @@ SEC-{category}-{NNN}
 | `SEC-LOG-001` | MUST | A sensitive value is kept out of a log line, an error-reporting payload and telemetry, a configuration value being `CFG-ENV-006`'s at `/{project}:analyze` | none (new; 008 task 32) |
 | `SEC-DEPS-001` | MUST | Build inputs the lockfile does not cover are pinned to an immutable reference | `BE-DEPS-006` |
 | `SEC-AUTHN-001` | MUST | Secrets and signatures are compared in constant time | `BE-AUTHN-009` |
-| `SEC-AUTHN-002` | MUST | OAuth and OIDC client flows use `state`, PKCE, `nonce` validation and an exact `redirect_uri` | `BE-AUTHN-013` |
-| `SEC-AUTHN-003` | MUST | OAuth grant and response types, the PKCE method and public-client refresh-token protection | `BE-AUTHN-020` |
+| `SEC-AUTHN-002` | MUST | OAuth and OIDC client flows use a bound `state`, PKCE, ID-token validation, an exact `redirect_uri`, unguessable transaction-bound values, a mix-up defence and an external user-agent | `BE-AUTHN-013` |
+| `SEC-AUTHN-003` | MUST | OAuth grant and response types, the PKCE method and its enforcement, public-client refresh-token protection, and an authorization server's redirect of a credential-carrying request | `BE-AUTHN-020` |
 | `SEC-AUTHN-004` | MUST | An OAuth authorization server matches each `redirect_uri` it receives exactly | `BE-API-009`'s authorization-server sentences (008 task 43) |
 
 Each predecessor is labelled `**DEPRECATED in {version}:**` in `security-backend.md`, with the second minor release after the shipping one as its removal target (077's Resolved Questions). It names its successor as the owner of every case it governed until it is removed.

@@ -106,9 +106,9 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > State-changing operations MUST NOT be exposed via HTTP `GET`; `GET` requests MUST be restricted to safe, idempotent reads.
 
-**Verification:** Any spec or plan that introduces an endpoint MUST name the HTTP method per operation. `/{project}:analyze` flags endpoint specs whose `GET` handlers are described as creating, updating, or deleting state, or that conflate read and write under a single method.
+**Verification:** Any spec or plan that introduces an endpoint MUST name the HTTP method per operation. `/{project}:analyze` flags endpoint specs whose `GET` handlers are described as creating, updating, or deleting state, or that conflate read and write under a single method. **Not flagged:** an OAuth client's redirection endpoint, such as `GET /auth/callback` exchanging the code and creating the session, to which an authorization server delivers its response in the query component (RFC 6749 §4.1.2), when the client verifies the response's `state` as `security-cross.md` `SEC-AUTHN-002` (a) requires.
 
-**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet
+**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet, RFC 6749 §4.1.2
 
 ### FE-CSRF-004
 
