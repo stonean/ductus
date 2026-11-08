@@ -204,7 +204,8 @@ its version and date.
   holds the paths of a commit that belongs to the spec alone or to no spec; of a
   commit several specs claim, the paths in the spec's directory or its plan's
   Affected Files, and a path in none of their plans when its subject names this
-  spec first or names none of them; and uncommitted work. A plan entry unchanged
+  spec first or, outside the other specs' directories, names none of them; and
+  uncommitted work. A plan entry unchanged
   in the window stays only on the spec's first review. What the scope leaves out
   is the result's `excluded` list, and `review.md` gains an `excluded` count and
   an `Excluded from scope` section naming each path by the spec that claimed it.

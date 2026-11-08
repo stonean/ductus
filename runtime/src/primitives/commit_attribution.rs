@@ -5,8 +5,8 @@
 //! subject's scope names. Both tests are needed: 35 commits since 2026-10-01
 //! name a spec without touching a spec directory, and 30 touch one without
 //! naming any. A project whose subjects name no spec loses only
-//! [`CommitClaims::first_named`], and AC6 then gives an unplanned path to every
-//! claimant.
+//! [`CommitClaims::first_named`], and AC6 then gives an unplanned path outside
+//! the other claimants' directories to every claimant.
 //!
 //! A merge commit claims nothing, since its branch's commits are in the walk,
 //! and its [`CommitClaims::paths`] are only what it changed itself: the paths

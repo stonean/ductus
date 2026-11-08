@@ -806,7 +806,8 @@ pub struct ComputeReviewScopeResult {
     /// The review scope: the paths of a commit that belongs to the spec alone
     /// or to no spec; of a commit several specs claim, those in the spec's
     /// directory or its plan's Affected Files, and a path in none of their plans
-    /// when its subject names this spec first or names none of them;
+    /// when its subject names this spec first or, outside the other specs'
+    /// directories, names none of them;
     /// uncommitted work; each path the record at `HEAD` leaves open; and what a
     /// spec folded into this one below `done` brought. A plan entry unchanged in
     /// the window stays only on the spec's first review. Absent in the file form.

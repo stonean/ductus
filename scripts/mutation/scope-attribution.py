@@ -1853,4 +1853,11 @@ MUTATIONS = [
         '',
         'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
+    (
+        "M267 a subject naming no spec gives a claimant another claimant's directory",
+        'src/primitives/compute_review_scope.rs',
+        '|| (unplanned && takes_unplanned && !anothers)',
+        '|| (unplanned && takes_unplanned)',
+        'compute_review_scope::tests::a_subject_naming_none_leaves_each_claimants_directory_to_it',
+    ),
 ]

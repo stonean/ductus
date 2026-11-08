@@ -724,6 +724,21 @@ fn attribute_window(
             .first_named
             .as_ref()
             .is_none_or(|first| *first == form);
+        // A subject naming no spec leaves a path in another claimant's directory
+        // to that claimant, whose own review reads it: a groom commit routing
+        // scenarios to many specs would otherwise put every one of them in each
+        // claimant's scope (owner, 2026-11-08).
+        let others_directories: Vec<String> = if claims.first_named.is_none() {
+            claims
+                .claimants
+                .iter()
+                .filter(|claimant| **claimant != form)
+                .filter_map(|claimant| attributor.directory_of(claimant))
+                .map(|directory| format!("{specs_root}/{directory}/"))
+                .collect()
+        } else {
+            Vec::new()
+        };
         for path in claims.paths {
             let unplanned = !claims
                 .claimants
@@ -731,9 +746,12 @@ fn attribute_window(
                 .filter_map(|claimant| attributor.directory_of(claimant))
                 .filter_map(|directory| plans.get(directory))
                 .any(|plan| plan.names(&path));
+            let anothers = others_directories
+                .iter()
+                .any(|prefix| path.starts_with(prefix.as_str()));
             if path.starts_with(&own_prefix)
                 || own_plan.names(&path)
-                || (unplanned && takes_unplanned)
+                || (unplanned && takes_unplanned && !anothers)
             {
                 window.own.insert(path);
             } else {
@@ -2876,6 +2894,44 @@ mod tests {
             assert!(has(&scope, "src/unplanned.rs"), "{:?}", scope.scope);
             assert!(!scope.excluded.contains_key("src/unplanned.rs"));
         }
+    }
+
+    /// A subject naming no spec leaves a path in another claimant's directory to
+    /// that claimant alone, as a groom commit routing scenarios to several specs
+    /// does, while a subject naming one keeps the unplanned rule.
+    #[test]
+    fn a_subject_naming_none_leaves_each_claimants_directory_to_it() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        write(&tmp.path().join("specs/001-x/scenarios/a.md"), "x\n");
+        write(&tmp.path().join("specs/002-y/scenarios/b.md"), "y\n");
+        write(&tmp.path().join("src/unplanned.rs"), "fn u() {}\n");
+        commit_all(&repo, "groom: route two items");
+
+        let (scope_x, scope_y) = (x(&tmp), y(&tmp));
+        assert!(
+            has(&scope_x, "specs/001-x/scenarios/a.md"),
+            "{:?}",
+            scope_x.scope
+        );
+        assert!(
+            !has(&scope_x, "specs/002-y/scenarios/b.md"),
+            "{:?}",
+            scope_x.scope
+        );
+        assert_eq!(scope_x.excluded["specs/002-y/scenarios/b.md"], ["002-y"]);
+        assert!(
+            has(&scope_y, "specs/002-y/scenarios/b.md"),
+            "{:?}",
+            scope_y.scope
+        );
+        assert_eq!(scope_y.excluded["specs/001-x/scenarios/a.md"], ["001-x"]);
+        for scope in [&scope_x, &scope_y] {
+            assert!(has(scope, "src/unplanned.rs"), "{:?}", scope.scope);
+        }
+
+        write(&tmp.path().join("specs/002-y/scenarios/c.md"), "y\n");
+        commit_all(&repo, "feat(001, 002): named first");
+        assert!(has(&x(&tmp), "specs/002-y/scenarios/c.md"));
     }
 
     #[test]
