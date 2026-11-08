@@ -81,7 +81,7 @@ This spec therefore carries no data-model, by design. One here would become the 
 - [x] AC13: `BE-APIVER-001` accepts a declared versionless strategy, whose declaration in `specs/system.md` commits to making no change `BE-COMPAT-001` lists as breaking, and `BE-COMPAT-001` says such an API makes none of them, so a deprecated field or operation stays served until the API adopts a versioning strategy.
 - [x] AC14: `BE-SCHEMA-001` requires the schema served by the API itself — from a documented URL on its own origin, or, for gRPC and JSON-RPC, through the protocol's own discovery mechanism, gRPC server reflection or the OpenRPC `rpc.discover` method — and committed to the repository.
 - [x] AC15: The file's header and the `ERRENV` Statements limit the category to a resource-oriented HTTP API, an RPC protocol carried over HTTP counting as an API that is not an HTTP API, whose errors `security-backend.md` `BE-ERR-002` and `BE-ERR-004` govern.
-- [ ] AC16: `BE-APIVER-002` says a deprecated gRPC method carries `Deprecation` and `Sunset` as response metadata in its HTTP/2 response headers.
+- [x] AC16: `BE-APIVER-002` says a deprecated gRPC method carries `Deprecation` and `Sunset` as response metadata in its HTTP/2 response headers.
 
 ## Open Questions
 

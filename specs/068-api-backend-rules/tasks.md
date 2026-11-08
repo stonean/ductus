@@ -37,8 +37,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. A deprecated gRPC method's headers (AC16)
 
-- [ ] `BE-APIVER-002`'s Statement: a deprecated gRPC method carries `Deprecation` and `Sunset` as response metadata, which gRPC sends in its HTTP/2 response headers
-- [ ] Add gRPC *PROTOCOL-HTTP2* (Response-Headers, Custom-Metadata) to the Source
+- [x] `BE-APIVER-002`'s Statement: a deprecated gRPC method carries `Deprecation` and `Sunset` as response metadata, which gRPC sends in its HTTP/2 response headers
+- [x] Add gRPC *PROTOCOL-HTTP2* (Response-Headers, Custom-Metadata) to the Source
 
 - **Done when**: `BE-APIVER-002` reads as AC16 says, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC16 is ticked.
 
