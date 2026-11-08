@@ -200,15 +200,13 @@ fn load_registry(repo: &Path) -> Result<BTreeMap<String, RegisteredService>> {
     let services = load_services(repo)?;
     let mut registry = BTreeMap::new();
     for (alias, entry) in services.0 {
-        let checkout = {
-            let candidate = Path::new(&entry.path);
-            let resolved = if candidate.is_absolute() {
-                candidate.to_path_buf()
-            } else {
-                repo.join(candidate)
-            };
-            resolved.is_dir().then_some(resolved)
+        let candidate = Path::new(&entry.path);
+        let resolved = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            repo.join(candidate)
         };
+        let checkout = resolved.is_dir().then_some(resolved);
         // Reachable checkout → require that checkout's own root. Unreachable
         // → `None`, the permissive tier.
         let specs_root = checkout.map(|dir| paths::Paths::load(&dir).specs_root);
