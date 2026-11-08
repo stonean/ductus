@@ -4,10 +4,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. The severity posture and the three tiers (AC12)
 
-- [ ] Add the posture sentence to the header, in the siblings' "A rule is **MUST** only when …; the rest are **SHOULD**" form, after the design-time sentence
-- [ ] `BE-PAGE-003`: Statement and Verification to MUST, keeping the MAY for static or append-only-at-tail collections
-- [ ] `BE-REPR-003`: Statement to MUST NOT and MUST, Verification to MUST and "flags"
-- [ ] `BE-APIVER-002`: `Sunset` no longer has to be a future date, and still must not be earlier than `Deprecation`
+- [x] Add the posture sentence to the header, in the siblings' "A rule is **MUST** only when …; the rest are **SHOULD**" form, after the design-time sentence
+- [x] `BE-PAGE-003`: Statement and Verification to MUST, keeping the MAY for static or append-only-at-tail collections
+- [x] `BE-REPR-003`: Statement to MUST NOT and MUST, Verification to MUST and "flags"
+- [x] `BE-APIVER-002`: `Sunset` no longer has to be a future date, and still must not be earlier than `Deprecation`
 
 - **Done when**: the header states the posture as AC12 words it, the three rules read as AC12 says, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC12 is ticked.
 
