@@ -12,13 +12,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. The disclaimer and the seven criteria (AC13, first part)
 
-- [ ] The header's first paragraph ends with the conformance disclaimer, citing WCAG 2.2 §5.2.2
-- [ ] `FE-CONTRAST-002` gains §1.3.3: instructions do not rely solely on shape, color, size, visual location, orientation or sound
-- [ ] `FE-A11YMEDIA-001` gains §1.4.5: text rather than images of text, with its Customizable and Essential exceptions as MAY
-- [ ] `FE-POINTER-002` gains §2.5.4: functionality operated by device or user motion is also operable by UI components, and responding to motion can be disabled, with its two exceptions as MAY
-- [ ] `FE-SEMHTML-004`: across a set of web pages, §2.4.5 Multiple Ways, §3.2.3 Consistent Navigation, §3.2.4 Consistent Identification and §3.2.6 Consistent Help, MUST, with a Verification and Source
-- [ ] spec.md: the scope table's `SEMHTML`, `CONTRAST`, `A11YMEDIA` and `POINTER` rows, and Severity posture's counts (40 rules, 36 MUST, 4 SHOULD)
-- [ ] Measure the file; if it is over 50,000 bytes, tighten wording, the header's first paragraph first, dropping no claim, and state the size in the commit
+- [x] The header's first paragraph ends with the conformance disclaimer, citing WCAG 2.2 §5.2.2
+- [x] `FE-CONTRAST-002` gains §1.3.3: instructions do not rely solely on shape, color, size, visual location, orientation or sound
+- [x] `FE-A11YMEDIA-001` gains §1.4.5: text rather than images of text, with its Customizable and Essential exceptions as MAY
+- [x] `FE-POINTER-002` gains §2.5.4: functionality operated by device or user motion is also operable by UI components, and responding to motion can be disabled, with its two exceptions as MAY
+- [x] `FE-SEMHTML-004`: across a set of web pages, §2.4.5 Multiple Ways, §3.2.3 Consistent Navigation, §3.2.4 Consistent Identification and §3.2.6 Consistent Help, MUST, with a Verification and Source
+- [x] spec.md: the scope table's `SEMHTML`, `CONTRAST`, `A11YMEDIA` and `POINTER` rows, and Severity posture's counts (40 rules, 36 MUST, 4 SHOULD)
+- [x] Measure the file; if it is over 51,200 bytes, the documented single-read limit, tighten wording, dropping no claim, and state the size in the commit
 
 - **Done when**: each criterion is cited by the rule the plan names, the header disclaims conformance, `cargo test no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh` and `scripts/audit/run-all.sh` pass, and the file's size is in the commit.
 

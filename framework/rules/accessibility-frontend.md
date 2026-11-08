@@ -1,6 +1,6 @@
 # Accessibility Rules — Frontend
 
-Accessibility rules for browser-rendered UI, for any project with a web frontend. They derive from WCAG 2.2 Level AA (W3C Recommendation, first published 5 October 2023 and republished 12 December 2024; the October 2023 text is ISO/IEC 40500:2025). W3C states that content conforming to WCAG 2.2 also conforms to WCAG 2.0 and 2.1: 2.2 adds criteria and removes only §4.1.1 (Parsing), now obsolete, though a project required by policy to conform to 2.0 or 2.1 may still need to test and report §4.1.1. Regimes that mandate web accessibility differ in the version they name: US Section 508 incorporates WCAG 2.0 Level A and AA; the US Department of Justice's ADA Title II rule for state and local governments adopts WCAG 2.1 Level AA; Ontario's AODA requires WCAG 2.0 Level AA except §1.2.4 and §1.2.5; GOV.UK's guidance on the UK Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018 says to meet WCAG 2.2 AA; and the EU European Accessibility Act, applying since 28 June 2025, names no WCAG version itself, granting a presumption of conformity to harmonised standards cited in the Official Journal. Where a rule adopts a Level AAA criterion, it says so and is stated as SHOULD.
+Accessibility rules for browser-rendered UI, for any project with a web frontend. They derive from WCAG 2.2 Level AA (W3C Recommendation, first published 5 October 2023 and republished 12 December 2024; the October 2023 text is ISO/IEC 40500:2025). W3C states that content conforming to WCAG 2.2 also conforms to WCAG 2.0 and 2.1: 2.2 adds criteria and removes only §4.1.1 (Parsing), now obsolete, though a project required by policy to conform to 2.0 or 2.1 may still need to test and report §4.1.1. Regimes that mandate web accessibility differ in the version they name: US Section 508 incorporates WCAG 2.0 Level A and AA; the US Department of Justice's ADA Title II rule for state and local governments adopts WCAG 2.1 Level AA; Ontario's AODA requires WCAG 2.0 Level AA except §1.2.4 and §1.2.5; GOV.UK's guidance on the UK Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018 says to meet WCAG 2.2 AA; and the EU European Accessibility Act, applying since 28 June 2025, names no WCAG version itself, granting a presumption of conformity to harmonised standards cited in the Official Journal. Where a rule adopts a Level AAA criterion, it says so and is stated as SHOULD. Meeting these rules is not a WCAG conformance claim, which §5.2.2 (Full pages) reserves for full web pages.
 
 These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts, including code snippets a plan quotes for its affected files. Rule IDs follow the format `FE-{CATEGORY}-{NNN}`. Categories: `SEMHTML` (semantic HTML), `KBD` (keyboard navigation and focus), `ARIA` (ARIA usage), `CONTRAST` (color and contrast), `A11YFORM` (accessible forms), `A11YMEDIA` (text alternatives and media), `POINTER` (pointer input and target size), `LAYOUT` (reflow, zoom, text spacing, and orientation), `MOTION` (motion, flashing, and auto-playing media), `TIMING` (time limits), `A11YTEST` (accessibility testing). Severity, ID permanence, and how review selects or excludes this file follow constitution §rules.
 
@@ -29,6 +29,14 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 **Verification:** Any spec or plan that introduces a page, a client-side route, or the application shell MUST commit to the document language and a per-page title pattern. `/{project}:analyze` flags affected-files snippets whose root `<html>` element lacks a `lang` attribute, and flags client-side routing specs that do not update `document.title` on navigation.
 
 **Source:** WCAG 2.2 §2.4.2 (Page Titled), §3.1.1 (Language of Page), §3.1.2 (Language of Parts), W3C Understanding 2.4.2 and 3.1.1, HTML Living Standard (the `lang` attribute)
+
+### FE-SEMHTML-004
+
+> Across a set of web pages, more than one way MUST be available to locate a page that is not the result of, or a step in, a process; navigation, and help mechanisms (human contact details or mechanism, self-help, automated contact), repeated on multiple pages MUST keep the same relative order unless the user changes it; and components with the same functionality MUST be identified consistently.
+
+**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation and help, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the three.
+
+**Source:** WCAG 2.2 §2.4.5 (Multiple Ways), §3.2.3 (Consistent Navigation), §3.2.4 (Consistent Identification), §3.2.6 (Consistent Help)
 
 ## FE-KBD — Keyboard Navigation and Focus
 
@@ -142,11 +150,11 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-CONTRAST-002
 
-> Information MUST NOT be conveyed by color alone. Status, validation state, required-field marking, and selection state MUST be reinforced by a non-color cue: icon, text label, underline, weight, pattern, or position.
+> Information MUST NOT be conveyed by color alone. Status, validation state, required-field marking, and selection state MUST be reinforced by a non-color cue: icon, text label, underline, weight, pattern, or position. Instructions MUST NOT identify a component by a sensory characteristic alone: shape, color, size, visual location, orientation, or sound.
 
-**Verification:** Any spec or plan that introduces state indicators (errors, warnings, success, selection, required) MUST commit to a non-color cue per state. `/{project}:analyze` flags spec descriptions that describe state via color only ("the field turns red"), and flags affected-files snippets that style validation state without an accompanying icon or text node.
+**Verification:** Any spec or plan that introduces state indicators (errors, warnings, success, selection, required) MUST commit to a non-color cue per state, and one that writes instructions MUST name each component by more than a sensory characteristic. `/{project}:analyze` flags spec descriptions that describe state via color only ("the field turns red"), affected-files snippets that style validation state without an accompanying icon or text node, and instructions that identify a component only by a sensory characteristic.
 
-**Source:** WCAG 2.2 §1.4.1 (Use of Color)
+**Source:** WCAG 2.2 §1.4.1 (Use of Color), §1.3.3 (Sensory Characteristics)
 
 ## FE-A11YFORM — Accessible Forms
 
@@ -210,11 +218,11 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YMEDIA-001
 
-> Every `<img>` element MUST have an `alt` attribute. Informational images MUST have descriptive alt text; purely decorative images MUST have `alt=""` (empty string). SVG icons used as interactive triggers MUST give the control an accessible name by one of the means `FE-ARIA-002` lists.
+> Every `<img>` element MUST have an `alt` attribute. Informational images MUST have descriptive alt text; purely decorative images MUST have `alt=""` (empty string). SVG icons used as interactive triggers MUST give the control an accessible name by one of the means `FE-ARIA-002` lists. Where the technology can present it, information MUST be conveyed as text rather than as an image of text; an image of text MAY convey it where the user can customize it or its presentation is essential, as a logotype's is.
 
-**Verification:** Any spec or plan that introduces image rendering MUST commit to an alt-text policy. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking an `alt` attribute; an unnamed SVG-only control is flagged under `FE-ARIA-002`.
+**Verification:** Any spec or plan that introduces image rendering MUST commit to an alt-text policy, and to rendering text as text but where the Statement's MAY applies. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking an `alt` attribute, and images of text the MAY does not cover; an unnamed SVG-only control is flagged under `FE-ARIA-002`.
 
-**Source:** WCAG 2.2 §1.1.1 (Non-text Content), W3C Technique H67 (Using null alt text and no title attribute on img elements for images that assistive technology should ignore), WebAIM "Alternative Text"
+**Source:** WCAG 2.2 §1.1.1 (Non-text Content), §1.4.5 (Images of Text), W3C Technique H67 (Using null alt text and no title attribute on img elements for images that assistive technology should ignore), WebAIM "Alternative Text"
 
 ### FE-A11YMEDIA-002
 
@@ -244,11 +252,11 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-POINTER-002
 
-> Functionality operated by a dragging movement (drag-and-drop reordering, sliders, map panning, resizable panes) MUST also be operable by a single pointer without dragging — taps or clicks on controls such as move-up/move-down buttons, a destination picker, or a position on a slider track. Functionality operated by multipoint or path-based gestures (pinch, two-finger swipe, swipe paths) MUST also be operable by a single pointer without a path-based gesture. Dragging or a path-based gesture MAY be the only method where the movement itself is essential (freehand drawing, or a signature whose drawn mark is itself the function, not one that only acknowledges something or confirms identity), and dragging MAY also be where the browser determines the functionality and the author has not modified it.
+> Functionality operated by a dragging movement (drag-and-drop reordering, sliders, map panning, resizable panes) MUST also be operable by a single pointer without dragging — taps or clicks on controls such as move-up/move-down buttons, a destination picker, or a position on a slider track. Functionality operated by multipoint or path-based gestures (pinch, two-finger swipe, swipe paths) MUST also be operable by a single pointer without a path-based gesture. Dragging or a path-based gesture MAY be the only method where the movement itself is essential (freehand drawing, or a signature whose drawn mark is itself the function, not one that only acknowledges something or confirms identity), and dragging MAY also be where the browser determines the functionality and the author has not modified it. Functionality operated by device or user motion MUST also be operable by user interface components, with responding to the motion able to be disabled, unless the motion operates it through an accessibility supported interface or is essential to the function.
 
-**Verification:** Any spec or plan that introduces drag-and-drop, sliders, swipe, pinch, or drawn-path input such as a signature pad MUST name the single-pointer, non-dragging alternative for each one the Statement's MAY does not cover; the keyboard equivalent required by `FE-KBD-001` satisfies this rule only where it also provides controls a pointer can click or tap. `/{project}:analyze` flags interaction specs that describe drag, swipe, pinch, or drawn-path operations without a click or tap alternative, and flags affected-files snippets that bind drag or multi-touch handlers (`draggable`, `dragstart`, pointer-move drag or drawing logic, multi-touch checks) with no control that performs the same action. **Not flagged:** dragging or a path-based gesture the Statement's MAY covers, such as freehand drawing or a signature whose drawn mark is itself the function.
+**Verification:** Any spec or plan that introduces drag-and-drop, sliders, swipe, pinch, or drawn-path input such as a signature pad MUST name the single-pointer, non-dragging alternative for each one the Statement's MAY does not cover, and one that introduces motion-operated functionality its user interface alternative and how motion response is disabled; the keyboard equivalent required by `FE-KBD-001` satisfies this rule only where it also provides controls a pointer can click or tap. `/{project}:analyze` flags interaction specs that describe drag, swipe, pinch, or drawn-path operations without a click or tap alternative, and flags affected-files snippets that bind drag or multi-touch handlers (`draggable`, `dragstart`, pointer-move drag or drawing logic, multi-touch checks) with no control that performs the same action. **Not flagged:** dragging or a path-based gesture the Statement's MAY covers, such as freehand drawing or a signature whose drawn mark is itself the function.
 
-**Source:** WCAG 2.2 §2.5.7 (Dragging Movements), §2.5.1 (Pointer Gestures), W3C Understanding 2.5.7 and 2.5.1
+**Source:** WCAG 2.2 §2.5.7 (Dragging Movements), §2.5.1 (Pointer Gestures), §2.5.4 (Motion Actuation), W3C Understanding 2.5.7 and 2.5.1
 
 ### FE-POINTER-003
 

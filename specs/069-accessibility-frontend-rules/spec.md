@@ -34,13 +34,13 @@ The file's header is the canonical statement of the baseline. This section recor
 
 | Category | Abbrev | Concern |
 | --- | --- | --- |
-| Semantic HTML | `SEMHTML` | native elements for interactive UI; landmarks and heading hierarchy; page language and page titles |
+| Semantic HTML | `SEMHTML` | native elements for interactive UI; landmarks and heading hierarchy; page language and page titles; across a set of pages, more than one way to a page and consistent navigation, identification, and help |
 | Keyboard navigation and focus | `KBD` | keyboard operability; visible focus and indicator contrast; modal focus containment and restoration; focus not obscured; focus order and focus after removal; content on hover or focus; character key shortcuts; focus appearance (AAA, SHOULD) |
 | ARIA usage | `ARIA` | ARIA fills gaps in native semantics rather than overriding them; accessible names; visible label within the accessible name; live regions for status messages |
-| Color and contrast | `CONTRAST` | AA contrast for text and for UI components and graphics; no information by color alone |
+| Color and contrast | `CONTRAST` | AA contrast for text and for UI components and graphics; no information by color alone, and no instruction by a sensory characteristic alone |
 | Accessible forms | `A11YFORM` | programmatic labels; error association, identification, and suggestion; `autocomplete` input purpose; authentication without cognitive function tests; no redundant entry; no change of context on focus or input; error prevention for legal, financial, and data submissions |
-| Text alternatives and media | `A11YMEDIA` | `alt` text; captions, transcripts, and alternatives for prerecorded media; audio description and live captions for all synchronized media a page presents, embedded and user-contributed media included |
-| Pointer input and target size | `POINTER` | 24×24 CSS pixel targets or equivalent spacing; single-pointer alternatives to dragging and path-based gestures; pointer cancellation (completion on the up-event) |
+| Text alternatives and media | `A11YMEDIA` | `alt` text; text rather than images of text; captions, transcripts, and alternatives for prerecorded media; audio description and live captions for all synchronized media a page presents, embedded and user-contributed media included |
+| Pointer input and target size | `POINTER` | 24×24 CSS pixel targets or equivalent spacing; single-pointer alternatives to dragging and path-based gestures; pointer cancellation (completion on the up-event); a user interface alternative to motion actuation, which can be disabled |
 | Reflow, zoom, text spacing, and orientation | `LAYOUT` | reflow at 320 CSS pixels; 200% text resize (captions and images of text excepted); no zoom lock; tolerance of text-spacing overrides; no orientation lock |
 | Motion, flashing, and auto-playing media | `MOTION` | pause, stop, or hide for moving and auto-updating content; audio control; three-flash limit; reduced motion (AAA, SHOULD) |
 | Time limits | `TIMING` | time limits that can be turned off, adjusted, or warned about and extended |
@@ -59,7 +59,7 @@ The file's header is the canonical statement of the baseline. This section recor
 - A rule adopting a **Level AAA** criterion is **SHOULD**, and its text labels the criterion Level AAA.
 - A **testing-practice** rule is **SHOULD**, with one exception: the automated check that gates a release (`FE-A11YTEST-001`) is MUST. No MUST or MUST NOT requires continuous integration ([008-security-rules](../008-security-rules/spec.md) data model, *Severity classification*): whether a project runs CI, and what it runs there, is its own business, and a spec or plan cannot show it — so running the check on every change is the SHOULD `FE-A11YTEST-003`.
 
-Checked against the file on disk: of 39 rules, 35 are MUST and 4 are SHOULD, and no Statement mixes tiers. The SHOULD rules are `FE-KBD-005` and `FE-MOTION-003` (AAA) and `FE-A11YTEST-002` and `FE-A11YTEST-003` (testing). Every MUST rule cites at least one Level A or AA criterion, `FE-ARIA-001` through §4.1.2 (Resolved Questions — `FE-ARIA-001`'s basis), with one exception:
+Checked against the file on disk: of 40 rules, 36 are MUST and 4 are SHOULD, and no Statement mixes tiers. The SHOULD rules are `FE-KBD-005` and `FE-MOTION-003` (AAA) and `FE-A11YTEST-002` and `FE-A11YTEST-003` (testing). Every MUST rule cites at least one Level A or AA criterion, `FE-ARIA-001` through §4.1.2 (Resolved Questions — `FE-ARIA-001`'s basis), with one exception:
 
 - **`FE-A11YTEST-001`** is MUST and cites no success criterion: it is the testing practice the posture names as its exception, holding each release to an automated check.
 
