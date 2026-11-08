@@ -2103,8 +2103,8 @@ pub struct DeriveReferencesResult {
     pub untracked_skipped: Vec<String>,
     /// Number of services resolved from the `[services]` registry. Zero means
     /// every harvested reference records `service: null`, which is a very
-    /// different state from "no references found" — an unreadable or absent
-    /// config looks identical in `updated` alone.
+    /// different state from "no references found" — an absent registry looks
+    /// identical in `updated` alone. One that cannot be read halts the run.
     pub registered_services: u32,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
     /// be derived from them, or whose derived rewrite would leave a block that
@@ -4467,15 +4467,32 @@ pub struct DuplicateRepo {
 }
 
 /// Result for `resolve-references`: one record per entry in the consumer's
-/// `references:` index, in index order, and the registry's duplicated repos.
+/// `references:` index, in index order, and the registry's duplicated repos,
+/// inline up to `[artifacts] read-size-bytes` and in the file `lists-file`
+/// names past it (`BE-PAYLOAD-001`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ResolveReferencesResult {
-    /// Resolution records in the consumer spec's `references:` order.
-    pub references: Vec<ResolutionRecord>,
+    /// Resolution records in the consumer spec's `references:` order. Absent
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub references: Option<Vec<ResolutionRecord>>,
     /// Each repo registered under two or more aliases, by normalized URL,
-    /// sorted; empty when none (spec 030).
-    pub duplicate_repos: Vec<DuplicateRepo>,
+    /// sorted; empty when none (spec 030). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duplicate_repos: Option<Vec<DuplicateRepo>>,
+    /// Entries in `references`, in either form.
+    pub references_count: usize,
+    /// Entries in `duplicate-repos`, in either form.
+    pub duplicate_repos_count: usize,
+    /// Where the two lists are: in this result, or, past the read size, in
+    /// the file `lists-file` names (066 scenario
+    /// `scope-results-have-a-bounded-size`).
+    pub form: ListsForm,
+    /// In the file form, the file holding both lists whole, from the project
+    /// root: a JSON object with the keys `references` and `duplicate-repos`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// Repo-relative path to the consumer spec file.
     pub path: String,
 }

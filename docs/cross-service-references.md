@@ -38,7 +38,7 @@ path = "../api"
 description = "owns shared data models"
 ```
 
-The registry is **required for status resolution, optional for referencing** — an unregistered link is just navigation. Register each repo once: one under two aliases, compared with a trailing `/` and `.git` removed, resolves through one of them silently, and `/analyze` reports it as an Advisory finding.
+The registry is **required for status resolution, optional for referencing** — an unregistered link is just navigation. Register each repo once: one under two aliases, compared with a trailing `/` and `.git` removed, resolves through one of them silently, and `/analyze` reports it as an Advisory finding. An entry needs both `repo` and `path`: one with either absent or empty, or a config that does not parse, stops every command that reads the registry, naming the file.
 
 ## Resolution outcomes
 

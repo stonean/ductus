@@ -14,8 +14,8 @@
 //! reader's to report, so it never stops another section's report, and a
 //! document that does not parse reports nothing here. Whether a reader
 //! reports the parse error is its own contract: most halt or warn, while
-//! `derive-references` and `check-orphaned-references` read an unparseable
-//! file as an empty registry and an absent watermark. Sections `ductus` does
+//! `check-orphaned-references` reads an unparseable file as an absent
+//! watermark. Sections `ductus` does
 //! not own are never examined, and neither is the session file, whose top
 //! level is the exec walker's open seed.
 

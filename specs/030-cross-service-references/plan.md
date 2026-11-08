@@ -20,7 +20,7 @@ Comprehensive tests are a first-class deliverable (per the planning decision): R
 
 A `[services.<alias>]` table with two string fields: `repo` (canonical URL, the identity matched against body-link hrefs) and `path` (local checkout, relative to repo root or absolute). The table is optional — absent means no cross-service resolution, and a single-service adopter writes nothing.
 
-`.ductus/config.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `ductus` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs. A key in an entry other than these three is named in a warning and never fails the run, as in every `ductus`-owned section (019's scenario `an-unknown-config-key-is-named`; `runtime/src/schema/config_keys.rs`, which both readers call), since teammates can run different `ductus` versions against one committed file.
+`.ductus/config.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `ductus` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs. A key in an entry other than these three is named in a warning and never fails the run, as in every `ductus`-owned section (019's scenario `an-unknown-config-key-is-named`; `runtime/src/schema/config_keys.rs`, which both readers call), since teammates can run different `ductus` versions against one committed file. Every reader of the registry, `resolve-references`, `derive-references`, `classify-spec-edit`'s reference scrub and `dashboard`, reads it through `resolve_references::load_services`, which halts naming the file on a config that does not parse (`PrimitiveError::Toml`) and on an entry whose `repo` or `path` is absent or empty (`PrimitiveError::InvalidServiceEntry`, naming the alias and field too), as `[constitutions.*]` does.
 
 ### D2 — Reference syntax and harvesting
 
@@ -44,7 +44,7 @@ The outcome is decided by deterministic predicates — no prose read for intent:
 | `broken` | registered + reachable, but the target spec does not exist (renamed/deleted/mistyped) or the URL is malformed |
 | `status-unreadable` | target file exists but `status` is missing / malformed YAML / out of the allowed set / a scenario (no status) |
 
-It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`, `ALLOWED_STATUSES`) against the resolved external path. Registered in `primitives/mod.rs`, exposed in `mcp/server.rs`, types in `schema/primitives.rs`.
+It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`, `ALLOWED_STATUSES`) against the resolved external path. Registered in `primitives/mod.rs`, exposed in `mcp/server.rs`, types in `schema/primitives.rs`. Its result is bounded by `[artifacts] read-size-bytes`, past which both lists move to the file `lists-file` names (`bounded_lists::place`); `dashboard`, which renders every reference, reads the unbounded `resolve`.
 
 ### D4 — Command integration
 
@@ -82,6 +82,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `runtime/src/mcp/server.rs` | Modify | Expose the MCP tool |
 | `runtime/src/schema/primitives.rs` | Modify | Args/Result types + outcome enum |
 | `runtime/src/schema/services.rs` | Create | `[services]` registry type (`repo`/`path`/`description`) + parser |
+| `runtime/src/primitives/derive_references.rs` | Modify | The harvest reads the validated registry |
 | `framework/commands/link.md` | Create | `/{project}:link` registration command source |
 | `framework/commands/status.md` | Modify | Surface reference status |
 | `framework/commands/analyze.md` | Modify | Broken-reference Advisory finding |

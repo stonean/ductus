@@ -462,7 +462,7 @@ fn render_references(
     let services = load_services(repo)?;
     let mut sections: Vec<String> = Vec::new();
     for spec in specs {
-        let resolved = resolve_references::run(
+        let resolved = resolve_references::resolve(
             &ResolveReferencesArgs {
                 feature: spec.slug.clone(),
             },

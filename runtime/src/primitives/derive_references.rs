@@ -71,15 +71,15 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use crate::primitives::resolve_references::load_services;
 use crate::primitives::spec_links::{
     continues_key, frontmatter_parses, harvestable_lines, has_unterminated_frontmatter,
     is_frontmatter_fence,
 };
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
-use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{DeriveReferencesArgs, DeriveReferencesResult};
-use crate::schema::services::{self, Services};
+use crate::schema::services;
 
 /// One harvested reference: the resolved service alias (`None` for an
 /// unregistered repo) and the referenced `NNN-slug`.
@@ -96,14 +96,18 @@ struct RegisteredService {
 ///
 /// # Errors
 ///
-/// Returns [`super::PrimitiveError::Io`] when a spec cannot be read or the
-/// rewrite cannot be persisted, and [`super::PrimitiveError::Git`] when a
+/// Returns [`super::PrimitiveError::Io`] when a spec or the project config
+/// cannot be read or the rewrite cannot be persisted,
+/// [`super::PrimitiveError::Toml`] when the config does not parse and
+/// [`super::PrimitiveError::InvalidServiceEntry`] when a `[services.<alias>]`
+/// entry's `repo` or `path` is absent or empty, both naming the file, and
+/// [`super::PrimitiveError::Git`] when a
 /// repository contains the project but its index or status cannot be read —
 /// the listing of which specs to derive then has no answer, and guessing one
 /// would rewrite drafts or skip specs silently.
 pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesResult> {
     let specs_root = paths::Paths::load(repo).specs_root;
-    let registry = load_registry(repo);
+    let registry = load_registry(repo)?;
 
     // Every tracked spec is enumerated, exactly as `derive-dependencies` does,
     // and `--staged` filters only the *write*. The enumeration is deliberately
@@ -187,27 +191,16 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
 /// Build the repo→service registry, resolving each service's own spec-root
 /// from its local checkout when that checkout is reachable.
 ///
-/// A missing, unreadable, or unparseable config yields an empty registry —
-/// every reference then resolves to `unregistered` and is still harvested,
-/// rather than the run failing over an unrelated config error.
-fn load_registry(repo: &Path) -> BTreeMap<String, RegisteredService> {
-    let config_path = paths::config_path(repo);
-    let Ok(content) = std::fs::read_to_string(&config_path) else {
-        return BTreeMap::new();
-    };
-    config_keys::warn_unknown_keys(&config_path, &content, &["services"]);
-    let Ok(services) = Services::from_toml_str(&content) else {
-        return BTreeMap::new();
-    };
-
+/// The registry is `resolve-references`' own read of it, so an absent config
+/// is an empty registry and one that does not parse, or names an entry with
+/// no `repo` or `path`, halts naming the file (`CFG-ENV-003`, `CFG-ENV-008`).
+/// Read as an empty registry, as it once was, a malformed config gave every
+/// reference a null `service`, and `--write` committed that.
+fn load_registry(repo: &Path) -> Result<BTreeMap<String, RegisteredService>> {
+    let services = load_services(repo)?;
     let mut registry = BTreeMap::new();
     for (alias, entry) in services.0 {
-        if entry.repo.is_empty() {
-            continue;
-        }
-        let checkout = if entry.path.is_empty() {
-            None
-        } else {
+        let checkout = {
             let candidate = Path::new(&entry.path);
             let resolved = if candidate.is_absolute() {
                 candidate.to_path_buf()
@@ -224,7 +217,7 @@ fn load_registry(repo: &Path) -> BTreeMap<String, RegisteredService> {
             RegisteredService { alias, specs_root },
         );
     }
-    registry
+    Ok(registry)
 }
 
 /// Drop a trailing `/blob/<ref>`, `/tree/<ref>`, or `/-/blob|tree/<ref>`
@@ -354,10 +347,15 @@ pub(crate) struct ReferenceScrub {
 
 impl ReferenceScrub {
     /// A scrub reading the project's `[services]` registry.
-    pub(crate) fn new(repo: &Path) -> Self {
-        Self {
-            registry: load_registry(repo),
-        }
+    ///
+    /// # Errors
+    ///
+    /// Each error [`load_registry`] returns: without the registry no link can be
+    /// told to be a reference.
+    pub(crate) fn new(repo: &Path) -> Result<Self> {
+        Ok(Self {
+            registry: load_registry(repo)?,
+        })
     }
 
     /// `content` without its references, line for line.
@@ -884,6 +882,47 @@ mod tests {
             splice_references(content, &[]),
             "---\nstatus: done\ndependencies: []\nnext-criterion: 2\n---\nbody\n"
         );
+    }
+
+    /// A config that does not parse, or names an entry with no `path`, halts
+    /// the run naming the file, and nothing is written: read as no registry, it
+    /// gave every reference `service: null` (`CFG-ENV-003`, `CFG-ENV-008`).
+    #[test]
+    fn a_registry_that_cannot_be_read_halts_and_writes_nothing() {
+        use crate::primitives::{PrimitiveError, git_fixture};
+        for (config, invalid_entry) in [
+            ("[services.api\n", false),
+            (
+                "[services.api]\nrepo = \"https://example.invalid/acme/api\"\npath = \"\"\n",
+                true,
+            ),
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            let repository = git2::Repository::init(tmp.path()).unwrap();
+            let original = spec(REFERENCE);
+            let path = tmp.path().join("specs/001-a/spec.md");
+            git_fixture::write(&path, &original);
+            git_fixture::write(&tmp.path().join(".ductus/config.toml"), config);
+            git_fixture::commit_all(&repository, "feat: spec");
+            let err = run(
+                &DeriveReferencesArgs {
+                    write: true,
+                    staged: false,
+                },
+                tmp.path(),
+            )
+            .unwrap_err();
+            match &err {
+                PrimitiveError::InvalidServiceEntry { alias, field, .. } => {
+                    assert!(invalid_entry, "{err}");
+                    assert_eq!((alias.as_str(), field.as_str()), ("api", "path"));
+                }
+                PrimitiveError::Toml { .. } => assert!(!invalid_entry, "{err}"),
+                other => panic!("expected the registry to halt the run, got {other}"),
+            }
+            assert!(err.to_string().contains("config.toml"), "{err}");
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+        }
     }
 
     /// A stale block whose rewrite would not parse — a flow sequence closing

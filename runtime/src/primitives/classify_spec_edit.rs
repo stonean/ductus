@@ -75,7 +75,7 @@ pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditR
         base: &base,
         repo,
         rel_dir: &rel_dir,
-        scrub: ReferenceScrub::new(repo),
+        scrub: ReferenceScrub::new(repo)?,
     };
 
     let mut edited = false;

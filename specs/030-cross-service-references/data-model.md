@@ -32,6 +32,7 @@ Constraints:
 - `repo` values should be unique across entries; a duplicate `repo` under two aliases is a registry-validation finding (the match becomes ambiguous): `resolve-references` returns each in `duplicate-repos` with its aliases, and `/{project}:analyze` reports it as an Advisory finding.
 - **Identity is the normalized `repo`, not the literal string.** Matching strips a trailing `/` and a trailing `.git`, so `https://h/o/r`, `https://h/o/r/` and `https://h/o/r.git` are one service (`services::normalize_repo`). Uniqueness above is therefore a claim about the *normalized* value. Two aliases whose `repo` values differ only by those suffixes are the same service: the harvester keys the registry by the normalized URL, so the alias that sorts last wins and references harvest under it. `Services::duplicate_repos` groups by the same function, so `duplicate-repos` reports that shape too.
 - `path` is not required to exist on disk — a missing path yields the `not-checked-out` outcome at resolution time, not a config error.
+- An entry whose `repo` or `path` is absent or empty, an empty value counting as absent, halts every reader of the registry, naming the alias, the field and the file, and so does a config that does not parse (`CFG-ENV-003`, `CFG-ENV-008`). A key other than the three above is named in a warning and never halts.
 
 ## Cross-service reference
 
@@ -78,3 +79,5 @@ The allowed `status` values are the lifecycle set declared in constitution §tex
 | `spec` | string | Target `NNN-slug`. |
 | `outcome` | enum | One of the outcomes above. |
 | `status` | string \| null | Linked lifecycle status; non-null only when `outcome` is `ok`. |
+
+The result holds the records and `duplicate-repos` inline while it fits `[artifacts] read-size-bytes` (50,000 bytes by default); past it, both move whole to the file `lists-file` names, with `references-count` and `duplicate-repos-count` inline, as 066's scenario `scope-results-have-a-bounded-size` bounds `compute-review-scope` (`BE-PAYLOAD-001`).

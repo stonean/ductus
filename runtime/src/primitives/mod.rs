@@ -574,6 +574,24 @@ pub enum PrimitiveError {
         /// One-line description of why, phrased to follow the field name.
         reason: String,
     },
+    /// A `[services.<alias>]` entry's `repo` or `path` is absent or empty
+    /// (spec 030, `CFG-ENV-003`). A halt, as
+    /// [`PrimitiveError::InvalidConstitutionEntry`] is, rather than an empty
+    /// registry or a `not-checked-out` outcome: an entry naming no repo or no
+    /// checkout is a mistake in the committed config, and reading past it
+    /// would report every reference to the service wrongly. The alias is
+    /// escaped for display, as that error's is.
+    #[error("invalid entry in {path}: [services.{}] `{field}` {reason}", .alias.escape_debug())]
+    InvalidServiceEntry {
+        /// Path of the config file carrying the offending entry.
+        path: PathBuf,
+        /// `[services.<alias>]` — the offending entry, verbatim.
+        alias: String,
+        /// Which field was rejected: `repo` or `path`.
+        field: String,
+        /// One-line description of why, phrased to follow the field name.
+        reason: String,
+    },
     /// `[artifacts] read-size-bytes` is present but is not a positive whole
     /// number of bytes, or `artifacts` is not a table that could hold it
     /// (spec 063).

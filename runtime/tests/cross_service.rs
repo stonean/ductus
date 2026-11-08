@@ -40,9 +40,11 @@ fn cross_service_basic_records_match_golden_and_recorded_capture() {
     };
     let result = resolve_references::run(&args, &repo).expect("resolve-references runs clean");
 
-    // One ResolutionRecord per line, in the consumer's `references:` order.
+    // One ResolutionRecord per line, in the consumer's `references:` order. The
+    // fixture's result fits the default read size, so its lists are inline.
+    let references = result.references.expect("the fixture's result is inline");
     let mut actual = String::new();
-    for record in &result.references {
+    for record in &references {
         actual.push_str(&serde_json::to_string(record).expect("serialize record"));
         actual.push('\n');
     }

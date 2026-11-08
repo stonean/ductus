@@ -383,6 +383,16 @@ its version and date.
 
 ### Fixed
 
+- **A `[services]` entry with no `repo` or `path` halts, as does a config that
+  does not parse.** `resolve-references`, `derive-references`,
+  `classify-spec-edit` and `dashboard` read the registry through one reader,
+  which names the file, and the entry's alias and field. `derive-references`
+  read a config that did not parse as no registry, so `--write` gave every
+  reference `service: null`, and an empty `path` resolved a service against
+  the project itself. `resolve-references`' result is bounded by `[artifacts]
+  read-size-bytes`, past which its two lists move to the file `lists-file`
+  names. Spec 030, task 15.
+
 - **A repo registered under two aliases is reported.** `resolve-references`
   returns `duplicate-repos`, each repo the `[services]` registry holds under two
   or more aliases, compared with a trailing `/` and `.git` removed, with those

@@ -17,15 +17,47 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+/// Why the `[services]` registry could not be read.
+///
+/// Kept apart as `ConstitutionsError` keeps its two: a [`Self::Parse`] failure
+/// is a document that is not TOML, located by serde's message, and an
+/// [`Self::Invalid`] one is an entry that parsed and lacks a value it needs,
+/// which nothing but [`Services::validate`] would ever name.
+#[derive(Debug, thiserror::Error)]
+pub enum ServicesError {
+    /// The config document is not valid TOML, or an entry's field holds the
+    /// wrong type. Carried through verbatim so the caller can attach the path.
+    #[error(transparent)]
+    Parse(#[from] toml::de::Error),
+    /// An entry's `repo` or `path` is absent or empty. The alias is escaped
+    /// for display, as `ConstitutionsError::Invalid`'s is, since a quoted key
+    /// may carry a newline (`BE-INPUT-011`).
+    #[error("[services.{}] `{field}` {reason}", .alias.escape_debug())]
+    Invalid {
+        /// The offending entry's registry alias, verbatim.
+        alias: String,
+        /// Which field was rejected: `repo` or `path`.
+        field: String,
+        /// One-line description of why, phrased to follow the field name.
+        reason: String,
+    },
+}
+
 /// One `[services.<alias>]` entry.
+///
+/// `repo` and `path` default to empty on the wire so an absent one reaches
+/// [`Services::validate`], which names the alias with the field, where serde's
+/// missing-field error names neither the entry nor the reason (`CFG-ENV-003`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ServiceEntry {
     /// Canonical repository URL — the identity matched against a reference
     /// link's href to decide registration.
+    #[serde(default)]
     pub repo: String,
     /// Local checkout location (relative to the repo root or absolute) read
     /// for status resolution.
+    #[serde(default)]
     pub path: String,
     /// Optional human/agent-facing note on the service's purpose.
     /// Informational only — no runtime behavior depends on it.
@@ -66,11 +98,47 @@ impl Services {
     ///
     /// # Errors
     ///
-    /// Returns the underlying [`toml::de::Error`] when the document is not
-    /// valid TOML or a `[services]` entry is missing a required field.
-    pub fn from_toml_str(content: &str) -> std::result::Result<Self, toml::de::Error> {
+    /// Returns [`ServicesError::Parse`] when the document is not valid TOML or
+    /// a field holds the wrong type, and [`ServicesError::Invalid`] when an
+    /// entry's `repo` or `path` is absent or empty (see [`Self::validate`]).
+    pub fn from_toml_str(content: &str) -> std::result::Result<Self, ServicesError> {
         let parsed: ServicesConfig = toml::from_str(content)?;
-        Ok(Self(parsed.services))
+        let registry = Self(parsed.services);
+        registry.validate()?;
+        Ok(registry)
+    }
+
+    /// Check that every entry names a `repo` and a `path`, returning the
+    /// first entry, in alias order, that does not, `repo` before `path`.
+    ///
+    /// An empty value counts as absent (`CFG-ENV-003`): an empty `repo`
+    /// matches no link, so every reference to the service would read as
+    /// unregistered, and an empty `path` resolves to the consumer's own
+    /// repository, whose specs would then answer for the service's. A `path`
+    /// that does not resolve is not checked: that is the `not-checked-out`
+    /// outcome, correct for any contributor who has not cloned the service.
+    fn validate(&self) -> std::result::Result<(), ServicesError> {
+        for (alias, entry) in &self.0 {
+            if entry.repo.trim().is_empty() {
+                return Err(ServicesError::Invalid {
+                    alias: alias.clone(),
+                    field: "repo".to_string(),
+                    reason: "is absent or empty: it is the identity a reference link's repo \
+                             is matched against"
+                        .to_string(),
+                });
+            }
+            if entry.path.trim().is_empty() {
+                return Err(ServicesError::Invalid {
+                    alias: alias.clone(),
+                    field: "path".to_string(),
+                    reason: "is absent or empty: it names the service's local checkout, and an \
+                             empty value resolves to this repository"
+                        .to_string(),
+                });
+            }
+        }
+        Ok(())
     }
 
     /// True when no services are registered.
@@ -256,10 +324,43 @@ path = "../frontend"
         assert_eq!(services.duplicate_repos(), [] as [(String, Vec<String>); 0]);
     }
 
+    /// An absent or empty `repo` or `path` names the alias and the field
+    /// (`CFG-ENV-003`), each of the four cases on its own.
     #[test]
-    fn missing_required_field_is_error() {
-        // `path` omitted — a malformed entry surfaces as a parse error.
-        let toml = "[services.api]\nrepo = \"https://github.com/acme/api\"\n";
-        assert!(Services::from_toml_str(toml).is_err());
+    fn an_absent_or_empty_repo_or_path_names_the_alias_and_the_field() {
+        let cases = [
+            ("[services.api]\npath = \"../api\"\n", "repo"),
+            ("[services.api]\nrepo = \"  \"\npath = \"../api\"\n", "repo"),
+            (
+                "[services.api]\nrepo = \"https://github.com/acme/api\"\n",
+                "path",
+            ),
+            (
+                "[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"\"\n",
+                "path",
+            ),
+        ];
+        for (toml, expected) in cases {
+            let err = Services::from_toml_str(toml).unwrap_err();
+            let ServicesError::Invalid { alias, field, .. } = &err else {
+                panic!("expected a value rejection for {toml:?}, got {err}");
+            };
+            assert_eq!(
+                (alias.as_str(), field.as_str()),
+                ("api", expected),
+                "{toml:?}"
+            );
+            assert!(err.to_string().starts_with("[services.api] `"), "{err}");
+        }
+    }
+
+    /// A field of the wrong type is still serde's parse error.
+    #[test]
+    fn a_field_of_the_wrong_type_is_a_parse_error() {
+        let toml = "[services.api]\nrepo = 7\npath = \"../api\"\n";
+        assert!(matches!(
+            Services::from_toml_str(toml),
+            Err(ServicesError::Parse(_))
+        ));
     }
 }
