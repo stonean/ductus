@@ -389,6 +389,59 @@ its version and date.
   `examined`. A script reading `scope` no longer finds deleted paths there.
   Spec 066, task 10.
 
+- **The security, configuration and performance rules close the gaps a
+  re-read round found.** Each new obligation is an `/analyze` finding for a
+  spec that meets its rule's trigger. In `security-cross.md`, installed in
+  every shape: `SEC-AUTHN-002` asks an OAuth or OIDC client for a one-time
+  `state` bound to the user agent, an ID token's `iss`, `aud`, `exp` and
+  signature, `state`, `code_verifier` and `nonce` from a cryptographically
+  secure generator, a mix-up defence where it can talk to more than one
+  authorization server, and a native app's external user-agent;
+  `SEC-AUTHN-003` asks an authorization server to enforce PKCE at its token
+  endpoint and never to redirect a credential-carrying request with 307; a
+  new `SEC-DATA-001`, in a new `DATA` category, keeps a credential or PII out
+  of a URL the project's code requests, sends or renders, a server or
+  command-line tool calling another party's API with its key in the query
+  included; `SEC-DEPS-001` reaches a container action's own image, a
+  SHA-pinned action or reusable workflow whose own references take tags
+  outside a lockfile, a `./` local action in a job that checks out another
+  commit, and `specs/system.md`, and sets aside a GitHub-hosted runner label,
+  so a waiver of `runs-on: ubuntu-latest` can go; and `SEC-LOG-001` adds
+  product-analytics events and session-replay recordings. In
+  `security-backend.md`: `BE-LOG-008` adds the same two carriers;
+  `BE-API-008` reaches search engines and coordination services;
+  `BE-API-011` reaches a form or client code sending the token; `BE-ERR-002`
+  asks every API spec, gRPC and JSON-RPC included, for its error format;
+  `BE-AUTHN-012` and `BE-AUTHN-019` read an OIDC client's ID-token
+  validation as JWT verification, `BE-AUTHN-012` (e) applying where a spec
+  issues tokens; and `BE-API-013` sets aside OpenID Connect Front-Channel
+  Logout's `iss` and `sid`. In `security-frontend.md`: new `FE-DEPS-007`
+  (SBOM), `FE-DEPS-008` (registry signatures and provenance) and
+  `FE-DEPS-009` (dependency confusion) hold a frontend-only project to what
+  `BE-DEPS-003` to `-005` hold the others; `FE-STORAGE-003` sets aside an
+  RFC 8058 `List-Unsubscribe` identifier and Front-Channel Logout's `iss` and
+  `sid`, and its commitment no longer fails a callback that receives an
+  authorization code; and `FE-CSRF-003` sets aside an OAuth redirection
+  endpoint's `GET`. In `configuration-cross.md`: `CFG-ENV-006` reaches a
+  sensitive value in trace context outside a backend, a message to a
+  person, a configuration service client code fetches, such as Firebase
+  Remote Config, product analytics and session replay, and a value newly
+  written to a log line, and `CFG-ENV-010`'s trigger is the build's; an
+  analytics ID is no longer named as public. `api-backend.md`'s
+  `BE-ERRENV-003` judges `specs/errors.md`'s envelope, and
+  `performance-frontend.md`'s `FE-LOAD-007` asks a spec that introduces a
+  server-rendered page for its cache policy. A case a changed rule now names
+  as another's is reported once, under that rule. A newly created
+  `specs/errors.md` has its example envelope carry a `request_id`, as
+  `BE-ERR-002` requires; an existing one is not rewritten. A pinned copy of
+  a changed file keeps its old text until re-synced, and a
+  `security-backend.md` pinned from 0.59.11, or left from a surface the
+  project no longer configures, has no `BE-LOG-008`, so beside it
+  `observability-backend.md`'s `BE-METRIC-003` and `BE-TRACE-002`, which
+  0.59.11 had flag a sensitive metric label or span attribute themselves,
+  and `configuration-cross.md`'s trace-context yield report the case under
+  no rule until the file is re-synced or deleted. Spec 008, tasks 43 and 44.
+
 ### Fixed
 
 - **A `[services]` entry with no `repo` or `path` halts, as does a config that

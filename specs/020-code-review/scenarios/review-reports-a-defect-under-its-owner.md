@@ -14,6 +14,7 @@ Counted at the end of the 2026-11-02 re-read round over the Verification paragra
 
 - A finding a pass makes against a loaded rule is reported under the owner a loaded rule's Verification names for the case the code shows, as `/{project}:analyze` names it, and not under the rule that yields it.
 - A load condition in that clause ("where `security-backend.md` is also loaded") is judged against the rule files this review loaded, so a frontend-only review keeps the frontend rule's finding.
+- A **Not flagged:** clause that only narrows a rule's scope and names no owner, such as `security-frontend.md` `FE-XSS-005`'s or `security-backend.md` `BE-DATA-011`'s, sets the case aside at review as `/{project}:analyze` sets it aside, so review reports no finding analyze sets aside (008's task 43, 2026-11-08).
 - A finding stays with the yielding rule when this review did not load the owner's file, a file the project excludes from review included, or no pass applies it, so routing never leaves a defect review reports today reported by no rule.
 - One defect is then one finding, at the owner's tier, so a defect a MUST rule yields to a SHOULD owner becomes advisory, and the reverse; it counts once toward blocking, needs one waiver, and AC13's de-duplication applies to it.
 - `framework/reference/review.md` and `security-frontend.md`'s header say review applies the routing, the generated command copies are regenerated, and the runtime's `performReview` extension carries what the pass needs to apply it.

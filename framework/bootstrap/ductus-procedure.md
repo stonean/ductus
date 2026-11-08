@@ -392,7 +392,7 @@ Each gap resurfaces when /{project}:analyze next runs on its spec. Run it on a s
 One `{NNN-feature}` group per spec with a finding, each listing every finding for that spec — no cap, because a truncated list reads as the complete one. Omit the block when:
 
 - The audit did not run (trigger conditions did not fire — greenfield run, or routine re-run with rule files already present), OR
-- The audit ran but produced no findings (no rule's Verification trigger fired against any existing artifact).
+- The audit ran but produced no findings (no rule found a gap it owns in any existing artifact).
 
 This summary hands off to `/{project}:analyze`, which dispositions each gap in the run that finds it.
 

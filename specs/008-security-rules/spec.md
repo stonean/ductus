@@ -4,7 +4,7 @@ status: in-progress
 dependencies: [007-govern-workflow]
 tags: [security, format]
 next-criterion: 29
-cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-review, 034-performance-backend-rules, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 060-exec-analyze-assesses-each-loaded-rule, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
+cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-review, 034-performance-backend-rules, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 048-govern-acquired-runtime, 060-exec-analyze-assesses-each-loaded-rule, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 077-security-cross-rules]
 ---
 
 # 008 — Security Rules
@@ -159,7 +159,7 @@ Ductus runs a one-time security audit when **both** conditions hold after the fi
 - One of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or, since spec 077, `specs/rules/security-cross.md` was newly **created** by the manifest pass (i.e., not already present, not just updated).
 - The project contains at least one feature spec directory under `specs/`, in either numbering form — the membership rule lives in `framework/constitution.md` §numbering and is not restated here, because a second copy is how the sequential and branch-scoped forms drift apart.
 
-When neither condition holds — greenfield adoption with no existing specs, or a routine re-run where the rule files already exist — the audit is silently skipped. There is no per-run audit; the trigger is "rule file newly installed in a project with existing specs."
+When either condition fails — greenfield adoption with no existing specs, or a routine re-run where the rule files already exist — the audit is silently skipped. There is no per-run audit; the trigger is "rule file newly installed in a project with existing specs."
 
 ### Audit logic
 

@@ -9,7 +9,7 @@ title: "008-security-rules — data-model"
 A rule file is a markdown document with the following structure:
 
 ```markdown
-# Security Rules — {Surface}
+# {Domain} Rules[ — {Surface}]
 
 {Introduction: the file's scope and how its rules are enforced; the ID format and category list; a pointer to constitution §rules for severity, ID permanence, and how review selects or excludes the file.}
 
@@ -26,7 +26,7 @@ A rule file is a markdown document with the following structure:
 …
 ```
 
-- **Surface** is `Backend`, `Frontend` or, for `security-cross.md`, `Cross-Surface`.
+- **Domain** names the file's concern as its H1 does (`Security`, `Performance`, `Configuration`, `Code Quality`, …). **Surface** is `Backend` or `Frontend` for a `-backend.md` or `-frontend.md` file; a `-cross.md` file omits it, or, as `security-cross.md` does, names `Cross-Surface`. Nothing checks the H1.
 - **ID prefix** is the `{surface}-{category}` pair the section's rules share (`BE-AUTHN`, `FE-XSS`), or in `security-cross.md` the `SEC-{category}` pair (`SEC-LOG`), so the heading carries the abbreviation a reader needs to cite a rule under it.
 - **Category Name** is the section's human-readable title in title case (`Authentication`, `Input Validation`, `Cross-Site Scripting Prevention`). It **names the same category** as the spec's `## Two Rule Files` list and the abbreviation table below, or, in `security-cross.md`, as the category table of `specs/077-security-cross-rules/data-model.md`, but is **not byte-identical** to either: the shipped headings title-case the words and several are longer than the spec's label (`Cross-Site Scripting Prevention` for `Cross-site scripting (XSS)`, `Secure Client-Side Storage` for `Secure storage`, `Content Security Policy` for `Content security`). The binding identity is the **abbreviation**, not the prose title — an earlier wording of this bullet claimed the titles matched the spec's list "verbatim", which was never true of 12 of the 15.
 - **Rule ID** appears as a level-3 heading and is the only level-3 heading content (no surrounding text). This makes rules grep-able by ID.
