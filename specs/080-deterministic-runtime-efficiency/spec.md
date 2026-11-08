@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: []
 cross-spec-impact:
   - 022-deterministic-runtime

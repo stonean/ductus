@@ -10,6 +10,8 @@
 
 #![allow(dead_code, clippy::unwrap_used, clippy::expect_used)]
 
+pub mod corpus;
+
 use std::fs;
 use std::path::Path;
 use std::process::Command;

@@ -4,10 +4,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Fixture corpus and the result-size script
 
-- [ ] Write `runtime/tests/common/corpus.rs`: a git-initialized project of N specs, scaling the spec count and each spec's criteria, tasks and scenarios
-- [ ] Write `runtime/tests/result_sizes.rs` (`#[ignore]`) and `scripts/measure-result-sizes.sh`. Run every `PRIMITIVE_REGISTRY` name on corpora of two sizes and record the characters of each result's text, or a *not measured* row with its reason
-- [ ] Record each tool's loaded schema (description plus input schema, in characters, from `ductus mcp` `tools/list` over stdio) and the total
-- [ ] Create `research.md` holding both tables, each with its method, units, population and date, plus the grows-set and the handoff's three method traps
+- [x] Write `runtime/tests/common/corpus.rs`: a git-initialized project of N specs, scaling the spec count and each spec's criteria, tasks and scenarios
+- [x] Write `runtime/tests/result_sizes.rs` (`#[ignore]`) and `scripts/measure-result-sizes.sh`. Run every `PRIMITIVE_REGISTRY` name on corpora of two sizes and record the characters of each result's text, or a *not measured* row with its reason
+- [x] Record each tool's loaded schema (description plus input schema, in characters, from `ductus mcp` `tools/list` over stdio) and the total
+- [x] Create `research.md` holding both tables, each with its method, units, population and date, plus the grows-set and the handoff's three method traps
 
 - **Done when**: `research.md` names every registry primitive as measured or not measured with its reason, names the primitives that grow with the corpus, and records each tool's loaded schema size and the total (AC14, AC23).
 
