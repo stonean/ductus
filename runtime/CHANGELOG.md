@@ -499,6 +499,13 @@ its version and date.
   constant can move without the test failing. Asserting the figure itself, or
   the behavior at it and just past it, complies. Spec 036, its scenario
   `a-bound-test-pins-the-stated-figure`.
+- **`BE-LOCK-002` has a set rewrite lock its parent first.**
+  `concurrency-backend.md`'s `BE-LOCK-002` adds, at its SHOULD tier, that a
+  transaction deleting or rewriting a set of child rows as a whole first
+  locks the parent row that owns the set, or an equivalent serializer such as
+  an advisory lock keyed on the parent, and `/analyze` flags a plan's set
+  rewrite that does not. Its Source quotes MySQL's current wording. Spec 038,
+  its scenario `lock-the-parent-before-rewriting-its-children`.
 
 ### Fixed
 

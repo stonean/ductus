@@ -66,7 +66,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Implement scenario: lock-the-parent-before-rewriting-its-children
 
-- [ ] Implement the behavior described in `scenarios/lock-the-parent-before-rewriting-its-children.md`
+- [x] Implement the behavior described in `scenarios/lock-the-parent-before-rewriting-its-children.md`
 
 008's review (`4c25aeb6`) waived to this task an observation on the scenario: it asks for a MUST-tier lock-ordering rule and has no open question, against this spec's Resolved Question that lock ordering stays SHOULD and its Severity posture, and its Context says no rule covers the case, though `BE-LOCK-002` already asks for one consistent acquisition order. Settle the tier against the Resolved Questions, through `/ductus:amend` if the scenario needs a question, before writing the rule.
 

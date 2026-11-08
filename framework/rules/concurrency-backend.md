@@ -40,11 +40,11 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-LOCK-002
 
-> When more than one lock is held at once, locks SHOULD be acquired in a single consistent global order, each acquisition SHOULD wait no longer than a bounded lock timeout, and each lock SHOULD be released within a bounded hold time.
+> When more than one lock is held at once, locks SHOULD be acquired in a single consistent global order, each acquisition SHOULD wait no longer than a bounded lock timeout, and each lock SHOULD be released within a bounded hold time. A transaction that deletes or rewrites a set of child rows as a whole SHOULD first lock the parent row that owns the set, or an equivalent serializer, before any child row.
 
-**Verification:** Any spec or plan that acquires more than one lock SHOULD state the global acquisition order, the acquisition timeout, and the hold-time bound. `/{project}:analyze` flags multi-lock plans with no stated ordering, timeout, or hold bound. **Not flagged:** a lock timeout or hold bound written as a bare literal, which `configuration-cross.md` `CFG-CONST-003` owns.
+**Verification:** Any spec or plan that acquires more than one lock SHOULD state the global acquisition order, the acquisition timeout, and the hold-time bound, and one whose transaction deletes or rewrites a set of child rows as a whole SHOULD state that it locks the parent row, or an equivalent serializer such as an advisory lock keyed on the parent, before any child row. `/{project}:analyze` flags multi-lock plans with no stated ordering, timeout, or hold bound, and set rewrites that lock no parent or serializer first. **Not flagged:** a lock timeout or hold bound written as a bare literal, which `configuration-cross.md` `CFG-CONST-003` owns.
 
-**Source:** PostgreSQL documentation, *Explicit Locking* — Deadlocks ("acquire locks on multiple objects in a consistent order"); Microsoft, SQL Server *Deadlocks guide* ("Access objects in the same order"); MySQL documentation, InnoDB deadlocks ("use the same order of operations").
+**Source:** PostgreSQL documentation, *Explicit Locking* — Deadlocks ("acquire locks on multiple objects in a consistent order") and Advisory Locks ("locks that have application-defined meanings"); Microsoft, SQL Server *Deadlocks guide* ("Access objects in the same order"); MySQL documentation, *How to Minimize and Handle Deadlocks* ("do those operations in a consistent order each time", and a one-row table each transaction updates "before accessing other tables").
 
 ## BE-TXN — Transaction isolation
 

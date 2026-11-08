@@ -21,7 +21,7 @@ This spec closes that gap: a backend concurrency rule set citable by ID (`BE-{CA
 | Category | Abbrev | Concern |
 | --- | --- | --- |
 | Shared-state races | `RACE` | guarded shared mutable state (`BE-RACE-001`); sharing eliminated rather than guarded where it can be (`BE-RACE-002`); no check-then-act without atomicity unless its act is harmless to repeat, and uniqueness or existence on persisted data enforced by the data store (`BE-RACE-003`) |
-| Locking | `LOCK` | optimistic vs. pessimistic choice stated (`BE-LOCK-001`); consistent lock ordering to avoid deadlock, a bounded acquisition timeout, and a bounded hold time (`BE-LOCK-002`) |
+| Locking | `LOCK` | optimistic vs. pessimistic choice stated (`BE-LOCK-001`); consistent lock ordering to avoid deadlock, with a set rewrite locking its parent first, a bounded acquisition timeout, and a bounded hold time (`BE-LOCK-002`) |
 | Transaction isolation | `TXN` | explicit isolation level per transaction, with the anomalies it prevents on the chosen engine (`BE-TXN-001`); lost updates guarded (`BE-TXN-002`); write skew and phantoms guarded (`BE-TXN-003`); conflict aborts handled as an expected outcome (`BE-TXN-004`) |
 | Distributed coordination | `COORD` | distributed locks relied on for correctness carry fencing tokens (`BE-COORD-001`); duplicates from retry, redelivery, or a scheduler — one that fires more than once for a scheduled time or starts a run while the previous one is in progress — are idempotent or deduplicated, with delivery semantics stated — at-most-once, at-least-once, or exactly-once within a named boundary (`BE-COORD-002`); no dual write — a database change and its publish made atomic (`BE-COORD-003`); no message ordering assumed wider than the broker guarantees (`BE-COORD-004`) |
 
