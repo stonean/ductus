@@ -43,5 +43,6 @@ SEC-{category}-{NNN}
 | `SEC-AUTHN-001` | MUST | Secrets and signatures are compared in constant time | `BE-AUTHN-009` |
 | `SEC-AUTHN-002` | MUST | OAuth and OIDC client flows use `state`, PKCE, `nonce` validation and an exact `redirect_uri` | `BE-AUTHN-013` |
 | `SEC-AUTHN-003` | MUST | OAuth grant and response types, the PKCE method and public-client refresh-token protection | `BE-AUTHN-020` |
+| `SEC-AUTHN-004` | MUST | An OAuth authorization server matches each `redirect_uri` it receives exactly | `BE-API-009`'s authorization-server sentences (008 task 43) |
 
 Each predecessor is labelled `**DEPRECATED in {version}:**` in `security-backend.md`, with the second minor release after the shipping one as its removal target (077's Resolved Questions). It names its successor as the owner of every case it governed until it is removed.

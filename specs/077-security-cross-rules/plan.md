@@ -4,7 +4,7 @@ Implements [077 — Security cross rules](spec.md).
 
 ## Overview
 
-Create `framework/rules/security-cross.md` with five `SEC-` rules: one new rule (`SEC-LOG-001`) and four moved from `security-backend.md`. The work then has four parts:
+Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC-LOG-001`), four moved from `security-backend.md`, and `SEC-AUTHN-004`, which 008's task 43 moved from `BE-API-009`'s authorization-server sentences. The work then has four parts:
 
 - **Register the prefix** in this spec's `data-model.md`, the rule-ID lint and the analyze reference.
 - **Deprecate the four old rules**, each reduced to a yield to its successor so `/{project}:analyze` reports a case once.
@@ -42,7 +42,7 @@ Its Sources are the OWASP Logging Cheat Sheet, W3C Trace Context §6 and OpenTel
 
 - `SEC-DEPS-001`: `BE-DEPS-002` takes "where `security-backend.md` is also loaded", and `FE-DEPS-004` takes "where `security-frontend.md` is also loaded"; the yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest`, which `FE-DEPS-004` and `BE-DEPS-002` name as `SEC-DEPS-001`'s, so no rule routes that case to one that routes it back;
 - `SEC-AUTHN-001`: `BE-API-010` (d) takes the backend condition;
-- `SEC-AUTHN-002`: `BE-API-009` takes the backend condition;
+- `SEC-AUTHN-002`: its yield of an authorization server's `redirect_uri` matching names `SEC-AUTHN-004`, in the same file, so it takes none, and `BE-API-009` and `FE-AUTHN-001` name `SEC-AUTHN-004` with none;
 - the mutual references between `BE-AUTHN-013` and `BE-AUTHN-020` become `SEC-AUTHN-002` and `SEC-AUTHN-003`, in the same file, so they take none.
 
 The Sources are re-fetched at the move, and any quote that no longer matches is corrected before the rule lands.
@@ -106,7 +106,7 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/rules/security-cross.md` | Create | The five `SEC-` rules |
+| `framework/rules/security-cross.md` | Create | The `SEC-` rules |
 | `specs/077-security-cross-rules/data-model.md` | Create | Registers `SEC` and its categories |
 | `framework/rules/security-backend.md` | Modify | Deprecate four rules; re-point `BE-API-009`, `-010`, `-011`, `-013`; `BE-DEPS-002`'s yield to `SEC-DEPS-001` |
 | `framework/rules/security-frontend.md` | Modify | Re-point `FE-AUTHN-001` and `FE-STORAGE-003`, dropping their load condition; `FE-DEPS-004`'s yield to `SEC-DEPS-001` |

@@ -21,7 +21,7 @@ Introduce `framework/rules/security-cross.md`, a security rule file with the `-c
 
 `security-cross.md` is loaded for every stack through the rule loader's suffix discovery ([024-rule-loader](../024-rule-loader/spec.md)). It follows the canonical rule schema of 008's `data-model.md`. Its rule IDs follow `SEC-{CATEGORY}-{NNN}`, the domain prefix the other `-cross.md` files set (`CFG`, `QUAL`), with three categories: `LOG` (sensitive values in logs and telemetry), `DEPS` (build inputs) and `AUTHN` (authentication). Its header declares them, and this spec's `data-model.md` registers them.
 
-The file carries five rules.
+The file carries these rules.
 
 1. **`SEC-LOG-001`: sensitive values in logs, error reports and telemetry (new).**
    - The values `security-backend.md` `BE-LOG-002` bars from logs, and `BE-LOG-008` from telemetry, MUST NOT be written to a log line, an error-reporting payload or telemetry, in any shape. They include passwords, full authentication tokens, session IDs, one-time and recovery codes, raw PII and other sensitive field values.
@@ -36,10 +36,11 @@ The file carries five rules.
 4. **`SEC-AUTHN-002`: OAuth and OIDC client flows (moved from `BE-AUTHN-013`).**
    - The rule covers `state`, PKCE, `nonce` validation and exact `redirect_uri` matching.
    - It includes the native-app loopback port and the relaxation for a client that authenticates to the authorization server, in a pushed authorization request or a signed request object, which covers only a `redirect_uri` the client does not take from the request.
-   - Its yield to `BE-API-009` takes the load condition.
+   - Its yield of an authorization server's `redirect_uri` matching names `SEC-AUTHN-004`, in the same file, so it takes no load condition.
 5. **`SEC-AUTHN-003`: OAuth grant and response types (moved whole from `BE-AUTHN-020`).** The rule covers the forbidden grants and response types, the PKCE challenge method, and public-client refresh-token protection.
+6. **`SEC-AUTHN-004`: an authorization server's exact `redirect_uri` matching (moved from `BE-API-009`'s authorization-server sentences, by 008's task 43, owner, 2026-11-08).** It names a server the project serves or provides, as a service or a library, so an authorization-server library in a cross-only project is asked for it, and `BE-API-009` and `security-frontend.md` `FE-AUTHN-001` name it as the owner with no load condition.
 
-Each moved rule carries its predecessor's Statement and Verification as they stand when it moves, re-pointed but not reworded, except that `SEC-DEPS-001`'s reusable-workflow sentence and flag, and `BE-DEPS-006`'s kept Statement, draw the reusable-workflow line by how the call is written, as item 2 states, and `SEC-DEPS-001`'s yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest`, as §Deprecation and re-pointing states. Its Sources are re-fetched when it lands.
+Each moved rule carries its predecessor's Statement and Verification as they stand when it moves, re-pointed but not reworded, except that `SEC-DEPS-001`'s reusable-workflow sentence and flag, and `BE-DEPS-006`'s kept Statement, draw the reusable-workflow line by how the call is written, as item 2 states, and `SEC-DEPS-001`'s yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest`, as §Deprecation and re-pointing states, and that `SEC-AUTHN-004` names a server the project serves or provides where `BE-API-009` named one it serves. Its Sources are re-fetched when it lands.
 
 ### Deprecation and re-pointing
 
@@ -75,7 +76,7 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/rules/security-cross.md` exists in the canonical rule schema. Its header declares the `SEC-{CATEGORY}-{NNN}` format and the categories `LOG`, `DEPS` and `AUTHN`, and it holds the five rules of §Rule set scope, each with a Statement, a Verification and a Source fetched when the rule was written.
+- [x] AC1: `framework/rules/security-cross.md` exists in the canonical rule schema. Its header declares the `SEC-{CATEGORY}-{NNN}` format and the categories `LOG`, `DEPS` and `AUTHN`, and it holds the rules of §Rule set scope, each with a Statement, a Verification and a Source fetched when the rule was written.
 - [x] AC2: `specs/077-security-cross-rules/data-model.md` registers the file's ID prefix and categories, and `/ductus:analyze` loads the file: `check-rule-ids` accepts each of its IDs, and every citation of a successor resolves.
 - [x] AC3: A sensitive value that is not configuration, in a log line, an error-reporting payload or telemetry, is reported by the new log rule in a frontend-only and a cross-only project. In a backend-only and a full-stack project `/{project}:analyze` reports it once, under `BE-LOG-002` or `BE-LOG-008`, which the new rule names as owner where `security-backend.md` is loaded.
 - [x] AC4: The four moved rules carry their predecessors' Statements and Verifications as decided in 008's tasks 40 and 42, `SEC-DEPS-001`'s reusable-workflow sentence and flag as §Rule set scope item 2 states them and its yield as §Deprecation and re-pointing states it, and each successor's yield to a backend owner carries "where `security-backend.md` is also loaded".
@@ -85,7 +86,7 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 - [x] AC8: `framework/bootstrap/ductus.md` ships the file in every shape, and `docs/rules.md` lists it. A frontend-only, a backend-only and a cross-only `[rules] surfaces` setting each install it.
 - [x] AC9: `runtime/CHANGELOG.md`'s `## [Unreleased]` section names the four ID changes and the waivers they expire.
 - [x] AC11: `runtime/CHANGELOG.md`'s `## [Unreleased]` section also names each successor, the removal version, and the double report a project pinning `security-backend.md` sees until it re-syncs the file.
-- [x] AC10: A fresh agent's re-read of the new file and of every rule this spec changes, across all four project shapes, finds no MUST or SHOULD.
+- [ ] AC10: A fresh agent's re-read of the new file and of every rule this spec changes, across all four project shapes, finds no MUST or SHOULD.
 
 ## Open Questions
 

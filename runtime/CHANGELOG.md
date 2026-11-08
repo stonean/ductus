@@ -267,8 +267,13 @@ its version and date.
   outside a workflow onboarded to a GitHub Actions workflow dependency
   lockfile, a reusable workflow called by `{owner}/{repo}` and a tag or
   branch, a container or base image by tag alone, and a download run without
-  checksum verification. A frontend-only or cross-only project is now held to
-  all five: a frontend-only OAuth client needs an exact registered
+  checksum verification. `SEC-AUTHN-004` takes `BE-API-009`'s
+  authorization-server half: an OAuth authorization server the project
+  serves or provides, a library in a cross-only project included, compares
+  each `redirect_uri` it receives with a registered one by exact string
+  matching, and `/analyze` reports the case under `SEC-AUTHN-004` rather than
+  `BE-API-009` or `FE-AUTHN-001`. A frontend-only or cross-only project is
+  now held to all of them: a frontend-only OAuth client needs an exact registered
   `redirect_uri` where `FE-AUTHN-001` asked only for an allowlist, and
   `/analyze` reports a client's `redirect_uri` under `SEC-AUTHN-002` rather
   than `FE-AUTHN-001`, and an access token an authorization response returns
@@ -317,8 +322,11 @@ its version and date.
   upgrading: the upgrade replaces it with the shipped file, and no audit
   runs for it, since the file is not newly created. Pinning it instead
   keeps the shipped file out, so `/analyze` reports under no rule every case
-  another rule file yields to a `SEC-` rule. Spec 077; spec
-  008, tasks 32, 40 and 42.
+  another rule file yields to a `SEC-` rule. A `security-backend.md` pinned
+  before `SEC-AUTHN-004` keeps `BE-API-009`'s authorization-server sentences,
+  so `/analyze` reports such a server's `redirect_uri` matching under both
+  IDs until the file is re-synced. Spec 077; spec 008, tasks 32, 40, 42 and
+  43.
 - **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
   `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s
   `dispositions:` map counts `deferred` and `waived` where it counted `routed`
