@@ -37,12 +37,12 @@ A primitive **grows with the corpus** when its result at the larger corpus excee
 
 ### One view model, two renderings, one bound
 
-The rendering in `dashboard.rs` (`render_markdown` and its helpers, `runtime/src/primitives/dashboard.rs:127-460`) moves to a new module, `runtime/src/primitives/pipeline_view.rs`. The module builds one model and renders it two ways (AC17, AC19). The model holds the target line, notices, rows, summary items, next-action groups and the closing prompt.
+`runtime/src/primitives/pipeline_view.rs` holds the view: one model, built from the data `dashboard.rs` loads, rendered two ways (AC17, AC19). The model holds the target line, notices, rows, summary items, next-action groups and the closing prompt.
 
 - **Markdown:** the existing table, with the target's row in bold.
 - **Text:** each column padded to its widest cell plus two spaces, with no pipes, separator row or emphasis; the target's row is marked by a leading `→`.
 
-Both renderings put the summary one item per line (AC18). `Counts:`, `Tags:`, `Reopenings:` and `Inbox:` are labelled lines. The scenario-question callout becomes a header line followed by one `{spec}: {scenario}` line per scenario. Its `Run /{project}:target …` hint moves to the end. A `Next actions:` block follows the summary, with one line per next action listing its non-done specs, excluding the target and `done (spec is complete)`. The block ends with the single `Run /{project}:target <feature> to select one.` line (AC6). The other callouts keep their own guidance on one line each.
+The two renderings differ only in the table and its emphasis, and every other line is the same in both. Both put the summary one item per line (AC18), each item a labelled line, with the reopenings line keeping the form spec 079 gave it. The scenario-question callout becomes a header line followed by one indented `{spec} · {scenario}: {question}` line per unresolved question. The view model carries each question's text beside `DashboardSpec`, whose payload is unchanged. The callout's `Run /{project}:target …` hint moves to the end. A `Next actions:` block follows the summary, with one line per next action listing its non-done specs, excluding the target and `done (spec is complete)`. The block ends with the single `Run /{project}:target <feature> to select one.` line (AC6). The other callouts keep their own guidance on one line each.
 
 **Bound (AC24).** Each rendering is measured in bytes against `resolve_threshold`, the read size `bounded_lists.rs:23` already reads. When it is over:
 

@@ -2559,13 +2559,14 @@ pub struct DashboardResult {
     /// how many `in-progress` specs have no unchecked task, rendered as the view's
     /// `Reopenings:` line on every run (spec 079, AC19).
     pub reopenings: ReopeningCounts,
-    /// The full pipeline view pre-rendered as one markdown fragment —
-    /// preamble, dashboard table, counts and callouts, and the
-    /// cross-service references readout (the runtime resolves each spec's
-    /// `references:` index internally for the readout). Returned data the
-    /// host may restyle, never printed by the runtime; the structured
-    /// fields above stay authoritative for hosts that render their own
-    /// view.
+    /// The full pipeline view pre-rendered as one markdown fragment (spec
+    /// 080's view model) — the target block, the table, the summary one item
+    /// per line, the cross-service references readout (the runtime resolves
+    /// each spec's `references:` index internally for it), the specs with
+    /// work left grouped by next action, and the `/{project}:target` prompt.
+    /// Returned data the host may restyle, never printed by the runtime; the
+    /// structured fields above stay authoritative for hosts that render their
+    /// own view.
     pub rendered_markdown: String,
 }
 

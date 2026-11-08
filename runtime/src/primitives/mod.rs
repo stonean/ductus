@@ -64,6 +64,7 @@ pub mod mechanical_sweep;
 pub mod merge_managed_block;
 pub mod merge_permissions;
 pub mod migrate_session_file;
+pub(crate) mod pipeline_view;
 pub mod process_decisions;
 pub mod process_waivers;
 pub mod prune_plan;

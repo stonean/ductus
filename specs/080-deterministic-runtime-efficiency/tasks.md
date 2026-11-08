@@ -13,10 +13,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. One view model, two renderings
 
-- [ ] Move the view's rendering from `runtime/src/primitives/dashboard.rs` into `runtime/src/primitives/pipeline_view.rs`, built on one model
-- [ ] Render markdown and fixed-width text as `data-model.md` defines
-- [ ] Put the summary one item per line, with one line per unresolved scenario question, then the `Next actions:` block, then the single closing `/{project}:target` prompt
-- [ ] Test that one model rendered both ways carries the same facts
+- [x] Move the view's rendering from `runtime/src/primitives/dashboard.rs` into `runtime/src/primitives/pipeline_view.rs`, built on one model
+- [x] Render markdown and fixed-width text as `data-model.md` defines
+- [x] Put the summary one item per line, with one line per unresolved scenario question, then the `Next actions:` block, then the single closing `/{project}:target` prompt
+- [x] Test that one model rendered both ways carries the same facts
 
 - **Done when**: unit tests show three things. The text rendering aligns its columns with two-space gaps and carries no `|` row syntax or `**`. Both renderings put each summary item on its own line and list the non-done specs by next action, with the `/{project}:target` hint once at the end. Both carry the same facts from one model (AC6's first half, AC17, AC18, AC19).
 

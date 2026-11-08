@@ -14,7 +14,6 @@
 //! Defined by `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`.
 
 use std::collections::{BTreeSet, HashMap};
-use std::fmt::Write as _;
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -23,20 +22,19 @@ use serde::Deserialize;
 use crate::host::Host;
 use crate::primitives::resolve_references::{self, load_services};
 use crate::primitives::{
-    PrimitiveError, Result, ScenarioFrontmatter, flatten_line, list_feature_dirs,
-    list_scenario_files, parse_feature_dir, read_spec, read_text, rel_path, section_lines,
-    split_frontmatter,
+    PrimitiveError, Result, ScenarioFrontmatter, list_feature_dirs, list_scenario_files,
+    pipeline_view, read_spec, read_text, rel_path, section_lines, split_frontmatter,
 };
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     DashboardArgs, DashboardConfig, DashboardResult, DashboardScenarioDetail,
-    DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, InboxState,
-    ReferenceOutcome, ReopeningCounts, ReopeningState, ResolutionRecord, ResolveReferencesArgs,
-    SessionNotice, SessionSource,
+    DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, ReferenceOutcome,
+    ReopeningCounts, ResolutionRecord, ResolveReferencesArgs, ScenarioOpenQuestion, SessionNotice,
+    SessionSource,
 };
 use crate::schema::services::Services;
-use crate::schema::status::{ALLOWED_STATUSES, UNBLOCKING_STATUSES};
+use crate::schema::status::UNBLOCKING_STATUSES;
 use crate::session::{self, Identity};
 
 /// Execute the `dashboard` primitive.
@@ -64,7 +62,7 @@ pub(crate) fn run_as(
     identity: Option<&Identity>,
     now: SystemTime,
 ) -> Result<DashboardResult> {
-    let specs = load_specs(repo)?;
+    let (specs, questions) = load_specs(repo)?;
     let tags_union = compute_tags_union(&specs);
     // Resolved once: `config_name` is the name the read below actually
     // resolved, carried into the render so the provenance tag cannot name a
@@ -73,10 +71,11 @@ pub(crate) fn run_as(
     let (session_target, session) = load_session_target(repo, identity, now)?;
     let inbox_standing = super::inbox_standing::standing(repo);
     let reopenings = super::measure_reopenings::counts(repo, now);
-    let rendered_markdown = render_markdown(
+    let rendered_markdown = render_view(
         repo,
         &View {
             specs: &specs,
+            questions: &questions,
             tags_union: &tags_union,
             config: &config,
             config_name,
@@ -85,6 +84,7 @@ pub(crate) fn run_as(
         },
         session_target.as_ref(),
         &session,
+        pipeline_view::Format::Markdown,
     )?;
     Ok(DashboardResult {
         session_target,
@@ -102,18 +102,15 @@ pub(crate) fn run_as(
 }
 
 // ---------------------------------------------------------------------------
-// Rendered pipeline view (spec 022, scenario coverage-expansion-primitives)
-//
-// `/ductus:status` previously spent five of its six steps on LLM-side
-// rendering of this payload. The runtime pre-renders the same four pieces
-// — preamble, dashboard table, counts/callouts, references readout — as
-// one markdown fragment the host may restyle. Returned data, never stdout
-// printing: user-facing rendering stays with the host (§runtime-boundary).
+// The pipeline view (spec 080): built and rendered by `pipeline_view`, from
+// the data loaded here. Returned data, never stdout printing: user-facing
+// rendering stays with the host (§runtime-boundary).
 // ---------------------------------------------------------------------------
 
 /// What the pipeline view is rendered from, beside the session target.
 struct View<'a> {
     specs: &'a [DashboardSpec],
+    questions: &'a [(String, Vec<ScenarioOpenQuestion>)],
     tags_union: &'a [String],
     config: &'a DashboardConfig,
     config_name: &'a str,
@@ -121,346 +118,47 @@ struct View<'a> {
     reopenings: &'a ReopeningCounts,
 }
 
-/// Render the full pipeline view. Blocks are joined by blank lines; the
-/// references readout is omitted entirely when no spec declares
-/// references (a single-service adopter sees no change).
-fn render_markdown(
+/// Build the view's model and render it as `format`. The references readout
+/// is omitted entirely when no spec declares references (a single-service
+/// adopter sees no change).
+fn render_view(
     repo: &Path,
     view: &View<'_>,
     session_target: Option<&DashboardSessionTarget>,
     session: &SessionView,
+    format: pipeline_view::Format,
 ) -> Result<String> {
     let project = Host::load(repo).project;
-    let specs = view.specs;
-    let mut blocks = vec![
-        render_preamble(specs, session_target, session, &project),
-        render_table(specs, session_target, &project),
-        render_callouts(view, &project),
-    ];
-    if let Some(readout) = render_references(repo, specs, &project)? {
-        blocks.push(readout);
-    }
-    blocks.retain(|b| !b.is_empty());
-    Ok(blocks.join("\n\n"))
+    let model = pipeline_view::build(pipeline_view::ViewData {
+        specs: view.specs,
+        questions: view.questions,
+        tags_union: view.tags_union,
+        config: view.config,
+        config_name: view.config_name,
+        inbox: view.inbox,
+        reopenings: view.reopenings,
+        session_target,
+        session_label: session.identity.as_deref(),
+        notices: &session.notices,
+        unreadable: &session.unreadable,
+        references: resolve_references_readout(repo, view.specs, &project)?,
+        project: &project,
+    });
+    Ok(pipeline_view::render(&model, format))
 }
 
-/// The preamble line(s) above the table. With a session target:
-/// `Target: {feature} / {status} / next: {next-action}`, plus a
-/// `Scenario: …` line when a scenario is targeted (a scenario with
-/// unresolved questions overrides the next action). Without one, the
-/// pointer to `/{project}:target`.
-///
-/// An identified process's target line ends `— session {label}`, and each
-/// session notice follows as a `Notice: …` line — after the no-target pointer
-/// too, since a consolidation's notice is exactly what explains a target that
-/// has gone (spec 062) — then an `Unreadable: …` line per session file the
-/// peek could not parse. An unidentified process renders exactly as before.
-fn render_preamble(
-    specs: &[DashboardSpec],
-    session_target: Option<&DashboardSessionTarget>,
-    session: &SessionView,
-    project: &str,
-) -> String {
-    let mut out = render_target_lines(specs, session_target, session, project);
-    for notice in &session.notices {
-        let _ = write!(out, "\nNotice: {}", notice.message);
-    }
-    for path in &session.unreadable {
-        let _ = write!(
-            out,
-            "\nUnreadable: {path} — a session file that does not parse, so whether it \
-             shares this feature was not checked"
-        );
-    }
-    out
-}
-
-fn render_target_lines(
-    specs: &[DashboardSpec],
-    session_target: Option<&DashboardSessionTarget>,
-    session: &SessionView,
-    project: &str,
-) -> String {
-    let Some(target) = session_target else {
-        return format!("No session target. Run /{project}:target to select one.");
-    };
-    // A target naming a spec that is not on disk degrades to placeholders
-    // rather than failing the whole render.
-    let (status, mut next) = specs.iter().find(|s| s.slug == target.feature).map_or_else(
-        || ("unknown".to_string(), "—".to_string()),
-        |s| (s.status.clone(), next_action(s, project)),
-    );
-    if target
-        .scenario_detail
-        .as_ref()
-        .is_some_and(|d| d.open_question_count >= 1)
-    {
-        // A targeted scenario with unresolved questions owns the next
-        // action regardless of the parent spec's status.
-        next = format!("/{project}:clarify (scenario-targeted)");
-    }
-    let mut out = format!("Target: {} / {status} / next: {next}", target.feature);
-    if let Some(label) = &session.identity {
-        let _ = write!(out, " — session {label}");
-    }
-    if let Some(scenario) = &target.scenario {
-        let (section, open) = target
-            .scenario_detail
-            .as_ref()
-            .map(|d| (d.section.clone(), d.open_question_count))
-            .unwrap_or_default();
-        let _ = write!(
-            out,
-            "\nScenario: {scenario} ({section}) — open-questions: {open}"
-        );
-    }
-    out
-}
-
-/// The dashboard table, one row per spec in directory order. The session
-/// target's Feature cell is bold; artifact flags render `✓`/`—`; the
-/// Dependencies column shows sorted three-digit `NNN` prefixes (`—` when
-/// empty).
-fn render_table(
-    specs: &[DashboardSpec],
-    session_target: Option<&DashboardSessionTarget>,
-    project: &str,
-) -> String {
-    let target_slug = session_target.map(|t| t.feature.as_str());
-    let mut rows = vec![
-        "| Feature | Status | Plan | Tasks | Data-model | Scenarios | Dependencies | Next Action |"
-            .to_string(),
-        "| --- | --- | --- | --- | --- | --- | --- | --- |".to_string(),
-    ];
-    for spec in specs {
-        let feature = if Some(spec.slug.as_str()) == target_slug {
-            format!("**{}**", spec.slug)
-        } else {
-            spec.slug.clone()
-        };
-        rows.push(format!(
-            "| {feature} | {} | {} | {} | {} | {} | {} | {} |",
-            status_cell(spec),
-            mark(spec.has_plan),
-            mark(spec.has_tasks),
-            mark(spec.has_data_model),
-            scenarios_cell(spec),
-            dependency_prefixes(&spec.dependencies),
-            next_action(spec, project),
-        ));
-    }
-    rows.join("\n")
-}
-
-/// Counts per status plus the conditional callouts (blocked, recovery,
-/// tags, disabled rule files), one line each, closed by the standing inbox
-/// line, which renders on every run (spec 058). `config_name` is the
-/// repo-relative resolved config file, rendered in the disabled-rule-files
-/// provenance tag (spec 042: `.ductus/config.toml`, or the legacy root
-/// `.govern.toml` pre-migration).
-fn render_callouts(view: &View<'_>, project: &str) -> String {
-    let (specs, tags_union, config, config_name) =
-        (view.specs, view.tags_union, view.config, view.config_name);
-    let mut lines: Vec<String> = Vec::new();
-    if !specs.is_empty() {
-        lines.push(render_counts(specs));
-    }
-    let blocked: Vec<&str> = specs
-        .iter()
-        .filter(|s| !s.blocked_by.is_empty())
-        .map(|s| s.slug.as_str())
-        .collect();
-    if !blocked.is_empty() {
-        lines.push(format!(
-            "Blocked: {} spec(s) — {}",
-            blocked.len(),
-            blocked.join(", ")
-        ));
-    }
-    let recovery: Vec<&str> = specs
-        .iter()
-        .filter(|s| in_recovery(s))
-        .map(|s| s.slug.as_str())
-        .collect();
-    if !recovery.is_empty() {
-        lines.push(format!(
-            "{} spec(s) in recovery state: {}. Run /{project}:clarify on each to walk the \
-             questions; the spec reverts to draft and advances forward again.",
-            recovery.len(),
-            recovery.join(", ")
-        ));
-    }
-    // Scenario-question callout. Rendered independently of the recovery
-    // callout above: when a spec is in both states only the Next Action
-    // cell is exclusive, and suppressing this line would hide questions
-    // that still need resolving after the recovery walk (spec 046). Every
-    // carrying scenario is named, with no cap — a truncated list reads as
-    // "these are the ones needing attention" while hiding others.
-    let with_questions: Vec<&DashboardSpec> = specs
-        .iter()
-        .filter(|s| s.scenario_open_question_count >= 1)
-        .collect();
-    if !with_questions.is_empty() {
-        let total: u32 = with_questions
-            .iter()
-            .map(|s| s.scenario_open_question_count)
-            .sum();
-        let detail: Vec<String> = with_questions
-            .iter()
-            .map(|s| format!("{} ({})", s.slug, s.scenarios_with_questions.join(", ")))
-            .collect();
-        lines.push(format!(
-            "{total} unresolved scenario question(s) in {} spec(s): {}. Run /{project}:target \
-             <feature>/<scenario> then /{project}:clarify on each; a spec is not complete while \
-             its scenarios carry questions.",
-            with_questions.len(),
-            detail.join("; ")
-        ));
-    }
-    // Pending-fold callout: the row-level qualification says a fold is
-    // outstanding, this collects the backlog into one line so it can be read
-    // without scanning the table. Rendered independently of the callouts
-    // above for the same reason they are independent of each other.
-    let pending: Vec<&DashboardSpec> = specs.iter().filter(|s| s.folds_into.is_some()).collect();
-    if !pending.is_empty() {
-        let detail: Vec<String> = pending
-            .iter()
-            .map(|s| {
-                let target = s.folds_into.as_deref().unwrap_or("—");
-                if s.fold_target_missing {
-                    format!("{} → {target} (not in this tree)", s.slug)
-                } else {
-                    format!("{} → {target}", s.slug)
-                }
-            })
-            .collect();
-        lines.push(format!(
-            "{} spec(s) with an outstanding fold: {}. Run /{project}:fold on each once it \
-             is done; a fold never holds done, and fold-back retires the branch-scoped \
-             spec. A target reported as not in this tree is the normal state before the \
-             merge — it lives on the upstream branch, and the fold waits for the tree that \
-             holds both — so correct it only when it is a typo.",
-            pending.len(),
-            detail.join("; ")
-        ));
-    }
-    if !tags_union.is_empty() {
-        lines.push(format!("tags: {}", tags_union.join(", ")));
-    }
-    if config.present && !config.disabled_rule_files.is_empty() {
-        // Each basename is committed config, rendered on one line so a
-        // newline in it cannot forge a dashboard line (`BE-INPUT-011`), as
-        // `discover-rule-files` renders the same values.
-        let shown: Vec<String> = config
-            .disabled_rule_files
-            .iter()
-            .map(|file| flatten_line(file))
-            .collect();
-        lines.push(format!(
-            "disabled rule files: {} ({config_name}) — {}",
-            config.disabled_rule_files.len(),
-            shown.join(", ")
-        ));
-    }
-    if !config.unknown_keys.is_empty() {
-        // Each entry is already one line: a key that needs it is quoted and
-        // escaped by the registry (`BE-INPUT-011`).
-        lines.push(format!(
-            "unknown config keys: {} ({config_name}) — {} — this version of ductus does not read them",
-            config.unknown_keys.len(),
-            config.unknown_keys.join(", ")
-        ));
-    }
-    lines.push(render_reopenings_line(view.reopenings));
-    lines.push(render_inbox_line(view.inbox, project));
-    lines.join("\n")
-}
-
-/// The reopenings row, rendered on **every** run (spec 079, AC19). A state the
-/// count cannot speak to renders its own words, so nothing reads as a clean zero
-/// over a history that was not examined.
-fn render_reopenings_line(reopenings: &ReopeningCounts) -> String {
-    let since = reopenings.since.as_deref().unwrap_or("the window's start");
-    let waiting = format!(
-        "{} in-progress spec(s) with no unchecked task",
-        reopenings.waiting_count
-    );
-    match reopenings.state {
-        ReopeningState::Measured => format!(
-            "Reopenings since {since}: {} closed, {} over the review and analysis bound, \
-             {} not counted · {waiting}",
-            reopenings.closed_count, reopenings.over_bound_count, reopenings.not_counted_count,
-        ),
-        ReopeningState::NothingToCompare => {
-            format!("Reopenings since {since}: none closed, nothing to compare · {waiting}")
-        }
-        ReopeningState::ShallowHistory => {
-            format!("Reopenings: ? history too shallow to measure · {waiting}")
-        }
-        ReopeningState::NotMeasured => format!(
-            "Reopenings: ? not measured — {}",
-            reopenings.reason.as_deref().unwrap_or("no reason given")
-        ),
-    }
-}
-
-/// The `Counts:` line, in lifecycle order. An out-of-set status (a
-/// hand-edited frontmatter) still counts, appended after the known tiers.
-fn render_counts(specs: &[DashboardSpec]) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    let mut counted: Vec<&str> = Vec::new();
-    for status in ALLOWED_STATUSES {
-        let n = specs.iter().filter(|s| s.status == *status).count();
-        if n > 0 {
-            parts.push(format!("{status} {n}"));
-            counted.push(status);
-        }
-    }
-    for spec in specs {
-        if !counted.contains(&spec.status.as_str()) {
-            let n = specs.iter().filter(|s| s.status == spec.status).count();
-            parts.push(format!("{} {n}", spec.status));
-            counted.push(spec.status.as_str());
-        }
-    }
-    format!("Counts: {}", parts.join(" · "))
-}
-
-/// The standing inbox row, rendered on **every** run in one of four states.
-///
-/// Never omitted: a clean inbox renders a clean row and an absent one renders
-/// its own state, because examined-and-empty, not-computed, and nothing-there
-/// must not share an output. An age that `git blame` could not determine is
-/// reported as undeterminable — never as today.
-fn render_inbox_line(inbox: &InboxStanding, project: &str) -> String {
-    match inbox.state {
-        InboxState::NoFile => format!("Inbox: ? no readable {} — nothing examined", inbox.path),
-        InboxState::Clean => "Inbox: ✓ clean".to_string(),
-        InboxState::Outstanding => match inbox.oldest.as_deref() {
-            Some(oldest) => format!(
-                "Inbox: {} item(s) outstanding, oldest {oldest} — run /{project}:groom to route",
-                inbox.outstanding
-            ),
-            None => format!(
-                "Inbox: {} item(s) outstanding, age undeterminable — run /{project}:groom to route",
-                inbox.outstanding
-            ),
-        },
-    }
-}
-
-/// The cross-service references readout: one section per spec whose
-/// derived `references:` index is non-empty, resolved through the same
-/// classification `resolve-references` exposes (composed here so one
-/// `dashboard` call renders the whole view). `None` when no spec declares
+/// The cross-service references readout: each spec whose derived
+/// `references:` index is non-empty, with one line per reference, resolved
+/// through the same classification `resolve-references` exposes (composed
+/// here so one call renders the whole view). Empty when no spec declares
 /// references.
-fn render_references(
+fn resolve_references_readout(
     repo: &Path,
     specs: &[DashboardSpec],
     project: &str,
-) -> Result<Option<String>> {
+) -> Result<Vec<(String, Vec<String>)>> {
     let services = load_services(repo)?;
-    let mut sections: Vec<String> = Vec::new();
+    let mut sections = Vec::new();
     for spec in specs {
         let resolved = resolve_references::resolve(
             &ResolveReferencesArgs {
@@ -471,16 +169,14 @@ fn render_references(
         if resolved.references.is_empty() {
             continue;
         }
-        let mut lines = vec![format!("**{}**", spec.slug), String::new()];
-        for record in &resolved.references {
-            lines.push(format!("- {}", reference_line(record, &services, project)));
-        }
-        sections.push(lines.join("\n"));
+        let lines = resolved
+            .references
+            .iter()
+            .map(|record| reference_line(record, &services, project))
+            .collect();
+        sections.push((spec.slug.clone(), lines));
     }
-    if sections.is_empty() {
-        return Ok(None);
-    }
-    Ok(Some(format!("References:\n\n{}", sections.join("\n\n"))))
+    Ok(sections)
 }
 
 /// One readout line per resolution record, with the matched service's
@@ -515,128 +211,28 @@ fn reference_line(record: &ResolutionRecord, services: &Services, project: &str)
     }
 }
 
-/// The Status → next action mapping, with the `clarify (recovery)`
-/// override for a non-draft spec that has re-acquired open questions.
-/// An out-of-set status echoes as-is (`validate-frontmatter` owns
-/// flagging it).
-fn next_action(spec: &DashboardSpec, project: &str) -> String {
-    if in_recovery(spec) {
-        // Recovery wins the cell when both apply: spec-body questions at
-        // `clarified` or later are the more upstream defect, and clearing
-        // them reverts the spec to `draft` with the scenario questions
-        // still there to resolve afterward (spec 046).
-        return "clarify (recovery)".to_string();
-    }
-    if spec.scenario_open_question_count >= 1 {
-        return "clarify (scenario)".to_string();
-    }
-    if let (Some(target), "done") = (&spec.folds_into, spec.status.as_str()) {
-        // Done first, then fold (spec 051 scenario
-        // `a-pending-fold-never-holds-done`). A staging spec completes its own
-        // pipeline like any other, so below `done` the status-driven match
-        // keeps the cell; at `done` the fold is what remains, and it takes
-        // the cell instead of "complete". It sits *below* the two overrides
-        // above because an open question is the more upstream defect: the
-        // content gets settled before it gets moved.
-        let mut action = format!("/{project}:fold → {target}");
-        if spec.fold_target_missing {
-            // Called out on the row the fold is offered from, as well as in
-            // the outstanding-fold callout. A report, not a verdict — see
-            // `DashboardSpec::fold_target_missing`.
-            action.push_str(" (target not in this tree)");
-        }
-        return action;
-    }
-    match spec.status.as_str() {
-        "draft" => format!("/{project}:clarify"),
-        "clarified" => format!("/{project}:plan"),
-        "planned" | "in-progress" => format!("/{project}:implement"),
-        "done" => "done (spec is complete)".to_string(),
-        other => other.to_string(),
-    }
-}
-
-/// The Status cell. A spec declaring `folds-into` is qualified as carrying
-/// a pending fold, so the view never reports it as simply `done` — the fold
-/// is owed whatever its status, until fold-back retires it (spec 051 AC34).
-/// It never holds the spec short of `done`: the fold is run after it.
-///
-/// The frontmatter value is kept alongside the qualification rather than
-/// replaced by it: the view's job is to show where a spec sits, and
-/// `in-progress` and `done` are different situations for the operator even
-/// though both still owe the fold — the first has its own pipeline to
-/// finish, the second has only the fold left.
-fn status_cell(spec: &DashboardSpec) -> String {
-    if spec.folds_into.is_some() {
-        return format!("{} (fold pending)", spec.status);
-    }
-    spec.status.clone()
-}
-
-/// Recovery state: a spec past clarification whose body has re-acquired
-/// open questions (usually a manual frontmatter edit).
-fn in_recovery(spec: &DashboardSpec) -> bool {
-    matches!(
-        spec.status.as_str(),
-        "clarified" | "planned" | "in-progress"
-    ) && spec.open_question_count >= 1
-}
-
-/// The Scenarios cell: the count, suffixed with the outstanding
-/// question total when there is one. Reusing the existing column keeps the
-/// glance table from growing a ninth one; a spec whose scenarios carry no
-/// questions renders exactly as before (spec 046).
-fn scenarios_cell(spec: &DashboardSpec) -> String {
-    if spec.scenario_open_question_count == 0 {
-        return spec.scenarios_count.to_string();
-    }
-    format!(
-        "{} ({} open)",
-        spec.scenarios_count, spec.scenario_open_question_count
-    )
-}
-
-/// Artifact-existence table mark.
-fn mark(present: bool) -> &'static str {
-    if present { "✓" } else { "—" }
-}
-
-/// The Dependencies column: sorted three-digit `NNN` prefixes from the
-/// dependency slugs (`—` when empty; a slug without an `NNN-` prefix
-/// passes through raw rather than vanishing).
-///
-/// A branch-scoped dependency takes the pass-through arm: it carries no
-/// sequential number, so it renders as its own name. Abbreviating it to
-/// the first three digits would print `123` for `1234.1-thing`, naming a
-/// different spec.
-fn dependency_prefixes(dependencies: &[String]) -> String {
-    if dependencies.is_empty() {
-        return "—".to_string();
-    }
-    let mut prefixes: Vec<String> = dependencies
-        .iter()
-        .map(|dep| {
-            parse_feature_dir(dep)
-                .and_then(|form| form.sequential_number())
-                .map_or_else(|| dep.clone(), |n| format!("{n:03}"))
-        })
-        .collect();
-    prefixes.sort();
-    prefixes.join(", ")
-}
-
 /// Walk `specs/` and build the per-spec entry list. Non-`NNN-feature`
 /// directories are skipped (via the shared [`list_feature_dirs`]); a
 /// present-but-missing `spec.md` still halts with a structured error from
 /// [`load_one_spec`]. After the first pass, walks the list a second time
 /// to fill in each spec's `blocked-by` (needs every spec's status known).
-fn load_specs(repo: &Path) -> Result<Vec<DashboardSpec>> {
+/// Beside the entries, each spec carrying unresolved scenario questions with
+/// those questions, for the view, which lists every one.
+#[allow(clippy::type_complexity)]
+fn load_specs(
+    repo: &Path,
+) -> Result<(Vec<DashboardSpec>, Vec<(String, Vec<ScenarioOpenQuestion>)>)> {
     let layout = paths::Paths::load(repo);
     let specs_dir = repo.join(&layout.specs_root);
     let mut entries: Vec<DashboardSpec> = Vec::new();
+    let mut questions: Vec<(String, Vec<ScenarioOpenQuestion>)> = Vec::new();
 
     for slug in list_feature_dirs(&specs_dir) {
-        entries.push(load_one_spec(&specs_dir, &layout.specs_root, &slug)?);
+        let (entry, carried) = load_one_spec(&specs_dir, &layout.specs_root, &slug)?;
+        if !carried.is_empty() {
+            questions.push((slug.clone(), carried));
+        }
+        entries.push(entry);
     }
 
     let status_by_slug: HashMap<String, String> = entries
@@ -662,12 +258,17 @@ fn load_specs(repo: &Path) -> Result<Vec<DashboardSpec>> {
             .cloned()
             .collect();
     }
-    Ok(entries)
+    Ok((entries, questions))
 }
 
-/// Load one spec's dashboard entry. `blocked_by` is filled in by the
-/// caller after every spec's status has been read.
-fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSpec> {
+/// Load one spec's dashboard entry, with its unresolved scenario questions.
+/// `blocked_by` is filled in by the caller after every spec's status has
+/// been read.
+fn load_one_spec(
+    specs_dir: &Path,
+    root: &str,
+    slug: &str,
+) -> Result<(DashboardSpec, Vec<ScenarioOpenQuestion>)> {
     let feature_dir = specs_dir.join(slug);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {
@@ -697,7 +298,7 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
         .into_iter()
         .map(ToString::to_string)
         .collect();
-    Ok(DashboardSpec {
+    let entry = DashboardSpec {
         slug: slug.to_string(),
         status: frontmatter.status,
         dependencies: frontmatter.dependencies,
@@ -713,7 +314,8 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
         folds_into: frontmatter.folds_into,
         // Filled in by the caller, which needs every slug known first.
         fold_target_missing: false,
-    })
+    };
+    Ok((entry, scenario_questions))
 }
 
 /// Count `*.md` files directly under `scenarios_dir` via the shared
@@ -912,7 +514,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::schema::primitives::{SessionNoticeKind, SessionTarget};
+    use crate::schema::primitives::{InboxState, ReopeningState, SessionNoticeKind, SessionTarget};
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::TempDir;
 
@@ -1018,7 +620,7 @@ mod tests {
         assert_eq!(result.session_source, Some(SessionSource::Cleared));
         let rendered = &result.rendered_markdown;
         let (first, rest) = rendered.split_once('\n').unwrap();
-        assert!(first.starts_with("No session target. Run /"), "{rendered}");
+        assert_eq!(first, "No session target.", "{rendered}");
         assert!(
             rest.starts_with("Notice: Target 058-gone was removed by a consolidation"),
             "{rendered}"
@@ -1315,7 +917,7 @@ mod tests {
             .find(|l| l.contains("outstanding fold"))
             .expect("the pending-fold callout is rendered");
         assert!(
-            callout.starts_with("2 spec(s) with an outstanding fold:"),
+            callout.starts_with("Folds: 2 spec(s) with an outstanding fold — "),
             "{callout}"
         );
         assert!(
@@ -1603,11 +1205,11 @@ reason = "Deferred until v2 perf budget lands."
         let callout = result
             .rendered_markdown
             .lines()
-            .find(|line| line.starts_with("unknown config keys:"))
+            .find(|line| line.starts_with("Unknown config keys:"))
             .expect("the unknown-keys callout is rendered");
         assert_eq!(
             callout,
-            "unknown config keys: 4 (.ductus/config.toml) — [rules] surface, [paths] spec-root, \
+            "Unknown config keys: 4 (.ductus/config.toml) — [rules] surface, [paths] spec-root, \
              [[review.disabled-rule-files]] entry [0] approved-by, [review] \"evil\\u000A- line\" \
              — this version of ductus does not read them"
         );
@@ -1624,7 +1226,7 @@ reason = "Deferred until v2 perf budget lands."
         .unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert_eq!(result.config.unknown_keys, [] as [String; 0]);
-        assert!(!result.rendered_markdown.contains("unknown config keys"));
+        assert!(!result.rendered_markdown.contains("Unknown config keys"));
     }
 
     #[test]
@@ -1917,9 +1519,10 @@ reason = "Deferred until v2 perf budget lands."
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         let rendered = &result.rendered_markdown;
+        assert!(rendered.starts_with("No session target.\n\n"), "{rendered}");
         assert!(
-            rendered.starts_with("No session target. Run /ductus:target to select one."),
-            "{rendered}"
+            rendered.ends_with("\n\nRun /ductus:target <feature> to select one."),
+            "the hint to set a target closes the view: {rendered}"
         );
         assert!(
             rendered.contains(
@@ -1988,13 +1591,13 @@ reason = "Deferred until v2 perf budget lands."
         );
         assert!(
             rendered.contains(
-                "1 spec(s) in recovery state: 002-beta. Run /ductus:clarify on each to walk the questions; the spec reverts to draft and advances forward again."
+                "Recovery: 1 spec(s) past clarification with open questions again — 002-beta. Run /ductus:clarify on each; the spec reverts to draft and advances forward again."
             ),
             "{rendered}"
         );
-        assert!(rendered.contains("tags: pipeline"), "{rendered}");
+        assert!(rendered.contains("\nTags: pipeline\n"), "{rendered}");
         assert!(
-            rendered.contains("disabled rule files: 1 (.govern.toml) — security-backend.md"),
+            rendered.contains("Disabled rule files: 1 (.govern.toml) — security-backend.md"),
             "{rendered}"
         );
     }
@@ -2021,7 +1624,7 @@ reason = "Deferred until v2 perf budget lands."
         assert!(
             result
                 .rendered_markdown
-                .contains("disabled rule files: 1 (.ductus/config.toml) — security-backend.md"),
+                .contains("Disabled rule files: 1 (.ductus/config.toml) — security-backend.md"),
             "{}",
             result.rendered_markdown
         );
@@ -2152,7 +1755,7 @@ reason = "Deferred until v2 perf budget lands."
     }
 
     #[test]
-    fn callout_names_every_spec_and_its_carrying_scenarios() {
+    fn the_summary_lists_every_scenario_question_beside_its_spec() {
         let tmp = tempfile::tempdir().unwrap();
         write_spec(tmp.path(), "002-asking", PLANNED_FM, "");
         write_scenario(tmp.path(), "002-asking", "alpha.md", "- One?");
@@ -2161,12 +1764,15 @@ reason = "Deferred until v2 perf budget lands."
         let rendered = run(&DashboardArgs {}, tmp.path())
             .unwrap()
             .rendered_markdown;
+        let lines: Vec<&str> = rendered.lines().collect();
         assert!(
-            rendered.contains(
-                "2 unresolved scenario question(s) in 1 spec(s): 002-asking (alpha, beta)"
-            ),
+            lines
+                .iter()
+                .any(|l| l.starts_with("Scenario questions: 2 in 1 spec(s);")),
             "{rendered}"
         );
+        assert!(lines.contains(&"  002-asking · alpha: One?"), "{rendered}");
+        assert!(lines.contains(&"  002-asking · beta: Two?"), "{rendered}");
     }
 
     #[test]
@@ -2185,9 +1791,9 @@ reason = "Deferred until v2 perf budget lands."
             !rendered.contains("clarify (scenario)"),
             "the cell is exclusive: {rendered}"
         );
-        assert!(rendered.contains("in recovery state"), "{rendered}");
+        assert!(rendered.contains("\nRecovery: "), "{rendered}");
         assert!(
-            rendered.contains("unresolved scenario question(s)"),
+            rendered.contains("\nScenario questions: "),
             "both callouts render: {rendered}"
         );
     }
@@ -2212,47 +1818,12 @@ reason = "Deferred until v2 perf budget lands."
         );
         assert!(rendered.contains("/ductus:implement"), "{rendered}");
         assert!(
-            !rendered.contains("unresolved scenario question(s)"),
+            !rendered.contains("Scenario questions:"),
             "no callout when nothing is outstanding: {rendered}"
         );
     }
 
     // -- the reopenings row (spec 079) ------------------------------------------
-
-    #[test]
-    fn the_reopenings_line_says_each_state_in_its_own_words() {
-        let counts = |state, since: Option<&str>, reason: Option<&str>| ReopeningCounts {
-            state,
-            since: since.map(str::to_string),
-            closed_count: 12,
-            over_bound_count: 1,
-            not_counted_count: 2,
-            waiting_count: 3,
-            runs: 20,
-            reason: reason.map(str::to_string),
-        };
-        let since = Some("2026-10-06");
-        let waiting = "3 in-progress spec(s) with no unchecked task";
-        assert_eq!(
-            render_reopenings_line(&counts(ReopeningState::Measured, since, None)),
-            format!(
-                "Reopenings since 2026-10-06: 12 closed, 1 over the review and analysis bound, \
-                 2 not counted · {waiting}"
-            )
-        );
-        assert_eq!(
-            render_reopenings_line(&counts(ReopeningState::NothingToCompare, since, None)),
-            format!("Reopenings since 2026-10-06: none closed, nothing to compare · {waiting}")
-        );
-        assert_eq!(
-            render_reopenings_line(&counts(ReopeningState::ShallowHistory, since, None)),
-            format!("Reopenings: ? history too shallow to measure · {waiting}")
-        );
-        assert_eq!(
-            render_reopenings_line(&counts(ReopeningState::NotMeasured, None, Some("no repo"))),
-            "Reopenings: ? not measured — no repo"
-        );
-    }
 
     /// Never omitted, and last but the inbox, which keeps its place at the end. With
     /// no repository the state says the measurement did not run.
@@ -2361,20 +1932,6 @@ reason = "Deferred until v2 perf budget lands."
             inbox_line(&result.rendered_markdown),
             Some("Inbox: 2 item(s) outstanding, age undeterminable — run /ductus:groom to route"),
             "an age blame cannot determine is unknown, never today"
-        );
-    }
-
-    #[test]
-    fn a_dated_outstanding_inbox_names_its_oldest_item() {
-        let standing = InboxStanding {
-            state: InboxState::Outstanding,
-            outstanding: 6,
-            oldest: Some("2026-05-19".into()),
-            path: "specs/inbox.md".into(),
-        };
-        assert_eq!(
-            render_inbox_line(&standing, "ductus"),
-            "Inbox: 6 item(s) outstanding, oldest 2026-05-19 — run /ductus:groom to route"
         );
     }
 }

@@ -17,17 +17,18 @@ If the Pi verifying run records that a displayed message renders no markdown, th
 
 ## The pipeline view
 
-One model, rendered as markdown (`render-status`, model path) or as fixed-width text (`ductus hook status`, hook path). The blocks, in order, separated by blank lines:
+One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`render-status`, model path) or as fixed-width text (`ductus hook status`, hook path). The two differ only in the table and its emphasis; every other line is the same in both. The blocks, in order, separated by blank lines:
 
 1. **Target block.** `Target: {feature} / {status} / next: {next-action}`, ending `— session {label}` for an identified process. Then `Scenario: {slug} ({section}) — open-questions: {n}` when a scenario is targeted, then one `Notice: …` line per session notice and one `Unreadable: …` line per unreadable session file. With no target, the block's first line is `No session target.`
 2. **Table.** The columns are Feature, Status, Plan, Tasks, Data-model, Scenarios, Dependencies and Next Action, one row per spec in directory order.
    - *Markdown:* a pipe table, with the target's Feature cell in bold.
    - *Text:* each column padded to its widest cell, columns separated by two spaces, with no pipes, separator row or emphasis. Every row starts with a two-character gutter: `→` and a space on the target's row, two spaces on every other row.
-3. **Summary.** One item per line, each starting with its label. Labels are `Counts:`, `Blocked:`, `Recovery:`, `Scenario questions:`, `Folds:`, `Tags:`, `Disabled rule files:`, `Unknown config keys:`, `Reopenings:` and `Inbox:`.
-   - Only `Counts:`, `Reopenings:` and `Inbox:` render on every run; the others render when they apply.
+3. **Summary.** One item per line, each starting with its label, in this order: `Counts:`, `Blocked:`, `Recovery:`, `Scenario questions:`, `Folds:`, `Tags:`, `Disabled rule files:`, `Unknown config keys:`, then the reopenings line and `Inbox:`.
+   - The reopenings line keeps the form spec 079 gave it, `Reopenings since {date}: …` or `Reopenings: ? …`.
+   - Only `Counts:`, the reopenings line and `Inbox:` render on every run; the others render when they apply.
    - `Scenario questions: {n} in {m} spec(s)` is followed by one line per unresolved question, indented two spaces: `{spec} · {scenario}: {question}`, with the question flattened to one line.
-4. **References.** The cross-service readout, unchanged, present only when a spec declares references.
-5. **Next actions.** `Next actions:`, then one line, indented two spaces, `{next-action}: {spec}, {spec}`, per next action that has a non-done spec other than the target.
+4. **References.** `References:`, then each spec that declares references, its slug (bold in markdown) followed by one `- …` line per reference. Present only when a spec declares references.
+5. **Next actions.** `Next actions:`, then one line per next action, indented two spaces: `{next-action}: {spec}, {spec}`. It groups every spec but the target whose Next Action is not `done (spec is complete)`, in order of first appearance in the table. Absent when there is none.
 6. **Prompt.** `Run /{project}:target <feature> to select one.`, the view's only `/{project}:target` hint.
 
 **Bound.** Each rendering is held to `[artifacts] read-size-bytes` in bytes; a rendering exactly at the bound fits. When it is over:
