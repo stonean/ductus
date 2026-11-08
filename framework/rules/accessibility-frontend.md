@@ -24,7 +24,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-SEMHTML-003
 
-> Every page MUST declare its primary language with a valid BCP 47 tag on the root `<html lang>` attribute, and a passage in a different language MUST carry its own `lang` attribute (proper names, technical terms, words of indeterminate language, and phrases absorbed into the surrounding language excepted). Every page and every client-side route MUST have a descriptive `<title>` naming its topic or purpose, and a client-side navigation MUST update `document.title` to the new route's title.
+> Every page MUST declare its primary language with a valid BCP 47 tag on the root `<html lang>` attribute, and a passage or phrase in a different language MUST carry its own `lang` attribute (proper names, technical terms, words of indeterminate language, and phrases absorbed into the surrounding language excepted). Every page and every client-side route MUST have a descriptive `<title>` naming its topic or purpose, and a client-side navigation MUST update `document.title` to the new route's title.
 
 **Verification:** Any spec or plan that introduces a page, a client-side route, or the application shell MUST commit to the document language and a per-page title pattern. `/{project}:analyze` flags affected-files snippets whose root `<html>` element lacks a `lang` attribute, and flags client-side routing specs that do not update `document.title` on navigation.
 
@@ -32,9 +32,9 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-SEMHTML-004
 
-> Across a set of web pages, more than one way MUST be available to locate a page that is not the result of, or a step in, a process; navigation, and help mechanisms (human contact details or mechanism, self-help, automated contact), repeated on multiple pages MUST keep the same relative order unless the user changes it; and components with the same functionality MUST be identified consistently.
+> Across a set of web pages, more than one way MUST be available to locate a page that is not the result of, or a step in, a process; navigation repeated on multiple pages MUST keep the same relative order, and help mechanisms (human contact details or mechanism, self-help, automated contact) repeated on multiple pages the same order relative to other page content, unless the user changes it; and components with the same functionality MUST be identified consistently.
 
-**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation and help, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the three.
+**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation, help in the same order relative to other page content, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the three.
 
 **Source:** WCAG 2.2 §2.4.5 (Multiple Ways), §3.2.3 (Consistent Navigation), §3.2.4 (Consistent Identification), §3.2.6 (Consistent Help)
 
@@ -58,11 +58,11 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-KBD-003
 
-> Modal dialogs and disclosure UI that take over the page MUST trap focus while open (Tab and Shift+Tab cycle within the dialog) and MUST return focus to the triggering element on close. Pressing `Escape` MUST close the dialog. A native `<dialog>` opened with `showModal()`, or a page whose content outside the dialog is made `inert`, MAY satisfy the trap provided focus never reaches the page beneath, whether or not it can reach the browser's own controls. Where the triggering element no longer exists, or the dialog's task leads directly to a next step elsewhere in the workflow, focus MAY move on close to the element that continues that workflow instead.
+> Modal dialogs and disclosure UI that take over the page MUST trap focus while open (Tab and Shift+Tab cycle within the dialog) and MUST return focus to the triggering element on close. Pressing `Escape` MUST close the dialog. A native `<dialog>` opened with `showModal()`, or a page whose content outside the dialog is made `inert`, MAY satisfy the trap provided focus never reaches the page beneath, whether or not it can reach the browser's own controls. Where the triggering element no longer exists, or users are very unlikely to need the dialog again at once and its task leads directly to a next step elsewhere in the workflow, focus MAY move on close to the element that continues that workflow instead.
 
 **Verification:** Any spec or plan that introduces modal dialogs, drawers, or full-screen overlays MUST commit to focus-trap, focus-restoration, and Escape-key dismissal. `/{project}:analyze` flags modal-UI specs that omit any of the three.
 
-**Source:** WAI-ARIA Authoring Practices Guide: Dialog (Modal) Pattern, WCAG 2.2 §2.1.2 (No Keyboard Trap), §2.4.3 (Focus Order), HTML Living Standard (the `dialog` element)
+**Source:** WAI-ARIA Authoring Practices Guide: Dialog (Modal) Pattern, WCAG 2.2 §2.1.2 (No Keyboard Trap), §2.4.3 (Focus Order), W3C Understanding 2.4.3, HTML Living Standard (the `dialog` element)
 
 ### FE-KBD-004
 
@@ -108,7 +108,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-ARIA-001
 
-> ARIA roles, states, and properties MUST be used to fill gaps in native HTML semantics — not to override them. A native HTML element with the needed semantics and behavior built in MUST take precedence over an ARIA role: `role="button"` on a `<div>` is forbidden when a `<button>` would serve. ARIA roles MUST be added only when no native element exists for the pattern (tabs, comboboxes, treeviews, custom listboxes, etc.), and only on a host element that ARIA in HTML allows the role on (`role="tab"` on a `<button>` is allowed; `role="heading"` on a `<button>` is not). ARIA states and properties MAY be added to native elements to expose state or relationships HTML cannot express (`aria-expanded`, `aria-current`, `aria-describedby`, `aria-invalid`).
+> ARIA roles, states, and properties MUST be used to fill gaps in native HTML semantics — not to override them where ARIA in HTML forbids it. A native HTML element with the needed semantics and behavior built in MUST take precedence over an ARIA role: `role="button"` on a `<div>` is forbidden when a `<button>` would serve. ARIA roles MUST be added only when no native element exists for the pattern (tabs, treeviews, custom comboboxes or listboxes, etc.), and only on a host element that ARIA in HTML allows the role on (`role="tab"` on a `<button>` is allowed; `role="heading"` on a `<button>` is not). ARIA states and properties MAY be added to native elements to expose state or relationships HTML cannot express (`aria-expanded`, `aria-current`, `aria-describedby`, `aria-invalid`).
 
 **Verification:** Any spec or plan that introduces custom widgets MUST justify each ARIA role/state/property against the WAI-ARIA Authoring Practices Guide pattern it implements. `/{project}:analyze` flags affected-files snippets that apply a role ARIA in HTML does not allow on its host element, that put an ARIA widget role on a `<div>`/`<span>` where a native element provides the pattern, other than a click-listening `<div>`/`<span>` that a native `<button>` or `<a href>` would serve, which `FE-SEMHTML-001` owns, or that apply `aria-hidden="true"` to focusable elements.
 
@@ -142,11 +142,11 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-CONTRAST-001
 
-> Text and functional graphics MUST meet the WCAG 2.2 AA contrast ratios against adjacent colors: 4.5:1 for normal text; 3:1 for large text (≥18pt, or ≥14pt bold — W3C's Understanding 1.4.3 gives these as approximately 24 and 18.5 CSS pixels); and 3:1 for the visual information needed to identify UI components and their states and for graphics needed to understand content (form-field borders, focus indicators, status indicators, icons that convey information). Inactive (disabled) components, purely decorative text and graphics, logotypes, and components whose appearance the browser determines and the author has not modified MAY fall below these ratios.
+> Text and functional graphics MUST meet the WCAG 2.2 AA contrast ratios against adjacent colors: 4.5:1 for normal text; 3:1 for large text (≥18pt, or ≥14pt bold — W3C's Understanding 1.4.3 gives these as approximately 24 and 18.5 CSS pixels); and 3:1 for the visual information needed to identify UI components and their states and for graphics needed to understand content (form-field borders, focus indicators, status indicators, icons that convey information). Inactive (disabled) components, purely decorative text and graphics, and logotypes MAY fall below these ratios, and a component whose appearance the browser determines and the author has not modified MAY fall below the 3:1 non-text ratio.
 
 **Verification:** Any spec or plan that introduces a color palette, theme, or text-on-color UI element MUST commit to AA contrast across all foreground/background pairs in use. `/{project}:analyze` runs against the project's documented palette and flags pair combinations below threshold, and flags foreground/background pairs hard-coded in affected-files snippets that fall below threshold. **Not flagged:** a pair the Statement's MAY covers. A documented focus-indicator color below 3:1 against adjacent colors is `FE-KBD-002`'s.
 
-**Source:** WCAG 2.2 §1.4.3 (Contrast (Minimum)), §1.4.11 (Non-text Contrast), W3C Understanding 1.4.3
+**Source:** WCAG 2.2 §1.4.3 (Contrast (Minimum)), §1.4.11 (Non-text Contrast), W3C Understanding 1.4.3 and 1.4.11
 
 ### FE-CONTRAST-002
 
@@ -184,7 +184,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YFORM-004
 
-> Authentication flows (sign-in, sign-up, multi-factor, account recovery) MUST NOT require a cognitive function test at any step — remembering a password, transcribing a code, solving a puzzle, performing a calculation — unless that step also offers an alternative method without one or a mechanism that assists the user with it. Password and one-time-code fields MUST permit paste and password-manager autofill. A CAPTCHA MUST NOT be the only path through a step when it requires text transcription or puzzle solving; object-recognition and personal-content checks MAY be used.
+> Authentication flows (sign-in, multi-factor, account recovery, and sign-up, which §3.3.8 does not cover) MUST NOT require a cognitive function test at any step — remembering a password, transcribing a code, solving a puzzle, performing a calculation — unless that step also offers an alternative method without one or a mechanism that assists the user with it. Password and one-time-code fields MUST permit paste and password-manager autofill. A CAPTCHA MUST NOT be the only path through a step when it requires text transcription or puzzle solving; object-recognition and personal-content checks MAY be used.
 
 **Verification:** Any spec or plan that introduces sign-in, sign-up, multi-factor, account recovery, or a CAPTCHA MUST commit to paste and autofill support on credential and code fields and name the non-cognitive alternative for any puzzle or transcription step. `/{project}:analyze` flags affected-files snippets that block paste on credential or code inputs (`onpaste` handlers that call `preventDefault`), split one-time codes across per-digit inputs that do not accept a pasted code, and flags authentication specs whose only bot check is a text-transcription or puzzle CAPTCHA.
 
@@ -192,7 +192,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YFORM-005
 
-> Within a multi-step process, information the user has already entered MUST NOT be requested again unless it is auto-populated or offered for selection. Re-entry MAY be required when it is essential to the activity, when it is needed for security, or when the earlier value is no longer valid.
+> Within a multi-step process, information the user has already entered, or that was provided to the user, MUST NOT be requested again unless it is auto-populated or offered for selection. Re-entry MAY be required when it is essential to the activity, when it is needed for security, or when the earlier value is no longer valid.
 
 **Verification:** Any spec or plan that introduces a multi-step flow (checkout, onboarding, an application wizard) MUST identify each data point requested in more than one step and commit to auto-population or selection for it. `/{project}:analyze` flags multi-step-flow specs that request the same data point in two steps without naming the reuse mechanism.
 
@@ -226,7 +226,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YMEDIA-002
 
-> Prerecorded video with audio MUST provide synchronized captions; prerecorded audio-only content MUST provide a transcript; prerecorded video-only content MUST provide a text alternative or an audio track that conveys the same information. Captions and transcripts for content authored by the application MUST be human-edited (not solely auto-generated). Audio or video that is a media alternative for text and is clearly labeled as such MAY omit these alternatives.
+> Prerecorded video with audio MUST provide synchronized captions; prerecorded audio-only content MUST provide a transcript; prerecorded video-only content MUST provide an alternative for time-based media or an audio track that conveys the same information. Captions and transcripts for content authored by the application MUST be human-edited (not solely auto-generated). Audio or video that is a media alternative for text and is clearly labeled as such MAY omit these alternatives.
 
 **Verification:** Any spec or plan that introduces prerecorded video or audio media, other than a clearly labeled media alternative for text, MUST commit to captions/transcripts and to the editorial pipeline that produces them. `/{project}:analyze` flags specs introducing prerecorded media that omit caption/transcript commitments or that rely solely on auto-generation for application-authored content. **Not flagged:** audio or video that is a media alternative for text and is clearly labeled as such. Live video, and audio description of prerecorded synchronized media, are `FE-A11YMEDIA-003`'s.
 
@@ -252,9 +252,9 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-POINTER-002
 
-> Functionality operated by a dragging movement (drag-and-drop reordering, sliders, map panning, resizable panes) MUST also be operable by a single pointer without dragging — taps or clicks on controls such as move-up/move-down buttons, a destination picker, or a position on a slider track. Functionality operated by multipoint or path-based gestures (pinch, two-finger swipe, swipe paths) MUST also be operable by a single pointer without a path-based gesture. Dragging or a path-based gesture MAY be the only method where the movement itself is essential (freehand drawing, or a signature whose drawn mark is itself the function, not one that only acknowledges something or confirms identity), and dragging MAY also be where the browser determines the functionality and the author has not modified it. Functionality operated by device or user motion MUST also be operable by user interface components, with responding to the motion able to be disabled, unless the motion operates it through an accessibility supported interface or is essential to the function.
+> Functionality operated by a dragging movement (drag-and-drop reordering, sliders, map panning, resizable panes) MUST also be operable by a single pointer without dragging — taps or clicks on controls such as move-up/move-down buttons, a destination picker, or a position on a slider track. Functionality operated by multipoint or path-based gestures (pinch, two-finger swipe, swipe paths) MUST also be operable by a single pointer without a path-based gesture. Dragging or a path-based gesture MAY be the only method where the movement itself is essential (a signature whose drawn mark is itself the function, not one that only acknowledges something or confirms identity), and dragging MAY also be where the browser determines the functionality and the author has not modified it. Functionality operated by device or user motion MUST also be operable by user interface components, with responding to the motion able to be disabled, unless the motion operates it through an accessibility supported interface or is essential to the function, where an alternative would invalidate the activity.
 
-**Verification:** Any spec or plan that introduces drag-and-drop, sliders, swipe, pinch, or drawn-path input such as a signature pad MUST name the single-pointer, non-dragging alternative for each one the Statement's MAY does not cover, and one that introduces motion-operated functionality its user interface alternative and how motion response is disabled; the keyboard equivalent required by `FE-KBD-001` satisfies this rule only where it also provides controls a pointer can click or tap. `/{project}:analyze` flags interaction specs that describe drag, swipe, pinch, or drawn-path operations without a click or tap alternative, and flags affected-files snippets that bind drag or multi-touch handlers (`draggable`, `dragstart`, pointer-move drag or drawing logic, multi-touch checks) with no control that performs the same action. **Not flagged:** dragging or a path-based gesture the Statement's MAY covers, such as freehand drawing or a signature whose drawn mark is itself the function.
+**Verification:** Any spec or plan that introduces drag-and-drop, sliders, swipe, pinch, or drawn-path input such as a signature pad MUST name the single-pointer, non-dragging alternative for each one the Statement's MAY does not cover, and one that introduces motion-operated functionality its user interface alternative and how motion response is disabled; the keyboard equivalent required by `FE-KBD-001` satisfies this rule only where it also provides controls a pointer can click or tap. `/{project}:analyze` flags interaction specs that describe drag, swipe, pinch, or drawn-path operations without a click or tap alternative, and flags affected-files snippets that bind drag or multi-touch handlers (`draggable`, `dragstart`, pointer-move drag or drawing logic, multi-touch checks) with no control that performs the same action. **Not flagged:** dragging or a path-based gesture the Statement's MAY covers, such as a signature whose drawn mark is itself the function.
 
 **Source:** WCAG 2.2 §2.5.7 (Dragging Movements), §2.5.1 (Pointer Gestures), §2.5.4 (Motion Actuation), W3C Understanding 2.5.7 and 2.5.1
 
@@ -278,7 +278,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-LAYOUT-002
 
-> Text containers MUST NOT clip, truncate, or overlap content when the user overrides text spacing to a line height of 1.5×, paragraph spacing of 2×, letter spacing of 0.12×, and word spacing of 0.16× the font size. Content MUST NOT restrict its display to a single orientation (portrait or landscape) unless a specific orientation is essential (a bank-check capture, a piano keyboard).
+> Text containers MUST NOT clip or overlap content, or truncate it with no way to reveal it, when the user overrides text spacing to a line height of 1.5×, paragraph spacing of 2×, letter spacing of 0.12×, and word spacing of 0.16× the font size. Content MUST NOT restrict its display to a single orientation (portrait or landscape) unless a specific orientation is essential (a bank-check capture, a piano keyboard).
 
 **Verification:** Any spec or plan that introduces text containers with fixed dimensions, or that constrains orientation, MUST commit to tolerating spacing overrides and to no orientation lock without an essential reason. `/{project}:analyze` flags affected-files snippets that set a fixed pixel `height` on text containers together with `overflow: hidden`, that call `screen.orientation.lock()`, or that hide or rotate content under an `orientation` media query to force one orientation.
 
@@ -288,7 +288,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-MOTION-001
 
-> Content that moves, blinks, or scrolls automatically for more than five seconds alongside other content (carousels, marquees, animated banners, background video) MUST provide a control to pause, stop, or hide it, and content that updates automatically (tickers, live feeds) MUST provide a control to pause, stop, hide it, or set its update frequency. Audio that plays automatically for more than three seconds MUST provide a control to pause or stop it, or to set its volume independently of the system volume. Movement or updating that is essential to the activity MAY omit the control, such as a loading indicator shown while no interaction is possible.
+> Content that moves, blinks, or scrolls automatically for more than five seconds alongside other content (carousels, marquees, animated banners, background video) MUST provide a control to pause, stop, or hide it, and content that updates automatically (tickers, live feeds) MUST provide a control to pause, stop, hide it, or set its update frequency. Audio that plays automatically for more than three seconds MUST provide a control to pause or stop it, or to set its volume independently of the system volume. Movement or updating that is essential to the activity MAY omit the control, such as a loading indicator shown while no interaction is possible, whose absence could make the content look frozen.
 
 **Verification:** Any spec or plan that introduces carousels, auto-advancing slides, animated or auto-updating regions, background video, or auto-playing audio MUST name the pause, stop, or hide control. `/{project}:analyze` flags affected-files snippets with `autoplay` on `<audio>`, or on `<video>` without `muted`, that render no controls, and flags auto-advancing carousel or ticker specs that omit a pause control.
 
@@ -304,7 +304,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-MOTION-003
 
-> Non-essential motion triggered by interaction — parallax, zoom and slide transitions, scroll-linked animation, animated page transitions — SHOULD be removed or reduced when the user has set the `prefers-reduced-motion: reduce` media feature.
+> Non-essential motion triggered by interaction — parallax, zoom and slide transitions, scroll-linked animation, animated page transitions — SHOULD be removed, or replaced with a non-motion effect, when the user has set the `prefers-reduced-motion: reduce` media feature.
 
 **Verification:** Any spec or plan that introduces animated transitions, parallax, or scroll-linked effects SHOULD commit to a reduced-motion variant. `/{project}:analyze` emits a warning when affected files define animations or transitions of `transform` or position, or use a JavaScript animation library, with no `prefers-reduced-motion` media query or `matchMedia` check governing them.
 
@@ -314,7 +314,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-TIMING-001
 
-> Every time limit the application sets (session inactivity timeout, timed form, held reservation) MUST let the user turn it off, adjust it to at least ten times its default length, or extend it — warning the user before it expires, giving at least 20 seconds to extend with a simple action, and allowing at least ten extensions. A limit that is a required part of a real-time event (an auction) where no alternative to the limit is possible, a limit that is essential and that extending would invalidate the activity (a time-limited one-time code), and a limit longer than 20 hours MAY be exempt.
+> Every time limit the application sets (session inactivity timeout, timed form, held reservation) MUST let the user, before reaching it, turn it off or adjust it to at least ten times its default length, or extend it — warning the user before it expires, giving at least 20 seconds to extend with a simple action, and allowing at least ten extensions. A limit that is a required part of a real-time event (an auction) where no alternative to the limit is possible, a limit that is essential and that extending would invalidate the activity (a time-limited one-time code), and a limit longer than 20 hours MAY be exempt.
 
 **Verification:** Any spec or plan that introduces a session timeout, timed task, or held reservation MUST commit, for each limit, to one of turn-off, adjust, or warn-and-extend — naming, for warn-and-extend, the warning lead time — or name the Statement's exemption that applies to it. `/{project}:analyze` flags timeout-introducing specs that commit to none of the three and claim no exemption, or whose warn-and-extend allows less than 20 seconds to respond. A limit set for security is still one the application sets: the idle timeout `BE-AUTHN-005` requires is in scope, and so is an absolute session lifetime of 20 hours or less unless it is essential in the Statement's sense. This rule governs the warning and the chance to continue before a limit expires: a session lacking an idle or absolute timeout, or enforcing one only client-side, is `BE-AUTHN-005`'s, and a session expiry or revocation that fails silently or leaves the UI broken is `FE-AUTHN-002`'s.
 
@@ -328,15 +328,15 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 **Verification:** `specs/system.md` or the spec that introduces the frontend MUST name the automated accessibility tool, the pages or components it covers, when it runs before release, and the release-blocking severity threshold; any spec or plan that adds a page, route, or shared component MUST extend that coverage. `/{project}:analyze` flags frontend projects with no automated accessibility-check commitment, and UI-introducing specs whose plan adds no coverage for the new surface. **Not flagged:** the engine running wherever the project chooses — CI, a pre-commit hook, a component test suite, or a release script; a check that does not also run on every change, which `FE-A11YTEST-003` owns; and the absence of manual keyboard and screen-reader testing, which `FE-A11YTEST-002` owns.
 
-**Source:** W3C WAI "Selecting Web Accessibility Evaluation Tools", Deque axe-core rule documentation
+**Source:** W3C WAI "Selecting Web Accessibility Evaluation Tools", Deque axe-core rule documentation, Pa11y README, Chrome for Developers *Lighthouse accessibility score*
 
 ### FE-A11YTEST-002
 
-> New custom widgets, page templates, and interaction patterns SHOULD be tested manually before release with the keyboard alone and with at least one screen reader and browser pairing (NVDA or JAWS with Chrome or Firefox on Windows, VoiceOver with Safari on macOS or iOS, TalkBack with Chrome on Android).
+> New custom widgets, page templates, and interaction patterns SHOULD be tested manually before release with the keyboard alone and with at least one screen reader and browser pairing.
 
 **Verification:** Any spec or plan that introduces a custom widget, a new page template, or a novel interaction pattern SHOULD include a manual keyboard and screen-reader test step naming the screen-reader and browser pairing. `/{project}:analyze` emits a warning when such a spec's plan or tasks contain no manual assistive-technology test step.
 
-**Source:** W3C WCAG Evaluation Methodology (WCAG-EM) 2.0 (W3C Group Note, 23 July 2026; Methodology Requirement 1.3), W3C WAI "Evaluating Web Accessibility Overview"
+**Source:** WCAG 2.2 §2.1.1 (Keyboard), W3C WCAG Evaluation Methodology (WCAG-EM) 2.0 (W3C Group Note, 23 July 2026; Methodology Requirement 1.3), W3C WAI "Evaluating Web Accessibility Overview"
 
 ### FE-A11YTEST-003
 

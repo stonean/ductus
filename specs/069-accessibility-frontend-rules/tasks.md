@@ -33,10 +33,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 The set is every document a Source line, or the header, cites after tasks 1–3, the regime sources included. Reuse the clarify session's WCAG 2.2 and *ARIA in HTML* copies. Fetch the rest into this session's scratchpad, never committed, by 068's task 6 method (`a8f419f7`). A claim no copy confirms is rewritten or removed.
 
-- [ ] Fetch the set
-- [ ] Check each rule's claims and the header's against the copies, through read-only agents, confirming every quote behind an edit before the edit
-- [ ] Check each cited criterion's number, title and level against the WCAG copy (AC5)
-- [ ] The landing commit names each document, its URL, the fetch date and the method
+- [x] Fetch the set
+- [x] Check each rule's claims and the header's against the copies, through read-only agents, confirming every quote behind an edit before the edit
+- [x] Check each cited criterion's number, title and level against the WCAG copy (AC5)
+- [x] The landing commit names each document, its URL, the fetch date and the method
 
 - **Done when**: every claim matches a fetched copy or was rewritten or removed, `cargo test no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh` and `scripts/audit/run-all.sh` pass, and AC4 and AC5 are ticked.
 
