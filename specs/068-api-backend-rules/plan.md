@@ -27,7 +27,7 @@ A tier change is proved by `no_shipped_statement_mixes_tiers` (`runtime/src/prim
 
 ### A declared versionless strategy (AC13)
 
-`BE-APIVER-001`'s list of strategies adds a versionless one. Its declaration in `specs/system.md` commits to making none of the changes `BE-COMPAT-001` lists as breaking for as long as the API stays versionless. `BE-COMPAT-001` adds that such an API makes none of those changes, so a deprecated field or operation stays served until the API adopts a versioning strategy. Its Verification flags a versionless API's spec that describes one. `BE-APIVER-001` stays MUST, and its Source adds graphql.org *Schema Design* §Versioning.
+`BE-APIVER-001`'s list of strategies adds a versionless one. Its declaration in `specs/system.md` commits to making none of the changes `BE-COMPAT-001` lists as breaking for as long as the API stays versionless. `BE-COMPAT-001` adds that such an API makes none of those changes, so a deprecated field or operation stays served until the API adopts a versioning strategy. Its Verification flags a versionless API's spec that describes one. `BE-APIVER-001` stays MUST, and its Source adds graphql.org *Schema Design* (*Versioning*). `BE-APIVER-002` sends no `Sunset` on such an API's deprecated endpoint, which stays served, as RFC 8594 §1.4 has `Sunset` "not appropriate" while an API "remains operational" (Resolved Questions).
 
 ### The API serves its own schema (AC14)
 
@@ -35,7 +35,7 @@ A tier change is proved by `no_shipped_statement_mixes_tiers` (`runtime/src/prim
 
 ### A deprecated gRPC method carries the two headers as metadata (AC16)
 
-`BE-APIVER-002`'s Statement says a deprecated gRPC method sends `Deprecation` and `Sunset` as response metadata, which gRPC carries in the HTTP/2 response headers. Its schema mark stays protobuf `option deprecated = true`. The Source adds gRPC *PROTOCOL-HTTP2*, and the header's reach list already names `BE-APIVER-002`.
+`BE-APIVER-002`'s Statement says a deprecated gRPC method sends the headers the rule requires of it as response metadata, named `deprecation` and `sunset` since gRPC metadata names are lowercase, which gRPC carries in the HTTP/2 response headers. Its schema mark stays protobuf `option deprecated = true`. The Source adds gRPC *gRPC over HTTP2* (`doc/PROTOCOL-HTTP2.md`), and the header's reach list already names `BE-APIVER-002`.
 
 ### Every Source is re-fetched after the edits (AC4)
 

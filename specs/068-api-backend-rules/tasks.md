@@ -15,7 +15,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] `BE-APIVER-001`: add the versionless strategy, whose `specs/system.md` declaration commits to making none of `BE-COMPAT-001`'s breaking changes, and accept it in the Verification
 - [x] `BE-COMPAT-001`: a versionless API makes none of those changes, so a deprecated field or operation stays served until the API adopts a versioning strategy; the Verification flags a versionless API's spec that describes one
-- [x] Add graphql.org *Schema Design* §Versioning to `BE-APIVER-001`'s Source
+- [x] Add graphql.org *Schema Design* (*Versioning*) to `BE-APIVER-001`'s Source
 
 - **Done when**: both rules read as AC13 says, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC13 is ticked.
 
