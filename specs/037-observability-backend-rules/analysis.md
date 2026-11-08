@@ -1,21 +1,21 @@
 ---
 spec: 037-observability-backend-rules
-last-run: 2026-10-20T00:48:19Z
-analyzed-against: d3ade00ea528f1e284519adcc5f4c6398a50cee1
+last-run: 2026-11-08T17:33:49Z
+analyzed-against: 31899af5cf22e82bbd450b1e46b6dbb8f8a15c78
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 2
 analyzed-digest:
-  plan.md: 56cf7f146691f7c8094e34f9355017236120b39a568c08b91b2aa06be97d154e
-  review.md: 4a7db667285b99933813583c582c1d257867f953ef7c8a36b64f53a92b2cdac0
-  spec.md: 09aa664b8d1defa6172e61fb991942f84e7772931c761444c40d6d9530f088fb
+  plan.md: c4b5dde06c7592c43bef876ee8fb51f5f57723a8cb0b47ee4f1efeea3d592c86
+  review.md: 29e17d9514396f388e0d19f2d7017ad59238962af412a869df89bb020a9e0c6d
+  spec.md: 023973a9866d4e015dcdcf4fc15c632cf372386035ecb57b5dd58dc6eefef69b
   tasks.md: 4ce86902611c81e188f096b4290b59d88a0c0bd9031c42342e6448c2248ae06c
 blocking: false
 dispositions:
-  fixed: 3
-  routed: 0
-  discarded: 0
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -23,7 +23,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 3 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -37,12 +37,14 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-*None — every target was examined.*
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- anchor-resolution — spec.md:57 references §BE-LOG unqualified, which resolves to no constitution marker — `specs/037-observability-backend-rules/spec.md` — **fixed**
-- grounding — spec.md's BE-LOG-006 Resolved Question names scrape intervals as tunable config the rules cite, which no rule names — `specs/037-observability-backend-rules/spec.md` — **fixed**
-- grounding — spec.md Motivation asserted in the present tense that the backend surface covers only the logging slice, which observability-backend.md falsified — `specs/037-observability-backend-rules/spec.md` — **fixed**
+*None.*
