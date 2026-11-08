@@ -21,9 +21,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. The API serves its own schema (AC14)
 
-- [ ] `BE-SCHEMA-001`'s Statement: served by the API itself, from a documented URL on its own origin or, for gRPC and JSON-RPC, through gRPC server reflection or the OpenRPC `rpc.discover` method, and committed to the repository
-- [ ] The Verification names the schema's path and how the API serves it, and keeps its *Not flagged* GraphQL clause
-- [ ] Add gRPC `doc/server-reflection.md` and the OpenRPC Specification's service discovery method to the Source
+- [x] `BE-SCHEMA-001`'s Statement: served by the API itself, from a documented URL on its own origin or, for gRPC and JSON-RPC, through gRPC server reflection or the OpenRPC `rpc.discover` method, and committed to the repository
+- [x] The Verification names the schema's path and how the API serves it, and keeps its *Not flagged* GraphQL clause
+- [x] Add gRPC `doc/server-reflection.md` and the OpenRPC Specification's service discovery method to the Source
 
 - **Done when**: `BE-SCHEMA-001` reads as AC14 says, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC14 is ticked.
 

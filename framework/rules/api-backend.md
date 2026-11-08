@@ -6,11 +6,11 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-SCHEMA-001
 
-> Every public HTTP or RPC API MUST publish a machine-readable schema describing every endpoint, request shape, response shape, and error: OpenAPI 3.x for REST, `.proto` files for gRPC, GraphQL SDL for GraphQL, an OpenRPC document (JSON Schema–based) for JSON-RPC. The schema MUST be served from a documented URL on the same origin as the API AND committed to the repository.
+> Every public HTTP or RPC API MUST publish a machine-readable schema describing every endpoint, request shape, response shape, and error: OpenAPI 3.x for REST, `.proto` files for gRPC, GraphQL SDL for GraphQL, an OpenRPC document (JSON Schema–based) for JSON-RPC. The schema MUST be served by the API itself — from a documented URL on the API's own origin or, for gRPC and JSON-RPC, through the protocol's own discovery mechanism, gRPC server reflection or the OpenRPC `rpc.discover` method — AND committed to the repository.
 
-**Verification:** Any spec or plan that introduces a public HTTP/RPC endpoint MUST name the schema artifact path AND the URL it is served from. `/{project}:analyze` flags endpoint specs that omit the schema commitment, and flags the absence of a schema file at the named path. **Not flagged:** a GraphQL API that serves its SDL from a documented URL with introspection disabled in production; introspection enabled in production is `BE-INPUT-014`'s.
+**Verification:** Any spec or plan that introduces a public HTTP/RPC endpoint MUST name the schema artifact path AND how the API serves the schema: the URL, or the discovery mechanism. `/{project}:analyze` flags endpoint specs that omit the schema commitment or serve the schema from anywhere but the API itself, and flags the absence of a schema file at the named path. **Not flagged:** a GraphQL API that serves its SDL from a documented URL with introspection disabled in production; introspection enabled in production is `BE-INPUT-014`'s, which does not reach gRPC server reflection.
 
-**Source:** OpenAPI Specification; gRPC documentation, *Introduction to gRPC*; GraphQL Specification (September 2025) §3 (Type System); OpenRPC Specification; OpenAPI Initiative best practices (*Make the OpenAPI Descriptions Available to the Users*, *Add OpenAPI Descriptions to Source Control*)
+**Source:** OpenAPI Specification; gRPC documentation, *Introduction to gRPC* and `doc/server-reflection.md`; GraphQL Specification (September 2025) §3 (Type System); OpenRPC Specification (*Service Discovery Method*); OpenAPI Initiative best practices (*Make the OpenAPI Descriptions Available to the Users*, *Add OpenAPI Descriptions to Source Control*)
 
 ### BE-SCHEMA-002
 
