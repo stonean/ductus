@@ -4,7 +4,7 @@ Implements [077 — Security cross rules](spec.md).
 
 ## Overview
 
-Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC-LOG-001`), four moved from `security-backend.md`, and `SEC-AUTHN-004`, which 008's task 43 moved from `BE-API-009`'s authorization-server sentences. The work then has four parts:
+Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC-LOG-001`), four moved from `security-backend.md`, and `SEC-AUTHN-004`, which 008's task 43 moved from `BE-API-009`'s authorization-server sentences, and `SEC-DATA-001`, which it added. The work then has four parts:
 
 - **Register the prefix** in this spec's `data-model.md`, the rule-ID lint and the analyze reference.
 - **Deprecate the four old rules**, each reduced to a yield to its successor so `/{project}:analyze` reports a case once.
@@ -19,7 +19,7 @@ No runtime behaviour changes; one corpus test is added (§Verification). The rul
 
 There are three registration sites, and each must agree.
 
-- **This spec's `data-model.md`** registers `SEC-{CATEGORY}-{NNN}` and the categories `LOG`, `DEPS` and `AUTHN`, as 036's does for `QUAL` (`specs/036-quality-cross-rules/data-model.md`, §`QUAL` surface). `framework/reference/analyze.md` ("Which ID format governs a file", item 1) reads a file's introducing-spec data-model first, and a file whose IDs fail it is treated as unloadable.
+- **This spec's `data-model.md`** registers `SEC-{CATEGORY}-{NNN}` and the categories `LOG`, `DEPS`, `AUTHN` and `DATA`, as 036's does for `QUAL` (`specs/036-quality-cross-rules/data-model.md`, §`QUAL` surface). `framework/reference/analyze.md` ("Which ID format governs a file", item 1) reads a file's introducing-spec data-model first, and a file whose IDs fail it is treated as unloadable.
 - **`scripts/lint-rule-ids.sh`**'s `id_re` lists `SEC` beside `BE`, `FE`, `CFG` and `QUAL`, the source comment above it names 077's data-model, and the malformed-heading message lists `SEC`.
 - **The analyze reference** lists 077's data-model beside 008's and 017's in item 1. 008's `data-model.md` (§Rule ID format, the paragraph after the category table) names `security-cross.md`'s `SEC` prefix beside `CFG` and `QUAL`.
 

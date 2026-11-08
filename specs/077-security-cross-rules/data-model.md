@@ -33,6 +33,7 @@ SEC-{category}-{NNN}
 | Logging, error reporting and telemetry | `LOG` |
 | Build inputs and dependencies | `DEPS` |
 | Authentication and OAuth/OIDC client flows | `AUTHN` |
+| Sensitive values in URLs | `DATA` |
 
 ## Rule set
 
@@ -44,5 +45,6 @@ SEC-{category}-{NNN}
 | `SEC-AUTHN-002` | MUST | OAuth and OIDC client flows use a bound `state`, PKCE, ID-token validation, an exact `redirect_uri`, unguessable transaction-bound values, a mix-up defence and an external user-agent | `BE-AUTHN-013` |
 | `SEC-AUTHN-003` | MUST | OAuth grant and response types, the PKCE method and its enforcement, public-client refresh-token protection, and an authorization server's redirect of a credential-carrying request | `BE-AUTHN-020` |
 | `SEC-AUTHN-004` | MUST | An OAuth authorization server matches each `redirect_uri` it receives exactly | `BE-API-009`'s authorization-server sentences (008 task 43) |
+| `SEC-DATA-001` | MUST | A credential or PII stays out of a URL the project's code requests, sends or renders, with `BE-API-013`'s carve-outs | none (new; 008 task 43) |
 
 Each predecessor is labelled `**DEPRECATED in {version}:**` in `security-backend.md`, with the second minor release after the shipping one as its removal target (077's Resolved Questions). It names its successor as the owner of every case it governed until it is removed.
