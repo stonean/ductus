@@ -15,12 +15,15 @@ All error responses use a consistent JSON envelope:
   "error": {
     "code": "validation_failed",
     "message": "One or more fields are invalid.",
+    "request_id": "req_01J...",
     "details": []
   }
 }
 ```
 
-The `details` array is optional and used for validation errors (see below).
+The `request_id` is the request's correlation ID, so a caller can quote it
+when reporting the error. The `details` array is optional and used for
+validation errors (see below).
 
 -->
 
@@ -64,6 +67,7 @@ Validation errors populate the `details` array with one entry per invalid field:
   "error": {
     "code": "validation_failed",
     "message": "One or more fields are invalid.",
+    "request_id": "req_01J...",
     "details": [
       { "field": "email", "code": "required", "message": "Email is required." },
       { "field": "age", "code": "out_of_range", "message": "Age must be between 0 and 150." }
@@ -94,7 +98,7 @@ request ID, and stack trace (for unexpected errors only).
 
 External responses include the error code and a safe, human-readable message.
 Stack traces, internal identifiers, and infrastructure details are never
-included in responses. They are logged server-side with the request ID
-for correlation.
+included in responses. They are logged server-side with the request ID,
+which the response also carries so a caller can quote it.
 
 -->
