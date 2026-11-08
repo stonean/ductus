@@ -118,8 +118,9 @@ struct View<'a> {
     reopenings: &'a ReopeningCounts,
 }
 
-/// Build the view's model and render it as `format`. The references readout
-/// is omitted entirely when no spec declares references (a single-service
+/// Build the view's model and render it as `format`, held to the configured
+/// read size, `[artifacts] read-size-bytes` (AC24). The references readout is
+/// omitted entirely when no spec declares references (a single-service
 /// adopter sees no change).
 fn render_view(
     repo: &Path,
@@ -144,7 +145,8 @@ fn render_view(
         references: resolve_references_readout(repo, view.specs, &project)?,
         project: &project,
     });
-    Ok(pipeline_view::render(&model, format))
+    let (threshold, _) = super::check_artifact_size::resolve_threshold(repo)?;
+    Ok(pipeline_view::render(&model, format, threshold.bytes))
 }
 
 /// The cross-service references readout: each spec whose derived
@@ -1505,6 +1507,58 @@ reason = "Deferred until v2 perf budget lands."
             format!("[host]\nproject = \"ductus\"\n{extra}"),
         )
         .unwrap();
+    }
+
+    /// The view is held to the configured read size (spec 080, AC24): a
+    /// small `read-size-bytes` collapses the done rows and cuts the rest.
+    #[test]
+    fn the_view_is_held_to_the_configured_read_size() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 900\n");
+        for n in 1..=12 {
+            let status = if n % 2 == 0 { "done" } else { "planned" };
+            write_spec(
+                tmp.path(),
+                &format!("{n:03}-spec"),
+                &format!("status: {status}\ndependencies: []\n"),
+                "",
+            );
+        }
+        let rendered = run(&DashboardArgs::default(), tmp.path())
+            .unwrap()
+            .rendered_markdown;
+        assert!(
+            rendered.len() <= 900,
+            "{} bytes:\n{rendered}",
+            rendered.len()
+        );
+        assert!(
+            rendered.contains("\n\ndone (spec is complete): 6 spec(s)\n"),
+            "{rendered}"
+        );
+        assert!(
+            rendered.contains(" spec(s) not shown — the view is over the read size"),
+            "{rendered}"
+        );
+    }
+
+    /// A malformed read size halts the dashboard, as it halts every reader of
+    /// the setting, rather than rendering at the default.
+    #[test]
+    fn a_malformed_read_size_halts_the_view() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 0\n");
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let err = run(&DashboardArgs::default(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err:?}"
+        );
     }
 
     #[test]

@@ -22,8 +22,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. The view's bound
 
-- [ ] Collapse the `done (spec is complete)` rows to a count line past `read-size-bytes`, then cut the rows past the bound and end with a line counting the specs not shown
-- [ ] Test both renderings on a generated corpus past the bound
+- [x] Collapse the `done (spec is complete)` rows to a count line past `read-size-bytes`, then cut the rows past the bound and end with a line counting the specs not shown
+- [x] Test both renderings on a generated corpus past the bound
 
 - **Done when**: the test passes for both renderings (AC24).
 

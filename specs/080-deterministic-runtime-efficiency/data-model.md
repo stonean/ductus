@@ -31,12 +31,12 @@ One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`re
 5. **Next actions.** `Next actions:`, then one line per next action, indented two spaces: `{next-action}: {spec}, {spec}`. It groups every spec but the target whose Next Action is not `done (spec is complete)`, in order of first appearance in the table. Absent when there is none.
 6. **Prompt.** `Run /{project}:target <feature> to select one.`, the view's only `/{project}:target` hint.
 
-**Bound.** Each rendering is held to `[artifacts] read-size-bytes` in bytes; a rendering exactly at the bound fits. When it is over:
+**Bound.** Each rendering is held to `[artifacts] read-size-bytes` in bytes; a rendering exactly at the bound fits. When it is over, a block of its own follows the table, since a line directly under a markdown table would read as a row:
 
-1. the `done (spec is complete)` rows are removed from the table, and its last line is `done (spec is complete): {n} spec(s)`;
-2. if it is still over, the table's rows past the bound are removed, and its last line is `{n} spec(s) not shown — the view is over the read size`.
+1. the `done (spec is complete)` rows are removed from the table, and the block's first line is `done (spec is complete): {n} spec(s)`;
+2. if it is still over, the most leading rows that fit are kept, and the block ends `{n} spec(s) not shown — the view is over the read size`.
 
-A cut view therefore never reads as complete.
+A cut view therefore never reads as complete. A view whose other blocks alone are over the bound keeps no row and still counts them.
 
 ## `ductus hook status`
 

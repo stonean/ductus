@@ -9,6 +9,12 @@
 //! line is the same in both: the summary one item per line, the specs with
 //! work left listed by next action, and the view's one `/{project}:target`
 //! hint at the end (AC6, AC18).
+//!
+//! Each rendering is held to a bound in bytes, the configured read size
+//! (AC24): past it, the `done (spec is complete)` rows collapse to a count
+//! line, and if it is still over, the rows past the bound are cut and a line
+//! counts the specs not shown, so a partial view never reads as complete.
+//! Paging is no option, since the hook path shows one message.
 
 use std::fmt::Write as _;
 
@@ -78,6 +84,9 @@ pub(crate) struct ViewData<'a> {
 struct Row {
     cells: [String; 8],
     target: bool,
+    /// Whether the spec's Next Action is [`COMPLETE`], so its row is the
+    /// first to collapse past the bound.
+    complete: bool,
 }
 
 /// One summary item, with the lines that detail it.
@@ -117,6 +126,7 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
                 next_action(spec, project),
             ],
             target: Some(spec.slug.as_str()) == target_slug,
+            complete: next_action(spec, project) == COMPLETE,
         })
         .collect();
     let mut next_actions: Vec<(String, Vec<String>)> = Vec::new();
@@ -140,14 +150,65 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
     }
 }
 
-/// Render the model as `format`.
-pub(crate) fn render(model: &Model, format: Format) -> String {
+/// Render the model as `format`, held to `bound` bytes.
+///
+/// Within the bound the whole view renders. Past it, the
+/// `done (spec is complete)` rows collapse to one count line; if it is still
+/// over, the most rows that fit are kept and a line counts the specs not
+/// shown. A view whose summary alone is over the bound keeps no row and says
+/// how many it cut, which is the most it can do.
+pub(crate) fn render(model: &Model, format: Format, bound: u64) -> String {
+    let all: Vec<&Row> = model.rows.iter().collect();
+    let full = compose(model, format, &all, &[]);
+    if fits(&full, bound) {
+        return full;
+    }
+    let open: Vec<&Row> = model.rows.iter().filter(|row| !row.complete).collect();
+    let collapsed = model.rows.len() - open.len();
+    let mut trailer = Vec::new();
+    if collapsed > 0 {
+        trailer.push(format!("{COMPLETE}: {collapsed} spec(s)"));
+        let view = compose(model, format, &open, &trailer);
+        if fits(&view, bound) {
+            return view;
+        }
+    }
+    // Keeping more rows only lengthens the view, so the largest count that
+    // fits is found by bisection.
+    let with = |kept: usize| {
+        let mut lines = trailer.clone();
+        lines.push(format!(
+            "{} spec(s) not shown — the view is over the read size",
+            open.len() - kept
+        ));
+        compose(model, format, &open[..kept], &lines)
+    };
+    let (mut lo, mut hi) = (0, open.len());
+    while lo < hi {
+        let mid = (lo + hi).div_ceil(2);
+        if fits(&with(mid), bound) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    with(lo)
+}
+
+fn fits(view: &str, bound: u64) -> bool {
+    u64::try_from(view.len()).unwrap_or(u64::MAX) <= bound
+}
+
+/// The view with `rows` in its table, and `trailer` as a block of its own
+/// under it: a line directly under a markdown table would read as a row.
+fn compose(model: &Model, format: Format, rows: &[&Row], trailer: &[String]) -> String {
     let mut blocks = vec![
         model.target.join("\n"),
         match format {
-            Format::Markdown => markdown_table(&model.rows),
-            Format::Text => text_table(&model.rows),
+            Format::Markdown => markdown_table(rows),
+            Format::Text => text_table(rows),
         },
+        trailer.join("\n"),
         summary_block(&model.summary),
     ];
     if !model.references.is_empty() {
@@ -432,7 +493,7 @@ fn inbox_line(inbox: &InboxStanding, project: &str) -> String {
     }
 }
 
-fn markdown_table(rows: &[Row]) -> String {
+fn markdown_table(rows: &[&Row]) -> String {
     let mut lines = vec![
         format!("| {} |", HEADINGS.join(" | ")),
         format!("|{}", " --- |".repeat(HEADINGS.len())),
@@ -450,7 +511,7 @@ fn markdown_table(rows: &[Row]) -> String {
 /// Each column padded to its widest cell, two spaces between columns, and a
 /// two-character gutter that marks the target's row. The last column is not
 /// padded, so no line ends in spaces.
-fn text_table(rows: &[Row]) -> String {
+fn text_table(rows: &[&Row]) -> String {
     let mut widths: Vec<usize> = HEADINGS.iter().map(|h| h.chars().count()).collect();
     for row in rows {
         for (width, cell) in widths.iter_mut().zip(&row.cells) {
@@ -782,7 +843,11 @@ mod tests {
 
     #[test]
     fn the_text_table_aligns_its_columns_with_two_space_gaps_and_no_markdown() {
-        let rendered = render(&Fixture::new(Some("002-beta")).model(), Format::Text);
+        let rendered = render(
+            &Fixture::new(Some("002-beta")).model(),
+            Format::Text,
+            u64::MAX,
+        );
         assert!(!rendered.contains("**"), "{rendered}");
         let table: Vec<&str> = blocks(&rendered)[1].lines().collect();
         assert_eq!(table.len(), 7, "{rendered}");
@@ -814,8 +879,8 @@ mod tests {
     #[test]
     fn both_renderings_carry_the_same_facts_from_one_model() {
         let model = Fixture::new(Some("002-beta")).model();
-        let markdown = render(&model, Format::Markdown);
-        let text = render(&model, Format::Text);
+        let markdown = render(&model, Format::Markdown, u64::MAX);
+        let text = render(&model, Format::Text, u64::MAX);
         assert!(markdown.contains("| **002-beta** |"), "{markdown}");
         let rows = markdown_rows(&markdown);
         assert_eq!(rows, text_rows(&text));
@@ -845,7 +910,7 @@ mod tests {
     fn the_summary_is_one_item_per_line_and_ends_with_the_one_target_hint() {
         let model = Fixture::new(Some("002-beta")).model();
         for format in [Format::Markdown, Format::Text] {
-            let rendered = render(&model, format);
+            let rendered = render(&model, format, u64::MAX);
             let lines: Vec<&str> = rendered.lines().collect();
             for item in [
                 "Counts: draft 1 · clarified 1 · planned 1 · in-progress 1 · done 2",
@@ -873,7 +938,11 @@ mod tests {
 
     #[test]
     fn the_specs_with_work_left_are_grouped_by_next_action_without_the_target() {
-        let rendered = render(&Fixture::new(Some("002-beta")).model(), Format::Text);
+        let rendered = render(
+            &Fixture::new(Some("002-beta")).model(),
+            Format::Text,
+            u64::MAX,
+        );
         let block = blocks(&rendered)
             .into_iter()
             .find(|b| b.starts_with("Next actions:"))
@@ -887,13 +956,94 @@ mod tests {
 
     #[test]
     fn with_no_target_the_view_says_so_and_still_closes_with_the_one_hint() {
-        let rendered = render(&Fixture::new(None).model(), Format::Markdown);
+        let rendered = render(&Fixture::new(None).model(), Format::Markdown, u64::MAX);
         assert!(rendered.starts_with("No session target.\n\n"), "{rendered}");
         assert_eq!(rendered.matches(":target").count(), 1, "{rendered}");
         assert!(
             rendered.contains("  /ductus:implement: 002-beta, 003-gamma"),
             "{rendered}"
         );
+    }
+
+    /// A generated corpus of `n` specs, alternately `planned` and `done`, with
+    /// no target and no scenario questions.
+    fn generated(n: usize) -> Fixture {
+        let mut fixture = Fixture::new(None);
+        fixture.specs = (1..=n)
+            .map(|i| {
+                let status = if i % 2 == 0 { "done" } else { "planned" };
+                spec(&format!("{i:03}-generated-{i:03}"), status)
+            })
+            .collect();
+        fixture.questions = Vec::new();
+        fixture
+    }
+
+    /// The table's data rows, without its header (and separator).
+    fn table_rows(rendered: &str, format: Format) -> Vec<&str> {
+        let skip = match format {
+            Format::Markdown => 2,
+            Format::Text => 1,
+        };
+        blocks(rendered)[1].lines().skip(skip).collect()
+    }
+
+    fn size(view: &str) -> u64 {
+        u64::try_from(view.len()).unwrap()
+    }
+
+    #[test]
+    fn a_view_at_the_bound_renders_whole() {
+        let model = generated(60).model();
+        for format in [Format::Markdown, Format::Text] {
+            let full = render(&model, format, u64::MAX);
+            assert_eq!(render(&model, format, size(&full)), full);
+            assert_eq!(table_rows(&full, format).len(), 60);
+        }
+    }
+
+    #[test]
+    fn past_the_bound_the_done_rows_collapse_to_a_count_line() {
+        let model = generated(60).model();
+        for format in [Format::Markdown, Format::Text] {
+            let full = render(&model, format, u64::MAX);
+            let bound = size(&full) - 1;
+            let view = render(&model, format, bound);
+            assert!(size(&view) <= bound, "{view}");
+            let rows = table_rows(&view, format);
+            assert_eq!(rows.len(), 30, "{view}");
+            assert!(rows.iter().all(|row| !row.contains("done")), "{view}");
+            assert_eq!(blocks(&view)[2], "done (spec is complete): 30 spec(s)");
+            assert!(!view.contains("not shown"), "{view}");
+        }
+    }
+
+    #[test]
+    fn still_over_the_bound_the_rows_past_it_are_cut_and_counted() {
+        let model = generated(60).model();
+        for format in [Format::Markdown, Format::Text] {
+            let full = render(&model, format, u64::MAX);
+            let collapsed = render(&model, format, size(&full) - 1);
+            let bound = size(&collapsed) - 500;
+            let view = render(&model, format, bound);
+            assert!(size(&view) <= bound, "{view}");
+            let rows = table_rows(&view, format);
+            let trailer: Vec<&str> = blocks(&view)[2].lines().collect();
+            assert_eq!(trailer[0], "done (spec is complete): 30 spec(s)");
+            let cut: usize = trailer[1]
+                .strip_suffix(" spec(s) not shown — the view is over the read size")
+                .unwrap_or_else(|| panic!("{view}"))
+                .parse()
+                .unwrap();
+            assert!(cut > 0, "{view}");
+            assert_eq!(rows.len() + cut, 30, "every open spec is shown or counted");
+            assert!(rows[0].contains("001-generated-001"), "{view}");
+            // The most rows that fit are kept: the room left is less than one
+            // more row and its newline would take.
+            let longest = rows.iter().map(|row| row.len()).max().unwrap();
+            let room = usize::try_from(bound - size(&view)).unwrap();
+            assert!(room <= longest, "{room} bytes left, a row takes {longest}");
+        }
     }
 
     #[test]
