@@ -449,7 +449,8 @@ its version and date.
   or `FE-STORAGE-003`, `SEC-AUTHN-002` beside `BE-AUTHN-012`, `BE-AUTHN-019`
   and `BE-DATA-009`, and `FE-DEPS-007` to `-009` beside `BE-DEPS-003` to
   `-005`, a waiver under one ID of such a pair needing a counterpart under
-  the other until that routing lands. A newly created
+  the other, and one under the ID that yields the case expiring once that
+  routing moves the finding to its owner. A newly created
   `specs/errors.md` has its example envelope carry a `request_id`, as
   `BE-ERR-002` requires; an existing one is not rewritten. A pinned copy of
   a changed file keeps its old text until re-synced. A `security-backend.md`
