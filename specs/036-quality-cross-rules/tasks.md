@@ -114,6 +114,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 14. Implement scenario: a-bound-test-pins-the-stated-figure
 
-- [ ] Implement the behavior described in `scenarios/a-bound-test-pins-the-stated-figure.md`
+- [x] Implement the behavior described in `scenarios/a-bound-test-pins-the-stated-figure.md`
 
 - **Done when**: The scenario's open question is resolved and quality-cross.md states the requirement in the chosen form, with check-rule-ids accepting the file.

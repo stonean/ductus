@@ -492,6 +492,13 @@ its version and date.
   `security-backend.md` `BE-API-012` where that file is also loaded, so
   `/analyze` reports it once; `/review` reports it under both until spec
   020's routing lands. Spec 008, its review.
+- **`QUAL-TEST-001` flags a bound test that does not pin its figure.**
+  `quality-cross.md`'s `QUAL-TEST-001` also flags a test of a limit on a
+  size, a duration or a count whose figure a spec or contract states when it
+  checks the code's own constant, or the figure on one side only, so the
+  constant can move without the test failing. Asserting the figure itself, or
+  the behavior at it and just past it, complies. Spec 036, its scenario
+  `a-bound-test-pins-the-stated-figure`.
 
 ### Fixed
 
