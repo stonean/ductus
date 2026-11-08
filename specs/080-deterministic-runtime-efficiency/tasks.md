@@ -42,6 +42,13 @@ Blocked on tasks 2 and 3: the primitive returns their view.
 
 Blocked on task 1: its grows-set is this task's population.
 
+The population is the 11 that `research.md`'s grows-set lists as not bounded yet: `read-spec`, `read-tasks`, `derive-boundary`, `lint-markdown`, `prune-tasks`, `dashboard`, `check-review-gate`, `check-artifacts`, `check-corpus-links`, `check-unfolded-specs` and `rewrite-spec-links`. `render-status` was added after that measurement and is held to the read size by the view's own bound (task 3). The other readers a result's new shape reaches, besides the commands, were mapped at `57a63c35`, before any was changed:
+
+- Rust callers of `run`, which need an unbounded path such as a `compute` function, the pattern `compute-review-scope` uses: `read_tasks::run` from `runtime/src/interpreter/payload.rs`, `prune_tasks.rs` and `mark_task.rs`, and `lint_markdown::run` from `check_review_gate.rs`.
+- The exec walker unions `derive-boundary`'s `boundary` into the writeCode validator (`runtime/src/interpreter/mod.rs`, the `name == "derive-boundary"` arm), so a boundary moved to a file has to reach it.
+- `scripts/audit/lib.sh` enumerates the corpus from `dashboard`'s JSON, and `scripts/audit/broken-relative-links.sh` parses `check-corpus-links`'; both pre-commit hooks call `check-corpus-links` for its exit status only.
+- Each primitive's description in `runtime/src/schema/descriptions.rs` states its file form, as `diff-cross-spec`'s does, since the binary is the source of a primitive's rules (§runtime-host-integration).
+
 - [ ] Return each grows-set primitive through `bounded_lists::place`
 - [ ] Add the lists-file branch where a command reads a moved list: `framework/commands/implement.md`, `framework/commands/review.md` `--all`, `framework/commands/target.md` step 3, and any other reader a grep for the moved fields finds
 - [ ] Add each member's row to `data-model.md`'s bounded-results table

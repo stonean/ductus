@@ -96,6 +96,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "discover-rule-files"
         | "measure-reopenings"
         | "prune-project"
+        | "render-status"
         | "resolve-constitutions"
         | "resolve-session" => call(json!({})),
         "check-artifact-size"
@@ -436,6 +437,20 @@ fn schema_table() -> String {
         let _ = writeln!(out, "| `{name}` | {d} | {i} | {} |", d + i);
     }
     out
+}
+
+/// Every registry name has a case, so a primitive added without one fails
+/// here, in `cargo test`, rather than only when the measurement runs.
+#[test]
+fn every_registry_name_has_a_case() {
+    let ctx = Context {
+        size: corpus::SMALL,
+        base: String::new(),
+        head: String::new(),
+    };
+    for name in ductus::schema::registry::PRIMITIVE_REGISTRY {
+        let _ = case(name, &ctx);
+    }
 }
 
 /// The generator scales every dimension it is given, and builds the
