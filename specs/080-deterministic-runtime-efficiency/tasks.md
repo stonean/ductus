@@ -187,6 +187,8 @@ Blocked on task 1's schema sizes.
 
 Once this task is ticked the spec owes `/ductus:review`, `/ductus:analyze` and the completion gate, none of which a task schedules.
 
+The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-unknown-keys` scenario, found at task 5. Its Behavior says `dashboard`'s rendering adds the unknown-keys callout, and an Edge Case says `dashboard` names a key in that callout, but since task 4 the callout is in `render-status`'s view, and `dashboard` no longer loads `[host]` or `[services]`. `runtime/tests/config_unknown_keys.rs` was corrected at `ece1ed5a`. A scenario edit stales 022's review, so `classify-spec-edit` decides it with the back-link.
+
 - [ ] 022: link back to 080 from the `dashboard-primitive` scenario or from a blockquote signpost in its `spec.md`, covering the `hook` surface, `render-status`, `merge-status-hook`, the `alwaysLoad` `_meta` and the bounded results. A link in `data-model.md` discharges nothing, since the gate reads only `spec.md` and `scenarios/*.md`
 - [ ] 063: add a signpost that `read-size-bytes` now bounds primitive results and the view
 - [ ] 064: add a signpost for the bridge's registered command, and run `classify-spec-edit` on the edit
