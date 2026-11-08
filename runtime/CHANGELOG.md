@@ -383,6 +383,14 @@ its version and date.
 
 ### Fixed
 
+- **A repo registered under two aliases is reported.** `resolve-references`
+  returns `duplicate-repos`, each repo the `[services]` registry holds under two
+  or more aliases, compared with a trailing `/` and `.git` removed, with those
+  aliases, and an empty list when there is none; `/analyze` reports each as an
+  Advisory finding. A link to such a repo resolved through one alias with
+  nothing saying so, though the data model and `/link` called it a finding.
+  Spec 030, task 14.
+
 - **A review whose `diff-base` names no commit records nothing.** `write-review`
   refuses a `diff-base` its scope cannot be derived from, naming it, and leaves
   `review.md` as it was, where it recorded `scope: 0` beside whatever `examined`

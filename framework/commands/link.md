@@ -63,7 +63,7 @@ Prompt one field at a time, the same one-at-a-time interaction `/{project}:clari
 Per field, as entered:
 
 - **alias** — a valid bare TOML key (letters, digits, hyphens, underscores; no whitespace, dots, or quotes) and **not already present** as a `[services.<alias>]` table in `.ductus/config.toml`. A collision is **rejected** with no write — changing an existing entry is a hand-edit. This is the duplicate-alias rejection.
-- **repo** — URL-shaped (a scheme such as `https://` and a host). Recorded verbatim; it is identity and navigation only and is never fetched. If the same URL is already registered under another alias, **warn** — a duplicate repo makes the match ambiguous (a registry finding) — but allow the write.
+- **repo** — URL-shaped (a scheme such as `https://` and a host). Recorded verbatim; it is identity and navigation only and is never fetched. If the same repo is already registered under another alias, compared as resolution compares it, with a trailing `/` and `.git` removed, **warn** — a duplicate repo makes the match ambiguous (a registry finding) — but allow the write.
 - **path** — the local checkout location, relative to the repo root or absolute, recorded exactly as written. If it does not currently resolve to a directory, **warn** but do **not** block: a missing checkout is the valid `not-checked-out` state, surfaced at resolution time, not a config error.
 - **description** — free text, optional, informational only; no behavior depends on it.
 

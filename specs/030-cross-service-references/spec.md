@@ -85,7 +85,7 @@ Introducing a reference into an existing spec is a body edit. Because references
 
 ## Open Questions
 
-None remaining — all resolved above; ready for `/{project}:clarify`.
+None.
 
 ## See also
 

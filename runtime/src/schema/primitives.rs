@@ -4455,13 +4455,27 @@ pub struct ResolutionRecord {
     pub status: Option<String>,
 }
 
+/// One repo the `[services]` registry holds under two or more aliases, so a
+/// link to it matches one alias silently.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DuplicateRepo {
+    /// The normalized repo URL the aliases share.
+    pub repo: String,
+    /// The aliases registering it, sorted.
+    pub aliases: Vec<String>,
+}
+
 /// Result for `resolve-references`: one record per entry in the consumer's
-/// `references:` index, in index order.
+/// `references:` index, in index order, and the registry's duplicated repos.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ResolveReferencesResult {
     /// Resolution records in the consumer spec's `references:` order.
     pub references: Vec<ResolutionRecord>,
+    /// Each repo registered under two or more aliases, by normalized URL,
+    /// sorted; empty when none (spec 030).
+    pub duplicate_repos: Vec<DuplicateRepo>,
     /// Repo-relative path to the consumer spec file.
     pub path: String,
 }

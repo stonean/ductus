@@ -3,6 +3,7 @@
 //! Reads the consumer feature's derived `references:` index, resolves each
 //! entry's service through the project config's `[services]` registry, and
 //! reads the linked spec's live `status` from the registered local checkout.
+//! It also reports each repo the registry holds under two or more aliases.
 //! Every reference is classified into the closed [`ReferenceOutcome`] enum by
 //! deterministic predicates — no prose is read for intent. Reuses
 //! `read_text` / `split_frontmatter` and the allowed-status set that
@@ -26,7 +27,8 @@ use crate::primitives::{
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ReferenceOutcome, ResolutionRecord, ResolveReferencesArgs, ResolveReferencesResult,
+    DuplicateRepo, ReferenceOutcome, ResolutionRecord, ResolveReferencesArgs,
+    ResolveReferencesResult,
 };
 use crate::schema::services::Services;
 use crate::schema::status::ALLOWED_STATUSES;
@@ -87,8 +89,17 @@ pub fn run(args: &ResolveReferencesArgs, repo: &Path) -> Result<ResolveReference
         })
         .collect();
 
+    // A repo under two aliases resolves through one of them silently, so the
+    // registry's duplicates are part of the answer (spec 030's data model).
+    let duplicate_repos = services
+        .duplicate_repos()
+        .into_iter()
+        .map(|(repo, aliases)| DuplicateRepo { repo, aliases })
+        .collect();
+
     Ok(ResolveReferencesResult {
         references,
+        duplicate_repos,
         path: rel_path(&spec_path, repo),
     })
 }
@@ -456,6 +467,56 @@ mod tests {
 
         let result = run_consumer(repo);
         assert_eq!(result.references, [] as [ResolutionRecord; 0]);
+        assert_eq!(result.duplicate_repos, [] as [DuplicateRepo; 0]);
+    }
+
+    /// A repo registered under two aliases, by spellings the harvester treats
+    /// as one, is reported with its aliases: resolution uses one of them, and
+    /// without this nothing says which or that there was a choice.
+    #[test]
+    fn a_repo_under_two_aliases_is_reported_with_both() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        let toml = "[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"checkouts/api\"\n\n\
+                    [services.mirror]\nrepo = \"https://github.com/acme/api.git\"\npath = \"checkouts/mirror\"\n\n\
+                    [services.web]\nrepo = \"https://github.com/acme/web\"\npath = \"checkouts/web\"\n";
+        seed_consumer(
+            repo,
+            toml,
+            "references:\n  - service: api\n    spec: 003-user\n",
+        );
+
+        let result = run_consumer(repo);
+        assert_eq!(
+            result.duplicate_repos,
+            [DuplicateRepo {
+                repo: "https://github.com/acme/api".into(),
+                aliases: vec!["api".into(), "mirror".into()],
+            }]
+        );
+        // The references resolve as before.
+        assert_eq!(
+            result.references[0].outcome,
+            ReferenceOutcome::NotCheckedOut
+        );
+    }
+
+    /// Distinct repos report no duplicate, and the key is present and empty
+    /// on the wire rather than absent.
+    #[test]
+    fn distinct_repos_report_an_empty_duplicate_list() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        seed_consumer(
+            repo,
+            API_TOML,
+            "references:\n  - service: api\n    spec: 003-user\n",
+        );
+
+        let result = run_consumer(repo);
+        assert_eq!(result.duplicate_repos, [] as [DuplicateRepo; 0]);
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["duplicate-repos"], serde_json::json!([]));
     }
 
     #[test]

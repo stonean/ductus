@@ -29,8 +29,8 @@ description = "React management console"
 
 Constraints:
 
-- `repo` values should be unique across entries; a duplicate `repo` under two aliases is a registry-validation finding (the match becomes ambiguous).
-- **Identity is the normalized `repo`, not the literal string.** Matching strips a trailing `/` and a trailing `.git`, so `https://h/o/r`, `https://h/o/r/` and `https://h/o/r.git` are one service (`derive_references::normalize_repo`). Uniqueness above is therefore a claim about the *normalized* value. Two aliases whose `repo` values differ only by those suffixes are the same service: the harvester keys the registry by the normalized URL, so one alias silently wins and references harvest under it. `Services::duplicate_repos` compares raw strings and does not report that shape — see this spec's `review.md`.
+- `repo` values should be unique across entries; a duplicate `repo` under two aliases is a registry-validation finding (the match becomes ambiguous): `resolve-references` returns each in `duplicate-repos` with its aliases, and `/{project}:analyze` reports it as an Advisory finding.
+- **Identity is the normalized `repo`, not the literal string.** Matching strips a trailing `/` and a trailing `.git`, so `https://h/o/r`, `https://h/o/r/` and `https://h/o/r.git` are one service (`services::normalize_repo`). Uniqueness above is therefore a claim about the *normalized* value. Two aliases whose `repo` values differ only by those suffixes are the same service: the harvester keys the registry by the normalized URL, so the alias that sorts last wins and references harvest under it. `Services::duplicate_repos` groups by the same function, so `duplicate-repos` reports that shape too.
 - `path` is not required to exist on disk — a missing path yields the `not-checked-out` outcome at resolution time, not a config error.
 
 ## Cross-service reference

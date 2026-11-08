@@ -159,13 +159,14 @@ Suggested fix per finding: for an unlabelled criterion or a lowered counter, run
 
 ## Cross-service references (advisory)
 
-`resolve-references` classifies each `{service, spec}` entry of a spec's derived `references:` index (step 13). The repo URL is identity and navigation only and is **never fetched**; status is read from the local checkout. Map each outcome to a severity:
+`resolve-references` classifies each `{service, spec}` entry of a spec's derived `references:` index (step 13). The repo URL is identity and navigation only and is **never fetched**; status is read from the local checkout. Map each outcome, and each repo in the result's `duplicate-repos`, to a severity:
 
 - **`broken`** (Advisory finding) — the service is registered and its checkout reachable, but the target `spec.md` does not resolve. A provable defect in *this* spec, non-blocking because references are informative and never load-bearing. Suggested fix: correct or remove the reference link in the spec body, then re-run `derive-references`.
 - **`unregistered`** (informational, not a finding) — the repo matches no `[services]` entry, so it is a plain navigational link. Surface it with a pointer to `/ductus:link` to register the service.
 - **`not-checked-out`** (informational, not a finding) — registered, but the local `path` is missing or not a usable checkout, so nothing can be proven.
 - **`status-unreadable`** (informational, not a finding) — the target file exists but its `status` cannot be read, or the link targets a scenario, which has no status. The defect is upstream's.
 - **`ok`** (no finding) — the reference resolves and the linked `status` is readable.
+- **`duplicate-repos`** (Advisory finding, one per repo) — the registry holds the repo under two or more aliases, compared with a trailing `/` and `.git` removed, so a link to it resolves through one of them silently. Suggested fix: keep one `[services.<alias>]` table for the repo.
 
 The load-bearing line is **provably broken** (a finding) versus **can't check** (an informational unknown): a broken link never hides behind a benign unknown, and an unknown is never escalated to a defect.
 

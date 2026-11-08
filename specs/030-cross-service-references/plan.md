@@ -32,7 +32,7 @@ The index lives as a **committed, derived `references:` frontmatter field**, par
 
 ### D3 — Runtime primitive: `resolve-references`
 
-A new primitive in `runtime/src/primitives/resolve_references.rs` following the established pattern (`run(args, repo) -> Result<…>`, outcomes as data, `PrimitiveError` reserved for operational failures). Input: the consumer feature plus repo root. For each entry in the consumer's `references:` index it resolves the service via `[services]` and emits a resolution record `{ service, spec, outcome, status? }`.
+A new primitive in `runtime/src/primitives/resolve_references.rs` following the established pattern (`run(args, repo) -> Result<…>`, outcomes as data, `PrimitiveError` reserved for operational failures). Input: the consumer feature plus repo root. For each entry in the consumer's `references:` index it resolves the service via `[services]` and emits a resolution record `{ service, spec, outcome, status? }`. Beside the records it returns `duplicate-repos`, each repo the registry holds under two or more aliases, with them, empty when none, since a link to such a repo resolves through one alias silently.
 
 The outcome is decided by deterministic predicates — no prose read for intent:
 
@@ -49,7 +49,7 @@ It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`
 ### D4 — Command integration
 
 - `/{project}:status` gains a reference-status readout per spec: each reference shows its outcome and, on `ok`, the linked lifecycle status. The `resolve-references` classification does the work, and the readout shows it.
-- `/{project}:analyze` reports a `broken` outcome as an **Advisory** finding — surfaced on every run, but non-blocking, because references are informative and non-load-bearing. (`unregistered` / `not-checked-out` are *not* findings; they are informational unknowns — the can't-check vs. provably-broken line from the spec.)
+- `/{project}:analyze` reports a `broken` outcome, and each repo in `duplicate-repos`, as an **Advisory** finding — surfaced on every run, but non-blocking, because references are informative and non-load-bearing. (`unregistered` / `not-checked-out` are *not* findings; they are informational unknowns — the can't-check vs. provably-broken line from the spec.)
 
 ### D5 — Constitution and frontmatter schema
 
@@ -87,7 +87,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `framework/commands/analyze.md` | Modify | Broken-reference Advisory finding |
 | `framework/bootstrap/configure/*.md` | Modify | Per-agent permission entries for `/{project}:link` |
 | `framework/constitution.md` | Modify | §text-first-artifacts schema row, §spec-lifecycle carve-out, §drift-prevention canonical-source row |
-| `framework/runtime-tools.txt` | Modify | Register the new tool name for the opt-in check |
+| `framework/runtime-tools.txt` | Modify | Register the new tool name, which the per-agent allow blocks and the host-integration pointer lint read |
 | `.github/workflows/generators.yml` | Modify | Run the `references:` derivation |
 | `.githooks/pre-commit` | Modify | Run the `references:` derivation on every commit |
 | `runtime/tests/fixtures/cross-service-*` | Create | Consumer spec + fake registered checkouts per outcome |
