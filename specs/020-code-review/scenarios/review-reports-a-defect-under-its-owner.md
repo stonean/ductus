@@ -22,7 +22,7 @@ Counted at the end of the 2026-11-02 re-read round over the Verification paragra
 ## Edge Cases
 
 - A **Not flagged:** case that only a spec can show, such as a spec that only changes a client's registered redirect URIs, routes nothing at review.
-- Once scenario every-loaded-rule-file-has-a-pass gives `api-backend.md`, `configuration-cross.md` or `observability-backend.md` a pass, the yields to their rules route too, under the third Behavior item.
+- Once scenario every-loaded-rule-file-has-a-pass gives `api-backend.md`, `configuration-cross.md` or `observability-backend.md` a pass, the yields to their rules route too, under the Behavior item that keeps a finding with the yielding rule when no pass applies the owner.
 - A waiver recorded under the yielding rule's ID before this lands expires once the finding routes to its owner, since that rule no longer fires there (`framework/reference/review.md` §Per-run waiver processing); the finding counts under the owner's ID, where a waiver already recorded under that ID applies, and otherwise surfaces to be fixed, waived, or deferred.
 
 ## Open Questions

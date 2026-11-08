@@ -304,8 +304,9 @@ its version and date.
   beside their successors, so `/analyze` reports each such case under both
   IDs, and has no `BE-LOG-008`, so `/analyze` reports under no rule a
   sensitive value in propagated trace context, one other than configuration
-  in an error report, a span or a metric label, and a missing redaction
-  commitment for those carriers. A copy pinned from `main` after 0.59.11 keeps
+  in an error report, a span, a metric label, a product-analytics event or a
+  session-replay recording, and a missing redaction commitment for those
+  carriers. A copy pinned from `main` after 0.59.11 keeps
   whichever moved rules it had not yet deprecated, all four from `1598b87a`
   until `ad8a36f9`, and a `BE-DEPS-006` deprecated there may still name
   removal in 0.61.0. Any pinned `security-backend.md` keeps `BE-DEPS-002`'s `npx` case,
@@ -322,10 +323,12 @@ its version and date.
   upgrading: the upgrade replaces it with the shipped file, and no audit
   runs for it, since the file is not newly created. Pinning it instead
   keeps the shipped file out, so `/analyze` reports under no rule every case
-  another rule file yields to a `SEC-` rule. A `security-backend.md` pinned
-  before `SEC-AUTHN-004` keeps `BE-API-009`'s authorization-server sentences,
-  so `/analyze` reports such a server's `redirect_uri` matching under both
-  IDs until the file is re-synced. Spec 077; spec 008, tasks 32, 40, 42 and
+  another rule file yields to a `SEC-` rule. A project upgrading from 0.59.11 meets
+  `SEC-AUTHN-004` as a new MUST rule, since 0.59.11's `BE-API-009` had no
+  authorization-server sentences; a `security-backend.md` pinned from `main`
+  between `9b067399` and `86f46805` keeps them, so `/analyze` reports such a
+  server's `redirect_uri` matching under both IDs until the file is
+  re-synced. Spec 077; spec 008, tasks 32, 40, 42 and
   43.
 - **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
   `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s
@@ -393,8 +396,8 @@ its version and date.
   re-read round found.** Each new obligation is an `/analyze` finding for a
   spec that meets its rule's trigger. In `security-cross.md`, installed in
   every shape: `SEC-AUTHN-002` asks an OAuth or OIDC client for a one-time
-  `state` bound to the user agent, an ID token's `iss`, `aud`, `exp` and
-  signature, `state`, `code_verifier` and `nonce` from a cryptographically
+  `state` bound to the user agent, an ID token's `iss`, `aud` and `exp`, and
+  its signature unless it came directly from the token endpoint, `state`, `code_verifier` and `nonce` from a cryptographically
   secure generator, a mix-up defence where it can talk to more than one
   authorization server, and a native app's external user-agent;
   `SEC-AUTHN-003` asks an authorization server to enforce PKCE at its token
@@ -405,8 +408,11 @@ its version and date.
   included; `SEC-DEPS-001` reaches a container action's own image, a
   SHA-pinned action or reusable workflow whose own references take tags
   outside a lockfile, a `./` local action in a job that checks out another
-  commit, and `specs/system.md`, and sets aside a GitHub-hosted runner label,
-  so a waiver of `runs-on: ubuntu-latest` can go; and `SEC-LOG-001` adds
+  commit, a larger runner's custom image set to `Latest`, and
+  `specs/system.md`, and sets aside a GitHub-hosted runner label that selects
+  a GitHub-owned image,
+  as the deprecated `BE-DEPS-006`'s kept Statement now does too, so a waiver
+  of `runs-on: ubuntu-latest` can go; and `SEC-LOG-001` adds
   product-analytics events and session-replay recordings. In
   `security-backend.md`: `BE-LOG-008` adds the same two carriers;
   `BE-API-008` reaches search engines and coordination services;
@@ -418,7 +424,8 @@ its version and date.
   Logout's `iss` and `sid`. In `security-frontend.md`: new `FE-DEPS-007`
   (SBOM), `FE-DEPS-008` (registry signatures and provenance) and
   `FE-DEPS-009` (dependency confusion) hold a frontend-only project to what
-  `BE-DEPS-003` to `-005` hold the others; `FE-STORAGE-003` sets aside an
+  `BE-DEPS-003` to `-005` hold a backend-only or full-stack one, a cross-only
+  project being held to neither; `FE-STORAGE-003` sets aside an
   RFC 8058 `List-Unsubscribe` identifier and Front-Channel Logout's `iss` and
   `sid`, and its commitment no longer fails a callback that receives an
   authorization code; and `FE-CSRF-003` sets aside an OAuth redirection
@@ -430,17 +437,28 @@ its version and date.
   analytics ID is no longer named as public. `api-backend.md`'s
   `BE-ERRENV-003` judges `specs/errors.md`'s envelope, and
   `performance-frontend.md`'s `FE-LOAD-007` asks a spec that introduces a
-  server-rendered page for its cache policy. A case a changed rule now names
-  as another's is reported once, under that rule. A newly created
+  server-rendered page for its cache policy. At `/analyze`, a case a changed
+  rule now names as another's is reported once, under that rule; `/review`
+  applies Statements and no routing until spec 020's lands, so it reports
+  this batch's new pairs under both IDs: `SEC-DATA-001` beside `BE-API-013`
+  or `FE-STORAGE-003`, `SEC-AUTHN-002` beside `BE-AUTHN-012`, `BE-AUTHN-019`
+  and `BE-DATA-009`, and `FE-DEPS-007` to `-009` beside `BE-DEPS-003` to
+  `-005`. A newly created
   `specs/errors.md` has its example envelope carry a `request_id`, as
   `BE-ERR-002` requires; an existing one is not rewritten. A pinned copy of
-  a changed file keeps its old text until re-synced, and a
-  `security-backend.md` pinned from 0.59.11, or left from a surface the
-  project no longer configures, has no `BE-LOG-008`, so beside it
-  `observability-backend.md`'s `BE-METRIC-003` and `BE-TRACE-002`, which
-  0.59.11 had flag a sensitive metric label or span attribute themselves,
-  and `configuration-cross.md`'s trace-context yield report the case under
-  no rule until the file is re-synced or deleted. Spec 008, tasks 43 and 44.
+  a changed file keeps its old text until re-synced. A `security-backend.md`
+  pinned from 0.59.11, or left from a surface the project no longer
+  configures, has no `BE-LOG-008`, so beside it `configuration-cross.md`'s
+  yield of a configuration value in trace context and `SEC-LOG-001`'s yields,
+  product-analytics events and session-replay recordings now among them,
+  report the case under no rule until the file is re-synced or deleted, as
+  does `SEC-AUTHN-002`'s yield of an ID token's key source, 0.59.11 having no
+  `BE-AUTHN-019`, while the cases `SEC-DATA-001` yields to `BE-API-013` and
+  `BE-API-015`, absent there too, stay `SEC-DATA-001`'s; beside a pinned one,
+  so do the current `observability-backend.md`'s
+  `BE-METRIC-003` and `BE-TRACE-002`, which yield a sensitive metric label or
+  span attribute to `BE-LOG-008`, where 0.59.11's `BE-METRIC-003` flagged an
+  email label itself. Spec 008, tasks 43 and 44.
 
 ### Fixed
 

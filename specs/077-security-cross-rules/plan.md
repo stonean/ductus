@@ -23,18 +23,18 @@ There are three registration sites, and each must agree.
 - **`scripts/lint-rule-ids.sh`**'s `id_re` lists `SEC` beside `BE`, `FE`, `CFG` and `QUAL`, the source comment above it names 077's data-model, and the malformed-heading message lists `SEC`.
 - **The analyze reference** lists 077's data-model beside 008's and 017's in item 1. 008's `data-model.md` (§Rule ID format, the paragraph after the category table) names `security-cross.md`'s `SEC` prefix beside `CFG` and `QUAL`.
 
-`security-cross.md`'s header declares the format and the three categories, as `quality-cross.md`'s does (`framework/rules/quality-cross.md:3`).
+`security-cross.md`'s header declares the format and its categories, as `quality-cross.md`'s does (`framework/rules/quality-cross.md:3`).
 
 ### `SEC-LOG-001` states its own value set
 
-A frontend-only or cross-only project does not install `security-backend.md` (`framework/bootstrap/ductus.md`, "Rule-file surface filter"), so `SEC-LOG-001` cannot rely on `BE-LOG-002` for its value set. Its Statement names the values `BE-LOG-002`'s Statement bars, word for word, and bars them from a log line, an error-reporting payload and telemetry, in any shape.
+A frontend-only or cross-only project does not install `security-backend.md` (`framework/bootstrap/ductus.md`, "Rule-file surface filter"), so `SEC-LOG-001` cannot rely on `BE-LOG-002` for its value set. Its Statement names the values `BE-LOG-002`'s Statement bars, word for word, and bars them from a log line, an error-reporting payload and telemetry, and, since 008's task 44, product-analytics events and session-replay recordings, in any shape.
 
-Its Verification asks a spec or plan that introduces logging, error reporting or telemetry, client-side or server-side, to commit to excluding or redacting those values. Its Not-flagged clause names three owners:
+Its Verification asks a spec or plan that introduces logging, error reporting, telemetry, product analytics or session replay, client-side or server-side, to commit to excluding or redacting those values. Its Not-flagged clause names three owners:
 
-- the exclusion or redaction commitment for logging and a value in a log line are `BE-LOG-002`'s, and the commitment for error reporting, tracing, metrics or baggage and a value in those carriers `BE-LOG-008`'s, each "where `security-backend.md` is also loaded" (008 `data-model.md` §Verification phrasing, item 6), since both owners' triggers fire on the same missing commitment;
+- the exclusion or redaction commitment for logging and a value in a log line are `BE-LOG-002`'s, and the commitment for error reporting, tracing, metrics, baggage, product analytics or session replay and a value in those carriers `BE-LOG-008`'s, each "where `security-backend.md` is also loaded" (008 `data-model.md` §Verification phrasing, item 6), since both owners' triggers fire on the same missing commitment;
 - a sensitive configuration value is `configuration-cross.md` `CFG-ENV-006`'s, with no condition.
 
-Its Sources are the OWASP Logging Cheat Sheet, W3C Trace Context §6 and OpenTelemetry's Baggage security considerations, fetched when the rule is written.
+Its Sources are the OWASP Logging Cheat Sheet, W3C Trace Context §6 and OpenTelemetry's Baggage security considerations, fetched when the rule is written, and, since 008's task 44, Google Analytics Help's PII guidance.
 
 ### Moved rules keep their text
 
@@ -60,9 +60,9 @@ The version is the next one `version` would ship, computed when the labels are w
 These name a deprecated rule and change to name its successor:
 
 - `security-backend.md`: the yields in `BE-API-009`, `BE-API-010`, `BE-API-011` and `BE-API-013`, and the Statements of `BE-API-010` (d) and `BE-API-011`. The latter's "Token comparison MUST be constant-time per `BE-AUTHN-009`" becomes per `SEC-AUTHN-001`.
-- `security-frontend.md`: the yields in `FE-AUTHN-001` and `FE-STORAGE-003`, which drop "where `security-backend.md` is also loaded", since a `-cross.md` owner installs in every shape. `FE-DEPS-004` gains a yield, with no condition, of a package a build step's command runs by a mutable reference, such as `npx tool@latest`, in a spec or plan, to `SEC-DEPS-001`, whose trigger reaches a spec or plan and not `system.md`, which a frontend-only project now loads beside it, so the case is reported once; `security-backend.md`'s `BE-DEPS-002` gains the same yield.
+- `security-frontend.md`: the yields in `FE-AUTHN-001` and `FE-STORAGE-003`, which drop "where `security-backend.md` is also loaded", since a `-cross.md` owner installs in every shape. `FE-DEPS-004` gains a yield, with no condition, of a package a build step's command runs by a mutable reference, such as `npx tool@latest`, to `SEC-DEPS-001`, which a frontend-only project now loads beside it, so the case is reported once, its trigger reaching a spec, a plan and, since 008's task 44, `system.md`; `security-backend.md`'s `BE-DEPS-002` gains the same yield.
 
-`configuration-cross.md`'s `CFG-ENV-006` is the only rule outside the backend surface, other than this spec's `SEC-LOG-001`, that names `BE-LOG-002` or `BE-LOG-008` for a sensitive value (grep of `framework/rules/` for both IDs). For a non-configuration value in a log line it reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there stays `BE-LOG-008`'s with no condition, as 008's task 43 leaves it open.
+`configuration-cross.md`'s `CFG-ENV-006` is the only rule outside the backend surface, other than this spec's `SEC-LOG-001`, that names `BE-LOG-002` or `BE-LOG-008` for a sensitive value (grep of `framework/rules/` for both IDs). For a non-configuration value in a log line it reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there is `BE-LOG-008`'s where `security-backend.md` is also loaded and `CFG-ENV-006`'s otherwise, as 008's task 43 decided.
 
 `observability-backend.md`'s pointers to `BE-LOG-008` stay as they are: it installs on the backend surface, beside `security-backend.md`.
 
@@ -139,7 +139,7 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 
 `data-model.md` registers the `SEC` surface:
 
-- its prefix, its ID grammar and its three categories;
+- its prefix, its ID grammar and its categories;
 - the rule set, with each rule's tier and, for a moved rule, its predecessor;
 - a pointer to 008's `data-model.md` for the rule schema, which it does not restate.
 

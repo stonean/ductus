@@ -1,6 +1,6 @@
 # 077 — Security cross rules Data Model
 
-Registers the `SEC` rule-ID surface and its three categories. It does not restate the rule-file schema, which `specs/008-security-rules/data-model.md` defines once: Statement and Verification, `### {ID}` headings, permanent IDs, one obligation tier per Statement, and the `**DEPRECATED in {version}:**` label.
+Registers the `SEC` rule-ID surface and its categories. It does not restate the rule-file schema, which `specs/008-security-rules/data-model.md` defines once: Statement and Verification, `### {ID}` headings, permanent IDs, one obligation tier per Statement, and the `**DEPRECATED in {version}:**` label.
 
 ## `SEC` surface
 
@@ -47,4 +47,4 @@ SEC-{category}-{NNN}
 | `SEC-AUTHN-004` | MUST | An OAuth authorization server matches each `redirect_uri` it receives exactly | `BE-API-009`'s authorization-server sentences (008 task 43) |
 | `SEC-DATA-001` | MUST | A credential or PII stays out of a URL the project's code requests, sends or renders, with `BE-API-013`'s carve-outs | none (new; 008 task 43) |
 
-Each predecessor is labelled `**DEPRECATED in {version}:**` in `security-backend.md`, with the second minor release after the shipping one as its removal target (077's Resolved Questions). It names its successor as the owner of every case it governed until it is removed.
+Each predecessor that is a whole rule is labelled `**DEPRECATED in {version}:**` in `security-backend.md`, with the second minor release after the shipping one as its removal target (077's Resolved Questions). It names its successor as the owner of every case it governed until it is removed. `SEC-AUTHN-004`'s predecessor is the authorization-server sentences `BE-API-009` no longer holds, and `BE-API-009` stays live, naming `SEC-AUTHN-004` as their owner.

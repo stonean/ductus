@@ -77,8 +77,8 @@ The 17 violations identified during the audit, classified by disposition. Accept
 > `configuration-cross.md` `CFG-ENV-006` names a sensitive value that is not
 > configuration, in a log line or in propagated trace context, as `security-backend.md`
 > `BE-LOG-002`'s or `BE-LOG-008`'s where that file is also loaded and `security-cross.md`
-> `SEC-LOG-001`'s otherwise; a sensitive configuration value in trace context stays
-> `BE-LOG-008`'s. This spec's `plan.md` and scenario `the-adopter-ci-template-can-run` cite
+> `SEC-LOG-001`'s otherwise; a sensitive configuration value in trace context is
+> `BE-LOG-008`'s where `security-backend.md` is also loaded and `CFG-ENV-006`'s otherwise, by 008's task 43. This spec's `plan.md` and scenario `the-adopter-ci-template-can-run` cite
 > `SEC-DEPS-001`, which takes over the deprecated `BE-DEPS-006`. 077 records the obligation
 > in its `cross-spec-impact:` frontmatter; this signpost is its discharge.
 
