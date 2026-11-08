@@ -1,23 +1,22 @@
 ---
 spec: 038-concurrency-backend-rules
-last-run: 2026-10-20T00:52:03Z
-analyzed-against: 709e043f00dc1f311d689fb8642f86b3bc0e5b7c
+last-run: 2026-11-08T19:16:08Z
+analyzed-against: fb28634b3d4442c2f3ee5dc9e885be04e92bee4d
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 1
+unexamined: 2
 analyzed-digest:
-  plan.md: cd84ff2856193cc78a01d3912ac043a07aab204251ba1d6896c6eb92699850ad
-  review.md: 6887eec2b33fe8116aa6c635aa903c84fd80f86c9cf670f2d490a050fe943841
-  spec.md: 283db126d7eb9142565855c61b43cc04df25f63c07462c024b77ba9ac5dfa749
-  tasks.md: 86f9335290c68cb01110e06b398bf556aa0f6de90d05358f4228240a0aacf777
-unexamined-by-reason:
-  ships-to-adopter: 1
+  plan.md: 300657c3e0ea1d2917ea0a186133b9729c0b6cd3d8fc4a0a3db86271bbe04bc6
+  review.md: ecc107cdd9a5b8397557d1266acd9f89ab24a815aca13a7ba95fecbe2d395a18
+  scenarios/lock-the-parent-before-rewriting-its-children.md: 0c192fd9dac4abfa8acf792caad259c328fb41f61885bf33df0a96ccd6ab401b
+  spec.md: 313f15d6f67726a9f1b992f8e3c9917e278fcd154f58d780200ae09713f8ea85
+  tasks.md: 08215aadb71d3f50a37367b73656ffc3720c9256b8f6565733f250b16fd14ac7
 blocking: false
 dispositions:
-  fixed: 2
-  routed: 0
-  discarded: 0
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -25,7 +24,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -39,11 +38,14 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-- ships-to-adopter: 1
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- anchor-resolution — spec.md:63 references §Trade-offs, a plan section, which resolves to no constitution marker — `specs/038-concurrency-backend-rules/spec.md` — **fixed**
-- grounding — spec.md Motivation asserted in the present tense that the backend surface has zero concurrency coverage, which concurrency-backend.md falsified — `specs/038-concurrency-backend-rules/spec.md` — **fixed**
+*None.*
