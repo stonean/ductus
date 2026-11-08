@@ -1,17 +1,17 @@
 ---
 spec: 077-security-cross-rules
-last-run: 2026-11-04T03:46:07Z
-analyzed-against: 65ec2d7f70c6ac37f7ea71b5486d20108575c435
+last-run: 2026-11-08T06:37:34Z
+analyzed-against: b138c78f9af009a49376a1fb604f723332ae7597
 hard-fail: 0
 blocking-findings: 0
 advisory: 4
-unexamined: 0
+unexamined: 2
 analyzed-digest:
-  data-model.md: cbf317f3d8635097191d82c1b4a9cc35aedd9275dd026eaeb68a9685f241be0d
-  plan.md: fdfe23e5ed5c775bda496f1a7e0bdf73bd7cd2f9e0cf251e1de59f269a344d28
-  review.md: 849d702700c49b296c7cf7a9c9be27381ebe3437cb4524a461f40b3c4aea45a3
-  spec.md: 59fb87a32818e61288be2ed52283c29196d0d1e4f0d410c2fd5fb9b77ffc32f6
-  tasks.md: f1e4152fb2b0f0c34e7b307c2a7c334d52354bff7f8e0a1c9a491c04b89075e9
+  data-model.md: 7c47616784eef9e266659f9323cbfea1a710519df6d959dc8f056c2a026efce6
+  plan.md: 03252f18bd14a9246ae292a764153ea0aca834f522b4defc2ae810d1beaa31e7
+  review.md: 45af5d9fcc85be5465da9d8cd4a2d896e35672e9b579ec0339ac2f225f58c5f2
+  spec.md: cd772d6af2c33bab59f7ccabff6506b6530a00d3e4fb1f99a542ee942f85e1a2
+  tasks.md: 959b6c0f334e229097e4f3fd943b90ce3a9fd542e09b702238d5ac572dc46c2e
 blocking: false
 dispositions:
   fixed: 0
@@ -45,7 +45,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 4 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -68,7 +68,7 @@ decisions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
