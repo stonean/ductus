@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [008-security-rules, 024-rule-loader, 025-rule-opt-out, 033-rule-surface-setting]
 next-criterion: 15
 ---
@@ -92,7 +92,7 @@ This spec deliberately has no `data-model.md`. The first source in that same res
 - [ ] AC11: The file remains in the `ductus`-owned Shared Files manifest in `framework/bootstrap/ductus.md` and is selected under the `frontend` surface by `discover-rule-files`.
 - [ ] AC12: This spec has no `data-model.md`, and the file's header remains the governing source of its ID format and categories.
 - [ ] AC13: Every WCAG 2.2 Level A and AA success criterion a design-time commitment can address, 1.3.3, 1.4.5, 2.4.5, 2.5.4, 3.2.3, 3.2.4 and 3.2.6 included, is cited by a rule, and the file's header says that meeting it is not a WCAG conformance claim.
-- [ ] AC14: `FE-ARIA-001`'s Source cites WCAG 2.2 §4.1.2 for its MUST, Severity posture names it as no exception, and no rule in the file carries a MUST against restating an element's implicit role.
+- [x] AC14: `FE-ARIA-001`'s Source cites WCAG 2.2 §4.1.2 for its MUST, Severity posture names it as no exception, and no rule in the file carries a MUST against restating an element's implicit role.
 
 ## Open Questions
 

@@ -4,9 +4,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. `FE-ARIA-001` rests on §4.1.2 (AC14)
 
-- [ ] Drop the Statement's MUST NOT on restating an element's implicit role and the styled-list MAY that qualifies it
-- [ ] Drop the Verification's restated-role flag and its styled-list exception
-- [ ] Source: add WCAG 2.2 §4.1.2 (Name, Role, Value) for the MUST, and drop *ARIA in HTML* §3.2
+- [x] Drop the Statement's MUST NOT on restating an element's implicit role and the styled-list MAY that qualifies it
+- [x] Drop the Verification's restated-role flag and its styled-list exception
+- [x] Source: add WCAG 2.2 §4.1.2 (Name, Role, Value) for the MUST, and drop *ARIA in HTML* §3.2
 
 - **Done when**: `FE-ARIA-001` reads as AC14 says, `cargo test no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh` and `scripts/audit/run-all.sh` pass, and AC14 is ticked.
 
