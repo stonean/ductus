@@ -68,12 +68,12 @@ Reuse the eight copies the plan names, from the clarify session's scratchpad `06
 
 Blocked on task 6, which can rewrite rule text. Once every box in this file is ticked, `/ductus:review` runs, then `/ductus:analyze`, then the completion gate with the owner's approval.
 
-- [ ] AC1: the header's categories against the scope table, and `scripts/lint-rule-ids.sh`
-- [ ] AC2: categories disjoint from the five other `-backend.md` headers
-- [ ] AC3: each rule's heading, Statement and Verification, and no Rationale
-- [ ] AC5, AC6, AC8 and AC9: each rule read against the spec
-- [ ] AC7: `check-rule-ids`, each cited rule's text, and every citation into this file from the other rule files
-- [ ] AC10: the manifest row in `framework/bootstrap/ductus.md`, and `discover-rule-files` under `backend`
-- [ ] AC11: `framework/constitution.md` names no `api-backend.md`
+- [x] AC1: the header's categories against the scope table, and `scripts/lint-rule-ids.sh`
+- [x] AC2: categories disjoint from the five other `-backend.md` headers
+- [x] AC3: each rule's heading, Statement and Verification, and no Rationale
+- [x] AC5, AC6, AC8 and AC9: each rule read against the spec
+- [x] AC7: `check-rule-ids`, each cited rule's text, and every citation into this file from the other rule files
+- [x] AC10: the manifest row in `framework/bootstrap/ductus.md`, and `discover-rule-files` under `backend`
+- [x] AC11: `framework/constitution.md` names no `api-backend.md`
 
 - **Done when**: each criterion holds against the tree, with a failure fixed in this task, and AC1–AC3 and AC5–AC11 are ticked.
