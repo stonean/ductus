@@ -24,8 +24,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. Every Level A and AA criterion is cited (AC13, second part)
 
-- [ ] List the 55 Level A and AA success criteria of the fetched WCAG 2.2 copy, 31 and 24
-- [ ] Check each by number against the rules' `§` citations, recording a design-time reason for any not cited
+- [x] List the 55 Level A and AA success criteria of the fetched WCAG 2.2 copy, 31 and 24
+- [x] Check each by number against the rules' `§` citations, recording a design-time reason for any not cited
 
 - **Done when**: each of the 55 is cited by a rule or recorded with its reason in the commit message, and AC13 is ticked.
 
