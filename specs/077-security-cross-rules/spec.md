@@ -89,7 +89,7 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 - [x] AC8: `framework/bootstrap/ductus.md` ships the file in every shape, and `docs/rules.md` lists it. A frontend-only, a backend-only and a cross-only `[rules] surfaces` setting each install it.
 - [x] AC9: `runtime/CHANGELOG.md`'s `## [Unreleased]` section names the four ID changes and the waivers they expire.
 - [x] AC11: `runtime/CHANGELOG.md`'s `## [Unreleased]` section also names each successor, the removal version, and the double report a project pinning `security-backend.md` sees until it re-syncs the file.
-- [ ] AC10: A fresh agent's re-read of the new file and of every rule this spec changes, across all four project shapes, finds no MUST or SHOULD.
+- [x] AC10: A fresh agent's re-read of the new file and of every rule this spec changes, across all four project shapes, finds no MUST or SHOULD.
 
 ## Open Questions
 
