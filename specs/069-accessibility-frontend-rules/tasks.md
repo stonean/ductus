@@ -44,15 +44,15 @@ The set is every document a Source line, or the header, cites after tasks 1–3,
 
 Blocked on task 4, which can rewrite rule text. Once every box in this file is ticked, `/ductus:review` runs, in a clean worktree when another session's uncommitted files sit in the tree, then `/ductus:analyze`, then the completion gate with the owner's approval.
 
-- [ ] AC1: the eleven categories, a `## FE-{CATEGORY}` section each, and every rule ID's category one of them
-- [ ] AC2: no category shared with `security-frontend.md` or `performance-frontend.md`
-- [ ] AC3: each rule's heading, one-tier Statement and Verification, no Rationale, no repeated ID, and `scripts/lint-rule-ids.sh`
-- [ ] AC6: each AAA rule SHOULD and labelled, each SHOULD rule AAA or testing, each MUST rule citing an A or AA criterion but those Severity posture names
-- [ ] AC7: no MUST requires CI; `FE-A11YTEST-001` and `FE-A11YTEST-003` as stated
-- [ ] AC8: `FE-KBD-002`'s MUST is §2.4.7 plus §1.4.11's 3:1, and §2.4.13 only in `FE-KBD-005`
-- [ ] AC9: `check-rule-ids` over the file, `FE-PII-002`, `FE-AUTHN-002` and `BE-AUTHN-005` included
-- [ ] AC10 and AC11: the constitution names no `accessibility-frontend.md`; the manifest row, and `discover-rule-files` under `frontend`
-- [ ] AC12: no `data-model.md`, and the header governs the ID format
-- [ ] spec.md: Enforcement's "(see Open Questions)" points at the Resolved Question that defers the review pass to 020's scenario
+- [x] AC1: the eleven categories, a `## FE-{CATEGORY}` section each, and every rule ID's category one of them
+- [x] AC2: no category shared with `security-frontend.md` or `performance-frontend.md`
+- [x] AC3: each rule's heading, one-tier Statement and Verification, no Rationale, no repeated ID, and `scripts/lint-rule-ids.sh`
+- [x] AC6: each AAA rule SHOULD and labelled, each SHOULD rule AAA or testing, each MUST rule citing an A or AA criterion but those Severity posture names
+- [x] AC7: no MUST requires CI; `FE-A11YTEST-001` and `FE-A11YTEST-003` as stated
+- [x] AC8: `FE-KBD-002`'s MUST is §2.4.7 plus §1.4.11's 3:1, and §2.4.13 only in `FE-KBD-005`
+- [x] AC9: `check-rule-ids` over the file, `FE-PII-002`, `FE-AUTHN-002` and `BE-AUTHN-005` included
+- [x] AC10 and AC11: the constitution names no `accessibility-frontend.md`; the manifest row, and `discover-rule-files` under `frontend`
+- [x] AC12: no `data-model.md`, and the header governs the ID format
+- [x] spec.md: Enforcement's "(see Open Questions)" points at the Resolved Question that defers the review pass to 020's scenario
 
 - **Done when**: each criterion holds against the tree, with a failure fixed in this task, and AC1–AC3 and AC6–AC12 are ticked.

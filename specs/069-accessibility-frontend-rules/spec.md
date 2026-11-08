@@ -79,18 +79,18 @@ This spec deliberately has no `data-model.md`. The first source in that same res
 
 ## Acceptance Criteria
 
-- [ ] AC1: The header of `framework/rules/accessibility-frontend.md` declares exactly the eleven categories `SEMHTML`, `KBD`, `ARIA`, `CONTRAST`, `A11YFORM`, `A11YMEDIA`, `POINTER`, `LAYOUT`, `MOTION`, `TIMING`, and `A11YTEST`; each has a `## FE-{CATEGORY} — {Name}` section; and every rule ID's category is one of them.
-- [ ] AC2: No category the file declares is also declared by another `-frontend.md` rule file.
-- [ ] AC3: Every rule meets the schema in 008's data model: a level-3 heading containing only an ID of the form `FE-{CATEGORY}-{NNN}`, a block-quoted Statement whose obligations come from one RFC 2119 tier, and a Verification, with no Rationale; no ID repeats; and `scripts/lint-rule-ids.sh` passes.
+- [x] AC1: The header of `framework/rules/accessibility-frontend.md` declares exactly the eleven categories `SEMHTML`, `KBD`, `ARIA`, `CONTRAST`, `A11YFORM`, `A11YMEDIA`, `POINTER`, `LAYOUT`, `MOTION`, `TIMING`, and `A11YTEST`; each has a `## FE-{CATEGORY} — {Name}` section; and every rule ID's category is one of them.
+- [x] AC2: No category the file declares is also declared by another `-frontend.md` rule file.
+- [x] AC3: Every rule meets the schema in 008's data model: a level-3 heading containing only an ID of the form `FE-{CATEGORY}-{NNN}`, a block-quoted Statement whose obligations come from one RFC 2119 tier, and a Verification, with no Rationale; no ID repeats; and `scripts/lint-rule-ids.sh` passes.
 - [x] AC4: Every rule has a Source, and re-checking each claim the file makes about an external standard against the cited document's current text finds no discrepancy.
 - [x] AC5: Every WCAG success criterion the file cites exists under that number in WCAG 2.2 (W3C Recommendation, 12 December 2024), the title beside it names that criterion, and every conformance level the file states for it matches WCAG 2.2.
-- [ ] AC6: Every rule adopting a Level AAA criterion is SHOULD and labels that criterion Level AAA in its own text; every SHOULD rule adopts a Level AAA criterion or states a testing practice; and every MUST rule cites at least one Level A or AA criterion, except those Severity posture names.
-- [ ] AC7: No MUST or MUST NOT Statement requires continuous integration; `FE-A11YTEST-001` holds each release to an automated check, and running that check on every change is the SHOULD `FE-A11YTEST-003`.
-- [ ] AC8: `FE-KBD-002`'s MUST is the Level AA requirement, §2.4.7 visible focus plus the §1.4.11 3:1 ratio for author-styled indicators, and the §2.4.13 bar appears only in the SHOULD rule `FE-KBD-005`.
-- [ ] AC9: Every rule ID the file cites, within it and in other rule files (`FE-PII-002`, `FE-AUTHN-002`, `BE-AUTHN-005`), resolves to a rule heading in a shipped rule file.
-- [ ] AC10: The constitution's §rules *Lifecycle* no longer lists `accessibility-frontend.md` under its recorded backfill exception.
-- [ ] AC11: The file remains in the `ductus`-owned Shared Files manifest in `framework/bootstrap/ductus.md` and is selected under the `frontend` surface by `discover-rule-files`.
-- [ ] AC12: This spec has no `data-model.md`, and the file's header remains the governing source of its ID format and categories.
+- [x] AC6: Every rule adopting a Level AAA criterion is SHOULD and labels that criterion Level AAA in its own text; every SHOULD rule adopts a Level AAA criterion or states a testing practice; and every MUST rule cites at least one Level A or AA criterion, except those Severity posture names.
+- [x] AC7: No MUST or MUST NOT Statement requires continuous integration; `FE-A11YTEST-001` holds each release to an automated check, and running that check on every change is the SHOULD `FE-A11YTEST-003`.
+- [x] AC8: `FE-KBD-002`'s MUST is the Level AA requirement, §2.4.7 visible focus plus the §1.4.11 3:1 ratio for author-styled indicators, and the §2.4.13 bar appears only in the SHOULD rule `FE-KBD-005`.
+- [x] AC9: Every rule ID the file cites, within it and in other rule files (`FE-PII-002`, `FE-AUTHN-002`, `BE-AUTHN-005`), resolves to a rule heading in a shipped rule file.
+- [x] AC10: The constitution's §rules *Lifecycle* no longer lists `accessibility-frontend.md` under its recorded backfill exception.
+- [x] AC11: The file remains in the `ductus`-owned Shared Files manifest in `framework/bootstrap/ductus.md` and is selected under the `frontend` surface by `discover-rule-files`.
+- [x] AC12: This spec has no `data-model.md`, and the file's header remains the governing source of its ID format and categories.
 - [x] AC13: Every WCAG 2.2 Level A and AA success criterion a design-time commitment can address, 1.3.3, 1.4.5, 2.4.5, 2.5.4, 3.2.3, 3.2.4 and 3.2.6 included, is cited by a rule, and the file's header says that meeting it is not a WCAG conformance claim.
 - [x] AC14: `FE-ARIA-001`'s Source cites WCAG 2.2 §4.1.2 for its MUST, Severity posture names it as no exception, and no rule in the file carries a MUST against restating an element's implicit role.
 
