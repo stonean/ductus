@@ -235,7 +235,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 - [x] AC1: `framework/rules/security-backend.md` exists in the `ductus` framework with categorized, numbered rules
 - [x] AC2: `framework/rules/security-frontend.md` exists in the `ductus` framework with categorized, numbered rules
-- [ ] AC3: Every rule has an ID, a statement, and a verification method, and no rule carries a Rationale paragraph
+- [x] AC3: Every rule has an ID, a statement, and a verification method, and no rule carries a Rationale paragraph
 - [x] AC4: Rule IDs follow the format `{surface}-{category}-{NNN}` with `{surface}` ∈ `{BE, FE}` and `{NNN}` zero-padded starting at `001`
 - [x] AC5: Rules use RFC 2119 language to distinguish enforced (MUST/MUST NOT) from advisory (SHOULD/SHOULD NOT)
 
