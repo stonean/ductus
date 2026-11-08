@@ -4,9 +4,12 @@
 #
 # Runs the ignored `result_sizes` test in runtime/tests/result_sizes.rs, which
 # builds two corpora (runtime/tests/common/corpus.rs), calls every name in
-# PRIMITIVE_REGISTRY through the built binary's MCP server on a fresh copy of
-# each, and records the characters of each result's text. A name the fixture
-# cannot exercise gets a "not measured" row with its reason. The report opens
+# PRIMITIVE_REGISTRY, and each argument mode that widens a read, through the
+# built binary's MCP server on a fresh copy of each, and records the
+# characters of each result's text: on both corpora at a read size past every
+# result, which is what the growth test reads, and on the large one at the
+# default read size, which is what a host reads. A name the fixture cannot
+# exercise gets a "not measured" row with its reason. The report opens
 # with the commit it was measured at, each uncommitted path under runtime/
 # (the binary is built from the work tree), and the UTC time, and goes to
 # stdout, or to the file given as the first argument.

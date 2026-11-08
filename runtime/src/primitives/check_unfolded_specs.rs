@@ -29,10 +29,44 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, Frontmatter, UnfoldedSpec,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, Frontmatter, ListsForm, UnfoldedSpec,
 };
 
-/// Execute the `check-unfolded-specs` primitive against the given repo root.
+/// Execute the `check-unfolded-specs` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with `unfolded` in
+/// the file it names and only its count inline (`bounded_lists::place`; spec
+/// 080, AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &CheckUnfoldedSpecsArgs, repo: &Path) -> Result<CheckUnfoldedSpecsResult> {
+    let (unfolded, examined) = compute(args, repo)?;
+    let lists = serde_json::json!({ "unfolded": unfolded });
+    let mut result = CheckUnfoldedSpecsResult {
+        unfolded_count: unfolded.len(),
+        unfolded: Some(unfolded),
+        examined,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "check-unfolded-specs",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.unfolded = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Every surviving branch-scoped spec, whole, with the count of feature
+/// directories scanned.
 ///
 /// # Errors
 ///
@@ -44,7 +78,10 @@ use crate::schema::primitives::{
 /// surviving spec declares, so a directory whose declaration could not be read
 /// has no honest row — and dropping it silently would understate the very
 /// backlog the check exists to report.
-pub fn run(_args: &CheckUnfoldedSpecsArgs, repo: &Path) -> Result<CheckUnfoldedSpecsResult> {
+pub(crate) fn compute(
+    _args: &CheckUnfoldedSpecsArgs,
+    repo: &Path,
+) -> Result<(Vec<UnfoldedSpec>, u32)> {
     let layout = paths::Paths::load(repo);
     let specs_dir = repo.join(&layout.specs_root);
 
@@ -84,7 +121,7 @@ pub fn run(_args: &CheckUnfoldedSpecsArgs, repo: &Path) -> Result<CheckUnfoldedS
         });
     }
 
-    Ok(CheckUnfoldedSpecsResult { unfolded, examined })
+    Ok((unfolded, examined))
 }
 
 #[cfg(test)]
@@ -117,7 +154,7 @@ mod tests {
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
         assert_eq!(
-            result.unfolded,
+            result.unfolded.as_deref().unwrap(),
             [] as [crate::schema::primitives::UnfoldedSpec; 0]
         );
         // The distinction the count exists for: examined-and-clean, not
@@ -133,7 +170,7 @@ mod tests {
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
         assert_eq!(
-            result.unfolded,
+            result.unfolded.as_deref().unwrap(),
             [] as [crate::schema::primitives::UnfoldedSpec; 0]
         );
         assert_eq!(result.examined, 0);
@@ -159,6 +196,8 @@ mod tests {
         assert_eq!(result.examined, 3);
         let rows: Vec<(&str, &str, Option<&str>, &str)> = result
             .unfolded
+            .as_deref()
+            .unwrap()
             .iter()
             .map(|s| {
                 (
@@ -206,9 +245,12 @@ mod tests {
 
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
-        assert_eq!(result.unfolded.len(), 1);
-        assert_eq!(result.unfolded[0].feature, "1234.1-shipped");
-        assert_eq!(result.unfolded[0].status, "done");
+        assert_eq!(result.unfolded_count, 1);
+        assert_eq!(
+            result.unfolded.as_deref().unwrap()[0].feature,
+            "1234.1-shipped"
+        );
+        assert_eq!(result.unfolded.as_deref().unwrap()[0].status, "done");
     }
 
     #[test]
@@ -222,8 +264,8 @@ mod tests {
 
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
-        assert_eq!(result.unfolded.len(), 1);
-        assert_eq!(result.unfolded[0].folds_into, None);
+        assert_eq!(result.unfolded_count, 1);
+        assert_eq!(result.unfolded.as_deref().unwrap()[0].folds_into, None);
     }
 
     #[test]

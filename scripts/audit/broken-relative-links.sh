@@ -91,6 +91,18 @@ except ValueError:
                      "run `ductus check-corpus-links --scope repository` directly to see the error"]))
     raise SystemExit(0)
 
+# Past [artifacts] read-size-bytes the lists are in the file `lists-file`
+# names (spec 080): read them there, or say no link was checked.
+if data.get("form") == "file":
+    try:
+        with open(data["lists-file"], encoding="utf-8") as handle:
+            data.update(json.load(handle))
+    except (KeyError, TypeError, OSError, ValueError) as err:
+        print("\t".join(["(precondition)",
+                         "check-corpus-links moved its lists to a file that could not be read (%s), so no link was checked" % err,
+                         "run `ductus check-corpus-links --scope repository` and read the file its lists-file names"]))
+        raise SystemExit(0)
+
 for link in data.get("broken", []):
     print("\t".join(["%s:%s" % (link["path"], link["line"]),
                      "relative link `%s` resolves to nothing" % link["target"],

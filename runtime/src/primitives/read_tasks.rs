@@ -24,33 +24,69 @@ use crate::primitives::{
     split_numbered_heading,
 };
 use crate::schema::paths;
-use crate::schema::primitives::{ReadTasksArgs, ReadTasksResult, Subtask, Task};
+use crate::schema::primitives::{ListsForm, ReadTasksArgs, ReadTasksResult, Subtask, Task};
 
-/// Execute the `read-tasks` primitive against the given repo root.
+/// Execute the `read-tasks` primitive: [`compute`], returned inline while it
+/// fits `[artifacts] read-size-bytes`, and past it with its task list in the
+/// file it names and only its count inline (`bounded_lists::place`; spec 080,
+/// AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
+    let list = compute(args, repo)?;
+    let mut result = ReadTasksResult {
+        tasks_count: list.tasks.len(),
+        tasks: Some(list.tasks),
+        path: list.path,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    let lists = serde_json::json!({ "tasks": &result.tasks });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "read-tasks", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.tasks = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// A feature's task list, whole: what `read-tasks` reads, before its result
+/// is bounded.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct TaskList {
+    /// Tasks in declaration order.
+    pub(crate) tasks: Vec<Task>,
+    /// Repo-relative path to the tasks file.
+    pub(crate) path: String,
+}
+
+/// Parse the feature's `tasks.md`, every task whole. A caller in the runtime
+/// reads this, never the bounded result.
 ///
 /// # Errors
 ///
 /// Returns [`PrimitiveError::FeatureNotFound`] when `specs/<feature>/` does
 /// not exist, or [`PrimitiveError::Io`] when `tasks.md` cannot be read.
-pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
+pub(crate) fn compute(args: &ReadTasksArgs, repo: &Path) -> Result<TaskList> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     read_checked(args, repo, &root)
 }
 
-/// [`run`] without its walk of the feature directory, for a caller that has
-/// already checked the feature argument itself: `check-artifacts`, which is
-/// exempt from the walk (spec 022, scenario
+/// [`compute`] without its walk of the feature directory, for a caller that
+/// has already checked the feature argument itself: `check-artifacts`, which
+/// is exempt from the walk (spec 022, scenario
 /// `a-path-argument-resolves-inside-its-base`) and reads its task list here.
 ///
 /// # Errors
 ///
-/// As [`run`], less the walk's refusal.
-pub(crate) fn read_checked(
-    args: &ReadTasksArgs,
-    repo: &Path,
-    root: &str,
-) -> Result<ReadTasksResult> {
+/// As [`compute`], less the walk's refusal.
+pub(crate) fn read_checked(args: &ReadTasksArgs, repo: &Path, root: &str) -> Result<TaskList> {
     let feature_dir = repo.join(root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
@@ -60,7 +96,7 @@ pub(crate) fn read_checked(
     }
     let tasks_path = feature_dir.join("tasks.md");
     let content = read_text(&tasks_path)?;
-    Ok(ReadTasksResult {
+    Ok(TaskList {
         tasks: parse_tasks(&content),
         path: rel_path(&tasks_path, repo),
     })
@@ -284,7 +320,7 @@ mod tests {
     #[test]
     fn parses_fixture_tasks() {
         let repo = fixture_repo();
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-basic".into(),
             },
@@ -325,7 +361,7 @@ mod tests {
         let body = "# feat\n\n## 1. Unchecked clause\n\n- [x] done subtask\n- [ ] Done when: not yet ticked\n\n## 2. Checked clause\n\n- [x] done subtask\n- [x] Done when: ticked\n\n## 3. Bold form\n\n- [x] done subtask\n- **Done when**: no checkbox at all\n";
         fs::write(feature_dir.join("tasks.md"), body).unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "feat".into(),
             },
@@ -370,7 +406,7 @@ mod tests {
                        - [ ] only subtask\n\n\
                        Done when: the bare form parses.\n";
         make_phased_fixture(tmp.path(), "001-forms", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-forms".into(),
             },
@@ -430,7 +466,7 @@ mod tests {
                        ## 1. Guard\n\n\
                        - [ ] Done whenever the cache warms, refresh it\n";
         make_phased_fixture(tmp.path(), "001-guard", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-guard".into(),
             },
@@ -471,7 +507,7 @@ mod tests {
                        ### 3. Build the thing\n\n\
                        - [ ] Code it up\n";
         make_phased_fixture(tmp.path(), "001-phased", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-phased".into(),
             },
@@ -513,7 +549,7 @@ mod tests {
                        ## 2. Second\n\n\
                        - [ ] sub two\n";
         make_phased_fixture(tmp.path(), "001-flat", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-flat".into(),
             },
@@ -538,7 +574,7 @@ mod tests {
                        - [x] sub\n\n\
                        - **Done when**: done.\n";
         make_phased_fixture(tmp.path(), "001-mixed", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-mixed".into(),
             },
@@ -563,7 +599,7 @@ mod tests {
                        - [x] subtask\n\n\
                        - **Done when**: done.\n";
         make_phased_fixture(tmp.path(), "001-stage", content);
-        let result = run(
+        let result = compute(
             &ReadTasksArgs {
                 feature: "001-stage".into(),
             },

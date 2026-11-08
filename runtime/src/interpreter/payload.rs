@@ -80,12 +80,13 @@ pub enum PayloadError {
         /// The unrecognized extension identifier from the step marker.
         identifier: String,
     },
-    /// `compute-review-scope` returned its lists in a file — its result was
-    /// past `[artifacts] read-size-bytes` — and that file cannot be read or
-    /// holds no `scope` list, so the review's in-scope files cannot be
-    /// loaded. The walk halts: a request carrying no in-scope file would
-    /// read as a pass over nothing (066 scenario
-    /// `scope-results-have-a-bounded-size`).
+    /// A primitive returned its lists in a file — its result was past
+    /// `[artifacts] read-size-bytes` — and that file cannot be read or holds
+    /// no JSON object, so [`restore_lists`] cannot give the walk the lists
+    /// the result moved there. The walk halts: a later step reading a list
+    /// the context lacks would read it as empty, as a review whose scope is
+    /// missing would read as a pass over nothing (066 scenario
+    /// `scope-results-have-a-bounded-size`; spec 080).
     #[error("lists-file-unreadable: '{path}': {reason}")]
     ListsFileUnreadable {
         /// The list file, from the project root.
@@ -182,7 +183,7 @@ pub fn build_extension_request(
             command_name,
             step_prose,
         )),
-        "performReview" => build_perform_review_request(context, repo),
+        "performReview" => Ok(build_perform_review_request(context, repo)),
         "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo)),
         "askClarifyQuestion" => Ok(build_ask_clarify_question_request(context, repo)),
         "routeInboxItem" => Ok(build_route_inbox_item_request(context, repo)),
@@ -200,22 +201,40 @@ pub fn build_extension_request(
 /// outbound request by [`is_walker_internal_key`], which reads this same list.
 pub(crate) const PERFORM_REVIEW_ACCUMULATORS: &[&str] = &["findings", "observations"];
 
-/// `true` for walker-internal accumulator keys that never belong in an
-/// outbound request: prior `llm:<identifier>` response echoes and the
-/// cross-pass [`PERFORM_REVIEW_ACCUMULATORS`] arrays the walker accumulates
-/// for `write-review`. Primitive results threaded through the context
+/// `true` for walker-internal keys that never belong in an outbound request:
+/// prior `llm:<identifier>` response echoes, the cross-pass
+/// [`PERFORM_REVIEW_ACCUMULATORS`] arrays the walker accumulates for
+/// `write-review`, and the walker's own `walker:` bookkeeping, such as
+/// [`RESTORED_LISTS`]. Primitive results threaded through the context
 /// (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) are NOT
 /// accumulator state and pass through the merge untouched.
 fn is_walker_internal_key(key: &str) -> bool {
-    PERFORM_REVIEW_ACCUMULATORS.contains(&key) || key.starts_with("llm:")
+    PERFORM_REVIEW_ACCUMULATORS.contains(&key)
+        || key.starts_with("llm:")
+        || key.starts_with("walker:")
 }
 
+/// The context key naming each list [`restore_lists`] read back from a list
+/// file and the merge kept, so the legacy tail leaves it out: a host reading
+/// that tail sees a bounded result as the primitive returned it, its counts
+/// and `lists-file`, and the typed prefix carries what a request needs. The
+/// walker keeps it current, dropping a key a later inline result replaced.
+pub(super) const RESTORED_LISTS: &str = "walker:restored-lists";
+
 /// Append the legacy-compat context fields after a typed prefix, skipping
-/// walker-internal accumulator keys ([`is_walker_internal_key`]) and any
-/// key the typed prefix already emitted (typed values win).
+/// walker-internal accumulator keys ([`is_walker_internal_key`]), each list
+/// [`RESTORED_LISTS`] names, and any key the typed prefix already emitted
+/// (typed values win).
 fn merge_legacy_context(object: &mut Map<String, Value>, context: &Map<String, Value>) {
+    let restored: Vec<&str> = context
+        .get(RESTORED_LISTS)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
     for (key, value) in context {
-        if is_walker_internal_key(key) {
+        if is_walker_internal_key(key) || restored.contains(&key.as_str()) {
             continue;
         }
         object.entry(key.clone()).or_insert_with(|| value.clone());
@@ -248,28 +267,21 @@ fn typed_only<T: Serialize>(typed: &T) -> Value {
 }
 
 /// Build the `performReview` request for one pass. Loads the in-scope files
-/// (`scope`, from `compute-review-scope`, or from the file its `lists-file`
-/// names when the result was past the read size) and the pass's rule files
-/// (`selected` basenames under `rules-dir`, from `discover-rule-files`) off
-/// disk, and pairs them with the `pass` name. Missing/unreadable files are
-/// skipped rather than erroring — the pass reviews what it can read. The
-/// typed prefix leads (cache-anchor order: `scope-files` is stable across
-/// passes); legacy context fields follow for hosts that already parse them.
-///
-/// # Errors
-///
-/// [`PayloadError::ListsFileUnreadable`] when the scope is in a list file
-/// that cannot be read or holds no `scope` list.
-fn build_perform_review_request(
-    context: &Map<String, Value>,
-    repo: &Path,
-) -> Result<Value, PayloadError> {
+/// (`scope`, from `compute-review-scope`, whole even past the read size, since
+/// [`restore_lists`] put a moved list back when the result arrived) and the
+/// pass's rule files (`selected` basenames under `rules-dir`, from
+/// `discover-rule-files`) off disk, and pairs them with the `pass` name.
+/// Missing/unreadable files are skipped rather than erroring — the pass
+/// reviews what it can read. The typed prefix leads (cache-anchor order:
+/// `scope-files` is stable across passes); legacy context fields follow for
+/// hosts that already parse them.
+fn build_perform_review_request(context: &Map<String, Value>, repo: &Path) -> Value {
     let pass = context
         .get("pass")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
-    let scope_files = load_scope_files(context, repo)?;
+    let scope_files = load_scope_files(context, repo);
     let rule_files = load_rule_files(context, repo);
 
     let typed = PerformReviewRequest {
@@ -282,7 +294,7 @@ fn build_perform_review_request(
     // primitive results it legitimately needs (`scope`/`diff-base` from
     // compute-review-scope, `selected`/`rules-dir`/`notices` from
     // discover-rule-files).
-    Ok(typed_with_legacy_context(&typed, context))
+    typed_with_legacy_context(&typed, context)
 }
 
 /// Classification of a repo-relative path against the canonicalized repo root
@@ -318,18 +330,11 @@ fn classify_contained(canon_repo: &Path, rel: &Path) -> Contained {
 /// is canonicalized and confined to the repo root before it is opened — an
 /// absolute or traversing entry is skipped, never read into the review
 /// payload. Missing and unreadable paths are likewise skipped (best-effort).
-///
-/// # Errors
-///
-/// [`PayloadError::ListsFileUnreadable`] from [`scope_paths`].
-fn load_scope_files(
-    context: &Map<String, Value>,
-    repo: &Path,
-) -> Result<Vec<ReviewScopeFile>, PayloadError> {
+fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScopeFile> {
     let Ok(canon_repo) = repo.canonicalize() else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
-    Ok(scope_paths(context, &canon_repo)?
+    string_array(context, "scope")
         .into_iter()
         .filter_map(
             |path| match classify_contained(&canon_repo, Path::new(&path)) {
@@ -339,51 +344,64 @@ fn load_scope_files(
                 Contained::Missing | Contained::Outside => None,
             },
         )
-        .collect())
+        .collect()
 }
 
-/// The in-scope paths `compute-review-scope` returned: its `scope` list when
-/// the result was inline, else the `scope` list in the file its `lists-file`
-/// names, read whole (066 scenario `scope-results-have-a-bounded-size`).
-/// Neither key means no scope was computed, which is no paths.
+/// Give a result past the read size back the lists it moved to a file, so
+/// every later step in the walk reads them whole, as it reads an inline
+/// result's (spec 080).
+///
+/// A primitive bounded through `bounded_lists` returns `form: file` past
+/// `[artifacts] read-size-bytes`, with its lists in the file `lists-file`
+/// names, under the same keys the inline form carries them. The bound exists
+/// for a host's tool-result cap; the walker emits no result to a host, so it
+/// holds the lists whole. Reading them when the result arrives, before the
+/// tally and the merge, is what keeps one result's file from being replaced
+/// by a later result's `lists-file` before anything reads it. `form` and
+/// `lists-file` stay as the primitive returned them. An inline result, or one
+/// that is not an object, is left as it is. Returns the keys it put back, which
+/// the walker names under [`RESTORED_LISTS`].
 ///
 /// # Errors
 ///
-/// [`PayloadError::ListsFileUnreadable`] when the named file resolves outside
-/// the project, cannot be read, is not JSON, or holds no `scope` list of
-/// strings.
-fn scope_paths(
-    context: &Map<String, Value>,
-    canon_repo: &Path,
-) -> Result<Vec<String>, PayloadError> {
-    if context.contains_key("scope") {
-        return Ok(string_array(context, "scope"));
-    }
-    let Some(file) = context.get("lists-file").and_then(Value::as_str) else {
+/// [`PayloadError::ListsFileUnreadable`] when `lists-file` is absent or not a
+/// string, or the file it names resolves outside the project, cannot be read,
+/// or does not hold a JSON object.
+pub(super) fn restore_lists(result: &mut Value, repo: &Path) -> Result<Vec<String>, PayloadError> {
+    let Value::Object(map) = result else {
         return Ok(Vec::new());
     };
+    if map.get("form").and_then(Value::as_str) != Some("file") {
+        return Ok(Vec::new());
+    }
+    let file = map
+        .get("lists-file")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
     let unreadable = |reason: String| PayloadError::ListsFileUnreadable {
-        path: file.to_string(),
+        path: file.clone(),
         reason,
     };
-    let abs = match classify_contained(canon_repo, Path::new(file)) {
+    if file.is_empty() {
+        return Err(unreadable("the result names no list file".into()));
+    }
+    let canon_repo = repo
+        .canonicalize()
+        .map_err(|err| unreadable(err.to_string()))?;
+    let abs = match classify_contained(&canon_repo, Path::new(&file)) {
         Contained::Inside(abs) => abs,
         Contained::Missing => return Err(unreadable("it does not exist".into())),
         Contained::Outside => return Err(unreadable("it resolves outside the project".into())),
     };
     let text = std::fs::read_to_string(&abs).map_err(|err| unreadable(err.to_string()))?;
     let lists: Value = serde_json::from_str(&text).map_err(|err| unreadable(err.to_string()))?;
-    let Some(scope) = lists.get("scope").and_then(Value::as_array) else {
-        return Err(unreadable("it holds no `scope` list".into()));
+    let Value::Object(lists) = lists else {
+        return Err(unreadable("it holds no JSON object".into()));
     };
-    scope
-        .iter()
-        .map(|path| {
-            path.as_str().map(str::to_string).ok_or_else(|| {
-                unreadable("its `scope` list holds a value that is not a path".into())
-            })
-        })
-        .collect()
+    let keys = lists.keys().cloned().collect();
+    map.extend(lists);
+    Ok(keys)
 }
 
 /// Load the pass's `selected` rule basenames (from `discover-rule-files`)
@@ -1051,7 +1069,7 @@ fn load_current_task(feature: &str, context: &Map<String, Value>, repo: &Path) -
     let args = ReadTasksArgs {
         feature: feature.to_string(),
     };
-    let Ok(result) = read_tasks::run(&args, repo) else {
+    let Ok(result) = read_tasks::compute(&args, repo) else {
         return WriteCodeTask {
             number: task_number,
             heading: String::new(),
@@ -2653,7 +2671,7 @@ mod tests {
             Value::Array(vec![Value::String("security-backend.md".into())]),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
+        let value = build_perform_review_request(&ctx, tmp.path());
         let obj = value.as_object().unwrap();
         // Typed prefix leads in cache-anchor order.
         let prefix: Vec<&str> = obj.keys().map(String::as_str).take(3).collect();
@@ -2672,7 +2690,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
         ctx.insert("pass".into(), Value::String("reuse".into()));
-        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
+        let value = build_perform_review_request(&ctx, tmp.path());
         assert_eq!(value["pass"], "reuse");
         assert_eq!(
             value["scope-files"].as_array().unwrap().as_slice(),
@@ -2714,25 +2732,24 @@ mod tests {
             ]),
         );
 
-        let files = load_scope_files(&ctx, &repo).unwrap();
+        let files = load_scope_files(&ctx, &repo);
         assert_eq!(files.len(), 1, "only the in-repo scope file is read");
         assert_eq!(files[0].path, "src/in.rs");
         assert_eq!(files[0].content, "fn a() {}");
     }
 
-    /// A context whose `compute-review-scope` result took the file form: no
-    /// inline `scope`, and `lists-file` naming `file`.
-    fn file_form_context(file: &str) -> Map<String, Value> {
-        let mut ctx = Map::new();
-        ctx.insert("form".into(), Value::String("file".into()));
-        ctx.insert("lists-file".into(), Value::String(file.into()));
-        ctx
+    /// A result that took the file form: no inline list, and `lists-file`
+    /// naming `file`.
+    fn file_form_result(file: &str) -> Value {
+        serde_json::json!({"form": "file", "scope-count": 2, "lists-file": file})
     }
 
-    /// A scope in a list file is loaded from it whole, as an inline one is
-    /// (066 scenario `scope-results-have-a-bounded-size`).
+    /// A result past the read size gets its lists back whole from its list
+    /// file, beside the counts and the file's name, so the scope a review
+    /// loads from it is the whole scope (066 scenario
+    /// `scope-results-have-a-bounded-size`; spec 080).
     #[test]
-    fn a_scope_in_a_list_file_is_loaded_from_it() {
+    fn a_file_form_result_gets_its_lists_back_from_its_list_file() {
         let tmp = tempdir().unwrap();
         fs::create_dir_all(tmp.path().join("src")).unwrap();
         fs::write(tmp.path().join("src/a.rs"), "fn a() {}").unwrap();
@@ -2742,35 +2759,90 @@ mod tests {
             r#"{"scope": ["src/a.rs", "src/b.rs"], "modified-since": []}"#,
         )
         .unwrap();
-        let files = load_scope_files(&file_form_context("lists.json"), tmp.path()).unwrap();
+        let mut result = file_form_result("lists.json");
+        let restored = restore_lists(&mut result, tmp.path()).unwrap();
+        assert_eq!(restored, ["scope", "modified-since"]);
+        assert_eq!(
+            result,
+            serde_json::json!({
+                "form": "file",
+                "scope-count": 2,
+                "lists-file": "lists.json",
+                "scope": ["src/a.rs", "src/b.rs"],
+                "modified-since": [],
+            })
+        );
+        let files = load_scope_files(result.as_object().unwrap(), tmp.path());
         let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
     }
 
-    /// A list file that is missing, outside the project, not JSON, or holds
-    /// no list of paths halts the request rather than reading as an empty
-    /// scope.
+    /// An inline result, and a value that is no object, are left as they are,
+    /// and no file is read for them.
     #[test]
-    fn an_unreadable_list_file_is_an_error_not_an_empty_scope() {
+    fn an_inline_result_is_left_as_it_is() {
+        let tmp = tempdir().unwrap();
+        for original in [
+            serde_json::json!({"form": "inline", "scope": [], "lists-file": "absent.json"}),
+            serde_json::json!({"scope": ["src/a.rs"]}),
+            serde_json::json!(["not", "an", "object"]),
+        ] {
+            let mut result = original.clone();
+            assert_eq!(
+                restore_lists(&mut result, tmp.path()).unwrap(),
+                [] as [String; 0]
+            );
+            assert_eq!(result, original);
+        }
+    }
+
+    /// A list file that is missing, unnamed, outside the project, not JSON, or
+    /// holds no object halts the walk rather than leaving the lists absent,
+    /// which a later step would read as empty.
+    #[test]
+    fn an_unreadable_list_file_is_an_error_not_an_empty_list() {
         let outer = tempdir().unwrap();
         let repo = outer.path().join("repo");
         fs::create_dir_all(&repo).unwrap();
         fs::write(outer.path().join("outside.json"), r#"{"scope": []}"#).unwrap();
         fs::write(repo.join("not-json.json"), "{").unwrap();
-        fs::write(repo.join("no-scope.json"), r#"{"modified-since": []}"#).unwrap();
-        fs::write(repo.join("not-paths.json"), r#"{"scope": [1]}"#).unwrap();
+        fs::write(repo.join("not-object.json"), r#"["src/a.rs"]"#).unwrap();
         for file in [
+            "",
             "absent.json",
             "../outside.json",
             "not-json.json",
-            "no-scope.json",
-            "not-paths.json",
+            "not-object.json",
         ] {
-            match load_scope_files(&file_form_context(file), &repo) {
+            match restore_lists(&mut file_form_result(file), &repo) {
                 Err(PayloadError::ListsFileUnreadable { path, .. }) => assert_eq!(path, file),
-                other => panic!("{file}: expected ListsFileUnreadable, got {other:?}"),
+                other => panic!("{file:?}: expected ListsFileUnreadable, got {other:?}"),
             }
         }
+        let mut unnamed = serde_json::json!({"form": "file"});
+        assert!(matches!(
+            restore_lists(&mut unnamed, &repo),
+            Err(PayloadError::ListsFileUnreadable { .. })
+        ));
+    }
+
+    /// A list read back from a list file stays out of the legacy tail, as the
+    /// primitive's file form left it out, while a key the marker does not
+    /// name, and the typed prefix, pass as before (spec 080).
+    #[test]
+    fn a_restored_list_stays_out_of_the_legacy_tail() {
+        let mut ctx = Map::new();
+        ctx.insert("scope".into(), serde_json::json!(["src/a.rs"]));
+        ctx.insert("scope-count".into(), serde_json::json!(1));
+        ctx.insert("selected".into(), serde_json::json!(["a.md"]));
+        ctx.insert(RESTORED_LISTS.into(), serde_json::json!(["scope"]));
+        let mut object = Map::new();
+        object.insert("pass".into(), serde_json::json!("security"));
+        merge_legacy_context(&mut object, &ctx);
+        assert_eq!(
+            Value::Object(object),
+            serde_json::json!({"pass": "security", "scope-count": 1, "selected": ["a.md"]})
+        );
     }
 
     #[test]
@@ -2832,7 +2904,7 @@ mod tests {
             serde_json::json!({ "findings": [] }),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path()).unwrap();
+        let value = build_perform_review_request(&ctx, tmp.path());
         let obj = value.as_object().unwrap();
         assert!(!obj.contains_key("findings"));
         assert!(!obj.contains_key("observations"));

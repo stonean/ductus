@@ -157,15 +157,20 @@ else
 
       report="$synth/.audit-report"
       (cd "$synth" && "$bin" check-corpus-links --scope repository 2> /dev/null) \
-        | python3 -c '
-import json, sys
+        | SYNTH="$synth" python3 -c '
+import json, os, sys
 raw = sys.stdin.read()
 start = raw.find("{")
 if start < 0:
     sys.exit(1)
 try:
     data = json.loads(raw[start:])
-except ValueError:
+    # Past [artifacts] read-size-bytes the lists are in the file `lists-file`
+    # names, from the synthetic tree the scan ran in (spec 080).
+    if data.get("form") == "file":
+        with open(os.path.join(os.environ["SYNTH"], data["lists-file"]), encoding="utf-8") as handle:
+            data.update(json.load(handle))
+except (ValueError, KeyError, TypeError, OSError):
     sys.exit(1)
 for item in data.get("broken", []):
     print("broken\t%s\t%s\t%s" % (item.get("path", ""), item.get("line", ""), item.get("target", "")))

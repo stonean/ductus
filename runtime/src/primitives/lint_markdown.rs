@@ -22,7 +22,9 @@ use crate::primitives::{PrimitiveError, Result, output_within};
 /// the review gate that calls it — forever. Five minutes covers a cold fetch
 /// and a whole-repository lint.
 pub(crate) const LINT_MARKDOWN_TIMEOUT: Duration = Duration::from_secs(300);
-use crate::schema::primitives::{LintMarkdownArgs, LintMarkdownResult, MarkdownViolation};
+use crate::schema::primitives::{
+    LintMarkdownArgs, LintMarkdownResult, ListsForm, MarkdownViolation,
+};
 
 /// Pick the markdownlint-cli2 invocation: a repo-local
 /// `node_modules/.bin/markdownlint-cli2` when one exists, else `npx`.
@@ -88,7 +90,51 @@ pub(crate) fn feature_markdown_glob(rel_dir: &str) -> String {
     format!("{rel_dir}/**/*.md")
 }
 
-/// Execute the `lint-markdown` primitive.
+/// The path segment this primitive's list file sits under, in place of the
+/// feature `bounded_lists::place` keys others by, since a lint takes paths.
+const LISTS_SCOPE: &str = "paths";
+
+/// Execute the `lint-markdown` primitive: [`compute`], returned inline while
+/// it fits `[artifacts] read-size-bytes`, and past it with the violations in
+/// the file it names and only their count inline (`bounded_lists::place`;
+/// spec 080, AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
+    let lint = compute(args, repo)?;
+    let mut result = LintMarkdownResult {
+        violations_count: lint.violations.len(),
+        violations: Some(lint.violations),
+        clean: lint.clean,
+        exit_code: lint.exit_code,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    let lists = serde_json::json!({ "violations": &result.violations });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "lint-markdown", LISTS_SCOPE, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.violations = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// One lint run, whole: what `lint-markdown` returns, before its result is
+/// bounded. Each field is [`LintMarkdownResult`]'s of the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Lint {
+    pub(crate) violations: Vec<MarkdownViolation>,
+    pub(crate) clean: bool,
+    pub(crate) exit_code: i32,
+}
+
+/// Run the linter, every violation whole. A caller in the runtime reads
+/// this, never the bounded result: `check-review-gate`.
 ///
 /// # Errors
 ///
@@ -106,17 +152,13 @@ pub(crate) fn feature_markdown_glob(rel_dir: &str) -> String {
 /// [`super::validate_glob_contained`]), and
 /// [`PrimitiveError::ToolTimedOut`] when the linter outlives
 /// [`LINT_MARKDOWN_TIMEOUT`] and is stopped.
-pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
+pub(crate) fn compute(args: &LintMarkdownArgs, repo: &Path) -> Result<Lint> {
     run_within(args, repo, LINT_MARKDOWN_TIMEOUT)
 }
 
-/// [`run`] under a caller-chosen timeout — the seam a test uses to prove a
-/// hung linter is stopped without waiting five minutes.
-pub(crate) fn run_within(
-    args: &LintMarkdownArgs,
-    repo: &Path,
-    timeout: Duration,
-) -> Result<LintMarkdownResult> {
+/// [`compute`] under a caller-chosen timeout — the seam a test uses to prove
+/// a hung linter is stopped without waiting five minutes.
+pub(crate) fn run_within(args: &LintMarkdownArgs, repo: &Path, timeout: Duration) -> Result<Lint> {
     // A path beginning with `-` would be parsed by markdownlint-cli2 as an
     // option, not a file — `--config=evil.json` can load a `customRules` JS
     // module, i.e. arbitrary code under this primitive's permission. Reject
@@ -179,7 +221,7 @@ pub(crate) fn run_within(
     // silently passed such runs. Mirrors run-generator's exit-code-derived
     // `drift`.
     let clean = violations.is_empty() && exit_code == 0;
-    Ok(LintMarkdownResult {
+    Ok(Lint {
         violations,
         clean,
         exit_code,

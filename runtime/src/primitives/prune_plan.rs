@@ -28,8 +28,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    DecisionOutcome, PlanFinding, PlanRemoval, PlanSection, PrunePlanArgs, PrunePlanResult,
-    PrunePlanSummary, PruneWalk, PruneWalkEntry, SkipReason, SkippedFeature,
+    DecisionOutcome, ListsForm, PlanFinding, PlanRemoval, PlanSection, PrunePlanArgs,
+    PrunePlanResult, PrunePlanSummary, PruneWalk, PruneWalkEntry, SkipReason, SkippedFeature,
 };
 
 /// The plan template's `##` headings, in template order — the design record.
@@ -162,9 +162,11 @@ pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
     }
     check_removals(args)?;
     let Some(feature) = feature else {
+        let mut walk = walk(args, repo, &root)?;
+        super::prune_tasks::bound_walk(repo, "prune-plan", &mut walk)?;
         return Ok(PrunePlanResult {
             summary: None,
-            walk: Some(walk(args, repo, &root)?),
+            walk: Some(walk),
         });
     };
     Ok(PrunePlanResult {
@@ -199,8 +201,12 @@ fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prune
     }
     Ok(PruneWalk {
         examined: u32::try_from(names.len()).unwrap_or(u32::MAX),
-        features,
-        skipped,
+        features_count: features.len(),
+        features: Some(features),
+        skipped_count: skipped.len(),
+        skipped: Some(skipped),
+        form: ListsForm::Inline,
+        lists_file: None,
     })
 }
 
@@ -727,6 +733,8 @@ mod tests {
             .expect("an all walk");
         let order: Vec<(&str, &str)> = walk
             .features
+            .as_deref()
+            .unwrap()
             .iter()
             .map(|f| (f.feature.as_str(), f.summary.status.as_str()))
             .collect();
@@ -739,7 +747,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            walk.skipped,
+            walk.skipped.as_deref().unwrap(),
             [SkippedFeature {
                 feature: "004-draft".into(),
                 reason: SkipReason::NoPlanFile,
@@ -850,12 +858,14 @@ mod tests {
             .expect("an all walk");
         let listed: Vec<(&str, Option<bool>)> = walk
             .features
+            .as_deref()
+            .unwrap()
             .iter()
             .map(|f| (f.feature.as_str(), f.summary.reopen_required))
             .collect();
         assert_eq!(listed, [("002-no-plan", Some(true))]);
         assert_eq!(
-            walk.skipped,
+            walk.skipped.as_deref().unwrap(),
             [SkippedFeature {
                 feature: "004-draft".into(),
                 reason: SkipReason::NoPlanFile,

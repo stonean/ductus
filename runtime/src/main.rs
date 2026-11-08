@@ -352,7 +352,7 @@ fn report_cycles(cycles: &[Vec<String>]) {
 ///
 /// Each line is `path:line` first, which is what an editor and a terminal both
 /// make clickable.
-fn report_broken_links(result: &ductus::schema::primitives::CheckCorpusLinksResult) {
+fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
     for link in &result.broken {
         eprintln!(
             "broken link: {}:{} -> `{}` — {}",
@@ -831,10 +831,14 @@ fn main() -> ExitCode {
             emit_result(primitives::derive_routing_candidates::run(&args, &repo))
         }
         Command::CheckCorpusLinks(args) => {
-            let outcome = primitives::check_corpus_links::run(&args, &repo);
-            if let Ok(result) = &outcome {
-                report_broken_links(result);
+            // Every broken link is reported from the whole scan, before the
+            // result is bounded, so a blocked commit names each one even when
+            // the result moved its lists to a file (spec 080).
+            let scan = primitives::check_corpus_links::compute(&args, &repo);
+            if let Ok(scan) = &scan {
+                report_broken_links(scan);
             }
+            let outcome = scan.and_then(|scan| primitives::check_corpus_links::bound(scan, &repo));
             // A broken link blocks the commit — that is the whole point: a
             // deletion should fail at the commit that makes it rather than at
             // a reader's next traversal. A scan that could not establish a
@@ -842,7 +846,7 @@ fn main() -> ExitCode {
             // reason: a check that could not run must never exit like one
             // that passed.
             emit_result_gated(outcome, |r| {
-                !r.broken.is_empty() || !r.guidance.is_empty() || !r.skipped.is_empty()
+                r.broken_count > 0 || !r.guidance.is_empty() || r.skipped_count > 0
             })
         }
         Command::CheckOrphanedReferences(args) => {

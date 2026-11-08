@@ -68,14 +68,14 @@ fn stderr_of(dir: &Path, args: &[&str]) -> String {
 #[test]
 fn each_reader_names_the_unknown_keys_of_the_section_it_reads() {
     let dir = project();
-    let cases: [(&[&str], &[&str]); 4] = [
+    let cases: [(&[&str], &[&str]); 5] = [
+        (&["dashboard"], &["[paths] spec-root"]),
+        // The view's hints name the project and its references readout
+        // resolves each service, so `render-status` is where a status read
+        // loads `[host]` and `[services]` (spec 080).
         (
-            &["dashboard"],
-            &[
-                "[host] projct",
-                "[paths] spec-root",
-                "[services.api] branch",
-            ],
+            &["render-status"],
+            &["[host] projct", "[services.api] branch"],
         ),
         (&["resolve-constitutions"], &["[constitutions.acme] url"]),
         (

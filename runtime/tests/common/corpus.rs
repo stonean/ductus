@@ -42,6 +42,10 @@ pub struct CorpusSize {
     /// none could not show that growth (§design-principles: build the
     /// subject that carries the condition).
     pub defects: bool,
+    /// `[artifacts] read-size-bytes` in the corpus's config, written before
+    /// the first commit so the history is the same either way; `None` leaves
+    /// the setting out, so the default applies.
+    pub read_size_bytes: Option<usize>,
 }
 
 /// The smaller corpus a measurement compares against.
@@ -53,6 +57,7 @@ pub const SMALL: CorpusSize = CorpusSize {
     scenarios: 2,
     inbox_items: 5,
     defects: true,
+    read_size_bytes: None,
 };
 
 /// Ten times [`SMALL`] in every dimension but subtasks per task.
@@ -64,6 +69,7 @@ pub const LARGE: CorpusSize = CorpusSize {
     scenarios: 20,
     inbox_items: 50,
     defects: true,
+    read_size_bytes: None,
 };
 
 /// The subject spec: the one a per-feature primitive is pointed at.
@@ -105,7 +111,11 @@ pub fn generate(root: &Path, size: &CorpusSize) {
         fs::write(path, body).unwrap();
     };
 
-    write(".ductus/config.toml", "[project]\nname = \"corpus\"\n");
+    let mut config = "[project]\nname = \"corpus\"\n".to_string();
+    if let Some(bytes) = size.read_size_bytes {
+        let _ = write!(config, "\n[artifacts]\nread-size-bytes = {bytes}\n");
+    }
+    write(".ductus/config.toml", &config);
     write("specs/inbox.md", &inbox(size.inbox_items));
     let rules = Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/rules/quality-cross.md");
     write(

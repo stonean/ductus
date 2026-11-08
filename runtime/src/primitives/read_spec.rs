@@ -8,11 +8,78 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AcceptanceCriterion, Frontmatter, OpenQuestion, ReadSpecArgs, ReadSpecResult,
-    ScenarioOpenQuestion, SpecSection,
+    AcceptanceCriterion, AnalyzeBlock, Frontmatter, ListsForm, OpenQuestion, ReadSpecArgs,
+    ReadSpecResult, ReviewBlock, ScenarioOpenQuestion, SpecSection,
 };
 
-/// Execute the `read-spec` primitive against the given repo root.
+/// Execute the `read-spec` primitive: [`compute`], returned inline while it
+/// fits `[artifacts] read-size-bytes`, and past it with its five lists in the
+/// file it names and only their counts inline (`bounded_lists::place`; spec
+/// 080, AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
+    let spec = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "sections": spec.sections,
+        "acceptance-criteria": spec.acceptance_criteria,
+        "open-questions": spec.open_questions,
+        "scenario-open-questions": spec.scenario_open_questions,
+        "scenario-files-unreadable": spec.scenario_files_unreadable,
+    });
+    let unreadable = spec.scenario_files_unreadable;
+    let mut result = ReadSpecResult {
+        frontmatter: spec.frontmatter,
+        review: spec.review,
+        analyze: spec.analyze,
+        sections_count: spec.sections.len(),
+        sections: Some(spec.sections),
+        acceptance_criteria_count: spec.acceptance_criteria.len(),
+        acceptance_criteria: Some(spec.acceptance_criteria),
+        open_questions_count: spec.open_questions.len(),
+        open_questions: Some(spec.open_questions),
+        scenario_open_questions_count: spec.scenario_open_questions.len(),
+        scenario_open_questions: Some(spec.scenario_open_questions),
+        scenario_files_unreadable_count: unreadable.len(),
+        scenario_files_unreadable: (!unreadable.is_empty()).then_some(unreadable),
+        path: spec.path,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "read-spec", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.sections = None;
+        result.acceptance_criteria = None;
+        result.open_questions = None;
+        result.scenario_open_questions = None;
+        result.scenario_files_unreadable = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// A spec read whole: what `read-spec` returns, before its result is
+/// bounded. Each field is [`ReadSpecResult`]'s of the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct SpecRead {
+    pub(crate) frontmatter: Frontmatter,
+    pub(crate) review: Option<ReviewBlock>,
+    pub(crate) analyze: Option<AnalyzeBlock>,
+    pub(crate) sections: Vec<SpecSection>,
+    pub(crate) acceptance_criteria: Vec<AcceptanceCriterion>,
+    pub(crate) open_questions: Vec<OpenQuestion>,
+    pub(crate) scenario_open_questions: Vec<ScenarioOpenQuestion>,
+    pub(crate) scenario_files_unreadable: Vec<String>,
+    pub(crate) path: String,
+}
+
+/// Read the spec, every list whole. A caller in the runtime reads this,
+/// never the bounded result.
 ///
 /// # Errors
 ///
@@ -21,21 +88,21 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::MissingFrontmatter`] when the spec lacks `---` fences,
 /// [`PrimitiveError::UnclosedFrontmatter`] when its block never closes,
 /// or [`PrimitiveError::Yaml`] when the frontmatter is not valid YAML.
-pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
+pub(crate) fn compute(args: &ReadSpecArgs, repo: &Path) -> Result<SpecRead> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     read_checked(args, repo, &root)
 }
 
-/// [`run`] without its walk of the feature directory, for a caller that has
-/// already checked the feature argument itself: `check-artifacts`, which is
-/// exempt from the walk (spec 022, scenario
+/// [`compute`] without its walk of the feature directory, for a caller that
+/// has already checked the feature argument itself: `check-artifacts`, which
+/// is exempt from the walk (spec 022, scenario
 /// `a-path-argument-resolves-inside-its-base`) and reads its spec here.
 ///
 /// # Errors
 ///
-/// As [`run`], less the walk's refusal.
-pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Result<ReadSpecResult> {
+/// As [`compute`], less the walk's refusal.
+pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Result<SpecRead> {
     let feature_dir = repo.join(root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
@@ -70,7 +137,7 @@ pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Resu
         .as_present()
         .cloned();
 
-    Ok(ReadSpecResult {
+    Ok(SpecRead {
         frontmatter,
         review,
         analyze,
@@ -450,7 +517,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "001-x".into(),
                 include_body: false,
@@ -479,7 +546,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "001-x".into(),
                 include_body: false,
@@ -500,7 +567,7 @@ mod tests {
     #[test]
     fn parses_basic_spec() {
         let repo = fixture_repo();
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "001-basic".into(),
                 include_body: false,
@@ -547,7 +614,7 @@ mod tests {
     #[test]
     fn include_body_populates_section_text() {
         let repo = fixture_repo();
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "001-basic".into(),
                 include_body: true,
@@ -566,7 +633,7 @@ mod tests {
     #[test]
     fn dependent_spec_lists_dependencies() {
         let repo = fixture_repo();
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "002-dependent".into(),
                 include_body: false,
@@ -594,7 +661,7 @@ mod tests {
         std::fs::create_dir_all(&feature_dir).unwrap();
         std::fs::write(feature_dir.join("spec.md"), template).unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "042-fresh".into(),
                 include_body: false,
@@ -622,7 +689,7 @@ mod tests {
                     - [x] Second real criterion.\n";
         std::fs::write(feature_dir.join("spec.md"), spec).unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "042-fresh".into(),
                 include_body: false,
@@ -654,7 +721,7 @@ mod tests {
                     - [x] A single-line criterion.\n";
         std::fs::write(feature_dir.join("spec.md"), spec).unwrap();
 
-        let result = run(
+        let result = compute(
             &ReadSpecArgs {
                 feature: "042-fresh".into(),
                 include_body: false,
@@ -912,8 +979,8 @@ mod tests {
         tmp
     }
 
-    fn probe(tmp: &tempfile::TempDir) -> ReadSpecResult {
-        run(
+    fn probe(tmp: &tempfile::TempDir) -> SpecRead {
+        compute(
             &ReadSpecArgs {
                 feature: "046-probe".into(),
                 include_body: false,

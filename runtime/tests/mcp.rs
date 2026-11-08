@@ -985,6 +985,176 @@ async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list
     }
 }
 
+/// Vendor a `markdownlint-cli2` that reports three violations and exits 1, so
+/// a lint, and the review gate's lint check, return a list to move.
+fn vendor_a_violating_markdownlint(root: &Path) {
+    let bin = root.join("node_modules").join(".bin");
+    fs::create_dir_all(&bin).unwrap();
+    let lines = [
+        "specs/001-feature-001/spec.md:1 MD041/first-line-heading First line in a file should be a top-level heading",
+        "specs/001-feature-001/tasks.md:2 MD012/no-multiple-blanks Multiple consecutive blank lines",
+        "specs/002-feature-002/spec.md:3 MD009/no-trailing-spaces Trailing spaces",
+    ];
+    #[cfg(windows)]
+    {
+        let mut body = String::new();
+        for line in lines {
+            body.push_str("@echo ");
+            body.push_str(line);
+            body.push_str("\r\n");
+        }
+        fs::write(
+            bin.join("markdownlint-cli2.cmd"),
+            format!("{body}@exit /b 1\r\n"),
+        )
+        .unwrap();
+    }
+    #[cfg(not(windows))]
+    {
+        let mut body = String::new();
+        for line in lines {
+            body.push_str("echo '");
+            body.push_str(line);
+            body.push_str("'\n");
+        }
+        let stub = bin.join("markdownlint-cli2");
+        fs::write(&stub, format!("#!/bin/sh\n{body}exit 1\n")).unwrap();
+        #[cfg(unix)]
+        {
+            let mut perms = fs::metadata(&stub).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&stub, perms).unwrap();
+        }
+    }
+}
+
+/// AC7's population (spec 080): each primitive `research.md` measures as
+/// growing with the corpus, with the arguments it is called with on the
+/// generated corpus and the lists its file form moves. A primitive with an
+/// argument mode that grows is a row per mode.
+fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
+    use common::corpus::{SUBJECT, slug};
+    let feature = json!({ "feature": SUBJECT });
+    vec![
+        (
+            "read-spec",
+            json!({ "feature": SUBJECT, "include-body": true }),
+            &[
+                "sections",
+                "acceptance-criteria",
+                "open-questions",
+                "scenario-open-questions",
+                "scenario-files-unreadable",
+            ],
+        ),
+        ("read-tasks", feature.clone(), &["tasks"]),
+        ("derive-boundary", feature.clone(), &["boundary"]),
+        (
+            "lint-markdown",
+            json!({ "paths": ["specs"] }),
+            &["violations"],
+        ),
+        ("prune-tasks", feature.clone(), &["sections"]),
+        (
+            "prune-tasks",
+            json!({ "all": true }),
+            &["features", "skipped"],
+        ),
+        (
+            "prune-plan",
+            json!({ "all": true }),
+            &["features", "skipped"],
+        ),
+        ("dashboard", json!({}), &["specs", "tags-union"]),
+        (
+            "check-review-gate",
+            feature.clone(),
+            &["violations", "cross-spec-impact"],
+        ),
+        ("check-artifacts", feature, &["findings", "skipped"]),
+        (
+            "check-corpus-links",
+            json!({}),
+            &["broken", "examined", "skipped"],
+        ),
+        (
+            "check-corpus-links",
+            json!({ "scope": "repository" }),
+            &["broken", "examined", "skipped"],
+        ),
+        ("check-unfolded-specs", json!({}), &["unfolded"]),
+        (
+            "rewrite-spec-links",
+            json!({ "from": slug(2), "to": SUBJECT }),
+            &["rewritten", "skipped", "kept-tails", "mentions"],
+        ),
+    ]
+}
+
+/// `name` called with `args` over MCP on a fresh copy of `template`, with
+/// `[artifacts] read-size-bytes` set to `read_size` when given: the result,
+/// and the copy it ran on, which holds any list file it wrote.
+async fn call_on_a_copy(
+    template: &Path,
+    name: &str,
+    args: &Value,
+    read_size: Option<usize>,
+) -> (serde_json::Map<String, Value>, tempfile::TempDir) {
+    let copy = tempfile::tempdir().unwrap();
+    common::copy_dir_recursive(template, copy.path());
+    if let Some(bytes) = read_size {
+        fs::write(
+            copy.path().join(".ductus/config.toml"),
+            format!("[project]\nname = \"corpus\"\n\n[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+    let client = start_pair(copy.path().to_path_buf()).await;
+    let result = call_tool(&client, name, args.clone()).await;
+    assert_ne!(result.is_error, Some(true), "{name} {args}: {result:?}");
+    (structured_object(&result).clone(), copy)
+}
+
+/// Spec 080, AC7: every primitive whose result grows with the corpus bounds
+/// it. Each member is called on a generated corpus twice, on fresh copies:
+/// at the default read size its lists are inline; past its bound, at a read
+/// size of one byte, they are absent, each count still matches, and the file
+/// `lists-file` names holds every list exactly as the inline call returned
+/// it. A list the inline form leaves out when empty
+/// is an empty list. At least one list a member moves is non-empty, so a
+/// member that moved nothing could not pass.
+#[tokio::test]
+async fn every_result_that_grows_with_the_corpus_moves_its_lists_past_the_read_size_via_mcp() {
+    let template = tempfile::tempdir().unwrap();
+    common::corpus::generate(template.path(), &common::corpus::SMALL);
+    vendor_a_violating_markdownlint(template.path());
+    for (name, args, lists) in bounded_members() {
+        let (inline, _) = call_on_a_copy(template.path(), name, &args, None).await;
+        assert_eq!(inline["form"], "inline", "{name} {args}: {inline:?}");
+        let (bounded, copy) = call_on_a_copy(template.path(), name, &args, Some(1)).await;
+        assert_eq!(bounded["form"], "file", "{name} {args}: {bounded:?}");
+        let file = bounded["lists-file"].as_str().expect("a lists-file path");
+        assert!(
+            file.starts_with(&format!(".ductus/results/{name}/")),
+            "{name}: {file}"
+        );
+        let moved: Value =
+            serde_json::from_str(&fs::read_to_string(copy.path().join(file)).unwrap()).unwrap();
+        let mut entries = 0;
+        for key in lists {
+            assert!(bounded.get(*key).is_none(), "{name}: `{key}` stayed inline");
+            let whole = inline.get(*key).cloned().unwrap_or_else(|| json!([]));
+            assert_eq!(moved[*key], whole, "{name} {args}: `{key}`");
+            let len = whole.as_array().map_or(0, Vec::len);
+            let count = format!("{key}-count");
+            assert_eq!(inline[count.as_str()], len, "{name}: inline `{count}`");
+            assert_eq!(bounded[count.as_str()], len, "{name}: file `{count}`");
+            entries += len;
+        }
+        assert!(entries > 0, "{name} {args}: every moved list was empty");
+    }
+}
+
 /// `check-review-gate`'s per-entry `cross-spec-impact`, a field 0.48.0 added
 /// to a primitive **result**, crosses the MCP wire.
 ///

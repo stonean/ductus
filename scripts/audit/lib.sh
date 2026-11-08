@@ -133,12 +133,19 @@ agent_config_dirs() {
 # unusable `dashboard` produces. A caller testing `-z` instead would report a
 # precondition failure at every fresh adopter, inventing a finding out of an
 # empty repository.
+#
+# Past `[artifacts] read-size-bytes`, `dashboard` moves `specs` to the file its
+# `lists-file` names (spec 080), so the list is read there; a file that cannot
+# be read exits non-zero too, rather than reading as an empty corpus.
 spec_corpus() {
   "$1" dashboard 2> /dev/null | python3 -c '
 import json, sys
 try:
     data = json.load(sys.stdin)
-except ValueError:
+    if data.get("form") == "file":
+        with open(data["lists-file"], encoding="utf-8") as handle:
+            data = json.load(handle)
+except (ValueError, KeyError, TypeError, OSError):
     sys.exit(1)
 for spec in data.get("specs", []):
     print("%s\t%s" % (spec.get("slug", ""), spec.get("status", "")))

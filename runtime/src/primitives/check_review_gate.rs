@@ -23,8 +23,8 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalyzeBlock, CheckReviewGateArgs, CheckReviewGateResult, CrossSpecImpactEntry,
-    CrossSpecImpactState, Frontmatter, LintMarkdownArgs, LintMarkdownResult, RecordFreshness,
-    ReviewGateBlock,
+    CrossSpecImpactState, Frontmatter, LintMarkdownArgs, ListsForm, MarkdownViolation,
+    RecordFreshness, ReviewGateBlock,
 };
 
 /// Execute the `check-review-gate` primitive against the given repo root.
@@ -40,8 +40,51 @@ use crate::schema::primitives::{
 /// `npx` cannot be spawned, or [`PrimitiveError::Yaml`] for a malformed
 /// frontmatter block. Every gate verdict — including every block reason
 /// [`ReviewGateBlock`] names — is a domain outcome in the result.
+///
+/// The result is inline while it fits `[artifacts] read-size-bytes`, and past
+/// it carries `violations` and `cross-spec-impact` in the file it names and
+/// only their counts inline (`bounded_lists::place`; spec 080, AC7).
 pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateResult> {
-    run_with_lint(args, repo, lint_markdown::run)
+    let verdict = run_with_lint(args, repo, lint_markdown::compute)?;
+    let lists = serde_json::json!({
+        "violations": verdict.violations,
+        "cross-spec-impact": verdict.cross_spec_impact,
+    });
+    let impact = verdict.cross_spec_impact;
+    let mut result = CheckReviewGateResult {
+        passed: verdict.passed,
+        blocked_by: verdict.blocked_by,
+        message: verdict.message,
+        guidance: verdict.guidance,
+        violations_count: verdict.violations.len(),
+        violations: Some(verdict.violations),
+        cross_spec_impact_count: impact.len(),
+        cross_spec_impact: (!impact.is_empty()).then_some(impact),
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-review-gate", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.violations = None;
+        result.cross_spec_impact = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// A gate verdict, whole: what `check-review-gate` returns, before its result
+/// is bounded. Each field is [`CheckReviewGateResult`]'s of the same name;
+/// an empty `cross_spec_impact` is the result's absent one.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Verdict {
+    pub(crate) passed: bool,
+    pub(crate) blocked_by: Option<ReviewGateBlock>,
+    pub(crate) message: Option<String>,
+    pub(crate) guidance: Option<String>,
+    pub(crate) violations: Vec<MarkdownViolation>,
+    pub(crate) cross_spec_impact: Vec<CrossSpecImpactEntry>,
 }
 
 /// Implementation seam that lets unit tests inject a canned lint outcome
@@ -50,8 +93,8 @@ pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateRes
 pub(crate) fn run_with_lint(
     args: &CheckReviewGateArgs,
     repo: &Path,
-    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<LintMarkdownResult>,
-) -> Result<CheckReviewGateResult> {
+    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<lint_markdown::Lint>,
+) -> Result<Verdict> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
@@ -208,7 +251,7 @@ pub(crate) fn run_with_lint(
     // `QUAL-CLAIM-001` applied to the gate itself. Naming it is what keeps the
     // silence of a clean verdict meaningful, and it is the operator's to weigh
     // at the transition rather than the walker's to drop.
-    Ok(CheckReviewGateResult {
+    Ok(Verdict {
         passed: true,
         blocked_by: None,
         message: None,
@@ -239,7 +282,7 @@ fn review_half_block(
     feature_dir: &Path,
     rel_dir: &str,
     project: &str,
-) -> std::result::Result<Option<String>, CheckReviewGateResult> {
+) -> std::result::Result<Option<String>, Verdict> {
     let gating = review
         .must_violations
         .saturating_add(review.should_violations);
@@ -280,7 +323,7 @@ fn analyze_half_block(
     rel_dir: &str,
     feature_dir: &Path,
     project: &str,
-) -> std::result::Result<RecordFreshness, CheckReviewGateResult> {
+) -> std::result::Result<RecordFreshness, Verdict> {
     let analyze_record = match crate::primitives::load_analyze_record(feature_dir) {
         crate::primitives::RecordLoad::Unreadable(reason) => {
             return Err(unreadable_record_block(
@@ -326,8 +369,8 @@ fn analyze_half_block(
 /// review, or since its reopen when none has run in it. Its window moves only at the
 /// commit holding a finished review's record, so a review just run clears this once
 /// that record is committed.
-fn review_owed_block(owed_by: &[String], project: &str) -> CheckReviewGateResult {
-    CheckReviewGateResult {
+fn review_owed_block(owed_by: &[String], project: &str) -> Verdict {
+    Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewOwed),
         message: Some(format!(
@@ -377,8 +420,8 @@ fn disposition_block(
     feature_dir: &Path,
     rel_dir: &str,
     project: &str,
-) -> Option<CheckReviewGateResult> {
-    let blocked = |by, message: String, guidance: String| CheckReviewGateResult {
+) -> Option<Verdict> {
+    let blocked = |by, message: String, guidance: String| Verdict {
         passed: false,
         blocked_by: Some(by),
         message: Some(message),
@@ -432,8 +475,8 @@ fn must_violations_block(
     feature_dir: &Path,
     rel_dir: &str,
     project: &str,
-) -> CheckReviewGateResult {
-    CheckReviewGateResult {
+) -> Verdict {
+    Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::MustViolations),
         message: Some(format!(
@@ -548,9 +591,9 @@ fn fix_round_block(
     review: &crate::schema::primitives::ReviewBlock,
     rel_dir: &str,
     project: &str,
-) -> Option<CheckReviewGateResult> {
+) -> Option<Verdict> {
     if review.fix_rounds_open == Some(true) {
-        return Some(CheckReviewGateResult {
+        return Some(Verdict {
             passed: false,
             blocked_by: Some(ReviewGateBlock::FixRoundLoopOpen),
             message: Some(format!(
@@ -570,7 +613,7 @@ fn fix_round_block(
     if not_re_read <= waived {
         return None;
     }
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::FixRoundNotReRead),
         message: Some(format!(
@@ -666,7 +709,7 @@ fn analyze_gate_block(
     rel_dir: &str,
     analyze: Option<&AnalyzeBlock>,
     project: &str,
-) -> std::result::Result<RecordFreshness, CheckReviewGateResult> {
+) -> std::result::Result<RecordFreshness, Verdict> {
     let analyze = match analyze {
         Some(analyze) if analyze.last_run.is_some() => analyze,
         // Absent block or null `last-run`: the spec has never completed an
@@ -675,7 +718,7 @@ fn analyze_gate_block(
         // only the review gate run — one of them published to crates.io
         // before anything noticed, because nothing could.
         _ => {
-            return Err(CheckReviewGateResult {
+            return Err(Verdict {
                 passed: false,
                 blocked_by: Some(ReviewGateBlock::NotAnalyzed),
                 message: Some(format!(
@@ -701,7 +744,7 @@ fn analyze_gate_block(
         };
     }
 
-    Err(CheckReviewGateResult {
+    Err(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::AnalyzeFindings),
         message: Some(format!(
@@ -769,14 +812,11 @@ fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
 /// line on the passing verdict instead. A gate that blocks on its own inability
 /// to check is one people route around; the difference from failing open is
 /// that this one says so.
-fn stale_analyze_block(
-    freshness: &RecordFreshness,
-    project: &str,
-) -> Option<CheckReviewGateResult> {
+fn stale_analyze_block(freshness: &RecordFreshness, project: &str) -> Option<Verdict> {
     let RecordFreshness::Stale { paths, .. } = freshness else {
         return None;
     };
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::AnalyzeStale),
         message: Some(format!(
@@ -819,11 +859,11 @@ fn stale_analyze_block(
 ///
 /// A record carrying no digest is **undeterminable**, not stale and not
 /// current, and does not block. It clears on the next review.
-fn stale_review_block(freshness: &RecordFreshness, project: &str) -> Option<CheckReviewGateResult> {
+fn stale_review_block(freshness: &RecordFreshness, project: &str) -> Option<Verdict> {
     let RecordFreshness::Stale { paths, .. } = freshness else {
         return None;
     };
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewStale),
         message: Some(format!(
@@ -848,8 +888,8 @@ fn stale_review_block(freshness: &RecordFreshness, project: &str) -> Option<Chec
 fn markdown_lint_block(
     rel_dir: &str,
     repo: &Path,
-    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<LintMarkdownResult>,
-) -> Result<Option<CheckReviewGateResult>> {
+    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<lint_markdown::Lint>,
+) -> Result<Option<Verdict>> {
     let lint_result = lint(
         &LintMarkdownArgs {
             paths: vec![lint_markdown::feature_markdown_glob(rel_dir)],
@@ -871,7 +911,7 @@ fn markdown_lint_block(
             lint_result.violations.len()
         )
     };
-    Ok(Some(CheckReviewGateResult {
+    Ok(Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::MarkdownLint),
         message: Some(message),
@@ -886,8 +926,8 @@ fn markdown_lint_block(
 /// Absence of the artifact and a record carrying a null `last-run` are the same
 /// answer — no review has finished — so they share one message. What they must
 /// not share is [`unreadable_record_block`]'s, which is a different claim.
-fn never_reviewed_block(project: &str) -> CheckReviewGateResult {
-    CheckReviewGateResult {
+fn never_reviewed_block(project: &str) -> Verdict {
+    Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::NotReviewed),
         message: Some(format!(
@@ -909,8 +949,8 @@ enum RecordKind {
 
 /// The blocked verdict for an `analysis.md` whose record reads and whose `decisions:` list
 /// does not: `write-analysis` refuses to record over it, so a re-run is no repair.
-fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> CheckReviewGateResult {
-    CheckReviewGateResult {
+fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> Verdict {
+    Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::AnalyzeRecordUnreadable),
         message: Some(format!(
@@ -936,7 +976,7 @@ fn unreadable_record_block(
     project: &str,
     kind: RecordKind,
     reason: &str,
-) -> CheckReviewGateResult {
+) -> Verdict {
     let (file, noun, verb, blocked_by) = match kind {
         RecordKind::Review => (
             "review.md",
@@ -951,7 +991,7 @@ fn unreadable_record_block(
             ReviewGateBlock::AnalyzeRecordUnreadable,
         ),
     };
-    CheckReviewGateResult {
+    Verdict {
         passed: false,
         blocked_by: Some(blocked_by),
         message: Some(format!(
@@ -987,11 +1027,11 @@ fn unreadable_record_block(
 /// because `validate-frontmatter` owns reporting a bad value and inferring
 /// "probably finished" from an unrecognized status would be the same unearned
 /// conclusion in the other direction.
-fn already_done_block(status: &str, project: &str) -> Option<CheckReviewGateResult> {
+fn already_done_block(status: &str, project: &str) -> Option<Verdict> {
     if status != "done" {
         return None;
     }
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::AlreadyDone),
         message: Some(
@@ -1148,7 +1188,7 @@ fn cross_spec_impact_block(
     entries: &[CrossSpecImpactEntry],
     feature: &str,
     project: &str,
-) -> Option<CheckReviewGateResult> {
+) -> Option<Verdict> {
     let name = |wanted: CrossSpecImpactState| -> Vec<&str> {
         entries
             .iter()
@@ -1192,7 +1232,7 @@ fn cross_spec_impact_block(
         );
     }
 
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::UndischargedCrossSpecImpact),
         message: Some(format!(
@@ -1209,30 +1249,25 @@ fn cross_spec_impact_block(
 
 /// Gate check 2's second half: `tasks.md` holds an unchecked box under any heading
 /// (spec 079). A file that cannot be read is an error, never a pass.
-fn unchecked_task_block(
-    feature_dir: &Path,
-    rel_dir: &str,
-) -> Result<Option<CheckReviewGateResult>> {
+fn unchecked_task_block(feature_dir: &Path, rel_dir: &str) -> Result<Option<Verdict>> {
     let tasks = feature_dir.join("tasks.md");
     if !tasks.is_file() {
         return Ok(None);
     }
-    Ok(
-        describe_unchecked(&read_text(&tasks)?).map(|owed| CheckReviewGateResult {
-            passed: false,
-            blocked_by: Some(ReviewGateBlock::UncheckedTask),
-            message: Some(format!(
-                "blocked: {rel_dir}/tasks.md holds {owed} — finish each before completing"
-            )),
-            guidance: Some(
-                "Tick a box once its work is done, and remove one no longer owed. A step that can \
+    Ok(describe_unchecked(&read_text(&tasks)?).map(|owed| Verdict {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::UncheckedTask),
+        message: Some(format!(
+            "blocked: {rel_dir}/tasks.md holds {owed} — finish each before completing"
+        )),
+        guidance: Some(
+            "Tick a box once its work is done, and remove one no longer owed. A step that can \
              only happen after done, such as a release, is not this spec's task."
-                    .to_string(),
-            ),
-            violations: vec![],
-            cross_spec_impact: vec![],
-        }),
-    )
+                .to_string(),
+        ),
+        violations: vec![],
+        cross_spec_impact: vec![],
+    }))
 }
 
 /// The scenario-open-questions gate check: `Some(blocked)` when any
@@ -1259,11 +1294,7 @@ fn unchecked_task_block(
 ///
 /// Reads through `read-spec`'s collector rather than re-deriving the list,
 /// so the gate blocks on exactly the questions the user was shown.
-fn scenario_question_block(
-    feature_dir: &Path,
-    repo: &Path,
-    feature: &str,
-) -> Option<CheckReviewGateResult> {
+fn scenario_question_block(feature_dir: &Path, repo: &Path, feature: &str) -> Option<Verdict> {
     let scan = read_spec::collect_scenario_open_questions(feature_dir);
     let questions = scan.questions;
     if questions.is_empty() {
@@ -1276,7 +1307,7 @@ fn scenario_question_block(
     }
     let scenarios = read_spec::scenario_names(&questions);
     let project = Host::load(repo).project;
-    Some(CheckReviewGateResult {
+    Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ScenarioOpenQuestions),
         message: Some(format!(
@@ -1300,7 +1331,6 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::schema::primitives::MarkdownViolation;
     use std::fmt::Write as _;
     use std::fs;
     use tempfile::tempdir;
@@ -1411,8 +1441,8 @@ mod tests {
 
     // The wrapper matches the `run_with_lint` seam signature.
     #[allow(clippy::unnecessary_wraps)]
-    fn clean_lint(_: &LintMarkdownArgs, _: &Path) -> Result<LintMarkdownResult> {
-        Ok(LintMarkdownResult {
+    fn clean_lint(_: &LintMarkdownArgs, _: &Path) -> Result<lint_markdown::Lint> {
+        Ok(lint_markdown::Lint {
             violations: vec![],
             clean: true,
             exit_code: 0,
@@ -2143,7 +2173,7 @@ mod tests {
         };
         let canned = violation.clone();
         let result = run_with_lint(&args(), tmp.path(), move |_, _| {
-            Ok(LintMarkdownResult {
+            Ok(lint_markdown::Lint {
                 violations: vec![canned],
                 clean: false,
                 exit_code: 1,
@@ -2166,7 +2196,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
         let result = run_with_lint(&args(), tmp.path(), |_, _| {
-            Ok(LintMarkdownResult {
+            Ok(lint_markdown::Lint {
                 violations: vec![],
                 clean: false,
                 exit_code: 2,
@@ -2275,7 +2305,7 @@ mod tests {
         let mut seen_glob = String::new();
         let result = run_with_lint(&args(), tmp.path(), |lint_args, _| {
             seen_glob = lint_args.paths[0].clone();
-            Ok(LintMarkdownResult {
+            Ok(lint_markdown::Lint {
                 violations: vec![],
                 clean: true,
                 exit_code: 0,
@@ -2359,7 +2389,7 @@ mod tests {
 
         // Both checks would block; gate order must report the first.
         let dirty = |_: &LintMarkdownArgs, _: &Path| {
-            Ok(LintMarkdownResult {
+            Ok(lint_markdown::Lint {
                 violations: vec![MarkdownViolation {
                     path: "specs/007-gate/spec.md".into(),
                     line: 3,
@@ -2958,7 +2988,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), ALREADY_DONE);
         let dirty_lint = |_: &LintMarkdownArgs, _: &Path| {
-            Ok(LintMarkdownResult {
+            Ok(lint_markdown::Lint {
                 violations: vec![MarkdownViolation {
                     path: "specs/007-gate/spec.md".into(),
                     line: 1,
@@ -3769,7 +3799,7 @@ mod tests {
         write_gate_analysis(repo, at);
     }
 
-    fn gate(repo: &Path) -> CheckReviewGateResult {
+    fn gate(repo: &Path) -> Verdict {
         run_with_lint(&args(), repo, clean_lint).unwrap()
     }
 

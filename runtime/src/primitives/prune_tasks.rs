@@ -21,6 +21,8 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use serde::Serialize;
+
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, TasksStructure, checkbox, detect_tasks_structure,
     join_blocks, list_feature_dirs, parse_atx_heading, read_text, rel_path, split_frontmatter,
@@ -28,7 +30,7 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    Classification, PruneAction, PruneGate, PruneMode, PruneSection, PruneTasksArgs,
+    Classification, ListsForm, PruneAction, PruneGate, PruneMode, PruneSection, PruneTasksArgs,
     PruneTasksLine, PruneTasksResult, PruneTasksSummary, PruneWalk, PruneWalkEntry, SizeSummary,
     SkipReason, SkippedFeature,
 };
@@ -134,15 +136,56 @@ pub fn run(args: &PruneTasksArgs, repo: &Path) -> Result<PruneTasksResult> {
                     .into(),
             });
         }
+        let mut walk = walk(args, repo, &root)?;
+        bound_walk(repo, "prune-tasks", &mut walk)?;
         return Ok(PruneTasksResult {
             summary: None,
-            walk: Some(walk(args, repo, &root)?),
+            walk: Some(walk),
         });
     };
+    let mut summary = summarize(feature, args, repo, &root)?;
+    let lists = serde_json::json!({ "sections": &summary.sections });
+    if let Some(file) = super::bounded_lists::place(repo, "prune-tasks", feature, &summary, &lists)?
+    {
+        summary.form = ListsForm::File;
+        summary.sections = None;
+        summary.lists_file = Some(file);
+    }
     Ok(PruneTasksResult {
-        summary: Some(summarize(feature, args, repo, &root)?),
+        summary: Some(summary),
         walk: None,
     })
+}
+
+/// Hold `walk` to `[artifacts] read-size-bytes`: past it, its `features` and
+/// `skipped` go to the file it names, with only their counts inline
+/// (`bounded_lists::place`; spec 080, AC7). Shared by both prune primitives'
+/// `all` walks. A walk that applied its reductions has written them by then,
+/// so a list file that cannot be written fails a call whose writes stand.
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+pub(crate) fn bound_walk<T: Serialize>(
+    repo: &Path,
+    primitive: &str,
+    walk: &mut PruneWalk<T>,
+) -> Result<()> {
+    let lists = serde_json::json!({ "features": &walk.features, "skipped": &walk.skipped });
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        primitive,
+        super::bounded_lists::ALL_SPECS,
+        &*walk,
+        &lists,
+    )? {
+        walk.form = ListsForm::File;
+        walk.features = None;
+        walk.skipped = None;
+        walk.lists_file = Some(file);
+    }
+    Ok(())
 }
 
 /// The feature a call names, or `None` for an `all` walk. Exactly one of the
@@ -214,8 +257,12 @@ fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prun
     }
     Ok(PruneWalk {
         examined: u32::try_from(names.len()).unwrap_or(u32::MAX),
-        features,
-        skipped,
+        features_count: features.len(),
+        features: Some(features),
+        skipped_count: skipped.len(),
+        skipped: Some(skipped),
+        form: ListsForm::Inline,
+        lists_file: None,
     })
 }
 
@@ -305,8 +352,11 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
             kept_count: kept,
             size_before: size_of(&content),
             size_after: size_of(&new_content),
-            sections,
+            sections_count: sections.len(),
+            sections: Some(sections),
             path: rel_path(&tasks_path, repo),
+            form: ListsForm::Inline,
+            lists_file: None,
         },
         tasks_path,
         new_content,
@@ -770,7 +820,13 @@ mod tests {
             .unwrap()
             .walk
             .expect("an all walk");
-        let order: Vec<&str> = walk.features.iter().map(|f| f.feature.as_str()).collect();
+        let order: Vec<&str> = walk
+            .features
+            .as_deref()
+            .unwrap()
+            .iter()
+            .map(|f| f.feature.as_str())
+            .collect();
         // Sequential by number, then branch-scoped by counter, numerically.
         assert_eq!(
             order,
@@ -782,7 +838,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            walk.skipped,
+            walk.skipped.as_deref().unwrap(),
             [SkippedFeature {
                 feature: "003-no-tasks".into(),
                 reason: SkipReason::NoTasksFile,
@@ -790,11 +846,19 @@ mod tests {
         );
         // The lean feature is examined but, with nothing to reduce, not listed.
         assert_eq!(walk.examined, 6);
-        assert!(walk.features.iter().all(|f| !f.summary.applied));
+        assert!(
+            walk.features
+                .as_deref()
+                .unwrap()
+                .iter()
+                .all(|f| !f.summary.applied)
+        );
         // Keep-pending reads no status for its own work; the walk reads each
         // listed spec's own.
         let statuses: Vec<(&str, &str)> = walk
             .features
+            .as_deref()
+            .unwrap()
             .iter()
             .map(|f| (f.feature.as_str(), f.summary.status.as_str()))
             .collect();
@@ -885,6 +949,8 @@ mod tests {
             .expect("an all walk");
         let gates: Vec<(&str, PruneGate, bool, &str)> = walk
             .features
+            .as_deref()
+            .unwrap()
             .iter()
             .map(|f| {
                 (
@@ -944,7 +1010,7 @@ mod tests {
 
         // The reset file's guidance comment embeds `## 1/2/3` example
         // headings; the HTML-comment-aware parsers must see zero real tasks.
-        let tasks = read_tasks::run(
+        let tasks = read_tasks::compute(
             &ReadTasksArgs {
                 feature: "041-task-pruning".into(),
             },

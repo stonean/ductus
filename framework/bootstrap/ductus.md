@@ -676,10 +676,10 @@ last_applied = "rule-files-relocate"
 
 # Consumed by /{project}:clarify, /{project}:plan and /{project}:analyze (spec
 # 063), through the check-artifact-size primitive, by /{project}:target's
-# report of each loaded shared constitution's size (spec 055), and by
-# /{project}:review, /{project}:analyze and /{project}:implement, whose
-# scope, decisions, cross-spec and fix-round results move their lists to a
-# file past it (specs 066 and 078). The size, in bytes, above
+# report of each loaded shared constitution's size (spec 055), by every
+# primitive result that grows with the corpus, which moves its lists to a
+# file past it (specs 066, 078 and 080), and by /{project}:status's view,
+# which collapses and cuts its rows past it (spec 080). The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
 # scenario) may not be read in one call by an agent's file reader; each
 # command warns on every artifact over it and names the fixes. A whole number

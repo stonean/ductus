@@ -27,6 +27,10 @@ use crate::primitives::{PrimitiveError, Result, fix_rounds, write_atomic};
 /// The directory list files are written under, from the project root.
 pub(crate) const RESULTS_DIR: &str = ".ductus/results";
 
+/// The path segment a corpus-wide primitive's list file sits under, in place
+/// of the feature [`place`] keys a per-feature primitive's by.
+pub(crate) const ALL_SPECS: &str = "all-specs";
+
 /// How long a list file outlives the call that wrote it. A write removes the
 /// same feature's files older than this, so the directory does not grow with
 /// every review for the life of a checkout, while a concurrent reader's file,

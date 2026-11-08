@@ -129,8 +129,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, CrossSpecImpactState, ReadSpecArgs,
-    ReadSpecResult, ReadTasksArgs, SkippedTarget, Task,
+    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, CrossSpecImpactState, ListsForm,
+    ReadSpecArgs, ReadTasksArgs, SkippedTarget, Task,
 };
 use crate::schema::severity::AnalyzeSeverity;
 use crate::schema::status::COMPATIBLE_STATUSES;
@@ -146,7 +146,58 @@ use crate::schema::status::COMPATIBLE_STATUSES;
 /// `validate-frontmatter`'s job — this primitive needs a readable `status` to
 /// classify tiers at all), or
 /// [`PrimitiveError::Io`] on filesystem failures.
+///
+/// The result is inline while it fits `[artifacts] read-size-bytes`, and past
+/// it carries `findings` and `skipped` in the file it names and only their
+/// counts inline (`bounded_lists::place`; spec 080, AC7).
 pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResult> {
+    let checked = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "findings": checked.findings,
+        "skipped": checked.skipped,
+    });
+    let mut result = CheckArtifactsResult {
+        feature: checked.feature,
+        status: checked.status,
+        findings_count: checked.findings.len(),
+        findings: Some(checked.findings),
+        clean: checked.clean,
+        skipped_count: checked.skipped.len(),
+        skipped: Some(checked.skipped),
+        path: checked.path,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-artifacts", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.skipped = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// One check of a feature's artifacts, whole: what `check-artifacts` returns,
+/// before its result is bounded. Each field is [`CheckArtifactsResult`]'s of
+/// the same name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Checked {
+    pub(crate) feature: String,
+    pub(crate) status: String,
+    pub(crate) findings: Vec<ArtifactFinding>,
+    pub(crate) clean: bool,
+    pub(crate) skipped: Vec<SkippedTarget>,
+    pub(crate) path: String,
+}
+
+/// Run every family, every finding and skip whole.
+///
+/// # Errors
+///
+/// As [`run`], less the list file's.
+pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
     let root = paths::Paths::load(repo).specs_root;
     // The argument is checked, the directory's contents are not: this
     // primitive skips a linked sibling as `target-unparseable` and keeps
@@ -263,7 +314,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     check_criterion_labels(&mut findings, &spec, &spec_path, repo);
 
     let clean = findings.is_empty();
-    Ok(CheckArtifactsResult {
+    Ok(Checked {
         feature: args.feature.clone(),
         status,
         findings,
@@ -825,7 +876,7 @@ fn check_scenario_open_questions(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
     feature_dir: &Path,
-    spec: &ReadSpecResult,
+    spec: &read_spec::SpecRead,
     spec_path: &Path,
     repo: &Path,
 ) {
@@ -948,7 +999,7 @@ fn check_link_adjacent_drift(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
     feature_dir: &Path,
-    spec: &ReadSpecResult,
+    spec: &read_spec::SpecRead,
     repo: &Path,
 ) {
     let spec_status = spec.frontmatter.status.clone();
@@ -1346,7 +1397,7 @@ fn check_criterion_path_existence(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
     status: &str,
-    spec: &ReadSpecResult,
+    spec: &read_spec::SpecRead,
     spec_path: &Path,
     repo: &Path,
 ) {
@@ -2152,7 +2203,7 @@ fn paths_in_history(repo: &Path, wanted: &BTreeSet<String>) -> Option<BTreeSet<S
 /// hand, so there is no target it can fail to examine.
 fn check_criterion_labels(
     findings: &mut Vec<ArtifactFinding>,
-    spec: &ReadSpecResult,
+    spec: &read_spec::SpecRead,
     spec_path: &Path,
     repo: &Path,
 ) {
@@ -2254,6 +2305,12 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    /// The tests read the whole result: [`super::compute`], which [`super::run`]
+    /// bounds.
+    fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
+        compute(args, repo)
+    }
     use std::fs;
     use tempfile::tempdir;
 
@@ -2356,9 +2413,7 @@ mod tests {
     const OWED: &str =
         "  dispositions:\n    fixed: 0\n    deferred: 0\n    waived: 0\n    undispositioned: 2";
 
-    fn disposition_families(
-        result: &crate::schema::primitives::CheckArtifactsResult,
-    ) -> Vec<String> {
+    fn disposition_families(result: &Checked) -> Vec<String> {
         result
             .findings
             .iter()
@@ -2486,7 +2541,7 @@ mod tests {
         assert_eq!(families(&result), Vec::<(&str, &str)>::new());
     }
 
-    fn impact_findings(result: &crate::schema::primitives::CheckArtifactsResult) -> Vec<String> {
+    fn impact_findings(result: &Checked) -> Vec<String> {
         result
             .findings
             .iter()
@@ -2617,7 +2672,7 @@ mod tests {
         - [x] sub\n\n\
         - **Done when**: CLI works.\n";
 
-    fn families(result: &CheckArtifactsResult) -> Vec<(&str, &str)> {
+    fn families(result: &Checked) -> Vec<(&str, &str)> {
         result
             .findings
             .iter()
@@ -3656,7 +3711,7 @@ mod tests {
         );
     }
 
-    fn drift(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+    fn drift(result: &Checked) -> Vec<&ArtifactFinding> {
         result
             .findings
             .iter()
@@ -4469,7 +4524,7 @@ mod tests {
         assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
     }
 
-    fn path_findings(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+    fn path_findings(result: &Checked) -> Vec<&ArtifactFinding> {
         result
             .findings
             .iter()
@@ -4859,7 +4914,7 @@ mod tests {
         write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
     }
 
-    fn label_findings(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+    fn label_findings(result: &Checked) -> Vec<&ArtifactFinding> {
         result
             .findings
             .iter()

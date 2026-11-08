@@ -258,7 +258,32 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             dispatch_primitive(name, &self.context, &self.repo)
         };
         match dispatched {
-            Ok(result) => {
+            Ok(mut result) => {
+                // A result past the read size moved its lists to a file; the
+                // walk reads them back now, before the tally and the merge,
+                // so no step sees a list as empty and no later result's
+                // `lists-file` replaces this one's unread (spec 080).
+                let restored = match payload::restore_lists(&mut result, &self.repo) {
+                    Ok(restored) => restored,
+                    Err(err) => {
+                        let code = err.code().to_string();
+                        let message = err.to_string();
+                        self.emit_error(
+                            code.clone(),
+                            message.clone(),
+                            Some(ErrorLocation {
+                                file: self.procedure.command.clone(),
+                                line: location.start_line,
+                                col: location.start_col,
+                            }),
+                        )?;
+                        return Ok(Some(WalkOutcome::Errored { code, message }));
+                    }
+                };
+                let keys: Vec<String> = result
+                    .as_object()
+                    .map(|map| map.keys().cloned().collect())
+                    .unwrap_or_default();
                 if let Some(tally) = &mut self.analyze_tally {
                     tally.record_primitive(name, &result, &self.context);
                 }
@@ -266,6 +291,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                     self.emit_progress(line, Some(step_label.clone()), Some(name.into()))?;
                 }
                 self.merge_primitive_result(name, result);
+                self.note_restored_lists(&keys, &restored);
                 Ok(None)
             }
             Err(err) => {
@@ -400,6 +426,38 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         if retargets_session {
             self.seeded_keys.insert("feature".into());
             self.seeded_keys.insert("path".into());
+        }
+    }
+
+    /// Keep [`payload::RESTORED_LISTS`] naming exactly the context keys that
+    /// hold a list read back from a list file: of a result's `keys`, those in
+    /// `restored` and kept by the merge are named, and the rest, replaced by
+    /// this result's own values, are not.
+    fn note_restored_lists(&mut self, keys: &[String], restored: &[String]) {
+        let mut named: std::collections::BTreeSet<String> = self
+            .context
+            .get(payload::RESTORED_LISTS)
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
+        for key in keys {
+            named.remove(key);
+        }
+        named.extend(
+            restored
+                .iter()
+                .filter(|key| !self.seeded_keys.contains(*key))
+                .cloned(),
+        );
+        if named.is_empty() {
+            self.context.remove(payload::RESTORED_LISTS);
+        } else {
+            self.context.insert(
+                payload::RESTORED_LISTS.into(),
+                Value::Array(named.into_iter().map(Value::String).collect()),
+            );
         }
     }
 
@@ -3364,10 +3422,109 @@ mod tests {
         assert!(matches!(outcome, WalkOutcome::Complete), "{outcome:?}");
     }
 
+    /// Two bounded results past the read size in one walk each reach the
+    /// context whole, read back when each arrives: `derive-boundary`'s
+    /// boundary still feeds the writeCode validator's `write-boundary`, and
+    /// `read-tasks`' later `lists-file` does not take the boundary's place
+    /// (spec 080).
+    #[test]
+    fn two_bounded_results_past_the_read_size_each_reach_the_context_whole() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n",
+        );
+        write(
+            &tmp.path().join("specs/001-x/tasks.md"),
+            "# Tasks\n\n## 1. First\n\n- [ ] a\n\n## 2. Second\n\n- [ ] b\n",
+        );
+        commit_all(&repository, "begin");
+        write(&tmp.path().join("src/lib.rs"), "fn f() {}\n");
+        commit_all(&repository, "feat(001): work");
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        );
+
+        let step = |n: u32, name: &str| Step::Primitive {
+            number: StepNumber(vec![n]),
+            name: name.into(),
+            prose: String::new(),
+            location: loc(),
+        };
+        let procedure = Procedure {
+            command: "implement".into(),
+            steps: vec![step(1, "derive-boundary"), step(2, "read-tasks")],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            tmp.path().to_path_buf(),
+            ctx_with_feature("001-x"),
+            &mut reader,
+            &mut writer,
+        );
+        assert!(matches!(walker.run().unwrap(), WalkOutcome::Complete));
+        let boundary = serde_json::json!(["specs/001-x/**", "src/**"]);
+        assert_eq!(walker.context["boundary"], boundary);
+        assert_eq!(walker.context["write-boundary"], boundary);
+        let tasks = walker.context["tasks"].as_array().unwrap();
+        let numbers: Vec<&str> = tasks
+            .iter()
+            .map(|t| t["number"].as_str().unwrap())
+            .collect();
+        assert_eq!(numbers, ["1", "2"]);
+        assert_eq!(walker.context["form"], "file");
+        let file = walker.context["lists-file"].as_str().unwrap();
+        assert!(file.starts_with(".ductus/results/read-tasks/"), "{file}");
+        assert_eq!(
+            walker.context[payload::RESTORED_LISTS],
+            serde_json::json!(["boundary", "tasks"])
+        );
+    }
+
+    /// The marker names only the keys still holding a restored list: a later
+    /// result's own value for a key un-names it, a seeded key is never named,
+    /// and an empty set leaves no marker (spec 080).
+    #[test]
+    fn a_later_result_un_names_the_restored_list_it_replaced() {
+        let procedure = Procedure {
+            command: "implement".into(),
+            steps: vec![],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            fixture_repo(),
+            ctx_with_feature("001-x"),
+            &mut reader,
+            &mut writer,
+        );
+        walker.note_restored_lists(
+            &["skipped".into(), "findings".into(), "feature".into()],
+            &["skipped".into(), "findings".into(), "feature".into()],
+        );
+        assert_eq!(
+            walker.context[payload::RESTORED_LISTS],
+            serde_json::json!(["findings", "skipped"])
+        );
+        walker.note_restored_lists(&["skipped".into(), "clean".into()], &[]);
+        assert_eq!(
+            walker.context[payload::RESTORED_LISTS],
+            serde_json::json!(["findings"])
+        );
+        walker.note_restored_lists(&["findings".into()], &[]);
+        assert!(walker.context.get(payload::RESTORED_LISTS).is_none());
+    }
+
     /// On the exec path a cross-spec surface past the read size reaches the
-    /// walker whole: dispatching `diff-cross-spec` leaves no inline list in
-    /// the context, its count, and the list file holding every sibling path
-    /// (066 scenario `scope-results-have-a-bounded-size`).
+    /// walker whole: dispatching `diff-cross-spec` leaves its file form, its
+    /// count, and every sibling path, read back from the list file that
+    /// holds them (066 scenario `scope-results-have-a-bounded-size`; spec 080).
     #[test]
     fn a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file() {
         use crate::primitives::git_fixture::{commit_all, write};
@@ -3411,7 +3568,10 @@ mod tests {
         );
         assert!(matches!(walker.run().unwrap(), WalkOutcome::Complete));
         assert_eq!(walker.context["form"], "file");
-        assert!(walker.context.get("cross-spec-paths").is_none());
+        assert_eq!(
+            walker.context["cross-spec-paths"],
+            serde_json::json!(siblings)
+        );
         assert_eq!(walker.context["cross-spec-count"], siblings.len());
         let file = walker.context["lists-file"].as_str().unwrap().to_string();
         let lists: Value =

@@ -743,7 +743,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         write_phased_fixture(tmp.path());
 
-        let read_result = read_tasks::run(
+        let read_result = read_tasks::compute(
             &ReadTasksArgs {
                 feature: "feat".into(),
             },

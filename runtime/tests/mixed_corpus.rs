@@ -75,7 +75,13 @@ fn dashboard_lists_both_directory_forms() {
     let tmp = tempfile::tempdir().unwrap();
     seed(tmp.path());
     let result = primitives::dashboard::run(&DashboardArgs::default(), tmp.path()).unwrap();
-    let features: Vec<&str> = result.specs.iter().map(|s| s.slug.as_str()).collect();
+    let features: Vec<&str> = result
+        .specs
+        .as_deref()
+        .unwrap()
+        .iter()
+        .map(|s| s.slug.as_str())
+        .collect();
     assert!(
         features.contains(&BRANCH_SCOPED),
         "pipeline view omitted the branch-scoped spec: {features:?}"

@@ -33,26 +33,106 @@ use crate::primitives::{Result, inline_code_spans, rel_path};
 use crate::schema::paths;
 use crate::schema::primitives::{
     BrokenCorpusLink, CheckCorpusLinksArgs, CheckCorpusLinksResult, CorpusLinkSkip, LinkScope,
+    ListsForm,
 };
 
 /// Report every relative markdown link under the spec root whose target does
-/// not exist.
+/// not exist: [`compute`], returned through [`bound`].
 ///
 /// # Errors
 ///
-/// Never returns `Err`. Every condition that stops the scan is a **domain
-/// outcome** carried in the result: an unreadable file lands in `skipped`, and
-/// a spec root that could not be listed sets `guidance`. Reporting either as
-/// an error would collapse *could not examine* into *failed to run*, and the
-/// caller's whole job is to tell those apart from *examined and clean*.
+/// Only those [`bound`] returns. Every condition that stops the scan is a
+/// **domain outcome** carried in the result: an unreadable file lands in
+/// `skipped`, and a spec root that could not be listed sets `guidance`.
+/// Reporting either as an error would collapse *could not examine* into
+/// *failed to run*, and the caller's whole job is to tell those apart from
+/// *examined and clean*.
 pub fn run(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksResult> {
+    bound(compute(args, repo)?, repo)
+}
+
+/// A link scan, whole: what `check-corpus-links` reports, before its result
+/// is bounded. Each field is [`CheckCorpusLinksResult`]'s of the same name.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CorpusLinks {
+    /// See [`CheckCorpusLinksResult::broken`].
+    pub broken: Vec<BrokenCorpusLink>,
+    /// See [`CheckCorpusLinksResult::examined`].
+    pub examined: Vec<String>,
+    /// See [`CheckCorpusLinksResult::skipped`].
+    pub skipped: Vec<CorpusLinkSkip>,
+    /// See [`CheckCorpusLinksResult::excluded_by_construction`].
+    pub excluded_by_construction: u32,
+    /// See [`CheckCorpusLinksResult::shapes_skipped`].
+    pub shapes_skipped: u32,
+    /// See [`CheckCorpusLinksResult::specs_root`].
+    pub specs_root: String,
+    /// See [`CheckCorpusLinksResult::scope`].
+    pub scope: LinkScope,
+    /// See [`CheckCorpusLinksResult::guidance`].
+    pub guidance: String,
+}
+
+/// `scan` as the primitive's result: inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with its three lists in the file it names
+/// and only their counts inline (`bounded_lists::place`; spec 080, AC7). The
+/// CLI reports the broken links from the whole scan before bounding it, so a
+/// blocked commit names every one.
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+pub fn bound(scan: CorpusLinks, repo: &Path) -> Result<CheckCorpusLinksResult> {
+    let lists = serde_json::json!({
+        "broken": scan.broken,
+        "examined": scan.examined,
+        "skipped": scan.skipped,
+    });
+    let segment = match scan.scope {
+        LinkScope::SpecCorpus => super::bounded_lists::ALL_SPECS,
+        LinkScope::Repository => "repository",
+    };
+    let mut result = CheckCorpusLinksResult {
+        broken_count: scan.broken.len(),
+        broken: Some(scan.broken),
+        examined_count: scan.examined.len(),
+        examined: Some(scan.examined),
+        skipped_count: scan.skipped.len(),
+        skipped: Some(scan.skipped),
+        excluded_by_construction: scan.excluded_by_construction,
+        shapes_skipped: scan.shapes_skipped,
+        specs_root: scan.specs_root,
+        scope: scan.scope,
+        guidance: scan.guidance,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-corpus-links", segment, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.broken = None;
+        result.examined = None;
+        result.skipped = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Scan every relative markdown link in the scope, every list whole.
+///
+/// # Errors
+///
+/// Never returns `Err`; see [`run`].
+pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> {
     let specs_dir = paths::specs_dir(repo);
     let specs_root = rel_path(&specs_dir, repo);
 
-    let mut result = CheckCorpusLinksResult {
+    let mut result = CorpusLinks {
         specs_root: specs_root.clone(),
         scope: args.scope,
-        ..CheckCorpusLinksResult::default()
+        ..CorpusLinks::default()
     };
 
     let mut files = Vec::new();
@@ -257,13 +337,7 @@ fn collect_markdown(
 }
 
 /// Scan one file's body for broken relative links, appending to `result`.
-fn scan_file(
-    text: &str,
-    relative: &str,
-    here: &Path,
-    repo: &Path,
-    result: &mut CheckCorpusLinksResult,
-) {
+fn scan_file(text: &str, relative: &str, here: &Path, repo: &Path, result: &mut CorpusLinks) {
     let mut fm_seen = false;
     let mut in_fm = false;
     let mut in_fence = false;
@@ -344,7 +418,7 @@ fn classify(
     line: usize,
     here: &Path,
     repo: &Path,
-    result: &mut CheckCorpusLinksResult,
+    result: &mut CorpusLinks,
 ) {
     // Scheme-bearing targets and bare fragments are out of scope: nothing on
     // the filesystem answers for them.
@@ -467,8 +541,8 @@ mod tests {
     /// a literal here would have been the defect, not just its fixture.
     const GENERATED_COPY: &str = concat!(".cla", "ude/commands/ductus/x.md");
 
-    fn run_at(repo: &Path) -> CheckCorpusLinksResult {
-        run(&CheckCorpusLinksArgs::default(), repo).unwrap()
+    fn run_at(repo: &Path) -> CorpusLinks {
+        compute(&CheckCorpusLinksArgs::default(), repo).unwrap()
     }
 
     #[test]
@@ -772,7 +846,7 @@ mod tests {
             .unwrap();
         index.write().unwrap();
 
-        let corpus = run(&CheckCorpusLinksArgs::default(), tmp.path()).unwrap();
+        let corpus = compute(&CheckCorpusLinksArgs::default(), tmp.path()).unwrap();
         assert_eq!(corpus.scope, LinkScope::SpecCorpus);
         assert!(
             corpus.broken.is_empty(),
@@ -780,7 +854,7 @@ mod tests {
             corpus.broken
         );
 
-        let repository = run(
+        let repository = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -814,7 +888,7 @@ mod tests {
         index.add_path(Path::new("tracked.md")).unwrap();
         index.write().unwrap();
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -852,7 +926,7 @@ mod tests {
         );
         git_fixture::commit_all(&repo, "base");
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -883,7 +957,7 @@ mod tests {
         write(tmp.path(), "other/doc.md", "# Other\n");
         git_fixture::commit_all(&repo, "base");
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -904,7 +978,7 @@ mod tests {
     fn the_repository_scope_outside_a_git_repo_is_guidance_not_a_clean_verdict() {
         let tmp = tempdir().unwrap();
         write(tmp.path(), "specs/042-demo/spec.md", "# Demo\n");
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -936,7 +1010,7 @@ mod tests {
         }
         index.write().unwrap();
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -973,7 +1047,7 @@ mod tests {
         index.add_path(Path::new(source)).unwrap();
         index.write().unwrap();
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -1007,7 +1081,7 @@ mod tests {
             .unwrap();
         index.write().unwrap();
 
-        let result = run(
+        let result = compute(
             &CheckCorpusLinksArgs {
                 scope: LinkScope::Repository,
             },
@@ -1048,7 +1122,7 @@ mod tests {
             index.add_path(Path::new(".github/x.md")).unwrap();
             index.write().unwrap();
 
-            let result = run(
+            let result = compute(
                 &CheckCorpusLinksArgs {
                     scope: LinkScope::Repository,
                 },

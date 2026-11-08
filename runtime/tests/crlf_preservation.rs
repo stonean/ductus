@@ -93,7 +93,7 @@ fn rewrite_spec_links_preserves_crlf() {
         repo,
     )
     .unwrap();
-    assert_eq!(result.rewritten.len(), 1, "the sibling link should move");
+    assert_eq!(result.rewritten_count, 1, "the sibling link should move");
 
     let beta = repo.join("specs/060-beta/spec.md");
     assert_crlf(&beta, "rewrite-spec-links");

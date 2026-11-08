@@ -56,10 +56,6 @@ const DONE: &str = "done";
 const SPEC_FILE: &str = "spec.md";
 const TASKS_FILE: &str = "tasks.md";
 
-/// The path segment this primitive's list file sits under, in place of the feature
-/// `bounded_lists::place` keys others by, since a measurement covers every spec.
-const LISTS_SCOPE: &str = "all-specs";
-
 /// Execute the `measure-reopenings` primitive: [`compute`], returned inline while it
 /// fits `[artifacts] read-size-bytes`, and past it with its lists in the file it
 /// names and only their counts inline.
@@ -90,9 +86,13 @@ pub fn run(args: &MeasureReopeningsArgs, repo: &Path) -> Result<MeasureReopening
         "not-counted": measurement.not_counted,
         "waiting": measurement.waiting,
     });
-    if let Some(file) =
-        super::bounded_lists::place(repo, "measure-reopenings", LISTS_SCOPE, &result, &lists)?
-    {
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "measure-reopenings",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
         result.form = ListsForm::File;
         result.reopenings = None;
         result.not_counted = None;

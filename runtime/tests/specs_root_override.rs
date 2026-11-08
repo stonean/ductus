@@ -179,7 +179,13 @@ fn dashboard_enumerates_configured_root_and_ignores_stray_specs() {
     let tmp = tempfile::tempdir().unwrap();
     seed(tmp.path());
     let result = primitives::dashboard::run(&DashboardArgs {}, tmp.path()).unwrap();
-    let slugs: Vec<&str> = result.specs.iter().map(|s| s.slug.as_str()).collect();
+    let slugs: Vec<&str> = result
+        .specs
+        .as_deref()
+        .unwrap()
+        .iter()
+        .map(|s| s.slug.as_str())
+        .collect();
     assert!(
         slugs.contains(&"001-demo"),
         "governance feature present: {slugs:?}"
@@ -334,15 +340,14 @@ fn check_artifacts_resolves_configured_root() {
     .unwrap();
     assert_eq!(result.status, "in-progress");
     assert_eq!(result.path, "governance/001-demo/spec.md");
-    let plan_findings: Vec<_> = result
-        .findings
+    let findings = result.findings.as_deref().unwrap();
+    let plan_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.family == "artifact-completeness")
         .collect();
     assert_eq!(plan_findings.len(), 1, "{:?}", result.findings);
     assert_eq!(plan_findings[0].path, "governance/001-demo/plan.md");
-    let task_findings: Vec<_> = result
-        .findings
+    let task_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.family == "task-consistency")
         .collect();

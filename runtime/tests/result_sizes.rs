@@ -13,7 +13,17 @@
 //! A primitive **grows with the corpus** when its result on the large
 //! corpus is at least twice its result on the small one and at least 200
 //! characters longer: a count's extra digits pass neither test, and a list
-//! that scales with the corpus passes both.
+//! that scales with the corpus passes both. Both are measured with
+//! `[artifacts] read-size-bytes` raised past any result ([`UNBOUNDED`]), so a
+//! bounded result is measured by what it carries rather than by the file
+//! form its bound gives it; a third column measures the large corpus at the
+//! default read size, the size a host reads.
+//!
+//! A primitive with an argument that widens what it reads — a walk of every
+//! spec in place of one, a body in place of a heading, the repository in
+//! place of the spec root — gets a row for that mode beside its own
+//! ([`modes`]), since a result can grow in a mode the default call never
+//! takes.
 //!
 //! The same run records each served tool's loaded schema — its description
 //! plus its input schema serialized as compact JSON, in characters — from
@@ -41,6 +51,11 @@ enum Case {
     /// Not measured, for this reason.
     NotMeasured(&'static str),
 }
+
+/// The read size the growth columns are measured at: past any result here, so
+/// no bounded result moves its lists, and growth is a fact about what each
+/// result carries.
+const UNBOUNDED: usize = 1_000_000_000;
 
 /// What a run on one corpus needs to build a case's arguments.
 struct Context {
@@ -172,6 +187,24 @@ fn case(name: &str, ctx: &Context) -> Case {
     }
 }
 
+/// The argument modes of `name` that widen what it reads, each with its label
+/// and its arguments: measured in rows of their own, since a result can grow
+/// in a mode the default call never takes. Every other optional argument of
+/// a registry primitive narrows a read, names a write, or carries the host's
+/// input.
+fn modes(name: &str) -> Vec<(&'static str, Value)> {
+    let f = SUBJECT;
+    match name {
+        "read-spec" => vec![(
+            "`include-body`",
+            json!({"feature": f, "include-body": true}),
+        )],
+        "prune-tasks" | "prune-plan" => vec![("`all`", json!({"all": true}))],
+        "check-corpus-links" => vec![("`scope: repository`", json!({"scope": "repository"}))],
+        _ => Vec::new(),
+    }
+}
+
 /// The MCP server of the built binary, rooted at `repo`, initialized.
 struct Server {
     child: Child,
@@ -255,6 +288,11 @@ fn run_case(template: &Path, name: &str, ctx: &Context) -> Outcome {
         Case::CallWithNodeModules(args) => (args, true),
         Case::NotMeasured(reason) => return Outcome::NotMeasured(reason),
     };
+    call_on_copy(template, name, &args, link)
+}
+
+/// Call `name` with `args` on a fresh copy of `template`.
+fn call_on_copy(template: &Path, name: &str, args: &Value, link: bool) -> Outcome {
     let copy = tempfile::tempdir().unwrap();
     common::copy_dir_recursive(template, copy.path());
     if link {
@@ -316,16 +354,22 @@ fn commit_shas(root: &Path) -> (String, String) {
     (shas[0].clone(), shas[shas.len() - 1].clone())
 }
 
-/// Every registry name's outcome on a corpus of `size`.
-fn measure(size: CorpusSize) -> Vec<(&'static str, Outcome)> {
+/// Every registry name's outcome on a corpus of `size`, labelled for its
+/// row, each followed by the outcome of each of its [`modes`].
+fn measure(size: CorpusSize) -> Vec<(String, Outcome)> {
     let template = tempfile::tempdir().unwrap();
     corpus::generate(template.path(), &size);
     let (base, head) = commit_shas(template.path());
     let ctx = Context { size, base, head };
-    ductus::schema::registry::PRIMITIVE_REGISTRY
-        .iter()
-        .map(|name| (*name, run_case(template.path(), name, &ctx)))
-        .collect()
+    let mut rows = Vec::new();
+    for name in ductus::schema::registry::PRIMITIVE_REGISTRY {
+        rows.push((format!("`{name}`"), run_case(template.path(), name, &ctx)));
+        for (label, args) in modes(name) {
+            let outcome = call_on_copy(template.path(), name, &args, false);
+            rows.push((format!("`{name}` with {label}"), outcome));
+        }
+    }
+    rows
 }
 
 fn cell(outcome: &Outcome) -> String {
@@ -372,15 +416,20 @@ fn describe(size: &CorpusSize) -> String {
 }
 
 fn result_table() -> String {
-    let small = measure(corpus::SMALL);
-    let large = measure(corpus::LARGE);
+    let raised = |size: CorpusSize| CorpusSize {
+        read_size_bytes: Some(UNBOUNDED),
+        ..size
+    };
+    let small = measure(raised(corpus::SMALL));
+    let large = measure(raised(corpus::LARGE));
+    let host = measure(corpus::LARGE);
     let mut out = format!(
-        "Small corpus: {}. Large corpus: {}.\n\n\
-         | Primitive | Small (chars) | Large (chars) | Grows | Bounded already | Note |\n| --- | --- | --- | --- | --- | --- |\n",
+        "Small corpus: {}. Large corpus: {}. Small and Large are measured at a read size of {UNBOUNDED} bytes, past every result; Large at the default read size is the same corpus at 50,000.\n\n\
+         | Primitive | Small (chars) | Large (chars) | Large at the default read size (chars) | Grows | Bounded | Note |\n| --- | --- | --- | --- | --- | --- | --- |\n",
         describe(&corpus::SMALL),
         describe(&corpus::LARGE)
     );
-    for ((name, s), (_, l)) in small.iter().zip(&large) {
+    for (((name, s), (_, l)), (_, h)) in small.iter().zip(&large).zip(&host) {
         // An empty cell is one space, as markdownlint's compact table style
         // (MD060) requires.
         let note = match s {
@@ -399,9 +448,10 @@ fn result_table() -> String {
         };
         let _ = writeln!(
             out,
-            "| `{name}` | {} | {} | {} | {bounded} | {note}|",
+            "| {name} | {} | {} | {} | {} | {bounded} | {note}|",
             cell(s),
             cell(l),
+            cell(h),
             grows(s, l)
         );
     }
@@ -465,6 +515,7 @@ fn the_corpus_scales_every_dimension() {
         scenarios: 5,
         inbox_items: 7,
         defects: true,
+        read_size_bytes: None,
     };
     let tmp = tempfile::tempdir().unwrap();
     corpus::generate(tmp.path(), &size);

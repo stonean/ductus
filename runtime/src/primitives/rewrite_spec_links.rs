@@ -131,7 +131,7 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    KeptTail, ReferrerSkip, RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile,
+    KeptTail, ListsForm, ReferrerSkip, RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile,
     SourceMention,
 };
 
@@ -483,7 +483,63 @@ impl Sweep<'_> {
     }
 }
 
-/// Execute the `rewrite-spec-links` primitive against the given repo root.
+/// Execute the `rewrite-spec-links` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its four
+/// lists in the file it names and only their counts inline
+/// (`bounded_lists::place`; spec 080, AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written. The
+/// rewrite is on disk by then, so a list file that cannot be written fails a
+/// run whose edits stand; a re-run re-points nothing and lists the rest.
+pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
+    let sweep = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "rewritten": sweep.rewritten,
+        "skipped": sweep.skipped,
+        "kept-tails": sweep.kept_tails,
+        "mentions": sweep.mentions,
+    });
+    let mut result = RewriteSpecLinksResult {
+        rewritten_count: sweep.rewritten.len(),
+        rewritten: Some(sweep.rewritten),
+        examined: sweep.examined,
+        skipped_count: sweep.skipped.len(),
+        skipped: Some(sweep.skipped),
+        kept_tails_count: sweep.kept_tails.len(),
+        kept_tails: Some(sweep.kept_tails),
+        mentions_count: sweep.mentions.len(),
+        mentions: Some(sweep.mentions),
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "rewrite-spec-links", &args.from, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.rewritten = None;
+        result.skipped = None;
+        result.kept_tails = None;
+        result.mentions = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// One sweep, whole: what `rewrite-spec-links` returns, before its result is
+/// bounded. Each field is [`RewriteSpecLinksResult`]'s of the same name.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Swept {
+    pub(crate) rewritten: Vec<RewrittenFile>,
+    pub(crate) examined: u32,
+    pub(crate) skipped: Vec<ReferrerSkip>,
+    pub(crate) kept_tails: Vec<KeptTail>,
+    pub(crate) mentions: Vec<SourceMention>,
+}
+
+/// Re-point every inbound pointer, every list whole.
 ///
 /// # Errors
 ///
@@ -504,7 +560,7 @@ impl Sweep<'_> {
 /// `skipped`, as a referrer resolving outside the project is, and as a
 /// symbolic link is, whether a referrer or one below the spec root named
 /// `*.md` or to a directory; a spec root that is itself a link is followed.
-pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
+pub(crate) fn compute(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "rewrite-spec-links".into(),
@@ -605,7 +661,7 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         )?;
     }
 
-    Ok(RewriteSpecLinksResult {
+    Ok(Swept {
         rewritten: sweep.rewritten,
         examined: sweep.examined,
         skipped: sweep.skipped,
@@ -1132,11 +1188,17 @@ fn names_a_file_the_fold_did_not_write(tail: &[&str]) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use super::{SKIP_LINK, SKIP_OUTSIDE, run};
-    use crate::primitives::PrimitiveError;
+    use super::{SKIP_LINK, SKIP_OUTSIDE, Swept, compute};
+    use crate::primitives::{PrimitiveError, Result};
     use crate::schema::primitives::{ReferrerSkip, RewriteSpecLinksArgs};
     use std::fs;
     use std::path::Path;
+
+    /// The tests read the whole sweep: [`super::compute`], which
+    /// [`super::run`] bounds.
+    fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept> {
+        compute(args, repo)
+    }
 
     fn args(from: &str, to: &str) -> RewriteSpecLinksArgs {
         RewriteSpecLinksArgs {
@@ -1541,7 +1603,7 @@ mod tests {
         fs::read_to_string(repo.join(rel)).unwrap()
     }
 
-    fn rewritten_paths(result: &crate::schema::primitives::RewriteSpecLinksResult) -> Vec<&str> {
+    fn rewritten_paths(result: &Swept) -> Vec<&str> {
         result.rewritten.iter().map(|f| f.path.as_str()).collect()
     }
 

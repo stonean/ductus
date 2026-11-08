@@ -107,12 +107,24 @@ A primitive in the grows-set takes the shape `process-decisions` and `compute-re
 
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
 - a `{list}-count` per moved list is present in both forms;
-- each moved list is present only in the inline form;
-- in the file form, `lists-file` names `.ductus/results/{primitive}/{feature}/{sha256}.json`, which holds the lists whole, one entry per line.
+- each moved list is present only in the inline form, where `scenario-files-unreadable` and `cross-spec-impact` are also absent when empty, as before;
+- in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, and `paths` for `lint-markdown`.
 
-Each member's row is added to this table as it lands.
+A call that writes, `rewrite-spec-links` or an applied prune, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
 
-| Primitive | Lists moved | Counts |
-| --- | --- | --- |
-| `read-tasks` | `tasks` | `tasks-count` |
-| `dashboard` | `specs`, `tags-union` | `specs-count`, `tags-union-count` |
+| Primitive | Lists moved |
+| --- | --- |
+| `read-spec` | `sections`, `acceptance-criteria`, `open-questions`, `scenario-open-questions`, `scenario-files-unreadable` |
+| `read-tasks` | `tasks` |
+| `derive-boundary` | `boundary` |
+| `lint-markdown` | `violations` |
+| `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
+| `prune-plan` | `features`, `skipped` under `all` |
+| `dashboard` | `specs`, `tags-union` |
+| `check-review-gate` | `violations`, `cross-spec-impact` |
+| `check-artifacts` | `findings`, `skipped` |
+| `check-corpus-links` | `broken`, `examined`, `skipped` |
+| `check-unfolded-specs` | `unfolded` |
+| `rewrite-spec-links` | `rewritten`, `skipped`, `kept-tails`, `mentions` |
+
+The counts are each list's `{list}-count`. The prune primitives flatten a summary or a walk into their result, so `form` and `lists-file` sit inside the half that moves lists: `prune-tasks`' summary, and the walk both share. A one-feature result is still its summary on the wire. `prune-plan`'s one-feature summary does not grow with the corpus and carries neither.

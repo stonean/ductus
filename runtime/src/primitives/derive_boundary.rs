@@ -17,9 +17,31 @@ use git2::{Repository, Sort};
 
 use crate::primitives::{PrimitiveError, ProjectRepository, Result};
 use crate::schema::paths;
-use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
+use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult, ListsForm};
 
-/// Execute the `derive-boundary` primitive.
+/// Execute the `derive-boundary` primitive: [`compute`], returned inline while
+/// it fits `[artifacts] read-size-bytes`, and past it with the boundary in the
+/// file it names and only its count inline (`bounded_lists::place`; spec 080,
+/// AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
+    let mut result = compute(args, repo)?;
+    let lists = serde_json::json!({ "boundary": &result.boundary });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "derive-boundary", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.boundary = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Derive the boundary, whole: the inline form of the result.
 ///
 /// # Errors
 ///
@@ -35,7 +57,7 @@ use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
 /// [`uncommitted_guidance`]. Enforcement stays fail-closed on that result —
 /// the first out-of-spec edit halts with `out-of-boundary-edit` — while the
 /// walk itself reaches a legible next-step instead of dying at step 2.
-pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
+pub(crate) fn compute(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
@@ -65,12 +87,12 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
     let Some((first_commit, head_oid)) =
         first_commit_for_prefix(repository, &project.to_git(&spec_prefix))?.zip(head)
     else {
-        return Ok(DeriveBoundaryResult {
-            boundary: vec![spec_glob],
-            first_commit: String::new(),
-            current_head: head.map(|oid| oid.to_string()).unwrap_or_default(),
-            guidance: Some(uncommitted_guidance(&layout.specs_root, &args.feature)),
-        });
+        return Ok(inline(
+            vec![spec_glob],
+            String::new(),
+            head.map(|oid| oid.to_string()).unwrap_or_default(),
+            Some(uncommitted_guidance(&layout.specs_root, &args.feature)),
+        ));
     };
 
     let first = repository.find_commit(first_commit)?;
@@ -106,12 +128,30 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
         None,
     )?;
 
-    Ok(DeriveBoundaryResult {
-        boundary: boundary.into_iter().collect(),
-        first_commit: first_commit.to_string(),
-        current_head: head_oid.to_string(),
-        guidance: None,
-    })
+    Ok(inline(
+        boundary.into_iter().collect(),
+        first_commit.to_string(),
+        head_oid.to_string(),
+        None,
+    ))
+}
+
+/// The inline form of a derivation's result.
+fn inline(
+    boundary: Vec<String>,
+    first_commit: String,
+    current_head: String,
+    guidance: Option<String>,
+) -> DeriveBoundaryResult {
+    DeriveBoundaryResult {
+        boundary_count: boundary.len(),
+        boundary: Some(boundary),
+        first_commit,
+        current_head,
+        guidance,
+        form: ListsForm::Inline,
+        lists_file: None,
+    }
 }
 
 /// Next-step text for a spec dir with no commit touching it. Names both
@@ -238,15 +278,20 @@ mod tests {
         write(&tmp.path().join("runtime/src/main.rs"), "fn main() {}\n");
         commit_all(&repo, "feat(020): runtime");
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "020-demo".into(),
             },
             tmp.path(),
         )
         .unwrap();
-        let boundary: std::collections::HashSet<&str> =
-            result.boundary.iter().map(String::as_str).collect();
+        let boundary: std::collections::HashSet<&str> = result
+            .boundary
+            .as_deref()
+            .unwrap()
+            .iter()
+            .map(String::as_str)
+            .collect();
         assert!(
             boundary.contains("governance/020-demo/**"),
             "boundary glob under configured root: {boundary:?}"
@@ -276,7 +321,7 @@ mod tests {
         write(&tmp.path().join("README.md"), "# repo v2\n");
         commit_all(&repo, "feat(020): runtime bootstrap");
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "020-demo".into(),
             },
@@ -285,8 +330,13 @@ mod tests {
         .unwrap();
         assert_ne!(result.first_commit, "");
         assert_ne!(result.current_head, "");
-        let boundary: std::collections::HashSet<&str> =
-            result.boundary.iter().map(String::as_str).collect();
+        let boundary: std::collections::HashSet<&str> = result
+            .boundary
+            .as_deref()
+            .unwrap()
+            .iter()
+            .map(String::as_str)
+            .collect();
         assert!(boundary.contains("specs/020-demo/**"));
         assert!(
             boundary.contains("runtime/src/**"),
@@ -324,7 +374,7 @@ mod tests {
         write(&tmp.path().join("other/src/x.rs"), "fn x() {}\n");
         git_fixture::commit_all(&repo, "feat(020): implement");
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "020-demo".into(),
             },
@@ -334,7 +384,7 @@ mod tests {
         assert_eq!(result.first_commit, first.to_string());
         assert_eq!(result.guidance, None);
         assert_eq!(
-            result.boundary,
+            result.boundary.as_deref().unwrap(),
             vec![
                 "README.md".to_string(),
                 "runtime/src/**".to_string(),
@@ -357,7 +407,7 @@ mod tests {
         write(&tmp.path().join("scripts/gen.sh"), "#!/bin/sh\n");
         commit_all(&repo, "feat(020): work");
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "020-demo".into(),
             },
@@ -365,7 +415,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            result.boundary,
+            result.boundary.as_deref().unwrap(),
             vec![
                 "runtime/src/**".to_string(),
                 "scripts/**".to_string(),
@@ -390,7 +440,7 @@ mod tests {
         );
         // No commit yet — the feature dir exists on disk but never landed in
         // git history.
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "030-orphan".into(),
             },
@@ -400,7 +450,10 @@ mod tests {
 
         // Fail-closed: the feature's own zone and nothing else, so the first
         // out-of-spec writeCode edit still halts with out-of-boundary-edit.
-        assert_eq!(result.boundary, vec!["specs/030-orphan/**".to_string()]);
+        assert_eq!(
+            result.boundary.as_deref().unwrap(),
+            vec!["specs/030-orphan/**".to_string()]
+        );
         assert_eq!(result.first_commit, "", "no history to point at");
         assert!(
             !result.current_head.is_empty(),
@@ -431,7 +484,7 @@ mod tests {
             "---\nstatus: planned\n---\n\n# 030\n",
         );
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "030-orphan".into(),
             },
@@ -439,7 +492,10 @@ mod tests {
         )
         .expect("unborn HEAD is not an error");
 
-        assert_eq!(result.boundary, vec!["specs/030-orphan/**".to_string()]);
+        assert_eq!(
+            result.boundary.as_deref().unwrap(),
+            vec!["specs/030-orphan/**".to_string()]
+        );
         assert_eq!(result.first_commit, "");
         assert_eq!(result.current_head, "", "no HEAD to report");
         assert!(result.guidance.is_some());
@@ -457,7 +513,7 @@ mod tests {
         );
         commit_all(&repo, "feat(020): plan");
 
-        let result = run(
+        let result = compute(
             &DeriveBoundaryArgs {
                 feature: "020-demo".into(),
             },

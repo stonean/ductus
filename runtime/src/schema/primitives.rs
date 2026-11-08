@@ -1758,7 +1758,8 @@ pub struct ScenarioOpenQuestion {
     pub text: String,
 }
 
-/// Result for `read-spec`.
+/// Result for `read-spec`: inline up to `[artifacts] read-size-bytes`, and
+/// past it with its five lists in the file `lists-file` names (spec 080, AC7).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReadSpecResult {
@@ -1782,13 +1783,23 @@ pub struct ReadSpecResult {
     /// caveat.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub analyze: Option<AnalyzeBlock>,
-    /// Body sections in document order.
-    pub sections: Vec<SpecSection>,
-    /// Acceptance-criteria checkboxes.
-    pub acceptance_criteria: Vec<AcceptanceCriterion>,
+    /// Body sections in document order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sections: Option<Vec<SpecSection>>,
+    /// Entries in `sections`, in either form.
+    pub sections_count: usize,
+    /// Acceptance-criteria checkboxes. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acceptance_criteria: Option<Vec<AcceptanceCriterion>>,
+    /// Entries in `acceptance-criteria`, in either form.
+    pub acceptance_criteria_count: usize,
     /// Open Questions list, from the spec body only. Unchanged in meaning
     /// and value by spec 046 — every existing consumer keeps its behavior.
-    pub open_questions: Vec<OpenQuestion>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_questions: Option<Vec<OpenQuestion>>,
+    /// Entries in `open-questions`, in either form.
+    pub open_questions_count: usize,
     /// Unresolved questions carried by this feature's scenarios, in shared
     /// scenario order, each tagged with its source scenario. A sibling
     /// signal to `open-questions`, never merged into it: the two answer
@@ -1802,9 +1813,15 @@ pub struct ReadSpecResult {
     /// no longer holds: feature-targeted clarify *reports* this field as of
     /// 022's `scenario-open-question-signal`. The conclusion is unchanged;
     /// only the reason is.
-    pub scenario_open_questions: Vec<ScenarioOpenQuestion>,
+    ///
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario_open_questions: Option<Vec<ScenarioOpenQuestion>>,
+    /// Entries in `scenario-open-questions`, in either form.
+    pub scenario_open_questions_count: usize,
     /// Slugs of scenario files that could not be read while collecting
-    /// `scenario-open-questions`. Empty in the ordinary case.
+    /// `scenario-open-questions`. Absent when none was unreadable, the
+    /// ordinary case, and in the file form.
     ///
     /// Present so a caller can tell *"every scenario was examined and none
     /// carries a question"* from *"a scenario could not be examined"* — an
@@ -1812,10 +1829,19 @@ pub struct ReadSpecResult {
     /// scenario is never escalated into a `done`-blocking finding (nothing
     /// can be proven about a file that will not parse), but it is reported
     /// rather than dropped, per `QUAL-CLAIM-001` (spec 046).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub scenario_files_unreadable: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario_files_unreadable: Option<Vec<String>>,
+    /// Entries in `scenario-files-unreadable`, in either form.
+    pub scenario_files_unreadable_count: usize,
     /// Repo-relative path to the spec file.
     pub path: String,
+    /// Where the five lists are: in this result, or past the read size in
+    /// the file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding the five lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- read-tasks --------------------------------------------------------------
@@ -1874,14 +1900,25 @@ pub struct Task {
     pub phase: Option<String>,
 }
 
-/// Result for `read-tasks`.
+/// Result for `read-tasks`: inline up to `[artifacts] read-size-bytes`, and
+/// past it with the task list in the file `lists-file` names (spec 080, AC7).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReadTasksResult {
-    /// Tasks in declaration order.
-    pub tasks: Vec<Task>,
+    /// Tasks in declaration order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tasks: Option<Vec<Task>>,
+    /// Entries in `tasks`, in either form.
+    pub tasks_count: usize,
     /// Repo-relative path to the tasks file.
     pub path: String,
+    /// Where the task list is: in this result, or past the read size in the
+    /// file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding the task list whole, from the
+    /// project root: a JSON object with its `tasks` key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- mark-task ---------------------------------------------------------------
@@ -2142,12 +2179,18 @@ pub struct DeriveBoundaryArgs {
     pub feature: String,
 }
 
-/// Result for `derive-boundary`.
+/// Result for `derive-boundary`: inline up to `[artifacts] read-size-bytes`,
+/// and past it with the boundary in the file `lists-file` names (spec 080,
+/// AC7).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DeriveBoundaryResult {
-    /// Boundary entries (glob patterns and concrete paths).
-    pub boundary: Vec<String>,
+    /// Boundary entries (glob patterns and concrete paths). Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boundary: Option<Vec<String>>,
+    /// Entries in `boundary`, in either form.
+    pub boundary_count: usize,
     /// First commit that touched the spec dir. Empty when no commit
     /// touches it yet — the boundary is then unknowable rather than
     /// broken, and `guidance` carries the next step (scenario
@@ -2163,6 +2206,13 @@ pub struct DeriveBoundaryResult {
     /// fail-closed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guidance: Option<String>,
+    /// Where the boundary is: in this result, or past the read size in the
+    /// file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding the boundary whole, from the
+    /// project root: a JSON object with its `boundary` key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-stuck -------------------------------------------------------------
@@ -2540,11 +2590,17 @@ pub struct DashboardResult {
     /// (AC22). Absent when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub session_unreadable: Vec<String>,
-    /// Per-spec entries in directory-name order.
-    pub specs: Vec<DashboardSpec>,
+    /// Per-spec entries in directory-name order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub specs: Option<Vec<DashboardSpec>>,
+    /// Entries in `specs`, in either form.
+    pub specs_count: usize,
     /// Sorted, deduplicated union of every spec's `tags` array. Empty when
-    /// no spec has tags.
-    pub tags_union: Vec<String>,
+    /// no spec has tags. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags_union: Option<Vec<String>>,
+    /// Entries in `tags-union`, in either form.
+    pub tags_union_count: usize,
     /// Config review-state summary.
     pub config: DashboardConfig,
     /// The project's standing inbox — the todos a person has logged and
@@ -2559,6 +2615,14 @@ pub struct DashboardResult {
     /// how many `in-progress` specs have no unchecked task, rendered as the view's
     /// `Reopenings:` line on every run (spec 079, AC19).
     pub reopenings: ReopeningCounts,
+    /// Where `specs` and `tags-union` are: in this result, or past
+    /// `[artifacts] read-size-bytes` in the file `lists-file` names (spec 080,
+    /// AC7).
+    pub form: ListsForm,
+    /// In the file form, the file holding both lists whole, from the project
+    /// root: a JSON object with their two keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- render-status -----------------------------------------------------------
@@ -2789,16 +2853,27 @@ pub struct MarkdownViolation {
     pub message: String,
 }
 
-/// Result for `lint-markdown`.
+/// Result for `lint-markdown`: inline up to `[artifacts] read-size-bytes`, and
+/// past it with the violations in the file `lists-file` names (spec 080, AC7).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct LintMarkdownResult {
-    /// All violations.
-    pub violations: Vec<MarkdownViolation>,
+    /// All violations. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub violations: Option<Vec<MarkdownViolation>>,
+    /// Entries in `violations`, in either form.
+    pub violations_count: usize,
     /// Whether the lint produced no violations and exited zero.
     pub clean: bool,
     /// `markdownlint-cli2` exit code.
     pub exit_code: i32,
+    /// Where the violations are: in this result, or past the read size in
+    /// the file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding the violations whole, from the
+    /// project root: a JSON object with its `violations` key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- apply-manifest ----------------------------------------------------------
@@ -3577,10 +3652,21 @@ pub struct PruneTasksSummary {
     /// preview, which computes but does not write it); equal to
     /// `size_before` only on a no-op (nothing to prune).
     pub size_after: SizeSummary,
-    /// Per-section classification records.
-    pub sections: Vec<PruneSection>,
+    /// Per-section classification records. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sections: Option<Vec<PruneSection>>,
+    /// Entries in `sections`, in either form.
+    pub sections_count: usize,
     /// Repo-relative path to the tasks file.
     pub path: String,
+    /// Where `sections` is: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding `sections` whole, from the project
+    /// root: a JSON object with its key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 /// Result for `prune-tasks`: one feature's summary, at the top level exactly
@@ -3656,9 +3742,27 @@ pub struct PruneWalk<T> {
     /// Each feature with something to report, in corpus order, beside its
     /// `feature`: `prune-plan`'s full single-feature summary, or
     /// `prune-tasks`' compact per-spec line (no per-section records).
-    pub features: Vec<PruneWalkEntry<T>>,
-    /// Each feature without the artifact, with the reason.
-    pub skipped: Vec<SkippedFeature>,
+    /// Absent in the file form. No `default`: serde would bound `T: Default`
+    /// for it, and an absent `Option` reads as `None` without one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features: Option<Vec<PruneWalkEntry<T>>>,
+    /// Entries in `features`, in either form.
+    pub features_count: usize,
+    /// Each feature without the artifact, with the reason. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<SkippedFeature>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
+    /// Where `features` and `skipped` are: in this result, or past
+    /// `[artifacts] read-size-bytes` in the file `lists-file` names (spec
+    /// 080, AC7).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding both lists whole, from the project
+    /// root: a JSON object with their two keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 /// One feature's summary within a walk.
@@ -5385,9 +5489,11 @@ impl Default for RecordFreshness {
     }
 }
 
-/// Result for `check-review-gate`. A blocked gate is a domain outcome —
-/// the host halts with `message` and does not propose the in-progress →
-/// done transition; it is never an operational error.
+/// Result for `check-review-gate`. A blocked gate is a domain outcome — the
+/// host halts with `message` and does not propose the in-progress → done
+/// transition; it is never an operational error. Inline up to `[artifacts]
+/// read-size-bytes`, and past it with `violations` and `cross-spec-impact` in
+/// the file `lists-file` names (spec 080, AC7).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckReviewGateResult {
@@ -5407,8 +5513,11 @@ pub struct CheckReviewGateResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guidance: Option<String>,
     /// Markdown-lint violations backing a `markdown-lint` block; empty
-    /// otherwise.
-    pub violations: Vec<MarkdownViolation>,
+    /// otherwise. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub violations: Option<Vec<MarkdownViolation>>,
+    /// Entries in `violations`, in either form.
+    pub violations_count: usize,
     /// Per-entry state of the spec's `cross-spec-impact:` declarations.
     ///
     /// A list rather than a boolean because partially discharged is the
@@ -5420,8 +5529,19 @@ pub struct CheckReviewGateResult {
     /// primitive stops at the first failing check and never evaluates the
     /// rest. An empty list is therefore "not examined here", not "no
     /// declarations"; `blocked_by` says which of the two.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cross_spec_impact: Vec<CrossSpecImpactEntry>,
+    ///
+    /// Absent when empty, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cross_spec_impact: Option<Vec<CrossSpecImpactEntry>>,
+    /// Entries in `cross-spec-impact`, in either form.
+    pub cross_spec_impact_count: usize,
+    /// Where `violations` and `cross-spec-impact` are: in this result, or
+    /// past the read size in the file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding both lists whole, from the project
+    /// root: a JSON object with their two keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 /// State of one `cross-spec-impact:` declaration at the pre-`done` gate.
@@ -5747,7 +5867,9 @@ pub struct SkippedTarget {
     pub path: String,
 }
 
-/// Result for `check-artifacts`.
+/// Result for `check-artifacts`: inline up to `[artifacts] read-size-bytes`,
+/// and past it with `findings` and `skipped` in the file `lists-file` names
+/// (spec 080, AC7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactsResult {
@@ -5759,8 +5881,11 @@ pub struct CheckArtifactsResult {
     /// them (completeness → task consistency → scenario consistency → review
     /// drift → disposition drift → scenario open questions → link-adjacent
     /// drift → criterion path existence → body path existence → criterion
-    /// labels).
-    pub findings: Vec<ArtifactFinding>,
+    /// labels). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<ArtifactFinding>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
     /// `true` when no family produced a finding.
     ///
     /// Deliberately **not** widened to account for [`Self::skipped`]:
@@ -5774,11 +5899,20 @@ pub struct CheckArtifactsResult {
     /// by construction did not, look at, and `scenario-consistency` records
     /// each unmapped scenario as `no-readable-state` when the `tasks.md`
     /// history cannot be consulted. The other families' subjects are fully
-    /// examinable by construction.
-    #[serde(default)]
-    pub skipped: Vec<SkippedTarget>,
+    /// examinable by construction. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<SkippedTarget>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// Repo-relative path to the spec file.
     pub path: String,
+    /// Where `findings` and `skipped` are: in this result, or past the read
+    /// size in the file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding both lists whole, from the project
+    /// root: a JSON object with their two keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-artifact-size -------------------------------------------------------
@@ -6221,20 +6355,31 @@ pub struct CorpusLinkSkip {
 /// `examined` at zero, is **could not examine** — a caller must not render
 /// either as assurance (`QUAL-CLAIM-001`). That distinction is the whole
 /// reason the counts are returned rather than a bare list.
+///
+/// Inline up to `[artifacts] read-size-bytes`, and past it with `broken`,
+/// `examined` and `skipped` in the file `lists-file` names, their counts
+/// inline (spec 080, AC7).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckCorpusLinksResult {
-    /// Broken links, in file then line order.
-    #[serde(default)]
-    pub broken: Vec<BrokenCorpusLink>,
+    /// Broken links, in file then line order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub broken: Option<Vec<BrokenCorpusLink>>,
+    /// Entries in `broken`, in either form.
+    pub broken_count: usize,
     /// Markdown files actually read, repo-relative — the subject the verdict
     /// describes. Zero examined with zero broken is not a clean corpus.
-    #[serde(default)]
-    pub examined: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub examined: Option<Vec<String>>,
+    /// Entries in `examined`, in either form.
+    pub examined_count: usize,
     /// Files that could not be read. Never silent: an unreadable file is a
-    /// file whose links were never checked.
-    #[serde(default)]
-    pub skipped: Vec<CorpusLinkSkip>,
+    /// file whose links were never checked. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<CorpusLinkSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// Files excluded **by construction**, because a link that does not
     /// resolve here is their correct state. On both scopes: the
     /// adopter-facing templates under `{specs-root}/templates/`, whose links
@@ -6274,6 +6419,14 @@ pub struct CheckCorpusLinksResult {
     /// at* rather than *nothing is broken*. Empty otherwise.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub guidance: String,
+    /// Where `broken`, `examined` and `skipped` are: in this result, or past
+    /// the read size in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-step-references -----------------------------------------------------
@@ -6482,14 +6635,24 @@ pub struct UnfoldedSpec {
 #[serde(rename_all = "kebab-case")]
 pub struct CheckUnfoldedSpecsResult {
     /// Surviving branch-scoped specs, in the corpus order
-    /// `list_feature_dirs` establishes.
-    #[serde(default)]
-    pub unfolded: Vec<UnfoldedSpec>,
+    /// `list_feature_dirs` establishes. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unfolded: Option<Vec<UnfoldedSpec>>,
+    /// Entries in `unfolded`, in either form.
+    pub unfolded_count: usize,
     /// Feature directories scanned — **every** form, not just the
     /// branch-scoped ones. The count bounds the claim by subject: it is what
     /// separates "no branch-scoped specs survive" from "nothing was looked
     /// at", which an empty list alone cannot express.
     pub examined: u32,
+    /// Where `unfolded` is: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding `unfolded` whole, from the project
+    /// root: a JSON object with its key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- rewrite-spec-links --------------------------------------------------------
@@ -6595,9 +6758,11 @@ pub struct SourceMention {
 pub struct RewriteSpecLinksResult {
     /// Files changed: those under the spec root in path order, then the
     /// referrers outside it in the order `check-orphaned-references` reads
-    /// them.
-    #[serde(default)]
-    pub rewritten: Vec<RewrittenFile>,
+    /// them. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rewritten: Option<Vec<RewrittenFile>>,
+    /// Entries in `rewritten`, in either form.
+    pub rewritten_count: usize,
     /// Files scanned — each markdown file under the spec root outside the
     /// retiring directory, and each referrer outside the spec root, that was
     /// read. The subject the empty case describes. A referrer that was not
@@ -6617,8 +6782,11 @@ pub struct RewriteSpecLinksResult {
     /// skips the file itself when it cannot. A reference in a listed
     /// spec-root link is left as written too, and `check-corpus-links`, which
     /// reads through the link, reports it once the directory is gone.
-    #[serde(default)]
-    pub skipped: Vec<ReferrerSkip>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<ReferrerSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// References re-pointed under a feature-only target whose kept tail is
     /// neither empty, nor `spec.md`, nor under `scenarios/` —
     /// `../050-alpha/plan.md`, say. A body-edit fold writes the upstream
@@ -6634,8 +6802,11 @@ pub struct RewriteSpecLinksResult {
     /// since no fold carried it. In the order of `rewritten`, then by line.
     /// A run that fails part-way, on a write, returns none, and a re-run
     /// cannot list the kept tails of the files it had already re-pointed.
-    #[serde(default)]
-    pub kept_tails: Vec<KeptTail>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kept_tails: Option<Vec<KeptTail>>,
+    /// Entries in `kept-tails`, in either form.
+    pub kept_tails_count: usize,
     /// Lines of the files counted in [`Self::examined`] that still name the
     /// retiring directory once the rewrite has run — by its directory name,
     /// or by the number it is cited by (`050` for `050-alpha`, `1234.1` for
@@ -6648,9 +6819,19 @@ pub struct RewriteSpecLinksResult {
     /// pre-commit hook regenerates them from the rewritten links. A token
     /// match, so a line can name something else that happens to share the
     /// number; and only the examined files are searched, so docs, code and
-    /// any other file are not.
+    /// any other file are not. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<SourceMention>>,
+    /// Entries in `mentions`, in either form.
+    pub mentions_count: usize,
+    /// Where the four lists are: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7).
     #[serde(default)]
-    pub mentions: Vec<SourceMention>,
+    pub form: ListsForm,
+    /// In the file form, the file holding the four lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- retire-feature ------------------------------------------------------------
@@ -6756,13 +6937,13 @@ mod tests {
         AcceptanceCriterion, AnchorReference, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs,
         CheckStuckResult, CheckboxToggleResult, Classification, DependencyEdge, DeriveBoundaryArgs,
         DeriveBoundaryResult, Frontmatter, FrontmatterFinding, GateConfirmArgs, GateConfirmResult,
-        InboxStanding, InboxState, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs,
-        MarkTaskArgs, MarkdownViolation, MigrateSessionFileArgs, MigrateSessionFileResult,
-        OpenQuestion, PlanFinding, PlanRemoval, PlanSection, PruneAction, PruneGate, PruneMode,
-        PrunePlanArgs, PrunePlanResult, PrunePlanSummary, PruneSection, PruneTasksArgs,
-        PruneTasksLine, PruneTasksResult, PruneTasksSummary, PruneWalk, PruneWalkEntry,
-        ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs,
-        ResolveAnchorResult, RuleCitation, RunGeneratorArgs, RunGeneratorResult,
+        InboxStanding, InboxState, LintMarkdownArgs, LintMarkdownResult, ListsForm,
+        MarkCriterionArgs, MarkTaskArgs, MarkdownViolation, MigrateSessionFileArgs,
+        MigrateSessionFileResult, OpenQuestion, PlanFinding, PlanRemoval, PlanSection, PruneAction,
+        PruneGate, PruneMode, PrunePlanArgs, PrunePlanResult, PrunePlanSummary, PruneSection,
+        PruneTasksArgs, PruneTasksLine, PruneTasksResult, PruneTasksSummary, PruneWalk,
+        PruneWalkEntry, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
+        ResolveAnchorArgs, ResolveAnchorResult, RuleCitation, RunGeneratorArgs, RunGeneratorResult,
         ScenarioOpenQuestion, SetStatusArgs, SetStatusResult, SizeSummary, SkipReason,
         SkippedFeature, SpecSection, Subtask, Task, TraverseDepsArgs, TraverseDepsResult,
         ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
@@ -6839,23 +7020,30 @@ mod tests {
             },
             review: None,
             analyze: None,
-            sections: vec![SpecSection {
+            sections: Some(vec![SpecSection {
                 heading: "Motivation".into(),
                 level: 2,
                 body: "…".into(),
-            }],
-            acceptance_criteria: vec![AcceptanceCriterion {
+            }]),
+            sections_count: 1,
+            acceptance_criteria: Some(vec![AcceptanceCriterion {
                 checked: false,
                 text: "A single binary builds…".into(),
                 label: None,
-            }],
-            open_questions: vec![OpenQuestion { text: "?".into() }],
-            scenario_open_questions: vec![ScenarioOpenQuestion {
+            }]),
+            acceptance_criteria_count: 1,
+            open_questions: Some(vec![OpenQuestion { text: "?".into() }]),
+            open_questions_count: 1,
+            scenario_open_questions: Some(vec![ScenarioOpenQuestion {
                 scenario: "framework-list-dedup".into(),
                 text: "Format argument or separate primitive?".into(),
-            }],
-            scenario_files_unreadable: vec![],
+            }]),
+            scenario_open_questions_count: 1,
+            scenario_files_unreadable: None,
+            scenario_files_unreadable_count: 0,
             path: "specs/022-deterministic-runtime/spec.md".into(),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert!(value.get("acceptance-criteria").is_some());
@@ -6874,7 +7062,7 @@ mod tests {
     #[test]
     fn read_tasks_round_trip() {
         let result = ReadTasksResult {
-            tasks: vec![Task {
+            tasks: Some(vec![Task {
                 number: "1".into(),
                 heading: "Bootstrap".into(),
                 subtasks: vec![Subtask {
@@ -6884,11 +7072,17 @@ mod tests {
                 done_when: Some("cargo build succeeds".into()),
                 done_when_checked: None,
                 phase: None,
-            }],
+            }]),
+            tasks_count: 1,
             path: "specs/022-deterministic-runtime/tasks.md".into(),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["tasks"][0]["done-when"], "cargo build succeeds");
+        assert_eq!(value["tasks-count"], 1);
+        assert_eq!(value["form"], "inline");
+        assert!(value.get("lists-file").is_none());
         // `phase: None` must not surface in the JSON — backward-compat for
         // existing consumers that pre-date the phased read-tasks fix.
         assert!(
@@ -6905,15 +7099,18 @@ mod tests {
     #[test]
     fn read_tasks_phased_task_carries_phase_metadata() {
         let result = ReadTasksResult {
-            tasks: vec![Task {
+            tasks: Some(vec![Task {
                 number: "1".into(),
                 heading: "Wire up".into(),
                 subtasks: vec![],
                 done_when: None,
                 done_when_checked: None,
                 phase: Some("Phase A — Bootstrap".into()),
-            }],
+            }]),
+            tasks_count: 1,
             path: "specs/022-deterministic-runtime/tasks.md".into(),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["tasks"][0]["phase"], "Phase A — Bootstrap");
@@ -6960,7 +7157,7 @@ mod tests {
                 lines: 20,
                 bytes: 450,
             },
-            sections: vec![
+            sections: Some(vec![
                 PruneSection {
                     number: "1".into(),
                     heading: "Schema types".into(),
@@ -6988,8 +7185,11 @@ mod tests {
                     checkbox_checked: 0,
                     action: PruneAction::Kept,
                 },
-            ],
+            ]),
+            sections_count: 3,
             path: "specs/041-task-pruning/tasks.md".into(),
+            form: ListsForm::Inline,
+            lists_file: None,
         }
     }
 
@@ -7039,14 +7239,18 @@ mod tests {
             summary: None,
             walk: Some(PruneWalk {
                 examined: 3,
-                features: vec![PruneWalkEntry {
+                features: Some(vec![PruneWalkEntry {
                     feature: "041-task-pruning".into(),
                     summary: PruneTasksLine::new(summary, "done".into()),
-                }],
-                skipped: vec![SkippedFeature {
+                }]),
+                features_count: 1,
+                skipped: Some(vec![SkippedFeature {
                     feature: "042-draft".into(),
                     reason: SkipReason::NoTasksFile,
-                }],
+                }]),
+                skipped_count: 1,
+                form: ListsForm::Inline,
+                lists_file: None,
             }),
         };
         let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
@@ -7148,14 +7352,18 @@ mod tests {
             summary: None,
             walk: Some(PruneWalk {
                 examined: 2,
-                features: vec![PruneWalkEntry {
+                features: Some(vec![PruneWalkEntry {
                     feature: "041-task-pruning".into(),
                     summary,
-                }],
-                skipped: vec![SkippedFeature {
+                }]),
+                features_count: 1,
+                skipped: Some(vec![SkippedFeature {
                     feature: "042-draft".into(),
                     reason: SkipReason::NoPlanFile,
-                }],
+                }]),
+                skipped_count: 1,
+                form: ListsForm::Inline,
+                lists_file: None,
             }),
         };
         let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
@@ -7391,13 +7599,16 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = DeriveBoundaryResult {
-            boundary: vec![
+            boundary: Some(vec![
                 "specs/022-deterministic-runtime/**".into(),
                 "runtime/**".into(),
-            ],
+            ]),
+            boundary_count: 2,
             first_commit: "d398083".into(),
             current_head: "6f0f54e".into(),
             guidance: None,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["first-commit"], "d398083");
@@ -7408,10 +7619,13 @@ mod tests {
         assert_eq!(round_trip(&result), result);
 
         let uncommitted = DeriveBoundaryResult {
-            boundary: vec!["specs/022-deterministic-runtime/**".into()],
+            boundary: Some(vec!["specs/022-deterministic-runtime/**".into()]),
+            boundary_count: 1,
             first_commit: String::new(),
             current_head: "6f0f54e".into(),
             guidance: Some("commit the spec directory".into()),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&uncommitted).unwrap();
         assert_eq!(value["guidance"], "commit the spec directory");
@@ -7574,14 +7788,17 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = LintMarkdownResult {
-            violations: vec![MarkdownViolation {
+            violations: Some(vec![MarkdownViolation {
                 path: "README.md".into(),
                 line: 17,
                 rule: "MD013".into(),
                 message: "Line length".into(),
-            }],
+            }]),
+            violations_count: 1,
             clean: false,
             exit_code: 1,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["exit-code"], 1);
@@ -8199,7 +8416,7 @@ mod tests {
 
     #[test]
     fn check_review_gate_round_trip() {
-        use super::{CheckReviewGateArgs, CheckReviewGateResult, ReviewGateBlock};
+        use super::{CheckReviewGateArgs, CheckReviewGateResult, ListsForm, ReviewGateBlock};
         let args = CheckReviewGateArgs {
             feature: "042-widget".into(),
         };
@@ -8210,8 +8427,12 @@ mod tests {
             blocked_by: None,
             message: None,
             guidance: None,
-            violations: vec![],
-            cross_spec_impact: vec![],
+            violations: Some(vec![]),
+            violations_count: 0,
+            cross_spec_impact: None,
+            cross_spec_impact_count: 0,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let pv: serde_json::Value = serde_json::to_value(&passed).unwrap();
         // Options are absent from the JSON on pass, not null.
@@ -8231,8 +8452,12 @@ mod tests {
                 "blocked: spec has 3 MUST violation(s) — see specs/042-widget/review.md".into(),
             ),
             guidance: Some("Resolve the violations and re-run /ductus:review".into()),
-            violations: vec![],
-            cross_spec_impact: vec![],
+            violations: Some(vec![]),
+            violations_count: 0,
+            cross_spec_impact: None,
+            cross_spec_impact_count: 0,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let bv: serde_json::Value = serde_json::to_value(&blocked).unwrap();
         assert_eq!(bv["blocked-by"], "must-violations");
@@ -8539,7 +8764,9 @@ mod tests {
 
     #[test]
     fn check_artifacts_round_trip() {
-        use super::{ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, SkippedTarget};
+        use super::{
+            ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, ListsForm, SkippedTarget,
+        };
         let args = CheckArtifactsArgs {
             feature: "022-deterministic-runtime".into(),
         };
@@ -8548,19 +8775,23 @@ mod tests {
         let result = CheckArtifactsResult {
             feature: "022-deterministic-runtime".into(),
             status: "planned".into(),
-            findings: vec![ArtifactFinding {
+            findings: Some(vec![ArtifactFinding {
                 family: "artifact-completeness".into(),
                 severity: crate::schema::severity::AnalyzeSeverity::Blocking,
                 message: "plan.md is required at status 'planned' but does not exist".into(),
                 path: "specs/022-deterministic-runtime/plan.md".into(),
-            }],
+            }]),
+            findings_count: 1,
             clean: false,
-            skipped: vec![SkippedTarget {
+            skipped: Some(vec![SkippedTarget {
                 family: "link-adjacent-drift".into(),
                 reason: "target-missing".into(),
                 path: "specs/022-deterministic-runtime/scenarios/renamed.md".into(),
-            }],
+            }]),
+            skipped_count: 1,
             path: "specs/022-deterministic-runtime/spec.md".into(),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(rv["findings"][0]["family"], "artifact-completeness");

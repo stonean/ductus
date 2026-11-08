@@ -99,6 +99,7 @@ fi
 
 python3 - "$ROOT" "$SPECS_ROOT" "$ductus_bin" <<'PY'
 import json
+import os
 import subprocess
 import sys
 
@@ -140,8 +141,14 @@ def first_line(text):
 
 dashboard = call("dashboard")
 try:
-    specs = json.loads(dashboard.stdout)["specs"]
-except (ValueError, KeyError, TypeError):
+    inventory = json.loads(dashboard.stdout)
+    # Past [artifacts] read-size-bytes the list is in the file `lists-file`
+    # names, from the project root (spec 080).
+    if inventory.get("form") == "file":
+        with open(os.path.join(root, inventory["lists-file"]), encoding="utf-8") as handle:
+            inventory = json.load(handle)
+    specs = inventory["specs"]
+except (ValueError, KeyError, TypeError, OSError):
     emit(
         "(precondition)",
         f"dashboard did not answer (exit {dashboard.returncode}): "

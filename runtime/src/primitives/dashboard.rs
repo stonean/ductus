@@ -33,7 +33,7 @@ use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     DashboardArgs, DashboardConfig, DashboardResult, DashboardScenarioDetail,
-    DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, ReferenceOutcome,
+    DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, ListsForm, ReferenceOutcome,
     ReopeningCounts, ResolutionRecord, ResolveReferencesArgs, ScenarioOpenQuestion, SessionNotice,
     SessionSource,
 };
@@ -60,13 +60,34 @@ pub fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
 
 /// The dashboard as `identity` at `now`: the one path [`run`] and the tests
 /// share.
+///
+/// The result is inline while it fits `[artifacts] read-size-bytes`, and past
+/// it carries `specs` and `tags-union` in the file it names and only their
+/// counts inline (`bounded_lists::place`; spec 080, AC7).
 pub(crate) fn run_as(
     _args: &DashboardArgs,
     repo: &Path,
     identity: Option<&Identity>,
     now: SystemTime,
 ) -> Result<DashboardResult> {
-    Ok(load(repo, identity, now)?.into_result())
+    let mut result = load(repo, identity, now)?.into_result();
+    let lists = serde_json::json!({
+        "specs": &result.specs,
+        "tags-union": &result.tags_union,
+    });
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "dashboard",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.specs = None;
+        result.tags_union = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
 }
 
 /// The pipeline view as `identity` at `now`, rendered as `format`, with the
@@ -132,11 +153,15 @@ impl Loaded {
             session_source: self.session.source,
             session_notices: self.session.notices,
             session_unreadable: self.session.unreadable,
-            specs: self.specs,
-            tags_union: self.tags_union,
+            specs_count: self.specs.len(),
+            specs: Some(self.specs),
+            tags_union_count: self.tags_union.len(),
+            tags_union: Some(self.tags_union),
             config: self.config,
             inbox_standing: self.inbox_standing,
             reopenings: self.reopenings,
+            form: ListsForm::Inline,
+            lists_file: None,
         }
     }
 
@@ -596,10 +621,11 @@ mod tests {
         assert_eq!(value["specs"][0]["status"], "in-progress");
     }
 
-    /// Only the view reads `[artifacts] read-size-bytes`, so a malformed one
-    /// leaves the payload readable.
+    /// The payload is held to `[artifacts] read-size-bytes` (spec 080, AC7),
+    /// so a malformed one halts it, as it halts every reader of the setting,
+    /// rather than choosing a form.
     #[test]
-    fn the_payload_does_not_read_the_read_size() {
+    fn a_malformed_read_size_halts_the_payload() {
         let tmp = TempDir::new().unwrap();
         pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 0\n");
         write_spec(
@@ -608,7 +634,10 @@ mod tests {
             "status: draft\ndependencies: []\n",
             "",
         );
-        assert!(super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()).is_ok());
+        assert!(matches!(
+            super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()),
+            Err(PrimitiveError::InvalidReadSize { .. })
+        ));
     }
 
     fn fixed_now() -> SystemTime {
@@ -888,6 +917,8 @@ mod tests {
 
         let staged = result
             .specs
+            .as_deref()
+            .unwrap()
             .iter()
             .find(|s| s.slug == "1234.1-staged")
             .expect("the branch-scoped spec is enumerated");
@@ -956,7 +987,7 @@ mod tests {
 
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
 
-        assert!(result.specs[0].fold_target_missing);
+        assert!(result.specs.as_deref().unwrap()[0].fold_target_missing);
         let row = row_for(&result.rendered_markdown, "1234.1-staged");
         assert!(row.contains("/ductus:fold → 099-elsewhere"), "{row}");
         assert!(row.contains("(target not in this tree)"), "{row}");
@@ -1034,8 +1065,8 @@ mod tests {
 
         assert!(!result.rendered_markdown.contains("outstanding fold"));
         assert!(!result.rendered_markdown.contains("fold pending"));
-        assert_eq!(result.specs[0].folds_into, None);
-        assert!(!result.specs[0].fold_target_missing);
+        assert_eq!(result.specs.as_deref().unwrap()[0].folds_into, None);
+        assert!(!result.specs.as_deref().unwrap()[0].fold_target_missing);
     }
 
     /// An unresolved scenario question is the more upstream defect, so it
@@ -1084,8 +1115,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         std::fs::create_dir_all(tmp.path().join("specs")).unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs, [] as [DashboardSpec; 0]);
-        assert_eq!(result.tags_union, [] as [String; 0]);
+        assert_eq!(result.specs.as_deref().unwrap(), [] as [DashboardSpec; 0]);
+        assert_eq!(result.tags_union.as_deref().unwrap(), [] as [String; 0]);
         assert!(!result.config.present);
         assert!(result.session_target.is_none());
     }
@@ -1094,7 +1125,7 @@ mod tests {
     fn missing_specs_dir_returns_empty_list() {
         let tmp = TempDir::new().unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs, [] as [DashboardSpec; 0]);
+        assert_eq!(result.specs.as_deref().unwrap(), [] as [DashboardSpec; 0]);
     }
 
     #[test]
@@ -1122,11 +1153,11 @@ mod tests {
         std::fs::write(tmp.path().join("specs/002-beta/scenarios/README"), "# r").unwrap();
 
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs.len(), 2);
-        assert_eq!(result.specs[0].slug, "001-alpha");
-        assert_eq!(result.specs[1].slug, "002-beta");
+        assert_eq!(result.specs_count, 2);
+        assert_eq!(result.specs.as_deref().unwrap()[0].slug, "001-alpha");
+        assert_eq!(result.specs.as_deref().unwrap()[1].slug, "002-beta");
 
-        let alpha = &result.specs[0];
+        let alpha = &result.specs.as_deref().unwrap()[0];
         assert_eq!(alpha.status, "done");
         assert_eq!(alpha.dependencies, [] as [String; 0]);
         assert_eq!(alpha.tags, vec!["format", "pipeline"]);
@@ -1137,7 +1168,7 @@ mod tests {
         assert_eq!(alpha.scenarios_count, 0);
         assert_eq!(alpha.blocked_by, [] as [String; 0]);
 
-        let beta = &result.specs[1];
+        let beta = &result.specs.as_deref().unwrap()[1];
         assert_eq!(beta.status, "planned");
         assert_eq!(beta.dependencies, vec!["001-alpha"]);
         assert_eq!(beta.tags, vec!["pipeline"]);
@@ -1148,7 +1179,10 @@ mod tests {
         assert_eq!(beta.scenarios_count, 2);
         assert_eq!(beta.blocked_by, [] as [String; 0]);
 
-        assert_eq!(result.tags_union, vec!["format", "pipeline"]);
+        assert_eq!(
+            result.tags_union.as_deref().unwrap(),
+            vec!["format", "pipeline"]
+        );
     }
 
     #[test]
@@ -1164,8 +1198,8 @@ mod tests {
         std::fs::create_dir_all(tmp.path().join("specs/.hidden")).unwrap();
         std::fs::write(tmp.path().join("specs/inbox.md"), "# inbox").unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs.len(), 1);
-        assert_eq!(result.specs[0].slug, "001-real");
+        assert_eq!(result.specs_count, 1);
+        assert_eq!(result.specs.as_deref().unwrap()[0].slug, "001-real");
     }
 
     #[test]
@@ -1214,7 +1248,13 @@ mod tests {
             "*None — all resolved.*",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let by_slug: HashMap<_, _> = result.specs.iter().map(|s| (s.slug.as_str(), s)).collect();
+        let by_slug: HashMap<_, _> = result
+            .specs
+            .as_deref()
+            .unwrap()
+            .iter()
+            .map(|s| (s.slug.as_str(), s))
+            .collect();
         assert_eq!(by_slug["001-draft"].blocked_by, [] as [String; 0]);
         assert_eq!(by_slug["002-ready"].blocked_by, [] as [String; 0]);
         assert_eq!(by_slug["003-dep"].blocked_by, vec!["001-draft"]);
@@ -1493,7 +1533,7 @@ reason = "Deferred until v2 perf budget lands."
             "- First question with\n  a continuation line.\n- Second question.",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs[0].open_question_count, 2);
+        assert_eq!(result.specs.as_deref().unwrap()[0].open_question_count, 2);
     }
 
     #[test]
@@ -1512,7 +1552,7 @@ reason = "Deferred until v2 perf budget lands."
             questions,
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.specs[0].open_question_count, 3);
+        assert_eq!(result.specs.as_deref().unwrap()[0].open_question_count, 3);
         let body = format!("## Open Questions\n\n{questions}\n");
         assert_eq!(
             read_spec::parse_open_questions(&body, "Open Questions").len(),
