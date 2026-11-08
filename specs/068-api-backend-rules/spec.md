@@ -60,7 +60,7 @@ One severity constraint binds this file as it binds every rule file: a MUST neve
 
 ## Rule ID format
 
-Rule IDs are `BE-{CATEGORY}-{NNN}`, permanent and never renumbered, under the schema in `specs/008-security-rules/data-model.md`. Which categories the format admits is governed by the file's own header: constitution §rules, the rule tier [016-cross-cutting-rules](../016-cross-cutting-rules/spec.md) established, places a rule file's category abbreviations there, and `framework/commands/analyze.md` (*Which ID format governs a file*) consults an introducing-spec data-model first and the file's header second.
+Rule IDs are `BE-{CATEGORY}-{NNN}`, permanent and never renumbered, under the schema in `specs/008-security-rules/data-model.md`. Which categories the format admits is governed by the file's own header: constitution §rules, the rule tier [016-cross-cutting-rules](../016-cross-cutting-rules/spec.md) established, places a rule file's category abbreviations there, and `framework/reference/analyze.md` (*Which ID format governs a file*) consults an introducing-spec data-model first and the file's header second.
 
 This spec therefore carries no data-model, by design. One here would become the first-tier source for the file's ID format and would have to stay complete — every category the file gains added to it in the same change — or it would govern wrongly. The precedent specs (034, 037, 038, 039) carry none and rely on their files' headers. A new category is registered by adding it to the header, in the change that adds the rule needing it.
 

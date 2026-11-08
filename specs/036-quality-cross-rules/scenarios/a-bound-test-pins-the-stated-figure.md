@@ -6,7 +6,7 @@ section: "Rule set scope"
 
 ## Context
 
-A test of a bound — a size limit, a timeout, a retry count — that reads the constant it checks passes whatever the constant is, so moving the constant past the figure the spec states fails nothing. `QUAL-TEST-001` requires a test to fail when the behavior it names is removed, and a bound test that reads its own constant is one it does not visibly catch: the behavior is the stated figure, and the test pins only the value incidental to it. Reported 2026-10-25 at HEAD f24c55c6 as a candidate no shipped rule covers.
+A test of a bound — a size limit, a timeout, a retry count — that reads the constant it checks passes whatever the constant is, so moving the constant past the figure the spec states fails nothing. `QUAL-TEST-001` says a test SHOULD fail when the behavior it names is removed, and a bound test that reads its own constant is one it does not visibly catch: the behavior is the stated figure, and the test pins only the value incidental to it. Reported 2026-10-25 at HEAD f24c55c6 as a candidate no shipped rule covers.
 
 ## Behavior
 
@@ -21,7 +21,7 @@ A test of a bound — a size limit, a timeout, a retry count — that reads the 
 
 ## Open Questions
 
-- Is this a clause of `QUAL-TEST-001` (a test that pins only a value incidental to the behavior does not catch its removal) or a rule of its own — and does either form fit the in-flight "rules are as short as their required content" pass, which cuts examples a rule does not need?
+- Is this a clause of `QUAL-TEST-001` (a test that pins only a value incidental to the behavior does not catch its removal) or a rule of its own — and does either form fit 008's "rules are as short as their required content" pass, which cuts examples a rule does not need?
 
 ## Resolved Questions
 

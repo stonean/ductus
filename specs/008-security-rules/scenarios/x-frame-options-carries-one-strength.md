@@ -18,12 +18,12 @@ The two rule files state one strength for `X-Frame-Options`, SHOULD, and a proje
 
 - `BE-API-001`'s minimum-required header table no longer lists `X-Frame-Options`. Its frame protection is the CSP `frame-ancestors` directive that its CSP row already requires, and its Verification leaves a missing `X-Frame-Options` to `BE-API-012`.
 - `BE-API-012` (SHOULD) states that HTML responses set `X-Frame-Options: DENY`, or `SAMEORIGIN` where same-origin framing is required, as a clickjacking fallback for browsers that do not honor `frame-ancestors`. Its Verification names `FE-CSP-008` as the frontend statement of the same obligation.
-- `FE-CSP-008` keeps its SHOULD Statement and names `BE-API-012` as its backend mirror.
+- `FE-CSP-008` keeps its SHOULD Statement and, where `security-backend.md` is also loaded, leaves a missing header to `BE-API-012` (owner's delegation, 2026-11-08).
 
 ## Edge Cases
 
 - **A backend-only project.** It loads `security-backend.md` without `security-frontend.md`, so the backend file has to state the header's strength itself, not leave it to the frontend rule. `BE-API-012` is where it does.
-- **A project loading both files.** It gets an advisory finding under each mirror when the header is missing. Both are advisory, so neither blocks, and waiving either one silences no blocking clause.
+- **A project loading both files.** `/{project}:analyze` reports a missing header once, under `BE-API-012`, since `FE-CSP-008` yields it there, so a defect is reported under one ID (008's data model, Verification phrasing items 5 and 6; owner's delegation, 2026-11-08). `/{project}:review`, which applies no Not-flagged routing until 020's scenario `review-reports-a-defect-under-its-owner` lands, reports it under both. Both are advisory, so neither blocks.
 - **Non-HTML responses.** OWASP notes the header does nothing for a redirect or a JSON API response. `BE-API-012` is scoped to HTML responses, as `BE-API-001`'s table row was, so an API-only backend gets no finding.
 - **Adopter copies.** Both files ship with the `update` strategy. An unpinned copy receives the change on the next `/ductus` run, and a pinned copy keeps the disagreement until its owner acts.
 

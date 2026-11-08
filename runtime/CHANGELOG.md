@@ -460,7 +460,8 @@ its version and date.
   applies Statements and no routing until spec 020's lands, so it reports
   this batch's new pairs under both IDs: `SEC-DATA-001` beside `BE-API-013`
   or `FE-STORAGE-003`, `SEC-AUTHN-002` beside `BE-AUTHN-012`, `BE-AUTHN-019`
-  and `BE-DATA-009`, and `FE-DEPS-007` to `-009` beside `BE-DEPS-003` to
+  and `BE-DATA-009`, `BE-AUTHN-012` beside `SEC-AUTHN-003` for a public
+  client's refresh token, and `FE-DEPS-007` to `-009` beside `BE-DEPS-003` to
   `-005`, a waiver under one ID of such a pair needing a counterpart under
   the other, and one under the ID that yields the case expiring once that
   routing moves the finding to its owner. A newly created
@@ -480,6 +481,16 @@ its version and date.
   `BE-METRIC-003` and `BE-TRACE-002`, which yield a sensitive metric label or
   span attribute to `BE-LOG-008`, where 0.59.11's `BE-METRIC-003` flagged an
   email label itself. Spec 008, tasks 43 and 44.
+- **Three security and configuration rules agree with their neighbours.**
+  `BE-AUTHN-008`'s Statement now has a plain-HTTP request to a login
+  or credential-change endpoint refused, not redirected to HTTPS, which its
+  Verification already flagged, so `/review`, which applies Statements, flags
+  the redirect too. `configuration-cross.md`'s `CFG-ENV-005` has an
+  out-of-range value's error redact a sensitive setting per `CFG-ENV-006`.
+  `security-frontend.md`'s `FE-CSP-008` leaves a missing `X-Frame-Options` to
+  `security-backend.md` `BE-API-012` where that file is also loaded, so
+  `/analyze` reports it once; `/review` reports it under both until spec
+  020's routing lands. Spec 008, its review.
 
 ### Fixed
 

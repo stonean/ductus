@@ -42,7 +42,7 @@ Its Sources are the OWASP Logging Cheat Sheet, W3C Trace Context §6 and OpenTel
 
 - `SEC-DEPS-001`: `BE-DEPS-002` takes "where `security-backend.md` is also loaded", and `FE-DEPS-004` takes "where `security-frontend.md` is also loaded"; the yield keeps a package a build step's command runs by a mutable reference, such as `npx tool@latest`, which `FE-DEPS-004` and `BE-DEPS-002` name as `SEC-DEPS-001`'s, so no rule routes that case to one that routes it back;
 - `SEC-AUTHN-001`: `BE-API-010` (d) takes the backend condition;
-- `SEC-AUTHN-002`: its yield of an authorization server's `redirect_uri` matching names `SEC-AUTHN-004`, in the same file, so it takes none, and `BE-API-009` and `FE-AUTHN-001` name `SEC-AUTHN-004` with none; since 008's task 44 it also yields, where `security-backend.md` is also loaded, the generator of its values to `BE-DATA-009` and an ID token's signature verification to `BE-AUTHN-012` and `BE-AUTHN-019`;
+- `SEC-AUTHN-002`: its yield of an authorization server's `redirect_uri` matching names `SEC-AUTHN-004`, in the same file, so it takes none, and `BE-API-009` and `FE-AUTHN-001` name `SEC-AUTHN-004` with none; since 008's task 44 it also yields, where `security-backend.md` is also loaded, the generator of its values to `BE-DATA-009` and, for a client that verifies an ID token's signature, the algorithm allowlist and key binding to `BE-AUTHN-012` and the key's source to `BE-AUTHN-019`;
 - the mutual references between `BE-AUTHN-013` and `BE-AUTHN-020` become `SEC-AUTHN-002` and `SEC-AUTHN-003`, in the same file, so they take none.
 
 The Sources are re-fetched at the move, and any quote that no longer matches is corrected before the rule lands.

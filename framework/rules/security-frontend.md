@@ -256,7 +256,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Legacy `X-Frame-Options: DENY` (or `SAMEORIGIN` where same-origin framing is required) SHOULD also be set as a clickjacking fallback for browsers that do not honor `frame-ancestors`.
 
-**Verification:** Any spec or plan that describes serving HTML responses SHOULD commit to `X-Frame-Options: DENY` (or `SAMEORIGIN`). `/{project}:analyze` emits a warning when HTML-serving specs omit `X-Frame-Options`. `BE-API-012` is this rule's backend mirror, for a backend that serves HTML without loading this file.
+**Verification:** Any spec or plan that describes serving HTML responses SHOULD commit to `X-Frame-Options: DENY` (or `SAMEORIGIN`). `/{project}:analyze` emits a warning when HTML-serving specs omit `X-Frame-Options`. **Not flagged:** where `security-backend.md` is also loaded, a missing `X-Frame-Options` on an HTML response, which its `BE-API-012` owns.
 
 **Source:** OWASP HTTP Headers Cheat Sheet, OWASP Clickjacking Defense Cheat Sheet
 

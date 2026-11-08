@@ -94,9 +94,9 @@ The trade-off: the check's accuracy depends on the rule author's Verification ph
 
 ### Edge case behaviors are encoded as a dedicated check section in `/{project}:analyze`
 
-`framework/commands/analyze.md` gains a new check section codifying all 7 edge cases from the spec. It shipped as **Security rules**, slotted between the cross-spec-reference and markdown-lint checks; spec 016 later generalized it to **Rules (blocking and advisory)**, which is the heading it carries today, and 022 moved the markdown lint to a numbered Instructions step — block on malformed/unknown/duplicate; warn on missing files / deprecated references; silent on contextually-inert rules.
+`framework/commands/analyze.md` gains a new check section codifying all 7 edge cases from the spec. It shipped as **Security rules**, slotted between the cross-spec-reference and markdown-lint checks; spec 016 later generalized it to **Rules (blocking and advisory)**, and 071 moved it to `framework/reference/analyze.md`, where it carries that heading today and the command's step 5 points at it; 022 moved the markdown lint to a numbered Instructions step — block on malformed/unknown/duplicate; warn on missing files / deprecated references; silent on contextually-inert rules.
 
-Each edge case maps directly to a checkbox in the command's check list, so violations show up grouped under the standard hard-fail/blocking/advisory headers in its report.
+Each edge case maps directly to a checkbox in that section's check list, so violations show up grouped under the standard hard-fail/blocking/advisory headers in its report.
 
 ### Brownfield audit lives in ductus, not `/{project}:analyze`
 

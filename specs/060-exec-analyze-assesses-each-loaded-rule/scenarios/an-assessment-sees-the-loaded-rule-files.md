@@ -16,7 +16,7 @@ section: "Motivation"
 ## Edge Cases
 
 - **A condition naming a file the run did not load, or no rule file at all.** The condition is false, so the yielding rule keeps the case; a misspelt file name can never silence a rule.
-- **A rule file the walk lists but could not load.** A file that is unreadable, or that the analyze rule-integrity check treats as unloadable, is not in the list, so the list names exactly the files whose rules the walk assessed, and no rule yields to an owner nobody assessed.
+- **A rule file the walk lists but could not load.** A file that is unreadable is not in the list, the walk checking no rule-file integrity, so the list names exactly the files whose rules the walk assessed, and no rule yields to an owner nobody assessed.
 - **A request that carries no list.** A host answering a request from a runtime that predates this field treats every load condition as false, as 008's data-model item 6 states, so the yielding rule keeps the case.
 
 ## Open Questions

@@ -75,7 +75,7 @@ Rules for operator-tunable values, named constants, environment variables and ot
 
 ### CFG-ENV-005
 
-> Every configuration value with a documented valid range (bounds named per `CFG-CONST-004`) — an environment variable, a configuration-file key, or a command-line flag — MUST be validated against that range at startup. An out-of-range value MUST cause fail-fast with an error message naming the setting, and the file for a file key, the offending value, and the violated bound.
+> Every configuration value with a documented valid range (bounds named per `CFG-CONST-004`) — an environment variable, a configuration-file key, or a command-line flag — MUST be validated against that range at startup. An out-of-range value MUST cause fail-fast with an error message naming the setting, and the file for a file key, the offending value (redacted per `CFG-ENV-006` when the setting is sensitive), and the violated bound.
 
 **Verification:** Any spec or plan that introduces a configuration value with a documented valid range MUST include a startup-validation step whose error message names what the Statement requires. `/{project}:analyze` flags plans that introduce ranged configuration values without a startup-range-check step.
 

@@ -6,13 +6,13 @@ section: "Backend (`security-backend.md`)"
 
 ## Context
 
-An adopter ships an on-premises appliance: one host, installed by the customer or a reseller, often air-gapped — no external call at start, no KMS, secrets manager or orchestrator, no reach to a public CA or ACME. Verified 2026-10-26 at HEAD c0952038, three rules misfit. Since then the rules carry no Rationale and `BE-DATA-003`'s at-rest half moved to `configuration-cross.md` `CFG-ENV-013` (008 task 21); each rule's obligation below is unchanged:
+An adopter ships an on-premises appliance: one host, installed by the customer or a reseller, often air-gapped — no external call at start, no KMS, secrets manager or orchestrator, no reach to a public CA or ACME. Verified 2026-10-26 at HEAD c0952038, three rules misfit. Since then the rules carry no Rationale and `BE-DATA-003`'s at-rest half moved to `configuration-cross.md` `CFG-ENV-013` (008 task 21); each bullet below describes its rule as it read then, before 008 task 27 amended it (`554d0ee3`):
 
 - `BE-DATA-003`'s Statement sources secrets from a secrets management system or orchestrator injection, narrower than its own Verification, which accepts a mounted file, and than `BE-DATA-008`'s Statement, which accepts mounted secret volumes — so a secret generated on the host at install and mounted fails the Statement as written.
 - `BE-DATA-010` requires backup keys stored separately from both the backup media and the production data plane, a term the rule never defines. On one host the only such custody is an operator-held key, which the adopter's own constitution forbids because resellers misplace it.
 - `BE-DATA-011` requires validation against a trusted CA set, accepting pinning or a private CA with a documented trust anchor, and forbids disabling verification in production. The adopter wants an operator switch turning validation off for third-party servers it does not control (a backup server, an activity-forwarding destination, a virtualization manager, SMTP).
 
-Already fitting: `BE-DATA-002`'s host-level keystore clause, and `BE-DATA-011`'s private-CA clause for the appliance's own install-minted certificates. A rule can already carry an in-place MAY conditioned on what `specs/system.md` declares (`BE-DATA-001`'s documented loopback plaintext, `BE-DATA-002`'s host keystore), so a deployment precondition needs no new schema or config key; a config key would reopen 008 Resolved Q3 and 033's `[rules]` scope. IDs are kept and text amended in place in the framework's rule sources.
+Already fitting: `BE-DATA-002`'s host-level keystore clause, and `BE-DATA-011`'s private-CA clause for the appliance's own install-minted certificates. A rule can already carry an in-place MAY conditioned on what `specs/system.md` declares (`BE-DATA-001`'s documented loopback plaintext), so a deployment precondition needs no new schema or config key; a config key would reopen 008 Resolved Q3 and 033's `[rules]` scope. IDs are kept and text amended in place in the framework's rule sources.
 
 ## Behavior
 

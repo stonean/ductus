@@ -6,7 +6,7 @@ section: "The primitive library"
 
 ## Context
 
-Every `ductus` subcommand panics with exit 101 when the reader of its stdout exits before draining it: `failed printing to stdout: Broken pipe (os error 32)`. Reproduced 2026-10-26 with the 0.59.11 binary: `ductus dashboard | true`, and `read-spec --include-body` piped to `true` or to `dd bs=1 count=1`. Reported against `extract-archive … | head`, it is general: the result emitters in `main.rs` write with `println!`, and nothing handles a broken pipe. Plain `| head` on single-line JSON does not trigger it, because `head` reads to the end of the one line; a reader that exits early does. The stderr side was fixed in b482e029 (063's review) with `let _ = writeln!`. Exit 101 is also what a panicking or failing run returns, so a shell script cannot tell an early-exiting reader from a crash.
+Every `ductus` subcommand panics with exit 101 when the reader of its stdout exits before draining it: `failed printing to stdout: Broken pipe (os error 32)`. Reproduced 2026-10-26 with the 0.59.11 binary: `ductus dashboard | true`, and `read-spec --include-body` piped to `true` or to `dd bs=1 count=1`. Reported against `extract-archive … | head`, it is general: the result emitters in `main.rs` write with `println!`, and nothing handles a broken pipe. Plain `| head` on single-line JSON does not trigger it, because `head` reads to the end of the one line; a reader that exits early does. One stderr site, `warn_unknown_keys`, was fixed in b482e029 (063's review) with `let _ = writeln!`; `main.rs` still writes its errors with `eprintln!`. Exit 101 is also what a panicking or failing run returns, so a shell script cannot tell an early-exiting reader from a crash.
 
 ## Behavior
 

@@ -6,7 +6,7 @@ section: "Rule Format"
 
 ## Context
 
-On 2026-10-28 the owner applied 050's `artifacts-are-as-short-as-their-required-content` to the shipped rule files, which that scenario leaves unswept. They held 297 rules in 509,421 bytes (`wc -c framework/rules/*.md` at `4e82686d`); by each paragraph's leading field marker, Rationale took 182,204, Verification 127,501, Statement 114,363, Source 53,651, and headers and headings 31,724.
+On 2026-10-28 the owner applied 050's `artifacts-are-as-short-as-their-required-content` to the shipped rule files, which that scenario leaves unswept. They held 297 rules in 509,421 bytes (`wc -c framework/rules/*.md` at `4e82686d`); by each paragraph's leading field marker, Rationale took 182,204, Verification 127,501, Statement 114,363, Source 53,629, and headers and headings 31,724.
 
 ## Behavior
 

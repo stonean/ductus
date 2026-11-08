@@ -129,7 +129,7 @@ A MUST or MUST NOT obligation never requires continuous integration — neither 
 
 ## ID stability invariants
 
-These invariants are enforced by `/{project}:analyze` (as edge cases in `spec.md`) and are also a discipline for rule authors:
+`/{project}:analyze` enforces the duplicate-ID invariant and reports a citation of an unknown or deprecated ID, and `scripts/audit/deprecation-removal.sh` (spec 026, Family 40) holds a deprecated rule's removal release; the rest is a discipline for rule authors:
 
 - Once an ID is assigned, the rule retains that ID for life. Editing the Statement or moving the rule within the file does not change its ID.
 - Deprecated rules retain their ID. They are removed in the release their label names, after a deprecation window in which a citation of one draws an Advisory finding; an adopting project's references cannot be checked from here, so the changelog names each successor to re-point them to.
@@ -138,4 +138,4 @@ These invariants are enforced by `/{project}:analyze` (as edge cases in `spec.md
 
 ## Rule file integrity
 
-A rule file is considered well-formed if every rule heading, statement, and verification field is present and the ID format is satisfied. A rule carries no Rationale: its Statement stands without a stated reason, and a boundary with a sibling rule is stated in its Verification. A `**Rationale:**` paragraph in a project-authored or pinned file is ignored, never malformed. Missing fields, malformed IDs, or unparseable content cause `/{project}:analyze` to refuse to load the file (per the spec's edge-case decisions). The file is then treated as absent for matching purposes, but the parse failure itself is a hard error.
+A rule file is considered well-formed if every rule heading, statement, and verification field is present and the ID format is satisfied. A rule carries no Rationale: its Statement stands without a stated reason, and a boundary with a sibling rule is stated in its Verification. A `**Rationale:**` paragraph in a project-authored or pinned file is ignored, never malformed. Missing fields, malformed IDs, or unparseable content cause `/{project}:analyze` to refuse to load the file (per the spec's edge-case decisions). The file is then treated as absent for matching purposes, and the failure itself is reported as a Blocking finding (`framework/reference/analyze.md` §Rules (blocking and advisory)); the `ductus exec` walker checks no rule-file integrity.
