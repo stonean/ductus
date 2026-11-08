@@ -1,6 +1,6 @@
 ---
 title: "016-cross-cutting-rules — spec"
-status: in-progress
+status: done
 dependencies: [006-bug-workflow, 008-security-rules]
 tags: [format, process, pipeline]
 next-criterion: 9
