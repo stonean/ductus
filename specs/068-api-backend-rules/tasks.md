@@ -46,8 +46,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 The set is every document a Source line cites after tasks 1–5. As read at `719c7a19`, with the two documents tasks 2 and 3 add:
 
-- IETF: RFC 3339, 5789, 6585, 6902, 7396, 7493, 8259, 8594, 9110, 9457, 9651 and 9745, and `draft-ietf-httpapi-idempotency-key-header-07`
-- Google AIP-140, 142, 151, 154, 155, 180, 185 and 193
+- IETF: RFC 3339, 5789, 6585, 6902, 7396, 7493, 8259, 8594, 9110, 9457, 9651 and 9745, and `draft-ietf-httpapi-idempotency-key-header-07`, superseded by `-08` (22 October 2026)
+- Google AIP-126, 140, 142, 151, 154, 155, 180, 185 and 193
 - Microsoft REST API Guidelines (Azure): *API Versioning*, *HTTP Return Codes*, *JSON*, *Considerations for sorting with pagination*, *Conditional Requests*, *Long-Running Operations & Jobs*
 - The OpenAPI Specification (Operation Object) and the OpenAPI Initiative's best practices
 - The GraphQL Specification (September 2025) §3 and §3.13.3, the GraphQL Cursor Connections Specification, GraphQL over HTTP (working draft), and graphql.org *Schema Design*
@@ -58,9 +58,9 @@ The set is every document a Source line cites after tasks 1–5. As read at `719
 
 Reuse the eight copies the plan names, from the clarify session's scratchpad `068-fetch/`. Fetch the rest into this session's scratchpad `068-fetch/`, never committed, with `curl` and `scripts/check-runtime-currency.sh`'s User-Agent. Use WebFetch for verbatim quotes where `curl` is refused. Rewrite or remove a claim no fetched copy confirms.
 
-- [ ] Fetch the set, reusing the eight copies
-- [ ] Check each claim of each rule against its fetched copy, correcting a claim or a section reference the copy does not support
-- [ ] The landing commit's message names each document, its URL, the fetch date and the method, WebFetch beside each claim it confirmed
+- [x] Fetch the set, reusing the eight copies
+- [x] Check each claim of each rule against its fetched copy, correcting a claim or a section reference the copy does not support
+- [x] The landing commit's message names each document, its URL, the fetch date and the method, WebFetch beside each claim it confirmed
 
 - **Done when**: every claim matches a fetched copy or was rewritten or removed, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC4 is ticked.
 
