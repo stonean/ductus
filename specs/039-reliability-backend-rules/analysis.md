@@ -1,23 +1,21 @@
 ---
 spec: 039-reliability-backend-rules
-last-run: 2026-10-20T00:55:24Z
-analyzed-against: 06a7aa795952f3fe6d0165dad78869292173acee
+last-run: 2026-11-08T01:54:31Z
+analyzed-against: fd34d677a634f37bce35196cf43605717a4b7cd5
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 1
+unexamined: 2
 analyzed-digest:
-  plan.md: a1d8295c8f51b48a8b3a3518e44e75b5334de1cebdd95bf823e80195c584437d
-  review.md: 73236f1c3294d5be00eeb335e704e616ed70f97e579b94ccd3bc0f41b3dde063
-  spec.md: 3d4e959fda86807db23ed415696477f44289179c0c011cf98b4bad9676fd986c
+  plan.md: e59f034c86086e260c03f308afdd6a6eb5de470d50d021fab0398f4a9b577dc6
+  review.md: 4d7d961aac7ffc2c203ea7701b9b692ac37fcc1546ff47a8302cfb6b4fc8393f
+  spec.md: 52b71215c8761c3aff3c025b842c3bc90141fc302ceab49f342b3dd450b7f02a
   tasks.md: 1ceaffd0d87640928d9cd23a67a43da77f822968780033c50e9193c444238119
-unexamined-by-reason:
-  ships-to-adopter: 1
 blocking: false
 dispositions:
-  fixed: 1
-  routed: 0
-  discarded: 0
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 ---
 
@@ -25,7 +23,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 1 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -39,10 +37,14 @@ dispositions:
 
 *None.*
 
+## Deferred to other specs
+
+*None.*
+
 ## Unexamined targets
 
-- ships-to-adopter: 1
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- grounding — spec.md Motivation asserted in the present tense that recurring reliability failures have nowhere to be promoted, which reliability-backend.md falsified — `specs/039-reliability-backend-rules/spec.md` — **fixed**
+*None.*
