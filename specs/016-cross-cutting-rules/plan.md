@@ -18,11 +18,11 @@ The governing constraint is **canonical-source discipline**: the constitution ca
 
 The constitution today walks the artifact tiers in this order: §spec-phase / §spec-requirements / §spec-lifecycle, then §bug-handling and §scenarios, then §brownfield-inbox / §brownfield-process. §rules belongs alongside §scenarios as a sibling artifact-tier definition, immediately after §scenario-promotion and before §brownfield-inbox. This co-locates all three artifact tiers (specs, scenarios, rules) and reads naturally in the flow.
 
-The HTML anchor is `<!-- §rules -->`, matching the existing convention. Adding it to the canonical-sources table in §drift-prevention is part of this work — "Rules artifact definition" → `framework/constitution.md` §rules.
+The HTML anchor is `<!-- §rules -->`, matching the existing convention. Naming it in §drift-prevention's canonical-sources table is part of this work; the table's row for this document now lists it as the rules tier.
 
 ### Bug decision tree extension: insert as new step 1, push existing 1–3 to 2–4
 
-Today's §bug-handling decision tree starts with "1. No spec exists for the behavior." For cross-cutting concerns (perf budget, observability commitment, etc.), a missing spec isn't the right diagnosis — the right diagnosis is "no rule covers this." If §rules sits after §scenarios in the constitution, the decision tree should evaluate the rule question first (broadest-scope check) before falling back to spec-level questions.
+Before 016, §bug-handling's decision tree started with "1. No spec exists for the behavior." For cross-cutting concerns (perf budget, observability commitment, etc.), a missing spec isn't the right diagnosis — the right diagnosis is "no rule covers this." If §rules sits after §scenarios in the constitution, the decision tree should evaluate the rule question first (broadest-scope check) before falling back to spec-level questions.
 
 Decision-tree order after this change:
 
@@ -46,19 +46,9 @@ The §rules section carries:
 
 The constitution names 008's data model by its path in a code span, `specs/008-security-rules/data-model.md`, rather than by a markdown link, so an adopter whose tree lacks 008's spec directory carries no broken link.
 
-### Validate generalization: prose-only, list still hardcoded
+### Validate generalization: the section is "Rules", and discovery is 024's
 
-Today's `framework/commands/analyze.md` "Security rules" section names the two security files explicitly:
-
-> Load `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` if either is present in the project.
-
-The generalization renames the section heading to "Rules" and rewrites the loading prose to be parameterized: "Load each rule file in the rule-file list (currently `specs/rules/security-backend.md` and `specs/rules/security-frontend.md`) if present in the project." The list itself remains hardcoded in analyze.md.
-
-This is *prose-only* generalization. The list does not move to the manifest, nor is shared infrastructure introduced for cross-command list reuse. Reasoning:
-
-- Adding a new rule file is already a per-spec event (see 008 as precedent — the rule files were added to the manifest *and* to validate as part of 008's work). The discipline of "update both lists in the same change" is a small invariant.
-- The cleaner factoring (single source-of-truth list shared between `framework/bootstrap/ductus.md`'s manifest and `framework/commands/analyze.md`'s loader) is exactly the kind of cross-doc invariant the deferred `/audit` command (already in the inbox) is meant to mechanize. Doing it here would expand 016's scope.
-- Validate's per-rule integrity check, reference check, severity behavior, and brownfield-audit hook are unchanged.
+The section once named "Security rules" is "Rules", now `## Rules (blocking and advisory)` in `framework/reference/analyze.md` since 071, and its loading prose covers every rule file rather than the two security files. Which files load is 024's rule loader, `discover-rule-files`, which selects by filename suffix, so no list of rule files is kept by hand. Validate's per-rule integrity check, reference check, severity behavior, and brownfield-audit hook are unchanged.
 
 The references to the rule-file schema location (currently "canonically declared in `specs/008-security-rules/data-model.md`") remain — that's still where the schema lives.
 
@@ -70,11 +60,7 @@ The section is comment-prompt only. The body is an HTML comment listing example 
 
 ### Groom decision-tree update: add rule-promotion step before existing steps
 
-`framework/commands/groom.md` walks a three-step decision tree that mirrors §bug-handling. After 016, this becomes a four-step walk with rule promotion as the first check. The new step text:
-
-> **Step 1: Is this a cross-cutting concern with no covering rule?** — Apply the four-indicator promotion checklist (§rules in the constitution). If the concern qualifies, recommend promoting to a rule. Direct the user to amend the relevant rule file (e.g., `specs/rules/security-backend.md`) or, if no rule file covers the domain, note that a new rule file is its own spec (out of groom's scope) — capture the item back into the inbox with that signal.
-
-The existing Steps 1–3 become 2–4 with no other changes. Groom still creates scenarios and appends tasks; rule promotion is *user-action*, not auto-applied (matching scenario promotion's user-decision discipline).
+`/{project}:groom`'s decision tree, `framework/reference/groom.md` §Groom decision tree since 071, walks four steps that mirror §bug-handling, rule promotion first: Step 1 asks whether the item is a cross-cutting concern with no covering rule, applies the four-indicator promotion checklist (§rules), and recommends amending the covering rule file, or, where none covers the domain, notes that a new rule file is its own spec. Groom still creates scenarios and appends tasks; rule promotion is *user-action*, not auto-applied (matching scenario promotion's user-decision discipline).
 
 ### 008 signpost: top-of-file note, body untouched
 
@@ -86,14 +72,14 @@ This pattern (signpost note for evolved framing) is consistent with how 006 alre
 
 ### Generated Claude commands: regenerate via scripts/gen-claude-commands.sh
 
-CLAUDE.md is explicit: `.claude/commands/ductus/*.md` is generated from `framework/commands/`. After editing `analyze.md` and `groom.md` sources, the generator must run. The generator substitutes `{project}` → `gov` and `{cli-config-dir}` → `.claude`. No manual edits to the generated files.
+`.claude/commands/ductus/*.md` is generated from `framework/commands/`, as `AGENTS.md` says. After editing `analyze.md` and `groom.md` sources, the generator must run. The generator substitutes `{project}` → `ductus` and `{cli-config-dir}` → `.claude`. No manual edits to the generated files.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/constitution.md` | Modify | Add `<!-- §rules -->` section between §scenario-promotion and §brownfield-inbox; update §bug-handling intro and decision tree (4 steps); add row to canonical-sources table |
-| `framework/commands/analyze.md` | Modify | Rename "Security rules" section heading to "Rules"; rewrite loading prose to parameterize over rule-file list (list itself unchanged) |
+| `framework/commands/analyze.md` | Modify | Rename "Security rules" section heading to "Rules"; generalize its loading prose to every rule file |
 | `framework/commands/groom.md` | Modify | Insert new Step 1 (rule-promotion check) into decision-tree walk; renumber existing 1–3 to 2–4 |
 | `framework/templates/spec/spec.md` | Modify | Insert optional `## Applicable Rules` comment-prompt section between Acceptance Criteria and Open Questions |
 | `specs/008-security-rules/spec.md` | Modify | Add top-of-file signpost noting 008 is the security instance of the general rules tier defined in 016; body untouched |
@@ -106,10 +92,9 @@ No source code, no tests, no migrations. All artifacts are markdown.
 
 ## Trade-offs
 
-- **Validate list remains hardcoded.** The cleaner factoring (single source-of-truth list shared between bootstrap manifest and validate's loader) is deferred to a future spec, likely tied to the `/audit` inbox item. This trades a small ongoing maintenance discipline ("update both lists in the same change") for keeping 016's scope tight.
 - **§rules duplicates a small amount of 008's content.** The conceptual format summary in §rules names ID, Statement, Verification, and RFC 2119 — the same fields described more fully in 008's data-model. This duplication is bounded and intentional (the hybrid resolution to Q2). The constitution back-links for the full schema.
 - **008's body remains security-framed.** Its motivation paragraph still reads "Security rules belong at the governance level because they are cross-cutting." The signpost makes the general framing discoverable without rewriting a `done` spec's body, but readers who land on 008 and don't notice the signpost may carry forward the security-only mental model. Acceptable — the constitution and 016 are now the canonical entry points.
-- **"Applicable Rules" section is decorative without the deferred consistency check.** Authors can skip it without consequence (validate's existing reference check only fires on cited IDs, not on missing citations). Mitigated by inbox capture of the consistency-check work — when that ships, the section becomes load-bearing.
+- **"Applicable Rules" stays optional.** Authors can skip it; a citation must earn its place, since `/{project}:analyze` step 14 reports a cited rule whose trigger does not fire against the spec (scenario `applicable-rules-consistency-check`).
 - **Adding §rules to canonical-sources is a small drift surface of its own.** The canonical-sources table grows by one row; future readers must remember to update it when the artifact location changes. No mitigation beyond the existing discipline of editing the table when canonical sources move.
 
 ## Open Questions Resolved
