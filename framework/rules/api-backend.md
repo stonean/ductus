@@ -40,11 +40,11 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-APIVER-001
 
-> Every public API MUST declare its versioning strategy explicitly: URI path versioning (`/v1/`, `/v2/`), query-parameter versioning (`?api-version=2024-10-01`), media-type versioning (`Accept: application/vnd.app.v2+json`), header versioning (`API-Version: 2`), or — for gRPC — a major version at the end of the protobuf package (`acme.billing.v1`). The strategy MUST be documented in `specs/system.md` and applied consistently across all endpoints of the API.
+> Every public API MUST declare its versioning strategy explicitly: URI path versioning (`/v1/`, `/v2/`), query-parameter versioning (`?api-version=2024-10-01`), media-type versioning (`Accept: application/vnd.app.v2+json`), header versioning (`API-Version: 2`), for gRPC a major version at the end of the protobuf package (`acme.billing.v1`), or a versionless API. The strategy MUST be documented in `specs/system.md` and applied consistently across all endpoints of the API. A versionless declaration MUST commit to making none of the changes `BE-COMPAT-001` lists as breaking for as long as the API stays versionless.
 
-**Verification:** Any spec or plan that introduces a public API MUST name the versioning strategy and reference its declaration in `specs/system.md`. `/{project}:analyze` flags public-API specs that omit the strategy commitment, and inconsistencies where some endpoints version one way and others a different way.
+**Verification:** Any spec or plan that introduces a public API MUST name the versioning strategy, a versionless one included, and reference its declaration in `specs/system.md`. `/{project}:analyze` flags public-API specs that omit the strategy commitment, inconsistencies where some endpoints version one way and others a different way, and a versionless declaration that does not commit to making none of `BE-COMPAT-001`'s breaking changes.
 
-**Source:** Microsoft REST API Guidelines (Azure, *API Versioning*), Google AIP-185 (API Versioning)
+**Source:** Microsoft REST API Guidelines (Azure, *API Versioning*), Google AIP-185 (API Versioning), graphql.org *Schema Design* (§Versioning)
 
 ### BE-APIVER-002
 
@@ -146,9 +146,9 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-COMPAT-001
 
-> Within a major version, schema changes MUST be additive only. Removing or renaming a field, changing a field's type (including narrowing, e.g. `string` → `enum`), changing a default value, adding a required request field or making an optional request field required, ceasing to populate a response field the server previously populated, or adding a value to a response enum the schema does not document as open to new values MUST NOT happen without a major version bump. Adding new optional request fields, new response fields, new values to enums used only in requests, new values to response enums the schema documents as open to new values, and new endpoints is permitted.
+> Within a major version, schema changes MUST be additive only. Removing or renaming a field, changing a field's type (including narrowing, e.g. `string` → `enum`), changing a default value, adding a required request field or making an optional request field required, ceasing to populate a response field the server previously populated, or adding a value to a response enum the schema does not document as open to new values MUST NOT happen without a major version bump. Adding new optional request fields, new response fields, new values to enums used only in requests, new values to response enums the schema documents as open to new values, and new endpoints is permitted. An API declared versionless under `BE-APIVER-001` has no major version to bump, so it MUST NOT make any of those breaking changes: a deprecated field or operation stays served until the API adopts a versioning strategy.
 
-**Verification:** Any spec or plan that modifies an existing API endpoint MUST classify the change as additive (compatible) or breaking (requires major version). `/{project}:analyze` flags endpoint-modifying specs that omit the classification, and plans that describe a change the Statement lists as breaking — subtractive, narrowing, or otherwise — within a major version without a major-version commitment. **Not flagged:** an existing error code's value or meaning changed, a renamed one included, which `BE-ERRENV-002` owns for an HTTP API and `security-backend.md` `BE-ERR-002` for any other.
+**Verification:** Any spec or plan that modifies an existing API endpoint MUST classify the change as additive (compatible) or breaking (requires major version). `/{project}:analyze` flags endpoint-modifying specs that omit the classification, plans that describe a change the Statement lists as breaking — subtractive, narrowing, or otherwise — within a major version without a major-version commitment, and a versionless API's spec that describes one, the removal of a deprecated field or operation included, without adopting a versioning strategy. **Not flagged:** an existing error code's value or meaning changed, a renamed one included, which `BE-ERRENV-002` owns for an HTTP API and `security-backend.md` `BE-ERR-002` for any other.
 
 **Source:** Semantic Versioning 2.0.0, Google AIP-180 (Backwards compatibility)
 
