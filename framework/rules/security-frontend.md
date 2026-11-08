@@ -324,7 +324,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 **Verification:** Any spec or plan covering a frontend production build, its release, or `system.md` where it describes one MUST name the SBOM tool and format and commit to per-build generation and retention. `/{project}:analyze` flags such specs that omit SBOM generation or that describe one-off SBOM exports separate from the build. **Not flagged:** where `security-backend.md` is also loaded, the SBOM of any production build artifact, the frontend's included, which its `BE-DEPS-003` owns.
 
-**Source:** OWASP Dependency Graph & SBOM Cheat Sheet, CycloneDX / SPDX specifications
+**Source:** OWASP Dependency Graph & SBOM Best Practices Cheat Sheet, CycloneDX / SPDX specifications
 
 ### FE-DEPS-008
 

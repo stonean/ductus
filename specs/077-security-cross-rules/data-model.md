@@ -39,7 +39,7 @@ SEC-{category}-{NNN}
 
 | ID | Tier | Subject | Predecessor |
 | --- | --- | --- | --- |
-| `SEC-LOG-001` | MUST | A sensitive value is kept out of a log line, an error-reporting payload and telemetry, a configuration value being `CFG-ENV-006`'s at `/{project}:analyze` | none (new; 008 task 32) |
+| `SEC-LOG-001` | MUST | A sensitive value is kept out of a log line, an error-reporting payload, telemetry, a product-analytics event and a session-replay recording, a configuration value being `CFG-ENV-006`'s at `/{project}:analyze` | none (new; 008 task 32) |
 | `SEC-DEPS-001` | MUST | Build inputs the lockfile does not cover are pinned to an immutable reference | `BE-DEPS-006` |
 | `SEC-AUTHN-001` | MUST | Secrets and signatures are compared in constant time | `BE-AUTHN-009` |
 | `SEC-AUTHN-002` | MUST | OAuth and OIDC client flows use a bound `state`, PKCE, ID-token validation, an exact `redirect_uri`, unguessable transaction-bound values, a mix-up defence and an external user-agent | `BE-AUTHN-013` |

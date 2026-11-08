@@ -291,14 +291,17 @@ its version and date.
   `SEC-AUTHN-002` beside `FE-AUTHN-001`, and a token in an authorization
   response's URL fragment under `SEC-AUTHN-003` beside `FE-STORAGE-003`; and a
   package a build step's command runs by a mutable reference under
-  `SEC-DEPS-001` beside `BE-DEPS-002` or `FE-DEPS-004`. A sensitive
-  configuration value in a log line, an error report, a span or a metric label
-  stays under both `SEC-LOG-001` and `BE-LOG-002` or `BE-LOG-008` after that
-  routing lands, since each yields it to `configuration-cross.md`, which no
-  review pass applies yet. A waiver recorded under one ID of such a pair needs
-  a counterpart under the other; one under the yielding ID (the old ID,
-  `SEC-LOG-001`, `FE-AUTHN-001`, `FE-STORAGE-003`, `BE-DEPS-002` or
-  `FE-DEPS-004`) expires once that routing moves the finding to its owner,
+  `SEC-DEPS-001` beside `BE-DEPS-002` or `FE-DEPS-004`; and an authorization
+  server's `redirect_uri` under `SEC-AUTHN-004` beside `BE-API-009` or
+  `FE-AUTHN-001`. A sensitive configuration value in a log line, an error
+  report, a span, a metric label, a product-analytics event or a
+  session-replay recording stays under both `SEC-LOG-001` and `BE-LOG-002` or
+  `BE-LOG-008` after that routing lands, and one in a URL under both
+  `SEC-DATA-001` and `BE-API-013` or `FE-STORAGE-003`, since each yields it to
+  `configuration-cross.md`, which no review pass applies yet. A waiver
+  recorded under one ID of such a pair needs a counterpart under the other;
+  one under the yielding ID (the old ID, `BE-API-009`, `SEC-LOG-001`,
+  `FE-AUTHN-001`, `FE-STORAGE-003`, `BE-DEPS-002` or `FE-DEPS-004`) expires once that routing moves the finding to its owner,
   and an old ID's also when it is removed. A `specs/rules/security-backend.md`
   pinned from 0.59.11 keeps `BE-AUTHN-009` and `BE-AUTHN-013` undeprecated
   beside their successors, so `/analyze` reports each such case under both
@@ -316,7 +319,11 @@ its version and date.
   `FE-AUTHN-001` and `FE-STORAGE-003` keep their OAuth cases beside
   `SEC-AUTHN-002` and `SEC-AUTHN-003` in a project without
   `security-backend.md`, or in any project when the copy predates
-  `9b067399`, 0.59.11's among them. Each lasts until the file is re-synced. A
+  `9b067399`, 0.59.11's among them, and one that predates `86f46805` keeps
+  `FE-AUTHN-001`'s case of a `redirect_uri` an authorization server receives
+  beside `SEC-AUTHN-004` in a project without `security-backend.md`, or in
+  any project when it predates `afb8a865`. Each lasts until the file is
+  re-synced. A
   `security-backend.md` or `security-frontend.md` left from a surface the
   project no longer configures stops receiving updates, with the same results
   until the file is deleted or its surface configured again. A project that
@@ -398,11 +405,17 @@ its version and date.
   spec that meets its rule's trigger. In `security-cross.md`, installed in
   every shape: `SEC-AUTHN-002` asks an OAuth or OIDC client for a one-time
   `state` bound to the user agent, an ID token's `iss`, `aud` and `exp`, and
-  its signature unless it came directly from the token endpoint, `state`, `code_verifier` and `nonce` from a cryptographically
-  secure generator, a mix-up defence where it can talk to more than one
-  authorization server, and a native app's external user-agent;
+  its signature, with a key the issuer provides, unless it came directly from
+  the token endpoint, `state`, `code_verifier` and `nonce` from a
+  cryptographically secure generator, a mix-up defence where it can talk to
+  more than one authorization server, and a native app's external
+  user-agent, and asks a change to an existing client for the requirements
+  the change reaches, a redirection endpoint `state` and exact matching;
   `SEC-AUTHN-003` asks an authorization server to enforce PKCE at its token
-  endpoint and never to redirect a credential-carrying request with 307; a
+  endpoint and never to redirect a credential-carrying request with 307, a
+  change to an existing server's token endpoint or sign-in step included,
+  and a change to the refresh tokens it issues to public clients for their
+  protection; a
   new `SEC-DATA-001`, in a new `DATA` category, keeps a credential or PII out
   of a URL the project's code requests, sends or renders, a server or
   command-line tool calling another party's API with its key in the query
