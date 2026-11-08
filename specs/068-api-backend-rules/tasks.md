@@ -29,9 +29,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. `ERRENV` governs a resource-oriented HTTP API (AC15)
 
-- [ ] The header's `ERRENV` declaration and reach sentence limit the category to a resource-oriented HTTP API, an RPC protocol carried over HTTP counting as an API that is not one, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s
-- [ ] Each of `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` names a resource-oriented HTTP API as its subject in its Statement
-- [ ] Confirm `BE-ERR-002`'s and `BE-ERR-004`'s Verification still reach such an API, so `security-backend.md` needs no edit
+- [x] The header's `ERRENV` declaration and reach sentence limit the category to a resource-oriented HTTP API, an RPC protocol carried over HTTP counting as an API that is not one, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s
+- [x] Each of `BE-ERRENV-001`, `BE-ERRENV-002` and `BE-ERRENV-003` names a resource-oriented HTTP API as its subject in its Statement
+- [x] Confirm `BE-ERR-002`'s and `BE-ERR-004`'s Verification still reach such an API, so `security-backend.md` needs no edit
 
 - **Done when**: the header and the three Statements read as AC15 says, `cargo test no_shipped_statement_mixes_tiers` and `scripts/lint-rule-ids.sh` pass, and AC15 is ticked.
 
