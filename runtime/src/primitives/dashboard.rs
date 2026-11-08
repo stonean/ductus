@@ -6,10 +6,14 @@
 //!
 //! The session target is a peek through [`crate::session`] (spec 062): an identified
 //! process sees its own target, with its session label and the notices its next command
-//! will deliver rendered under the target line. The peek pins no adoption, refreshes no
-//! `used-at` and consumes no notice, so the read-only contract holds for the session too —
-//! `dashboard` is also called for data, and a delivering read there would take the notices
-//! from the command that owns them.
+//! will deliver. The peek pins no adoption, refreshes no `used-at` and consumes no notice,
+//! so the read-only contract holds for the session too — `dashboard` is also called for
+//! data, and a delivering read there would take the notices from the command that owns
+//! them.
+//!
+//! The pipeline view is rendered from the same load by [`render_as`], which
+//! `render-status` and the hook surface call (spec 080): the view travels without the
+//! structured payload, and the payload without the view.
 //!
 //! Defined by `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`.
 
@@ -54,99 +58,117 @@ pub fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
     run_as(args, repo, identity.as_ref(), SystemTime::now())
 }
 
-/// Render the dashboard as `identity` at `now`: the one path [`run`] and the
-/// tests share.
+/// The dashboard as `identity` at `now`: the one path [`run`] and the tests
+/// share.
 pub(crate) fn run_as(
     _args: &DashboardArgs,
     repo: &Path,
     identity: Option<&Identity>,
     now: SystemTime,
 ) -> Result<DashboardResult> {
+    Ok(load(repo, identity, now)?.into_result())
+}
+
+/// The pipeline view as `identity` at `now`, rendered as `format`, with the
+/// slash-command namespace its hints name.
+///
+/// # Errors
+///
+/// Every error [`run`] returns; [`PrimitiveError::InvalidReadSize`] for a
+/// malformed `[artifacts] read-size-bytes`, as every reader of the setting
+/// halts; and the errors resolving a spec's `references:` index returns for
+/// the readout.
+pub(crate) fn render_as(
+    repo: &Path,
+    identity: Option<&Identity>,
+    now: SystemTime,
+    format: pipeline_view::Format,
+) -> Result<(String, String)> {
+    load(repo, identity, now)?.render(repo, format)
+}
+
+/// Everything one read of the pipeline state holds: the payload's fields, and
+/// beside them what only the view shows.
+struct Loaded {
+    specs: Vec<DashboardSpec>,
+    /// Each spec's unresolved scenario questions, as the scenario carrying
+    /// each one, for the view, which lists every one.
+    questions: pipeline_view::QuestionsBySpec,
+    tags_union: Vec<String>,
+    config: DashboardConfig,
+    /// The repo-relative name the config read actually resolved, carried
+    /// into the view so its provenance tag cannot name a different file than
+    /// the one parsed.
+    config_name: &'static str,
+    session_target: Option<DashboardSessionTarget>,
+    session: SessionView,
+    inbox_standing: InboxStanding,
+    reopenings: ReopeningCounts,
+}
+
+fn load(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result<Loaded> {
     let (specs, questions) = load_specs(repo)?;
     let tags_union = compute_tags_union(&specs);
-    // Resolved once: `config_name` is the name the read below actually
-    // resolved, carried into the render so the provenance tag cannot name a
-    // different file than the one parsed.
     let (config, config_name) = load_config(repo)?;
     let (session_target, session) = load_session_target(repo, identity, now)?;
-    let inbox_standing = super::inbox_standing::standing(repo);
-    let reopenings = super::measure_reopenings::counts(repo, now);
-    let rendered_markdown = render_view(
-        repo,
-        &View {
-            specs: &specs,
-            questions: &questions,
-            tags_union: &tags_union,
-            config: &config,
-            config_name,
-            inbox: &inbox_standing,
-            reopenings: &reopenings,
-        },
-        session_target.as_ref(),
-        &session,
-        pipeline_view::Format::Markdown,
-    )?;
-    Ok(DashboardResult {
-        session_target,
-        session_identity: session.identity,
-        session_source: session.source,
-        session_notices: session.notices,
-        session_unreadable: session.unreadable,
-        specs,
+    Ok(Loaded {
         tags_union,
+        specs,
+        questions,
         config,
-        inbox_standing,
-        reopenings,
-        rendered_markdown,
+        config_name,
+        session_target,
+        session,
+        inbox_standing: super::inbox_standing::standing(repo),
+        reopenings: super::measure_reopenings::counts(repo, now),
     })
 }
 
-// ---------------------------------------------------------------------------
-// The pipeline view (spec 080): built and rendered by `pipeline_view`, from
-// the data loaded here. Returned data, never stdout printing: user-facing
-// rendering stays with the host (§runtime-boundary).
-// ---------------------------------------------------------------------------
+impl Loaded {
+    fn into_result(self) -> DashboardResult {
+        DashboardResult {
+            session_target: self.session_target,
+            session_identity: self.session.identity,
+            session_source: self.session.source,
+            session_notices: self.session.notices,
+            session_unreadable: self.session.unreadable,
+            specs: self.specs,
+            tags_union: self.tags_union,
+            config: self.config,
+            inbox_standing: self.inbox_standing,
+            reopenings: self.reopenings,
+        }
+    }
 
-/// What the pipeline view is rendered from, beside the session target.
-struct View<'a> {
-    specs: &'a [DashboardSpec],
-    questions: &'a [(String, Vec<ScenarioOpenQuestion>)],
-    tags_union: &'a [String],
-    config: &'a DashboardConfig,
-    config_name: &'a str,
-    inbox: &'a InboxStanding,
-    reopenings: &'a ReopeningCounts,
-}
-
-/// Build the view's model and render it as `format`, held to the configured
-/// read size, `[artifacts] read-size-bytes` (AC24). The references readout is
-/// omitted entirely when no spec declares references (a single-service
-/// adopter sees no change).
-fn render_view(
-    repo: &Path,
-    view: &View<'_>,
-    session_target: Option<&DashboardSessionTarget>,
-    session: &SessionView,
-    format: pipeline_view::Format,
-) -> Result<String> {
-    let project = Host::load(repo).project;
-    let model = pipeline_view::build(pipeline_view::ViewData {
-        specs: view.specs,
-        questions: view.questions,
-        tags_union: view.tags_union,
-        config: view.config,
-        config_name: view.config_name,
-        inbox: view.inbox,
-        reopenings: view.reopenings,
-        session_target,
-        session_label: session.identity.as_deref(),
-        notices: &session.notices,
-        unreadable: &session.unreadable,
-        references: resolve_references_readout(repo, view.specs, &project)?,
-        project: &project,
-    });
-    let (threshold, _) = super::check_artifact_size::resolve_threshold(repo)?;
-    Ok(pipeline_view::render(&model, format, threshold.bytes))
+    /// Build the view's model and render it as `format`, held to the
+    /// configured read size, `[artifacts] read-size-bytes` (AC24). The
+    /// references readout is omitted entirely when no spec declares
+    /// references (a single-service adopter sees no change). Returned data,
+    /// never stdout printing: user-facing rendering stays with the host
+    /// (§runtime-boundary).
+    fn render(&self, repo: &Path, format: pipeline_view::Format) -> Result<(String, String)> {
+        let project = Host::load(repo).project;
+        let model = pipeline_view::build(pipeline_view::ViewData {
+            specs: &self.specs,
+            questions: &self.questions,
+            tags_union: &self.tags_union,
+            config: &self.config,
+            config_name: self.config_name,
+            inbox: &self.inbox_standing,
+            reopenings: &self.reopenings,
+            session_target: self.session_target.as_ref(),
+            session_label: self.session.identity.as_deref(),
+            notices: &self.session.notices,
+            unreadable: &self.session.unreadable,
+            references: resolve_references_readout(repo, &self.specs, &project)?,
+            project: &project,
+        });
+        let (threshold, _) = super::check_artifact_size::resolve_threshold(repo)?;
+        Ok((
+            pipeline_view::render(&model, format, threshold.bytes),
+            project,
+        ))
+    }
 }
 
 /// The cross-service references readout: each spec whose derived
@@ -219,20 +241,18 @@ fn reference_line(record: &ResolutionRecord, services: &Services, project: &str)
 /// [`load_one_spec`]. After the first pass, walks the list a second time
 /// to fill in each spec's `blocked-by` (needs every spec's status known).
 /// Beside the entries, each spec carrying unresolved scenario questions with
-/// those questions, for the view, which lists every one.
-#[allow(clippy::type_complexity)]
-fn load_specs(
-    repo: &Path,
-) -> Result<(Vec<DashboardSpec>, Vec<(String, Vec<ScenarioOpenQuestion>)>)> {
+/// the scenario of each one, for the view, which lists every one.
+fn load_specs(repo: &Path) -> Result<(Vec<DashboardSpec>, pipeline_view::QuestionsBySpec)> {
     let layout = paths::Paths::load(repo);
     let specs_dir = repo.join(&layout.specs_root);
     let mut entries: Vec<DashboardSpec> = Vec::new();
-    let mut questions: Vec<(String, Vec<ScenarioOpenQuestion>)> = Vec::new();
+    let mut questions = pipeline_view::QuestionsBySpec::new();
 
     for slug in list_feature_dirs(&specs_dir) {
         let (entry, carried) = load_one_spec(&specs_dir, &layout.specs_root, &slug)?;
         if !carried.is_empty() {
-            questions.push((slug.clone(), carried));
+            let scenarios = carried.into_iter().map(|q| q.scenario).collect();
+            questions.push((slug.clone(), scenarios));
         }
         entries.push(entry);
     }
@@ -520,11 +540,75 @@ mod tests {
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::TempDir;
 
+    /// The payload and the view one load renders, so a test reads both as it
+    /// did before spec 080 moved the view to `render-status`.
+    #[derive(Debug, PartialEq)]
+    struct Viewed {
+        result: DashboardResult,
+        rendered_markdown: String,
+    }
+
+    impl std::ops::Deref for Viewed {
+        type Target = DashboardResult;
+        fn deref(&self) -> &DashboardResult {
+            &self.result
+        }
+    }
+
     /// Shadows [`super::run`] so every existing test names its process as
     /// **unidentified** explicitly, rather than relying on the test binary
     /// never capturing the identity at startup.
-    fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
+    fn run(args: &DashboardArgs, repo: &Path) -> Result<Viewed> {
         run_as(args, repo, None, SystemTime::now())
+    }
+
+    /// Shadows [`super::run_as`]: the payload, and the view rendered from the
+    /// same load.
+    fn run_as(
+        _args: &DashboardArgs,
+        repo: &Path,
+        identity: Option<&Identity>,
+        now: SystemTime,
+    ) -> Result<Viewed> {
+        let loaded = load(repo, identity, now)?;
+        let (rendered_markdown, _) = loaded.render(repo, pipeline_view::Format::Markdown)?;
+        Ok(Viewed {
+            result: loaded.into_result(),
+            rendered_markdown,
+        })
+    }
+
+    /// The payload carries no view, which is `render-status`'s now, and keeps
+    /// the per-spec status `/{project}:review --all` enumerates from (AC13).
+    #[test]
+    fn the_payload_carries_no_view_and_keeps_each_specs_status() {
+        let tmp = TempDir::new().unwrap();
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: in-progress\ndependencies: []\n",
+            "",
+        );
+        let result =
+            super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()).unwrap();
+        let value = serde_json::to_value(&result).unwrap();
+        assert!(value.get("rendered-markdown").is_none(), "{value}");
+        assert_eq!(value["specs"][0]["status"], "in-progress");
+    }
+
+    /// Only the view reads `[artifacts] read-size-bytes`, so a malformed one
+    /// leaves the payload readable.
+    #[test]
+    fn the_payload_does_not_read_the_read_size() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 0\n");
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        assert!(super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()).is_ok());
     }
 
     fn fixed_now() -> SystemTime {
@@ -669,6 +753,7 @@ mod tests {
 
         let shown = run_as(&DashboardArgs::default(), tmp.path(), Some(&x), fixed_now())
             .unwrap()
+            .result
             .session_notices;
         let kinds: Vec<_> = shown.iter().map(|notice| notice.kind).collect();
         assert_eq!(
@@ -723,7 +808,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         write_session_toml(tmp.path(), "feature = \"055-a\"\npath = \"specs/055-a\"\n");
         let value =
-            serde_json::to_value(run(&DashboardArgs::default(), tmp.path()).unwrap()).unwrap();
+            serde_json::to_value(run(&DashboardArgs::default(), tmp.path()).unwrap().result)
+                .unwrap();
         for key in [
             "session-identity",
             "session-source",
@@ -1299,7 +1385,7 @@ reason = "Deferred until v2 perf budget lands."
             "feature = \"022-deterministic-runtime\"\npath = \"specs/022-deterministic-runtime\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.feature, "022-deterministic-runtime");
         assert!(target.scenario.is_none());
         assert!(target.scenario_detail.is_none());
@@ -1320,7 +1406,7 @@ reason = "Deferred until v2 perf budget lands."
         // No `.claude/` or `.augment/` directory needs to exist.
         assert!(!tmp.path().join(".claude").exists());
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.feature, "002-observability");
     }
 
@@ -1371,7 +1457,7 @@ reason = "Deferred until v2 perf budget lands."
             "feature = \"022-foo\"\npath = \"specs/022-foo\"\nscenario = \"widget\"\nscenario-path = \"specs/022-foo/scenarios/widget.md\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.feature, "022-foo");
         assert_eq!(target.scenario.as_deref(), Some("widget"));
         let detail = target.scenario_detail.unwrap();
@@ -1391,7 +1477,7 @@ reason = "Deferred until v2 perf budget lands."
             "feature = \"022-foo\"\npath = \"specs/022-foo\"\nscenario = \"ghost\"\nscenario-path = \"specs/022-foo/scenarios/ghost.md\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.feature, "022-foo");
         assert_eq!(target.scenario.as_deref(), Some("ghost"));
         assert!(target.scenario_detail.is_none());
@@ -1461,7 +1547,7 @@ reason = "Deferred until v2 perf budget lands."
             "feature = \"022-foo\"\npath = \"specs/022-foo\"\nscenario = \"broken\"\nscenario-path = \"specs/022-foo/scenarios/broken.md\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.feature, "022-foo");
         assert_eq!(target.scenario.as_deref(), Some("broken"));
         assert!(
@@ -1493,7 +1579,7 @@ reason = "Deferred until v2 perf budget lands."
             "feature = \"022-foo\"\npath = \"specs/022-foo\"\nscenario = \"bare\"\nscenario-path = \"specs/022-foo/scenarios/bare.md\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        let target = result.session_target.unwrap();
+        let target = result.result.session_target.unwrap();
         assert_eq!(target.scenario.as_deref(), Some("bare"));
         assert!(target.scenario_detail.is_none());
     }
@@ -1542,8 +1628,8 @@ reason = "Deferred until v2 perf budget lands."
         );
     }
 
-    /// A malformed read size halts the dashboard, as it halts every reader of
-    /// the setting, rather than rendering at the default.
+    /// A malformed read size halts the view, as it halts every reader of the
+    /// setting, rather than rendering at the default.
     #[test]
     fn a_malformed_read_size_halts_the_view() {
         let tmp = TempDir::new().unwrap();
@@ -1825,8 +1911,8 @@ reason = "Deferred until v2 perf budget lands."
                 .any(|l| l.starts_with("Scenario questions: 2 in 1 spec(s);")),
             "{rendered}"
         );
-        assert!(lines.contains(&"  002-asking · alpha: One?"), "{rendered}");
-        assert!(lines.contains(&"  002-asking · beta: Two?"), "{rendered}");
+        assert!(lines.contains(&"  002-asking · alpha"), "{rendered}");
+        assert!(lines.contains(&"  002-asking · beta"), "{rendered}");
     }
 
     #[test]

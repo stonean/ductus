@@ -2530,8 +2530,8 @@ pub struct DashboardResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_source: Option<SessionSource>,
     /// Session notices the process's next command will deliver — also
-    /// rendered as `Notice:` lines in `rendered-markdown`. The dashboard's read
-    /// is a peek, so none is consumed here.
+    /// rendered as `Notice:` lines in `render-status`'s view. The dashboard's
+    /// read is a peek, so none is consumed here.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub session_notices: Vec<SessionNotice>,
     /// Repo-relative session files the peek could not parse while checking
@@ -2559,17 +2559,33 @@ pub struct DashboardResult {
     /// how many `in-progress` specs have no unchecked task, rendered as the view's
     /// `Reopenings:` line on every run (spec 079, AC19).
     pub reopenings: ReopeningCounts,
-    /// The full pipeline view pre-rendered as one markdown fragment (spec
-    /// 080's view model) — the target block, the table, the summary one item
-    /// per line, the cross-service references readout (the runtime resolves
-    /// each spec's `references:` index internally for it), the specs with
-    /// work left grouped by next action, and the `/{project}:target` prompt —
-    /// held to `[artifacts] read-size-bytes`: past it the done rows collapse to
-    /// a count line, then the rows past the bound are cut and counted.
-    /// Returned data the host may restyle, never printed by the runtime; the
-    /// structured fields above stay authoritative for hosts that render their
-    /// own view.
+}
+
+// -- render-status -----------------------------------------------------------
+
+/// Args for `render-status`. It takes none: `ductus exec` dispatches a step's
+/// primitive with no arguments (spec 080), and the view reads only the state
+/// `dashboard` reads.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct RenderStatusArgs {}
+
+/// Result for `render-status`: the pipeline view `/{project}:status` shows on
+/// the model path, without `dashboard`'s structured payload (spec 080, AC13).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RenderStatusResult {
+    /// The pipeline view as one markdown fragment — the target block, the
+    /// table, the summary one item per line, the cross-service references
+    /// readout (each spec's `references:` index resolved internally), the
+    /// specs with work left grouped by next action, and the
+    /// `/{project}:target` prompt — held to `[artifacts] read-size-bytes`: past
+    /// it the done rows collapse to a count line, then the rows past the bound
+    /// are cut and counted. Returned data the host may restyle, never printed
+    /// by the runtime.
     pub rendered_markdown: String,
+    /// The slash-command namespace the view's `/{project}:` hints name.
+    pub project: String,
 }
 
 // -- check-rule-ids ----------------------------------------------------------

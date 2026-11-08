@@ -31,10 +31,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on tasks 2 and 3: the primitive returns their view.
 
-- [ ] Register `render-status` at the six sites `docs/developing-ductus.md` lists, then run `scripts/gen-configure-mcp.sh`
-- [ ] Rewrite `framework/commands/status.md`: step 1 invokes `render-status`, step 2 emits `rendered-markdown`, and step 3 is removed. Sweep `framework/reference/status.md` with it
-- [ ] Drop `rendered-markdown` from `dashboard`, and sweep the name across the plan's list and by meaning
-- [ ] Re-bless `runtime/tests/golden/status-basic.jsonl`, reading the diff
+- [x] Register `render-status` at the six sites `docs/developing-ductus.md` lists, then run `scripts/gen-configure-mcp.sh`
+- [x] Rewrite `framework/commands/status.md`: step 1 invokes `render-status`, step 2 emits `rendered-markdown`, and step 3 is removed. Sweep `framework/reference/status.md` with it
+- [x] Drop `rendered-markdown` from `dashboard`, and sweep the name across the plan's list and by meaning
+- [x] Re-bless `runtime/tests/golden/status-basic.jsonl`, reading the diff
 
 - **Done when**: `ductus exec status` and the MCP tool both return the view without `dashboard`'s structured payload, `framework/commands/status.md` composes neither the list nor the prompt, and `rendered-markdown` survives only on `render-status` and in records (AC6, AC13).
 

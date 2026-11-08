@@ -21,7 +21,7 @@ use std::fmt::Write as _;
 use crate::primitives::{flatten_line, parse_feature_dir};
 use crate::schema::primitives::{
     DashboardConfig, DashboardSessionTarget, DashboardSpec, InboxStanding, InboxState,
-    ReopeningCounts, ReopeningState, ScenarioOpenQuestion, SessionNotice,
+    ReopeningCounts, ReopeningState, SessionNotice,
 };
 use crate::schema::status::ALLOWED_STATUSES;
 
@@ -56,12 +56,16 @@ const HEADINGS: [&str; 8] = [
     "Next Action",
 ];
 
+/// Each spec carrying unresolved scenario questions, by slug, with the
+/// scenario of each question, in the shared scenario-file order.
+pub(crate) type QuestionsBySpec = Vec<(String, Vec<String>)>;
+
 /// What the view is built from.
 pub(crate) struct ViewData<'a> {
     pub specs: &'a [DashboardSpec],
-    /// Each spec's unresolved scenario questions, by slug, in the shared
-    /// scenario-file order. A spec with none has no entry.
-    pub questions: &'a [(String, Vec<ScenarioOpenQuestion>)],
+    /// The specs carrying unresolved scenario questions; a spec with none has
+    /// no entry.
+    pub questions: &'a QuestionsBySpec,
     pub tags_union: &'a [String],
     pub config: &'a DashboardConfig,
     /// The repo-relative config file the read resolved, for provenance tags.
@@ -356,18 +360,19 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
     items
 }
 
-/// The scenario-questions item, with one detail line per question.
+/// The scenario-questions item, with one detail line per question naming its
+/// spec and scenario, so a scenario with three questions has three lines. The
+/// question's text is left to `/{project}:clarify`: the model path re-types
+/// the view, and the text took this repository's view from 10,904 characters
+/// to 16,434 (owner, 2026-11-08; spec 080's plan).
 ///
 /// Rendered whether or not a spec is also in recovery: only the Next Action
 /// cell is exclusive, and suppressing this item would hide questions that
 /// still need resolving after the recovery walk (spec 046). Every question is
 /// listed, with no cap: a truncated list reads as "these are the ones needing
 /// attention" while hiding others.
-fn questions_item(
-    questions: &[(String, Vec<ScenarioOpenQuestion>)],
-    project: &str,
-) -> Option<Item> {
-    let carrying: Vec<&(String, Vec<ScenarioOpenQuestion>)> =
+fn questions_item(questions: &QuestionsBySpec, project: &str) -> Option<Item> {
+    let carrying: Vec<&(String, Vec<String>)> =
         questions.iter().filter(|(_, q)| !q.is_empty()).collect();
     if carrying.is_empty() {
         return None;
@@ -375,11 +380,7 @@ fn questions_item(
     let total: usize = carrying.iter().map(|(_, q)| q.len()).sum();
     let details = carrying
         .iter()
-        .flat_map(|(slug, questions)| {
-            questions
-                .iter()
-                .map(move |q| format!("{slug} · {}: {}", q.scenario, flatten_line(&q.text)))
-        })
+        .flat_map(|(slug, scenarios)| scenarios.iter().map(move |s| format!("{slug} · {s}")))
         .collect();
     Some(Item {
         line: format!(
@@ -705,18 +706,11 @@ mod tests {
         }
     }
 
-    fn question(scenario: &str, text: &str) -> ScenarioOpenQuestion {
-        ScenarioOpenQuestion {
-            scenario: scenario.to_string(),
-            text: text.to_string(),
-        }
-    }
-
     /// Specs at every status, a target, scenario questions (one spanning two
     /// lines), a dependency, a tag and a references readout.
     struct Fixture {
         specs: Vec<DashboardSpec>,
-        questions: Vec<(String, Vec<ScenarioOpenQuestion>)>,
+        questions: QuestionsBySpec,
         tags: Vec<String>,
         config: DashboardConfig,
         inbox: InboxStanding,
@@ -744,10 +738,7 @@ mod tests {
                 ],
                 questions: vec![(
                     "004-delta".to_string(),
-                    vec![
-                        question("s1", "Which path does case one take?"),
-                        question("s1", "How long may\nthe wait be?"),
-                    ],
+                    vec!["s1".to_string(), "s1".to_string()],
                 )],
                 tags: vec!["pipeline".to_string()],
                 config: DashboardConfig {
@@ -917,11 +908,14 @@ mod tests {
                 "Tags: pipeline",
                 "Reopenings: ? not measured — no repo",
                 "Inbox: ✓ clean",
-                "  004-delta · s1: Which path does case one take?",
-                "  004-delta · s1: How long may the wait be?",
             ] {
                 assert!(lines.contains(&item), "{item:?} in:\n{rendered}");
             }
+            assert_eq!(
+                lines.iter().filter(|l| **l == "  004-delta · s1").count(),
+                2,
+                "one line per question, its scenario's twice:\n{rendered}"
+            );
             assert!(
                 lines
                     .iter()

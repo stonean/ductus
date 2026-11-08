@@ -24,7 +24,7 @@ New primitives, each wired at every site per the AGENTS.md six-site rule (schema
 - `check-review-gate` — evaluates the review record plus the feature-dir markdown lint into a verdict and the canonical blocked message (the spec's `review:` block as delivered here, `review.md`'s frontmatter since spec 057); implement's completion gate invokes it, replacing both the hand-walked branch and the raw `npx markdownlint-cli2` call (which becomes `lint-markdown`).
 - `append-question` — appends to `## Open Questions` with normalized-whitespace dedup and the same-write `done|clarified|planned|in-progress → draft` back-edge; amend's question route invokes it.
 - `create-plan-artifacts` — copies the plan/tasks/data-model templates and reports pre-existing files (mirroring `create-feature`, atomic and mode-preserving); plan.md invokes it.
-- `dashboard` gains a rendered-markdown field (preamble + table + counts/callouts + references) the host may restyle, absorbing status.md's rendering steps.
+- The pipeline view is pre-rendered for the host to restyle (preamble + table + counts/callouts + references), absorbing status.md's rendering steps — `dashboard`'s `rendered-markdown` field here, `render-status`'s result since spec 080, which absorbed the non-done prompt too.
 
 ## Edge Cases
 

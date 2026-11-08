@@ -3,7 +3,7 @@
 //! its own spec root and a history made by hand.
 //!
 //! The primitive's unit tests prove each rule and kill its mutations. This proves
-//! each state reaches a caller as the CLI's JSON and as `dashboard`'s rendered view,
+//! each state reaches a caller as the CLI's JSON and as `render-status`'s rendered view,
 //! since AC8 asks for the measurement in an adopter's project and AC19 asks for the
 //! counts on every run.
 
@@ -98,8 +98,8 @@ fn measure(dir: &Path) -> Value {
 }
 
 fn reopenings_line(dir: &Path) -> String {
-    let dashboard = runtime_json(dir, &["dashboard"]);
-    let rendered = dashboard["rendered-markdown"].as_str().expect("rendered");
+    let view = runtime_json(dir, &["render-status"]);
+    let rendered = view["rendered-markdown"].as_str().expect("rendered");
     rendered
         .lines()
         .find(|line| line.starts_with("Reopenings"))

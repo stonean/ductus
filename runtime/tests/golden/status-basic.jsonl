@@ -1,2 +1,2 @@
-{"type":"progress","message":"dispatching primitive `dashboard`","step":"1","primitive":"dashboard"}
+{"type":"progress","message":"dispatching primitive `render-status`","step":"1","primitive":"render-status"}
 {"type":"complete","result":{},"runtime-version":"{{runtime-version}}"}

@@ -256,8 +256,9 @@ auditable place.
   pending removal notice, a changed co-target set, a pending adoption — and
   the dashboard shows them without consuming them; the next command's
   `resolve-session` delivers them. The payload gains `session-identity`,
-  `session-source` and `session-notices`, and `rendered-markdown` renders the
-  process label on the target line and each notice beneath it (AC8).
+  `session-source` and `session-notices`, and the pipeline view (`render-status`'s
+  since spec 080) renders the process label on the target line and each notice
+  beneath it (AC8).
   `framework/commands/status.md` describes the new line. A delivering read was tried first
   and rejected (task 12): `dashboard` is also called for data —
   `scripts/audit/lib.sh` enumerates the corpus with it — and every such call

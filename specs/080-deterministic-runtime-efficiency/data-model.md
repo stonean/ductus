@@ -26,7 +26,7 @@ One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`re
 3. **Summary.** One item per line, each starting with its label, in this order: `Counts:`, `Blocked:`, `Recovery:`, `Scenario questions:`, `Folds:`, `Tags:`, `Disabled rule files:`, `Unknown config keys:`, then the reopenings line and `Inbox:`.
    - The reopenings line keeps the form spec 079 gave it, `Reopenings since {date}: …` or `Reopenings: ? …`.
    - Only `Counts:`, the reopenings line and `Inbox:` render on every run; the others render when they apply.
-   - `Scenario questions: {n} in {m} spec(s)` is followed by one line per unresolved question, indented two spaces: `{spec} · {scenario}: {question}`, with the question flattened to one line.
+   - `Scenario questions: {n} in {m} spec(s)` is followed by one line per unresolved question, indented two spaces: `{spec} · {scenario}`, so a scenario carrying three questions has three lines. The question's text is not in the view.
 4. **References.** `References:`, then each spec that declares references, its slug (bold in markdown) followed by one `- …` line per reference. Present only when a spec declares references.
 5. **Next actions.** `Next actions:`, then one line per next action, indented two spaces: `{next-action}: {spec}, {spec}`. It groups every spec but the target whose Next Action is not `done (spec is complete)`, in order of first appearance in the table. Absent when there is none.
 6. **Prompt.** `Run /{project}:target <feature> to select one.`, the view's only `/{project}:target` hint.

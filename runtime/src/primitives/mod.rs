@@ -75,6 +75,7 @@ pub mod read_spec;
 pub mod read_tasks;
 pub mod relocate_audit_records;
 pub mod remove_inbox_item;
+pub mod render_status;
 pub mod resolve_anchor;
 pub mod resolve_constitutions;
 pub mod resolve_feature;

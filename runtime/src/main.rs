@@ -23,11 +23,11 @@ use ductus::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
     MergePermissionsArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
     PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs, ResolveAnchorArgs,
+    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
+    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
+    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
+    WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -202,6 +202,8 @@ enum Command {
     GateConfirm(GateConfirmArgs),
     #[command(about = descriptions::summary(descriptions::DASHBOARD), long_about = descriptions::DASHBOARD)]
     Dashboard(DashboardArgs),
+    #[command(about = descriptions::summary(descriptions::RENDER_STATUS), long_about = descriptions::RENDER_STATUS)]
+    RenderStatus(RenderStatusArgs),
     #[command(about = descriptions::summary(descriptions::WRITE_SESSION), long_about = descriptions::WRITE_SESSION)]
     WriteSession(WriteSessionArgs),
     #[command(about = descriptions::summary(descriptions::RESOLVE_SESSION), long_about = descriptions::RESOLVE_SESSION)]
@@ -897,6 +899,7 @@ fn main() -> ExitCode {
         Command::PrunePlan(args) => emit_result(primitives::prune_plan::run(&args, &repo)),
         Command::PruneProject(args) => emit_result(primitives::prune_project::run(&args, &repo)),
         Command::Dashboard(args) => emit_result(primitives::dashboard::run(&args, &repo)),
+        Command::RenderStatus(args) => emit_result(primitives::render_status::run(&args, &repo)),
         Command::WriteSession(args) => emit_result(primitives::write_session::run(&args, &repo)),
         Command::ResolveSession(args) => {
             emit_result(primitives::resolve_session::run(&args, &repo))
