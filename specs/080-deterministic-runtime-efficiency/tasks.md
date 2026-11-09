@@ -329,7 +329,7 @@ The smallest of the seven: `framework/commands/groom.md`'s routing step calls `d
 
 ## 40. Scenario: the search goes out with the first call
 
-Lands with task 36 (see its note). Verify that each run's first call goes out in the search's own message, read from the raw stream as `research.md`'s *The search step* does. Once 34–40 are ticked, the spec owes `/ductus:review`, `/ductus:analyze` and the completion gate, none of which a task schedules. Each harness run is a model call on the owner's account; `research.md`'s *Command cost (AC8)* table gives each command's price.
+Lands with task 36 (see its note). Verify that each run's first call goes out in the search's own message, read from the raw stream as `research.md`'s *The search step* does. Once 34–40 are ticked, task 41 re-measures, and once 41 is ticked the spec owes `/ductus:review`, `/ductus:analyze` and the completion gate, none of which a task schedules. Each harness run is a model call on the owner's account; `research.md`'s *Command cost (AC8)* table gives each command's price.
 
 - [ ] Implement the behavior described in `scenarios/the-search-goes-out-with-the-first-call.md`
 
