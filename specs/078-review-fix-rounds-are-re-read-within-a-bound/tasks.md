@@ -135,7 +135,7 @@ This task waited until `079-review-and-analysis-work-converges` was `done` (owne
 
 It owes `/ductus:analyze` on 078, each live finding dispositioned, which runs once no box in this file is open (spec 079). `check-review-gate` decides whether a review comes first, and its ticked criteria are verified against the tree before either run (spec 079 task 26, owner, 2026-11-09).
 
-The closing review ran at `494a1f3f`, and the analysis after it deferred `CFG-ENV-001` to task 17 (owner, 2026-11-09). Task 17's change owes a second review, of that change, and a second analysis before the completion gate. A simulated closing at `494a1f3f` reads this reopening at 3 reviews and 1 analysis, over 079's AC1 bound before task 17's runs (`measure-reopenings --since e7fcde37`), so `done` also owes a task on 079 disposing of the miss, as 079's task 27 did for its own.
+The closing review ran at `494a1f3f`, and the analysis after it deferred `CFG-ENV-001` to task 17 (owner, 2026-11-09). Task 17's change had its own review (`5a24d0dc`) and analysis (`acc75e71`), and 079's task 28 waived the miss a simulated closing then read, 4 reviews and 3 analyses (owner, 2026-11-09). The completion gate's criteria verification at `bfd9c6b0` found the two defects tasks 18 and 19 fix (owner, 2026-11-09), so the gate owes a review of that change and an analysis after it, and before `done` 079's task 28 is corrected to the counts a simulated closing then reads (`measure-reopenings --since e7fcde37`), with the added runs' cause.
 
 - **Done when**: `analysis.md` is current with no live hard-fail or blocking finding, so `/ductus:implement`'s completion gate can run
 
@@ -154,3 +154,15 @@ The closing review ran at `494a1f3f`, and the analysis after it deferred `CFG-EN
 - [x] The data model's `[review] re-reads-off` row, `framework/bootstrap/ductus.md` §Project Configuration and `framework/commands/review.md`'s Inputs line say an empty value counts as absent, and AC14's "a switch without a valid reason" is read with an empty value as no switch
 
 - **Done when**: `re-reads-off = ""` runs the loop, a reason under 16 characters still halts, and the re-check of 078's analysis no longer produces the CFG-ENV-001 finding
+
+## 18. The `re-reads-off` comment names no reader list its callers outgrow
+
+- [x] `runtime/src/schema/config_keys.rs`'s `[review]` comment names `brief-re-read` and `write-review` as the readers of `re-reads-off`, while `start-fix-rounds` has also read it since `d62e72f3`: point at `fix_rounds::re_reads_off`'s callers instead of listing them (078's criteria verification, 2026-11-09; fixed here by the owner)
+
+- **Done when**: the comment names the shared reader, so a new caller cannot make it false
+
+## 19. Disposition out-of-spec finding: write-review doubles a waived round's final period
+
+- [x] `runtime/src/primitives/write_review.rs` — `loop_summary` appends a period after a round waiver's reason, so a reason ending in one renders `..` (`waived: Reviews here run on a host without subagents..`); 066's code (`a3beb4c0`, 066 task 15), found by 078's criteria verification (2026-11-09) — fixed: the period is appended only to a reason that does not end in `.`, `!` or `?`, with the test `a_waivers_reason_ending_its_sentence_takes_no_second_stop` and mutants M33 and M34 in `scripts/mutation/fix-round-record.py` (owner, 2026-11-09)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

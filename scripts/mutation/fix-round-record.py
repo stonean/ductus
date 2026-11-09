@@ -280,4 +280,18 @@ MUTATIONS = [
         '            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),',
         'write_review::tests::a_supplied_summary_carries_the_loops_account',
     ),
+    (
+        "M33 a waived round's reason that ends its sentence takes a second stop",
+        'src/primitives/write_review.rs',
+        '        let stop = if reason.ends_with([\'.\', \'!\', \'?\']) {\n            ""\n        } else {\n            "."\n        };',
+        '        let stop = ".";',
+        'write_review::tests::a_waivers_reason_ending_its_sentence_takes_no_second_stop',
+    ),
+    (
+        "M34 a waived round's reason that does not end its sentence takes no stop",
+        'src/primitives/write_review.rs',
+        '        let stop = if reason.ends_with([\'.\', \'!\', \'?\']) {\n            ""\n        } else {\n            "."\n        };',
+        '        let stop = "";',
+        'write_review::tests::a_waivers_reason_ending_its_sentence_takes_no_second_stop',
+    ),
 ]

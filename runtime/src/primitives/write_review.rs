@@ -231,11 +231,17 @@ fn loop_summary(record: &LoopRecord) -> String {
         let _ = write!(out, " Exempt: {}.", round_list(&record.exempt));
     }
     for waiver in &record.waivers {
+        let reason = crate::primitives::flatten_line(&waiver.reason);
+        // A reason that already ends its sentence takes no second stop.
+        let stop = if reason.ends_with(['.', '!', '?']) {
+            ""
+        } else {
+            "."
+        };
         let _ = write!(
             out,
-            " Round {} was not re-read, waived: {}.",
-            waiver.round,
-            crate::primitives::flatten_line(&waiver.reason)
+            " Round {} was not re-read, waived: {reason}{stop}",
+            waiver.round
         );
     }
     if !record.unwaived.is_empty() {
@@ -4719,6 +4725,44 @@ mod tests {
             "{report}"
         );
         assert!(!report.contains("not waived"), "{report}");
+    }
+
+    /// A waived round's reason that already ends its sentence takes no second
+    /// stop, and one that does not is given one.
+    #[test]
+    fn a_waivers_reason_ending_its_sentence_takes_no_second_stop() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.fix_rounds = Some(vec![
+            round(
+                FixRoundCheck::NotReRead,
+                None,
+                Some("Reviews here run on a host without subagents."),
+            ),
+            round(
+                FixRoundCheck::NotReRead,
+                None,
+                Some("was round 1 reverted?"),
+            ),
+            round(
+                FixRoundCheck::NotReRead,
+                None,
+                Some("the change reverts round 1"),
+            ),
+        ]);
+        run(&args, tmp.path()).unwrap();
+
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains(
+                "Round 1 was not re-read, waived: Reviews here run on a host without subagents. \
+                 Round 2 was not re-read, waived: was round 1 reverted? \
+                 Round 3 was not re-read, waived: the change reverts round 1."
+            ),
+            "{report}"
+        );
+        assert!(!report.contains("subagents.."), "{report}");
     }
 
     /// No list writes no loop field: a run that stated nothing about its

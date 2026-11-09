@@ -85,7 +85,7 @@ const SECTIONS: &[Section] = &[
     // `resolve-constitutions`' measured entry (spec 055).
     Section::keys("artifacts", &["read-size-bytes"]),
     // `tech-stack-verified`: `/{project}:review` by hand (spec 020).
-    // `re-reads-off`: `brief-re-read` and `write-review` (spec 078).
+    // `re-reads-off`: each caller of `fix_rounds::re_reads_off` (spec 078).
     // `disabled-rule-files`: `discover-rule-files` and `dashboard` (spec 025).
     Section {
         name: "review",
