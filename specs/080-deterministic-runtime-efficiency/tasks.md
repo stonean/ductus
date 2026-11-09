@@ -160,7 +160,7 @@ Blocked on task 12.
 
 Blocked on tasks 4, 8, 10 and 16: the round measures the commands as changed. Those have landed, so it is unblocked. Run `python3 scripts/measure-command-cost.py --specs 40 --raw <dir> --out <file> "/fixture:<name> <args>" …` (its docstring states every figure and flag; `research.md` *The `claude -p` harness's first run* is the method to repeat), once per command, with the hook absent so status's figure is the model path's. Its fixture allows only `mcp__ductus__*`, so a command whose steps need `Read`, `Bash` or `Edit` meets permission denials under `-p`: decide per command before the round (owner), and say in the record which ran to completion. Each run is a model call on the owner's account; the round is 17 commands (`audit.md` excluded, as `/ductus` installs no copy of it).
 
-- [ ] Run the harness over every command in `framework/commands/`
+- [x] Run the harness over every command in `framework/commands/`
 
 - **Done when**: `research.md` records each command's four figures with method, units, population and date (AC8).
 

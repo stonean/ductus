@@ -199,6 +199,43 @@ Measured by `scripts/measure-result-sizes.sh` at 4294b79a15383c1c5cf700d62a0f05b
 | `validate-frontmatter` | 55 | 187 | 242 |
 | `traverse-deps` | 58 | 180 | 238 |
 
+## Command cost (AC8)
+
+**Method.** On 2026-11-09 from 17:13:01Z to 17:21:23Z, `python3 scripts/measure-command-cost.py --round --permissions adopter --specs 40 --raw <dir> --out <file>` at 14c88044 ran each of the 17 commands `/ductus` installs for Claude Code once, through Claude Code 2.1.319 (`claude -p`, `stream-json`, model `claude-opus-5-5`), against this checkout's release build. That build was current: no `runtime/` change landed after it. Each command ran on a fixture of its own. Each fixture is the harness's generated 40-spec corpus, 8 specs per status, holding the tree `/ductus` installs for Claude, read from `ductus.md`'s own tables, with the status hook absent, so status's figure is the model path's. Its `.claude/settings.local.json` holds an adopter's permissions: the bootstrap seed, then `/ductus:configure`'s canonical sets (owner, 2026-11-09). On that fixture sat the command's preset in the script's `ROUND`, its prompt, session target and seed, the least state its main path needs. The child ran with stdin closed, without this shell's Claude Code session variables, with setting sources `project,local` and `--strict-mcp-config`. `audit.md` is not measured: `/ductus` installs no copy of it, so the fixture has no `/fixture:audit`.
+
+**Units.** First output and result are seconds of wall time from launch, to the first assistant text delta and to the result event. Output tokens are the result's `usage.output_tokens`. Largest tool result is the most characters of text any one tool result carried. Input tokens are the result's `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens` summed over the run's model requests. Turns are its `num_turns`. Cost is its `total_cost_usd`, at list price. Under `-p` a command cannot be answered, so a run that reaches a gate or a question ends there. *Ended at* says where each run ended, from its final reply and its last tool call. Every run's result subtype was `success`, and Claude Code listed every command among its slash commands.
+
+| Command | Preset (prompt; target; seed) | Ended at | First output (s) | Result (s) | Output tokens | Largest tool result (chars) | Input tokens | Turns | Cost (USD) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| help | none | its end, the guide printed | 2.841 | 16.653 | 2,204 | 0 | 43,450 | 1 | 0.270 |
+| status | none | its end, the view emitted | 13.626 | 20.036 | 2,134 | 3,853 | 131,190 | 3 | 0.300 |
+| target | `3` | its end, the target written | 11.663 | 11.680 | 684 | 822 | 186,722 | 8 | 0.297 |
+| log | one item | its end, the item appended | 9.590 | 9.605 | 357 | 81 | 171,350 | 4 | 0.256 |
+| specify | one description | step 9's gate, after writing `041`'s `spec.md` | 7.618 | 38.966 | 3,133 | 5,709 | 398,177 | 11 | 0.443 |
+| clarify | 005 (draft), one open question | step 6, asking the question | 4.663 | 15.030 | 1,112 | 11,859 | 204,281 | 7 | 0.364 |
+| plan | 001 (clarified) | step 9's gate, after writing `plan.md` and `tasks.md` | 5.782 | 42.648 | 3,606 | 9,781 | 468,306 | 18 | 0.486 |
+| implement | 002 (planned), a concrete task and a `src/` commit | the walk's end, the task written, `make test` passing, nothing committed | 5.502 | 28.088 | 2,118 | 1,061 | 403,475 | 17 | 0.412 |
+| review | 003, taken to done, reopened and implemented | its end, `review.md` written, not blocking | 6.919 | 91.777 | 6,286 | 7,808 | 1,502,864 | 27 | 0.925 |
+| analyze | 004 (done) | step 19's first gating question, before `write-analysis` | 32.766 | 80.132 | 6,446 | 50,087 | 1,266,279 | 27 | 1.072 |
+| amend | 003, one question | the approval gate, nothing recorded | 14.601 | 14.618 | 847 | 387 | 155,170 | 5 | 0.342 |
+| groom | none; one inbox item | step 3's gate on the item | 25.728 | 25.744 | 1,860 | 10,775 | 361,247 | 11 | 0.416 |
+| prune | 004 (done) | step 6's gate | 5.608 | 14.531 | 954 | 401 | 195,366 | 6 | 0.326 |
+| consolidate | `005-feature-5 --into 001-feature-1` | step 3's gate | 16.456 | 16.472 | 1,363 | 1,025 | 199,291 | 8 | 0.350 |
+| fold | `cost.1-csv-export`; a branch-scoped spec folding into 001 | step 5's gate | 15.346 | 22.529 | 1,967 | 5,210 | 264,759 | 9 | 0.411 |
+| link | one alias, repo and path | its end, the service registered | 11.400 | 11.412 | 870 | 239 | 131,718 | 4 | 0.268 |
+| configure | none | its end, step 5 not written | 28.847 | 28.859 | 3,047 | 7,172 | 252,649 | 6 | 0.414 |
+
+The round cost $7.352. analyze's population effect is the corpus's: on the generated `done` spec, its own reading found three blocking findings (placeholder criteria, and a plan with neither Technical Decisions nor Affected Files), so it stopped at the first one's deferral question. Its largest result is `.ductus/reference/analyze.md` read whole in one call.
+
+**Denied calls.** Six calls in four runs, from `permission_denials`:
+
+- review: a `for` loop running `cat -n` on each file, which no rule approves as a compound command, and `rm -r src/__pycache__`, which the deny set refuses. Neither stopped the run.
+- analyze: a `grep … | wc` pipeline and a `for` loop of `grep -c`, both compound. Neither stopped the run.
+- groom: `grep -il …; echo "exit=$?"`, compound. It did not stop the run.
+- configure: step 5's `Edit` of `.claude/settings.local.json`, though the file allows `Edit`. The run reported the step not written.
+
+**The search step.** The `ToolSearch` line's call costs a model step only when the call goes out alone. status's, log's and specify's did: 1.51 s, 1.52 s and 1.70 s from its result to the next model message, by the stream's `assistant` and `user` timestamps. The other ten sent it in the same message as their first step's call, so their next message followed in 0.00 to 0.38 s. That call was `resolve-session`, which loads with the session, for eight of them. consolidate's was two `resolve-feature` calls, and fold's was `check-unfolded-specs` beside `resolve-feature`. configure's 13.28 s is the model composing `merge-permissions`' 119 entries, not the search. plan made a second search, for `derive-boundary`, which its reference's §Validation gate names and its steps do not, at 1.68 s. help, target and link made none.
+
 ## Verifying runs
 
 ### The version probe under an MCP server's environment (task 7)
