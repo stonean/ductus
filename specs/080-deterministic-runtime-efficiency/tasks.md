@@ -281,11 +281,15 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 ## 34. Scenario: help answers with no model turn
 
+Design it in `plan.md` before any code: the plan has none yet. `merge-status-hook` recognizes its entry by command and matches `{project}:status`, so help is a second entry or a widened matcher, and the plan chooses. On Pi the guide takes task 28's respelling in the bridge. The `hook` surface and `merge-status-hook` are 022's, so 022's task-20 signpost gains help. Verify as task 8 did, by typing it in Claude Code, and with `scripts/measure-command-cost.py --round --only help --hook --permissions adopter`. On Pi, verify with the bridge harness and a real `pi --mode rpc` run, as `658c0ffc`'s message records. A runtime change follows `docs/developing-ductus.md` *Landing a runtime change*.
+
 - [ ] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 35. Scenario: configure types no permission entries
+
+Design it in `plan.md` first. `merge-permissions` holds the canonical allow set as its ceiling (`CANONICAL_ALLOW_STATIC` and the served tools, `runtime/src/primitives/merge_permissions.rs`), while the deny and retired sets live only in `framework/bootstrap/configure/claude.md` steps 3 and 4, and step 5's `additionalDirectories` write moves into the primitive. `merge-permissions` is a 022 surface, so 022's signpost gains it. Verify with `--round --only configure --permissions adopter`: no entry typed and no denial.
 
 - [ ] Implement the behavior described in `scenarios/configure-types-no-permission-entries.md`
 
@@ -293,11 +297,15 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 ## 36. Scenario: one search covers referenced sections
 
+36 and 40 both change the generated `ToolSearch` line (`tool-search-line` in `runtime/src/primitives/apply_manifest.rs`, the derivation in `runtime/src/primitives/tool_loading.rs`), so design them together in `plan.md`'s *Batched (AC29)* decision and land them as one runtime change. Verify with `--round --only plan,status,log,specify,configure --permissions adopter`: one search per run.
+
 - [ ] Implement the behavior described in `scenarios/one-search-covers-referenced-sections.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 37. Scenario: reference reads follow the cited sections
+
+Put the mechanism to the owner before code, with each option's cost: no primitive returns a section's text, since `resolve-anchor` only checks that a `§` anchor resolves. Verify with `--round --only analyze,clarify,groom,plan,fold,review --permissions adopter`: no whole-reference read.
 
 - [ ] Implement the behavior described in `scenarios/reference-reads-follow-the-cited-sections.md`
 
@@ -305,17 +313,23 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 ## 38. Scenario: rules load without shell reads
 
+Put the mechanism to the owner before code, with each option's cost: extend `discover-rule-files`, or a primitive returning each loaded rule's ID, tier, Statement and Verification, named by review's §Load rules and analyze's steps 11–12. Verify with `--round --only review,analyze --permissions adopter`: no shell read of a rule file.
+
 - [ ] Implement the behavior described in `scenarios/rules-load-without-shell-reads.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 39. Scenario: groom derives routing candidates
 
+The smallest of the seven: `framework/commands/groom.md`'s routing step calls `derive-routing-candidates` before `routeInboxItem`, as `framework/commands/specify.md` step 1 does. Verify with `--round --only groom --permissions adopter`: no `grep` of spec bodies.
+
 - [ ] Implement the behavior described in `scenarios/groom-derives-routing-candidates.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 40. Scenario: the search goes out with the first call
+
+Lands with task 36 (see its note). Verify that each run's first call goes out in the search's own message, read from the raw stream as `research.md`'s *The search step* does. Once 34–40 are ticked, the spec owes `/ductus:review`, `/ductus:analyze` and the completion gate, none of which a task schedules. Each harness run is a model call on the owner's account; `research.md`'s *Command cost (AC8)* table gives each command's price.
 
 - [ ] Implement the behavior described in `scenarios/the-search-goes-out-with-the-first-call.md`
 

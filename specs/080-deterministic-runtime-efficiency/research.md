@@ -4,11 +4,12 @@ The measurements and verifying runs spec 080's criteria point at. Each figure st
 
 ## Method traps
 
-Three ways an earlier measurement of this work went wrong, each of which inflates or misattributes a figure:
+Ways a measurement of this work went wrong, each of which inflates or misattributes a figure:
 
 - **Size a tool result as the characters of its result text, not as `json.dumps` of the content.** In a session transcript the content is a JSON value, and serializing it again counts its escaping: for `dashboard` that read 41–44 KB against the true 37,171–40,454 characters.
 - **A command the agent starts through the Skill tool leaves no `<command-name>` tag in a transcript.** Attributing each `ToolSearch` to the running command takes the Skill `tool_use` entries as well as the tags.
 - **A loaded tool reaches the model as its description and input schema only.** The output schemas, 228,054 of 366,331 schema characters when the spec was clarified, never do, so a loaded-schema size counts description plus input schema, measured from `ductus mcp` `tools/list` over stdio, never from a transcript.
+- **A `Read` result is not the file's size.** Claude Code's `Read` prefixes each line with its number, so analyze's 49,132-byte reference came back as 50,087 characters of result: over the 50,000-byte read size by that count, under it by the file's. Compare a file with the read size by its bytes (`wc -c`).
 
 ## Result sizes (AC14)
 
