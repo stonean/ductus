@@ -125,3 +125,5 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Test that an unmeasured call with a malformed `read-size-bytes` and a registered entry does not halt and carries no `threshold` or size, and show the test fails with the argument ignored.
 
 - **Done when**: a malformed `[artifacts] read-size-bytes` never halts `/ductus`, `/target` still measures and still halts on it, and the test fails with the argument ignored. Found in task 14's change: `/ductus` called the measured entry; the owner chose on 2026-10-29 to keep it unmeasured (`QUAL-DELEG-001`).
+
+It owes `/ductus:review` while `check-review-gate` says one is owed, then `/ductus:analyze` and the completion gate, which run once no box in this file is open (spec 079), its ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09).

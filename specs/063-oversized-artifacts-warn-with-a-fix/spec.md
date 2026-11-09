@@ -53,6 +53,8 @@ The fixes a warning names depend on where it fires and on the spec's status:
 - **At `done`, the warning says which fixes reopen the spec**, by §spec-lifecycle's rules for an edit under a spec, which `classify-spec-edit` decides from the diff. Splitting the spec and promoting a scenario always reopen it, because each removes requirements from what the original asserts, even though another spec now asserts them. Trimming `plan.md` never reopens it, because a plan edit takes no back-edge on a `done` spec (§spec-lifecycle; `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`); trimming `spec.md` reopens it only if the trim changes a criterion or an open question, and trimming `data-model.md` always does. Pruning `tasks.md` and a waiver never reopen it.
 - **No warning names a command that does not exist.** No command splits a spec ([/consolidate](../052-spec-supersession-and-consolidation/spec.md) only merges), so a split is described as the manual route it is: create the new spec with `/specify`, move the content into it, and link it from the original.
 
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed which trims reopen a `done` spec: the warning reads a trim as `classify-spec-edit` would, so a `spec.md` trim reopens it only when it changes a criterion or an open question, and a `data-model.md` trim, which edits a contract, always does.
+
 ## A waiver re-fires on growth
 
 A waived warning stays waived while its file keeps the read-page count it had when the waiver was recorded. Once the file grows into another page, the warning fires again and needs a new decision, since the reason given for one page does not cover two. A file that shrinks does not re-fire a waiver.

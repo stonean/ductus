@@ -74,7 +74,6 @@ Implements `scenarios/analyze-run-durability.md`. Findings outlived the session;
 ## 7. Return to done after AC2's work-item correction
 
 - [x] AC2 listed a finding's disposition as "the fixed file, the artifact it was deferred to, or the waiver reason", which 076's deferral to an external work item alone (rendered "deferred to work item `X`") made incomplete. Found by 077's review on 2026-11-03. — owner's call: reopen 047 and correct AC2; or waive — reopened: AC2 reads "the artifact or work item it was deferred to" (owner, 2026-11-03, option a)
-- [ ] Record 047's review and analysis over the correction, and re-verify its ticked criteria
-- [ ] The owner approves the `done` transition
+It owes `/ductus:review` and `/ductus:analyze` over the correction, its ticked criteria re-verified against the tree before they run, then the completion gate and the owner's approval of `done`, which run once no box in this file is open (spec 079).
 
 - **Done when**: 047's review and analysis are recorded and not stale, AC2 holds against the tree, and the owner has approved `done`.

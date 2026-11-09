@@ -205,18 +205,19 @@ The spec resolves all of them. Its entry on a reference's rules is why AC9 reach
 
 The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote signpost back-linking this spec, which induces no dependency edge:
 
-| Spec | Status | Surface this changes |
-| --- | --- | --- |
-| `020-code-review` | in-progress | The review command and reference; its task 16 |
-| `022-deterministic-runtime` | in-progress | `diff-cross-spec`, tool descriptions, the shared schema |
-| `026-framework-self-audit` | in-progress | Families 1c and 18, which pin the text this amends; neither script's logic changed |
-| `041-task-pruning` | in-progress | Only a person's waiver keeps a plan section from `/{project}:prune`, since the disposition rule waives every `plan-record` finding |
-| `050-constitution` | in-progress | The constitution's four edits, under its size ceiling |
-| `051-branch-scoped-spec-numbering` | done | What the review after a fold reads, which its AC24 requires |
-| `058-findings-route-at-discovery` | in-progress | Dispositions; its task 5 waits for this |
-| `067-analyze-and-audit-checks` | in-progress | A condition added to review-state drift |
-| `066-audit-records-and-the-completion-gate` | in-progress | Records, gate, scope; its tasks 17–21 rebase on this |
-| `076-waived-and-deferred-findings-are-distinct-dispositions` | in-progress | Dispositions; its data model held a false canonicality claim, so it reopened and owes a review |
-| `078-review-fix-rounds-are-re-read-within-a-bound` | in-progress | The loop; its task 15 waits for this |
+| Spec | Surface this changes |
+| --- | --- |
+| `020-code-review` | The review command and reference; its task 16 |
+| `022-deterministic-runtime` | `diff-cross-spec`, tool descriptions, the shared schema |
+| `026-framework-self-audit` | Families 1c and 18, which pin the text this amends; neither script's logic changed |
+| `041-task-pruning` | Only a person's waiver keeps a plan section from `/{project}:prune`, since the disposition rule waives every `plan-record` finding |
+| `050-constitution` | The constitution's four edits, under its size ceiling |
+| `051-branch-scoped-spec-numbering` | What the review after a fold reads, which its AC24 requires |
+| `058-findings-route-at-discovery` | Dispositions; its task 5 waits for this |
+| `063-oversized-artifacts-warn-with-a-fix` | Which trims `check-artifact-size`'s warning says reopen a `done` spec, read as `classify-spec-edit` reads the result |
+| `067-analyze-and-audit-checks` | A condition added to review-state drift |
+| `066-audit-records-and-the-completion-gate` | Records, gate, scope; its tasks 17–21 rebase on this |
+| `076-waived-and-deferred-findings-are-distinct-dispositions` | Dispositions; its data model held a false canonicality claim |
+| `078-review-fix-rounds-are-re-read-within-a-bound` | The loop; its task 15 waits for this |
 
-Correcting false claims also reopened, each owing a review and an analysis, `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032-opencode-agent` and `035-groom-session-target` (a scenario or data model), and, each owing an analysis and a review while `review-owed` reads true, `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion). Each holds a task naming what it owes. These owe no back-link; the correction names this spec in its commit. Task 19 rewrote the boxes that scheduled a run, or held a note as a box, in the task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076 and 078 as prose, a correction to each that reopens nothing.
+Correcting false claims also reopened `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032-opencode-agent` and `035-groom-session-target` (a scenario or data model), and `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion), each with a task naming what its reopening owed. These owe no back-link; the correction names this spec in its commit. Task 19 rewrote the boxes that scheduled a run, or held a note as a box, in the task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076 and 078 as prose, and task 26 those of 022 and 047, which task 19 missed, a correction to each that reopens nothing.
