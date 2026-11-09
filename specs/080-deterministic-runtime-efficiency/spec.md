@@ -51,7 +51,7 @@ Claude Code defers each MCP tool's schema until the agent searches for it. Each 
 - **Always loaded:** the tools `framework/commands/target.md`'s steps name, the session-opening command's, set `_meta["anthropic/alwaysLoad"]`. The set is derived from that file, so it follows the file's edits.
 - **Batched:** every other command loads the `ductus` tools its steps name in one search, generated from its steps.
 - **Measured:** every tool's loaded schema, its description plus input schema, is measured.
-- **Revisited:** whether to always-load every tool is decided again once that measurement shows how small the schemas can get.
+- **Revisited:** always-loading every tool was decided again once the schemas were measured, and target's tools stay the only ones loaded with the session (owner, 2026-11-09).
 
 ### Bounded tool results
 
@@ -159,7 +159,9 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
     - Documenting a minimum version: it would depend on someone remembering it (§design-principles).
     - Writing the hook unconditionally: it would silently cost a pre-2.1.101 user every permission.
     - A file of its own: Claude Code reads only user, project and local settings, and the project file is the team's.
-- **Which `ductus` tools set `anthropic/alwaysLoad`?** The tools `/{project}:target`'s steps name, with every other command batching its own tools into one search (owner, 2026-11-08). All tools are revisited only once loaded-schema sizes are measured.
+- **Which `ductus` tools set `anthropic/alwaysLoad`?** The tools `/{project}:target`'s steps name, with every other command batching its own tools into one search (owner, 2026-11-08). Revisited with the measured schemas, and kept (owner, 2026-11-09).
+  - **The revisit's figures:** 70 tools load 135,932 characters, description plus compact input schema, by the release build's `tools/list` over stdio on 2026-11-09, `research.md`'s method. Target's seven are 11,308 of them, and no description exceeds the 4,096-character upfront cap. In task 17's round a command's search cost a model step, 1.51 to 1.70 s, only on status's model path, log, specify and configure, where it goes out alone. The other ten sent it beside `resolve-session` or another call, and their next message followed in 0.00 to 0.38 s.
+  - **Rejected on revisit:** always-loading all 70, which saves about 1.5 s on those four commands for 124,624 more characters on every model request of every session; and loading none, which saves 11,308 characters but leaves target and the ten with a deferred first call. A deferred tool can go out in the same message as the search that loads it, as fold's `check-unfolded-specs` did, but where a command's first call was deferred the round's search went out alone in 4 of 5 runs.
   - **Cost per search:** a `ToolSearch` returned in 0.01 s (median of 353 calls) but cost an extra model step, 1.0–1.7 s in the 10 `/{project}:status` runs. 100 of this repository's sessions to 2026-11-08 made 463 `ductus` loads, a median of 4 per session.
   - **What a load adds:** a loaded tool adds its description and input schema to context, 132,846 characters across all 68 tools. The output schemas (228,054 characters) never reach the model.
   - **The chosen sets:** target's seven tools add 11,039 characters to a session that would not load them. With per-command batching, the loads drop to 356, attributing each load to the command running at that moment, typed or Skill-invoked.

@@ -177,7 +177,7 @@ Blocked on task 17.
 
 Blocked on task 1's schema sizes.
 
-- [ ] Put the measured figures to the owner, and record the decision in `spec.md`'s Resolved Questions
+- [x] Put the measured figures to the owner, and record the decision in `spec.md`'s Resolved Questions
 
 - **Done when**: the spec's Resolved Questions record the owner's decision beside the figures.
 

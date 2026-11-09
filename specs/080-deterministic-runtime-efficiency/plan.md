@@ -99,7 +99,7 @@ A command's steps **name** a tool when a served registry name occurs as a whole 
 - *This repo's copies:* `scripts/gen-claude-commands.sh` builds them by driving `apply-manifest` through `DUCTUS_BIN`, else the release binary, with its JSON in a `mktemp -d` directory. `--check` stages the sources in its temp directory and runs there, since `apply-manifest` holds both roots inside the directory it runs in. `generators.yml` builds the binary first (`.github/workflows/generators.yml:48-54`), and `.githooks/pre-commit` resolves it before its generators and passes it as `DUCTUS_BIN`. This repo's copy and an adopter's therefore come from one code path. The Pi pass is unchanged.
 - *The test:* a flagged copy parses to the same `Procedure` as its source, and an unflagged entry's output is byte-identical to its output before this change.
 
-**Revisited.** Once AC23's schema sizes are recorded, whether to always-load every tool goes back to the owner with those figures (spec Behavior, *Revisited*).
+**Revisited.** With AC23's schema sizes and task 17's search costs measured, the owner kept target's tools as the only ones loaded with the session (spec Resolved Questions, 2026-11-09).
 
 ### Pi registers the command in the bridge
 
@@ -205,7 +205,7 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 - **A shell or `jq` hook:** rejected by the spec. The hook's command is the binary.
 - **Host-run `claude --version` passed to the primitive:** rejected, since the probe reads the version from inside the MCP server. It would need a permission entry in two seeds, and it would not run under `ductus exec`.
 - **Always-load as a test-pinned constant:** rejected, because a pinned, edited `target.md` would not move it. Embedding at build time is impossible for a crate published from `runtime/` alone.
-- **Always-loading every tool, or a measured top-12 list:** rejected by the owner (spec Resolved Questions). Every tool is revisited after AC23.
+- **Always-loading every tool, or a measured top-12 list:** rejected by the owner (spec Resolved Questions), and rejected again on the revisit after AC23.
 - **Steps only:** the derivation reads steps, as the spec says. A tool named only outside them still loads through its own search. Today that is prune's `prune-project` and `classify-spec-edit`; consolidate's `check-corpus-links`, `check-orphaned-references` and `classify-spec-edit`; fold's `check-orphaned-references`; amend's `label-criteria`; clarify's `append-question`; and status's `resolve-references`.
 - **A batching line in the command sources:** rejected, because AC29 keeps the sources and other agents' copies unchanged.
 - **Driving `apply-manifest` from the generator:** costs the generator a built binary, which `generators.yml` already builds. It buys one code path for this repo's copies and adopters'.
