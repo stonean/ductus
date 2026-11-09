@@ -15,6 +15,8 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
 ## Instructions
 
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__merge-permissions,mcp__ductus__merge-status-hook`
+
 1. Invoke `merge-permissions` (MCP: `merge-permissions`) to install the canonical `permissions.allow` and `permissions.deny` sets into `.claude/settings.local.json`, dedup exact-match entries from both arrays, and retire the step-4 entries by passing them as `revoke`. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed. The `revoke` pass is allow-side only and runs before the dedup and canonical-presence passes, so every copy of a retired entry is removed and none is re-added; an entry named in both `allow` and `revoke` is rejected as a caller error rather than resolved by pass order. Without the server, run `.ductus/bin/ductus merge-permissions` with the same arguments (`--path`, and repeated `--allow`, `--deny` and `--revoke`).
 
 2. Canonical `permissions.allow` entries. **Only the bulleted entries below are canonical** — a pattern appearing in the surrounding prose is explanation, never an entry to install, and some of it names patterns that must *not* be added:

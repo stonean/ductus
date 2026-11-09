@@ -36,6 +36,8 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
+>
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__append-question,mcp__ductus__append-task,mcp__ductus__classify-spec-edit,mcp__ductus__create-scenario,mcp__ductus__lint-markdown,mcp__ductus__set-status`
 
 ### Confirm target
 
