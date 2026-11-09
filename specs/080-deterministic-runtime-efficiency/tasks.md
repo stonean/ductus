@@ -278,3 +278,9 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [x] Implement the behavior described in `scenarios/antigravity-keeps-the-model-path.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 34. Scenario: help answers with no model turn
+
+- [ ] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
