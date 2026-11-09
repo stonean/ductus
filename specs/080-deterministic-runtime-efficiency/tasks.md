@@ -169,7 +169,7 @@ Blocked on tasks 4, 8, 10 and 16: the round measures the commands as changed. Th
 Blocked on task 17.
 
 - [x] Name in `research.md`, per command, the reduction that applies or why none does
-- [ ] Record each reduction as a scenario through `/ductus:amend`
+- [x] Record each reduction as a scenario through `/ductus:amend`
 
 - **Done when**: every command has a reduction or a reason, and each reduction has its scenario.
 
@@ -306,5 +306,11 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 ## 38. Scenario: rules load without shell reads
 
 - [ ] Implement the behavior described in `scenarios/rules-load-without-shell-reads.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 39. Scenario: groom derives routing candidates
+
+- [ ] Implement the behavior described in `scenarios/groom-derives-routing-candidates.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
