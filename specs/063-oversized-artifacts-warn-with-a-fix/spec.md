@@ -35,6 +35,8 @@ It runs in three places:
 
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 
+> **Signpost:** [080](../080-deterministic-runtime-efficiency/spec.md) made `[artifacts] read-size-bytes` a bound on tool results as well as on artifacts. Past it, each primitive whose result grows with the corpus moves its lists to a JSON file under `.ductus/results/` and keeps their counts inline. The pipeline view `render-status` returns collapses its `done` rows to a count line and then cuts rows to stay within it.
+
 ## The warning names a fix
 
 Each warning names the file, its size, the threshold, and its read-page count, then the fixes for that kind of artifact:

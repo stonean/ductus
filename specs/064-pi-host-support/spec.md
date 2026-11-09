@@ -29,6 +29,8 @@ produces a working Pi adoption — on **verified** conventions, not assumed ones
 > ("It intentionally does not include built-in MCP …"), plus a grep over `dist/`
 > confirming no MCP client ships. The narrow items settled during planning are
 > **design choices** recorded in §Resolved Questions, not unknowns about Pi.
+>
+> **Signpost:** [080](../080-deterministic-runtime-efficiency/spec.md) gave the bridge a command of its own. It registers `/{project}-status`, whose handler calls `render-status` through the runtime's MCP server and shows the view as a displayed message with no model turn. Pi runs it in place of the same-named prompt template `/ductus` still installs.
 
 ## Motivation
 
