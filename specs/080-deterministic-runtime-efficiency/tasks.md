@@ -343,6 +343,6 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 
 ## 42. `merge-permissions`' canonical-directory tests on Windows
 
-- [ ] Make the `dir` helper in `runtime/src/primitives/merge_permissions.rs`'s tests join its relative path one component at a time, as `canonical_directories` does. The runtime workflow's Windows build + test failed `a_canonical_call_writes_the_canonical_sets_and_both_directories` and `a_canonical_call_retires_names_and_keeps_the_adopters_entries` at daf517be (run 42713267146): the primitive writes `…\.claude\commands\acme`, and the helper joined `.claude/commands/acme` whole, so it expected `…\.claude/commands/acme`
+- [x] Make the `dir` helper in `runtime/src/primitives/merge_permissions.rs`'s tests join its relative path one component at a time, as `canonical_directories` does. The runtime workflow's Windows build + test failed `a_canonical_call_writes_the_canonical_sets_and_both_directories` and `a_canonical_call_retires_names_and_keeps_the_adopters_entries` at daf517be (run 42713267146): the primitive writes `…\.claude\commands\acme`, and the helper joined `.claude/commands/acme` whole, so it expected `…\.claude/commands/acme`
 
 - **Done when**: the runtime workflow's Windows build + test job passes at the commit that lands the fix, since a local pass proves only the Unix branch.
