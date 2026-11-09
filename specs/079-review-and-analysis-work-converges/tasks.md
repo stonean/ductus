@@ -292,3 +292,11 @@ This spec's `/ductus:analyze` runs with task 12's, once every box in this file i
 - [x] `framework/reference/review.md` — an edit that changes no claim, rule or behavior, a stray comma or a hedge, is no observation, and a claim the passes could not re-check, since no fetched copy of its source was at hand, is named in the Summary's account of what went unexamined, not as an observation; a new criterion on this spec states it. Measured at 008's review: 9 of its 54 observations, 5 of wording and 4 lists of unfetched sources (owner, 2026-11-08, option c)
 
 - **Done when**: both changes land through the landing procedure with every check passing, before 036's and 038's closings
+
+## 25. Three scope-attribution mutants survive at e4c6078f
+
+- [ ] Find why M24, M25 and M123 in scripts/mutation/scope-attribution.py survive: task 12's closing run of the three lists whole at e4c6078f (2026-11-09) killed fix-round-record's 30 and reopen-measure's 133, and 260 of scope-attribution's 263, its expected survivors none. All three mutate compute_review_scope.rs's window start (the held run's last-run check, and hiding the transition commit), which has changed since the lists last ran whole at 5db2c8a5 (1a0623f2)
+- [ ] For each, make a test fail with the mutation: correct or add the test, or remove the line when nothing decides on it, and name the killing test in the mutation's filter
+- [ ] Re-run scope-attribution.py whole from a worktree of the fixing commit, and the other two lists if the fix touches what they mutate
+
+- **Done when**: scope-attribution.py runs whole with every mutation killed, or a survivor listed in EXPECTED_SURVIVORS with the reason no portable test can kill it, at the commit 079's review reads
