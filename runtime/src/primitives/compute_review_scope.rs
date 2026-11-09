@@ -2455,6 +2455,81 @@ mod tests {
         assert_eq!(scope.base_source, BaseSource::Reopen);
     }
 
+    /// A branch left at a record from before the reopening and merged back after it,
+    /// while the reopening's own record had moved on to a later run: the merge carries
+    /// the branch's run in, and neither the window nor the reopening's tree holds that
+    /// run, so only the merge's branch parent can say it was finished before.
+    fn merged_from_before_the_reopening(
+        branch: &str,
+        merged: &str,
+    ) -> (tempfile::TempDir, Repository, String) {
+        let run = "2026-11-01T00:00:00Z";
+        let (tmp, repo) = done_upstream();
+        let branch_tip = commit_record(&tmp, &repo, branch, run);
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-02T00:00:00Z");
+        let parent = repo
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(merged, run),
+        );
+        {
+            let mut index = repo.index().unwrap();
+            index
+                .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+                .unwrap();
+            index.write().unwrap();
+            let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+            let head = repo.head().unwrap().peel_to_commit().unwrap();
+            let branch_commit = repo
+                .find_commit(Oid::from_str(&branch_tip).unwrap())
+                .unwrap();
+            let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+            repo.commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "Merge branch 'story'",
+                &tree,
+                &[&head, &branch_commit],
+            )
+            .unwrap();
+        }
+        (tmp, repo, parent)
+    }
+
+    /// A merge carrying in a run finished before the reopening is no review.
+    #[test]
+    fn a_merge_carrying_in_a_run_from_before_the_reopening_does_not_move_the_start() {
+        let (tmp, _repo, parent) = merged_from_before_the_reopening(DISPOSITIONS, DISPOSITIONS);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
+    /// A merge that clears by hand the held count of a run from before the reopening
+    /// finishes nothing either: the held record still carries the run.
+    #[test]
+    fn a_merge_clearing_a_held_record_from_before_the_reopening_finishes_nothing() {
+        let held = format!("{DISPOSITIONS}should-violations: 1\n");
+        let (tmp, _repo, parent) = merged_from_before_the_reopening(&held, DISPOSITIONS);
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, parent);
+        assert_eq!(scope.base_source, BaseSource::Reopen);
+    }
+
     /// A later run after the restore finishes as any run does.
     #[test]
     fn a_new_run_after_a_restored_record_moves_the_start() {

@@ -295,8 +295,8 @@ This spec's `/ductus:analyze` runs with task 12's, once every box in this file i
 
 ## 25. Three scope-attribution mutants survive at e4c6078f
 
-- [ ] Find why M24, M25 and M123 in scripts/mutation/scope-attribution.py survive: task 12's closing run of the three lists whole at e4c6078f (2026-11-09) killed fix-round-record's 30 and reopen-measure's 133, and 260 of scope-attribution's 263, its expected survivors none. All three mutate compute_review_scope.rs's window start (the held run's last-run check, and hiding the transition commit), which has changed since the lists last ran whole at 5db2c8a5 (1a0623f2)
-- [ ] For each, make a test fail with the mutation: correct or add the test, or remove the line when nothing decides on it, and name the killing test in the mutation's filter
+- [x] Find why M24, M25 and M123 in scripts/mutation/scope-attribution.py survive: task 12's closing run of the three lists whole at e4c6078f (2026-11-09) killed fix-round-record's 30 and reopen-measure's 133, and 260 of scope-attribution's 263, its expected survivors none. All three mutate compute_review_scope.rs's window start (the held run's last-run check, and hiding the transition commit), which has changed since the lists last ran whole at 5db2c8a5 (1a0623f2)
+- [x] For each, make a test fail with the mutation: correct or add the test, or remove the line when nothing decides on it, and name the killing test in the mutation's filter
 - [ ] Re-run scope-attribution.py whole from a worktree of the fixing commit, and the other two lists if the fix touches what they mutate
 
 - **Done when**: scope-attribution.py runs whole with every mutation killed, or a survivor listed in EXPECTED_SURVIVORS with the reason no portable test can kill it, at the commit 079's review reads

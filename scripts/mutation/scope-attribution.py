@@ -15,7 +15,12 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 """
 
-EXPECTED_SURVIVORS = {}
+EXPECTED_SURVIVORS = {
+    'M25': 'including the transition commit in the walk changes no result: its record is the '
+    'reopening\'s own tree, so a run it holds is either held, which the walk skips (an open '
+    'fix-round mark counts as held), or carried in, which `carried` reads, and it finishes '
+    'nothing either way',
+}
 
 MUTATIONS = [
     (
@@ -184,7 +189,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)',
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|_| false)',
-        'compute_review_scope::tests::a_run_carried_across_the_reopening_does_not_move_the_start',
+        'compute_review_scope::tests::a_merge_carrying_in_a_run_from_before_the_reopening_does_not_move_the_start',
     ),
     (
         'M25 a record in the transition commit moves the start',
@@ -870,7 +875,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)',
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|prior| prior.last_run == run.last_run && !prior.stopped_early)',
-        'compute_review_scope::tests::clearing_a_held_record_from_before_the_reopening_finishes_nothing',
+        'compute_review_scope::tests::a_merge_clearing_a_held_record_from_before_the_reopening_finishes_nothing',
     ),
     (
         'M124 another spec\'s directory makes a review owed',
