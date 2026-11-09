@@ -76,12 +76,12 @@ Blocked on task 2: it shows the text rendering.
 
 ## 8. Install the hook, and verify it in Claude Code
 
-The prototype and its `settings.local.json` entry are removed, and the generator has run. What remains of the third subtask, `/ductus:configure`, needs a session started after this checkout's release build of 4294b79a, since an earlier session's MCP server has no `merge-status-hook`. The fourth needs the owner typing `/ductus:status`, since one the agent invokes takes the model path.
+`/ductus:configure` has installed the hook in this checkout, and `research.md` records that run. The fourth subtask needs the owner typing `/ductus:status`, since one the agent invokes takes the model path. Claude Code may snapshot hooks at session start, so if the first typed one still reaches the model, check `/hooks` or start a fresh session, and record which it was. Moving the pointer aside leaves a running session's MCP server up, so that run shows the fallback but not the model path surfacing the runtime's own error, AC25's second half; record which half it exercised.
 
 - [x] Add the `merge-status-hook` step to `framework/bootstrap/configure/claude.md` after `merge-permissions`
 - [x] Add it to `framework/bootstrap/ductus.md` for each Claude agent once the runtime is acquired. Add its CLI rule to Claude's seed and sweep the seed's subcommand count
-- [ ] Remove the local prototype, `.claude/hooks/status-hook.sh` and its `settings.local.json` entry. Then run `scripts/gen-claude-commands.sh`, since the slash command loads the installed copy, and run `/ductus:configure` in this checkout
-- [ ] Type `/ductus:status` twice and confirm the view shows with no model turn and no "Original prompt:" line, then from a session started in a subdirectory, then with the pointer moved aside. Confirm the last exits 1, falls back to the model path, and record whether Claude Code shows a notice
+- [x] Remove the local prototype, `.claude/hooks/status-hook.sh` and its `settings.local.json` entry. Then run `scripts/gen-claude-commands.sh`, since the slash command loads the installed copy, and run `/ductus:configure` in this checkout
+- [ ] Type `/ductus:status` twice and confirm the view shows with no model turn and no "Original prompt:" line, then from a session started in a subdirectory, then with the pointer moved aside. Confirm the last fails without blocking (the shell exits 127 for the missing pointer; only exit 2 blocks), falls back to the model path, and record the status Claude Code reports and whether it shows a notice
 
 - **Done when**: `research.md` records each run with its Claude Code version, timing and date (AC1, AC16, AC25).
 

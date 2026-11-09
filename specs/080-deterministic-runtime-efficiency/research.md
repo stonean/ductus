@@ -206,3 +206,9 @@ Measured by `scripts/measure-result-sizes.sh` at 4294b79a15383c1c5cf700d62a0f05b
 **Method.** On 2026-11-08, on macOS with Claude Code 2.1.319, the `ductus mcp` server that this session's `claude` process spawned was read for its environment with `ps -E` and for its working directory with `lsof`. `claude --version` was then run with exactly that environment, replacing rather than inheriting one, in that working directory, with stdin from `/dev/null`, as `merge-status-hook`'s probe runs it. The environment held 65 variables, `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PROJECT_DIR` among them, and its `PATH` held `~/.local/bin`, where the native installer puts `claude`.
 
 **Result.** Exit 0, `2.1.319 (Claude Code)` on stdout, nothing on stderr, so the probe stays in the runtime and the host-run fallback is not used. This replays the server's environment rather than probing from inside the server process; task 8's `/ductus:configure` run is that check.
+
+### The probe inside the MCP server, and the hook's install (task 8)
+
+**Method.** On 2026-11-09 at 02:11 UTC, on macOS with Claude Code 2.1.319, `/ductus:configure` ran in this checkout. It ran through the `ductus mcp` server this session's `claude` process spawned, which `lsof` showed running `runtime/target/release/ductus`, the release build of 4294b79a's runtime. No `runtime/` change landed after that build. Beforehand, `.claude/settings.local.json` had no `hooks` key.
+
+**Result.** Step 6's `merge-status-hook` returned `updated` with `claude-version` `2.1.319` and a null `reason`, so the probe reads the version from inside the server process. The file then held one `UserPromptExpansion` entry: matcher `ductus:status`, command `"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus" hook status`, timeout 10. It held no other hook event, and its other top-level keys were unchanged. A second call returned `unchanged` and left the one entry.
