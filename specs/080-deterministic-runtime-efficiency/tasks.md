@@ -108,9 +108,7 @@ Blocked on task 9: the line drops the always-loaded set.
 
 ## 11. An adopter bootstrap across the change
 
-Blocked on tasks 8 and 10.
-
-The real `/ductus` run waits for the commits to reach `main`. A version-bumped pin with no tag halts `--ref=main`, so that run names this checkout's release build in `[runtime] path`, which `/ductus`'s acquisition Branch 1 uses with a warning.
+Tasks 8 and 10 have landed and reached `main` (a62d2328, restored in 9bf198f5), so the second subtask's staging-copy check runs against the pushed tree. A version-bumped pin with no tag halts `--ref=main`, so the real `/ductus` run names this checkout's release build in `[runtime] path`, which `/ductus`'s acquisition Branch 1 uses with a warning.
 
 - [ ] Bootstrap a scratch adopter, with Claude and Auggie selected, from a release before this spec
 - [ ] Before pushing: drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`, per `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that Claude's copies carry the line and Auggie's are byte-identical to before
@@ -227,3 +225,10 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 - [ ] Test it in `runtime/src/interpreter/payload.rs`: a file-form result whose file lacks a counted list is `ListsFileUnreadable`, naming the list
 
 - **Done when**: the test passes and fails with the check removed, and task 24's M9 anchors on the restored check.
+
+## 26. `gen-claude-commands.sh` halts on a runtime that predates `tool-search-line`
+
+- [ ] Refuse a runtime whose `apply-manifest --help` does not name `tool-search-line`. 81285165 was committed from a worktree whose release binary predated a62d2328: that `apply-manifest` ignored the unknown field, so the hook's regeneration dropped the line from 14 Claude copies and nothing halted (restored in 9bf198f5). A stale runtime must halt the generator, and so the commit, rather than rewrite the copies
+- [ ] Test it in `scripts/tests/`, with a stub runtime that lacks the field and one that has it, and add the test to the workflow that runs the generator's scripts
+
+- **Done when**: the generator halts, naming the runtime, with a binary that lacks the field and passes with one that has it, and the test fails with the check removed.
