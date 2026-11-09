@@ -136,3 +136,11 @@ This task waited until `079-review-and-analysis-work-converges` was `done` (owne
 It owes `/ductus:analyze` on 078, each live finding dispositioned, which runs once no box in this file is open (spec 079). `check-review-gate` decides whether a review comes first, and its ticked criteria are verified against the tree before either run (spec 079 task 26, owner, 2026-11-09).
 
 - **Done when**: `analysis.md` is current with no live hard-fail or blocking finding, so `/ductus:implement`'s completion gate can run
+
+## 16. A supplied Summary carries the loop's account
+
+- [x] When the run passes `fix-rounds`, `write-review` appends the loop's account to a Summary the caller supplies, as it does to the one it generates, and with none it renders a supplied Summary exactly as given (066's scenario `a-supplied-summary-carries-the-loops-account`; fixed here rather than in 066's task 17, owner, 2026-11-09)
+- [x] A test that fails without the append, and the `runtime/CHANGELOG.md` entry
+- [x] `data-model.md` and `plan.md` say the Summary, supplied or generated, renders the account, every other artifact saying the generated one is swept, and 066's task 17 is ticked
+
+- **Done when**: AC2 holds for a supplied Summary: every record a run with the loop writes names each exempt round

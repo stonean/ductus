@@ -29,14 +29,15 @@ its version and date.
   points at, so a review still commits nothing; past `[artifacts]
   read-size-bytes` a result's lists move to the file `lists-file` names,
   with every count inline. `review.md` records `fix-rounds`, `re-reads`,
-  `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers`, and
+  `diff-checked`, `not-re-read`, `budget-stop` and `round-waivers`, its
+  Summary naming each exempt and each waived round whoever wrote it, and
   `/implement`'s completion gate holds `done` while a round that needed a
   re-read has neither one nor the operator's waiver: `check-review-gate`'s
   `blocked-by` gains `fix-round-not-re-read`, which a script matching its
   values must accept. A record written before this passes with a notice that
   it does not say. `[review] re-reads-off = "<reason>"` switches the loop
   off, waiving each such round with that reason; a malformed one halts the
-  run before its first fix. Spec 078; spec 066, task 15.
+  run before its first fix. Spec 078; spec 066, tasks 15 and 17.
 - **`check-review-freshness`: whether a spec's review is still current.** A
   new primitive, an MCP tool and CLI subcommand, that asks of one spec at any
   status the comparison `/implement`'s completion gate makes before `done`:

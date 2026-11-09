@@ -1399,8 +1399,11 @@ fn render_report(
 }
 
 /// The report's Summary: the caller's, when it supplied one, else the
-/// generated count line, followed by the loop's account when the run passed
-/// its rounds.
+/// generated count line. Either is followed by the loop's account, joined
+/// after a space, when the run passed its rounds, so the record names each
+/// exempt and each waived round whoever wrote the Summary (spec 078 AC2;
+/// 066's scenario `a-supplied-summary-carries-the-loops-account`). A supplied
+/// Summary is otherwise rendered exactly as given.
 fn report_summary(
     args: &WriteReviewArgs,
     buckets: &Buckets<'_>,
@@ -1408,7 +1411,10 @@ fn report_summary(
     record: &Record<'_>,
 ) -> String {
     if let Some(summary) = args.summary.as_deref().filter(|s| !s.trim().is_empty()) {
-        return summary.to_string();
+        return match record.fix_rounds {
+            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),
+            None => summary.to_string(),
+        };
     }
     let mut summary = generate_summary(
         args,
@@ -4751,6 +4757,39 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(!report.contains("round-waivers"), "{report}");
         assert!(report.contains("0 fix round(s)"), "{report}");
+    }
+
+    /// A Summary the caller supplies is rendered exactly as given when the
+    /// run passed no rounds, and carries the loop's account, joined after a
+    /// space, when it did, so an exempt round is named whoever wrote the
+    /// Summary (spec 078 AC2; 066's scenario
+    /// `a-supplied-summary-carries-the-loops-account`).
+    #[test]
+    fn a_supplied_summary_carries_the_loops_account() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.summary = Some("Read the scope whole".into());
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains("## Summary\n\nRead the scope whole\n\n## MUST"),
+            "{report}"
+        );
+
+        args.summary = Some("Read the scope whole\n".into());
+        args.fix_rounds = Some(vec![
+            round(FixRoundCheck::Exempt, None, None),
+            round(FixRoundCheck::ReRead, Some(ReReadOutcome::Clean), None),
+        ]);
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains(
+                "## Summary\n\nRead the scope whole 2 fix round(s): 1 re-read, 0 diff-checked, \
+                 1 exempt, 0 not re-read. Exempt: round 1.\n\n## MUST"
+            ),
+            "{report}"
+        );
     }
 
     /// One round is named alone, several in order with the last joined by

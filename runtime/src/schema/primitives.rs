@@ -1306,7 +1306,8 @@ pub struct WriteReviewArgs {
     #[arg(long)]
     pub empty_scope: bool,
     /// Optional Summary override; a deterministic count line is generated when
-    /// absent.
+    /// absent. When the run passes `fix-rounds`, the loop's account follows
+    /// either.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub summary: Option<String>,

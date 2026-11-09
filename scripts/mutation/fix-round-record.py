@@ -1,8 +1,8 @@
 """Mutation list for 066's `the-fix-round-loop-is-recorded-and-gated`: the
 fix-round loop's record and gate (spec 078). `write-review` derives the six
-loop fields from its `fix-rounds` argument, refuses a malformed round, and
-applies the `[review] re-reads-off` reason
-(`runtime/src/primitives/write_review.rs`); `check-review-gate`'s fix-round check
+loop fields from its `fix-rounds` argument, refuses a malformed round,
+applies the `[review] re-reads-off` reason, and appends the loop's account to
+a Summary the caller supplies (`runtime/src/primitives/write_review.rs`); `check-review-gate`'s fix-round check
 blocks an un-re-read round without a waiver and its passing notice names a
 record without the fields (`runtime/src/primitives/check_review_gate.rs`);
 `invalidate-review` drops the fields with the run
@@ -265,5 +265,12 @@ MUTATIONS = [
             '        "excluded",\n        "open-findings",\n',
         ],
         'invalidate_review::tests::a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay',
+    ),
+    (
+        "M31 a Summary the caller supplies drops the loop's account",
+        'src/primitives/write_review.rs',
+        '            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),',
+        '            Some(_) => summary.to_string(),',
+        'write_review::tests::a_supplied_summary_carries_the_loops_account',
     ),
 ]

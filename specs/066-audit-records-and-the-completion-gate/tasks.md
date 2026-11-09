@@ -134,8 +134,8 @@ Antigravity's seed carries no CLI entry, and Pi has no seed. Family 32 holds eac
 
 Before the second item, read 078's `status:`. At `done`, that edit is a factual correction to a durable contract, so it takes 078's `done → in-progress` back-edge and stales its review (§spec-lifecycle): put it to the owner first. If the line already says the Summary, supplied or generated, the item is satisfied.
 
-- [ ] Implement the behavior described in `scenarios/a-supplied-summary-carries-the-loops-account.md`
-- [ ] Change `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`'s "The generated Summary renders" line to say the Summary, supplied or generated
+- [x] Implement the behavior described in `scenarios/a-supplied-summary-carries-the-loops-account.md`
+- [x] Change `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`'s "The generated Summary renders" line to say the Summary, supplied or generated
 
 - **Done when**: a supplied Summary carries the loop's account whenever the run passes fix-rounds, a run without them renders it as given, and a test fails when the append is removed
 

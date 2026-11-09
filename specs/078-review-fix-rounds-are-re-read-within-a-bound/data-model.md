@@ -134,7 +134,7 @@ round-waivers:
 | `budget-stop` | `true` when at least `budget` re-reads (`RE_READ_BUDGET`) found a MUST or SHOULD and the last re-read did |
 | `round-waivers` | One per `not-re-read` entry with a `reason`, or, when the switch is set, with the switch's reason and the config file as `waived-by`. Omitted when empty |
 
-The generated Summary renders the counts and names each exempt round and each waived one.
+The Summary, supplied or generated, renders the counts and names each exempt round and each waived one: `write-review` appends that account to a Summary the caller supplies.
 
 ## `check-review-gate` — the fix-round check
 
