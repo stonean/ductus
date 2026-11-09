@@ -263,7 +263,7 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 ## 31. Disposition out-of-spec finding: Auggie's surfaced MCP command names the store when `[runtime] path` names another binary
 
-- [ ] `framework/bootstrap/ductus.md` — §MCP registration's Auggie row surfaces `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"`, the store path, while Runtime acquisition Branch 1 points a project with `[runtime] path` at that binary instead ("The pointer resolves to this path rather than to the store"), so an Auggie session would serve the store's runtime, not the one the project chose (task 11's second update run, 2026-11-09)
+- [x] `framework/bootstrap/ductus.md` — §MCP registration's Auggie row surfaces `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"`, the store path, while Runtime acquisition Branch 1 points a project with `[runtime] path` at that binary instead ("The pointer resolves to this path rather than to the store"), so an Auggie session would serve the store's runtime, not the one the project chose (task 11's second update run, 2026-11-09) — fixed: `ductus.md`'s Branch 1 and its `surface-instruction` paragraph, with `govern.md` copied, now say `[runtime] path` reaches only the agents whose registration names the pointer, while Auggie and Antigravity serve the store's runtime, since 048's Resolved Questions make the store the one correct entry in a per-machine config (owner, 2026-11-09)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
 
