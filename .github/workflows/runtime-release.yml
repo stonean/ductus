@@ -427,7 +427,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Install cargo-cyclonedx
-        run: cargo install --locked cargo-cyclonedx --version 0.5.9
+        run: cargo install --locked cargo-cyclonedx --version 0.5.10
 
       # --override-filename pins the output name (it replaces the whole
       # stem, so the .cdx convention must be part of the value); the
