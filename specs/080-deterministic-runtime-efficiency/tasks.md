@@ -284,3 +284,9 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [ ] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 35. Scenario: configure types no permission entries
+
+- [ ] Implement the behavior described in `scenarios/configure-types-no-permission-entries.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
