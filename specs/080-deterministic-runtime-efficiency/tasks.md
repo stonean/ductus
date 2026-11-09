@@ -76,10 +76,10 @@ Blocked on task 2: it shows the text rendering.
 
 ## 8. Install the hook, and verify it in Claude Code
 
-Blocked on tasks 6 and 7.
+The prototype and its `settings.local.json` entry are removed, and the generator has run. What remains of the third subtask, `/ductus:configure`, needs a session started after this checkout's release build of 4294b79a, since an earlier session's MCP server has no `merge-status-hook`. The fourth needs the owner typing `/ductus:status`, since one the agent invokes takes the model path.
 
-- [ ] Add the `merge-status-hook` step to `framework/bootstrap/configure/claude.md` after `merge-permissions`
-- [ ] Add it to `framework/bootstrap/ductus.md` for each Claude agent once the runtime is acquired. Add its CLI rule to Claude's seed and sweep the seed's subcommand count
+- [x] Add the `merge-status-hook` step to `framework/bootstrap/configure/claude.md` after `merge-permissions`
+- [x] Add it to `framework/bootstrap/ductus.md` for each Claude agent once the runtime is acquired. Add its CLI rule to Claude's seed and sweep the seed's subcommand count
 - [ ] Remove the local prototype, `.claude/hooks/status-hook.sh` and its `settings.local.json` entry. Then run `scripts/gen-claude-commands.sh`, since the slash command loads the installed copy, and run `/ductus:configure` in this checkout
 - [ ] Type `/ductus:status` twice and confirm the view shows with no model turn and no "Original prompt:" line, then from a session started in a subdirectory, then with the pointer moved aside. Confirm the last exits 1, falls back to the model path, and record whether Claude Code shows a notice
 

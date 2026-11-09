@@ -259,6 +259,8 @@ case "$agent" in
       "Bash(.ductus/bin/ductus.exe relocate-audit-records *)",
       "Bash(.ductus/bin/ductus check-orphaned-references *)",
       "Bash(.ductus/bin/ductus.exe check-orphaned-references *)",
+      "Bash(.ductus/bin/ductus merge-status-hook *)",
+      "Bash(.ductus/bin/ductus.exe merge-status-hook *)",
       "Bash(.ductus/bin/ductus compute-review-scope *)",
       "Bash(.ductus/bin/ductus.exe compute-review-scope *)",
       "Read(//private/var/folders/**/T/ductus-*/**)",
