@@ -74,9 +74,9 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
   - `[review] re-reads-off` (string, default unset): switches step 12's
     fix-round loop off; the value is the reason, at least 16 characters
     once trimmed. Each round that needed a re-read is then recorded as not
-    re-read and waived with it, and each run prints it. A malformed value
-    halts the run at step 10, before any fix, naming the setting and the
-    file.
+    re-read and waived with it, and each run prints it. An empty value
+    counts as unset. A malformed value halts the run at step 10, before any
+    fix, naming the setting and the file.
   - `[artifacts] read-size-bytes` (integer, default 50,000): the size past
     which a step's result moves its lists to the file `lists-file` names, as
     each primitive's description states. A malformed value halts the call

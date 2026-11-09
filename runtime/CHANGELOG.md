@@ -36,8 +36,9 @@ its version and date.
   `blocked-by` gains `fix-round-not-re-read`, which a script matching its
   values must accept. A record written before this passes with a notice that
   it does not say. `[review] re-reads-off = "<reason>"` switches the loop
-  off, waiving each such round with that reason; a malformed one halts the
-  run before its first fix. Spec 078; spec 066, tasks 15 and 17.
+  off, waiving each such round with that reason; an empty one counts as
+  unset, and a malformed one halts the run before its first fix. Spec 078;
+  spec 066, tasks 15 and 17.
 - **`check-review-freshness`: whether a spec's review is still current.** A
   new primitive, an MCP tool and CLI subcommand, that asks of one spec at any
   status the comparison `/implement`'s completion gate makes before `done`:

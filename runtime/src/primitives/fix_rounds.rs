@@ -245,9 +245,11 @@ fn malformed(index: usize, finding: &ReReadFinding) -> Option<String> {
 }
 
 /// The `[review] re-reads-off` reason from the resolved config file, flattened
-/// to one line, or `None` when the key is absent and the loop runs.
+/// to one line, or `None` when the key is absent or empty and the loop runs.
 ///
-/// The reason is held to the length `[[review.disabled-rule-files]]` requires
+/// An empty value, trimmed to nothing, counts as absent, as `CFG-ENV-001` has
+/// it for an optional value with no default (spec 078, task 17). Any other
+/// reason is held to the length `[[review.disabled-rule-files]]` requires
 /// of its own, since both are the audit trail for switching part of a review
 /// off. Any other value halts the caller rather than running or skipping the
 /// loop on a guess (`CFG-ENV-008`), as does a `review` that is not a table.
@@ -255,7 +257,7 @@ fn malformed(index: usize, finding: &ReReadFinding) -> Option<String> {
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidReReadsOff`] for a value that is not a string, or
-/// one shorter than [`MIN_REASON_LEN`] once trimmed, and for a `review` that
+/// one shorter than [`MIN_REASON_LEN`] once trimmed but not empty, and for a `review` that
 /// is not a table, each naming the config file; [`PrimitiveError::Toml`] when
 /// the file does not parse; [`PrimitiveError::Io`] when it cannot be read.
 pub(crate) fn re_reads_off(repo: &Path) -> Result<Option<String>> {
@@ -295,6 +297,9 @@ pub(crate) fn re_reads_off(repo: &Path) -> Result<Option<String>> {
         }
     };
     let length = reason.trim().chars().count();
+    if length == 0 {
+        return Ok(None);
+    }
     if length < MIN_REASON_LEN {
         return Err(invalid(format!(
             "the reason {} is {length} characters once trimmed, under the minimum of {MIN_REASON_LEN}",
@@ -709,6 +714,18 @@ mod tests {
             re_reads_off(config("[review]\ntech-stack-verified = true\n").path()).unwrap(),
             None
         );
+    }
+
+    /// An empty value, or one trimmed to nothing, counts as absent, so the loop
+    /// runs (`CFG-ENV-001`), while one character still halts as too short.
+    #[test]
+    fn an_empty_value_counts_as_absent() {
+        for value in ["\"\"", "\"   \""] {
+            let tmp = config(&format!("[review]\nre-reads-off = {value}\n"));
+            assert_eq!(re_reads_off(tmp.path()).unwrap(), None, "{value}");
+        }
+        let tmp = config("[review]\nre-reads-off = \"x\"\n");
+        assert!(re_reads_off(tmp.path()).is_err());
     }
 
     /// A valid reason comes back on one line, its whitespace collapsed.

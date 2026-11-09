@@ -709,10 +709,10 @@ last_applied = "rule-files-relocate"
 # off /{project}:review's fix-round loop, which has an independent agent re-read
 # the fixes a review makes (spec 078). Its value is the reason, at least 16
 # Unicode codepoints once trimmed, and each run records it as the waiver of
-# every round the loop would have re-read. Any other value halts
-# /{project}:review, naming the setting, the value and the config file. Absent
-# means the loop runs. It belongs to the `[review]` table above: uncomment
-# that header with it to use.
+# every round the loop would have re-read. An empty value counts as absent.
+# Any other value halts /{project}:review, naming the setting, the value and
+# the config file. Absent means the loop runs. It belongs to the `[review]`
+# table above: uncomment that header with it to use.
 #
 # re-reads-off = "Reviews here run on a host without subagents, and no one runs the briefs."
 

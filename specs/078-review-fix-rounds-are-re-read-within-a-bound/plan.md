@@ -48,7 +48,7 @@ The change is **breaking** under `BE-COMPAT-001` in two places: `check-review-ga
 
 ### The switch is read by the runtime
 
-`[review] re-reads-off` is one key whose value is the reason, validated as `[[review.disabled-rule-files]]`' reason is (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entry` and `MIN_REASON_LEN`), through one shared reader. `brief-re-read` reports it, so the host starts no agent. `write-review` applies its reason to every un-re-read round without one, as it resolves the constitution registry itself rather than taking it as an argument (`runtime/src/primitives/write_review.rs`, `render_unexamined_governance`), so the host cannot leave the waiver out. The key joins `runtime/src/schema/config_keys.rs` `SECTIONS` and `framework/bootstrap/ductus.md` §Project Configuration, which `the_installer_documents_the_registry` holds together.
+`[review] re-reads-off` is one key whose value is the reason, validated as `[[review.disabled-rule-files]]`' reason is (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entry` and `MIN_REASON_LEN`), through one shared reader, an empty value counting as absent (`CFG-ENV-001`). `brief-re-read` reports it, so the host starts no agent. `write-review` applies its reason to every un-re-read round without one, as it resolves the constitution registry itself rather than taking it as an argument (`runtime/src/primitives/write_review.rs`, `render_unexamined_governance`), so the host cannot leave the waiver out. The key joins `runtime/src/schema/config_keys.rs` `SECTIONS` and `framework/bootstrap/ductus.md` §Project Configuration, which `the_installer_documents_the_registry` holds together.
 
 ### The exec path makes no round
 

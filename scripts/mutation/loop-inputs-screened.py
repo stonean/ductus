@@ -60,4 +60,11 @@ MUTATIONS = [
         '',
         'start_fix_rounds::tests::a_malformed_switch_halts_before_anything_is_cleared',
     ),
+    (
+        'M7 an empty re-reads-off halts the run instead of running the loop',
+        'src/primitives/fix_rounds.rs',
+        '    if length == 0 {\n        return Ok(None);\n    }\n',
+        '',
+        'fix_rounds::tests::an_empty_value_counts_as_absent',
+    ),
 ]

@@ -149,8 +149,8 @@ The closing review ran at `494a1f3f`, and the analysis after it deferred `CFG-EN
 
 ## 17. An empty re-reads-off counts as absent
 
-- [ ] `fix_rounds::re_reads_off` reads an empty `[review] re-reads-off`, trimmed to nothing, as absent, so the loop runs, as `CFG-ENV-001`'s third declaration has it (078's analysis, 2026-11-09; deferred here by the owner)
-- [ ] A test that fails when an empty value halts again, and a mutant for it
-- [ ] The data model's `[review] re-reads-off` row, `framework/bootstrap/ductus.md` §Project Configuration and `framework/commands/review.md`'s Inputs line say an empty value counts as absent, and AC14's "a switch without a valid reason" is read with an empty value as no switch
+- [x] `fix_rounds::re_reads_off` reads an empty `[review] re-reads-off`, trimmed to nothing, as absent, so the loop runs, as `CFG-ENV-001`'s third declaration has it (078's analysis, 2026-11-09; deferred here by the owner)
+- [x] A test that fails when an empty value halts again, and a mutant for it
+- [x] The data model's `[review] re-reads-off` row, `framework/bootstrap/ductus.md` §Project Configuration and `framework/commands/review.md`'s Inputs line say an empty value counts as absent, and AC14's "a switch without a valid reason" is read with an empty value as no switch
 
 - **Done when**: `re-reads-off = ""` runs the loop, a reason under 16 characters still halts, and the re-check of 078's analysis no longer produces the CFG-ENV-001 finding
