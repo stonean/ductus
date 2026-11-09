@@ -19,7 +19,7 @@ State A becomes a **binding execution contract** rather than a preference. At th
 - **Steps with no backticked primitive run as shown in every state** — the per-language `.gitignore` `curl` (`github.com/github/gitignore`), `git config core.hooksPath`, `chmod`, the git repo / tracked-file checks, and the §Collect Project Inputs prompts in `framework/bootstrap/ductus.md`. The contract names these explicitly so the boundary is unambiguous in both directions (don't shell a primitive step; don't try to tool-ify a non-primitive step).
 - **Per-step graceful degradation**: if a primitive call errors (e.g. a too-old wired `ductus` raises a parse error per §Versioning enforcement in `specs/022-deterministic-runtime/spec.md`), fall back to that one step's shell spec and continue — the whole run does not abandon the deterministic path.
 
-A second, spot reinforcement is added at the top of `framework/bootstrap/ductus.md` **§File Fetching** — the step observed failing — naming the four primitive-backed steps there (`fetch-archive`/`extract-archive`/`apply-manifest`/`enforce-manifest`) and reminding that the `curl`/`tar` shown are the fallback spec.
+A second, spot reinforcement is added at the top of `framework/bootstrap/ductus.md` **§File Fetching** — the step observed failing — naming the four primitive-backed steps there (`fetch-archive`/`extract-archive`/`apply-manifest`/`enforce-manifest`) and reminding that the `curl`/`tar` shown specify what those primitives do, not commands to execute.
 
 ## Edge Cases
 
