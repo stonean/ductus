@@ -23,10 +23,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 The set is every document a Source line, or a claim in any field, cites after tasks 1 and 2. Fetch it into this session's scratchpad, never committed, by the plan's method. A page that renders client-side is read from its documentation source repository's raw file. A claim no copy confirms is rewritten or removed.
 
-- [ ] Name and fetch the set
-- [ ] Check each rule's claims and the header's against the copies, through read-only agents, confirming every quote behind an edit before the edit
-- [ ] Check `FE-VITALS-001`'s three metrics, thresholds and measurement basis against web.dev (AC4)
-- [ ] The landing commit names each document, its URL, the fetch date and the method
+- [x] Name and fetch the set
+- [x] Check each rule's claims and the header's against the copies, through read-only agents, confirming every quote behind an edit before the edit
+- [x] Check `FE-VITALS-001`'s three metrics, thresholds and measurement basis against web.dev (AC4)
+- [x] The landing commit names each document, its URL, the fetch date and the method
 
 - **Done when**: every claim matches a fetched copy or was rewritten or removed, `cargo test --lib no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh`, markdownlint and `scripts/audit/run-all.sh` pass, and AC3's claims half and AC4 hold.
 

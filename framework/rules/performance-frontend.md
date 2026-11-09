@@ -10,7 +10,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces or modifies user-facing UI MUST commit to maintaining the Web Vitals budgets published in `specs/system.md`. `/{project}:analyze` flags frontend projects with no Web Vitals budgets published in `specs/system.md`, a frontend-UI spec that omits that commitment, a spec proposing looser thresholds without a `specs/system.md` justification reference, and budgets that name First Input Delay (FID) in place of INP.
 
-**Source:** web.dev "Web Vitals", web.dev "Defining the Core Web Vitals metrics thresholds", web.dev "Interaction to Next Paint becomes a Core Web Vital on March 12"
+**Source:** web.dev "Web Vitals", web.dev "How the Core Web Vitals metrics thresholds were defined", web.dev "Interaction to Next Paint becomes a Core Web Vital on March 12"
 
 ### FE-VITALS-002
 
@@ -36,13 +36,13 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces a multi-route SPA or that adds a new route SHOULD commit to per-route code-splitting. `/{project}:analyze` emits a warning when an SPA build spec produces a single monolithic bundle, or when a new-route spec statically imports the route module from the entry point. **Not flagged:** a route's chunk prefetched after the initial render, through a framework's route prefetching or `<link rel="prefetch">`.
 
-**Source:** web.dev "Reduce JavaScript payloads with code splitting", React `lazy` reference, Vue Router "Lazy Loading Routes", Angular "Route loading strategies", Next.js `<Link>` reference, MDN `rel=prefetch` documentation
+**Source:** web.dev "Reduce JavaScript payloads with code splitting", React `lazy` reference, Vue Router "Lazy Loading Routes", Angular "Route Loading Strategies", Next.js `<Link>` reference, MDN `rel=prefetch` documentation
 
 ### FE-BUNDLE-003
 
 > The size budgets of `FE-BUNDLE-001` SHOULD be checked automatically on every change to frontend code, dependencies, or build configuration, failing the change when a bundle exceeds its budget.
 
-**Verification:** Any spec or plan covering frontend build or CI configuration SHOULD include an automated budget check that fails on exceedance. `/{project}:analyze` emits a warning when such a spec omits it. **Not flagged:** where the check runs, such as CI, a pre-commit hook, or the bundler's own budget setting.
+**Verification:** Any spec or plan covering frontend build or CI configuration SHOULD include an automated budget check that fails on exceedance. `/{project}:analyze` emits a warning when such a spec omits it. **Not flagged:** where the check runs, such as CI, a pre-commit hook, or the bundler's own budget setting where it measures transferred (compressed) bytes, as the budgets are published; webpack's performance hints compare uncompressed sizes.
 
 **Source:** web.dev "Incorporate performance budgets into your build process", Addy Osmani "Start Performance Budgeting"
 
@@ -66,7 +66,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-IMAGE-003
 
-> Content images SHOULD be delivered at a resolution matched to their rendered size: an image whose rendered width varies with the viewport or device pixel ratio SHOULD offer multiple widths through `srcset` with an accurate `sizes` attribute (or come from an image CDN that resizes per request), rather than one large file the browser scales down.
+> Content images SHOULD be delivered at a resolution matched to their rendered size: an image whose rendered width varies with the viewport SHOULD offer multiple widths through `srcset` with an accurate `sizes` attribute (or come from an image CDN that resizes per request), rather than one large file the browser scales down.
 
 **Verification:** Any spec or plan that introduces content imagery rendered at viewport-dependent sizes SHOULD commit to responsive delivery — named candidate widths with `srcset`/`sizes`, or an image CDN's per-request resizing. `/{project}:analyze` emits a warning when an image-bearing spec names a single source file for imagery that renders at different widths across breakpoints.
 
@@ -80,11 +80,11 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces below-the-fold UI, third-party embeds, or non-critical media SHOULD commit to lazy-loading. `/{project}:analyze` emits a warning when affected-files snippets statically include heavy third-party widgets in the initial render, or when a long-form-page spec omits lazy-loading commitments for below-fold imagery. **Not flagged:** eager loading of an image in a route's initial viewport, which is critical; lazy-loading one is `FE-LOAD-005`'s.
 
-**Source:** web.dev "Browser-level image lazy loading for the web", MDN `loading` attribute documentation
+**Source:** web.dev "Browser-level image lazy loading for the web", MDN `<img>` documentation (`loading`), Chrome for Developers "Lazy load third-party resources with facades"
 
 ### FE-LOAD-002
 
-> The critical rendering path MUST be defined and documented per route — the minimum set of CSS and JavaScript required to render above-the-fold content. Render-blocking JavaScript MUST be minimized: every external classic script (`<script src>`) MUST use `defer` or `async`, or be a module script (`type="module"`), unless parser-blocking execution is required for correctness, with the reason documented.
+> The critical rendering path MUST be defined and documented per route — the minimum set of CSS and JavaScript required to render above-the-fold content. Parser-blocking JavaScript MUST be minimized: every external classic script (`<script src>`) MUST use `defer` or `async`, or be a module script (`type="module"`), unless parser-blocking execution is required for correctness, with the reason documented.
 
 **Verification:** Any spec or plan that introduces a new route or that modifies the document `<head>` MUST commit to a documented critical rendering path and to `defer`/`async` (or module scripts) for every external classic script not documented as requiring parser-blocking execution. `/{project}:analyze` flags affected-files snippets with external classic `<script src>` tags lacking `defer`, `async`, or `type="module"`, other than documented parser-blocking scripts. An inline classic script in the `<head>` belongs in the documented critical path.
 
@@ -96,7 +96,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that lazy-loads images or iframes SHOULD commit to the native `loading="lazy"` attribute. `/{project}:analyze` emits a warning when affected-files snippets lazy-load images or iframes through a script-based loader without a stated reason the native attribute does not fit.
 
-**Source:** MDN `loading` attribute documentation, web.dev "Browser-level image lazy loading for the web"
+**Source:** MDN `<img>` documentation (`loading`), web.dev "Browser-level image lazy loading for the web"
 
 ### FE-LOAD-004
 
@@ -154,11 +154,11 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces web fonts MUST commit to `font-display: swap`, `fallback`, or `optional` on every `@font-face` declaration. `/{project}:analyze` flags CSS in affected files containing `@font-face` rules without a `font-display` declaration or with `font-display: auto`/`block`.
 
-**Source:** web.dev "Best practices for fonts", web.dev "Optimize Cumulative Layout Shift", MDN `font-display` documentation
+**Source:** web.dev "Best practices for fonts", web.dev "Optimize Cumulative Layout Shift", MDN `font-display` documentation, web.dev "Reduce web font size"
 
 ### FE-FONT-002
 
-> Self-hosted web fonts SHOULD be served as WOFF2; legacy formats (TTF, OTF, EOT, WOFF) SHOULD NOT be served as the primary source.
+> Self-hosted web fonts SHOULD be served as WOFF2; other formats (TTF, OTF, EOT, WOFF) SHOULD NOT be served as the primary source.
 
 **Verification:** Any spec or plan that introduces self-hosted fonts SHOULD commit to WOFF2 delivery. `/{project}:analyze` emits a warning when affected-files snippets carry `@font-face` rules that load `.ttf`/`.otf`/`.eot`/`.woff` (not `.woff2`) URLs as the primary source.
 
@@ -180,7 +180,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces client-side processing of large or unbounded data, or other CPU-heavy work in the browser, SHOULD state where that work runs — a Web Worker, or chunked with yields to the main thread. `/{project}:analyze` emits a warning when such a spec describes synchronous processing of a user-controlled or unbounded dataset in an event handler or on page load with no off-main-thread or chunking commitment.
 
-**Source:** web.dev "Optimize long tasks", W3C Long Tasks API, MDN Web Workers API, MDN browser compatibility data for `Scheduler.yield()`
+**Source:** web.dev "Optimize long tasks", MDN Web Workers API, MDN browser compatibility data for `Scheduler.yield()`
 
 ### FE-MAIN-002
 
@@ -188,4 +188,4 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that renders a list, table, feed, or grid whose length can grow with user data SHOULD state how many items are in the DOM at once and the mechanism that bounds it. `/{project}:analyze` emits a warning when such a spec renders the full collection, or accumulates items under infinite scroll, with no pagination or windowing commitment. CSS `content-visibility: auto` skips rendering work for off-screen content but keeps every node in the DOM, so it complements a bound rather than replacing one. This rule governs what the client keeps in the DOM: an unpaginated list response from the server is `BE-PAGE`'s (`api-backend.md`).
 
-**Source:** web.dev "Virtualize large lists with react-window", web.dev "content-visibility: the new CSS property that boosts your rendering performance", Lighthouse "Optimize DOM size" insight (formerly the "Avoid an excessive DOM size" audit)
+**Source:** web.dev "Virtualize large lists with react-window", web.dev "content-visibility: the new CSS property that boosts your rendering performance", Lighthouse "Optimize DOM size" insight
