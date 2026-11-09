@@ -310,3 +310,9 @@ At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25
 - [x] Put AC1's wording to the owner: as written, each reopening closing after this spec's changes land is within the bound, which 5 of the 23 closed since `e7fcde37` are not (030, 032, 015, 045, 061), each with a task here disposing of the miss as AC20 allows — decided (owner, 2026-11-09, option a): AC1 admits a reopening over the bound that has a task on this spec disposing of the miss, and Resolved Questions records why. Rejected: AC1 stating only the method; and keeping the unconditional bound, which this spec could never meet
 
 - **Done when**: the owner has decided the second and third items, this spec's criteria were verified before its review and analysis, and each other spec still to close carries the same step on its pending task
+
+## 27. A miss: 079's own reopening closed with three reviews and one analysis
+
+- [x] `specs/079-review-and-analysis-work-converges` — closed at `2d36f7ce` over AC1's bound, with reviews recorded in `6aef0472`, `347c3f70` and `b0d8ea87` and its analysis in `f46d8711`: `6aef0472`'s run was cut off with its fix-round loop open, so `347c3f70`'s is within the bound, but `347c3f70` left no gating finding, and the code tasks 20 to 25 added after it made `b0d8ea87`'s review owed. The completion gate's `done` question said the reopening closed within the bound, and `measure-reopenings` after the transition showed otherwise. Decide whether the cause wants a pipeline change or a waiver with its reason — fixed: a review recorded while implementation was still open, which AC28 (`29ec6cc2`, the day after `347c3f70`) has since ruled out, since a run records only once every box in `tasks.md` is ticked (owner, 2026-11-09, option a, recorded as a ticked task so the spec stays `done`)
+
+- **Done when**: the miss's cause is fixed, deferred, or waived, with a waiver's reason written on the task.
