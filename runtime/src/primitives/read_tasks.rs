@@ -129,7 +129,6 @@ pub(crate) fn adds_unchecked_box(now: &str, head: &str) -> bool {
         .any(|(line, count)| count > before.get(line).copied().unwrap_or(0))
 }
 
-/// The unchecked boxes `content` holds, for a message: the count, and the first few.
 /// Refuse a review's or an analysis's record while `tasks.md` under `feature_dir` holds an
 /// unchecked box: nothing can say whether a task still open would change what the run read, so
 /// a run records once implementation is complete (spec 079). No `tasks.md` holds no box. A box
@@ -190,6 +189,7 @@ fn without_tasks(content: &str, numbers: &BTreeSet<String>) -> String {
     kept
 }
 
+/// The unchecked boxes `content` holds, for a message: the count, and the first few.
 pub(crate) fn describe_unchecked(content: &str) -> Option<String> {
     let lines = unchecked_lines(content);
     let count: usize = lines.values().sum();

@@ -297,11 +297,11 @@ This spec's `/ductus:analyze` runs with task 12's, once every box in this file i
 
 - [x] Find why M24, M25 and M123 in scripts/mutation/scope-attribution.py survive: task 12's closing run of the three lists whole at e4c6078f (2026-11-09) killed fix-round-record's 30 and reopen-measure's 133, and 260 of scope-attribution's 263, its expected survivors none. All three mutate compute_review_scope.rs's window start (the held run's last-run check, and hiding the transition commit), which has changed since the lists last ran whole at 5db2c8a5 (1a0623f2)
 - [x] For each, make a test fail with the mutation: correct or add the test, or remove the line when nothing decides on it, and name the killing test in the mutation's filter
-- [ ] Re-run scope-attribution.py whole from a worktree of the fixing commit, and the other two lists if the fix touches what they mutate
+- [x] Re-run scope-attribution.py whole from a worktree of the fixing commit, and the other two lists if the fix touches what they mutate
 
 - **Done when**: scope-attribution.py runs whole with every mutation killed, or a survivor listed in EXPECTED_SURVIVORS with the reason no portable test can kill it, at the commit 079's review reads
 
-At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25 is an expected survivor. The whole run of the three lists at `9bf198f5` was stopped unfinished at a handoff (fix-round-record had killed 27 of its 30), so the last item runs all three again, from a clean worktree of HEAD.
+At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25 is an expected survivor. The whole run of the three lists at `9bf198f5` was stopped unfinished at a handoff (fix-round-record had killed 27 of its 30), so the last item runs all three again, from a clean worktree of HEAD. At `7c341fa6` they ran whole in sequence (2026-11-09, 13:14–13:50Z): fix-round-record killed 30 of 30 in 129 s, reopen-measure 133 of 133 in 622 s, and scope-attribution 262 of 263 in 1,388 s, M25 its expected survivor, each exiting 0 with `runtime/src` restored. The next commit moves one doc comment in `read_tasks.rs`, which no mutation's anchor holds (`--check` validates all 426), so the code the review reads is the code they ran against.
 
 ## 26. A miss: 015's, 045's and 061's reopenings closed with two analyses
 
