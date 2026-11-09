@@ -56,7 +56,7 @@ A check that fails is fixed inside that task, since it is inside this spec.
 | `framework/rules/performance-frontend.md` | Modify | The header's posture; five rules to SHOULD; `FE-VITALS-001`'s budgets in `specs/system.md`; Source corrections from the re-fetch |
 | `specs/070-performance-frontend-rules/spec.md` | Modify | *Severity posture*'s counts, the `VITALS` row, and the ticked criteria |
 
-A change under `framework/rules/` runs `runtime.yml`, whose `paths` list `framework/rules/**` and whose corpus test reads every shipped Statement, and `framework-checks.yml`, whose self-audit resolves every `§` reference in a shipped file. So each task runs the tier test, `scripts/lint-rule-ids.sh`, markdownlint and `scripts/audit/run-all.sh` before it is pushed, and the whole `cargo test` runs once before the push. No golden moves with a rule-file edit: the parity fixtures hold their own `framework/rules/`.
+A change under `framework/rules/` runs `runtime.yml`, whose `paths` list `framework/rules/**` and whose corpus test reads every shipped Statement, and `framework-checks.yml`, whose self-audit resolves every `§` reference in a shipped file. So each task runs the tier test, `scripts/lint-rule-ids.sh`, markdownlint and `scripts/audit/run-all.sh` before it is pushed, and the whole `cargo test` runs once before the push. No golden moves with a rule-file edit: `runtime/tests/fixtures/analyze-basic/` and `review-basic/` each carry a `framework/rules/` of their own, and `stage_fixture` in `runtime/tests/parity.rs` copies no repository rule file.
 
 ## Trade-offs
 
