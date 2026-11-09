@@ -22,7 +22,7 @@ One consequence worth naming: this spec's body linked to `../053-supersession-re
 
 052 reopens `done → in-progress` (meaningful body edit, §spec-lifecycle), loses its supersession sections and the acceptance criteria whose deliverables no longer exist, keeps its consolidation content, and returns to `done` when this spec lands.
 
-Deleting ticked criteria is safe rather than destructive because `next-criterion` is monotonically non-decreasing and never reissues a retired label — the counter exists for exactly this. That mechanism survives this change and is what replaces the criterion-level annotation rule being removed.
+Deleting ticked criteria is safe rather than destructive because `next-criterion` is monotonically non-decreasing and never reissues a retired label (§spec-requirements) — the counter exists for exactly this. That mechanism survives this change and is what replaces the criterion-level annotation rule being removed.
 
 The directory keeps its name. Directory names are stable numbered identifiers that inbound links and git history resolve through; renaming would re-point every pointer across the corpus for cosmetic gain, and would make this change carry two directory rewrites instead of one. Only the H1 is retitled.
 

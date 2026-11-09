@@ -1,31 +1,35 @@
 ---
 spec: 054-remove-supersession
-last-run: 2026-10-16T19:38:37Z
-analyzed-against: 2ce89f9d91c5ef1d03f1294506ade742e1aa8ef3
+last-run: 2026-11-09T23:29:49Z
+analyzed-against: ba2768e4b8134777ad3be53e1472cd832df87ef1
 hard-fail: 0
 blocking-findings: 0
-advisory: 0
-unexamined: 9
+advisory: 1
+unexamined: 2
 analyzed-digest:
-  plan.md: 45fb004315650a1c4f0e4bc2f52fde36a64577c0659a6e6a8c1f686ea65e72fa
-  review.md: c0305a010d5786cf4c81fee111da864b684033f71c31f25bf4856f8ce63e2356
-  spec.md: 0069219ff3e20c848b40f861e58db580d51289a5183aaedae6a5ad0791679a41
-  tasks.md: f84fe3bc825998f53727b74a68e5a6af6fed1de3f2d8115061303daf078fdc08
-unexamined-by-reason:
-  not-a-live-claim: 9
+  plan.md: 7071a7cc962dbc343df99220acf38f8cc0bf69ca78cf9d240bfccef1c678bec5
+  review.md: 43b9adca098b6cadef45ec9c3fc0e034e784737d108825c45b3f356fd1abe9ed
+  spec.md: 2316e510c35df8faba6bd5ebd25dadfbb3c3eee9f7dfc855dca5557d5c0a31dd
+  tasks.md: d6910ab4ecec3b92d66a989a1837b8ca002ccfc3e6f8b9b288611a7aa656aec2
 blocking: false
 dispositions:
-  fixed: 0
-  routed: 0
-  discarded: 0
+  fixed: 3
+  deferred: 0
+  waived: 1
   undispositioned: 0
+decisions:
+  - key: grounding — that migrations run only during a bootstrap pass is stated with no pointer
+    outcome: waived
+    reason: An aside inside a Limitation, saying a rejected migration would not have helped; AC16 does not rest on it, and the source that would state it, the bootstrap's migration pass, is outside what this command reads.
+    decided-at: 2026-11-09T23:29:49Z
+    decided-by: rule
 ---
 
 # Analysis — 054-remove-supersession
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 3 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -37,12 +41,18 @@ dispositions:
 
 ## Advisory findings
 
+- grounding — that migrations run only during a bootstrap pass is stated with no pointer — `specs/054-remove-supersession/plan.md` — **waived**: An aside inside a Limitation, saying a rejected migration would not have helped; AC16 does not rest on it, and the source that would state it, the bootstrap's migration pass, is outside what this command reads. (decided by the rule)
+
+## Deferred to other specs
+
 *None.*
 
 ## Unexamined targets
 
-- not-a-live-claim: 9
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-*None.*
+- grounding — the claim that no spec in the corpus carries a supersedes: key points at no record of the search — `specs/054-remove-supersession/spec.md` — **fixed** (decided by the rule)
+- grounding — next-criterion's never reissuing a retired label is stated with no pointer in the plan — `specs/054-remove-supersession/plan.md` — **fixed** (decided by the rule)
+- grounding — next-criterion's never reissuing a retired label is stated with no pointer in a Resolved Question — `specs/054-remove-supersession/spec.md` — **fixed** (decided by the rule)
