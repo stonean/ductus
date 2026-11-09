@@ -1528,8 +1528,14 @@ mod tests {
         }
     }
 
+    /// `rel` under `repo`, joined a component at a time as
+    /// `canonical_directories` joins it, so the expected path carries the
+    /// platform's own separator.
     fn dir(repo: &Path, rel: &str) -> String {
-        repo.join(rel).to_string_lossy().into_owned()
+        rel.split('/')
+            .fold(repo.to_path_buf(), |path, part| path.join(part))
+            .to_string_lossy()
+            .into_owned()
     }
 
     /// With no file, the canonical call writes the three sets and both

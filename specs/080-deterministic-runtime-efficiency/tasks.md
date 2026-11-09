@@ -340,3 +340,9 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 - [ ] Re-run `scripts/measure-result-sizes.sh` once tasks 34–40 have landed, and replace `research.md`'s *Result sizes (AC14)* and *Loaded schema sizes (AC23)* tables, each with its method, units, population, date and commit. Task 34 adds `render-help`, and 35 and 38 may add or change tools, so the recorded tables no longer cover every registry primitive and every tool, and the total no longer adds up. Re-derive the grows-set from the new run, and bound any new member, as task 5 did
 
 - **Done when**: `research.md` names every registry primitive as measured or not measured with its reason, and records each tool's loaded schema size and the total, at a commit after task 40 (AC14, AC23).
+
+## 42. `merge-permissions`' canonical-directory tests on Windows
+
+- [ ] Make the `dir` helper in `runtime/src/primitives/merge_permissions.rs`'s tests join its relative path one component at a time, as `canonical_directories` does. The runtime workflow's Windows build + test failed `a_canonical_call_writes_the_canonical_sets_and_both_directories` and `a_canonical_call_retires_names_and_keeps_the_adopters_entries` at daf517be (run 42713267146): the primitive writes `…\.claude\commands\acme`, and the helper joined `.claude/commands/acme` whole, so it expected `…\.claude/commands/acme`
+
+- **Done when**: the runtime workflow's Windows build + test job passes at the commit that lands the fix, since a local pass proves only the Unix branch.
