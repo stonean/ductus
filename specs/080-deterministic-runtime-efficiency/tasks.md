@@ -122,8 +122,8 @@ Blocked on task 4: the handler reads `render-status`.
 
 - [x] Register `{project}-status` in `framework/bootstrap/pi/ductus-bridge.ts`, with `registerCommand` and `sendMessage` added to its `ExtensionAPI` slice
 - [x] Add the cases to `scripts/tests/pi-bridge-harness.mjs`: the view shown with no turn, and a failure shown the same way
-- [ ] Run a real `pi` session, and record in `research.md` whether the view reached the agent's context, whether Pi can add context without a turn, whether a displayed message renders markdown, and whether the command or the prompt template ran
-- [ ] If markdown does not render, add `render-status`'s `format`. If the template ran, stop `/ductus` installing Pi's status template, and run `classify-spec-edit` on 064's edit
+- [x] Run a real `pi` session, and record in `research.md` whether the view reached the agent's context, whether Pi can add context without a turn, whether a displayed message renders markdown, and whether the command or the prompt template ran
+- [x] If markdown does not render, add `render-status`'s `format`. If the template ran, stop `/ductus` installing Pi's status template, and run `classify-spec-edit` on 064's edit
 
 - **Done when**: the harness passes, a real `pi` run shows the view with no turn, and `research.md` records the four outcomes (AC9, AC27, AC26's Pi half).
 
@@ -131,7 +131,7 @@ Blocked on task 4: the handler reads `render-status`.
 
 Blocked on task 12.
 
-- [ ] When `research.md` records that the view did not reach the context and Pi can add context without a turn, add the target line and the non-done specs grouped by status to the agent's context, and a harness test for it
+- [x] When `research.md` records that the view did not reach the context and Pi can add context without a turn, add the target line and the non-done specs grouped by status to the agent's context, and a harness test for it
 
 - **Done when**: either `research.md` records that the condition does not hold, or the bridge adds the compact form and its harness test passes (AC28).
 
