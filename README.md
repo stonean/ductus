@@ -131,7 +131,7 @@ curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases
 | Auggie | `auggie` | `.augment/commands/ductus.md` | Reads `CLAUDE.md` natively. Needs a one-time manual MCP registration — see [Registering the runtime](docs/runtime.md#registering-the-runtime). |
 | Antigravity | `antigravity` (or `agy`) | `.agents/skills/ductus/SKILL.md` | Wrapped as a skill, since Antigravity discovers dir-form skills rather than verbatim command files. Reads `AGENTS.md`. Needs a one-time manual MCP registration. |
 | OpenCode | `opencode` | `.opencode/command/ductus.md` | Reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` writes the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring. |
-| Pi | `pi` | `.pi/prompts/ductus.md` | Installed as a prompt template, which Pi expands natively (arguments, `description`/`argument-hint` frontmatter). Reads `AGENTS.md`. `/ductus` writes the `.pi/extensions/ductus.ts` bridge that exposes the runtime tools (Pi has no built-in MCP); accept the project-trust prompt once, then restart pi after wiring. |
+| Pi | `pi` | `.pi/prompts/ductus.md` | Installed as a prompt template, which Pi expands natively (arguments, `description`/`argument-hint` frontmatter). Reads `AGENTS.md`. `/ductus` writes the `.pi/extensions/ductus.ts` bridge that exposes the runtime tools (rather than the MCP client pi 1.0.0 added); accept the project-trust prompt once, then restart pi after wiring. |
 
 Then run `/ductus {project-name}` in your agent. The installer creates the right directory for your agent and drops the bootstrap command in place; it's safe to re-run.
 

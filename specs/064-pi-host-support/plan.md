@@ -177,8 +177,9 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 ### D7 — Constitution, README, AGENTS.md, docs (prose sweep, per AC12/AC13)
 
 - `framework/constitution.md` §runtime-host-integration: Pi's prefix, `ductus__`,
-  through the project's `.pi/extensions/ductus.ts` bridge, since Pi has no MCP
-  client (`050-constitution`'s cut shortened every host's entry to its prefix).
+  through the project's `.pi/extensions/ductus.ts` bridge rather than pi's own MCP
+  client, which pi 1.0.0 added (`050-constitution`'s cut shortened every host's
+  entry to its prefix).
   `framework/bootstrap/ductus.md`'s Pi layout states that the bridge wraps the
   runtime's own MCP server over stdio.
 - `README.md`: agent list gains Pi; §Installing (per agent) accepts `pi`

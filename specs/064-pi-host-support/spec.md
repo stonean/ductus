@@ -9,7 +9,7 @@ next-criterion: 17
 Add **Pi** (`pi`, the `@earendil-works/pi-coding-agent` terminal coding agent) as the
 fifth agent `ductus` scaffolds into, alongside Claude Code, Auggie, Antigravity, and
 OpenCode. The work expresses Pi's command surface (prompt templates), its tool surface
-(a zero-dependency extension bridge — Pi has **no built-in MCP**, by design), its native
+(a zero-dependency extension bridge — Pi shipped **no built-in MCP** when this spec verified it), its native
 rules file, and its (absent) permission format as registry-derived values so `/ductus`
 produces a working Pi adoption — on **verified** conventions, not assumed ones.
 
@@ -56,7 +56,7 @@ machinery the other four agents use, with the one new mechanism none of them nee
 | --- | --- |
 | Command surface | **Prompt templates** — `.pi/prompts/*.md`, flat, non-recursive, project-trust-gated. Filename is the command name (`/name`). Frontmatter `description` + `argument-hint` honored; other keys ignored. Body expansion supports `$ARGUMENTS`, `$1..$N`, `${N:-default}`, `${@:N}` — a superset of the syntax the pipeline command files already use |
 | Skills (rejected surface) | `.pi/skills/<name>/SKILL.md`, invoked `/skill:<name>` only when `enableSkillCommands: true`; arguments arrive appended as `User: <args>` with **no** `$ARGUMENTS` substitution |
-| Runtime tools | **No built-in MCP client** (by design). The only extension point is a TypeScript extension registering custom tools via `pi.registerTool`; project-local `.pi/extensions/*.ts` is auto-discovered once the project is trusted |
+| Runtime tools | **No built-in MCP client** (by design) on the pi this spec verified. pi 1.0.0 and later ship one, which `ductus` leaves unused (Resolved Questions). The only extension point is a TypeScript extension registering custom tools via `pi.registerTool`; project-local `.pi/extensions/*.ts` is auto-discovered once the project is trusted |
 | Permissions | **None.** No permission-gating settings surface in `.pi/settings.json` or anywhere else; the model runs tool calls without host prompts. Project trust (`~/.pi/agent/trust.json`, global) controls only whether `.pi/` resources load at all |
 | Native rules | `AGENTS.md` is loaded natively, regardless of project trust |
 | Settings | `.pi/settings.json` (project) / `~/.pi/agent/settings.json` (global) |
@@ -220,3 +220,4 @@ mechanism; nothing in the pipeline depends on either.
 - **Dogfooded pi surface committed in the framework repo** — settled D6. Uncommitted would make the framework repo's own pi adoption invisible to the audits that exist to protect it; the `.claude/commands/` convention already commits the dogfooded copy.
 - **No `cross-spec-impact:` on 012 / 028 / 029 / 031 / 032** — those specs' documented behavior is untouched: the registry *consumes* the new row, the layout branches are additive, and the State-B wiring branches on the existing `mechanism` vocabulary. The one spec this change modifies is 022 (the runtime), which is the back-link partner. 056 is a body-linked dependency (the archive/installer boundary the bootstrap edits land on both sides of), not an impact: neither side's contract moves.
 - **Typebox/JSON-Schema acceptance** — not a design open question but an implementation-time verification: the two-tool probe outcome (plain JSON-Schema object accepted by `registerTool`, or typebox wrap required) is recorded in the plan at implementation time; either path keeps the schema data server-sourced.
+- **Does `ductus` use the MCP client pi 1.0.0 and later ship?** No: the bridge stays Pi's tool surface (owner, 2026-11-09). It also registers `/{project}-status` (spec 080), which no MCP registration can add, and registering the runtime in pi's MCP client beside it would serve every tool twice. pi 1.5.0's own `pi mcp --help` and `--no-mcp` show the client; moving to it was not weighed with a model turn, since no pi account is at hand and Pi support was contributed.

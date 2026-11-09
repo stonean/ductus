@@ -1,14 +1,17 @@
 /**
  * ductus — pi extension bridge to the ductus runtime.
  *
- * Pi has no built-in MCP client (by design), so this extension wraps the
+ * Pi shipped no MCP client before 1.0.0, so this extension wraps the
  * ductus runtime's own MCP server — `.ductus/bin/ductus mcp` — over stdio
  * and re-registers every tool it lists as a pi tool under the `ductus__`
  * prefix. The runtime's MCP server stays the single source of truth for tool
  * names and schemas: this file holds no second copy of the registry, and a
  * runtime release that adds or changes a primitive reaches pi with no edit
  * here. It also registers `/{project}-status`, which shows the runtime's
- * pipeline view, or why it cannot, with no model turn (spec 080).
+ * pipeline view, or why it cannot, with no model turn (spec 080). That
+ * command is why the bridge stays pi's tool surface now that pi 1.0.0 and
+ * later ship an MCP client: no MCP registration can add one, and running
+ * both would serve every tool twice (spec 064, Resolved Questions).
  *
  * Written to `.pi/extensions/ductus.ts` by /ductus (the Pi layout's Bridge
  * step, strategy `update`). Zero npm dependencies — the MCP-over-stdio transport is
