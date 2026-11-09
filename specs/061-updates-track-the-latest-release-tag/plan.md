@@ -73,7 +73,7 @@ This replaces the literal `ductus-main/` at every occurrence: six in `framework/
 - **The id is present** in the tag's registry: the tag knows that migration, so it is not older than it. Pass.
 - **The id is absent**, so fetch `main`'s registry. Registry entries are appended, and removed only when they sunset.
   - **Present at `main`**: the migration was added after the tag. Halt, naming the tag and the migration's `introduced_in`.
-  - **Absent at `main` too**: the migration has been retired, so the project's layout predates every live entry. Pass, as §Pre-run Migrations' stale-reference behavior already treats a retired id.
+  - **Absent at `main` too**: the migration has been retired, so the project's layout predates every live entry. Pass, as `framework/bootstrap/ductus-procedure.md` §Pre-run Migrations' stale-reference behavior already treats a retired id.
 
 Either registry fetch failing halts, naming its URL, as the pin's does (`BE-BULK-002`): the floor is never passed on a registry the run could not read. A null `last_applied` passes, and on the `main` source the check is skipped entirely. The `main` registry read is a validation lookup, not a source fetch. Nothing in the run's content comes from it, so *One run, one source* is not touched. Only the target tag's registry cannot tell a migration newer than the tag from a retired one, and those two need opposite answers.
 
