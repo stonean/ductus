@@ -3234,6 +3234,14 @@ pub struct MergePermissionsArgs {
     #[serde(default)]
     #[arg(long, value_delimiter = ',')]
     pub revoke: Vec<String>,
+    /// Merge Claude's canonical allow, deny and retired sets, which the
+    /// runtime holds, beside any entries passed above, and ensure
+    /// `permissions.additionalDirectories` holds the spec root and
+    /// `{config-dir}/commands/{project}` as absolute paths (spec 080). False
+    /// when absent, so a call names its entries.
+    #[serde(default)]
+    #[arg(long)]
+    pub canonical: bool,
 }
 
 /// Result for `merge-permissions`. Reports the action taken plus
@@ -3257,10 +3265,16 @@ pub struct MergePermissionsResult {
     /// is why both copies went, so attributing one of them to dedup
     /// would credit that pass with work it did not do.
     pub allow_revoked: u32,
+    /// The distinct retired entries the revoke pass removed, in the order
+    /// `revoke` (or, under `canonical`, the retired set) lists them.
+    pub revoked: Vec<String>,
     /// Count of canonical `deny` entries appended (not already present).
     pub deny_added: u32,
     /// Count of duplicate `deny` entries removed.
     pub deny_deduped: u32,
+    /// The paths appended to `permissions.additionalDirectories`, in order;
+    /// empty unless the call was canonical.
+    pub directories_added: Vec<String>,
 }
 
 // -- merge-status-hook -------------------------------------------------------
@@ -7960,9 +7974,11 @@ mod tests {
             allow: vec!["Bash(ls *)".into(), "Edit".into()],
             deny: vec!["Bash(rm -rf *)".into()],
             revoke: vec!["Write(.ductus/session.toml)".into()],
+            canonical: true,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["path"], ".claude/settings.local.json");
+        assert_eq!(value["canonical"], true);
         assert_eq!(value["allow"][0], "Bash(ls *)");
         assert_eq!(value["revoke"][0], "Write(.ductus/session.toml)");
         assert_eq!(round_trip(&args), args);
@@ -7974,6 +7990,7 @@ mod tests {
             allow: vec![],
             deny: vec![],
             revoke: vec![],
+            canonical: false,
         };
         let v: serde_json::Value = serde_json::to_value(&auggie_args).unwrap();
         assert_eq!(v["path"], ".augment/settings.json");
@@ -7984,14 +8001,18 @@ mod tests {
             allow_added: 2,
             allow_deduped: 1,
             allow_revoked: 3,
+            revoked: vec!["Write(.ductus/session.toml)".into()],
             deny_added: 0,
             deny_deduped: 0,
+            directories_added: vec!["/repo/specs".into()],
         };
         let r_value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(r_value["allow-added"], 2);
         assert_eq!(r_value["allow-deduped"], 1);
         // Kebab-case on the wire, matching every sibling count.
         assert_eq!(r_value["allow-revoked"], 3);
+        assert_eq!(r_value["revoked"][0], "Write(.ductus/session.toml)");
+        assert_eq!(r_value["directories-added"][0], "/repo/specs");
         assert_eq!(round_trip(&result), result);
     }
 

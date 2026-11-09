@@ -5,6 +5,7 @@ cross-spec-impact:
   - 022-deterministic-runtime
   - 064-pi-host-support
   - 063-oversized-artifacts-warn-with-a-fix
+  - 023-govern-refinement
 next-criterion: 30
 ---
 

@@ -584,6 +584,7 @@ mod tests {
                 allow: vec!["Edit".into()],
                 deny: vec!["Bash(rm -rf *)".into()],
                 revoke: Vec::new(),
+                canonical: false,
             },
             tmp.path(),
         )

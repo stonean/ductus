@@ -56,6 +56,18 @@
 //! (a)). A host auto-approves the runtime's tools, and the agent calling one
 //! could otherwise write any rule into the file its own writes are prompted
 //! for. `deny` and `revoke` need no ceiling: each only takes a grant away.
+//!
+//! # Canonical sets (`canonical`)
+//!
+//! With `canonical` set, the call merges Claude's canonical allow, deny and
+//! retired sets itself ([`canonical_allow_ordered`], [`CANONICAL_DENY`],
+//! [`RETIRED_ALLOW`]), beside any entries the caller passes, and ensures
+//! `permissions.additionalDirectories` holds the spec root and the project's
+//! command directory as absolute paths. `/{project}:configure` on Claude Code
+//! then types no entry and writes the file through no host tool (spec 080,
+//! scenario `configure-types-no-permission-entries`). Steps 2–4 of
+//! `framework/bootstrap/configure/claude.md` stay the reviewed record of the
+//! three sets, and tests hold each constant equal to its step.
 
 #![allow(clippy::expect_used)]
 
@@ -63,7 +75,9 @@ use std::path::Path;
 
 use serde_json::{Map, Value, json};
 
+use crate::host::Host;
 use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
+use crate::schema::paths::Paths;
 use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 
 /// Execute the `merge-permissions` primitive.
@@ -83,8 +97,8 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 /// - [`PrimitiveError::Io`] on local filesystem failures.
 /// - [`PrimitiveError::Json`] when an existing file fails JSON parse.
 /// - [`PrimitiveError::JsonSchema`] when `permissions.allow` /
-///   `permissions.deny` exists but is not an array (e.g., null,
-///   object, string).
+///   `permissions.deny`, or under `canonical` `permissions.additionalDirectories`,
+///   exists but is not an array (e.g., null, object, string).
 /// - [`PrimitiveError::ConflictingRevoke`] when an entry appears in
 ///   both `allow` and `revoke`. Checked before any filesystem read,
 ///   so a contradictory call never leaves a partial write.
@@ -92,7 +106,22 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
     super::validate_contained(repo, &args.path)?;
     let target_path = repo.join(&args.path);
     super::host_config::check_no_protected(repo, &target_path, &args.path)?;
-    validate_revoke_disjoint(&args.allow, &args.revoke)?;
+    let (allow, deny, revoke, directories) = if args.canonical {
+        (
+            joined(&canonical_allow_ordered(), &args.allow),
+            joined(&to_strings(CANONICAL_DENY), &args.deny),
+            joined(&to_strings(RETIRED_ALLOW), &args.revoke),
+            canonical_directories(repo, &args.path),
+        )
+    } else {
+        (
+            args.allow.clone(),
+            args.deny.clone(),
+            args.revoke.clone(),
+            Vec::new(),
+        )
+    };
+    validate_revoke_disjoint(&allow, &revoke)?;
     refuse_beyond_ceiling(&args.allow)?;
 
     let existing = match target_path.try_exists() {
@@ -112,13 +141,18 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
         allow_added,
         allow_deduped,
         allow_revoked,
+        revoked,
         deny_added,
         deny_deduped,
+        directories_added,
     } = compute_merge(
         existing.as_deref(),
-        &args.allow,
-        &args.deny,
-        &args.revoke,
+        &Sets {
+            allow: &allow,
+            deny: &deny,
+            revoke: &revoke,
+            directories: &directories,
+        },
         &target_path,
     )?;
 
@@ -133,8 +167,10 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
         allow_added,
         allow_deduped,
         allow_revoked,
+        revoked,
         deny_added,
         deny_deduped,
+        directories_added,
     })
 }
 
@@ -174,6 +210,100 @@ const CANONICAL_ALLOW_STATIC: &[&str] = &[
     "Bash(scripts/install-hooks.sh)",
     "Bash(./scripts/install-hooks.sh)",
 ];
+
+/// Claude's canonical `permissions.deny` set, step 3 of
+/// `framework/bootstrap/configure/claude.md`, which
+/// `the_canonical_deny_set_is_configure_claudes_step_3` holds equal to it.
+pub(crate) const CANONICAL_DENY: &[&str] = &[
+    "Bash(rm -rf *)",
+    "Bash(rm -r *)",
+    "Bash(rm -fr *)",
+    "Bash(*rm -rf *)",
+    "Bash(*rm -r *)",
+    "Bash(*rm -fr *)",
+    "Bash(git mv *)",
+    "Bash(git push --force *)",
+    "Bash(git push -f *)",
+    "Bash(git reset --hard *)",
+    "Bash(git rm *)",
+    "Bash(git clean -fd *)",
+    "Bash(git -C * mv *)",
+    "Bash(git -C * push --force *)",
+    "Bash(git -C * push -f *)",
+    "Bash(git -C * reset --hard *)",
+    "Bash(git -C * rm *)",
+    "Bash(git -C * clean -fd *)",
+    "Bash(chmod -R 777 *)",
+    "Bash(> *)",
+];
+
+/// Claude's retired `permissions.allow` entries, step 4 of
+/// `framework/bootstrap/configure/claude.md`, which
+/// `the_retired_set_is_configure_claudes_step_4` holds equal to it. The
+/// canonical call passes them as `revoke`.
+pub(crate) const RETIRED_ALLOW: &[&str] = &[
+    "Bash(git -C * add *)",
+    "Bash(git -C * commit *)",
+    "Bash(git -C * push *)",
+    "Bash(git -C * log *)",
+    "Bash(git -C * diff *)",
+    "Bash(git -C * status *)",
+    "Bash(git -C * show *)",
+    "Write(.ductus/session.toml)",
+    "Write(.ductus/config.toml)",
+    "mcp__ductus__run-generator",
+    "mcp__ductus__check-review-agreement",
+    "mcp__ductus__read-supersession-pair",
+    "mcp__ductus__write-supersession-annotation",
+];
+
+/// [`canonical_allow`] in step 2's order: [`CANONICAL_ALLOW_STATIC`], then
+/// `mcp__ductus__<name>` for each served primitive in registry order. The
+/// canonical call appends missing entries in this order.
+fn canonical_allow_ordered() -> Vec<String> {
+    CANONICAL_ALLOW_STATIC
+        .iter()
+        .map(|entry| (*entry).to_string())
+        .chain(
+            crate::schema::registry::served_primitives().map(|name| format!("mcp__ductus__{name}")),
+        )
+        .collect()
+}
+
+fn to_strings(entries: &[&str]) -> Vec<String> {
+    entries.iter().map(|entry| (*entry).to_string()).collect()
+}
+
+/// `first`, then each entry of `extra` not already in it.
+fn joined(first: &[String], extra: &[String]) -> Vec<String> {
+    let mut out = first.to_vec();
+    for entry in extra {
+        if !out.contains(entry) {
+            out.push(entry.clone());
+        }
+    }
+    out
+}
+
+/// The directories the canonical call ensures under
+/// `permissions.additionalDirectories`, as absolute paths with no trailing
+/// slash: the configured spec root, and `{config-dir}/commands/{project}`,
+/// where `{config-dir}` is the settings file's own directory and `{project}`
+/// the namespace [`Host::load`] resolves.
+fn canonical_directories(repo: &Path, settings_path: &str) -> Vec<String> {
+    let config_dir = Path::new(settings_path)
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
+    let commands = config_dir.join("commands").join(Host::load(repo).project);
+    [repo.join(Paths::load(repo).specs_root), repo.join(commands)]
+        .iter()
+        .map(|dir| {
+            dir.to_string_lossy()
+                .trim_end_matches(['/', '\\'])
+                .to_owned()
+        })
+        .collect()
+}
 
 /// Claude's canonical `permissions.allow` set: [`CANONICAL_ALLOW_STATIC`]
 /// and `mcp__ductus__<name>` for every primitive the MCP server serves, the
@@ -273,53 +403,58 @@ struct MergeOutcome {
     allow_added: u32,
     allow_deduped: u32,
     allow_revoked: u32,
+    revoked: Vec<String>,
     deny_added: u32,
     deny_deduped: u32,
+    directories_added: Vec<String>,
 }
 
-fn compute_merge(
-    existing: Option<&str>,
-    canonical_allow: &[String],
-    canonical_deny: &[String],
-    revoke: &[String],
-    path: &Path,
-) -> Result<MergeOutcome> {
+/// What one call merges: the entries to ensure under `allow` and `deny`, the
+/// entries to retire from `allow`, and the paths to ensure under
+/// `additionalDirectories`, empty unless the call is canonical.
+struct Sets<'a> {
+    allow: &'a [String],
+    deny: &'a [String],
+    revoke: &'a [String],
+    directories: &'a [String],
+}
+
+fn compute_merge(existing: Option<&str>, sets: &Sets<'_>, path: &Path) -> Result<MergeOutcome> {
     match existing {
         // Nothing on disk to retire: a fresh file is written from the
         // canonical sets, which `validate_revoke_disjoint` has already
         // proven share no member with `revoke`.
-        None => Ok(fresh_merge(canonical_allow, canonical_deny)),
-        Some(text) => existing_merge(text, canonical_allow, canonical_deny, revoke, path),
+        None => Ok(fresh_merge(sets)),
+        Some(text) => existing_merge(text, sets, path),
     }
 }
 
-fn fresh_merge(canonical_allow: &[String], canonical_deny: &[String]) -> MergeOutcome {
-    let allow_added = u32::try_from(canonical_allow.len()).unwrap_or(u32::MAX);
-    let deny_added = u32::try_from(canonical_deny.len()).unwrap_or(u32::MAX);
-    let post_value = json!({
+fn fresh_merge(sets: &Sets<'_>) -> MergeOutcome {
+    let allow_added = u32::try_from(sets.allow.len()).unwrap_or(u32::MAX);
+    let deny_added = u32::try_from(sets.deny.len()).unwrap_or(u32::MAX);
+    let mut post_value = json!({
         "permissions": {
-            "allow": canonical_allow,
-            "deny": canonical_deny,
+            "allow": sets.allow,
+            "deny": sets.deny,
         }
     });
+    if !sets.directories.is_empty() {
+        post_value["permissions"]["additionalDirectories"] = json!(sets.directories);
+    }
     MergeOutcome {
         post_value,
         action: "created",
         allow_added,
         allow_deduped: 0,
         allow_revoked: 0,
+        revoked: Vec::new(),
         deny_added,
         deny_deduped: 0,
+        directories_added: sets.directories.to_vec(),
     }
 }
 
-fn existing_merge(
-    text: &str,
-    canonical_allow: &[String],
-    canonical_deny: &[String],
-    revoke: &[String],
-    path: &Path,
-) -> Result<MergeOutcome> {
+fn existing_merge(text: &str, sets: &Sets<'_>, path: &Path) -> Result<MergeOutcome> {
     let original: Value = serde_json::from_str(text).map_err(|source| PrimitiveError::Json {
         path: path.into(),
         source,
@@ -332,13 +467,15 @@ fn existing_merge(
         added: allow_added,
         deduped: allow_deduped,
         revoked: allow_revoked,
-    } = merge_array(permissions, "allow", canonical_allow, revoke, path)?;
+        revoked_entries: revoked,
+    } = merge_array(permissions, "allow", sets.allow, sets.revoke, path)?;
     // Deny is never a retirement subject; see the module's Retirement note.
     let ArrayOutcome {
         added: deny_added,
         deduped: deny_deduped,
-        revoked: _,
-    } = merge_array(permissions, "deny", canonical_deny, &[], path)?;
+        ..
+    } = merge_array(permissions, "deny", sets.deny, &[], path)?;
+    let directories_added = ensure_directories(permissions, sets.directories, path)?;
 
     let action = if post_value == original {
         "unchanged"
@@ -352,9 +489,42 @@ fn existing_merge(
         allow_added,
         allow_deduped,
         allow_revoked,
+        revoked,
         deny_added,
         deny_deduped,
+        directories_added,
     })
+}
+
+/// Append each of `directories` that `permissions.additionalDirectories` does
+/// not hold, compared by exact string, creating the array when it is absent
+/// and `directories` is not empty. Returns the paths appended, in order.
+fn ensure_directories(
+    permissions: &mut Map<String, Value>,
+    directories: &[String],
+    path: &Path,
+) -> Result<Vec<String>> {
+    if directories.is_empty() {
+        return Ok(Vec::new());
+    }
+    let Some(array) = permissions
+        .entry("additionalDirectories")
+        .or_insert_with(|| json!([]))
+        .as_array_mut()
+    else {
+        return Err(PrimitiveError::JsonSchema {
+            path: path.into(),
+            reason: "`permissions.additionalDirectories` exists but is not an array".into(),
+        });
+    };
+    let mut added = Vec::new();
+    for directory in directories {
+        if !array.iter().any(|held| held == directory.as_str()) {
+            array.push(Value::String(directory.clone()));
+            added.push(directory.clone());
+        }
+    }
+    Ok(added)
 }
 
 /// Ensure the top-level value has a `permissions` object, returning a
@@ -380,11 +550,13 @@ fn ensure_permissions_object<'a>(
     }
 }
 
-/// Per-array counts returned by [`merge_array`].
+/// Per-array counts returned by [`merge_array`], and the distinct entries
+/// the revoke pass removed, in `revoke`'s order.
 struct ArrayOutcome {
     added: u32,
     deduped: u32,
     revoked: u32,
+    revoked_entries: Vec<String>,
 }
 
 /// Apply the revoke + dedup + canonical-presence passes to one array
@@ -417,6 +589,7 @@ fn merge_array(
             added,
             deduped: 0,
             revoked: 0,
+            revoked_entries: Vec::new(),
         });
     };
 
@@ -431,18 +604,27 @@ fn merge_array(
     // exact string match. Runs before dedup so a doubled retired entry
     // is attributed wholly to retirement (see the note above).
     let mut revoked = 0u32;
+    let mut removed: Vec<String> = Vec::new();
     if !revoke.is_empty() {
         let mut idx = 0;
         while idx < arr.len() {
-            let retire = arr[idx]
+            let retired = arr[idx]
                 .as_str()
-                .is_some_and(|entry| revoke.iter().any(|r| r == entry));
-            if retire {
+                .filter(|entry| revoke.iter().any(|r| r == entry))
+                .map(str::to_owned);
+            if let Some(entry) = retired {
                 arr.remove(idx);
                 revoked = revoked.saturating_add(1);
+                removed.push(entry);
                 continue;
             }
             idx += 1;
+        }
+    }
+    let mut revoked_entries: Vec<String> = Vec::new();
+    for entry in revoke {
+        if removed.contains(entry) && !revoked_entries.contains(entry) {
+            revoked_entries.push(entry.clone());
         }
     }
 
@@ -481,6 +663,7 @@ fn merge_array(
         added,
         deduped,
         revoked,
+        revoked_entries,
     })
 }
 
@@ -506,7 +689,13 @@ mod tests {
             allow: allow.iter().map(|s| (*s).to_string()).collect(),
             deny: deny.iter().map(|s| (*s).to_string()).collect(),
             revoke: revoke.iter().map(|s| (*s).to_string()).collect(),
+            canonical: false,
         }
+    }
+
+    /// Read a settings file back as JSON.
+    fn read_json(path: &std::path::Path) -> Value {
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
     }
 
     /// Read back `permissions.allow` as owned strings.
@@ -1267,6 +1456,211 @@ mod tests {
             "the parse found the bullets: {documented:?}"
         );
         assert_eq!(documented, canonical_allow());
+    }
+
+    /// The bullets of `framework/bootstrap/configure/claude.md` between the
+    /// line starting `start` and the line starting `end`, each a single code
+    /// span, as the ceiling test parses step 2.
+    fn configure_bullets(start: &str, end: &str) -> Vec<String> {
+        let text = fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../framework/bootstrap/configure/claude.md"
+        ))
+        .unwrap();
+        let from = text.find(start).expect("start heading");
+        let to = from + text[from..].find(end).expect("end heading");
+        text[from..to]
+            .lines()
+            .filter_map(|line| {
+                let item = line.trim().strip_prefix("- `")?.strip_suffix('`')?;
+                (!item.contains('`')).then(|| item.to_string())
+            })
+            .collect()
+    }
+
+    /// The canonical call's deny set is configure's step 3, in its order.
+    #[test]
+    fn the_canonical_deny_set_is_configure_claudes_step_3() {
+        let documented = configure_bullets(
+            "\n3. Canonical `permissions.deny` entries",
+            "\n4. Retired `permissions.allow` entries",
+        );
+        assert!(
+            documented.len() > 10,
+            "the parse found the bullets: {documented:?}"
+        );
+        assert_eq!(documented, to_strings(CANONICAL_DENY));
+    }
+
+    /// The canonical call's retired set is configure's step 4, in its order.
+    #[test]
+    fn the_retired_set_is_configure_claudes_step_4() {
+        let documented = configure_bullets(
+            "\n4. Retired `permissions.allow` entries",
+            "\n5. Ensure `permissions.additionalDirectories`",
+        );
+        assert!(
+            documented.len() > 10,
+            "the parse found the bullets: {documented:?}"
+        );
+        assert_eq!(documented, to_strings(RETIRED_ALLOW));
+    }
+
+    /// A project named `acme`, its spec root `root` when one is given.
+    fn acme(root: Option<&str>) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        let paths = root.map_or_else(String::new, |root| {
+            format!("\n[paths]\nspecs-root = \"{root}\"\n")
+        });
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[host]\nproject = \"acme\"\n{paths}"),
+        )
+        .unwrap();
+        tmp
+    }
+
+    fn canonical_args(allow: &[&str]) -> MergePermissionsArgs {
+        MergePermissionsArgs {
+            canonical: true,
+            ..args(".claude/settings.local.json", allow, &[])
+        }
+    }
+
+    fn dir(repo: &Path, rel: &str) -> String {
+        repo.join(rel).to_string_lossy().into_owned()
+    }
+
+    /// With no file, the canonical call writes the three sets and both
+    /// directories, the model passing no entry.
+    #[test]
+    fn a_canonical_call_writes_the_canonical_sets_and_both_directories() {
+        let tmp = acme(None);
+        let result = run(&canonical_args(&[]), tmp.path()).unwrap();
+        assert_eq!(result.action, "created");
+        let value = read_json(&tmp.path().join(".claude/settings.local.json"));
+        let strings = |field: &str| -> Vec<String> {
+            value["permissions"][field]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_owned())
+                .collect()
+        };
+        assert_eq!(strings("allow"), canonical_allow_ordered());
+        assert_eq!(strings("deny"), to_strings(CANONICAL_DENY));
+        let directories = vec![
+            dir(tmp.path(), "specs"),
+            dir(tmp.path(), ".claude/commands/acme"),
+        ];
+        assert_eq!(strings("additionalDirectories"), directories);
+        assert_eq!(result.directories_added, directories);
+        assert_eq!(result.allow_added as usize, canonical_allow_ordered().len());
+        assert_eq!(result.deny_added as usize, CANONICAL_DENY.len());
+    }
+
+    /// On an existing file the canonical call retires every copy of a retired
+    /// entry and names it once, keeps the adopter's own entries and
+    /// directories where they are, and appends only the directory missing.
+    #[test]
+    fn a_canonical_call_retires_names_and_keeps_the_adopters_entries() {
+        let tmp = acme(None);
+        let specs = dir(tmp.path(), "specs");
+        let before = json!({
+            "permissions": {
+                "allow": ["Bash(my-tool *)", "Write(.ductus/session.toml)", "Edit", "Write(.ductus/session.toml)"],
+                "deny": ["Bash(my-deny *)"],
+                "additionalDirectories": ["/elsewhere", specs],
+            },
+            "model": "opus",
+        });
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        fs::write(
+            tmp.path().join(".claude/settings.local.json"),
+            before.to_string(),
+        )
+        .unwrap();
+        let result = run(&canonical_args(&[]), tmp.path()).unwrap();
+        assert_eq!(result.action, "updated");
+        assert_eq!(result.allow_revoked, 2);
+        assert_eq!(result.revoked, vec!["Write(.ductus/session.toml)"]);
+        let value = read_json(&tmp.path().join(".claude/settings.local.json"));
+        assert_eq!(value["model"], "opus");
+        let allow = value["permissions"]["allow"].as_array().unwrap();
+        assert_eq!(allow[0], "Bash(my-tool *)");
+        assert_eq!(allow[1], "Edit");
+        assert!(
+            !allow
+                .iter()
+                .any(|entry| entry == "Write(.ductus/session.toml)")
+        );
+        assert_eq!(value["permissions"]["deny"][0], "Bash(my-deny *)");
+        let commands = dir(tmp.path(), ".claude/commands/acme");
+        assert_eq!(
+            value["permissions"]["additionalDirectories"],
+            json!(["/elsewhere", specs, commands])
+        );
+        assert_eq!(result.directories_added, vec![commands]);
+
+        let again = run(&canonical_args(&[]), tmp.path()).unwrap();
+        assert_eq!(again.action, "unchanged");
+        assert_eq!(again.revoked, Vec::<String>::new());
+        assert_eq!(again.directories_added, Vec::<String>::new());
+    }
+
+    /// The spec-root directory follows `[paths] specs-root`.
+    #[test]
+    fn the_canonical_spec_root_directory_follows_the_configured_root() {
+        let tmp = acme(Some("design"));
+        let result = run(&canonical_args(&[]), tmp.path()).unwrap();
+        assert_eq!(result.directories_added[0], dir(tmp.path(), "design"));
+    }
+
+    /// Entries a canonical caller passes are still bounded: one beyond the
+    /// ceiling is refused, a retired one is named as the overlap, and an
+    /// `additionalDirectories` that is not an array is refused unwritten.
+    #[test]
+    fn a_canonical_call_still_refuses_what_an_explicit_call_refuses() {
+        let tmp = acme(None);
+        let beyond = run(&canonical_args(&["Bash(*)"]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&beyond, PrimitiveError::InvalidArgument { argument, .. } if argument == "allow"),
+            "{beyond}"
+        );
+        let retired =
+            run(&canonical_args(&["Write(.ductus/config.toml)"]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&retired, PrimitiveError::ConflictingRevoke { entries, .. } if entries == "Write(.ductus/config.toml)"),
+            "{retired}"
+        );
+        assert!(!tmp.path().join(".claude/settings.local.json").exists());
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        let text = r#"{"permissions": {"additionalDirectories": "specs"}}"#;
+        fs::write(tmp.path().join(".claude/settings.local.json"), text).unwrap();
+        let shape = run(&canonical_args(&[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(shape, PrimitiveError::JsonSchema { .. }),
+            "{shape}"
+        );
+        assert_eq!(
+            fs::read_to_string(tmp.path().join(".claude/settings.local.json")).unwrap(),
+            text
+        );
+    }
+
+    /// An explicit call writes no directory, as before the canonical form.
+    #[test]
+    fn an_explicit_call_ensures_no_directory() {
+        let tmp = acme(None);
+        let result = run(
+            &args(".claude/settings.local.json", &["Edit"], &[]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.directories_added, Vec::<String>::new());
+        let value = read_json(&tmp.path().join(".claude/settings.local.json"));
+        assert!(value["permissions"].get("additionalDirectories").is_none());
     }
 
     /// A path in the host's protected set is refused, before any write (spec

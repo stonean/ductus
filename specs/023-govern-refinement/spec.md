@@ -139,6 +139,8 @@ The list is sourced from `framework/runtime-tools.txt` to avoid drift. Each tool
 - [x] AC39: `/ductus:audit` Family 32b fails when an entry appears in both the retired list and the canonical allow set, so a maintainer's editing slip fails in this repo rather than in every adopter's `/ductus:configure` run. An absent retired section is a valid state and is skipped; a retired section that parses to zero entries is a finding.
 - [x] AC40: The contrary decision recorded in [`specs/023-govern-refinement/scenarios/configure-permission-pattern-safety.md`](scenarios/configure-permission-pattern-safety.md) — that `/ductus:configure` does not retroactively strip an already-present unsafe entry — is annotated in place as superseded by AC36–AC38, naming the scenario that counters it. The bullet is annotated rather than deleted: it is the record of what shipped, and an inbound reference to it must not resolve to nothing.
 
+> **Signpost:** [080 — Deterministic runtime efficiency](../080-deterministic-runtime-efficiency/spec.md) moved the passing AC36 and the `configure-retires-formerly-canonical-entries` scenario describe into the runtime. `/ductus:configure` on Claude Code now calls `merge-permissions` with `canonical` and no entries, and the primitive passes the retired list as `revoke` itself, holding it, with the canonical allow and deny sets, as constants that tests keep equal to configure's steps 2 to 4. The list, its exact-match retirement and AC37's pass order are unchanged.
+
 ## Open Questions
 
 *None — all resolved.*

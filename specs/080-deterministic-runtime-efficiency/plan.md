@@ -122,6 +122,16 @@ The scenario `help-answers-with-no-model-turn` puts `/{project}:help` on the pat
 - **Pi.** When the runtime serves `render-help`, the bridge also registers `{project}-help`. Its handler calls `render-help` and shows the guide as a displayed message that triggers no turn, respelled as status's view is, with a failure shown the same way.
 - **The agent's own invocation.** Claude Code fires `UserPromptExpansion` only for a command the user types (code.claude.com/docs/en/hooks), so a `/{project}:help` the agent invokes takes the model path, as status's does.
 
+### Configure's canonical sets come from the runtime
+
+The scenario `configure-types-no-permission-entries` has Claude Code's `/{project}:configure` pass `merge-permissions` no entries. In the cost round its model typed 132 of them, 3,897 characters in a 13.28 s step, and step 5's host-side `Edit` of the settings file was denied (`research.md`, R2).
+
+- **`canonical`.** `merge-permissions` gains a boolean argument, `canonical`, which is `false` when absent. When it is `true`, the call merges Claude's canonical allow set, its canonical deny set and its retired set as `revoke`, together with any entries the caller passes, which the ceiling still bounds. Configure's step 1 passes `path` and `canonical: true` and nothing else. A call without it behaves as before, so the explicit form stays the contract 022's `framework-list-dedup` scenario and 023's scenarios describe.
+- **Where the sets live.** The deny set and the retired set join the allow ceiling as compiled constants in `runtime/src/primitives/merge_permissions.rs`, `CANONICAL_DENY` and `RETIRED_ALLOW`. Two tests hold them equal to steps 3 and 4 of `framework/bootstrap/configure/claude.md`, as `the_ceiling_is_configure_claudes_canonical_allow_set` holds the allow set to step 2. Those steps stay the reviewed record that Families 29 and 32 read. A change to either side alone fails its test, and the constants reach adopters in lockstep with the command.
+- **`additionalDirectories`.** The canonical call also ensures that `permissions.additionalDirectories` holds two absolute paths without a trailing slash, as this checkout's file holds them: the configured spec root, and `{config-dir}/commands/{project}`. `{config-dir}` is the settings file's own directory and `{project}` is the namespace `Host::load` resolves. An entry is compared by its exact string, a missing one is appended, and every other entry stays where it is. Step 5's host-side write goes, and with it the approval prompt it raised.
+- **The result.** It gains `directories-added`, the paths appended, and `revoked`, the retired entries removed, in the retired set's order. Step 7 can then name each removed entry, which a count alone did not allow. Every existing count stays.
+- **The harness.** `scripts/measure-command-cost.py --permissions adopter` passes `--canonical` instead of the sets it parsed from configure's steps 2 and 3, so its own parse goes.
+
 ### Corpus-growing results are bounded through `bounded_lists`
 
 Each primitive in `research.md`'s grows-set returns through `bounded_lists::place` (`runtime/src/primitives/bounded_lists.rs:53`) (AC7). The result is inline while it fits `read-size-bytes`. Past that, its lists go to the file `lists-file` names, with their counts inline, as with `compute-review-scope` (`runtime/src/schema/primitives.rs:752`).
@@ -183,7 +193,8 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `framework/commands/implement.md` | Modify | `read-tasks` lists-file branch |
 | `framework/commands/review.md` | Modify | `--all` lists-file branch |
 | `framework/commands/target.md` | Modify | Not-found enumeration lists-file branch |
-| `framework/bootstrap/configure/claude.md` | Modify | Calls `merge-status-hook` |
+| `framework/bootstrap/configure/claude.md` | Modify | Calls `merge-status-hook`; step 1 passes `canonical`, step 5's host write goes |
+| `runtime/src/primitives/merge_permissions.rs` | Modify | `canonical`: the deny and retired sets, `additionalDirectories` |
 | `framework/bootstrap/configure/auggie.md` | Modify | Regenerated allow block |
 | `framework/bootstrap/ductus.md` | Modify | Claude rows' field; hook install; seed rule |
 | `framework/bootstrap/pi/ductus-bridge.ts` | Modify | Registered status and help commands |
@@ -227,6 +238,8 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 - **One entry for status and help, with a widened matcher:** rejected. It needs a `hook` member that reads `command_name` from the input, a field this project has not observed, and it needs every adopter's `hook status` entry retired, which would otherwise fire beside it. Two entries need neither.
 - **Renaming `merge-status-hook` once it installs help too:** rejected. The name is in 28 live files (115 occurrences, 7 specs), and every adopter's permission entries for the old name would need retiring.
 - **The bridge reading Pi's help copy itself:** rejected. It would be a second copy of the guide's extraction rule, in TypeScript, and the capability `hook help` adapts belongs on MCP in any case.
+- **Reading configure's sets from its installed copy at run time:** rejected. It would follow a pinned copy's deny and retired edits. But it needs a runtime parser of three steps, errors for a copy that is missing or malformed, and an allow set that the compiled ceiling would still refuse past, so a pinned copy that adds an allow entry would fail the whole call. The allow side already ignores such edits.
+- **Making the canonical sets the default when no entry is passed:** rejected. Over MCP an omitted list and an empty one arrive alike, so a call meant to dedup alone would install the sets. The explicit argument says what the call does.
 - **The settings entry's path:** it names the repository pointer and assumes `CLAUDE_PROJECT_DIR` is the registering root. A per-machine absolute path, as in the prototype, would not travel.
 
 ## Open Questions Resolved
@@ -236,6 +249,7 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 
 ## Cross-spec impact
 
-- **022 — deterministic runtime**, `in-progress`, owner of the runtime core. It owes the new `hook` surface with its `help` member, `render-status`, `render-help`, `merge-status-hook` with help's entry, the `alwaysLoad` `_meta`, `dashboard`'s dropped field and the bounded results. Discharged by the edits to its data model and its `dashboard-primitive` scenario, which links back to 080.
+- **022 — deterministic runtime**, `in-progress`, owner of the runtime core. It owes the new `hook` surface with its `help` member, `render-status`, `render-help`, `merge-status-hook` with help's entry, `merge-permissions`' `canonical` argument, the `alwaysLoad` `_meta`, `dashboard`'s dropped field and the bounded results. Discharged by the edits to its data model and its `dashboard-primitive` scenario, which links back to 080.
+- **023 — govern refinement**, `done`. Its scenario `configure-retires-formerly-canonical-entries` says configure passes the retired list to `merge-permissions` as `revoke`. Under `canonical` the primitive holds that list itself. A blockquote signpost in its `spec.md` is a correction and does not reopen it, and `cross-spec-impact:` gains 023 until that signpost links back.
 - **063 — oversized artifacts warn with a fix**, `in-progress`. `read-size-bytes` now also bounds primitive results and the view. Discharged by a signpost in its `spec.md` linking 080.
 - **064 — Pi host support**, `done`. The bridge registers two commands, status and help. A blockquote signpost in its `spec.md` is a correction and does not reopen it. Its D1 command surface changes only if the template loses to the command. If `/ductus` then stops installing `{project}-status`, 064's criteria change, and `classify-spec-edit` decides the reopen.

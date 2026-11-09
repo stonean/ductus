@@ -23,11 +23,11 @@ AGENTS.md or CLAUDE.md, and leaves the git hooks inactive.
 `.claude/settings.local.json` allows `mcp__ductus__*` alone by default.
 `--permissions adopter` instead holds what an adopter's file holds: the
 bootstrap seed of ductus.md's `claude` registry row, as its Permission
-Setup merges it, then the canonical allow and deny sets of
-framework/bootstrap/configure/claude.md steps 2 and 3 through
-merge-permissions, as /ductus:configure's step 1 does. Under `-p` a call
-those rules do not approve is denied (Claude Code's Manual mode); Read,
-Grep, Glob and read-only Bash need no rule. `--hook` also
+Setup merges it, then the canonical allow, deny and retired sets and
+directories of framework/bootstrap/configure/claude.md steps 2 to 5, through
+merge-permissions' canonical call, as /ductus:configure's step 1 makes it.
+Under `-p` a call those rules do not approve is denied (Claude Code's Manual
+mode); Read, Grep, Glob and read-only Bash need no rule. `--hook` also
 installs Claude Code's status and help hooks with merge-status-hook. `--target`
 writes the shared session default to that feature before any run, so a
 command that needs a target finds one.
@@ -77,7 +77,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 PROJECT = "fixture"
 DUCTUS_MD = REPO / "framework/bootstrap/ductus.md"
-CONFIGURE_MD = REPO / "framework/bootstrap/configure/claude.md"
 # The bare-keyed map /ductus substitutes (ductus.md, Placeholder Substitution).
 SUBSTITUTIONS = {"project": PROJECT, "cli-config-dir": ".claude", "project-name": PROJECT,
                  "One-line project description.": "A generated project for measuring command cost."}
@@ -171,22 +170,6 @@ def bootstrap_seed() -> dict:
     raise SystemExit(f"measure-command-cost: no `claude` registry row with a settings template in {DUCTUS_MD}")
 
 
-def configure_bullets(step: int) -> list[str]:
-    """The canonical entries of configure/claude.md's step `step` (2 allow,
-    3 deny), parsed as merge-permissions' own test parses step 2."""
-    text = CONFIGURE_MD.read_text()
-    start = text.index(f"\n{step}. Canonical `permissions.")
-    end = start + text[start:].index(f"\n{step + 1}. ")
-    items = []
-    for line in text[start:end].splitlines():
-        item = line.strip()
-        if item.startswith("- `") and item.endswith("`") and "`" not in item[3:-1]:
-            items.append(item[3:-1])
-    if not items:
-        raise SystemExit(f"measure-command-cost: no step-{step} bullets in {CONFIGURE_MD}")
-    return items
-
-
 def build_fixture(specs: int, binary: Path, hook: bool, permissions: str, target: str | None,
                   seed=None) -> Path:
     root = Path(tempfile.mkdtemp(prefix="ductus-cost-"))
@@ -203,16 +186,12 @@ def build_fixture(specs: int, binary: Path, hook: bool, permissions: str, target
     if permissions == "adopter":
         # An adopter's file: /ductus's Permission Setup merges the bootstrap
         # seed into an absent file, then /ductus:configure's step 1 merges
-        # the canonical sets (merge-permissions refuses anything beyond them).
+        # the canonical sets and directories, which the runtime holds.
         boot = bootstrap_seed()["permissions"]
         settings.write_text(json.dumps({"permissions": {"allow": boot["allow"], "deny": boot["deny"]},
                                         "enabledMcpjsonServers": ["ductus"]}, indent=2) + "\n")
-        cmd = [ductus, "merge-permissions", "--path", ".claude/settings.local.json"]
-        for entry in configure_bullets(2):
-            cmd.append(f"--allow={entry}")
-        for entry in configure_bullets(3):
-            cmd.append(f"--deny={entry}")
-        run(cmd, cwd=root, env=child_env())
+        run([ductus, "merge-permissions", "--path", ".claude/settings.local.json", "--canonical"],
+            cwd=root, env=child_env())
     else:
         settings.write_text(json.dumps({"permissions": {"allow": ["mcp__ductus__*"]},
                                         "enabledMcpjsonServers": ["ductus"]}, indent=2) + "\n")

@@ -95,6 +95,21 @@ As `ductus hook status`, except that the reason is `render-help`'s `guide`, unch
 
 An entry is ductus's status entry when an inner hook's `command` equals the first string above, and its help entry when it equals the second. On Windows each string names `ductus.exe`. Entries are compared by those strings alone, and every other entry, whatever its event or matcher, is left as it is. Each matcher holds a `:`, so Claude Code tests it as an unanchored regular expression on the command name.
 
+## `merge-permissions`' canonical call
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `canonical` | boolean, `false` when absent | Merge Claude's canonical allow, deny and retired sets, which the runtime holds, beside any `allow`, `deny` and `revoke` passed, and ensure the directories below |
+
+Under `canonical`, `allow` is step 2's set of `framework/bootstrap/configure/claude.md` in its order, `deny` is step 3's, and `revoke` is step 4's, each followed by the entries the caller passed. The caller's `allow` entries are still refused past the ceiling. `permissions.additionalDirectories` is created when absent and then holds, compared by exact string, the absolute path of the configured spec root and of `{config-dir}/commands/{project}`, with no trailing slash. `{config-dir}` is the settings file's own directory. Every other entry stays where it is.
+
+| Result field | Type | Meaning |
+| --- | --- | --- |
+| `revoked` | list of strings | The distinct retired entries removed, in the retired set's order |
+| `directories-added` | list of strings | The paths appended to `additionalDirectories`, empty unless the call was canonical |
+
+Every other field of the result is as before.
+
 ## `merge-status-hook`
 
 | Argument | Type | Meaning |

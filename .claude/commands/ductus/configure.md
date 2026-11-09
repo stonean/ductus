@@ -9,7 +9,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 ## Scope Boundaries
 
 - Read and write only `.claude/settings.local.json`. Do NOT modify any other file.
-- Add missing entries, remove exact-match duplicates from `permissions.allow` and `permissions.deny`, and remove the **retired** entries listed in step 4; do NOT reorder or rewrite any other non-duplicate entry the user (or another command) added beyond the canonical set listed below. Retirement is confined to that explicit list — entries this framework itself once shipped — so an entry an adopter authored is never touched, however closely it resembles one. The `merge-permissions` primitive performs the canonical-presence + dedup passes automatically; only `additionalDirectories` is handled outside the primitive (it has no duplication problem — entries are presence-checked, not deduped).
+- Add missing entries, remove exact-match duplicates from `permissions.allow` and `permissions.deny`, and remove the **retired** entries listed in step 4; do NOT reorder or rewrite any other non-duplicate entry the user (or another command) added beyond the canonical set listed below. Retirement is confined to that explicit list — entries this framework itself once shipped — so an entry an adopter authored is never touched, however closely it resembles one. The `merge-permissions` primitive's canonical call performs the retirement, dedup and canonical-presence passes over the sets in steps 2–4 and the `additionalDirectories` presence check of step 5, so this command passes no entry and writes the file through no host tool.
 - Do NOT scan source code, specs, or git history. This command manages only permissions and the status and help hooks.
 - Reference: no constitution sections apply — this command operates on agent-specific permission state, not `ductus` artifacts.
 
@@ -17,7 +17,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
 > **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__merge-permissions,mcp__ductus__merge-status-hook`
 
-1. Invoke `merge-permissions` (MCP: `merge-permissions`) to install the canonical `permissions.allow` and `permissions.deny` sets into `.claude/settings.local.json`, dedup exact-match entries from both arrays, and retire the step-4 entries by passing them as `revoke`. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed. The `revoke` pass is allow-side only and runs before the dedup and canonical-presence passes, so every copy of a retired entry is removed and none is re-added; an entry named in both `allow` and `revoke` is rejected as a caller error rather than resolved by pass order. Without the server, run `.ductus/bin/ductus merge-permissions` with the same arguments (`--path`, and repeated `--allow`, `--deny` and `--revoke`).
+1. Invoke `merge-permissions` (MCP: `merge-permissions`) with `path` `.claude/settings.local.json` and `canonical` `true`, passing no entries: the runtime holds the sets steps 2–4 list (spec 080). The call installs the canonical `permissions.allow` and `permissions.deny` sets, dedups exact-match entries from both arrays, retires the step-4 entries as `revoke`, and ensures step 5's directories. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed, `revoked` naming each retired entry removed, and `directories-added` naming each directory appended. The `revoke` pass is allow-side only and runs before the dedup and canonical-presence passes, so every copy of a retired entry is removed and none is re-added; an entry named in both `allow` and `revoke` is rejected as a caller error rather than resolved by pass order. Without the server, run `.ductus/bin/ductus merge-permissions --path .claude/settings.local.json --canonical`.
 
 2. Canonical `permissions.allow` entries. **Only the bulleted entries below are canonical** — a pattern appearing in the surrounding prose is explanation, never an entry to install, and some of it names patterns that must *not* be added:
 
@@ -178,7 +178,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Bash(chmod -R 777 *)`
    - `Bash(> *)`
 
-4. Retired `permissions.allow` entries — remove every one of these that is present. Passed to `merge-permissions` as `revoke`.
+4. Retired `permissions.allow` entries — remove every one of these that is present. Step 1's canonical call passes them as `revoke`.
 
    **Wildcard before the subcommand** (dropped from the canonical set in ductus 0.33.0, spec 023 task 21; the leading `*` spans inserted options, and `-c` / `--exec-path` run arbitrary commands, so each of these approved arbitrary execution with no prompt):
    - `Bash(git -C * add *)`
@@ -203,12 +203,12 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
    **The list is append-only and must stay disjoint from steps 2–3.** An entry that appears in both the canonical set and this list would be removed and re-added on every run — `merge-permissions` rejects that outright, and `/ductus:audit` Family 32 catches it at maintainer time. Never move an entry here without deleting it from the canonical set in the same edit. Deny-side entries are never retired: an over-broad *denial* refuses more rather than approving more, so the `Bash(git -C * …)` patterns in step 3 are correct and must stay.
 
-5. Ensure `permissions.additionalDirectories` contains (host-side; not handled by `merge-permissions` — this field has no duplication problem, entries are presence-checked):
-   - The `specs/` directory (absolute path)
+5. Ensure `permissions.additionalDirectories` contains (step 1's canonical call does this; the field has no duplication problem, so each entry is presence-checked by exact string and a missing one appended):
+   - The `specs/` directory (absolute path, the configured spec root)
    - The `.claude/commands/ductus/` directory (absolute path)
 
-   Read the file (post-`merge-permissions` write), add any missing absolute paths to `additionalDirectories`, and write atomically.
+   Each is written with no trailing slash. Write nothing here: the file has no host-side write.
 
 6. Invoke `merge-status-hook` (MCP: `merge-status-hook`) with `path` `.claude/settings.local.json` to install the `UserPromptExpansion` hooks that answer a typed `/ductus:status` and `/ductus:help` from the runtime with no model turn (spec 080). It runs `claude --version` first. On 2.1.101 or later it adds each hook entry that is absent, recognizing each of its entries by its command and leaving every other key and entry as they are, and emits `created`, `updated`, or `unchanged`. On an older version, or one it cannot read, it writes nothing and emits `skipped` with its `reason`, so the permissions step 1 merged stay as they are. Without the server, run `.ductus/bin/ductus merge-status-hook --path .claude/settings.local.json`.
 
-7. Confirm what was added, and report what was retired — name each removed entry, so the adopter sees the change to their permission file rather than finding it by diff. Report the hooks' action, and when it was skipped, its `reason`.
+7. Confirm what was added, and report what was retired — name each removed entry from step 1's `revoked`, and each directory from its `directories-added`, so the adopter sees the change to their permission file rather than finding it by diff. Report the hooks' action, and when it was skipped, its `reason`.

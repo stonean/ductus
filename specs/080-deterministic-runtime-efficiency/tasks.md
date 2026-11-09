@@ -291,7 +291,7 @@ Design it in `plan.md` before any code: the plan has none yet. `merge-status-hoo
 
 Design it in `plan.md` first. `merge-permissions` holds the canonical allow set as its ceiling (`CANONICAL_ALLOW_STATIC` and the served tools, `runtime/src/primitives/merge_permissions.rs`), while the deny and retired sets live only in `framework/bootstrap/configure/claude.md` steps 3 and 4, and step 5's `additionalDirectories` write moves into the primitive. `merge-permissions` is a 022 surface, so 022's signpost gains it. Verify with `--round --only configure --permissions adopter`: no entry typed and no denial.
 
-- [ ] Implement the behavior described in `scenarios/configure-types-no-permission-entries.md`
+- [x] Implement the behavior described in `scenarios/configure-types-no-permission-entries.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
