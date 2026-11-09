@@ -122,7 +122,7 @@ Blocked on task 4: the handler reads `render-status`.
 
 - [x] Register `{project}-status` in `framework/bootstrap/pi/ductus-bridge.ts`, with `registerCommand` and `sendMessage` added to its `ExtensionAPI` slice
 - [x] Add the cases to `scripts/tests/pi-bridge-harness.mjs`: the view shown with no turn, and a failure shown the same way
-- [x] Run a real `pi` session, and record in `research.md` whether the view reached the agent's context, whether Pi can add context without a turn, whether a displayed message renders markdown, and whether the command or the prompt template ran
+- [x] Run a real `pi` session, and record in `research.md` whether the view reached the agent's context, whether Pi can add context without a turn, whether a displayed message renders markdown, and whether the command or the prompt template ran — the context check waived: no pi account to run a model turn with (owner, 2026-11-09)
 - [x] If markdown does not render, add `render-status`'s `format`. If the template ran, stop `/ductus` installing Pi's status template, and run `classify-spec-edit` on 064's edit
 
 - **Done when**: the harness passes, a real `pi` run shows the view with no turn, and `research.md` records the four outcomes (AC9, AC27, AC26's Pi half).
@@ -144,8 +144,8 @@ Blocked on task 12.
 
 ## 15. Antigravity's scenario
 
-- [ ] Run `agy` 1.4.11 or later with a `PreInvocation` hook, and record whether it sees the raw command name
-- [ ] Record the scenario through `/ductus:amend`, as in task 14
+- [x] Run `agy` 1.4.11 or later with a `PreInvocation` hook, and record whether it sees the raw command name — waived: the installed `agy` is 1.0.9, and the scenario is recorded without a run (owner, 2026-11-09)
+- [x] Record the scenario through `/ductus:amend`, as in task 14
 
 - **Done when**: the scenario exists under `scenarios/`, is settled by the run, and has no open question (AC11's half; AC10 for Antigravity).
 
@@ -268,5 +268,11 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 ## 32. Scenario: OpenCode keeps the model path
 
 - [x] Implement the behavior described in `scenarios/opencode-keeps-the-model-path.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 33. Scenario: Antigravity keeps the model path
+
+- [x] Implement the behavior described in `scenarios/antigravity-keeps-the-model-path.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
