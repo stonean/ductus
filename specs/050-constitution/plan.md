@@ -364,7 +364,7 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 | The runtime stays current | Adopters have no `runtime/` to keep current, as with the release entries |
 | Stop your own background tasks before writing a handoff | Concerns the agent's own background tasks and handoff notes, which the pipeline has no step for, like *use repo-relative paths in tool calls* |
 | A CI verdict comes from pushing `main` | This repository's trunk-based flow and release-tag distribution, as W1 and W3 |
-| Pi has no MCP client | Concerns maintaining this framework's Pi bridge |
+| Pi's tool surface is the `.pi/extensions/ductus.ts` bridge | Concerns maintaining this framework's Pi bridge |
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
 
