@@ -1,23 +1,23 @@
 ---
 spec: 078-review-fix-rounds-are-re-read-within-a-bound
-last-run: 2026-11-09T19:34:21Z
-analyzed-against: 494a1f3f15b2244a8a226e0dad0ae20d159beef8
+last-run: 2026-11-09T20:14:44Z
+analyzed-against: 5a24d0dc1802720d8f8fcb61ce7f80b5320ebb95
 hard-fail: 0
-blocking-findings: 1
+blocking-findings: 0
 advisory: 5
 unexamined: 2
 analyzed-digest:
-  data-model.md: 2eab71db0a907e9bebb9fc7ffdbe6056a0d117d7f66c877991a7f82aafb99d54
-  plan.md: ad6c1d6a69b774826a25a56c883f3313cfa75f8c679a7d50a6b96c49089f2d9a
-  review.md: bf876f68329130c233294dbc95815daa2a7818e9430e9e51fe19295f593f8278
+  data-model.md: 95cd98fd2db64be4ac315c056ac68c8e70b480723cc124a4db436ca5b570cf78
+  plan.md: 9836d6779b53a075eae043e1327d1db8de9d3aa88cf0f64fdcaec5516c7777af
+  review.md: 0db8a5239f35f997a71ea4bbabd5673fb01293ac063f08a1818681db9b81711f
   scenarios/a-reviews-own-record-is-no-fix-round.md: 8a0190ef5a926425199a4381d558f52db626cdd81803b4e23c9aa1055b130440
   scenarios/fix-round-results-have-a-bounded-size.md: bd6472ece8d3586d1de656fd1d1689848d455ed79183249ff003e9db24817de7
   spec.md: c48110d371473584e66dd08a295650f35e66c8c071a008ba5df0c3600facf2e3
-  tasks.md: 7e41aff1c658ba6d22415680cc922232b54698e193ca2421fc91d22328986eb7
-blocking: true
+  tasks.md: 9730e71dae3eb88645cc82fe32b019a854950b4737c5abc7f860ce5e63279d9e
+blocking: false
 dispositions:
-  fixed: 2
-  deferred: 1
+  fixed: 1
+  deferred: 0
   waived: 5
   undispositioned: 0
 decisions:
@@ -41,13 +41,6 @@ decisions:
     reason: The split rationale's example; every audit run re-derives the overlap.
     decided-at: 2026-11-04T14:34:33Z
     decided-by: andy@stone.dev
-  - key: "rule-assessment — CFG-ENV-001: re-reads-off is declared optional with no default, absence naming what it disables, but an empty value halts where that declaration counts an empty value as absent"
-    outcome: deferred
-    target: specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md
-    task: "17"
-    gating: true
-    decided-at: 2026-11-09T19:34:21Z
-    decided-by: andy@stone.dev
   - key: grounding — the rejected alternative's reason, that compute-review-scope writes nothing outside .ductus/results/, cites nothing
     outcome: waived
     reason: A rejected alternative's reason in a decision record (owner, 2026-11-03), the shape of the stored cost waiver beside it; its source is the primitive's compiled description, which no 078 artifact names and this command does not read.
@@ -59,7 +52,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 1 blocking, 5 advisory; blocking. 2 unexamined target(s). Dispositions: 2 fixed, 1 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -67,7 +60,7 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — CFG-ENV-001: re-reads-off is declared optional with no default, absence naming what it disables, but an empty value halts where that declaration counts an empty value as absent — `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md` — **deferred** to `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md` task 17
+*None.*
 
 ## Advisory findings
 
@@ -75,7 +68,7 @@ decisions:
 - grounding — the Motivation's account of 076's avoidable rounds cites no commit or record — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: History that motivates the spec and governs no behavior; 076's review commits keep it.
 - grounding — the rejected alternative's cost, that diff_since without the index hashes every file on every review, cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: A decision record: it states the cost as the owner weighed it on 2026-11-03.
 - grounding — the overlap Family 7 sees is listed without the run or commit that produced it — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: The split rationale's example; every audit run re-derives the overlap.
-- grounding — the rejected alternative's reason, that compute-review-scope writes nothing outside .ductus/results/, cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: A rejected alternative's reason in a decision record (owner, 2026-11-03), the shape of the stored cost waiver beside it; its source is the primitive's compiled description, which no 078 artifact names and this command does not read. (decided by the rule)
+- grounding — the rejected alternative's reason, that compute-review-scope writes nothing outside .ductus/results/, cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: A rejected alternative's reason in a decision record (owner, 2026-11-03), the shape of the stored cost waiver beside it; its source is the primitive's compiled description, which no 078 artifact names and this command does not read.
 
 ## Deferred to other specs
 
@@ -87,5 +80,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — the claim that ductus exec's walker no-ops the fix and loop steps cites no source — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **fixed** (decided by the rule)
-- grounding — the claim that the round's git diff shows the text as git stores it cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **fixed** (decided by the rule)
+- rule-assessment — CFG-ENV-001: re-reads-off is declared optional with no default, absence naming what it disables, but an empty value halts where that declaration counts an empty value as absent — `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md` — **fixed**
