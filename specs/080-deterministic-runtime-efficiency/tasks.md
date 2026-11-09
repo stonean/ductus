@@ -151,14 +151,14 @@ Blocked on task 12.
 
 ## 16. The `claude -p` harness
 
-- [ ] Write `scripts/measure-command-cost.py`, which builds a fixture project and records four things per run: time to first visible output, time to result, output tokens, and the largest tool result in characters
-- [ ] Run it once, and record whether `claude -p` executes a custom slash command and how a local `UserPromptExpansion` hook treats a `-p` prompt
+- [x] Write `scripts/measure-command-cost.py`, which builds a fixture project and records four things per run: time to first visible output, time to result, output tokens, and the largest tool result in characters
+- [x] Run it once, and record whether `claude -p` executes a custom slash command and how a local `UserPromptExpansion` hook treats a `-p` prompt
 
 - **Done when**: no workflow references the script, and `research.md` records its first run's two findings (AC15).
 
 ## 17. Every command's cost
 
-Blocked on tasks 4, 8, 10 and 16: the round measures the commands as changed.
+Blocked on tasks 4, 8, 10 and 16: the round measures the commands as changed. Those have landed, so it is unblocked. Run `python3 scripts/measure-command-cost.py --specs 40 --raw <dir> --out <file> "/fixture:<name> <args>" …` (its docstring states every figure and flag; `research.md` *The `claude -p` harness's first run* is the method to repeat), once per command, with the hook absent so status's figure is the model path's. Its fixture allows only `mcp__ductus__*`, so a command whose steps need `Read`, `Bash` or `Edit` meets permission denials under `-p`: decide per command before the round (owner), and say in the record which ran to completion. Each run is a model call on the owner's account; the round is 17 commands (`audit.md` excluded, as `/ductus` installs no copy of it).
 
 - [ ] Run the harness over every command in `framework/commands/`
 
@@ -242,6 +242,8 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 ## 28. Pi's `/{project}-status` view names commands Pi can run
 
 - [ ] The view `render-status` returns spells its hints `/{project}:<name>` (each row's next action, the `Next actions:` block, the closing `/{project}:target` prompt). On Pi a command is `/{project}-<name>` (064's D1), and task 12's run showed `/scratch:status` reaching the model as plain text, so on Pi every hint names no command. Decide where the Pi spelling comes from before writing it (owner): the bridge rewriting the view's `/{project}:` to `/{project}-` before it shows it, or `render-status` taking the hint form
+
+OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the same gap on their model paths, which their scenarios' Edge Cases record; decide with Pi's whether the fix covers them.
 
 - **Done when**: the view Pi's registered command shows spells each hint as a command Pi runs, with a bridge harness case for it.
 
