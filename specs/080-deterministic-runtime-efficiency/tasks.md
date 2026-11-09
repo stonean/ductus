@@ -76,12 +76,12 @@ Blocked on task 2: it shows the text rendering.
 
 ## 8. Install the hook, and verify it in Claude Code
 
-`/ductus:configure` has installed the hook in this checkout, and `research.md` records that run. The fourth subtask needs the owner typing `/ductus:status`, since one the agent invokes takes the model path. Claude Code may snapshot hooks at session start, so if the first typed one still reaches the model, check `/hooks` or start a fresh session, and record which it was. Moving the pointer aside leaves a running session's MCP server up, so that run shows the fallback but not the model path surfacing the runtime's own error, AC25's second half; record which half it exercised.
+`/ductus:configure` has installed the hook in this checkout, and two typed `/ductus:status` runs showed the view with no model turn, in the installing session. A session started in `runtime/` showed no view on either path, since Claude Code sets `CLAUDE_PROJECT_DIR` to the session's start directory. Sessions are expected to start at the project root (owner, 2026-11-09), which the spec, the plan and `docs/runtime.md` now say, with `runtime/src/hook.rs`'s comment left to task 23. With the pointer moved aside, the hook exited 127 without blocking and Claude Code showed `UserPromptExpansion hook error`. In the installing session the still-running MCP server then rendered the view. In a session started with the pointer moved aside, the model reported the missing server, the missing-runtime case of AC25's second half. `research.md` records every run.
 
 - [x] Add the `merge-status-hook` step to `framework/bootstrap/configure/claude.md` after `merge-permissions`
 - [x] Add it to `framework/bootstrap/ductus.md` for each Claude agent once the runtime is acquired. Add its CLI rule to Claude's seed and sweep the seed's subcommand count
 - [x] Remove the local prototype, `.claude/hooks/status-hook.sh` and its `settings.local.json` entry. Then run `scripts/gen-claude-commands.sh`, since the slash command loads the installed copy, and run `/ductus:configure` in this checkout
-- [ ] Type `/ductus:status` twice and confirm the view shows with no model turn and no "Original prompt:" line, then from a session started in a subdirectory, then with the pointer moved aside. Confirm the last fails without blocking (the shell exits 127 for the missing pointer; only exit 2 blocks), falls back to the model path, and record the status Claude Code reports and whether it shows a notice
+- [x] Type `/ductus:status` twice and confirm the view shows with no model turn and no "Original prompt:" line. Then type it from a session started in a subdirectory, and with the pointer moved aside. Confirm each fails without blocking (the shell exits 127 for the missing pointer; only exit 2 blocks) and falls back to the model path, and record the status Claude Code reports and whether it shows a notice
 
 - **Done when**: `research.md` records each run with its Claude Code version, timing and date (AC1, AC16, AC25).
 
@@ -194,3 +194,22 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 - [ ] 064: add a signpost for the bridge's registered command, and run `classify-spec-edit` on the edit
 
 - **Done when**: `check-review-gate` reports all three `cross-spec-impact:` entries discharged.
+
+## 21. `merge-status-hook`'s created test on Windows
+
+- [x] Make `no_file_is_created_holding_the_entry` in `runtime/src/primitives/merge_status_hook.rs` expect each platform's own literal, `ductus.exe` on Windows, rather than compare against `hook_command()`. The runtime workflow's Windows build + test failed it at 3e7b3828 (run 42549616407): the primitive appends `EXE_SUFFIX`, as the plan and `data-model.md` specify, and the test pinned the Unix string
+- [x] Say in `MERGE_STATUS_HOOK`'s description (`runtime/src/schema/descriptions.rs`) that the command names `ductus.exe` on Windows
+
+- **Done when**: the runtime workflow's Windows build + test job passes at the commit that lands the fix, since a local pass proves only the Unix branch.
+
+## 22. Disposition out-of-spec finding: `.mcp.json`'s relative command needs a session started at the project root
+
+- [x] `framework/bootstrap/ductus.md` — §MCP registration writes Claude's `.mcp.json` with the command `.ductus/bin/ductus`, relative to the root, so a session started below the project root has no `ductus` server (task 8's `runtime/` run) — waived: sessions are always expected to start at the project root (owner, 2026-11-09; spec Resolved Questions)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 23. `hook.rs`'s `CLAUDE_PROJECT_DIR` comment
+
+- [ ] Correct `PROJECT_DIR_VAR`'s doc comment in `runtime/src/hook.rs`: Claude Code sets `CLAUDE_PROJECT_DIR` to the directory the session started in, and sessions start at the project root, so the claim that a session started below the root still shows the root's view goes (task 8's `runtime/` run; spec Resolved Questions)
+
+- **Done when**: the comment states the observed behavior, landed with the next runtime change rather than on its own.
