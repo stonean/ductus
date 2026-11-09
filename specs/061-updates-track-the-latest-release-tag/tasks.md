@@ -216,3 +216,9 @@ Answered (a) by the owner 2026-10-20, to: (a) fix all four in this run: 061's fi
 - [x] plan.md states the TLS floor, certificate validation and bounds for the bootstrap's and the installer's fetches, the halts' origin, and the three SHOULD sentences (BE-DEPS-007, CFG-ENV-012, BE-BULK-002); spec.md's Failure behavior, AC10 and AC17 name the origin
 
 - **Done when**: 061's re-check produces none of the seven findings, and `check-review-gate` on 061 passes
+
+## 25. Disposition: the migration floor passes a renamed migration id
+
+- [x] The completion gate's criterion check at aa91cdf2 found AC10 and AC17 false in one case. The floor treats a `[migrations] last_applied` id absent from both the tag's and `main`'s `framework/migrations.toml` as retired and passes (`framework/bootstrap/ductus.md`, Source resolution step 6), but `0f31a124` renamed `legacy-constitutions-region` to `remove-legacy-constitutions-region` on `main` (2026-10-29), at `introduced_in` 0.60.0 and in no release, so a `--ref=main` project whose last applied id is the old one passes the floor onto a pre-0.60.0 tag. Waived by the owner (2026-11-09): reaching it needs a `/ductus` run on `main` between `f056b209` and `0f31a124` whose migration batch stopped right after that entry, since a finished batch records a later id; AC10 and AC17 name the case
+
+- **Done when**: the finding is dispositioned, with a waiver's reason written on the task
