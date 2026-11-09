@@ -18,11 +18,13 @@ The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md`
 
 `mktemp -d -t ductus-XXXXXX` lands under `$TMPDIR` on macOS and `/tmp` on Linux without hardcoding either. The archive is fetched with `curl -fsSL -o {tempdir}/ductus.tar.gz {archive-url}` and extracted with `tar -xzf {tempdir}/ductus.tar.gz -C {tempdir}`. Failure is detected by checking `$?` after each command, then verifying `{tempdir}/ductus-main/` exists. Any failure of the three (curl, tar, missing dir) triggers the same abort message the spec mandates.
 
+**Bounds and transport** (`BE-TIMEOUT-001`, `BE-DATA-001`, `BE-DATA-011`). In a State-A or State-B run the `fetch-archive` primitive makes this request, and the `curl` in `framework/bootstrap/ductus.md`'s Archive fetch and extract section specifies what it does. 022's plan, under its `fetch-archive` transport heading, holds the commitments: `FETCH_TIMEOUT` bounds any one stall and `FETCH_DEADLINE` the whole download, both named constants in `runtime/src/primitives/fetch_archive.rs`; only `https` is fetched, through reqwest's rustls backend, which implements TLS 1.2 and 1.3 alone; and the certificate chain and hostname are verified against the system trust store.
+
 The download-then-extract sequence is deliberate over piping (`curl ... | tar -xzf -`):
 
 - Pipes obscure which command failed — needed for the abort message's `{reason}` field.
 - The archive on disk lets the **Post-Write Integrity Check** re-read `ductus.md` cheaply if a corrupted write is detected (no second `curl`).
-- Disk pressure is trivial (the archive plus the extract is <1 MB).
+- Disk pressure is small: the archive plus its extract came to about 15 MB at `ductus-v0.59.11`, 3,523,152 bytes compressed and 11,927,790 extracted (fetched from `codeload.github.com` with `curl` and summed with `tar -tzv` on 2026-11-09).
 
 ### Manifest source resolution
 
@@ -79,6 +81,6 @@ All four open questions resolved during `/ductus:clarify`. See the spec's **Reso
 
 ## Trade-offs
 
-- **Disk vs. memory for the archive** — the download-then-extract approach uses ~1 MB of temp disk. Piping `curl | tar` would skip the disk write but obscure which side failed (needed for the abort message) and force a second `curl` for the integrity-check re-read. The disk cost is negligible; the diagnostic clarity and re-read efficiency are not.
+- **Disk vs. memory for the archive** — the download-then-extract approach uses about 15 MB of temp disk at `ductus-v0.59.11` (measured under **Fetch and extract sequencing**). Piping `curl | tar` would skip the disk write but obscure which side failed (needed for the abort message) and force a second `curl` for the integrity-check re-read. The disk cost is negligible; the diagnostic clarity and re-read efficiency are not.
 - **Archive ref hardcoded to `main`** — same as the current per-file flow; ref pinning is deferred to a later spec (see Resolved Questions in the spec). Adopted since by 061, which resolves the ref per run and defaults it to the latest release.
 - **One-time bootstrap cost** — existing adopters get the new `tar`/`mktemp` allow entries on their next routine `/ductus` re-run. The merge logic is additive and idempotent, so no migration step is needed.
