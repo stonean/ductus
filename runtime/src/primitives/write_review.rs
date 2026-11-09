@@ -232,7 +232,7 @@ fn loop_summary(record: &LoopRecord) -> String {
     }
     for waiver in &record.waivers {
         let reason = crate::primitives::flatten_line(&waiver.reason);
-        // A reason that already ends its sentence takes no second stop.
+        // A reason already ending in '.', '!' or '?' takes no second stop.
         let stop = if reason.ends_with(['.', '!', '?']) {
             ""
         } else {
@@ -4727,7 +4727,7 @@ mod tests {
         assert!(!report.contains("not waived"), "{report}");
     }
 
-    /// A waived round's reason that already ends its sentence takes no second
+    /// A waived round's reason already ending in '.', '!' or '?' takes no second
     /// stop, and one that does not is given one.
     #[test]
     fn a_waivers_reason_ending_its_sentence_takes_no_second_stop() {
@@ -4748,6 +4748,11 @@ mod tests {
             round(
                 FixRoundCheck::NotReRead,
                 None,
+                Some("no one is left to re-read it!"),
+            ),
+            round(
+                FixRoundCheck::NotReRead,
+                None,
                 Some("the change reverts round 1"),
             ),
         ]);
@@ -4758,7 +4763,8 @@ mod tests {
             report.contains(
                 "Round 1 was not re-read, waived: Reviews here run on a host without subagents. \
                  Round 2 was not re-read, waived: was round 1 reverted? \
-                 Round 3 was not re-read, waived: the change reverts round 1."
+                 Round 3 was not re-read, waived: no one is left to re-read it! \
+                 Round 4 was not re-read, waived: the change reverts round 1."
             ),
             "{report}"
         );

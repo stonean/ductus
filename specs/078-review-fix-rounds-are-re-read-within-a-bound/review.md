@@ -1,18 +1,18 @@
 ---
 spec: 078-review-fix-rounds-are-re-read-within-a-bound
-last-run: 2026-11-09T20:01:53Z
-reviewed-against: 43b33b3013f1aae38fbd1d8cd8b8f3964e0683cf
-diff-base: 494a1f3f15b2244a8a226e0dad0ae20d159beef8
+last-run: 2026-11-09T21:28:14Z
+reviewed-against: f74d606014ab779bfc4391dfa45768f29c25f34a
+diff-base: 5a24d0dc1802720d8f8fcb61ce7f80b5320ebb95
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 14
-scope: 15
-excluded: 17
+examined: 5
+scope: 5
+excluded: 1
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 3
-re-reads: 2
+fix-rounds: 2
+re-reads: 1
 diff-checked: 1
 not-re-read: 0
 budget-stop: false
@@ -22,9 +22,9 @@ reviewed-digest:
   scenarios/fix-round-results-have-a-bounded-size.md: bd6472ece8d3586d1de656fd1d1689848d455ed79183249ff003e9db24817de7
 blocking: false
 dispositions:
-  fixed: 5
-  deferred: 1
-  waived: 5
+  fixed: 3
+  deferred: 0
+  waived: 4
   undispositioned: 0
 decisions:
   - key: "bug: 066's data-model example lists two `modified-since` paths with a count of 1 — `specs/066-audit-records-and-the-completion-gate/data-model.md`"
@@ -198,32 +198,44 @@ decisions:
     reason: The data model's re-reads-off row, the durable contract the switch rests on, says an empty value counts as absent and so is no switch, as task 17 records (owner, 2026-11-09).
     decided-at: 2026-11-09T20:01:53Z
     decided-by: rule
+  - key: "bug: a waived round's reason ending before a closing quote or bracket, or in an ellipsis or a colon, still takes a second stop — `runtime/src/primitives/write_review.rs`"
+    outcome: waived
+    reason: "Contrived input: which closing characters end a sentence is a style choice, and the record's contract (078's data model, 066's two loop scenarios) asks only that the Summary name each waived round, which it does; the comment that claimed more is fixed in this run."
+    decided-at: 2026-11-09T21:28:14Z
+    decided-by: rule
+  - key: "other: analysis.md counts as fixed in its run a finding an earlier commit had removed — `specs/078-review-fix-rounds-are-re-read-within-a-bound/analysis.md`"
+    outcome: waived
+    reason: analysis.md is write-analysis's output, which the analysis this change owes rewrites; whether a finding an earlier commit removed counts as fixed is analyze's machinery, outside 078's code.
+    decided-at: 2026-11-09T21:28:14Z
+    decided-by: rule
 ---
 
 # Review — 078-review-fix-rounds-are-re-read-within-a-bound
 
 ## Summary
 
-Window `494a1f3f..43b33b30` (base-source `last-review`, `review-owed` true), 14 scope entries from three 078 commits:
+Window `5a24d0dc..f74d6060` (base-source `last-review`, `review-owed` true), 5 scope entries from two 078 commits:
 
-- `45ec6154`, the analysis;
-- `55209792`, task 17: an empty `[review] re-reads-off` counts as absent (CFG-ENV-001, which the analysis deferred);
-- `c6626c4b`, which copied `framework/bootstrap/ductus.md` over the retired `framework/bootstrap/govern.md` once Family 21 reported the drift.
+- `acc75e71`, the second analysis;
+- `f74d6060`, tasks 18 and 19, which the completion gate's criteria verification found: the `[review]` comment in `config_keys.rs` names `fix_rounds::re_reads_off`'s callers, and a waived round's reason ending in `.`, `!` or `?` takes no second stop.
 
-The later commits are the 080 session's and were excluded.
+`bfd9c6b0`'s change to 079's `tasks.md` is excluded as that spec's.
 
-One independent read-only agent ran the five passes over the first 13 entries, by their window hunks and the code those call. It drove the binary on one fixture per value of the switch: absent, empty, whitespace, a no-break space, one, fifteen and sixteen characters, and sixteen control characters. `examined` is 14: this session read `govern.md`'s change itself, its diff against `ductus.md`; the two are byte-identical by `cmp`, and Family 21 is clean at `c6626c4b`. The 12 rule files `discover-rule-files` selected were applied, and CFG-ENV-001, -002, -005 and -008, CFG-CONST-004, QUAL-TEST-001 and BE-INPUT-001 and -002 are met. There is no violation.
+One independent read-only agent ran the five passes over all 5 entries, by their window hunks and the code those call, under the 12 rule files `discover-rule-files` selected. It drove `write-review` on a fixture of 13 waived rounds, one per kind of ending, and the supplied and generated Summary both name each waived round. QUAL-TEST-001 holds for the new test, and BE-INPUT-001 is met. There is no violation.
 
-Four observations:
+Seven observations:
 
-- the `govern.md` drift, fixed in `c6626c4b`;
-- a stale doc comment on `InvalidReReadsOff`, fixed in the run;
-- the switch's length measured before normalizing, covered by the stored waiver, whose reason still holds;
-- AC14's wording read alone, waived: the data model's row states the rule.
+- a reason ending before a closing quote or bracket, or in an ellipsis or a colon, still takes a second stop: waived by the rule, as a style choice the record's contract does not reach;
+- the code comment that claimed more than the code checks, fixed in the run;
+- no test covering a reason ending in `!`, fixed in the run with mutant M35;
+- the switch's length measured before normalizing: the stored waiver covers it, and its issue still stands;
+- `analysis.md` counting as fixed a finding an earlier commit removed, waived: the analysis this change owes rewrites it;
+- a supplied Summary without the generated one's excluded-from-scope sentence: the stored waiver covers it, checked against `write_review.rs`;
+- the new test's doc comment, which still said what the code comment had said: fix round 1's re-read prescribed the edit, and fix round 2 applied it.
 
-Of the stored decisions, five on in-scope files matched, each checked against its file; 27 on files outside the scope are retained.
+Of the stored decisions, these two matched; 31 on files outside the scope are retained.
 
-3 fix round(s): 2 re-read, 1 diff-checked, 0 exempt, 0 not re-read.
+2 fix round(s): 1 re-read, 1 diff-checked, 0 exempt, 0 not re-read.
 
 ## MUST violations (blocking)
 
@@ -247,17 +259,13 @@ Of the stored decisions, five on in-scope files matched, each checked against it
 
 ## Observations
 
-- bug: task 17's ductus.md edit was not copied to the retired bootstrap path, framework/bootstrap/govern.md, which Family 21 holds byte-identical — `framework/bootstrap/govern.md` — **fixed** (decided by the rule)
-- convention: InvalidReReadsOff's doc still said a reason shorter than the minimum once trimmed halts, which an empty one no longer does — `runtime/src/primitives/mod.rs` — **fixed** (decided by the rule)
-- convention: AC14's 'a switch without a valid reason halts the run', read alone, covers an empty re-reads-off, which now counts as absent — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: The data model's re-reads-off row, the durable contract the switch rests on, says an empty value counts as absent and so is no switch, as task 17 records (owner, 2026-11-09). (decided by the rule)
-- bug: a window holding only deletions under an empty plan reaches the nothing-to-review-yet branch — `framework/commands/review.md` — **deferred** to `specs/066-audit-records-and-the-completion-gate/tasks.md` task 19
-- bug: an open re-read MUST or SHOULD left at a stop is an observation, and undispositioned it never holds done — `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md` — **waived**: Option B (owner, 2026-11-04): low confidence; the loop asks the operator to defer or waive each open finding at a stop, and a design change would cost 078 another cycle.
+- bug: a waived round's reason ending before a closing quote or bracket, or in an ellipsis or a colon, still takes a second stop — `runtime/src/primitives/write_review.rs` — **waived**: Contrived input: which closing characters end a sentence is a style choice, and the record's contract (078's data model, 066's two loop scenarios) asks only that the Summary name each waived round, which it does; the comment that claimed more is fixed in this run. (decided by the rule)
+- convention: loop_summary's comment said a reason that ends its sentence takes no second stop, while only '.', '!' and '?' are checked — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
+- convention: no test or mutant covered a waived round's reason ending in '!' — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
 - bug: the re-reads-off reason's 16-character minimum is measured before its control characters and runs of spaces are collapsed — `runtime/src/primitives/fix_rounds.rs` — **waived**: Contrived input; the check matches the data model's 'once trimmed'. (decided by the rule)
-- other: the loop primitives accept a misspelled [review] key silently — `runtime/src/primitives/fix_rounds.rs` — **waived**: /review's step 2, discover-rule-files, reports an unknown [review] key (CFG-ENV-012), verified on a fixture: 'unknown config key: [review] re-read-off'. (decided by the rule)
-- other: a fixer's uncommitted edit that another spec's commit sweeps in leaves the round as excluded and is never re-read here — `runtime/src/primitives/fix_rounds.rs` — **waived**: It follows this spec's Edge Case on other sessions: that spec's review reads it as its own change, and git worktree isolates sessions. (decided by the rule)
-- convention: InvalidReReadsOff's edited doc line ran past its paragraph's wrap (fix round 1's NOTE) — `runtime/src/primitives/mod.rs` — **fixed** (decided by the rule)
-- convention: InvalidReReadsOff's doc omitted that a review that is not a table raises it too (fix round 1's NOTE) — `runtime/src/primitives/mod.rs` — **fixed** (decided by the rule)
-- convention: InvalidReReadsOff's doc put a review that is not a table under 'the key is present' (fix round 2's NOTE) — `runtime/src/primitives/mod.rs` — **fixed** (decided by the rule)
+- other: analysis.md counts as fixed in its run a finding an earlier commit had removed — `specs/078-review-fix-rounds-are-re-read-within-a-bound/analysis.md` — **waived**: analysis.md is write-analysis's output, which the analysis this change owes rewrites; whether a finding an earlier commit removed counts as fixed is analyze's machinery, outside 078's code. (decided by the rule)
+- other: a supplied Summary gets the loop's account but not the generated one's excluded-from-scope sentence — `runtime/src/primitives/write_review.rs` — **waived**: 079's contract; the frontmatter's excluded count and the Excluded from scope section carry it. (decided by the rule)
+- convention: the new test's doc comment still said a reason that ends its sentence takes no second stop, the wording fix round 1 narrowed in loop_summary's comment (fix round 1's NOTE) — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -265,23 +273,7 @@ Of the stored decisions, five on in-scope files matched, each checked against it
 
 ## Excluded from scope
 
-- `.pi/extensions/ductus.ts` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `.pi/prompts/ductus-configure.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `AGENTS.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `README.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `framework/bootstrap/configure/pi.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `framework/bootstrap/pi/ductus-bridge.ts` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `framework/constitution.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `scripts/tests/pi-bridge-harness.mjs` — 080-deterministic-runtime-efficiency
-- `specs/007-govern-workflow/tasks.md` — 007-govern-workflow, 080-deterministic-runtime-efficiency
-- `specs/050-constitution/plan.md` — 050-constitution, 080-deterministic-runtime-efficiency
-- `specs/064-pi-host-support/plan.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `specs/064-pi-host-support/spec.md` — 064-pi-host-support, 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/plan.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/research.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/scenarios/antigravity-keeps-the-model-path.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/scenarios/opencode-keeps-the-model-path.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/tasks.md` — 007-govern-workflow, 064-pi-host-support, 080-deterministic-runtime-efficiency
+- `specs/079-review-and-analysis-work-converges/tasks.md` — 079-review-and-analysis-work-converges
 
 ## Unexamined governance
 

@@ -294,4 +294,11 @@ MUTATIONS = [
         '        let stop = "";',
         'write_review::tests::a_waivers_reason_ending_its_sentence_takes_no_second_stop',
     ),
+    (
+        "M35 a waived round's reason ending in '!' takes a second stop",
+        'src/primitives/write_review.rs',
+        '        let stop = if reason.ends_with([\'.\', \'!\', \'?\']) {',
+        '        let stop = if reason.ends_with([\'.\', \'?\']) {',
+        'write_review::tests::a_waivers_reason_ending_its_sentence_takes_no_second_stop',
+    ),
 ]
