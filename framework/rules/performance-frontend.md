@@ -1,6 +1,6 @@
 # Performance Rules — Frontend
 
-Performance rules for browser-rendered UI, for any project with a web frontend. They verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts, including code snippets a plan quotes for its affected files. Rule IDs follow the format `FE-{CATEGORY}-{NNN}`. Categories: `VITALS` (Core Web Vitals budgets and measurement), `BUNDLE` (JavaScript/CSS bundle size), `IMAGE` (image delivery), `LOAD` (resource loading, prioritization, HTTP and back/forward caching, and layout reservation), `FONT` (web font discipline), `MAIN` (main-thread work). Severity, ID permanence, and how review selects or excludes this file follow constitution §rules.
+Performance rules for browser-rendered UI, for any project with a web frontend. They verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts, including code snippets a plan quotes for its affected files. A rule is **MUST** only when its absence blocks a user regardless of scale — text left invisible, rendering held by a parser-blocking script, the main content's image deferred — or leaves the page without the budgets and real-user measurement the other rules answer to, and **SHOULD** where it is one means among others toward a budget. Rule IDs follow the format `FE-{CATEGORY}-{NNN}`. Categories: `VITALS` (Core Web Vitals budgets and measurement), `BUNDLE` (JavaScript/CSS bundle size), `IMAGE` (image delivery), `LOAD` (resource loading, prioritization, HTTP and back/forward caching, and layout reservation), `FONT` (web font discipline), `MAIN` (main-thread work). Severity, ID permanence, and how review selects or excludes this file follow constitution §rules.
 
 ## FE-VITALS — Core Web Vitals Budgets and Measurement
 
@@ -32,9 +32,9 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-BUNDLE-002
 
-> Routes that are not part of the initial render MUST be code-split and loaded on demand. The initial JavaScript payload MUST NOT include code for routes the user has not yet navigated to.
+> Routes that are not part of the initial render SHOULD be code-split and loaded on demand. The initial JavaScript payload SHOULD NOT include code for routes the user has not yet navigated to.
 
-**Verification:** Any spec or plan that introduces a multi-route SPA or that adds a new route MUST commit to per-route code-splitting. `/{project}:analyze` flags SPA build specs that produce a single monolithic bundle and flags new-route specs that statically import the route module from the entry point. **Not flagged:** a route's chunk prefetched after the initial render, through a framework's route prefetching or `<link rel="prefetch">`.
+**Verification:** Any spec or plan that introduces a multi-route SPA or that adds a new route SHOULD commit to per-route code-splitting. `/{project}:analyze` emits a warning when an SPA build spec produces a single monolithic bundle, or when a new-route spec statically imports the route module from the entry point. **Not flagged:** a route's chunk prefetched after the initial render, through a framework's route prefetching or `<link rel="prefetch">`.
 
 **Source:** web.dev "Reduce JavaScript payloads with code splitting", React `lazy` reference, Vue Router "Lazy Loading Routes", Angular "Route loading strategies", Next.js `<Link>` reference, MDN `rel=prefetch` documentation
 
@@ -50,17 +50,17 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-IMAGE-001
 
-> Raster images served as content imagery (hero images, product photos, article media) MUST be delivered in a modern format — AVIF or WebP — selected by `<picture>` `<source type>` elements or by server/CDN negotiation on the request's `Accept` header. A JPEG/PNG fallback MUST be provided when the project's supported-browser policy includes a browser that lacks the delivered format. A bare `<img src="*.jpg">`/`<img src="*.png">` with no modern-format source or negotiation MUST NOT be used for non-decorative content imagery.
+> Raster images served as content imagery (hero images, product photos, article media) SHOULD be delivered in a modern format — AVIF or WebP — selected by `<picture>` `<source type>` elements or by server/CDN negotiation on the request's `Accept` header. A JPEG/PNG fallback SHOULD be provided when the project's supported-browser policy includes a browser that lacks the delivered format. A bare `<img src="*.jpg">`/`<img src="*.png">` with no modern-format source or negotiation SHOULD NOT be used for non-decorative content imagery.
 
-**Verification:** Any spec or plan that introduces image-bearing UI MUST commit to modern-format delivery and state whether its supported-browser policy requires a JPEG/PNG fallback. `/{project}:analyze` flags affected-files snippets with `<img src="*.jpg">` or `<img src="*.png">` for content imagery without an accompanying `<picture>` element, `Accept`-negotiating image pipeline, or other modern-format pipeline.
+**Verification:** Any spec or plan that introduces image-bearing UI SHOULD commit to modern-format delivery and state whether its supported-browser policy requires a JPEG/PNG fallback. `/{project}:analyze` emits a warning when affected-files snippets use `<img src="*.jpg">` or `<img src="*.png">` for content imagery without an accompanying `<picture>` element, `Accept`-negotiating image pipeline, or other modern-format pipeline.
 
 **Source:** web.dev "Use WebP images", web.dev "Using AVIF to compress images on your site", MDN `<picture>` documentation, Baseline (web-features) status for AVIF and WebP
 
 ### FE-IMAGE-002
 
-> Images MUST declare their intrinsic dimensions via `width` and `height` attributes (or via CSS `aspect-ratio`).
+> Images SHOULD declare their intrinsic dimensions via `width` and `height` attributes (or via CSS `aspect-ratio`).
 
-**Verification:** Any spec or plan that introduces image-bearing UI MUST commit to declared intrinsic dimensions per image. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking `width` and `height` attributes (or a corresponding `aspect-ratio` rule).
+**Verification:** Any spec or plan that introduces image-bearing UI SHOULD commit to declared intrinsic dimensions per image. `/{project}:analyze` emits a warning when affected-files snippets carry `<img>` elements lacking `width` and `height` attributes (or a corresponding `aspect-ratio` rule).
 
 **Source:** web.dev "Optimize Cumulative Layout Shift", MDN `<img>` attribute documentation
 
@@ -76,9 +76,9 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-LOAD-001
 
-> Non-critical resources (below-the-fold images, off-route JavaScript, third-party widgets, embedded media) MUST be lazy-loaded. Off-route JavaScript MUST be code-split per `FE-BUNDLE-002`.
+> Non-critical resources (below-the-fold images, off-route JavaScript, third-party widgets, embedded media) SHOULD be lazy-loaded. Off-route JavaScript SHOULD be code-split per `FE-BUNDLE-002`.
 
-**Verification:** Any spec or plan that introduces below-the-fold UI, third-party embeds, or non-critical media MUST commit to lazy-loading. `/{project}:analyze` flags affected-files snippets that statically include heavy third-party widgets in the initial render, and flags long-form-page specs that omit lazy-loading commitments for below-fold imagery. **Not flagged:** eager loading of an image in a route's initial viewport, which is critical; lazy-loading one is `FE-LOAD-005`'s.
+**Verification:** Any spec or plan that introduces below-the-fold UI, third-party embeds, or non-critical media SHOULD commit to lazy-loading. `/{project}:analyze` emits a warning when affected-files snippets statically include heavy third-party widgets in the initial render, or when a long-form-page spec omits lazy-loading commitments for below-fold imagery. **Not flagged:** eager loading of an image in a route's initial viewport, which is critical; lazy-loading one is `FE-LOAD-005`'s.
 
 **Source:** web.dev "Browser-level image lazy loading for the web", MDN `loading` attribute documentation
 
@@ -158,9 +158,9 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-FONT-002
 
-> Self-hosted web fonts MUST be served as WOFF2; legacy formats (TTF, OTF, EOT, WOFF) MUST NOT be served as the primary source.
+> Self-hosted web fonts SHOULD be served as WOFF2; legacy formats (TTF, OTF, EOT, WOFF) SHOULD NOT be served as the primary source.
 
-**Verification:** Any spec or plan that introduces self-hosted fonts MUST commit to WOFF2 delivery. `/{project}:analyze` flags affected-files snippets with `@font-face` rules that load `.ttf`/`.otf`/`.eot`/`.woff` (not `.woff2`) URLs as the primary source.
+**Verification:** Any spec or plan that introduces self-hosted fonts SHOULD commit to WOFF2 delivery. `/{project}:analyze` emits a warning when affected-files snippets carry `@font-face` rules that load `.ttf`/`.otf`/`.eot`/`.woff` (not `.woff2`) URLs as the primary source.
 
 **Source:** web.dev "Best practices for fonts", web.dev "Reduce web font size"
 

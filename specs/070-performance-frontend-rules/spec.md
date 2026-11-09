@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [008-security-rules, 011-brownfield-process, 024-rule-loader, 025-rule-opt-out, 033-rule-surface-setting, 034-performance-backend-rules, 037-observability-backend-rules]
 next-criterion: 13
 ---
@@ -31,7 +31,7 @@ That left the file with no owning spec. Its category set, its MUST/SHOULD split,
 
 ### Severity posture
 
-The header points at constitution §rules for the mapping every rule file shares — **MUST** / **MUST NOT** are errors and **SHOULD** / **SHOULD NOT** are warnings — and states its own criterion for when a rule is MUST: its absence blocks a user regardless of scale, or leaves the page without the budgets and real-user measurement the other rules answer to (Resolved Questions — the severity posture). After the second review on 2026-10-19, which added `FE-LOAD-009`, the file carries 22 rules, 11 MUST-tier and 11 SHOULD-tier, and no Statement mixes tiers; under the posture six of the MUST rules stay MUST and five become SHOULD.
+The header points at constitution §rules for the mapping every rule file shares — **MUST** / **MUST NOT** are errors and **SHOULD** / **SHOULD NOT** are warnings — and states its own criterion for when a rule is MUST: its absence blocks a user regardless of scale, or leaves the page without the budgets and real-user measurement the other rules answer to (Resolved Questions — the severity posture). After the second review on 2026-10-19, which added `FE-LOAD-009`, the file carried 22 rules, 11 MUST-tier and 11 SHOULD-tier (each `### FE-` section's Statement, at `1598b87a`, where both reviews landed). Under the posture six of the MUST rules stayed MUST and five became SHOULD, so the file carries 22 rules, 6 MUST-tier and 16 SHOULD-tier, and no Statement mixes tiers.
 
 One severity constraint is already settled. Under [008's data-model §Severity classification](../008-security-rules/data-model.md#severity-classification), a MUST never requires continuous integration — neither that a project run CI nor that a check run in it — so the MUST states the outcome, and a recommendation to run a check automatically on every change is a SHOULD of its own. `FE-BUNDLE-001` and `FE-BUNDLE-003` are that pair here (see Resolved Questions).
 
@@ -66,7 +66,7 @@ The category abbreviations are governed by the file's own header, per the consti
 - [ ] AC8: Every cross-file citation in the file resolves. `check-rule-ids`, run on `framework/rules/performance-frontend.md` against every rule file in `framework/rules/`, reports no missing or deprecated ID, and the `BE-PAGE` category it cites is a section of `framework/rules/api-backend.md`.
 - [ ] AC9: The file is listed in the Shared Files manifest of `framework/bootstrap/ductus.md`, and `/ductus:review` selects it under the `frontend` surface, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
 - [ ] AC10: The recorded backfill exception in `framework/constitution.md` §rules → Lifecycle no longer lists `performance-frontend.md`.
-- [ ] AC11: The file's header states its severity posture — a rule is MUST only when its absence blocks a user regardless of scale, or leaves the page without the budgets and real-user measurement the other rules answer to — and `FE-BUNDLE-002`, `FE-IMAGE-001`, `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` are SHOULD-tier, under their IDs.
+- [x] AC11: The file's header states its severity posture — a rule is MUST only when its absence blocks a user regardless of scale, or leaves the page without the budgets and real-user measurement the other rules answer to — and `FE-BUNDLE-002`, `FE-IMAGE-001`, `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` are SHOULD-tier, under their IDs.
 - [ ] AC12: `FE-VITALS-001` requires its budgets published in `specs/system.md`, as `FE-BUNDLE-001` requires its own.
 
 ## Open Questions

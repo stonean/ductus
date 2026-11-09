@@ -4,10 +4,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. The header's posture and five rules to SHOULD (AC11)
 
-- [ ] The header states the posture after its design-time sentence, in the sibling form, as one paragraph
-- [ ] `FE-BUNDLE-002`, `FE-IMAGE-001`, `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002`: each Statement in one tier, MUST to SHOULD and MUST NOT to SHOULD NOT
-- [ ] The same five Verifications: "SHOULD commit" and "emits a warning when", each **Not flagged** clause and yield kept
-- [ ] spec.md: *Severity posture* states 22 rules, 6 MUST and 16 SHOULD
+- [x] The header states the posture after its design-time sentence, in the sibling form, as one paragraph
+- [x] `FE-BUNDLE-002`, `FE-IMAGE-001`, `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002`: each Statement in one tier, MUST to SHOULD and MUST NOT to SHOULD NOT
+- [x] The same five Verifications: "SHOULD commit" and "emits a warning when", each **Not flagged** clause and yield kept
+- [x] spec.md: *Severity posture* states 22 rules, 6 MUST and 16 SHOULD
 
 - **Done when**: the header states the posture, the five are SHOULD-tier under their IDs, `cargo test --lib no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh`, markdownlint and `scripts/audit/run-all.sh` pass, and AC11 is ticked.
 
