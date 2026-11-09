@@ -5902,12 +5902,8 @@ pub struct ArtifactFinding {
     /// `criterion-labels`, `disposition-drift`, or `cross-spec-impact-drift`, matching the
     /// `family:` literals the primitive emits.
     pub family: String,
-    /// Severity tier: `blocking`
-    /// (artifact completeness, task consistency, review state drift, and
-    /// scenario open questions at `done`) or `advisory` (scenario
-    /// consistency, scenario open questions below `done`, link-adjacent
-    /// drift, cross-spec impact drift, criterion and body path existence, criterion labels
-    /// reciprocity, and disposition drift).
+    /// Severity tier: `blocking` or `advisory`. Which family takes which is
+    /// `schema::descriptions::CHECK_ARTIFACTS`.
     pub severity: AnalyzeSeverity,
     /// Human-readable description of the finding.
     pub message: String,
