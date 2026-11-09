@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [008-security-rules, 011-brownfield-process, 024-rule-loader, 025-rule-opt-out, 033-rule-surface-setting, 034-performance-backend-rules, 037-observability-backend-rules]
 next-criterion: 13
 ---
