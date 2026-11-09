@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [003-bootstrap-automation, 015-tarball-fetch, 048-govern-acquired-runtime]
 cross-spec-impact: [003-bootstrap-automation, 007-govern-workflow, 015-tarball-fetch, 023-govern-refinement, 026-framework-self-audit, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 050-constitution, 056-bootstrap-archive-boundary-split]
 next-criterion: 18
