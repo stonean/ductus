@@ -455,6 +455,9 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 ///   `decided-by`; or when a `fix-rounds` entry carries a `result` on any
 ///   check but `re-read`, a re-read none, or a `reason` that is blank,
 ///   spans lines, or sits on any check but `not-re-read`.
+/// - [`PrimitiveError::InvalidArgument`] on `feature` while the spec's `tasks.md` holds an
+///   unchecked box outside a task this run's own deferral names, and on `diff-base` when no
+///   scope can be derived from it (spec 079).
 /// - [`PrimitiveError::InvalidReReadsOff`] when `fix-rounds` is given and
 ///   `[review] re-reads-off` is malformed, and [`PrimitiveError::Toml`] when
 ///   the config file it is read from does not parse.
@@ -734,9 +737,9 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> String {
 ///
 /// Resolved through `compute-review-scope` against the run's own `diff-base`,
 /// so it is the scope the review was told to cover rather than whatever that
-/// base resolves to at some later moment. An empty base is a spec that never
-/// entered `in-progress`, which `compute-review-scope` reports as one, so its
-/// scope is zero. Any other base the derivation fails on refuses the write: a
+/// base resolves to at some later moment. An empty base, what `compute-review-scope`
+/// returns for a spec that never entered `in-progress`, records a scope of zero, though that
+/// scope still holds a first review's plan entries. Any other base the derivation fails on refuses the write: a
 /// mistyped sha once recorded `scope: 0` beside `examined: 8`, a window no
 /// check could tell from an empty one, while the caller still holds its
 /// findings and can write them again over the base the scope came from.
@@ -2934,16 +2937,16 @@ mod tests {
         // arms guard on `total > 0`), to Family 19 (the digest is valid) and
         // to `check-review-gate` (it is non-blocking).
         //
-        // Deriving unconditionally is what makes the two distinguishable.
-        // This spec has no recorded `in-progress` transition, so the derived
-        // window is empty and the honest answer really is 0 — the assertion
-        // that matters is that the number came from a derivation rather than
-        // from the flag, which the next test pins from the other side.
-        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        // Deriving unconditionally is what makes the two distinguishable: the
+        // window holds one changed file, so a flag that decided the number
+        // would record 0, and the derivation records 1.
+        let (tmp, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
+        args.diff_base = base;
         args.empty_scope = true;
         let result = run(&args, tmp.path()).unwrap();
         assert_eq!(result.exit_code, 0);
+        assert_eq!(result.scope, 1);
         let report = review_md(&tmp, "001-x");
         // The rendering half of the flag is untouched and still correct.
         assert!(report.contains("Review scope is empty"));
@@ -4183,8 +4186,9 @@ mod tests {
         assert_eq!(fs::read_to_string(&path).unwrap(), prior);
     }
 
-    /// An empty base is a spec that never entered `in-progress`: its scope is zero, so
-    /// it is an empty one and refuses over a record counting a finding.
+    /// An empty base, what `compute-review-scope` returns for a spec that never entered
+    /// `in-progress`, records a scope of zero, so it is an empty one and refuses over a record
+    /// counting a finding.
     #[test]
     fn an_empty_base_is_an_empty_scope() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");

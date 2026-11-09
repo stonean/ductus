@@ -1,7 +1,8 @@
 """Mutation list for 079's decisions from history and from a diff: whether an edit
 reopens a spec (`runtime/src/primitives/classify_spec_edit.rs`) and the hints that
 follow it (`check_artifact_size.rs`), and whether reopenings stayed within the
-bound (`measure_reopenings.rs`) and the line `dashboard.rs` renders from that.
+bound (`measure_reopenings.rs`) and the line `pipeline_view.rs` renders from the
+block `dashboard.rs` fills.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/reopen-measure.py
 [ID ...]`; see run.py for the format. This file is data, read with

@@ -138,7 +138,7 @@ while IFS= read -r f; do
     lineno="${hit%%:*}"
     emit "$f:$lineno" \
       "the project name appears where a verb belongs — residue from a word-boundary rename sweep that replaced the verb \`govern\` with the project noun" \
-      "restore the verb (\`govern\`) in this sentence; the repair changes no claim, so it is a mechanical edit under §spec-lifecycle and done specs stay done"
+      "restore the verb (\`govern\`) in this sentence; §spec-lifecycle reads the repair as a correction in a done spec's spec.md, plan.md or tasks.md outside a criterion, open question or unchecked box, and as reopening it in a scenario or data model"
   done <<< "$hits"
 done <<< "$files"
 

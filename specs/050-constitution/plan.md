@@ -91,9 +91,10 @@ blind spot.
 enumerated cases leave open: whether an edit that changes no claim is mechanical.
 The list read as closed, so a pure typo repair in a `done` spec's body was
 argued to reopen it — the disproportion a `045` chore held in
-`specs/inbox.md` waited on until task 7 resolved it against AC13's test. The section gains a stated test rather than a
+`specs/inbox.md` waited on until task 7 resolved it against AC13's test. The section states a default, that any other edit reopens, rather than a
 fourth enumerated case, so the next new case is decidable without another
-constitution change.
+constitution change. For a scenario or data model the test is `classify-spec-edit`'s,
+under which a typo fixed in one file reopens (spec 079).
 
 ### The version pin does not move
 

@@ -76,8 +76,8 @@ its version and date.
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together fell from 553,352
   bytes before these cuts to 421,717, `framework/reference/review.md` from 67,168 to 45,232
-  and `framework/reference/analyze.md` from 78,632 to 48,691, each within one
-  read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
+  and `framework/reference/analyze.md` from 78,632 to 48,691 (`wc -c` at `101a6e8e`), each
+  within one read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
   from the review reference (spec 079).
@@ -509,6 +509,16 @@ its version and date.
 
 ### Fixed
 
+- **`/analyze` goes on for a `done` spec holding an open box, so `--fix` can revert it.**
+  Its first step stopped on any open box, a `done` spec's too, so the review-state drift
+  such a spec has never reached `--fix`'s revert. Both commands' first step now names the
+  exception for a box under a task the run's own deferral names on the stop itself, which
+  `/analyze`'s re-check after such a deferral meets, and stops only that feature's run
+  under `--all`. `§spec-lifecycle` now says a typo fixed in one scenario or data-model file
+  reopens the spec, as `classify-spec-edit` has always read it. Spec 079.
+- **A deferral's task is matched at the task level.** `write-review` and `write-analysis`
+  left out the section of any numbered heading matching the deferred task, so in a phased
+  task list a phase numbered like it exempted the open boxes under it. Spec 079.
 - **A `[services]` entry with no `repo` or `path` halts, as does a config that
   does not parse.** `resolve-references`, `derive-references`,
   `classify-spec-edit` and `dashboard` read the registry through one reader,

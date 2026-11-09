@@ -15,12 +15,7 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 """
 
-EXPECTED_SURVIVORS = {
-    'M25': 'including the transition commit in the walk changes no result: its record is the '
-    'reopening\'s own tree, so a run it holds is either held, which the walk skips (an open '
-    'fix-round mark counts as held), or carried in, which `carried` reads, and it finishes '
-    'nothing either way',
-}
+EXPECTED_SURVIVORS = {}
 
 MUTATIONS = [
     (
@@ -196,7 +191,8 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         '    walk.hide(Oid::from_str(transition_sha)?)?;\n',
         '    walk.hide(repository.find_commit(Oid::from_str(transition_sha)?)?.parent_id(0)?)?;\n',
-        'compute_review_scope::tests::a_record_in_the_transition_commit_leaves_the_start_at_the_reopen',
+        'compute_review_scope::tests::a_record_in_the_transition_commit_leaves_the_start_at_the_reopen '
+        'compute_review_scope::tests::a_root_transition_commit_falls_back_to_itself',
     ),
     (
         'M26 every commit counts whole, as the old union did',
@@ -1864,5 +1860,27 @@ MUTATIONS = [
         '|| (unplanned && takes_unplanned && !anothers)',
         '|| (unplanned && takes_unplanned)',
         'compute_review_scope::tests::a_subject_naming_none_leaves_each_claimants_directory_to_it',
+    ),
+    # -- 079's review at 1879d9f7: the deferred section, write-analysis's exception, the flag
+    (
+        "M268 a deferred task's number matches a phase heading too",
+        'src/primitives/read_tasks.rs',
+        '                && level == task_level\n',
+        '',
+        'read_tasks::tests::a_deferred_task_is_matched_at_the_task_level_only',
+    ),
+    (
+        "M269 an analysis's own deferral refuses its own record",
+        'src/primitives/write_analysis.rs',
+        '    super::read_tasks::refuse_while_tasks_are_open("write-analysis", feature_dir, &deferred_here)\n',
+        '    let _ = deferred_here;\n    super::read_tasks::refuse_while_tasks_are_open("write-analysis", feature_dir, &std::collections::BTreeSet::new())\n',
+        'write_analysis::tests::an_analysis_records_over_its_own_deferrals_task_and_no_other',
+    ),
+    (
+        'M270 the empty-scope flag decides the denominator',
+        'src/primitives/write_review.rs',
+        '    if args.diff_base.is_empty() {\n        return Ok((0, BTreeMap::new()));\n',
+        '    if args.diff_base.is_empty() || args.empty_scope {\n        return Ok((0, BTreeMap::new()));\n',
+        'write_review::tests::empty_scope_does_not_suppress_the_derived_denominator',
     ),
 ]

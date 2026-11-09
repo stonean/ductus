@@ -70,7 +70,7 @@ A run whose last write still carries `fix-rounds-open` counts as leaving a gatin
 
 ### A run waits for the work
 
-`refuse_while_tasks_are_open` (`runtime/src/primitives/read_tasks.rs`) refuses a record while `tasks.md` holds a box by `describe_unchecked`, the gate's own test, and `write-review` and `write-analysis` call it after resolving the feature, so a run made before implementation is complete cannot record, under `ductus exec` too. `/{project}:review` and `/{project}:analyze` say so at their first step, so a host stops before the passes rather than at the write. The tasks template and `/{project}:plan`'s reference schedule no run, and each task list that did now says in prose what its spec owes (owner, 2026-11-07).
+`refuse_while_tasks_are_open` (`runtime/src/primitives/read_tasks.rs`) refuses a record while `tasks.md` holds a box by `describe_unchecked`, the gate's own test, but for a box under a task the run's own deferral names, which is the work the record holds, and `write-review` and `write-analysis` call it after resolving the feature, so a run made before implementation is complete cannot record, under `ductus exec` too. `/{project}:review` and `/{project}:analyze` say so at their first step, so a host stops this feature's run before the passes rather than at the write, except that `/{project}:analyze` goes on for a `done` spec holding a box, which has drifted, to report it and, with `--fix`, revert it. The tasks template and `/{project}:plan`'s reference schedule no run, and each task list that did now says in prose what its spec owes (owner, 2026-11-07).
 
 ### One description per primitive
 

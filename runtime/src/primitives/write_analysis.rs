@@ -96,9 +96,10 @@ fn refuse_while_implementation_is_open(
 ///   findings contradict the tier counts, when two findings sharing a key are
 ///   given different outcomes, or when a new decision has no `decided-by` —
 ///   each before any write.
-/// - [`PrimitiveError::Io`] when `spec.md`, the prior `analysis.md` or a new
-///   deferral's named `tasks.md` cannot be read, or the record cannot be
-///   written.
+/// - [`PrimitiveError::InvalidArgument`] on `feature` while the spec's `tasks.md` holds an
+///   unchecked box outside a task this run's own deferrals name (spec 079).
+/// - [`PrimitiveError::Io`] when `spec.md`, the spec's `tasks.md`, the prior `analysis.md` or
+///   a new deferral's named `tasks.md` cannot be read, or the record cannot be written.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block.
 /// - [`PrimitiveError::Yaml`] when `spec.md`'s frontmatter block is malformed —
@@ -728,6 +729,40 @@ mod tests {
         assert!(!tmp.path().join("specs/042-demo/analysis.md").exists());
         fs::write(&tasks, "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n").unwrap();
         run(&args(), tmp.path()).unwrap();
+    }
+
+    /// A box under the task this run's own deferral names is the work the record holds, while
+    /// any other open box still refuses: write-analysis's half of AC28's exception (spec 079).
+    #[test]
+    fn an_analysis_records_over_its_own_deferrals_task_and_no_other() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let tasks = tmp.path().join("specs/042-demo/tasks.md");
+        let deferred = "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n\n## 2. Fix it\n\n- [ ] fix\n\n- **Done when**: fixed.\n";
+        fs::write(&tasks, deferred).unwrap();
+        let mut a = args();
+        a.blocking_findings = 1;
+        a.decided_by = Some("dev@example.com".into());
+        let mut own = finding(
+            AnalysisTier::Blocking,
+            "task-consistency",
+            "task 2 is owed",
+            DispositionOutcome::Deferred,
+            Some("specs/042-demo/tasks.md"),
+        );
+        own.disposition.task = Some("2".into());
+        a.findings = vec![own];
+        run(&a, tmp.path()).unwrap();
+
+        fs::write(
+            &tasks,
+            format!("{deferred}\n## 3. Other\n\n- [ ] other\n\n- **Done when**: done.\n"),
+        )
+        .unwrap();
+        let error = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. } if argument == "feature" && reason.contains("other") && !reason.contains("fix")),
+            "{error}"
+        );
     }
 
     /// `analysis.md`'s text, after a run.

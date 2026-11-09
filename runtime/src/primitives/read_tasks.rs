@@ -162,8 +162,14 @@ pub(crate) fn refuse_while_tasks_are_open(
 }
 
 /// `content` without the sections of the tasks numbered in `numbers`, each closed by the next
-/// heading at its level or above, read outside fences and comments as the boxes are.
+/// heading at its level or above, read outside fences and comments as the boxes are. A task is
+/// a numbered heading at the file's task level, as [`parse_tasks`] reads it, so in a phased file
+/// a phase numbered like a deferred task exempts nothing.
 fn without_tasks(content: &str, numbers: &BTreeSet<String>) -> String {
+    let task_level = match detect_tasks_structure(content) {
+        TasksStructure::Flat => 2,
+        TasksStructure::Phased => 3,
+    };
     let mut skip = SkipScanner::default();
     let mut inside: Option<u8> = None;
     let mut kept = String::with_capacity(content.len());
@@ -175,6 +181,7 @@ fn without_tasks(content: &str, numbers: &BTreeSet<String>) -> String {
                 inside = None;
             }
             if inside.is_none()
+                && level == task_level
                 && split_numbered_heading(&heading)
                     .is_some_and(|(number, _)| numbers.contains(number))
             {
@@ -610,6 +617,22 @@ mod tests {
         assert_eq!(
             result.tasks[0].phase.as_deref(),
             Some("Stage 1 — Bootstrap")
+        );
+    }
+
+    /// A phased list's phase numbered like the deferred task is no task: the boxes under it
+    /// still count, while the deferred task's own section is left out (spec 079, AC28).
+    #[test]
+    fn a_deferred_task_is_matched_at_the_task_level_only() {
+        let content = "# T\n\n## 1. Phase one\n\n### 1. A\n\n- [x] a\n\n### 2. Fix\n\n- [ ] fix\n\n\
+                       ## 2. Phase two\n\n### 3. C\n\n- [ ] c3 still open\n";
+        let numbers = BTreeSet::from(["2".to_string()]);
+        let kept = without_tasks(content, &numbers);
+        assert!(!kept.contains("- [ ] fix"), "{kept}");
+        assert!(kept.contains("- [ ] c3 still open"), "{kept}");
+        assert_eq!(
+            describe_unchecked(&kept).as_deref(),
+            describe_unchecked("- [ ] c3 still open\n").as_deref()
         );
     }
 }
