@@ -129,7 +129,7 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 - [x] AC4: A failed archive fetch produces a clean abort with a clear error message and no partial scaffolding
 - [x] AC5: A missing source file within the archive produces a per-entry warning and the remaining manifest continues
 - [x] AC6: The temp directory path is logged in the run summary (and on abort, in the error message); `/ductus` does not delete it
-- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added
+- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither; every other agent's carries both
 - [x] AC8: The Claude `settings_template` also adds `Read(...)` globs for `ductus-*` temp paths under both macOS temp roots and Linux `/tmp`, so per-run `Read(...)` entries do not accumulate across `/ductus` invocations
 - [x] AC9: The **Post-Write Integrity Check** for `ductus.md` works against the local source — no additional `curl`
 - [x] AC10: The self-update notice continues to fire when the installed `ductus.md` differs from the archive's copy
