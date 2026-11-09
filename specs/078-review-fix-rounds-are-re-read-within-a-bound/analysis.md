@@ -1,7 +1,7 @@
 ---
 spec: 078-review-fix-rounds-are-re-read-within-a-bound
-last-run: 2026-11-09T20:14:44Z
-analyzed-against: 5a24d0dc1802720d8f8fcb61ce7f80b5320ebb95
+last-run: 2026-11-09T21:41:13Z
+analyzed-against: aa5e3096156aa2a0fc41338e2ba67240dd959b2a
 hard-fail: 0
 blocking-findings: 0
 advisory: 5
@@ -9,14 +9,14 @@ unexamined: 2
 analyzed-digest:
   data-model.md: 95cd98fd2db64be4ac315c056ac68c8e70b480723cc124a4db436ca5b570cf78
   plan.md: 9836d6779b53a075eae043e1327d1db8de9d3aa88cf0f64fdcaec5516c7777af
-  review.md: 0db8a5239f35f997a71ea4bbabd5673fb01293ac063f08a1818681db9b81711f
+  review.md: 3330a8dae59991d2ea8e19895300447af70f73ecff42d631c7c83944fe77946b
   scenarios/a-reviews-own-record-is-no-fix-round.md: 8a0190ef5a926425199a4381d558f52db626cdd81803b4e23c9aa1055b130440
   scenarios/fix-round-results-have-a-bounded-size.md: bd6472ece8d3586d1de656fd1d1689848d455ed79183249ff003e9db24817de7
   spec.md: c48110d371473584e66dd08a295650f35e66c8c071a008ba5df0c3600facf2e3
-  tasks.md: 9730e71dae3eb88645cc82fe32b019a854950b4737c5abc7f860ce5e63279d9e
+  tasks.md: b961250dcbf08c4186c5f3878b05c7986d8b55cf5b415514e415fd9b0339c48f
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
   waived: 5
   undispositioned: 0
@@ -52,7 +52,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -80,4 +80,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — CFG-ENV-001: re-reads-off is declared optional with no default, absence naming what it disables, but an empty value halts where that declaration counts an empty value as absent — `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md` — **fixed**
+*None.*
