@@ -114,6 +114,17 @@ function statusResult(result: ToolResult): { view: string; project: string } {
   return { view: parsed["rendered-markdown"], project: parsed.project };
 }
 
+/** The view with each command hint as Pi names the command. The runtime
+ *  spells a hint `/{project}:<name>`, which Pi runs as plain text to the
+ *  model; Pi names the command `/{project}-<name>` (spec 064's D1), so the
+ *  bridge respells it (spec 080). Lexical: the same form inside quoted text,
+ *  such as an open question, is respelled too, and on Pi it names no command
+ *  either. */
+function piSpelling(view: string, project: string): string {
+  const escaped = project.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return view.replace(new RegExp(`/${escaped}:(?=[a-z])`, "g"), `/${project}-`);
+}
+
 /** The ductus runtime child process: spawned and initialized on first use,
  *  and again on the first use after it dies. */
 class DuctusServer {
@@ -338,7 +349,7 @@ export default function (pi: ExtensionAPI) {
         }
         let content: string;
         try {
-          content = statusResult(result).view;
+          content = piSpelling(statusResult(result).view, project);
         } catch (err) {
           content = `ductus: ${project}-status could not show the view: ${reason(err)}`;
         }

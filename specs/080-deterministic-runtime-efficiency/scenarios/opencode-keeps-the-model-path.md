@@ -17,7 +17,7 @@ OpenCode runs `/{project}:status` on the model path: `/ductus` installs `framewo
 ## Edge Cases
 
 - An installed command keeps its name over a plugin's alias: with `scratch/status` among a plugin command's aliases, submitting `/scratch/status` ran the template on the model path. So a model-free `/{project}/status` would also need `/ductus` to stop installing `status.md` for OpenCode, or to give the plugin's command a distinct name.
-- The view's hints spell `/{project}:<name>`, while OpenCode names a command `/{project}/<name>`, so on OpenCode a hint names no command, as on Pi.
+- The view's hints spell `/{project}:<name>`, while OpenCode names a command `/{project}/<name>`, so on OpenCode a hint names no command. On Pi the bridge respells each hint as Pi names the command.
 
 ## Open Questions
 

@@ -241,7 +241,7 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 
 ## 28. Pi's `/{project}-status` view names commands Pi can run
 
-- [ ] The view `render-status` returns spells its hints `/{project}:<name>` (each row's next action, the `Next actions:` block, the closing `/{project}:target` prompt). On Pi a command is `/{project}-<name>` (064's D1), and task 12's run showed `/scratch:status` reaching the model as plain text, so on Pi every hint names no command. Decide where the Pi spelling comes from before writing it (owner): the bridge rewriting the view's `/{project}:` to `/{project}-` before it shows it, or `render-status` taking the hint form
+- [x] The view `render-status` returns spells its hints `/{project}:<name>` (each row's next action, the `Next actions:` block, the closing `/{project}:target` prompt). On Pi a command is `/{project}-<name>` (064's D1), and task 12's run showed `/scratch:status` reaching the model as plain text, so on Pi every hint names no command. Decide where the Pi spelling comes from before writing it (owner): the bridge rewriting the view's `/{project}:` to `/{project}-` before it shows it, or `render-status` taking the hint form
 
 OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the same gap on their model paths, which their scenarios' Edge Cases record; decide with Pi's whether the fix covers them.
 

@@ -243,6 +243,16 @@ await check("registers {project}-status, whose handler shows the view and trigge
   if (!view.includes("| Feature | Status |")) throw new Error(`no view: ${view.slice(0, 200)}`);
 });
 
+await check("{project}-status spells each command hint as Pi names the command", async () => {
+  const { commands, messages } = await load(project({ hostProject: "harness" }));
+  await until(5000, () => commands.size > 0);
+  await within(5000, commands.get("harness-status").handler("", {}));
+  const view = shownWithoutATurn(messages);
+  const colon = view.match(/\/harness:[a-z]+/g) ?? [];
+  if (colon.length) throw new Error(`hints Pi cannot run: ${[...new Set(colon)].join(", ")}`);
+  if (!view.includes("/harness-target")) throw new Error(`no /harness-target hint: ${view.slice(-300)}`);
+});
+
 await check("a status command that cannot reach the runtime shows why the same way", async () => {
   const dir = project({ hostProject: "harness" });
   const { commands, messages } = await load(dir);
