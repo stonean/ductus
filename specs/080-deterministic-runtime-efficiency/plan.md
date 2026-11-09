@@ -122,14 +122,14 @@ Each primitive in `research.md`'s grows-set returns through `bounded_lists::plac
 
 ### A `claude -p` harness records each command's cost
 
-`scripts/measure-command-cost.py` drives `claude -p --output-format stream-json --verbose` on a fixture project: a generated corpus, the generated Claude copies, `.mcp.json`, and the pointer to the release binary (AC15).
+`scripts/measure-command-cost.py` drives `claude -p --output-format stream-json --verbose` on a fixture project (AC15). The fixture holds a generated corpus, the tree `/ductus` installs for Claude, each file list read from `framework/bootstrap/ductus.md`'s own tables, `.mcp.json`, and the pointer to the release binary.
 
 - **What it records per run:** time to first visible output, time to result, model output tokens from the result event's usage, and the largest tool result in characters of result text.
 - **When it runs:** on demand only. No workflow references it, since a MUST never requires CI and each run is a model call.
 - **Its first run** records whether `claude -p` executes a custom slash command, and how a local `UserPromptExpansion` hook treats a `-p` prompt.
 - **Why Python:** stream parsing, and dropping the prototype's `jq` dependency is part of what this spec does.
 
-It runs one round after the view, the hook and tool loading land. That round records every command's cost in `research.md` with its method, units, population and date (AC8). There is no separate baseline round: the spec's transcript figures are status's before-figure. Each command's review then reads that record. `research.md` names, per command, the reduction that applies or why none does, and each reduction becomes a scenario through `/{project}:amend` (spec Behavior, *One case per command*).
+It runs one round after the view, the hook and tool loading land. That round records the cost of each command `/ductus` installs in `research.md` with its method, units, population and date (AC8). Each command runs once on a fixture of its own, seeded with the least state its main path needs, under an adopter's permissions: the bootstrap seed, then `/{project}:configure`'s canonical sets (owner, 2026-11-09). There is no separate baseline round: the spec's transcript figures are status's before-figure. Each command's review then reads that record. `research.md` names, per command, the reduction that applies or why none does, and each reduction becomes a scenario through `/{project}:amend` (spec Behavior, *One case per command*).
 
 ### Auggie, OpenCode and Antigravity
 

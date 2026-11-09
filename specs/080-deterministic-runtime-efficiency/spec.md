@@ -91,7 +91,7 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - [ ] AC23: Each `ductus` tool's loaded schema size, its description plus input schema in characters, is recorded in `research.md` with the total across all tools.
 - [ ] AC7: Every primitive whose result grows with the corpus bounds or pages its result, and a test drives each past its bound on a generated fixture corpus; `read-tasks` is one.
 - [ ] AC24: A view that would exceed the read size collapses its `done (spec is complete)` rows to a count line, then cuts the rows past the bound and ends with a line counting the specs not shown. A test drives a generated fixture corpus past the bound on both renderings.
-- [ ] AC8: Each command in `framework/commands/` has its cost recorded in `specs/080-deterministic-runtime-efficiency/research.md`, with method, units, population and date.
+- [ ] AC8: Each command `/ductus` installs has its cost recorded in `specs/080-deterministic-runtime-efficiency/research.md`, with method, units, population and date.
 - [ ] AC14: The result sizes recorded in `research.md` come from a script that runs each primitive on a generated fixture corpus and calls no model.
 - [ ] AC15: The time and token figures recorded in `research.md` come from an on-demand harness that drives `claude -p` with stream-json output on a fixture project. No CI job runs it, and its first run records whether `claude -p` executes a custom slash command.
 
@@ -138,7 +138,8 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
   - **Sizes:** measured by a script on a generated fixture corpus, the machinery AC7's test needs anyway, so they run anywhere without a model.
   - **Time and tokens:** from an on-demand `claude -p` harness. CI never runs it, because a MUST never requires CI and each run costs a model call.
   - **Transcripts:** supporting evidence only. They are one contributor's state, Claude Code-only, and removed after `cleanupPeriodDays`, 30 days by default.
-  - **Unverified:** whether `claude -p` executes a custom slash command, and how a local `UserPromptExpansion` hook treats a `-p` prompt.
+  - **Verified by the harness's first run:** `claude -p` executes a custom slash command, and a local `UserPromptExpansion` hook answers a `-p` prompt with no model turn (`research.md`).
+  - **Which commands:** each command `/ductus` installs. That leaves out the maintainer-only `audit.md`, which reaches no adopter, and takes in `configure`, whose source is `framework/bootstrap/configure/{key}.md` (owner, 2026-11-09).
 - **Does Claude Code's block presentation read acceptably?** Yes, with the typed command's echo suppressed (owner, 2026-11-08).
   - **What it looks like:** a block shows as a `level: warning` system message, prefixed "UserPromptExpansion operation blocked by hook:".
   - **The echo:** it ended with "Original prompt: /ductus:status" until the hook returned `suppressOriginalPrompt: true`, which `UserPromptExpansion` honored on 2.1.319 (2026-11-08).
