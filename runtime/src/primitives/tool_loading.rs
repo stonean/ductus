@@ -1,13 +1,15 @@
 //! Which `ductus` tools a slash command's steps name (spec 080). The MCP
 //! server flags the installed `target` command's tools to load up front
-//! ([`AlwaysLoaded`]), and every other command loads its own in one search.
-//! Both read the same derivation, [`step_tools`].
+//! ([`AlwaysLoaded`]), and every other Claude Code copy loads its own in one
+//! search through the line [`add_tool_search_line`] writes. Both read the
+//! same derivation, [`step_tools`].
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
-use crate::parser;
+use crate::parser::{self, ParseError};
+use crate::primitives::line_ending_of;
 use crate::schema::procedure::{Procedure, Step};
 use crate::schema::registry;
 
@@ -48,6 +50,168 @@ fn names_token(text: &str, name: &str) -> bool {
 /// continue with.
 fn is_name_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
+}
+
+/// The step tools of a command's text. For a file the parser reads as legacy
+/// prose they are [`section_tools`], since the parser ends the
+/// `## Instructions` section at its first sub-heading, so a command whose
+/// steps all sit under sub-headings has no parsed step (owner, 2026-11-09).
+///
+/// # Errors
+///
+/// The parser's error for a malformed procedure.
+pub fn text_step_tools(text: &str) -> Result<BTreeSet<&'static str>, ParseError> {
+    match parser::parse(text, "") {
+        Ok(procedure) => Ok(step_tools(&procedure)),
+        Err(ParseError::LegacyProse) => Ok(section_tools(text)),
+        Err(err) => Err(err),
+    }
+}
+
+/// The served names occurring as whole tokens in a command's
+/// `## Instructions` section, sub-headings included, past its preamble
+/// blockquote and up to the next heading of the same or a higher level. None
+/// when the file has no such section.
+#[must_use]
+pub fn section_tools(text: &str) -> BTreeSet<&'static str> {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let headings = atx_headings(&lines);
+    let Some(&(start, level, _)) = headings.iter().find(|h| h.2 == "Instructions") else {
+        return BTreeSet::new();
+    };
+    let end = headings
+        .iter()
+        .find(|h| h.0 > start && h.1 <= level)
+        .map_or(lines.len(), |h| h.0);
+    let mut first = start + 1;
+    while first < end && lines[first].trim().is_empty() {
+        first += 1;
+    }
+    while first < end && lines[first].starts_with('>') {
+        first += 1;
+    }
+    let body: String = lines[first..end].concat();
+    registry::served_primitives()
+        .filter(|name| names_token(&body, name))
+        .collect()
+}
+
+/// `text`, a command copy after substitution, with a last paragraph added to
+/// its `## Instructions` preamble blockquote that loads its step tools, less
+/// `always_loaded`, in one Claude Code `ToolSearch` (spec 080, AC29). The
+/// names are sorted, as one `select:` query, and the line takes the file's
+/// own line ending. A preamble is opened when the section has none. `text`
+/// comes back unchanged when no tool remains.
+///
+/// The parser reads a preamble code span as a reference, never a dispatch,
+/// so the copy parses to its source's procedure.
+///
+/// # Errors
+///
+/// The parser's error for a malformed procedure, and an
+/// [`ParseError::Invalid`] when the steps' `## Instructions` heading is not an
+/// ATX heading this can find.
+pub fn add_tool_search_line(
+    text: &str,
+    always_loaded: &BTreeSet<&'static str>,
+) -> Result<String, ParseError> {
+    let remaining: Vec<&str> = text_step_tools(text)?
+        .difference(always_loaded)
+        .copied()
+        .collect();
+    if remaining.is_empty() {
+        return Ok(text.to_owned());
+    }
+    let query = remaining
+        .iter()
+        .map(|name| format!("mcp__ductus__{name}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let eol = line_ending_of(text);
+    let line = format!(
+        "> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before \
+         step 1: `select:{query}`"
+    );
+
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let heading = instructions_heading(&lines).ok_or_else(|| ParseError::Invalid {
+        message: "no ATX `## Instructions` heading to hold the tool-search line".into(),
+        location: None,
+    })?;
+    let mut first = heading + 1;
+    while lines.get(first).is_some_and(|l| l.trim().is_empty()) {
+        first += 1;
+    }
+    let mut out = String::with_capacity(text.len() + line.len() + 8);
+    if lines.get(first).is_some_and(|l| l.starts_with('>')) {
+        let mut last = first;
+        while lines.get(last + 1).is_some_and(|l| l.starts_with('>')) {
+            last += 1;
+        }
+        for l in &lines[..=last] {
+            out.push_str(l);
+        }
+        if !lines[last].ends_with('\n') {
+            out.push_str(eol);
+        }
+        out.push('>');
+        out.push_str(eol);
+        out.push_str(&line);
+        out.push_str(eol);
+        for l in &lines[last + 1..] {
+            out.push_str(l);
+        }
+    } else {
+        for l in &lines[..first] {
+            out.push_str(l);
+        }
+        out.push_str(&line);
+        out.push_str(eol);
+        out.push_str(eol);
+        for l in &lines[first..] {
+            out.push_str(l);
+        }
+    }
+    Ok(out)
+}
+
+/// The index of the first ATX heading reading `Instructions`, at any level,
+/// as the parser takes it.
+fn instructions_heading(lines: &[&str]) -> Option<usize> {
+    atx_headings(lines)
+        .into_iter()
+        .find(|h| h.2 == "Instructions")
+        .map(|h| h.0)
+}
+
+/// Each ATX heading outside a fenced code block, as its line index, its
+/// level and its text.
+fn atx_headings<'a>(lines: &[&'a str]) -> Vec<(usize, usize, &'a str)> {
+    let mut headings = Vec::new();
+    let mut fence: Option<&str> = None;
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_end_matches(['\n', '\r']).trim_start();
+        if let Some(open) = fence {
+            if trimmed.starts_with(open) {
+                fence = None;
+            }
+            continue;
+        }
+        if trimmed.starts_with("```") {
+            fence = Some("```");
+            continue;
+        }
+        if trimmed.starts_with("~~~") {
+            fence = Some("~~~");
+            continue;
+        }
+        let level = trimmed.chars().take_while(|&c| c == '#').count();
+        let rest = &trimmed[level..];
+        if (1..=6).contains(&level) && rest.starts_with([' ', '\t']) {
+            headings.push((index, level, rest.trim().trim_end_matches('#').trim()));
+        }
+    }
+    headings
 }
 
 /// What the MCP server found for [`ALWAYS_LOADED_COMMAND`]'s installed copy,
@@ -225,6 +389,106 @@ mod tests {
         assert_eq!(
             step_tools(&procedure).into_iter().collect::<Vec<_>>(),
             vec!["read-spec"]
+        );
+    }
+
+    const LINE: &str = "> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` \
+                        call before step 1: ";
+
+    #[test]
+    fn the_line_closes_the_preamble_naming_the_tools_left_sorted() {
+        let text = "# X\n\n## Instructions\n\n> **For agent runtimes**: a.\n>\n> b.\n\n\
+                    1. Invoke `write-session`.\n2. Invoke `read-spec`.\n3. Then mark-task.\n";
+        let out = add_tool_search_line(text, &BTreeSet::from(["write-session"])).unwrap();
+        assert_eq!(
+            out,
+            format!(
+                "# X\n\n## Instructions\n\n> **For agent runtimes**: a.\n>\n> b.\n>\n{LINE}\
+                 `select:mcp__ductus__mark-task,mcp__ductus__read-spec`\n\n\
+                 1. Invoke `write-session`.\n2. Invoke `read-spec`.\n3. Then mark-task.\n"
+            )
+        );
+    }
+
+    #[test]
+    fn no_tool_left_and_no_procedure_leave_the_text_as_it_is() {
+        let text = "## Instructions\n\n> a.\n\n1. Invoke `write-session`.\n";
+        assert_eq!(
+            add_tool_search_line(text, &BTreeSet::from(["write-session"])).unwrap(),
+            text
+        );
+        let prose = "# Help\n\nNo steps, though resolve-session is named.\n";
+        assert_eq!(
+            add_tool_search_line(prose, &BTreeSet::new()).unwrap(),
+            prose
+        );
+    }
+
+    #[test]
+    fn a_section_with_no_preamble_gets_one() {
+        let text = "## Instructions\n\n1. Invoke `read-spec`.\n";
+        assert_eq!(
+            add_tool_search_line(text, &BTreeSet::new()).unwrap(),
+            format!(
+                "## Instructions\n\n{LINE}`select:mcp__ductus__read-spec`\n\n1. Invoke `read-spec`.\n"
+            )
+        );
+    }
+
+    #[test]
+    fn the_line_takes_the_files_line_ending() {
+        let text = "## Instructions\r\n\r\n> a.\r\n\r\n1. Invoke `read-spec`.\r\n";
+        let out = add_tool_search_line(text, &BTreeSet::new()).unwrap();
+        assert!(
+            out.contains(&format!(
+                "> a.\r\n>\r\n{LINE}`select:mcp__ductus__read-spec`\r\n\r\n1."
+            )),
+            "{out:?}"
+        );
+        assert!(
+            !out.replace("\r\n", "").contains('\n'),
+            "no bare LF: {out:?}"
+        );
+    }
+
+    /// A command whose steps all sit under sub-headings, as amend's do,
+    /// parses as legacy prose.
+    const LEGACY: &str = "# X\n\n## Instructions\n\n> Invoke `resolve-session` first.\n\n\
+                          ### Confirm\n\n1. Invoke `read-spec`.\n\n### Record\n\n\
+                          1. Then append-task.\n\n## Notes\n\nmark-task is named past the section.\n";
+
+    #[test]
+    fn a_legacy_prose_command_names_the_tools_under_its_sub_headings() {
+        assert_eq!(parser::parse(LEGACY, "x"), Err(ParseError::LegacyProse));
+        assert_eq!(
+            text_step_tools(LEGACY)
+                .unwrap()
+                .into_iter()
+                .collect::<Vec<_>>(),
+            vec!["append-task", "read-spec"],
+            "neither the preamble's tool nor one past the section's end"
+        );
+        let out = add_tool_search_line(LEGACY, &BTreeSet::new()).unwrap();
+        assert!(
+            out.contains(&format!(
+                "> Invoke `resolve-session` first.\n>\n{LINE}\
+                 `select:mcp__ductus__append-task,mcp__ductus__read-spec`\n\n### Confirm"
+            )),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_heading_inside_a_fence_is_not_the_section() {
+        let text = "# X\n\n```markdown\n## Instructions\n```\n\n## Instructions\n\n\
+                    1. Invoke `read-spec`.\n";
+        let out = add_tool_search_line(text, &BTreeSet::new()).unwrap();
+        assert_eq!(
+            out,
+            format!(
+                "# X\n\n```markdown\n## Instructions\n```\n\n## Instructions\n\n{LINE}\
+                 `select:mcp__ductus__read-spec`\n\n1. Invoke `read-spec`.\n"
+            )
         );
     }
 

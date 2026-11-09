@@ -984,6 +984,8 @@ Fetch each command template and copy it into `{config_dir}/commands/{project}/`.
 
 The configure row uses the agent-specific source `framework/bootstrap/configure/{key}.md` and writes it as the canonical `configure.md` in the project's command directory.
 
+For the `claude` agent, every entry above also sets `tool-search-line: true`, so each copy loads the `ductus` tools its steps name in one `ToolSearch` (spec 080). The field is keyed by agent, not by layout: Auggie's entries leave it unset.
+
 ### Slash command cleanup
 
 After processing the slash command manifest above, list all `.md` files in `{config_dir}/commands/{project}/`. For each file that is **not** in the slash command manifest above and **not** listed in `.ductus/config.toml` `pinned.files`:

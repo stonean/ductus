@@ -6,6 +6,10 @@
 # scoped to the git index (only specs already part of the commit), so untracked
 # in-progress drafts are never swept in (spec 017 / tracked-specs-not-worktree).
 #
+# The runtime is resolved first, since gen-claude-commands.sh builds the Claude
+# copies with its apply-manifest and is passed it as DUCTUS_BIN (spec 080). An
+# unreachable runtime halts the commit before any generator runs.
+#
 # Generators run in a fixed order:
 #   1. gen-configure-mcp.sh    — runtime-MCP-tool allow blocks in
 #                                framework/bootstrap/configure/{claude,auggie}.md
@@ -69,14 +73,11 @@ cd "$ROOT"
 staged_at_entry=0
 git diff --cached --quiet || staged_at_entry=1
 
-scripts/gen-configure-mcp.sh
-scripts/gen-claude-commands.sh > /dev/null
-scripts/gen-help-tables.sh
-
 # Resolve the runtime. This repo builds the binary it ships, so its own release
 # build wins over anything installed: the framework repo is where the primitives
 # are developed, and a `cargo install` lag would otherwise derive this repo's
-# frontmatter with a binary older than the one under test.
+# frontmatter, and build its Claude copies, with a binary older than the one
+# under test.
 ductus_bin=""
 if [ -x runtime/target/release/ductus ]; then
   ductus_bin="runtime/target/release/ductus"
@@ -91,6 +92,10 @@ if [ -z "$ductus_bin" ]; then
   echo "  --no-verify to bypass this hook deliberately." >&2
   exit 1
 fi
+
+scripts/gen-configure-mcp.sh
+DUCTUS_BIN="$ductus_bin" scripts/gen-claude-commands.sh > /dev/null
+scripts/gen-help-tables.sh
 
 "$ductus_bin" derive-dependencies --write > /dev/null
 "$ductus_bin" derive-references --write > /dev/null

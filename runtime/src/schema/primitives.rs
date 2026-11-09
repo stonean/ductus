@@ -2896,6 +2896,13 @@ pub struct ManifestEntry {
     /// Unlisted keys are substituted normally; unknown keys are no-ops.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_literals: Option<Vec<String>>,
+    /// Claude Code's command copies only (spec 080, AC29): after
+    /// substitution, end the `## Instructions` preamble with a line loading
+    /// the command's step tools in one `ToolSearch`, less the tools the
+    /// source root's `commands/target.md` names, which load with the session.
+    /// No line is written when none remain. `false` when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub tool_search_line: bool,
 }
 
 /// Args for `apply-manifest`.
@@ -8025,12 +8032,14 @@ mod tests {
                     dest: "framework/commands/status.md".into(),
                     strategy: "update".into(),
                     keep_literals: None,
+                    tool_search_line: false,
                 },
                 ManifestEntry {
                     source: "ductus.md".into(),
                     dest: ".claude/commands/acme/ductus.md".into(),
                     strategy: "update".into(),
                     keep_literals: Some(vec!["project".into(), "cli-config-dir".into()]),
+                    tool_search_line: false,
                 },
             ],
             pinned: vec!["AGENTS.md".into()],

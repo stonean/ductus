@@ -30,6 +30,11 @@
 //!   exclude. Used to keep `{project}` and `{cli-config-dir}` literal
 //!   in a self-installed `ductus.md` so the next adopter's bootstrap
 //!   substitutes them per their project, not this one's.
+//! - **`tool-search-line`**: per-entry flag, set on Claude Code's command
+//!   copies only (spec 080). After substitution the entry's
+//!   `## Instructions` preamble gains a line that loads its step tools in one
+//!   `ToolSearch`, less those the source root's `commands/target.md` names
+//!   ([`tool_loading::add_tool_search_line`]).
 //! - **Source missing**: when the staging tree doesn't contain an
 //!   entry's source, the action is `source-missing` (not an
 //!   operational error — the host surfaces it so the operator can
@@ -59,11 +64,12 @@
 //! Pinned matching is case-sensitive on Unix and case-insensitive on
 //! Windows (matching NTFS semantics).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
 use crate::primitives::host_config::{self, HostRow};
+use crate::primitives::tool_loading;
 use crate::primitives::{PrimitiveError, Result, write_atomic_bytes};
 use crate::schema::primitives::{
     ApplyManifestArgs, ApplyManifestResult, ManifestEntry, ManifestEntryResult,
@@ -115,6 +121,12 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   entries before it are written. A pinned entry, and one whose source is
 ///   missing, is reported `skipped-pinned` or `source-missing` before its
 ///   strategy is read.
+/// - [`PrimitiveError::InvalidArgument`] when an entry sets
+///   `tool-search-line` and the source root's `commands/target.md` is missing
+///   or does not parse, checked before any write; and when such an entry is
+///   not UTF-8 text or holds a malformed procedure, checked before any write
+///   for a command or skill destination and when the walk reaches it
+///   otherwise.
 /// - [`PrimitiveError::InvalidSubstitutionKey`] when a substitution key is
 ///   placeholder-shaped (`{project}`) or empty. Checked first, before the
 ///   traversal validation and before any filesystem operation, for the same
@@ -131,6 +143,12 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
         super::validate_contained(&target_root, &entry.dest)?;
     }
 
+    let always_loaded = if args.entries.iter().any(|entry| entry.tool_search_line) {
+        Some(always_loaded_tools(&source_root)?)
+    } else {
+        None
+    };
+
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
     let mut judged = Vec::with_capacity(args.entries.len());
     for entry in &args.entries {
@@ -141,6 +159,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             &target_root,
             &pinned,
             &args.substitutions,
+            always_loaded.as_ref(),
         )?);
     }
 
@@ -154,6 +173,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             &target_root,
             &pinned,
             &args.substitutions,
+            always_loaded.as_ref(),
             judged,
         )?;
         if let Some(count) = substitutions_applied {
@@ -233,6 +253,7 @@ fn check_host_destination(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
+    always_loaded: Option<&BTreeSet<&'static str>>,
 ) -> Result<Option<Judged>> {
     let dest = target_root.join(Path::new(&entry.dest));
     let row = host_config::check_destination(repo, &dest, &entry.dest)?;
@@ -255,9 +276,7 @@ fn check_host_destination(
             })?;
             (bytes, None)
         }
-        "update" | "create" => {
-            read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?
-        }
+        "update" | "create" => read_entry(&source, entry, substitutions, always_loaded)?,
         _ => return Ok(None),
     };
     host_config::check_frontmatter("apply-manifest", &entry.dest, &bytes)?;
@@ -283,6 +302,7 @@ fn process_entry(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
+    always_loaded: Option<&BTreeSet<&'static str>>,
     judged: Option<Judged>,
 ) -> Result<(&'static str, Option<u32>)> {
     // 1. Pinned short-circuit: do not read, do not write.
@@ -325,6 +345,7 @@ fn process_entry(
             dest_exists,
             entry,
             substitutions,
+            always_loaded,
             content,
         ),
         "create" => apply_create(
@@ -333,6 +354,7 @@ fn process_entry(
             dest_exists,
             entry,
             substitutions,
+            always_loaded,
             content,
         ),
         "skip-if-conflict" => {
@@ -351,11 +373,12 @@ fn apply_update(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
+    always_loaded: Option<&BTreeSet<&'static str>>,
     content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     let (new_bytes, applied) = match content {
         Some(content) => content,
-        None => read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?,
+        None => read_entry(source, entry, substitutions, always_loaded)?,
     };
 
     if dest_exists {
@@ -382,6 +405,7 @@ fn apply_create(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
+    always_loaded: Option<&BTreeSet<&'static str>>,
     content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
@@ -389,7 +413,7 @@ fn apply_create(
     }
     let (new_bytes, applied) = match content {
         Some(content) => content,
-        None => read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?,
+        None => read_entry(source, entry, substitutions, always_loaded)?,
     };
     write_atomic_bytes(dest, &new_bytes)?;
     mirror_source_mode(source, dest)?;
@@ -514,6 +538,76 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
 /// Returns the bytes and how many replacements were applied — `None` for a
 /// file whose bytes are not UTF-8, which is never examined for placeholders
 /// and so has no count to report rather than a count of zero.
+/// The tools a `tool-search-line` entry's line leaves out: those the source
+/// root's `commands/target.md` names, which load with the session (spec 080).
+/// The staged copy equals the installed one once the install completes.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] when the source root holds no
+/// `commands/target.md`, or one that does not parse, since the line would
+/// otherwise name the wrong tools; [`PrimitiveError::Io`] when it cannot be
+/// read.
+fn always_loaded_tools(source_root: &Path) -> Result<BTreeSet<&'static str>> {
+    let invalid = |reason: String| PrimitiveError::InvalidArgument {
+        primitive: "apply-manifest".into(),
+        argument: "entries".into(),
+        reason,
+    };
+    let path = source_root.join("commands").join("target.md");
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Err(invalid(
+                "an entry sets tool-search-line, and the source root holds no \
+                 commands/target.md naming the tools that load with the session"
+                    .into(),
+            ));
+        }
+        Err(source) => return Err(PrimitiveError::Io { path, source }),
+    };
+    tool_loading::text_step_tools(&text).map_err(|err| {
+        invalid(format!(
+            "an entry sets tool-search-line, and the source root's commands/target.md does \
+             not parse: {err}"
+        ))
+    })
+}
+
+/// An `update` or `create` entry's bytes and substitution count: its source
+/// substituted, then, when it sets `tool-search-line`, with that line added
+/// (spec 080, [`tool_loading::add_tool_search_line`]).
+///
+/// # Errors
+///
+/// As [`read_and_substitute`], and [`PrimitiveError::InvalidArgument`] when
+/// an entry setting `tool-search-line` is not UTF-8 text or holds a malformed
+/// procedure.
+fn read_entry(
+    source: &Path,
+    entry: &ManifestEntry,
+    substitutions: &BTreeMap<String, String>,
+    always_loaded: Option<&BTreeSet<&'static str>>,
+) -> Result<(Vec<u8>, Option<u32>)> {
+    let (bytes, applied) =
+        read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
+    let Some(always_loaded) = always_loaded.filter(|_| entry.tool_search_line) else {
+        return Ok((bytes, applied));
+    };
+    let invalid = |reason: String| PrimitiveError::InvalidArgument {
+        primitive: "apply-manifest".into(),
+        argument: "entries".into(),
+        reason: format!(
+            "entry `{}` sets tool-search-line, but {reason}",
+            entry.source
+        ),
+    };
+    let text = String::from_utf8(bytes).map_err(|_| invalid("it is not UTF-8 text".into()))?;
+    let with_line = tool_loading::add_tool_search_line(&text, always_loaded)
+        .map_err(|err| invalid(format!("its procedure does not parse: {err}")))?;
+    Ok((with_line.into_bytes(), applied))
+}
+
 fn read_and_substitute(
     source: &Path,
     keep_literals: Option<&[String]>,
@@ -649,6 +743,7 @@ mod tests {
             dest: dest.into(),
             strategy: strategy.into(),
             keep_literals: None,
+            tool_search_line: false,
         }
     }
 
@@ -1088,6 +1183,7 @@ mod tests {
                     dest: "ductus.md".into(),
                     strategy: "update".into(),
                     keep_literals: Some(vec!["project".into(), "cli-config-dir".into()]),
+                    tool_search_line: false,
                 },
                 entry("README.md", "README.md", "update"),
             ],
@@ -1134,6 +1230,7 @@ mod tests {
                 dest: "a.md".into(),
                 strategy: "update".into(),
                 keep_literals: Some(vec!["nonexistent-key".into()]),
+                tool_search_line: false,
             }],
             vec![],
             subs(&[("project", "acme")]),
@@ -2088,5 +2185,99 @@ mod tests {
         let result = run(&args, &dst).unwrap();
         assert_eq!(result.entries[1].action, ACTION_SOURCE_MISSING);
         assert!(!dst.join(".claude/commands/acme/x.md").exists());
+    }
+
+    /// A command whose steps name `read-spec` and `write-session`, and a
+    /// `target.md` naming `write-session`, which loads with the session.
+    const COMMAND: &str = "---\ndescription: X\n---\n\n# X\n\n## Instructions\n\n\
+                           > **For agent runtimes**: call the tools.\n\n\
+                           1. Invoke `read-spec` for {project}.\n2. Invoke `write-session`.\n";
+    const TARGET: &str = "## Instructions\n\n1. Invoke `write-session`.\n";
+
+    fn flagged(source: &str, dest: &str) -> ManifestEntry {
+        ManifestEntry {
+            tool_search_line: true,
+            ..entry(source, dest, "update")
+        }
+    }
+
+    /// Each step of `text`'s procedure, without its source location, which
+    /// the line moves.
+    fn steps(text: &str) -> Vec<serde_json::Value> {
+        crate::parser::parse(text, "x")
+            .unwrap()
+            .steps
+            .iter()
+            .map(|step| {
+                let mut value = serde_json::to_value(step).unwrap();
+                value.as_object_mut().unwrap().remove("location");
+                value
+            })
+            .collect()
+    }
+
+    /// AC29: a flagged entry's copy, at a command path, carries the line for
+    /// its steps' tools less target's, and parses to the procedure of the
+    /// unflagged copy beside it, which is substitution alone.
+    #[test]
+    fn a_flagged_copy_carries_the_line_and_parses_to_its_sources_procedure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("commands/x.md", COMMAND), ("commands/target.md", TARGET)],
+        );
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                flagged("commands/x.md", ".claude/commands/acme/x.md"),
+                entry("commands/x.md", "plain.md", "update"),
+            ],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.created, 2);
+        assert_eq!(result.entries[0].substitutions_applied, Some(1));
+
+        let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
+        let plain = fs::read_to_string(dst.join("plain.md")).unwrap();
+        assert_eq!(plain, COMMAND.replace("{project}", "acme"));
+        assert!(
+            written.contains(
+                "> **For agent runtimes**: call the tools.\n>\n> **Claude Code:** load this \
+                 command's `ductus` tools in one `ToolSearch` call before step 1: \
+                 `select:mcp__ductus__read-spec`\n\n1. Invoke"
+            ),
+            "{written}"
+        );
+        assert_eq!(steps(&written), steps(&plain));
+    }
+
+    /// A flagged entry needs target's tools, so a source root without
+    /// `commands/target.md` halts the call before any entry is written.
+    #[test]
+    fn a_flagged_entry_without_target_md_halts_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("commands/x.md", COMMAND)]);
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("commands/x.md", "plain.md", "update"),
+                flagged("commands/x.md", "x.md"),
+            ],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        match run(&args, tmp.path()) {
+            Err(PrimitiveError::InvalidArgument { reason, .. }) => {
+                assert!(reason.contains("commands/target.md"), "{reason}");
+            }
+            other => panic!("expected InvalidArgument, got {other:?}"),
+        }
+        assert!(!dst.join("plain.md").exists(), "nothing is written");
     }
 }

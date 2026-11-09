@@ -190,7 +190,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Write(.ductus/session.toml)`
    - `Write(.ductus/config.toml)`
 
-   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made `run-generator`, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, and spec 054 `read-supersession-pair` and `write-supersession-annotation`):
+   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made run-generator, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, and spec 054 `read-supersession-pair` and `write-supersession-annotation`):
    - `mcp__ductus__run-generator`
    - `mcp__ductus__check-review-agreement`
    - `mcp__ductus__read-supersession-pair`

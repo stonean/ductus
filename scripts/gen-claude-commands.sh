@@ -8,6 +8,10 @@
 # Files in .claude/commands/ductus/ that do not correspond to a current source
 # are removed so renames flow through cleanly.
 #
+# The Claude copies are built by the runtime's apply-manifest, as /ductus
+# builds an adopter's, with tool-search-line set on each (spec 080), so the
+# runtime must be reachable: DUCTUS_BIN, else runtime/target/release/ductus.
+#
 # Reference pass (spec 071): each command's reference is one
 # file shared by every agent, so it lands at .ductus/reference/<name>.md — the
 # path an adopter's /ductus installs it to — with {project} substituted and no
@@ -26,7 +30,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) check_mode=1 ;;
     -h|--help)
-      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -67,6 +71,51 @@ substitute_shared() {
   sed -e "s/{project}/$PROJECT/g"
 }
 
+# The runtime that builds the Claude copies. The pre-commit hook passes the one
+# it resolved as DUCTUS_BIN; a relative path is taken from where this started.
+ductus_bin="${DUCTUS_BIN:-$ROOT/runtime/target/release/ductus}"
+case "$ductus_bin" in
+  /*) ;;
+  */*) ductus_bin="$PWD/$ductus_bin" ;;
+esac
+if ! command -v "$ductus_bin" > /dev/null 2>&1; then
+  echo "gen-claude-commands: the ductus runtime is not reachable at $ductus_bin." >&2
+  echo "  Build it with (cd runtime && cargo build --release), or set DUCTUS_BIN." >&2
+  exit 1
+fi
+
+# Write apply-manifest's entries and substitutions for the Claude copies into
+# directory $1: one entry per command source, and configure.md from Claude's
+# permission file, each with tool-search-line set.
+write_claude_manifest() {
+  local dir="$1" first=1 name
+  {
+    printf '['
+    for src in "$SRC"/*.md; do
+      name="$(basename "$src")"
+      if [ "$first" -eq 0 ]; then printf ','; fi
+      first=0
+      printf '{"source":"commands/%s","dest":"%s/commands/%s/%s","strategy":"update","tool-search-line":true}' \
+        "$name" "$CONFIG_DIR" "$PROJECT" "$name"
+    done
+    printf ',{"source":"bootstrap/configure/claude.md","dest":"%s/commands/%s/configure.md","strategy":"update","tool-search-line":true}]\n' \
+      "$CONFIG_DIR" "$PROJECT"
+  } > "$dir/entries.json"
+  printf '{"project":"%s","cli-config-dir":"%s"}\n' "$PROJECT" "$CONFIG_DIR" \
+    > "$dir/substitutions.json"
+}
+
+# Build the Claude copies under $1/$CONFIG_DIR/commands/$PROJECT/ from the
+# sources under $1/framework/, with the manifest files in $2. The runtime runs
+# in $1, since apply-manifest holds both roots inside the directory it runs in.
+build_claude_copies() {
+  (
+    cd "$1"
+    "$ductus_bin" apply-manifest --source-root framework --target-root . \
+      --entries-json "$2/entries.json" --substitutions-json "$2/substitutions.json"
+  ) > /dev/null
+}
+
 # Track expected destination filenames so we can prune obsolete generated files.
 expected=()
 
@@ -75,12 +124,17 @@ if [ "$check_mode" -eq 1 ]; then
   # without modifying anything on disk.
   tmpdir="$(mktemp -d -t gen-claude-commands-check-XXXXXX)"
   trap 'rm -rf "$tmpdir"' EXIT
+  # The Claude copies, built over a staged copy of their sources.
+  claudetmp="$tmpdir/claude"
+  mkdir -p "$claudetmp/framework/commands" "$claudetmp/framework/bootstrap/configure"
+  cp "$SRC"/*.md "$claudetmp/framework/commands/"
+  cp "$CONFIGURE_SRC" "$claudetmp/framework/bootstrap/configure/claude.md"
+  write_claude_manifest "$tmpdir"
+  build_claude_copies "$claudetmp" "$tmpdir"
+  claude_out="$claudetmp/$CONFIG_DIR/commands/$PROJECT"
   for src in "$SRC"/*.md; do
-    name="$(basename "$src")"
-    substitute "$CONFIG_DIR" < "$src" > "$tmpdir/$name"
-    expected+=("$name")
+    expected+=("$(basename "$src")")
   done
-  substitute "$CONFIG_DIR" < "$CONFIGURE_SRC" > "$tmpdir/configure.md"
   expected+=("configure.md")
 
   # Pi pass: flat `{project}-{name}` prompt templates in a pi tempdir, plus
@@ -113,7 +167,7 @@ if [ "$check_mode" -eq 1 ]; then
   drift=0
   # Compare every expected file against DEST.
   for name in "${expected[@]}"; do
-    src_path="$tmpdir/$name"
+    src_path="$claude_out/$name"
     dest_path="$DEST/$name"
     if [ ! -f "$dest_path" ]; then
       echo "missing in DEST: $name"
@@ -212,17 +266,16 @@ if [ "$check_mode" -eq 1 ]; then
 fi
 
 # Write mode (default): regenerate destination from source.
-mkdir -p "$DEST"
 
-# Generate one command per source file in framework/commands/.
+# One command per source file in framework/commands/, and configure.md from
+# the agent-specific permission file, built in place by apply-manifest.
+manifest_dir="$(mktemp -d -t gen-claude-commands-XXXXXX)"
+trap 'rm -rf "$manifest_dir"' EXIT
+write_claude_manifest "$manifest_dir"
+build_claude_copies "$ROOT" "$manifest_dir"
 for src in "$SRC"/*.md; do
-  name="$(basename "$src")"
-  substitute "$CONFIG_DIR" < "$src" > "$DEST/$name"
-  expected+=("$name")
+  expected+=("$(basename "$src")")
 done
-
-# Configure is sourced from the agent-specific permission file, named configure.md.
-substitute "$CONFIG_DIR" < "$CONFIGURE_SRC" > "$DEST/configure.md"
 expected+=("configure.md")
 
 # Pi pass (write mode): flat `{project}-{name}` prompt templates + the bridge.

@@ -161,7 +161,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "launch-process", "shellInputRegex": "^grep " }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^for " }`
 
-   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made `run-generator`, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, and spec 054 `read-supersession-pair` and `write-supersession-annotation`):
+   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made run-generator, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, and spec 054 `read-supersession-pair` and `write-supersession-annotation`):
    - `{ "toolName": "mcp:ductus:run-generator" }`
    - `{ "toolName": "mcp:ductus:check-review-agreement" }`
    - `{ "toolName": "mcp:ductus:read-supersession-pair" }`

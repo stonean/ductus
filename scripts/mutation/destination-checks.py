@@ -39,8 +39,8 @@ MUTATIONS = [
     (
         'M3 raw bytes judged for update',
         'src/primitives/apply_manifest.rs',
-        '        "update" | "create" => {\n            read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?\n        }',
-        '        "update" | "create" => {\n            let _ = substitutions; (fs::read(&source).unwrap(), None)\n        }',
+        '        "update" | "create" => read_entry(&source, entry, substitutions, always_loaded)?,',
+        '        "update" | "create" => {\n            let _ = (substitutions, always_loaded); (fs::read(&source).unwrap(), None)\n        }',
         'apply_manifest',
     ),
     (

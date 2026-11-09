@@ -98,11 +98,11 @@ Blocked on task 2: it shows the text rendering.
 
 Blocked on task 9: the line drops the always-loaded set.
 
-- [ ] Add `tool-search-line` to `ManifestEntry` and the insertion to `apply-manifest`
-- [ ] Set the field on Claude's command rows in `framework/bootstrap/ductus.md` only
-- [ ] Have `scripts/gen-claude-commands.sh` build the Claude copies by driving `apply-manifest`, keeping `--check`'s behaviour
-- [ ] Move `.githooks/pre-commit`'s runtime resolution above its generator calls
-- [ ] Test that a flagged copy parses to its source's `Procedure`, and that an unflagged entry's output is unchanged
+- [x] Add `tool-search-line` to `ManifestEntry` and the insertion to `apply-manifest`
+- [x] Set the field on Claude's command rows in `framework/bootstrap/ductus.md` only
+- [x] Have `scripts/gen-claude-commands.sh` build the Claude copies by driving `apply-manifest`, keeping `--check`'s behaviour
+- [x] Move `.githooks/pre-commit`'s runtime resolution above its generator calls
+- [x] Test that a flagged copy parses to its source's `Procedure`, and that an unflagged entry's output is unchanged
 
 - **Done when**: the tests pass, each `.claude/commands/ductus/` copy whose remaining step tools are non-empty carries the line, and `scripts/gen-claude-commands.sh --check` passes (AC29).
 

@@ -1,8 +1,12 @@
-"""Mutation list for 080's step-tool derivation (task 9; AC21): a command's
-steps name a served tool as a whole token, backticked or bare, in any kind of
-step, never a CLI-only one; and the installed `target` command is found
-through every candidate, derived when it parses, and reported when it cannot
-be (`runtime/src/primitives/tool_loading.rs`).
+"""Mutation list for 080's step-tool derivation and tool-search line (tasks 9
+and 10; AC21, AC29). A command's steps name a served tool as a whole token,
+backticked or bare, in any kind of step, never a CLI-only one, and a
+legacy-prose command's whole Instructions section stands in for its steps.
+The installed `target` command is found through every candidate, derived when
+it parses, and reported when it cannot be. The line closes the preamble with
+the tools left after target's, in the file's own line ending, and only a
+flagged `apply-manifest` entry gets it (`runtime/src/primitives/tool_loading.rs`,
+`apply_manifest.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/tool-loading.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -70,5 +74,54 @@ MUTATIONS = [
         '            Self::Derived { .. } => None,\n',
         '            Self::Derived { .. } | Self::NoCopy { .. } => None,\n',
         'tool_loading::tests::no_copy_flags_nothing_and_names_every_path_tried',
+    ),
+    (
+        'M8 a legacy-prose section is read from its preamble',
+        'src/primitives/tool_loading.rs',
+        "    while first < end && lines[first].starts_with('>') {\n        first += 1;\n    }\n",
+        '',
+        'tool_loading::tests::a_legacy_prose_command_names_the_tools_under_its_sub_headings',
+    ),
+    (
+        'M9 a legacy-prose section runs past its end',
+        'src/primitives/tool_loading.rs',
+        '        .find(|h| h.0 > start && h.1 <= level)\n',
+        '        .find(|h| h.0 > start && h.1 == 0)\n',
+        'tool_loading::tests::a_legacy_prose_command_names_the_tools_under_its_sub_headings',
+    ),
+    (
+        'M10 the line names the tools that load with the session',
+        'src/primitives/tool_loading.rs',
+        '        .difference(always_loaded)\n',
+        '        .difference(&BTreeSet::new())\n',
+        'tool_loading::tests::the_line_closes_the_preamble_naming_the_tools_left_sorted',
+    ),
+    (
+        'M11 the line ends in LF in a CRLF file',
+        'src/primitives/tool_loading.rs',
+        '    let eol = line_ending_of(text);\n',
+        '    let eol = "\\n";\n',
+        'tool_loading::tests::the_line_takes_the_files_line_ending',
+    ),
+    (
+        'M12 a heading inside a fence is a heading',
+        'src/primitives/tool_loading.rs',
+        '        if let Some(open) = fence {\n',
+        '        if let Some(open) = fence.filter(|_| false) {\n',
+        'tool_loading::tests::a_heading_inside_a_fence_is_not_the_section',
+    ),
+    (
+        'M13 an unflagged entry gets the line',
+        'src/primitives/apply_manifest.rs',
+        '    let Some(always_loaded) = always_loaded.filter(|_| entry.tool_search_line) else {\n',
+        '    let Some(always_loaded) = always_loaded else {\n',
+        'apply_manifest::tests::a_flagged_copy_carries_the_line_and_parses_to_its_sources_procedure',
+    ),
+    (
+        'M14 a missing target.md leaves every tool in the line',
+        'src/primitives/apply_manifest.rs',
+        '    let path = source_root.join("commands").join("target.md");\n',
+        '    let path = source_root.join("commands").join("target.md");\n    if !path.exists() {\n        return Ok(BTreeSet::new());\n    }\n',
+        'apply_manifest::tests::a_flagged_entry_without_target_md_halts_before_any_write',
     ),
 ]
