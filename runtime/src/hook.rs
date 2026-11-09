@@ -17,10 +17,11 @@ use serde::Serialize;
 use crate::primitives::{Result, dashboard, pipeline_view};
 use crate::session;
 
-/// The variable Claude Code sets to the project directory for each command
-/// hook it runs (code.claude.com/docs/en/hooks). The hook reads it as the
-/// project root, so a session started below the root still shows the root's
-/// view. Optional: unset or empty, the working directory is the root.
+/// The variable Claude Code sets for each command hook it runs
+/// (code.claude.com/docs/en/hooks), to the directory the session started in.
+/// The hook reads it as the project root, since sessions start at the project
+/// root (spec 080). Optional: unset or empty, the working directory is the
+/// root.
 pub const PROJECT_DIR_VAR: &str = "CLAUDE_PROJECT_DIR";
 
 /// The project root the hook acts on: `project_dir`, the startup value of

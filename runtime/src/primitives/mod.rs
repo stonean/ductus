@@ -90,6 +90,7 @@ pub mod run_generator;
 pub mod set_status;
 pub(crate) mod spec_links;
 pub mod start_fix_rounds;
+pub mod tool_loading;
 pub mod traverse_deps;
 pub mod validate_frontmatter;
 pub mod write_analysis;

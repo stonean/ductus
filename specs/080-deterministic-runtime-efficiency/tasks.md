@@ -87,10 +87,10 @@ Blocked on task 2: it shows the text rendering.
 
 ## 9. Step-tool derivation and `alwaysLoad`
 
-- [ ] Write the derivation in `runtime/src/primitives/tool_loading.rs`: served registry names as whole tokens in the parsed `## Instructions` steps' prose
-- [ ] Flag the tools of the installed `target.md` that `Host::command_file_candidates` finds with `_meta["anthropic/alwaysLoad"]`, and say on stderr when there is no copy
-- [ ] Test in `runtime/tests/mcp.rs`: the flagged set equals the derivation over `framework/commands/target.md`, and each flagged description is at most 4,096 characters
-- [ ] Start a Claude Code session in this checkout and confirm target's tools are reached without a `ToolSearch`
+- [x] Write the derivation in `runtime/src/primitives/tool_loading.rs`: served registry names as whole tokens in the parsed `## Instructions` steps' prose
+- [x] Flag the tools of the installed `target.md` that `Host::command_file_candidates` finds with `_meta["anthropic/alwaysLoad"]`, and say on stderr when there is no copy
+- [x] Test in `runtime/tests/mcp.rs`: the flagged set equals the derivation over `framework/commands/target.md`, and each flagged description is at most 4,096 characters
+- [x] Start a Claude Code session in this checkout and confirm target's tools are reached without a `ToolSearch`
 
 - **Done when**: the test passes and `research.md` records the session check (AC21).
 
@@ -210,6 +210,20 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 
 ## 23. `hook.rs`'s `CLAUDE_PROJECT_DIR` comment
 
-- [ ] Correct `PROJECT_DIR_VAR`'s doc comment in `runtime/src/hook.rs`: Claude Code sets `CLAUDE_PROJECT_DIR` to the directory the session started in, and sessions start at the project root, so the claim that a session started below the root still shows the root's view goes (task 8's `runtime/` run; spec Resolved Questions)
+- [x] Correct `PROJECT_DIR_VAR`'s doc comment in `runtime/src/hook.rs`: Claude Code sets `CLAUDE_PROJECT_DIR` to the directory the session started in, and sessions start at the project root, so the claim that a session started below the root still shows the root's view goes (task 8's `runtime/` run; spec Resolved Questions)
 
 - **Done when**: the comment states the observed behavior, landed with the next runtime change rather than on its own.
+
+## 24. Re-anchor `scope-results-bounded.py`'s M6 and M9, which task 5 moved
+
+- [ ] Point M6 at `restore_lists`' file-form check in `runtime/src/interpreter/payload.rs`, with the renamed killing test `a_file_form_result_gets_its_lists_back_from_its_list_file`, and M7 and M8 at the renamed `an_unreadable_list_file_is_an_error_not_an_empty_list`. Task 5 (ece1ed5a) replaced the walker's scope-only read with `restore_lists`: `run.py --check` reports M6's and M9's anchors invalid, and M7's and M8's filters name no test, which `--check` does not see
+- [ ] Point M9 at task 25's restored check, after task 25
+
+- **Done when**: `run.py --check` passes on every list in `scripts/mutation/`, and M6 and M9 run killed.
+
+## 25. A list file missing a counted list halts the walk again
+
+- [ ] Restore the walker's halt on a list file that lacks a list its result counts, which task 5 (ece1ed5a) dropped when `restore_lists` replaced `scope_paths`. Since then a file-form `compute-review-scope` result whose list file holds no `scope` reads as an empty scope, which 066's scenario `scope-results-have-a-bounded-size` rules out ("a counts-only result never reads as an empty scope"). Derive the required lists from the bounded result, minding that `diff-cross-spec` counts `cross-spec-paths` as `cross-spec-count`
+- [ ] Test it in `runtime/src/interpreter/payload.rs`: a file-form result whose file lacks a counted list is `ListsFileUnreadable`, naming the list
+
+- **Done when**: the test passes and fails with the check removed, and task 24's M9 anchors on the restored check.

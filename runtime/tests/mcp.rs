@@ -24,7 +24,9 @@ use rmcp::ServiceExt;
 use rmcp::model::CallToolRequestParams;
 use serde_json::{Value, json};
 
-use ductus::mcp::server::{GovRuntimeServer, tool_names};
+use ductus::mcp::server::{ALWAYS_LOAD_META, GovRuntimeServer, tool_names};
+use ductus::parser;
+use ductus::primitives::tool_loading::step_tools;
 use ductus::schema::descriptions;
 use ductus::schema::registry::CLI_ONLY_PRIMITIVES;
 
@@ -143,6 +145,100 @@ async fn lists_every_manifest_tool_and_canonical_set() {
         manifest_names, expected,
         "framework/runtime-tools.txt diverged from the served tools"
     );
+}
+
+/// The names of the tools whose `_meta` holds [`ALWAYS_LOAD_META`] as
+/// `true`, and of every tool carrying a `_meta` at all.
+fn flagged_and_with_meta(
+    tools: &[rmcp::model::Tool],
+) -> (
+    std::collections::BTreeSet<String>,
+    std::collections::BTreeSet<String>,
+) {
+    let flagged = tools
+        .iter()
+        .filter(|tool| {
+            tool.meta
+                .as_ref()
+                .is_some_and(|meta| meta.0.get(ALWAYS_LOAD_META) == Some(&Value::Bool(true)))
+        })
+        .map(|tool| tool.name.to_string())
+        .collect();
+    let with_meta = tools
+        .iter()
+        .filter(|tool| tool.meta.is_some())
+        .map(|tool| tool.name.to_string())
+        .collect();
+    (flagged, with_meta)
+}
+
+/// AC21: with the generated `target.md` installed, the tools its source's
+/// steps name carry `_meta["anthropic/alwaysLoad"]`, and no other tool
+/// carries a `_meta`. The expected set is derived from
+/// `framework/commands/target.md`, so a tool named there without the flag,
+/// or a flag on one not named there, fails. Each flagged description is at
+/// most 4,096 characters, Claude Code's cut for an always-loaded tool.
+#[tokio::test]
+async fn the_tools_targets_steps_name_are_always_loaded_and_no_other_is() {
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        "[host]\nproject = \"ductus\"\n",
+    )
+    .unwrap();
+    let installed = tmp.path().join(".claude/commands/ductus");
+    fs::create_dir_all(&installed).unwrap();
+    fs::copy(
+        workspace_root().join(".claude/commands/ductus/target.md"),
+        installed.join("target.md"),
+    )
+    .unwrap();
+
+    let source = fs::read_to_string(workspace_root().join("framework/commands/target.md")).unwrap();
+    let expected: std::collections::BTreeSet<String> =
+        step_tools(&parser::parse(&source, "target").unwrap())
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+    assert!(
+        !expected.is_empty(),
+        "target.md's steps name no tool, so the flag has no subject"
+    );
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let tools = client.list_tools(Option::default()).await.unwrap().tools;
+    let (flagged, with_meta) = flagged_and_with_meta(&tools);
+    assert_eq!(
+        flagged, expected,
+        "the flagged set is target.md's step tools"
+    );
+    assert_eq!(with_meta, expected, "no other tool carries a _meta");
+    for tool in tools
+        .iter()
+        .filter(|tool| flagged.contains(tool.name.as_ref()))
+    {
+        let chars = tool
+            .description
+            .as_deref()
+            .unwrap_or_default()
+            .chars()
+            .count();
+        assert!(
+            chars <= 4_096,
+            "{}'s description is {chars} characters, past the 4,096 an always-loaded tool keeps",
+            tool.name
+        );
+    }
+}
+
+/// With no installed `target.md`, no tool carries a `_meta`, as before spec 080.
+#[tokio::test]
+async fn with_no_installed_target_no_tool_carries_meta() {
+    let client = start_pair(fixture_repo()).await;
+    let tools = client.list_tools(Option::default()).await.unwrap().tools;
+    let (_, with_meta) = flagged_and_with_meta(&tools);
+    assert!(with_meta.is_empty(), "{with_meta:?}");
 }
 
 /// What `ductus <subcommand> --help` prints above its usage: its `long_about`.

@@ -20,6 +20,7 @@
 
 use std::collections::HashSet;
 use std::future::Future;
+use std::io::Write;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -28,12 +29,15 @@ use rmcp::ErrorData;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::model::{CallToolResponse, Implementation, JsonObject, ServerCapabilities, ServerConfig};
+use rmcp::model::{
+    CallToolResponse, Implementation, JsonObject, MetaObject, ServerCapabilities, ServerConfig,
+};
 use rmcp::{ServerHandler, tool, tool_handler, tool_router};
 use serde_json::Value;
 
 use crate::primitives;
 use crate::primitives::gate_confirm::GatePromptPayload;
+use crate::primitives::tool_loading::AlwaysLoaded;
 use crate::schema::descriptions;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
@@ -105,6 +109,7 @@ impl GovRuntimeServer {
         let mut tool_router = Self::tool_router();
         strip_nonstandard_formats(&mut tool_router);
         reject_unknown_fields(&mut tool_router);
+        flag_always_loaded(&mut tool_router, &AlwaysLoaded::resolve(&repo));
         Self {
             repo: Arc::new(repo),
             tool_router,
@@ -130,6 +135,29 @@ fn strip_nonstandard_formats(router: &mut ToolRouter<GovRuntimeServer>) {
         route.attr.input_schema = sanitized_schema(&route.attr.input_schema);
         if let Some(output) = route.attr.output_schema.as_ref() {
             route.attr.output_schema = Some(sanitized_schema(output));
+        }
+    }
+}
+
+/// The `_meta` key Claude Code reads to load a tool's schema with the session
+/// rather than defer it to a tool search.
+pub const ALWAYS_LOAD_META: &str = "anthropic/alwaysLoad";
+
+/// Set [`ALWAYS_LOAD_META`] on the tools the installed `target` command's
+/// steps name, and on no other (spec 080, AC21). With no usable copy nothing
+/// is flagged, as before spec 080, and the server says so on stderr. The
+/// write ignores a closed stderr, since a warning must not fail the server.
+fn flag_always_loaded(router: &mut ToolRouter<GovRuntimeServer>, found: &AlwaysLoaded) {
+    if let Some(notice) = found.notice() {
+        let _ = writeln!(std::io::stderr(), "{notice}");
+    }
+    let tools = found.tools();
+    for route in router.map.values_mut() {
+        if tools.contains(route.attr.name.as_ref()) {
+            let mut meta = MetaObject::new();
+            meta.0
+                .insert(ALWAYS_LOAD_META.to_owned(), Value::Bool(true));
+            route.attr.meta = Some(meta);
         }
     }
 }
