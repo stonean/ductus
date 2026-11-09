@@ -13,9 +13,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. `FE-VITALS-001` publishes its budgets in `specs/system.md` (AC12)
 
-- [ ] The Statement names `specs/system.md` as the budgets' home
-- [ ] The Verification flags a frontend project with no Web Vitals budgets published there
-- [ ] spec.md: the `VITALS` row names the home
+- [x] The Statement names `specs/system.md` as the budgets' home
+- [x] The Verification flags a frontend project with no Web Vitals budgets published there
+- [x] spec.md: the `VITALS` row names the home
 
 - **Done when**: `FE-VITALS-001` reads as AC12 says, `cargo test --lib no_shipped_statement_mixes_tiers`, `scripts/lint-rule-ids.sh`, markdownlint and `scripts/audit/run-all.sh` pass, and AC12 is ticked.
 

@@ -6,9 +6,9 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-VITALS-001
 
-> The project MUST publish documented performance budgets for the three Core Web Vitals — Largest Contentful Paint (LCP), Interaction to Next Paint (INP), and Cumulative Layout Shift (CLS) — measured at the 75th percentile of real-user page loads, segmented by mobile and desktop. Default budgets at Google's "Good" threshold: LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1. Looser budgets MUST be justified in `specs/system.md`.
+> The project MUST publish performance budgets in `specs/system.md` for the three Core Web Vitals — Largest Contentful Paint (LCP), Interaction to Next Paint (INP), and Cumulative Layout Shift (CLS) — measured at the 75th percentile of real-user page loads, segmented by mobile and desktop. Default budgets at Google's "Good" threshold: LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1. Looser budgets MUST be justified there.
 
-**Verification:** Any spec or plan that introduces or modifies user-facing UI MUST commit to maintaining the documented Web Vitals budgets. `/{project}:analyze` flags a frontend-UI spec that omits that commitment, a spec proposing looser thresholds without a `specs/system.md` justification reference, and budgets that name First Input Delay (FID) in place of INP.
+**Verification:** Any spec or plan that introduces or modifies user-facing UI MUST commit to maintaining the Web Vitals budgets published in `specs/system.md`. `/{project}:analyze` flags frontend projects with no Web Vitals budgets published in `specs/system.md`, a frontend-UI spec that omits that commitment, a spec proposing looser thresholds without a `specs/system.md` justification reference, and budgets that name First Input Delay (FID) in place of INP.
 
 **Source:** web.dev "Web Vitals", web.dev "Defining the Core Web Vitals metrics thresholds", web.dev "Interaction to Next Paint becomes a Core Web Vital on March 12"
 
