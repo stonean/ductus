@@ -48,7 +48,7 @@ The revised AC16 is a negative requirement and the plan honors it as one: no `fr
 
 §drift-prevention makes the name sweep a mechanical edit — `done` specs stay `done` — but only while the diff stays uniform. The `` `/specify --supersedes` `` worked example appears in three places (`scripts/audit/readme-command-parity.sh:46`, `scripts/audit/README.md:73`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md:13`) and is replaced by a surviving flag in a single substitution across all three, landing on its own rather than bundled into the broader rewrite. `/specify --fold-into` is the replacement: it is a flag on the same command, inside a wider code span, so it exercises the exact matching property the example exists to illustrate.
 
-Ordinary-English uses of the verb are left alone — the pre-commit hooks, `framework/rules/security-backend.md`'s CSP note, and `review.md`'s report-regeneration line name no capability, and rewriting them would be the non-uniform diff the rule warns about.
+Ordinary-English uses of the verb were left alone — the pre-commit hooks, `framework/rules/security-backend.md`'s CSP note (since removed, by `1598b87a`), and `review.md`'s report-regeneration line (since moved to `framework/reference/review.md`) named no capability, and rewriting them would have been the non-uniform diff the rule warns about.
 
 ### Constitution surgery
 
@@ -102,7 +102,7 @@ Three excisions, one of which is not a deletion. `§supersession-annotations` go
 
 **Rejected: keeping `supersedes:` as a documented-but-inert key.** It would leave the schema advertising a relation nothing records, reads, or checks — the exact false-document failure this spec exists to remove, relocated into the frontmatter table.
 
-**Rejected: adding a migration.** Slash-command cleanup already removes the installed command in all three layouts, honors `[pinned] files`, and is silent when nothing is stale. An entry would duplicate that and hand `/{project}:audit` Family 10 a `target_paths` list to police. The two existing migrations are not a precedent: both clean artifacts outside the enforced set.
+**Rejected: adding a migration.** Slash-command cleanup already removes the installed command in all three layouts it was ever installed in (pi's came later), honors `[pinned] files`, and is silent when nothing is stale. An entry would duplicate that and hand `/{project}:audit` Family 10 a `target_paths` list to police. The two existing migrations are not a precedent: both clean artifacts outside the enforced set.
 
 **Rejected: consolidating 053 into 054.** It would put the whole removal story in one spec, but `rewrite-spec-links` would turn this spec's own body link to 053 into a self-link, which `derive-dependencies` records rather than strips.
 

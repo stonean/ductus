@@ -74,7 +74,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Remove `check_supersession_reciprocity`, its call site, and the `supersession-reciprocity` family tests from `runtime/src/primitives/check_artifacts.rs`
 - [x] Remove `blockquote_cites` from `runtime/src/primitives/mod.rs` — both its callers are now gone
 - [x] Correct the two `read_spec.rs` comments that name `read-supersession-pair` as a second caller
-- [x] Leave the blockquote exclusion in `runtime/src/primitives/spec_links.rs` untouched — it serves four other primitives and predates supersession
+- [x] Leave the blockquote exclusion in `runtime/src/primitives/spec_links.rs` untouched — it serves `derive-dependencies` and `derive-references` and predates supersession
 
 - **Done when**: `validate-frontmatter` reports `clean` on a spec carrying a `supersedes:` key, `check-artifacts` returns eight residual families, and `spec_links.rs` is unchanged.
 
@@ -117,7 +117,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 13. Close the 2026-10-29 reopen
 
-Reopened done → in-progress by 3297fbd6, the fix round of 051's 2026-10-29 review, which bounded §Motivation's claim that consolidation re-points every inbound pointer: it now reads "re-points every inbound pointer it reads first, lest it dangle". That sentence is the whole reopen. 051's review read it in depth: the sweep was that review's fix round, the first round was re-read independently, and "lest it dangle" came in the second, prose-only round. So `check-review-gate` holds 054's review current — spec.md is outside the review digest — and only the analysis is stale. Owed, in order: `/ductus:analyze 054`; `/ductus:implement 054`, which verifies the criteria against the tree and asks before `done`. Since then, commits no spec claims in its window make `compute-review-scope` report `review-owed: true` (at `7c341fa6`), so `check-review-gate` decides whether a review comes first, and its ticked criteria are verified against the tree before either run (spec 079 task 26, owner, 2026-11-09). They were verified at `ce217f0a` (task 14), so the review `check-review-gate` names comes next, then the analysis.
+Reopened done → in-progress by 3297fbd6, the fix round of 051's 2026-10-29 review, which bounded §Motivation's claim that consolidation re-points every inbound pointer: it now reads "re-points every inbound pointer it reads first, lest it dangle". That sentence is the whole reopen. 051's review read it in depth: the sweep was that review's fix round, the first round was re-read independently, and "lest it dangle" came in the second, prose-only round. `check-review-gate` then held 054's review current — spec.md is outside the review digest — and only the analysis stale. Since then, commits no spec claims in its window make `compute-review-scope` report `review-owed: true` (at `7c341fa6`), so `check-review-gate` decides whether a review comes first, and its ticked criteria are verified against the tree before either run (spec 079 task 26, owner, 2026-11-09). They were verified at `ce217f0a` (task 14), so the review `check-review-gate` names comes next, then the analysis.
 
 - **Done when**: 054's analysis is current, the completion gate passes, and 054 is back at `done`
 

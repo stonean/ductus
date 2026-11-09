@@ -18,7 +18,7 @@ The two operations that keep the corpus honest already existed before supersessi
 
 The cost of carrying it was real and had barely begun to be paid: a command, a flag on a second command, a hand-authored frontmatter key with its own validator, a constitution section defining three annotation granularities and the blockquote rule that keeps them out of the dependency graph, two runtime primitives across five registration sites each, an extension point with a four-outcome classification vocabulary, a check family whose own documentation has to state at length what its silence does *not* mean, and a shared already-present predicate binding the annotation writer to `check-artifacts`.
 
-The machinery shipped in [052 — Spec supersession and consolidation](../052-spec-supersession-and-consolidation/spec.md) — the declaration and its annotation, plus the reconciliation pass that followed — and has not been used. **No spec in the corpus carries a `supersedes:` key.** The one sunset banner in the corpus — on `005-workflows`, written when `043-workflows-sunset` removed the feature — was hand-authored before any of this existed, which is itself the evidence that the prose convention never needed a command, a key, a primitive, or a check to produce it. Removing the machinery now costs no migration and no corpus rewrite; removing it after adoption would cost both.
+The machinery shipped in [052 — Spec supersession and consolidation](../052-spec-supersession-and-consolidation/spec.md) — the declaration and its annotation, plus the reconciliation pass that followed — and has not been used. **No spec in the corpus carries a `supersedes:` key.** The one sunset banner the corpus then held — on `005-workflows`, written when `043-workflows-sunset` removed the feature — was hand-authored before any of this existed, which is itself the evidence that the prose convention never needed a command, a key, a primitive, or a check to produce it. Removing the machinery now costs no migration and no corpus rewrite; removing it after adoption would cost both.
 
 `/{project}:consolidate` shipped in the same spec and **stays**. It is the operation that removes the dead reference rather than annotating it.
 
@@ -38,7 +38,7 @@ Nothing new is built. Two existing operations absorb the cases supersession clai
 | A spec shipped, and a later spec countered all of it | Reopen and edit it down to what survives, or **consolidate** it into the spec that covers it. |
 | A spec never shipped and overlapped a sibling | **Consolidate** — unchanged from today. |
 
-The distinction `/{project}:consolidate` currently draws between "did it ship?" (annotate) and "did it never ship?" (consolidate) collapses: the question a reader now asks is whether the earlier spec still describes something true, not whether it once did. Its guidance needs rewriting to that question rather than to `/{project}:supersede`.
+The distinction `/{project}:consolidate` drew before this spec between "did it ship?" (annotate) and "did it never ship?" (consolidate) collapses: the question a reader now asks is whether the earlier spec still describes something true, not whether it once did. Its guidance needs rewriting to that question rather than to `/{project}:supersede`.
 
 ## Removal surface — framework
 
@@ -78,15 +78,15 @@ Three properties of the sweep are load-bearing, and all three come from that rul
 
 - **It is a mechanical edit, so `done` specs stay `done`.** The one `done` artifact outside 052 and 053 that carries a real reference is `specs/026-framework-self-audit/scenarios/link-check-consolidation.md`, which uses `` `/specify --supersedes` `` to illustrate Family 33's matching rule. Substituting a surviving flag uniformly across that scenario and the two audit artifacts that share the example keeps the edit mechanical; 026 takes no back-edge.
 - **It must not be bundled with unrelated edits.** A non-uniform diff is not mechanical and reopens what `classify-spec-edit` says it does, so the substitution lands on its own rather than inside a broader rewrite of the files it happens to touch.
-- **Ordinary English is not a reference.** "The primitives would have superseded" in the pre-commit hooks, `framework/rules/security-backend.md`'s note that CSP `frame-ancestors` supersedes `X-Frame-Options`, and the `review.md` line about a re-run superseding the prior report all use the verb and name no capability. They are left alone; a sweep that rewrote them would be the non-uniform diff the rule warns about.
+- **Ordinary English is not a reference.** "The primitives would have superseded" in the pre-commit hooks, `framework/rules/security-backend.md`'s note that CSP `frame-ancestors` supersedes `X-Frame-Options` (since removed, by `1598b87a`), and the `review.md` line about a re-run superseding the prior report (since moved to `framework/reference/review.md`) all used the verb and named no capability. They were left alone; a sweep that rewrote them would be the non-uniform diff the rule warns about.
 
 `check-corpus-links` and `check-orphaned-references` are what prove the sweep landed — in particular the `#supersession-annotations` anchor, cited from `§spec-requirements` and from `runtime/src/schema/primitives.rs`, and the README's deep link into `docs/slash-commands.md#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other`.
 
 ## Adopter cleanup
 
-**No migration is added.** The only artifact this removal leaves in an adopter's tree is the installed `supersede` command file, and it sits exactly where the framework's existing slash-command cleanup already reaches. Dropping the manifest row is the whole adopter-side change: `enforce-manifest` prunes anything in the per-layout cleanup glob that is neither in the manifest nor pinned, so the stale command is removed on the adopter's next `/ductus` run.
+**No migration is added.** The removal left two things in an adopter's tree: the installed `supersede` command file, which sits exactly where the framework's existing slash-command cleanup already reaches, and the two tools' permission entries in the agent's settings, which `/{project}:configure`'s step-4 revoke list has retired since 023's review (`3bbee201`). For the command file, dropping the manifest row is the whole change: `enforce-manifest` prunes anything in the per-layout cleanup glob that is neither in the manifest nor pinned, so the stale command is removed on the adopter's next `/ductus` run.
 
-That covers all three layouts, because the cleanup glob is defined per layout in the Agent Registry:
+That covered all three layouts the command was ever installed in (pi's came later), because the cleanup glob is defined per layout in the Agent Registry:
 
 | Layout | Cleanup glob | Installed path |
 | --- | --- | --- |
