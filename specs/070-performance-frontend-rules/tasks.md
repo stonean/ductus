@@ -34,11 +34,11 @@ The set is every document a Source line, or a claim in any field, cites after ta
 
 Blocked on task 3, which can rewrite rule text. Once every box in this file is ticked, `/ductus:review` runs, in a clean worktree when another session's uncommitted files sit in the tree, then `/ductus:analyze`, then the completion gate with the owner's approval.
 
-- [ ] AC1 and AC2: the six categories and their sections, every rule ID's category one of them, none shared with `security-frontend.md` or `accessibility-frontend.md`, and `scripts/lint-rule-ids.sh`
-- [ ] AC3: each rule's heading, one-tier Statement, Verification and Source, no Rationale, and the corpus test; AC3 ticked with task 3's half
-- [ ] AC5 and AC6: no MUST Statement or Verification requires CI, and `FE-BUNDLE-001` sets no budget figure
-- [ ] AC7 and AC8: the citations AC7 names, `check-rule-ids` against every file in `framework/rules/`, `BE-PAGE` a section of `api-backend.md`, and `BE-CACHE-004`'s deferral
-- [ ] AC9 and AC10: the manifest row and `discover-rule-files` under `frontend`; the constitution names no `performance-frontend.md`
-- [ ] AC4 ticked from task 3's check
+- [x] AC1 and AC2: the six categories and their sections, every rule ID's category one of them, none shared with `security-frontend.md` or `accessibility-frontend.md`, and `scripts/lint-rule-ids.sh`
+- [x] AC3: each rule's heading, one-tier Statement, Verification and Source, no Rationale, and the corpus test; AC3 ticked with task 3's half
+- [x] AC5 and AC6: no MUST Statement or Verification requires CI, and `FE-BUNDLE-001` sets no budget figure
+- [x] AC7 and AC8: the citations AC7 names, `check-rule-ids` against every file in `framework/rules/`, `BE-PAGE` a section of `api-backend.md`, and `BE-CACHE-004`'s deferral
+- [x] AC9 and AC10: the manifest row and `discover-rule-files` under `frontend`; the constitution names no `performance-frontend.md`
+- [x] AC4 ticked from task 3's check
 
 - **Done when**: each criterion holds against the tree, with a failure fixed in this task, and AC1–AC10 are ticked.
