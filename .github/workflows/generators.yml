@@ -50,6 +50,13 @@ jobs:
       - name: Run gen-configure-mcp
         run: ./scripts/gen-configure-mcp.sh
 
+      # Before the generator runs: a runtime that predates tool-search-line
+      # must halt it (spec 080, task 26). The test runs it from a scratch copy
+      # of the tree, so it leaves nothing for the in-sync check below, and its
+      # last case reads the release build the step above made.
+      - name: Test gen-claude-commands' runtime check
+        run: bash scripts/tests/test-gen-claude-commands.sh
+
       - name: Run gen-claude-commands
         run: ./scripts/gen-claude-commands.sh
 

@@ -19,6 +19,7 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use serde::Serialize;
+use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::primitives::check_artifact_size::resolve_threshold;
@@ -36,6 +37,43 @@ pub(crate) const ALL_SPECS: &str = "all-specs";
 /// every review for the life of a checkout, while a concurrent reader's file,
 /// written moments before, stays.
 pub(crate) const STALE_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// The counts a bounded result carries that do not name their list as
+/// `{list}-count`, by primitive: `Some` names the list the count is of, and
+/// `None` marks a count of no list, which the result carries in both forms.
+/// Each primitive's past-the-read-size test holds its entries to the file it
+/// writes.
+const IRREGULAR_COUNTS: &[(&str, &str, Option<&str>)] = &[
+    (
+        "diff-cross-spec",
+        "cross-spec-count",
+        Some("cross-spec-paths"),
+    ),
+    ("measure-reopenings", "closed-count", None),
+    ("measure-reopenings", "over-bound-count", None),
+    ("prune-tasks", "kept-count", None),
+    ("prune-tasks", "removed-count", None),
+];
+
+/// The lists the file a file-form `result` of `primitive` names must hold:
+/// one for each top-level `{list}-count`, read through [`IRREGULAR_COUNTS`],
+/// whose list the result does not carry inline. A list with no count of its
+/// own, such as `measure-reopenings`' `reopenings`, is not among them.
+pub(crate) fn counted_lists(primitive: &str, result: &Map<String, Value>) -> Vec<String> {
+    result
+        .keys()
+        .filter_map(|key| {
+            let irregular = IRREGULAR_COUNTS
+                .iter()
+                .find(|(name, count, _)| *name == primitive && count == key);
+            match irregular {
+                Some((_, _, list)) => list.map(str::to_string),
+                None => key.strip_suffix("-count").map(str::to_string),
+            }
+        })
+        .filter(|list| !result.contains_key(list))
+        .collect()
+}
 
 /// Where a result's lists go: `None` when `inline`, serialized, fits the
 /// configured read size; otherwise the path, from the project root, of the
@@ -114,6 +152,30 @@ fn prune_stale(dir: &Path, keep: &str, now: SystemTime) {
     }
 }
 
+/// Hold `primitive`'s [`IRREGULAR_COUNTS`] entries, and the lists its counts
+/// name, to a file-form `result` and the `lists` its file holds: every
+/// counted list is in the file, each entry's count is in the result, a count
+/// of no list names nothing the file holds, and a count with its list names
+/// one the file holds. So an entry left behind by a renamed count, or a count
+/// that came to name a list, fails the primitive's test.
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+pub(crate) fn assert_counts_name_the_file(primitive: &str, result: &Value, lists: &Value) {
+    let result = result.as_object().expect("a result object");
+    for list in counted_lists(primitive, result) {
+        assert!(lists[&list].is_array(), "{primitive}: no `{list}` list");
+    }
+    for (_, count, list) in IRREGULAR_COUNTS.iter().filter(|e| e.0 == primitive) {
+        assert!(result.contains_key(*count), "{primitive}: no `{count}`");
+        if let Some(list) = list {
+            assert!(lists[*list].is_array(), "{primitive}: no `{list}`");
+        } else {
+            let stem = count.strip_suffix("-count").unwrap();
+            assert!(lists.get(stem).is_none(), "{primitive}: `{stem}` is a list");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -157,6 +219,35 @@ mod tests {
             std::fs::read_to_string(tmp.path().join(".ductus/results/.gitignore")).unwrap(),
             "*\n"
         );
+    }
+
+    /// Each `{list}-count` names its list, an irregular count names the list
+    /// its entry gives or none, an entry applies to its own primitive only,
+    /// and a list the result carries inline is not owed by the file.
+    #[test]
+    fn a_result_counts_the_lists_its_counts_name() {
+        let result = serde_json::json!({
+            "form": "file",
+            "scope-count": 2,
+            "cross-spec-count": 1,
+            "removed-count": 3,
+            "deleted-count": 0,
+            "deleted": [],
+            "examined": 4,
+            "lists-file": "f.json",
+        });
+        let result = result.as_object().unwrap();
+        let sorted = |primitive| {
+            let mut lists = counted_lists(primitive, result);
+            lists.sort();
+            lists
+        };
+        assert_eq!(sorted("other"), ["cross-spec", "removed", "scope"]);
+        assert_eq!(
+            sorted("diff-cross-spec"),
+            ["cross-spec-paths", "removed", "scope"]
+        );
+        assert_eq!(sorted("prune-tasks"), ["cross-spec", "scope"]);
     }
 
     /// The default read size is 50,000 bytes.

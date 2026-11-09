@@ -639,6 +639,33 @@ mod tests {
 
     const FLAT: &str = "# 041 — Task Pruning Tasks\n\nTasks derived from the [plan](plan.md). Complete in order.\n\n## 1. Done task\n\n- [x] a\n- [x] b\n\n## 2. Pending task\n\n- [ ] c\n- [x] d\n\n## 3. Prose task\n\nNo checkboxes here.\n";
 
+    /// Past the read size one feature's `sections` move to a file, while its
+    /// `removed-count` and `kept-count`, which count no list, stay inline
+    /// beside `sections-count`: the counts the walker reads the file by.
+    #[test]
+    fn a_summary_past_the_read_size_moves_its_sections_to_a_file() {
+        let (_tmp, repo) = write_repo(FLAT, Some("in-progress"));
+        fs::create_dir_all(repo.join(".ductus")).unwrap();
+        fs::write(
+            repo.join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let summary = run(&args(false, false, false), &repo).unwrap();
+        assert_eq!(summary.form, ListsForm::File);
+        assert_eq!(summary.sections, None);
+        assert_eq!((summary.removed_count, summary.kept_count), (1, 2));
+        let file = repo.join(summary.lists_file.clone().unwrap());
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
+        assert_eq!(lists["sections"].as_array().map(Vec::len), Some(3));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "prune-tasks",
+            &serde_json::to_value(&summary).unwrap(),
+            &lists,
+        );
+    }
+
     #[test]
     fn keep_pending_drops_spent_preserves_pending_and_prose() {
         let (_tmp, repo) = write_repo(FLAT, None);

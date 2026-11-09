@@ -214,21 +214,21 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 
 ## 24. Re-anchor `scope-results-bounded.py`'s M6 and M9, which task 5 moved
 
-- [ ] Point M6 at `restore_lists`' file-form check in `runtime/src/interpreter/payload.rs`, with the renamed killing test `a_file_form_result_gets_its_lists_back_from_its_list_file`, and M7 and M8 at the renamed `an_unreadable_list_file_is_an_error_not_an_empty_list`. Task 5 (ece1ed5a) replaced the walker's scope-only read with `restore_lists`: `run.py --check` reports M6's and M9's anchors invalid, and M7's and M8's filters name no test, which `--check` does not see
-- [ ] Point M9 at task 25's restored check, after task 25
+- [x] Point M6 at `restore_lists`' file-form check in `runtime/src/interpreter/payload.rs`, with the renamed killing test `a_file_form_result_gets_its_lists_back_from_its_list_file`, and M7 and M8 at the renamed `an_unreadable_list_file_is_an_error_not_an_empty_list`. Task 5 (ece1ed5a) replaced the walker's scope-only read with `restore_lists`: `run.py --check` reports M6's and M9's anchors invalid, and M7's and M8's filters name no test, which `--check` does not see
+- [x] Point M9 at task 25's restored check, after task 25
 
 - **Done when**: `run.py --check` passes on every list in `scripts/mutation/`, and M6 and M9 run killed.
 
 ## 25. A list file missing a counted list halts the walk again
 
-- [ ] Restore the walker's halt on a list file that lacks a list its result counts, which task 5 (ece1ed5a) dropped when `restore_lists` replaced `scope_paths`. Since then a file-form `compute-review-scope` result whose list file holds no `scope` reads as an empty scope, which 066's scenario `scope-results-have-a-bounded-size` rules out ("a counts-only result never reads as an empty scope"). Derive the required lists from the bounded result, minding that `diff-cross-spec` counts `cross-spec-paths` as `cross-spec-count`
-- [ ] Test it in `runtime/src/interpreter/payload.rs`: a file-form result whose file lacks a counted list is `ListsFileUnreadable`, naming the list
+- [x] Restore the walker's halt on a list file that lacks a list its result counts, which task 5 (ece1ed5a) dropped when `restore_lists` replaced `scope_paths`. Since then a file-form `compute-review-scope` result whose list file holds no `scope` reads as an empty scope, which 066's scenario `scope-results-have-a-bounded-size` rules out ("a counts-only result never reads as an empty scope"). Derive the required lists from the bounded result, minding that `diff-cross-spec` counts `cross-spec-paths` as `cross-spec-count`
+- [x] Test it in `runtime/src/interpreter/payload.rs`: a file-form result whose file lacks a counted list is `ListsFileUnreadable`, naming the list
 
 - **Done when**: the test passes and fails with the check removed, and task 24's M9 anchors on the restored check.
 
 ## 26. `gen-claude-commands.sh` halts on a runtime that predates `tool-search-line`
 
-- [ ] Refuse a runtime whose `apply-manifest --help` does not name `tool-search-line`. 81285165 was committed from a worktree whose release binary predated a62d2328: that `apply-manifest` ignored the unknown field, so the hook's regeneration dropped the line from 14 Claude copies and nothing halted (restored in 9bf198f5). A stale runtime must halt the generator, and so the commit, rather than rewrite the copies
-- [ ] Test it in `scripts/tests/`, with a stub runtime that lacks the field and one that has it, and add the test to the workflow that runs the generator's scripts
+- [x] Refuse a runtime whose `apply-manifest --help` does not name `tool-search-line`. 81285165 was committed from a worktree whose release binary predated a62d2328: that `apply-manifest` ignored the unknown field, so the hook's regeneration dropped the line from 14 Claude copies and nothing halted (restored in 9bf198f5). A stale runtime must halt the generator, and so the commit, rather than rewrite the copies
+- [x] Test it in `scripts/tests/`, with a stub runtime that lacks the field and one that has it, and add the test to the workflow that runs the generator's scripts
 
 - **Done when**: the generator halts, naming the runtime, with a binary that lacks the field and passes with one that has it, and the test fails with the check removed.

@@ -36,6 +36,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::host::Host;
+use crate::primitives::bounded_lists::counted_lists;
 use crate::primitives::read_tasks;
 use crate::primitives::rule_sections::parse_rule_sections;
 use crate::schema::extensions::{
@@ -362,12 +363,21 @@ fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScop
 /// that is not an object, is left as it is. Returns the keys it put back, which
 /// the walker names under [`RESTORED_LISTS`].
 ///
+/// The file must hold every list `primitive`'s result counts
+/// (`bounded_lists::counted_lists`), since a list it lacks would read as empty
+/// at every later step: a counts-only result never reads as an empty scope
+/// (066 scenario `scope-results-have-a-bounded-size`).
+///
 /// # Errors
 ///
 /// [`PayloadError::ListsFileUnreadable`] when `lists-file` is absent or not a
 /// string, or the file it names resolves outside the project, cannot be read,
-/// or does not hold a JSON object.
-pub(super) fn restore_lists(result: &mut Value, repo: &Path) -> Result<Vec<String>, PayloadError> {
+/// does not hold a JSON object, or lacks a list the result counts.
+pub(super) fn restore_lists(
+    primitive: &str,
+    result: &mut Value,
+    repo: &Path,
+) -> Result<Vec<String>, PayloadError> {
     let Value::Object(map) = result else {
         return Ok(Vec::new());
     };
@@ -399,6 +409,11 @@ pub(super) fn restore_lists(result: &mut Value, repo: &Path) -> Result<Vec<Strin
     let Value::Object(lists) = lists else {
         return Err(unreadable("it holds no JSON object".into()));
     };
+    for list in counted_lists(primitive, map) {
+        if !lists.get(&list).is_some_and(Value::is_array) {
+            return Err(unreadable(format!("it holds no `{list}` list")));
+        }
+    }
     let keys = lists.keys().cloned().collect();
     map.extend(lists);
     Ok(keys)
@@ -2760,7 +2775,7 @@ mod tests {
         )
         .unwrap();
         let mut result = file_form_result("lists.json");
-        let restored = restore_lists(&mut result, tmp.path()).unwrap();
+        let restored = restore_lists("compute-review-scope", &mut result, tmp.path()).unwrap();
         assert_eq!(restored, ["scope", "modified-since"]);
         assert_eq!(
             result,
@@ -2789,7 +2804,7 @@ mod tests {
         ] {
             let mut result = original.clone();
             assert_eq!(
-                restore_lists(&mut result, tmp.path()).unwrap(),
+                restore_lists("compute-review-scope", &mut result, tmp.path()).unwrap(),
                 [] as [String; 0]
             );
             assert_eq!(result, original);
@@ -2814,16 +2829,70 @@ mod tests {
             "not-json.json",
             "not-object.json",
         ] {
-            match restore_lists(&mut file_form_result(file), &repo) {
+            match restore_lists("compute-review-scope", &mut file_form_result(file), &repo) {
                 Err(PayloadError::ListsFileUnreadable { path, .. }) => assert_eq!(path, file),
                 other => panic!("{file:?}: expected ListsFileUnreadable, got {other:?}"),
             }
         }
         let mut unnamed = serde_json::json!({"form": "file"});
         assert!(matches!(
-            restore_lists(&mut unnamed, &repo),
+            restore_lists("compute-review-scope", &mut unnamed, &repo),
             Err(PayloadError::ListsFileUnreadable { .. })
         ));
+    }
+
+    /// A list file lacking a list its result counts halts the walk, naming
+    /// the list, rather than leaving the list absent, which a later step would
+    /// read as empty: a counts-only result never reads as an empty scope (066
+    /// scenario `scope-results-have-a-bounded-size`). `diff-cross-spec`'s
+    /// count names `cross-spec-paths`, and `prune-tasks`' `removed-count` and
+    /// `kept-count` count no list, so a file without them is whole.
+    #[test]
+    fn a_list_file_lacking_a_counted_list_is_an_error_naming_it() {
+        let tmp = tempdir().unwrap();
+        fs::write(
+            tmp.path().join("no-scope.json"),
+            r#"{"modified-since": []}"#,
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("scope-not-list.json"),
+            r#"{"scope": "src/a.rs"}"#,
+        )
+        .unwrap();
+        fs::write(tmp.path().join("cross-spec.json"), r#"{"cross-spec": []}"#).unwrap();
+        fs::write(tmp.path().join("sections.json"), r#"{"sections": []}"#).unwrap();
+        let unreadable = |primitive: &str, mut result: Value| match restore_lists(
+            primitive,
+            &mut result,
+            tmp.path(),
+        ) {
+            Err(PayloadError::ListsFileUnreadable { reason, .. }) => reason,
+            other => panic!("{primitive}: expected ListsFileUnreadable, got {other:?}"),
+        };
+        for file in ["no-scope.json", "scope-not-list.json"] {
+            assert_eq!(
+                unreadable("compute-review-scope", file_form_result(file)),
+                "it holds no `scope` list",
+                "{file}"
+            );
+        }
+        let cross_spec = serde_json::json!({"form": "file", "cross-spec-count": 0, "lists-file": "cross-spec.json"});
+        assert_eq!(
+            unreadable("diff-cross-spec", cross_spec),
+            "it holds no `cross-spec-paths` list"
+        );
+        let mut prune = serde_json::json!({
+            "form": "file",
+            "removed-count": 1,
+            "kept-count": 2,
+            "sections-count": 0,
+            "lists-file": "sections.json",
+        });
+        assert_eq!(
+            restore_lists("prune-tasks", &mut prune, tmp.path()).unwrap(),
+            ["sections"]
+        );
     }
 
     /// A list read back from a list file stays out of the legacy tail, as the

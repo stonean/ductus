@@ -263,7 +263,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 // walk reads them back now, before the tally and the merge,
                 // so no step sees a list as empty and no later result's
                 // `lists-file` replaces this one's unread (spec 080).
-                let restored = match payload::restore_lists(&mut result, &self.repo) {
+                let restored = match payload::restore_lists(name, &mut result, &self.repo) {
                     Ok(restored) => restored,
                     Err(err) => {
                         let code = err.code().to_string();

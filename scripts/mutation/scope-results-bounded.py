@@ -1,10 +1,12 @@
 """Mutation list for 066's `scope-results-have-a-bounded-size`: a
 `compute-review-scope` or `diff-cross-spec` result is inline while it fits
 `[artifacts] read-size-bytes`, and past it names a file holding its lists
-whole, which the `ductus exec` walker's `performReview` request reads its
-scope from (`runtime/src/primitives/bounded_lists.rs`,
-`compute_review_scope.rs`, `diff_cross_spec.rs`,
-`runtime/src/interpreter/payload.rs`).
+whole, which the `ductus exec` walker reads every list back from when the
+result arrives, halting on a file that lacks a list the result counts, so a
+counts-only result never reads as an empty scope
+(`runtime/src/primitives/bounded_lists.rs`, `compute_review_scope.rs`,
+`diff_cross_spec.rs`, `runtime/src/interpreter/payload.rs`; spec 080 bounded
+the other results that grow with the corpus the same way).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/scope-results-bounded.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -14,10 +16,9 @@ free number. When the code a mutation anchors on changes, update the anchor
 in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
-run.py runs unit tests only. The three integration tests the bound also
-answers to — `a_scope_past_the_read_size_reaches_the_review_through_its_list_file`
-in `runtime/tests/walker.rs`, and the two `..._via_mcp` tests in
-`runtime/tests/mcp.rs` — fail under M1, run by hand with
+run.py runs unit tests only. The integration tests the bound also answers
+to, the `past_the_read_size` tests in `runtime/tests/walker.rs` and
+`runtime/tests/mcp.rs`, fail under M1, run by hand with
 `cargo test --locked --test walker --test mcp -- past_the_read_size`.
 """
 
@@ -60,32 +61,32 @@ MUTATIONS = [
         'bounded_lists::tests::a_result_past_the_read_size_is_written_whole_to_a_file compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list interpreter::tests::a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file',
     ),
     (
-        'M6 the walker reads no scope from a list file',
+        'M6 the walker reads no lists back from a list file',
         'src/interpreter/payload.rs',
-        '    if context.contains_key("scope") {\n        return Ok(string_array(context, "scope"));',
-        '    if true {\n        return Ok(string_array(context, "scope"));',
-        'interpreter::payload::tests::a_scope_in_a_list_file_is_loaded_from_it',
+        '    if map.get("form").and_then(Value::as_str) != Some("file") {',
+        '    if true {',
+        'interpreter::payload::tests::a_file_form_result_gets_its_lists_back_from_its_list_file',
     ),
     (
-        'M7 a missing list file reads as an empty scope',
+        'M7 a missing list file reads as empty lists',
         'src/interpreter/payload.rs',
         '        Contained::Missing => return Err(unreadable("it does not exist".into())),',
         '        Contained::Missing => return Ok(Vec::new()),',
-        'interpreter::payload::tests::an_unreadable_list_file_is_an_error_not_an_empty_scope',
+        'interpreter::payload::tests::an_unreadable_list_file_is_an_error_not_an_empty_list',
     ),
     (
-        'M8 a list file outside the project reads as an empty scope',
+        'M8 a list file outside the project reads as empty lists',
         'src/interpreter/payload.rs',
         '        Contained::Outside => return Err(unreadable("it resolves outside the project".into())),',
         '        Contained::Outside => return Ok(Vec::new()),',
-        'interpreter::payload::tests::an_unreadable_list_file_is_an_error_not_an_empty_scope',
+        'interpreter::payload::tests::an_unreadable_list_file_is_an_error_not_an_empty_list',
     ),
     (
-        'M9 a list file holding no scope reads as an empty scope',
+        'M9 a list file lacking a counted list reads as an empty list',
         'src/interpreter/payload.rs',
-        '        return Err(unreadable("it holds no `scope` list".into()));',
-        '        return Ok(Vec::new());',
-        'interpreter::payload::tests::an_unreadable_list_file_is_an_error_not_an_empty_scope',
+        '        if !lists.get(&list).is_some_and(Value::is_array) {',
+        '        if false {',
+        'interpreter::payload::tests::a_list_file_lacking_a_counted_list_is_an_error_naming_it',
     ),
     (
         'M10 a write prunes list files a concurrent reader may still need',
@@ -148,5 +149,33 @@ MUTATIONS = [
         '    write_atomic(&dir.join(&name), &body)?;',
         '    let _ = write_atomic(&dir.join(&name), &body);',
         'bounded_lists::tests::a_file_that_cannot_be_written_fails_the_call',
+    ),
+    (
+        'M18 diff-cross-spec\'s count names no list, so its paths go unchecked',
+        'src/primitives/bounded_lists.rs',
+        '        Some("cross-spec-paths"),',
+        '        None,',
+        'interpreter::payload::tests::a_list_file_lacking_a_counted_list_is_an_error_naming_it bounded_lists::tests::a_result_counts_the_lists_its_counts_name',
+    ),
+    (
+        'M19 prune-tasks\' removed-count names a list, halting a whole file',
+        'src/primitives/bounded_lists.rs',
+        '    ("prune-tasks", "removed-count", None),\n',
+        '',
+        'interpreter::payload::tests::a_list_file_lacking_a_counted_list_is_an_error_naming_it prune_tasks::tests::a_summary_past_the_read_size_moves_its_sections_to_a_file bounded_lists::tests::a_result_counts_the_lists_its_counts_name',
+    ),
+    (
+        'M20 measure-reopenings\' closed-count names a list, halting a whole file',
+        'src/primitives/bounded_lists.rs',
+        '    ("measure-reopenings", "closed-count", None),\n',
+        '',
+        'measure_reopenings::tests::a_result_past_the_read_size_moves_its_lists_to_a_file',
+    ),
+    (
+        'M21 a counted list the result carries inline is owed by the file too',
+        'src/primitives/bounded_lists.rs',
+        '        .filter(|list| !result.contains_key(list))\n',
+        '',
+        'bounded_lists::tests::a_result_counts_the_lists_its_counts_name',
     ),
 ]

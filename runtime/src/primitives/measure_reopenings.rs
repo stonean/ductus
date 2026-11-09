@@ -1985,11 +1985,16 @@ mod tests {
         assert_eq!(result.waiting, None);
         assert_eq!(result.closed_count, 1);
         assert_eq!(result.waiting_count, 1);
-        let file = fixture.root.join(result.lists_file.unwrap());
+        let file = fixture.root.join(result.lists_file.clone().unwrap());
         let lists: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
         assert_eq!(lists["reopenings"][0]["feature"], FEATURE);
         assert_eq!(lists["waiting"][0], FEATURE);
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "measure-reopenings",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 
     #[test]

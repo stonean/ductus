@@ -83,6 +83,25 @@ if ! command -v "$ductus_bin" > /dev/null 2>&1; then
   echo "  Build it with (cd runtime && cargo build --release), or set DUCTUS_BIN." >&2
   exit 1
 fi
+# A runtime that predates tool-search-line (spec 080) ignores the field, so it
+# would write every Claude copy without its ToolSearch line, and the pre-commit
+# hook would commit them: 81285165 did. Refuse it before anything is written.
+# The help is read whole first: `grep -q` in a pipeline under pipefail can
+# fail a match by closing the pipe early.
+if ! manifest_help="$("$ductus_bin" apply-manifest --help 2>&1)"; then
+  echo "gen-claude-commands: $ductus_bin apply-manifest --help failed:" >&2
+  printf '%s\n' "$manifest_help" >&2
+  exit 1
+fi
+case "$manifest_help" in
+  *tool-search-line*) ;;
+  *)
+    echo "gen-claude-commands: the runtime at $ductus_bin predates apply-manifest's tool-search-line." >&2
+    echo "  It would write the Claude copies without their ToolSearch line." >&2
+    echo "  Rebuild it with (cd runtime && cargo build --release), or set DUCTUS_BIN." >&2
+    exit 1
+    ;;
+esac
 
 # Write apply-manifest's entries and substitutions for the Claude copies into
 # directory $1: one entry per command source, and configure.md from Claude's
