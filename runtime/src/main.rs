@@ -41,6 +41,18 @@ struct Cli {
     command: Command,
 }
 
+/// The hooks `ductus hook` answers, one per host event it adapts.
+#[derive(Subcommand, Debug)]
+enum HookCommand {
+    /// Claude Code's `UserPromptExpansion` hook for `/{project}:status`.
+    ///
+    /// Reads the hook input from stdin, and prints a block response whose
+    /// reason is the pipeline view as fixed-width text. The project root is
+    /// `CLAUDE_PROJECT_DIR`, else the working directory. Exits 1, with the
+    /// error on stderr, when the view cannot be rendered.
+    Status,
+}
+
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Start the MCP server, exposing every primitive but `run-generator` as a tool.
@@ -68,6 +80,12 @@ enum Command {
         /// surface used to inspect the wire contract.
         #[arg(long, conflicts_with_all = ["file", "check"])]
         emit_schema: bool,
+    },
+
+    /// Answer an agent host's hook (spec 080).
+    Hook {
+        #[command(subcommand)]
+        hook: HookCommand,
     },
 
     #[command(about = descriptions::summary(descriptions::READ_SPEC), long_about = descriptions::READ_SPEC)]
@@ -704,6 +722,8 @@ fn main() -> ExitCode {
     // The runtime's environment variables — the session identity, the fetch
     // allowlist and the proxy variables — are read here, once, for every
     // subcommand (`CFG-ENV-001`), and primitives answer from this reading.
+    // `ductus hook status` reads `CLAUDE_PROJECT_DIR` once at its own start,
+    // since nothing else reads it.
     // The inventory is docs/runtime.md's. The certificate variables are the
     // one exception it names: on Linux and other non-Apple Unix,
     // `fetch-archive` reads them once per
@@ -730,6 +750,15 @@ fn main() -> ExitCode {
                 return ExitCode::from(1);
             };
             run_parse(&path, check)
+        }
+        Command::Hook {
+            hook: HookCommand::Status,
+        } => {
+            // `CLAUDE_PROJECT_DIR` is read here, once, at the start of the one
+            // subcommand that reads it (`CFG-ENV-001`).
+            let root =
+                ductus::hook::project_root(std::env::var_os(ductus::hook::PROJECT_DIR_VAR), repo);
+            emit_result(ductus::hook::status(&root, &mut io::stdin().lock()))
         }
         Command::ReadSpec(args) => emit_result(primitives::read_spec::run(&args, &repo)),
         Command::ReadTasks(args) => emit_result(primitives::read_tasks::run(&args, &repo)),
@@ -1104,15 +1133,19 @@ mod tests {
     /// `mcp` and `exec` are the runtime's two *surfaces*
     /// (§runtime-boundary), not capabilities it exposes; `parse` is the
     /// parseability check `scripts/lint-procedure-parseability.sh` and CI
-    /// drive, plus the `--emit-schema` debug surface. None of the three is
-    /// a primitive, so none appears in [`PRIMITIVE_REGISTRY`]. `help` is
-    /// synthesised by clap rather than declared here at all.
+    /// drive, plus the `--emit-schema` debug surface. `hook` adapts an agent
+    /// host's hook protocol, and the capability it adapts is the pipeline
+    /// view, which `render-status` serves on MCP (§runtime-boundary
+    /// principle 5; spec 080) — a cli-only primitive would need one of that
+    /// principle's three exemptions, and rendering a view meets none. None of
+    /// the four is a primitive, so none appears in [`PRIMITIVE_REGISTRY`].
+    /// `help` is synthesised by clap rather than declared here at all.
     ///
     /// A future primitive that genuinely should have no CLI surface is added
     /// here with its own reason. Nothing may be excluded silently: the point
     /// of the set-equality is that *not* being a subcommand has to be a
     /// stated decision.
-    const NON_PRIMITIVE_SUBCOMMANDS: &[&str] = &["mcp", "exec", "parse", "help"];
+    const NON_PRIMITIVE_SUBCOMMANDS: &[&str] = &["mcp", "exec", "parse", "hook", "help"];
 
     /// The clap subcommand enum is the fifth primitive-registration surface,
     /// and it was the one nothing pinned: with a `Command` variant and its

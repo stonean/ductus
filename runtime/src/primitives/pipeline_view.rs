@@ -30,14 +30,8 @@ use crate::schema::status::ALLOWED_STATUSES;
 pub(crate) enum Format {
     /// The pipe table and list summary the model path's hosts render.
     Markdown,
-    /// Fixed-width plain text for a terminal that renders no markdown.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the hook surface (spec 080 task 6) renders it; until then only the tests do"
-        )
-    )]
+    /// Fixed-width plain text for a terminal that renders no markdown, which
+    /// `ductus hook status` shows.
     Text,
 }
 

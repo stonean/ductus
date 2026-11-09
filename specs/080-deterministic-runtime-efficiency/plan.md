@@ -149,6 +149,8 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `runtime/src/primitives/merge_status_hook.rs` | Create | `merge-status-hook` primitive |
 | `runtime/src/primitives/tool_loading.rs` | Create | Step-tool derivation and the batching line |
 | `runtime/src/hook.rs` | Create | `ductus hook status` surface |
+| `runtime/tests/hook_status.rs` | Create | The hook's output, root and exits, driven through the binary |
+| `docs/runtime.md` | Modify | `CLAUDE_PROJECT_DIR` in the environment-variable inventory (`CFG-ENV-002`) |
 | `runtime/src/primitives/dashboard.rs` | Modify | Rendering moves out; `rendered-markdown` dropped; bounded |
 | `runtime/src/primitives/read_tasks.rs` | Modify | Bounded result |
 | `runtime/src/primitives/apply_manifest.rs` | Modify | `tool-search-line` entry field |

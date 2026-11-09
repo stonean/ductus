@@ -60,8 +60,8 @@ The population is what `research.md`'s grows-set lists as not bounded yet. The f
 
 Blocked on task 2: it shows the text rendering.
 
-- [ ] Add `runtime/src/hook.rs` and the `hook status` subcommand, and list `hook` in `NON_PRIMITIVE_SUBCOMMANDS` with its reason
-- [ ] Test the block output and its `suppressOriginalPrompt`, ignored command arguments, the `CLAUDE_PROJECT_DIR` root, and exit 1 with the error on stderr and nothing on stdout when the view cannot be rendered
+- [x] Add `runtime/src/hook.rs` and the `hook status` subcommand, and list `hook` in `NON_PRIMITIVE_SUBCOMMANDS` with its reason
+- [x] Test the block output and its `suppressOriginalPrompt`, ignored command arguments, the `CLAUDE_PROJECT_DIR` root, and exit 1 with the error on stderr and nothing on stdout when the view cannot be rendered
 
 - **Done when**: the tests pass (AC16; AC17 and AC25 on the runtime side).
 

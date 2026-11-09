@@ -3,7 +3,9 @@
 //! Implements the architecture described in
 //! [`specs/022-deterministic-runtime/spec.md`]. The runtime exposes two
 //! surfaces — an MCP server (`ductus mcp`) and a subprocess interpreter
-//! (`ductus exec`) — sharing a common library of primitives.
+//! (`ductus exec`) — sharing a common library of primitives. Beside them,
+//! `ductus hook` adapts a host's hook protocol to a capability one of those
+//! primitives already serves ([`hook`], spec 080).
 //!
 //! # Stability
 //!
@@ -18,6 +20,7 @@
 //! surface may land in a future major release; until then, treat the
 //! items below as private to the runtime.
 
+pub mod hook;
 pub mod host;
 pub mod interpreter;
 pub mod io;

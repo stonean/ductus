@@ -19,15 +19,19 @@ use std::process::Command;
 /// A runtime command with the session-identity variables removed (spec 062),
 /// so a spawned process never depends on the shell running the suite — which
 /// may itself carry a platform session id and would otherwise make every run
-/// an identified process's (AGENTS.md, Gotchas). A test that spawns the binary
-/// builds its command here, so the rule holds by construction, and one that
-/// wants an identity sets it on the returned command; `concurrent_sessions.rs`
-/// alone builds its own, since it sets each child's identity explicitly.
+/// an identified process's (AGENTS.md, Gotchas). `CLAUDE_PROJECT_DIR`, the
+/// root `ductus hook status` reads (spec 080), is removed for the same reason,
+/// since a suite run from a Claude Code hook would inherit it. A test that
+/// spawns the binary builds its command here, so the rule holds by
+/// construction, and one that wants an identity or a root sets it on the
+/// returned command; `concurrent_sessions.rs` alone builds its own, since it
+/// sets each child's identity explicitly.
 pub fn ductus_command(bin: impl AsRef<std::ffi::OsStr>) -> Command {
     let mut command = Command::new(bin);
     command
         .env_remove("DUCTUS_SESSION")
-        .env_remove("CLAUDE_CODE_SESSION_ID");
+        .env_remove("CLAUDE_CODE_SESSION_ID")
+        .env_remove("CLAUDE_PROJECT_DIR");
     command
 }
 
