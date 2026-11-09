@@ -661,9 +661,10 @@ pub enum PrimitiveError {
         /// What failed, naming the field: `` `reason` is missing ``.
         problem: String,
     },
-    /// `[review] re-reads-off` is present but is not a reason: not a string,
-    /// or shorter than the minimum once trimmed (spec 078). It halts rather
-    /// than running or skipping the fix-round loop on a guess, for the reason
+    /// `[review] re-reads-off` cannot be read as a reason: it is present but
+    /// not a string, or shorter than the minimum once trimmed but not empty,
+    /// or `review` is not a table (spec 078). It halts rather than running
+    /// or skipping the fix-round loop on a guess, for the reason
     /// [`Self::InvalidDisabledRuleFile`] gives (`CFG-ENV-008`); `problem`
     /// names the offending value on one line.
     #[error(
