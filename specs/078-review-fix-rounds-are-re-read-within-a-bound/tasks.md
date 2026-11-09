@@ -135,6 +135,8 @@ This task waited until `079-review-and-analysis-work-converges` was `done` (owne
 
 It owes `/ductus:analyze` on 078, each live finding dispositioned, which runs once no box in this file is open (spec 079). `check-review-gate` decides whether a review comes first, and its ticked criteria are verified against the tree before either run (spec 079 task 26, owner, 2026-11-09).
 
+The closing review ran at `494a1f3f`, and the analysis after it deferred `CFG-ENV-001` to task 17 (owner, 2026-11-09). Task 17's change owes a second review, of that change, and a second analysis before the completion gate. A simulated closing at `494a1f3f` reads this reopening at 3 reviews and 1 analysis, over 079's AC1 bound before task 17's runs (`measure-reopenings --since e7fcde37`), so `done` also owes a task on 079 disposing of the miss, as 079's task 27 did for its own.
+
 - **Done when**: `analysis.md` is current with no live hard-fail or blocking finding, so `/ductus:implement`'s completion gate can run
 
 ## 16. A supplied Summary carries the loop's account
@@ -144,3 +146,11 @@ It owes `/ductus:analyze` on 078, each live finding dispositioned, which runs on
 - [x] `data-model.md` and `plan.md` say the Summary, supplied or generated, renders the account, every other artifact saying the generated one is swept, and 066's task 17 is ticked
 
 - **Done when**: AC2 holds for a supplied Summary: every record a run with the loop writes names each exempt round
+
+## 17. An empty re-reads-off counts as absent
+
+- [ ] `fix_rounds::re_reads_off` reads an empty `[review] re-reads-off`, trimmed to nothing, as absent, so the loop runs, as `CFG-ENV-001`'s third declaration has it (078's analysis, 2026-11-09; deferred here by the owner)
+- [ ] A test that fails when an empty value halts again, and a mutant for it
+- [ ] The data model's `[review] re-reads-off` row, `framework/bootstrap/ductus.md` §Project Configuration and `framework/commands/review.md`'s Inputs line say an empty value counts as absent, and AC14's "a switch without a valid reason" is read with an empty value as no switch
+
+- **Done when**: `re-reads-off = ""` runs the loop, a reason under 16 characters still halts, and the re-check of 078's analysis no longer produces the CFG-ENV-001 finding
