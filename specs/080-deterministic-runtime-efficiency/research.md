@@ -24,7 +24,7 @@ An argument that widens what a primitive reads gets a row of its own, since a re
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at ece1ed5a5cce68960daa7225b00b0765a2f87d95, with a clean runtime/, at 2026-11-08T23:47:52Z.
+Measured by `scripts/measure-result-sizes.sh` at 4294b79a15383c1c5cf700d62a0f05b2fadee23d, with a clean runtime/, at 2026-11-09T01:51:06Z.
 
 Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenarios, one markdown-lint violation and one broken link; 5 inbox items. Large corpus: 100 specs, each with 50 criteria, 50 tasks of 3 subtasks and 20 scenarios, one markdown-lint violation and one broken link; 50 inbox items. Small and Large are measured at a read size of 1000000000 bytes, past every result; Large at the default read size is the same corpus at 50,000.
 
@@ -58,6 +58,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `enforce-manifest` | — | — | — | not measured | — | its result follows the expected-file list the host passes, not the spec corpus |
 | `merge-managed-block` | 163 | 163 | 163 | no | no | |
 | `merge-permissions` | 209 | 209 | 209 | no | no | |
+| `merge-status-hook` | 61 | 61 | 61 | no | no | |
 | `migrate-session-file` | 114 | 114 | 114 | no | no | |
 | `relocate-audit-records` | 61 | 61 | 61 | no | no | |
 | `create-scenario` | 59 | 59 | 59 | no | no | |
@@ -107,7 +108,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 
 ### Grows with the corpus
 
-Of the 70 registry names, 17 grow with the corpus by the test above, in 20 of the table's rows.
+Of the 71 registry names, 17 grow with the corpus by the test above, in 20 of the table's rows.
 
 - **Bounded through `bounded_lists` by this spec, so AC7's population (12):** `read-spec`, `read-tasks`, `derive-boundary`, `lint-markdown`, `prune-tasks`, `prune-plan`, `dashboard`, `check-review-gate`, `check-artifacts`, `check-corpus-links`, `check-unfolded-specs`, `rewrite-spec-links`. The first measurement, at 2b4eaddb, called each primitive in its default mode only and found the other 11; `prune-plan` grows only in its `all` walk.
 - **Bounded through `bounded_lists` before this spec (4):** `compute-review-scope`, `measure-reopenings`, `diff-cross-spec`, `brief-re-read`.
@@ -121,9 +122,9 @@ Of the 70 registry names, 17 grow with the corpus by the test above, in 20 of th
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at ece1ed5a5cce68960daa7225b00b0765a2f87d95, with a clean runtime/, at 2026-11-08T23:47:52Z.
+Measured by `scripts/measure-result-sizes.sh` at 4294b79a15383c1c5cf700d62a0f05b2fadee23d, with a clean runtime/, at 2026-11-09T01:51:06Z.
 
-69 tools, 133465 characters in all.
+70 tools, 134535 characters in all.
 
 | Tool | Description | Input schema | Loaded |
 | --- | --- | --- | --- |
@@ -166,6 +167,7 @@ Measured by `scripts/measure-result-sizes.sh` at ece1ed5a5cce68960daa7225b00b076
 | `resolve-references` | 1007 | 243 | 1250 |
 | `render-status` | 1093 | 74 | 1167 |
 | `enforce-manifest` | 66 | 1089 | 1155 |
+| `merge-status-hook` | 771 | 299 | 1070 |
 | `resolve-feature` | 442 | 622 | 1064 |
 | `check-unfolded-specs` | 972 | 74 | 1046 |
 | `check-orphaned-references` | 969 | 74 | 1043 |
