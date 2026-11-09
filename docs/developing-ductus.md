@@ -88,4 +88,4 @@ Test what each rule admits and refuses (separators, substitution, redirects, `xa
 
 ## Exercising an installer change without a push
 
-Drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`: `cp -R framework` to a `mktemp -d` `--source-root`, and build `--entries-json` from its `bootstrap/ductus.md`. On `main`, a subagent (no nested CLI) runs `install.sh` in scratch, with no `mcp__ductus__*`.
+Drive `apply-manifest` and `enforce-manifest` from a staging copy in `/ductus`'s own layout: `cp -R framework` into a `mktemp -d` directory, pass that directory as `--source-root`, and build `--entries-json` from its `framework/bootstrap/ductus.md` with sources spelled `framework/…` as the bootstrap's tables spell them. Staging `framework/` itself as the root is the generator's layout, not an adopter's, and passed a check an adopter's run then failed (spec 080). On `main`, a subagent (no nested CLI) runs `install.sh` in scratch, with no `mcp__ductus__*`.

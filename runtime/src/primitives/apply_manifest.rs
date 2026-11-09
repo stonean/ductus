@@ -33,8 +33,8 @@
 //! - **`tool-search-line`**: per-entry flag, set on Claude Code's command
 //!   copies only (spec 080). After substitution the entry's
 //!   `## Instructions` preamble gains a line that loads its step tools in one
-//!   `ToolSearch`, less those the source root's `commands/target.md` names
-//!   ([`tool_loading::add_tool_search_line`]).
+//!   `ToolSearch`, less those named by the `commands/target.md` the manifest
+//!   installs ([`tool_loading::add_tool_search_line`]).
 //! - **Source missing**: when the staging tree doesn't contain an
 //!   entry's source, the action is `source-missing` (not an
 //!   operational error — the host surfaces it so the operator can
@@ -122,8 +122,9 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   missing, is reported `skipped-pinned` or `source-missing` before its
 ///   strategy is read.
 /// - [`PrimitiveError::InvalidArgument`] when an entry sets
-///   `tool-search-line` and the source root's `commands/target.md` is missing
-///   or does not parse, checked before any write; and when such an entry is
+///   `tool-search-line` and the manifest installs no `commands/target.md`,
+///   installs two different ones, or installs one that is missing or does not
+///   parse, checked before any write; and when such an entry is
 ///   not UTF-8 text or holds a malformed procedure, checked before any write
 ///   for a command or skill destination and when the walk reaches it
 ///   otherwise.
@@ -144,7 +145,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     }
 
     let always_loaded = if args.entries.iter().any(|entry| entry.tool_search_line) {
-        Some(always_loaded_tools(&source_root)?)
+        Some(always_loaded_tools(&source_root, &args.entries)?)
     } else {
         None
     };
@@ -538,38 +539,71 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
 /// Returns the bytes and how many replacements were applied — `None` for a
 /// file whose bytes are not UTF-8, which is never examined for placeholders
 /// and so has no count to report rather than a count of zero.
-/// The tools a `tool-search-line` entry's line leaves out: those the source
-/// root's `commands/target.md` names, which load with the session (spec 080).
-/// The staged copy equals the installed one once the install completes.
+/// The tools a `tool-search-line` entry's line leaves out: those named by the
+/// `target.md` this manifest installs, the entry whose source ends in
+/// `commands/target.md`, which load with the session (spec 080). That source
+/// is the copy the MCP server reads once the install completes, in either
+/// layout a caller stages: `/ductus` passes the archive's root with sources
+/// `framework/commands/*.md`, and this repository's generator the framework
+/// directory with sources `commands/*.md`.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidArgument`] when the source root holds no
-/// `commands/target.md`, or one that does not parse, since the line would
+/// [`PrimitiveError::InvalidArgument`] when no entry installs a
+/// `commands/target.md`, when entries install two different ones, or when
+/// the one installed is missing or does not parse, since the line would
 /// otherwise name the wrong tools; [`PrimitiveError::Io`] when it cannot be
 /// read.
-fn always_loaded_tools(source_root: &Path) -> Result<BTreeSet<&'static str>> {
+fn always_loaded_tools(
+    source_root: &Path,
+    entries: &[ManifestEntry],
+) -> Result<BTreeSet<&'static str>> {
     let invalid = |reason: String| PrimitiveError::InvalidArgument {
         primitive: "apply-manifest".into(),
         argument: "entries".into(),
         reason,
     };
-    let path = source_root.join("commands").join("target.md");
-    let text = match fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+    let mut targets: Vec<&str> = entries
+        .iter()
+        .map(|entry| entry.source.as_str())
+        .filter(|source| Path::new(source).ends_with("commands/target.md"))
+        .collect();
+    targets.sort_unstable();
+    targets.dedup();
+    let source = match targets.as_slice() {
+        [source] => *source,
+        [] => {
             return Err(invalid(
-                "an entry sets tool-search-line, and the source root holds no \
+                "an entry sets tool-search-line, and no entry installs the \
                  commands/target.md naming the tools that load with the session"
                     .into(),
             ));
         }
-        Err(source) => return Err(PrimitiveError::Io { path, source }),
+        several => {
+            return Err(invalid(format!(
+                "an entry sets tool-search-line, and entries install {} different \
+                 commands/target.md sources ({}), so which tools load with the session is \
+                 ambiguous",
+                several.len(),
+                several.join(", ")
+            )));
+        }
+    };
+    let path = source_root.join(source);
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Err(invalid(format!(
+                "an entry sets tool-search-line, and the commands/target.md it installs, \
+                 `{source}`, is not in the source root"
+            )));
+        }
+        Err(err) => return Err(PrimitiveError::Io { path, source: err }),
     };
     tool_loading::text_step_tools(&text).map_err(|err| {
         invalid(format!(
-            "an entry sets tool-search-line, and the source root's commands/target.md does \
-             not parse: {err}"
+            "an entry sets tool-search-line, and the commands/target.md it installs, \
+             `{source}`, does not parse: {err}"
         ))
     })
 }
@@ -2233,12 +2267,13 @@ mod tests {
             vec![
                 flagged("commands/x.md", ".claude/commands/acme/x.md"),
                 entry("commands/x.md", "plain.md", "update"),
+                flagged("commands/target.md", ".claude/commands/acme/target.md"),
             ],
             vec![],
             subs(&[("project", "acme")]),
         );
         let result = run(&args, tmp.path()).unwrap();
-        assert_eq!(result.created, 2);
+        assert_eq!(result.created, 3);
         assert_eq!(result.entries[0].substitutions_applied, Some(1));
 
         let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
@@ -2255,12 +2290,16 @@ mod tests {
         assert_eq!(steps(&written), steps(&plain));
     }
 
-    /// A flagged entry needs target's tools, so a source root without
-    /// `commands/target.md` halts the call before any entry is written.
+    /// A flagged entry needs target's tools from the `target.md` the manifest
+    /// installs, so a manifest installing none halts the call before any entry
+    /// is written, even with one in the source root beside the others.
     #[test]
     fn a_flagged_entry_without_target_md_halts_before_any_write() {
         let tmp = tempfile::tempdir().unwrap();
-        let src = write_source(tmp.path(), &[("commands/x.md", COMMAND)]);
+        let src = write_source(
+            tmp.path(),
+            &[("commands/x.md", COMMAND), ("commands/target.md", TARGET)],
+        );
         let dst = tmp.path().join("dst");
         let args = args_for(
             &src,
@@ -2274,10 +2313,100 @@ mod tests {
         );
         match run(&args, tmp.path()) {
             Err(PrimitiveError::InvalidArgument { reason, .. }) => {
-                assert!(reason.contains("commands/target.md"), "{reason}");
+                assert!(
+                    reason.contains("no entry installs the commands/target.md"),
+                    "{reason}"
+                );
             }
             other => panic!("expected InvalidArgument, got {other:?}"),
         }
         assert!(!dst.join("plain.md").exists(), "nothing is written");
+    }
+
+    /// AC29 in `/ductus`'s layout: the archive's root as the source root,
+    /// with sources under `framework/`, takes target's tools from the
+    /// `framework/commands/target.md` the manifest installs (task 11's
+    /// adopter run halted here).
+    #[test]
+    fn the_bootstraps_layout_takes_target_from_the_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                ("framework/commands/x.md", COMMAND),
+                ("framework/commands/target.md", TARGET),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                flagged("framework/commands/x.md", ".claude/commands/acme/x.md"),
+                flagged(
+                    "framework/commands/target.md",
+                    ".claude/commands/acme/target.md",
+                ),
+            ],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.created, 2);
+        let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
+        assert!(
+            written.contains("`ToolSearch` call before step 1: `select:mcp__ductus__read-spec`\n"),
+            "{written}"
+        );
+        let target = fs::read_to_string(dst.join(".claude/commands/acme/target.md")).unwrap();
+        assert_eq!(
+            target, TARGET,
+            "target's own tools all load with the session"
+        );
+    }
+
+    /// Two different `target.md` sources leave target's tools ambiguous, and
+    /// one the manifest names that the source root lacks cannot be read: each
+    /// halts the call before any entry is written.
+    #[test]
+    fn an_ambiguous_or_absent_target_md_halts_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                ("commands/x.md", COMMAND),
+                ("commands/target.md", TARGET),
+                ("framework/commands/target.md", TARGET),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+        let plain = || entry("commands/x.md", "plain.md", "update");
+        let cases = [
+            (
+                vec![
+                    plain(),
+                    flagged("commands/target.md", "target.md"),
+                    flagged("framework/commands/target.md", "second.md"),
+                ],
+                "2 different commands/target.md sources",
+            ),
+            (
+                vec![plain(), flagged("other/commands/target.md", "target.md")],
+                "`other/commands/target.md`, is not in the source root",
+            ),
+        ];
+        for (entries, expected) in cases {
+            let args = args_for(&src, &dst, entries, vec![], subs(&[("project", "acme")]));
+            match run(&args, tmp.path()) {
+                Err(PrimitiveError::InvalidArgument { reason, .. }) => {
+                    assert!(reason.contains(expected), "{expected}: {reason}");
+                }
+                other => panic!("{expected}: expected InvalidArgument, got {other:?}"),
+            }
+            assert!(
+                !dst.join("plain.md").exists(),
+                "{expected}: nothing is written"
+            );
+        }
     }
 }

@@ -2898,8 +2898,9 @@ pub struct ManifestEntry {
     pub keep_literals: Option<Vec<String>>,
     /// Claude Code's command copies only (spec 080, AC29): after
     /// substitution, end the `## Instructions` preamble with a line loading
-    /// the command's step tools in one `ToolSearch`, less the tools the
-    /// source root's `commands/target.md` names, which load with the session.
+    /// the command's step tools in one `ToolSearch`, less the tools named by
+    /// the `commands/target.md` the manifest installs, which load with the
+    /// session.
     /// No line is written when none remain. `false` when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub tool_search_line: bool,

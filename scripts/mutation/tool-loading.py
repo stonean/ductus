@@ -5,7 +5,9 @@ legacy-prose command's whole Instructions section stands in for its steps.
 The installed `target` command is found through every candidate, derived when
 it parses, and reported when it cannot be. The line closes the preamble with
 the tools left after target's, in the file's own line ending, and only a
-flagged `apply-manifest` entry gets it (`runtime/src/primitives/tool_loading.rs`,
+flagged `apply-manifest` entry gets it, taking target's tools from the
+`target.md` the manifest installs, in the bootstrap's layout and the
+generator's alike (`runtime/src/primitives/tool_loading.rs`,
 `apply_manifest.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/tool-loading.py
@@ -118,10 +120,24 @@ MUTATIONS = [
         'apply_manifest::tests::a_flagged_copy_carries_the_line_and_parses_to_its_sources_procedure',
     ),
     (
-        'M14 a missing target.md leaves every tool in the line',
+        'M14 a manifest installing no target.md is not refused for that',
         'src/primitives/apply_manifest.rs',
-        '    let path = source_root.join("commands").join("target.md");\n',
-        '    let path = source_root.join("commands").join("target.md");\n    if !path.exists() {\n        return Ok(BTreeSet::new());\n    }\n',
+        '        [] => {\n            return Err(invalid(\n',
+        '        [] if false => {\n            return Err(invalid(\n',
         'apply_manifest::tests::a_flagged_entry_without_target_md_halts_before_any_write',
+    ),
+    (
+        'M15 target is read from the source root\'s commands/target.md, not the manifest\'s',
+        'src/primitives/apply_manifest.rs',
+        '        .filter(|source| Path::new(source).ends_with("commands/target.md"))\n',
+        '        .filter(|source| *source == "commands/target.md")\n',
+        'apply_manifest::tests::the_bootstraps_layout_takes_target_from_the_manifest',
+    ),
+    (
+        'M16 two different target.md sources: the first wins',
+        'src/primitives/apply_manifest.rs',
+        '        [source] => *source,\n',
+        '        [source, ..] => *source,\n',
+        'apply_manifest::tests::an_ambiguous_or_absent_target_md_halts_before_any_write',
     ),
 ]
