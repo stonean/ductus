@@ -10,7 +10,7 @@ Implements [069 — Accessibility rules (frontend)](spec.md).
 
 ### `FE-ARIA-001` rests on §4.1.2 alone (AC14)
 
-The Statement drops its MUST NOT on restating an element's implicit role (`<button role="button">`) and the styled-list MAY that qualifies it. The Verification drops its flag of a restated role and that flag's styled-list exception. The Source adds WCAG 2.2 §4.1.2 (Name, Role, Value) for the MUST, and drops *ARIA in HTML* §3.2, which supported only the removed clause. *ARIA in HTML* §1 and §3.1 stay for the allowed-role and override clauses. Severity posture already names `FE-ARIA-001` "through §4.1.2" and lists it under no exception (spec.md, *Severity posture*), so the spec needs no change for it. The rule's other clauses, quoted at `framework/rules/accessibility-frontend.md` in its `### FE-ARIA-001` section, are unchanged. The only other artifacts that name `FE-ARIA-001` are 008's ticked task 20 bullets, which concern its `<div>`-with-role overlap with `FE-SEMHTML-001`. That clause stays, so no other artifact changes.
+The Statement drops its MUST NOT on restating an element's implicit role (`<button role="button">`) and the styled-list MAY that qualifies it. The Verification drops its flag of a restated role and that flag's styled-list exception. The Source adds WCAG 2.2 §4.1.2 (Name, Role, Value) for the MUST, and drops *ARIA in HTML* §3.2, which supported only the removed clause. *ARIA in HTML* §1 and §3.1 stay for the allowed-role and override clauses. Severity posture already names `FE-ARIA-001` "through §4.1.2" and lists it under no exception (spec.md, *Severity posture*), so the posture needs no change for it, and the second review's Resolved Question records the styled-list MAY as gone. No other clause changes for AC14; AC4's re-fetch below corrects the override and combobox clauses its copies do not confirm. Outside this spec, `FE-ARIA-001` is named only by 008's ticked task 20 bullets and by stored review decisions, which concern its `<div>`-with-role overlap with `FE-SEMHTML-001`. That clause stays, so no other artifact changes.
 
 ### The header disclaims a conformance claim (AC13)
 
@@ -24,7 +24,7 @@ The Resolved Question says each "gains a rule or a clause of a rule its category
 | --- | --- | --- | --- |
 | 1.3.3 Sensory Characteristics | A | a clause of `FE-CONTRAST-002` | that rule is §1.4.1 Use of Color, and 1.3.3's text lists color among the sensory characteristics, its Note sending color to Guideline 1.4 |
 | 1.4.5 Images of Text | AA | a clause of `FE-A11YMEDIA-001` | text alternatives for images; its Customizable and Essential exceptions go into the clause as MAY, with logotypes noted as essential |
-| 2.5.4 Motion Actuation | A | a clause of `FE-POINTER-002` | that rule holds §2.5.1 and §2.5.7, Guideline 2.5 *Input Modalities*, and gives an alternative to complex input, as 2.5.4 does; its two exceptions become MAY |
+| 2.5.4 Motion Actuation | A | a clause of `FE-POINTER-002` | that rule holds §2.5.1 and §2.5.7, Guideline 2.5 *Input Modalities*, and gives an alternative to complex input, as 2.5.4 does; its two exceptions become an `unless` clause |
 | 2.4.5 Multiple Ways, 3.2.3 Consistent Navigation, 3.2.4 Consistent Identification, 3.2.6 Consistent Help | AA, AA, AA, A | a new rule, `FE-SEMHTML-004` | each concerns a set of web pages, the page structure `SEMHTML` holds, beside `FE-SEMHTML-002`'s §2.4.1 and §2.4.6 |
 
 Each is MUST, being Level A or AA (spec.md, *Severity posture*). Each Verification triggers on a spec or plan that introduces the surface concerned: instructions, images, motion input, or a set of pages that shares navigation, help or components. The scope table's `SEMHTML`, `CONTRAST`, `A11YMEDIA` and `POINTER` rows gain the concern, and Severity posture's count moves from 39 rules, 35 MUST and 4 SHOULD, to 40, 36 and 4.
@@ -43,7 +43,7 @@ Task 4 checks every claim against copies fetched during implementation, by 068's
 
 ### The spec's own stale passages are corrected
 
-Enforcement still says "(see Open Questions)" for which review pass applies the file. The question was deferred to 020's scenario `every-loaded-rule-file-has-a-pass` and is recorded under Resolved Questions, so the pointer moves there. Severity posture's counts follow the new rule, as above.
+Enforcement's pointer for which review pass applies the file names the Resolved Question that defers it to 020's scenario `every-loaded-rule-file-has-a-pass`, not Open Questions. Severity posture's counts follow the new rule, as above. The second review's Resolved Question follows AC14 and AC4: `FE-ARIA-001`'s styled-list MAY is recorded as gone, and the Dialog pattern's next-step exception carries both its conditions.
 
 ## Affected Files
 

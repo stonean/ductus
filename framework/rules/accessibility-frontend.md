@@ -34,7 +34,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Across a set of web pages, more than one way MUST be available to locate a page that is not the result of, or a step in, a process; navigation repeated on multiple pages MUST keep the same relative order, and help mechanisms (human contact details or mechanism, self-help, automated contact) repeated on multiple pages the same order relative to other page content, unless the user changes it; and components with the same functionality MUST be identified consistently.
 
-**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation, help in the same order relative to other page content, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the three.
+**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation, help in the same order relative to other page content, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the four.
 
 **Source:** WCAG 2.2 §2.4.5 (Multiple Ways), §3.2.3 (Consistent Navigation), §3.2.4 (Consistent Identification), §3.2.6 (Consistent Help)
 
