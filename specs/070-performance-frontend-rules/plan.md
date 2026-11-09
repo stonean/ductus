@@ -10,7 +10,7 @@ Implements [070 — Performance rules (frontend)](spec.md).
 
 ### The header states the severity posture (AC11)
 
-The header gains the posture sentence from Resolved Questions in the form its siblings use. That form is "A rule is **MUST** only when …; the rest are **SHOULD**" (line 3 of `framework/rules/concurrency-backend.md`, `performance-backend.md`, `reliability-backend.md` and `api-backend.md`). The sentence: a rule is MUST only when its absence blocks a user regardless of scale, such as text left invisible, rendering held by a parser-blocking script, or the main content's image deferred, or leaves the page without the budgets and real-user measurement the other rules answer to, and SHOULD where it is one means among others toward a budget. It sits after the design-time sentence, and the header stays one paragraph.
+The header gains the posture sentence from Resolved Questions in the form its siblings use, "A rule is **MUST** only when …" (line 3 of `framework/rules/concurrency-backend.md`, `performance-backend.md`, `reliability-backend.md` and `api-backend.md`). It names where a rule is **SHOULD**, as `api-backend.md`'s does, since Resolved Questions states that case too. The sentence: a rule is MUST only when its absence blocks a user regardless of scale, such as text left invisible, rendering held by a parser-blocking script, or the main content's image deferred, or leaves the page without the budgets and real-user measurement the other rules answer to, and SHOULD where it is one means among others toward a budget. It sits after the design-time sentence, and the header stays one paragraph.
 
 ### Five rules move to SHOULD under their IDs (AC11)
 
@@ -22,7 +22,7 @@ No other artifact states these rules' tiers. Outside this spec and the rule file
 
 ### `FE-VITALS-001` publishes its budgets in `specs/system.md` (AC12)
 
-The Statement's "MUST publish documented performance budgets" names `specs/system.md` as their home, as `FE-BUNDLE-001`'s does. The sentence on looser budgets keeps its pointer there. The Verification adds a flag for a frontend project with no Web Vitals budgets published in `specs/system.md`, mirroring `FE-BUNDLE-001`'s "flags frontend projects with no budgets published in `specs/system.md`". The spec's `VITALS` row names the home.
+The Statement's MUST to publish the budgets names `specs/system.md` as their home, as `FE-BUNDLE-001`'s does. The sentence on looser budgets keeps its pointer there. The Verification adds a flag for a frontend project with no Web Vitals budgets published in `specs/system.md`, mirroring `FE-BUNDLE-001`'s "flags frontend projects with no budgets published in `specs/system.md`". The spec's `VITALS` row names the home.
 
 ### Every Source is re-fetched after the edits (AC3, AC4)
 
@@ -34,7 +34,7 @@ The set is every document a Source line, or a claim in any field, cites once tas
 - A claim no copy confirms is rewritten to what the copy says, or removed, never kept on recall. A Source naming a section its document lacks is corrected.
 - The landing commit's message is the provenance: each document, its URL, the fetch date and the method.
 
-AC4's thresholds and measurement basis are checked against web.dev's "Defining the Core Web Vitals metrics thresholds" and "Web Vitals". The fetches are independent and may run in parallel agents, each writing only its own copies, while edits to the rule file stay serial.
+AC4's thresholds and measurement basis are checked against web.dev's "How the Core Web Vitals metrics thresholds were defined" and "Web Vitals". The fetches are independent and may run in parallel agents, each writing only its own copies, while edits to the rule file stay serial.
 
 ### The remaining criteria are verified last (AC1, AC2, AC3's schema, AC5–AC10)
 
