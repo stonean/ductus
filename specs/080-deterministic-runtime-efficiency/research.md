@@ -196,3 +196,11 @@ Measured by `scripts/measure-result-sizes.sh` at ece1ed5a5cce68960daa7225b00b076
 | `label-criteria` | 163 | 211 | 374 |
 | `validate-frontmatter` | 55 | 187 | 242 |
 | `traverse-deps` | 58 | 180 | 238 |
+
+## Verifying runs
+
+### The version probe under an MCP server's environment (task 7)
+
+**Method.** On 2026-11-08, on macOS with Claude Code 2.1.319, the `ductus mcp` server that this session's `claude` process spawned was read for its environment with `ps -E` and for its working directory with `lsof`. `claude --version` was then run with exactly that environment, replacing rather than inheriting one, in that working directory, with stdin from `/dev/null`, as `merge-status-hook`'s probe runs it. The environment held 65 variables, `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PROJECT_DIR` among them, and its `PATH` held `~/.local/bin`, where the native installer puts `claude`.
+
+**Result.** Exit 0, `2.1.319 (Claude Code)` on stdout, nothing on stderr, so the probe stays in the runtime and the host-run fallback is not used. This replays the server's environment rather than probing from inside the server process; task 8's `/ductus:configure` run is that check.

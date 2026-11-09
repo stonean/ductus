@@ -3234,6 +3234,34 @@ pub struct MergePermissionsResult {
     pub deny_deduped: u32,
 }
 
+// -- merge-status-hook -------------------------------------------------------
+
+/// Args for `merge-status-hook` — install Claude Code's `UserPromptExpansion`
+/// hook for `/{project}:status` into a settings file (spec 080).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct MergeStatusHookArgs {
+    /// Repo-relative path of the settings file, the bootstrap-substituted
+    /// `{cli-config-dir}/settings.local.json`. No default, as for
+    /// `merge-permissions`.
+    #[arg(long)]
+    pub path: String,
+}
+
+/// Result for `merge-status-hook`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MergeStatusHookResult {
+    /// One of `created` (no file existed), `updated` (the entry was added),
+    /// `unchanged` (it was already there), or `skipped` (nothing written).
+    pub action: String,
+    /// The version `claude --version` reported, null when it was unreadable.
+    pub claude_version: Option<String>,
+    /// Why the entry was skipped: a version older than 2.1.101, or one that
+    /// could not be read. Null unless `action` is `skipped`.
+    pub reason: Option<String>,
+}
+
 // -- extract-archive ---------------------------------------------------------
 
 /// Args for `extract-archive`.

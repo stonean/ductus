@@ -81,8 +81,8 @@ use crate::schema::primitives::{
     DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
     FetchArchiveArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
     MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
+    MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
+    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
     RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs, ResolveAnchorArgs,
     ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
     RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
@@ -1144,6 +1144,7 @@ fn dispatch_primitive(
         "enforce-manifest" => call!(EnforceManifestArgs, enforce_manifest),
         "merge-managed-block" => call!(MergeManagedBlockArgs, merge_managed_block),
         "merge-permissions" => call!(MergePermissionsArgs, merge_permissions),
+        "merge-status-hook" => call!(MergeStatusHookArgs, merge_status_hook),
         "migrate-session-file" => call!(MigrateSessionFileArgs, migrate_session_file),
         "relocate-audit-records" => call!(RelocateAuditRecordsArgs, relocate_audit_records),
         "create-scenario" => call!(CreateScenarioArgs, create_scenario),
@@ -3235,6 +3236,10 @@ mod tests {
             (
                 "merge-permissions",
                 serde_json::json!({"path": "link/settings.json", "allow": []}),
+            ),
+            (
+                "merge-status-hook",
+                serde_json::json!({"path": "link/settings.json"}),
             ),
             (
                 "migrate-session-file",

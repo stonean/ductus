@@ -91,6 +91,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:enforce-manifest", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:merge-managed-block", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:merge-permissions", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:merge-status-hook", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:migrate-session-file", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:create-scenario", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:append-task", "permission": { "type": "allow" } }`

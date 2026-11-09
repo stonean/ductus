@@ -57,19 +57,19 @@ use crate::schema::primitives::{
     LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs, LintMarkdownResult,
     MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MeasureReopeningsResult,
     MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult,
-    MigrateSessionFileArgs, MigrateSessionFileResult, ProcessDecisionsArgs, ProcessDecisionsResult,
-    ProcessWaiversArgs, ProcessWaiversResult, PrunePlanArgs, PrunePlanResult, PruneProjectArgs,
-    PruneProjectResult, PruneTasksArgs, PruneTasksResult, ReadReReadArgs, ReadReReadResult,
-    ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs,
-    RelocateAuditRecordsResult, RemoveInboxItemArgs, RemoveInboxItemResult, RenderStatusArgs,
-    RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs,
-    ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
-    RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, StartFixRoundsArgs,
-    StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    MergeStatusHookArgs, MergeStatusHookResult, MigrateSessionFileArgs, MigrateSessionFileResult,
+    ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
+    PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
+    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSpecArgs, ReadSpecResult,
+    ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
+    RemoveInboxItemArgs, RemoveInboxItemResult, RenderStatusArgs, RenderStatusResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult,
+    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
+    ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs, RetargetSessionsResult,
+    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
+    SetStatusArgs, SetStatusResult, StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
+    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -541,6 +541,19 @@ impl GovRuntimeServer {
         params: Parameters<MergePermissionsArgs>,
     ) -> Result<Json<MergePermissionsResult>, String> {
         primitives::merge_permissions::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "merge-status-hook",
+        description = descriptions::MERGE_STATUS_HOOK
+    )]
+    async fn merge_status_hook(
+        &self,
+        params: Parameters<MergeStatusHookArgs>,
+    ) -> Result<Json<MergeStatusHookResult>, String> {
+        primitives::merge_status_hook::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

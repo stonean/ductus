@@ -102,6 +102,10 @@ const EXEMPT: &[(&str, &str)] = &[
         "writes settings JSON through the serializer, which owns its own formatting",
     ),
     (
+        "merge_status_hook.rs",
+        "writes settings JSON through the serializer, which owns its own formatting",
+    ),
+    (
         "merge_managed_block.rs",
         "tracks each line's terminator alongside the line (`has_newline`) rather than re-joining, \
          so endings never leave the data; covered by its own CRLF case",

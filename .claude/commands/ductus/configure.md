@@ -103,6 +103,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__enforce-manifest`
    - `mcp__ductus__merge-managed-block`
    - `mcp__ductus__merge-permissions`
+   - `mcp__ductus__merge-status-hook`
    - `mcp__ductus__migrate-session-file`
    - `mcp__ductus__create-scenario`
    - `mcp__ductus__append-task`

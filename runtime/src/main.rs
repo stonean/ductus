@@ -21,13 +21,13 @@ use ductus::schema::primitives::{
     DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
     FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
     MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
-    MergePermissionsArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
-    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
-    WriteReviewArgs, WriteSessionArgs,
+    MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
+    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs,
+    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -148,6 +148,8 @@ enum Command {
     MergeManagedBlock(MergeManagedBlockArgs),
     #[command(about = descriptions::summary(descriptions::MERGE_PERMISSIONS), long_about = descriptions::MERGE_PERMISSIONS)]
     MergePermissions(MergePermissionsArgs),
+    #[command(about = descriptions::summary(descriptions::MERGE_STATUS_HOOK), long_about = descriptions::MERGE_STATUS_HOOK)]
+    MergeStatusHook(MergeStatusHookArgs),
     #[command(about = descriptions::summary(descriptions::MIGRATE_SESSION_FILE), long_about = descriptions::MIGRATE_SESSION_FILE)]
     MigrateSessionFile(MigrateSessionFileArgs),
     #[command(about = descriptions::summary(descriptions::RELOCATE_AUDIT_RECORDS), long_about = descriptions::RELOCATE_AUDIT_RECORDS)]
@@ -821,6 +823,9 @@ fn main() -> ExitCode {
         }
         Command::MergePermissions(args) => {
             emit_result(primitives::merge_permissions::run(&args, &repo))
+        }
+        Command::MergeStatusHook(args) => {
+            emit_result(primitives::merge_status_hook::run(&args, &repo))
         }
         Command::MigrateSessionFile(args) => {
             emit_result(primitives::migrate_session_file::run(&args, &repo))

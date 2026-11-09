@@ -58,6 +58,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "enforce-manifest",
     "merge-managed-block",
     "merge-permissions",
+    "merge-status-hook",
     "migrate-session-file",
     "relocate-audit-records",
     "create-scenario",

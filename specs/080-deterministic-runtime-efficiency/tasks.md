@@ -67,10 +67,10 @@ Blocked on task 2: it shows the text rendering.
 
 ## 7. `merge-status-hook`
 
-- [ ] Register it at the six sites, then run `scripts/gen-configure-mcp.sh`
-- [ ] Gate on `claude --version` (2.1.101 or later); recognize ductus's entry by its command; preserve every other key and entry; write atomically
-- [ ] Confirm the probe reads the version from inside an MCP server Claude Code spawned. If it cannot, switch to the plan's fallback, in which the host runs the probe and passes its output, and update the plan's decision
-- [ ] Test `created`, `updated`, `unchanged`, and `skipped` for an old and an unreadable version. A second run leaves exactly one entry, another `UserPromptExpansion` entry is untouched, and a skip leaves the merged permissions intact
+- [x] Register it at the six sites, then run `scripts/gen-configure-mcp.sh`
+- [x] Gate on `claude --version` (2.1.101 or later); recognize ductus's entry by its command; preserve every other key and entry; write atomically
+- [x] Confirm the probe reads the version from inside an MCP server Claude Code spawned. If it cannot, switch to the plan's fallback, in which the host runs the probe and passes its output, and update the plan's decision
+- [x] Test `created`, `updated`, `unchanged`, and `skipped` for an old and an unreadable version. A second run leaves exactly one entry, another `UserPromptExpansion` entry is untouched, and a skip leaves the merged permissions intact
 
 - **Done when**: the tests pass (AC2, AC20).
 

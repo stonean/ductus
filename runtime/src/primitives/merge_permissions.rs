@@ -258,7 +258,7 @@ fn validate_revoke_disjoint(allow: &[String], revoke: &[String]) -> Result<()> {
 /// infallible on `serde_json::Value` (no non-string keys, no I/O),
 /// so the `.expect` documents the invariant rather than handling a
 /// reachable failure mode.
-fn serialize_pretty(value: &Value) -> String {
+pub(crate) fn serialize_pretty(value: &Value) -> String {
     let mut out =
         serde_json::to_string_pretty(value).expect("serde_json::Value serializes infallibly");
     if !out.ends_with('\n') {

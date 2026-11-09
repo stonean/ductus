@@ -160,7 +160,9 @@ fn case(name: &str, ctx: &Context) -> Case {
             json!({"feature": f, "task-number": ctx.size.tasks.to_string(), "subtask-index": 0, "checked": true}),
         ),
         "merge-managed-block" => call(json!({"path": "AGENTS.md", "block": "corpus block"})),
-        "merge-permissions" => call(json!({"path": ".claude/settings.local.json"})),
+        "merge-permissions" | "merge-status-hook" => {
+            call(json!({"path": ".claude/settings.local.json"}))
+        }
         "migrate-session-file" => call(json!({"legacy-path": ".claude/corpus-session.json"})),
         "process-decisions" => call(json!({"feature": f, "record": "review"})),
         "remove-inbox-item" => call(json!({"item": "Corpus inbox item 001, logged by hand"})),

@@ -76,7 +76,7 @@ The AC19 test renders one model both ways and compares the facts each carries. T
 
 `merge-status-hook` is a new primitive that takes the settings file's path (AC2, AC20).
 
-- **Version gate.** It runs `claude --version` itself, with a timeout, as `lint-markdown` shells out to `npx`. That works from configure's MCP call, from `/ductus`'s CLI path and under `ductus exec`, and needs no new permission entry. *Assumption:* the probe runs inside an MCP server that Claude Code spawned. Task 7 checks this, and if it fails, the host runs the probe and passes its output instead (see Trade-offs). A version of 2.1.101 or later merges the entry. An older or unreadable one returns `skipped` with its reason and writes nothing. The permissions are a separate `merge-permissions` call, so a skip leaves them intact.
+- **Version gate.** It runs `claude --version` itself, with a timeout, as `lint-markdown` shells out to `npx`. That works from configure's MCP call, from `/ductus`'s CLI path and under `ductus exec`, and needs no new permission entry. The probe reads the version under the environment of an MCP server Claude Code spawned, which `research.md` records; task 8's `/{project}:configure` run is the check from inside the server, and if it fails, the host runs the probe and passes its output instead (see Trade-offs). The probe closes its stdin, which carries the server's protocol, and tries `claude.cmd` after `claude` on Windows. A version of 2.1.101 or later merges the entry. An older or unreadable one returns `skipped` with its reason and writes nothing. The permissions are a separate `merge-permissions` call, so a skip leaves them intact.
 - **Merge.** It works under `hooks.UserPromptExpansion` with matcher `{project}:status`, taking the project from `Host::load` (`runtime/src/host.rs:81`). It recognizes its own entry by the command string, adds the entry when absent, reports `unchanged` when present, and never edits another entry. It writes the whole file atomically and preserves every other key, as `merge-permissions` does.
 - **Callers.** `framework/bootstrap/configure/claude.md` calls it after `merge-permissions`. `framework/bootstrap/ductus.md` calls it for each Claude agent once the runtime is acquired, so an earlier adopter gets the hook on its next `/ductus` with no manual step (AC26). Claude's seed gains the subcommand's CLI rule, and the seed's count of CLI subcommands is swept.
 
@@ -147,6 +147,8 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `runtime/src/primitives/pipeline_view.rs` | Create | View model, two renderings, bound |
 | `runtime/src/primitives/render_status.rs` | Create | `render-status` primitive |
 | `runtime/src/primitives/merge_status_hook.rs` | Create | `merge-status-hook` primitive |
+| `runtime/tests/merge_status_hook.rs` | Create | The version probe's `PATH` lookup, driven through the binary |
+| `scripts/mutation/merge-status-hook.py` | Create | `merge-status-hook`'s mutations, each with its killing test |
 | `runtime/src/primitives/tool_loading.rs` | Create | Step-tool derivation and the batching line |
 | `runtime/src/hook.rs` | Create | `ductus hook status` surface |
 | `runtime/tests/hook_status.rs` | Create | The hook's output, root and exits, driven through the binary |
@@ -170,8 +172,6 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `framework/commands/target.md` | Modify | Not-found enumeration lists-file branch |
 | `framework/bootstrap/configure/claude.md` | Modify | Calls `merge-status-hook` |
 | `framework/bootstrap/configure/auggie.md` | Modify | Regenerated allow block |
-| `framework/bootstrap/configure/opencode.md` | Modify | Regenerated allow block |
-| `framework/bootstrap/configure/antigravity.md` | Modify | Regenerated allow block |
 | `framework/bootstrap/ductus.md` | Modify | Claude rows' field; hook install; seed rule |
 | `framework/bootstrap/pi/ductus-bridge.ts` | Modify | Registered status command |
 | `scripts/gen-claude-commands.sh` | Modify | Claude pass drives `apply-manifest` |

@@ -63,6 +63,7 @@ pub mod measure_reopenings;
 pub mod mechanical_sweep;
 pub mod merge_managed_block;
 pub mod merge_permissions;
+pub mod merge_status_hook;
 pub mod migrate_session_file;
 pub(crate) mod pipeline_view;
 pub mod process_decisions;

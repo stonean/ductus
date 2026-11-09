@@ -58,6 +58,7 @@ apply-manifest
 enforce-manifest
 merge-managed-block
 merge-permissions
+merge-status-hook
 migrate-session-file
 create-scenario
 append-task
