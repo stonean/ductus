@@ -7,7 +7,8 @@
  * prefix. The runtime's MCP server stays the single source of truth for tool
  * names and schemas: this file holds no second copy of the registry, and a
  * runtime release that adds or changes a primitive reaches pi with no edit
- * here.
+ * here. It also registers `/{project}-status`, which shows the runtime's
+ * pipeline view, or why it cannot, with no model turn (spec 080).
  *
  * Written to `.pi/extensions/ductus.ts` by /ductus (the Pi layout's Bridge
  * step, strategy `update`). Zero npm dependencies — the MCP-over-stdio transport is
@@ -76,6 +77,14 @@ interface ExtensionAPI {
     parameters: Record<string, Json>;
     execute(id: string, params: Record<string, Json>): Promise<ToolResult>;
   }): void;
+  registerCommand(
+    name: string,
+    options: { description?: string; handler: (args: string, ctx: unknown) => Promise<void> },
+  ): void;
+  sendMessage(
+    message: { customType: string; content: string; display: boolean },
+    options?: { triggerTurn?: boolean },
+  ): void;
 }
 
 function failure(text: string): ToolResult {
@@ -84,6 +93,22 @@ function failure(text: string): ToolResult {
 
 function reason(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/** The text of a tool result, its blocks joined. */
+function textOf(result: ToolResult): string {
+  return result.content.map((block) => block.text).join("\n");
+}
+
+/** `render-status`'s result read back from its text: the view and the
+ *  slash-command namespace it names, or an error saying why there is none. */
+function statusResult(result: ToolResult): { view: string; project: string } {
+  if (result.isError) throw new Error(textOf(result));
+  const parsed = JSON.parse(textOf(result)) as { "rendered-markdown"?: unknown; project?: unknown };
+  if (typeof parsed["rendered-markdown"] !== "string" || typeof parsed.project !== "string") {
+    throw new Error(`render-status returned no view: ${textOf(result)}`);
+  }
+  return { view: parsed["rendered-markdown"], project: parsed.project };
 }
 
 /** The ductus runtime child process: spawned and initialized on first use,
@@ -275,7 +300,7 @@ export default function (pi: ExtensionAPI) {
 
   /* Registration happens at load because the tool list comes from the
    * runtime. */
-  const registration = server.listTools().then((tools) => {
+  const registration = server.listTools().then(async (tools) => {
     for (const tool of tools) {
       pi.registerTool({
         name: `ductus__${tool.name}`,
@@ -291,6 +316,32 @@ export default function (pi: ExtensionAPI) {
         },
       });
     }
+    /* `/{project}-status` shows the pipeline view with no model turn (spec
+     * 080): its handler calls `render-status` through this same server
+     * process, so the view resolves this session's target, and shows the view,
+     * or the failure, as a displayed message that triggers no turn. A runtime
+     * without `render-status` registers no command. The call at load learns
+     * the namespace the command is named under. */
+    if (!tools.some((tool) => tool.name === "render-status")) return;
+    const { project } = statusResult(await server.callTool("render-status", {}));
+    pi.registerCommand(`${project}-status`, {
+      description: "Show the ductus pipeline view, with no model turn",
+      handler: async () => {
+        let result: ToolResult;
+        try {
+          result = await server.callTool("render-status", {});
+        } catch (err) {
+          result = failure(unavailable(err));
+        }
+        let content: string;
+        try {
+          content = statusResult(result).view;
+        } catch (err) {
+          content = `ductus: ${project}-status could not show the view: ${reason(err)}`;
+        }
+        pi.sendMessage({ customType: "ductus-status", content, display: true }, { triggerTurn: false });
+      },
+    });
   });
   /* Handled here so a failed load is never an unhandled rejection in pi's
    * process; session start reports it. */

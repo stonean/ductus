@@ -6,10 +6,12 @@
 // from the live tools/list, a round-tripped call, a multi-byte character split
 // across two chunks, the missing-binary load path, respawn after the
 // runtime exits, recovery after a call fails, and retiring a runtime that
-// stops answering.
-// What it does not: pi's own extension loader (jiti) and how pi renders a
-// result — a real `pi` run is still the only test of those (AGENTS.md, the
-// Pi bridge entry).
+// stops answering — and the `{project}-status` command it registers, which
+// shows the view, or a failure, as a displayed message that triggers no turn.
+// What it does not: pi's own extension loader (jiti), how pi renders a
+// result or a message, and whether a message reaches the agent's context —
+// a real `pi` run is still the only test of those (AGENTS.md, the Pi bridge
+// entry).
 //
 // Not wired into CI: it loads the bridge's TypeScript directly, which needs
 // Node's built-in type stripping (Node 22.18+ / 23.6+), and CI pins Node 20.
@@ -44,11 +46,13 @@ const TIMEOUT_DECL = "const REQUEST_TIMEOUT_MS = 120_000;";
 // `binary` is the pointer's target — the runtime build, a stub, or none.
 // `timeoutMs` rewrites the bridge copy's request cap, so a timeout case runs
 // in milliseconds; the rewrite is asserted, so a renamed constant fails the
-// case rather than leaving it waiting out two minutes.
-function project({ binary = runtime, timeoutMs } = {}) {
+// case rather than leaving it waiting out two minutes. `hostProject` writes
+// the `[host] project` the status command is named by.
+function project({ binary = runtime, timeoutMs, hostProject } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "pi-bridge-"));
   dirs.push(dir);
   mkdirSync(join(dir, ".ductus", "bin"), { recursive: true });
+  if (hostProject) writeFileSync(join(dir, ".ductus", "config.toml"), `[host]\nproject = "${hostProject}"\n`);
   if (binary) symlinkSync(binary, join(dir, ".ductus", "bin", "ductus"));
   mkdirSync(join(dir, ".pi", "extensions"), { recursive: true });
   let bridge = readFileSync(bridgeSrc, "utf8");
@@ -120,11 +124,15 @@ let loaded = 0;
 async function load(dir) {
   process.chdir(dir);
   const tools = new Map();
+  const commands = new Map();
+  const messages = [];
   const handlers = {};
   const notices = [];
   const api = {
     on: (event, handler) => { handlers[event] = handler; },
     registerTool: (tool) => tools.set(tool.name, tool),
+    registerCommand: (name, options) => commands.set(name, options),
+    sendMessage: (message, options) => messages.push({ message, options }),
   };
   const ctx = { ui: { notify: (message, level) => notices.push(`${level}: ${message}`) } };
   const url = pathToFileURL(join(dir, ".pi", "extensions", "ductus.ts")).href;
@@ -132,7 +140,16 @@ async function load(dir) {
   mod.default(api);
   await sleep(100); // pi fires session_start right after loading extensions
   handlers.session_start?.({}, ctx);
-  return { tools, notices };
+  return { tools, notices, commands, messages };
+}
+
+// The one message a status command sent: displayed, and triggering no turn.
+function shownWithoutATurn(messages) {
+  if (messages.length !== 1) throw new Error(`sent ${messages.length} messages`);
+  const [{ message, options }] = messages;
+  if (message.display !== true || options?.triggerTurn !== false)
+    throw new Error(`not displayed without a turn: display ${message.display}, options ${JSON.stringify(options)}`);
+  return message.content;
 }
 
 const ARGS = { feature: "no-such-feature" };
@@ -213,6 +230,39 @@ await check("a runtime that stops answering times out once, then is replaced", a
   const next = await within(3000, tool.execute("t2", {}));
   if (next.isError || next.content[0].text !== "answered")
     throw new Error(`the wedged runtime was not replaced: ${JSON.stringify(next)}`);
+});
+
+await check("registers {project}-status, whose handler shows the view and triggers no turn", async () => {
+  const { tools, commands, messages } = await load(project({ hostProject: "harness" }));
+  await until(5000, () => commands.size > 0);
+  if (commands.size !== 1 || !commands.has("harness-status"))
+    throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+  if (!tools.has("ductus__render-status")) throw new Error("render-status was not registered as a tool");
+  await within(5000, commands.get("harness-status").handler("", {}));
+  const view = shownWithoutATurn(messages);
+  if (!view.includes("| Feature | Status |")) throw new Error(`no view: ${view.slice(0, 200)}`);
+});
+
+await check("a status command that cannot reach the runtime shows why the same way", async () => {
+  const dir = project({ hostProject: "harness" });
+  const { commands, messages } = await load(dir);
+  await until(5000, () => commands.size > 0);
+  rmSync(join(dir, ".ductus/bin/ductus"));
+  killRuntime(dir);
+  await sleep(200);
+  await within(5000, commands.get("harness-status").handler("", {}));
+  const shown = shownWithoutATurn(messages);
+  if (!shown.includes("could not show the view") || !shown.includes("run /ductus"))
+    throw new Error(`the failure does not say why: ${shown}`);
+});
+
+await check("a runtime without render-status registers no status command", async () => {
+  // The stub would answer render-status, so only the tool list keeps it out.
+  const ANSWERS_AS_A_VIEW = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", project: "stub" }) }], isError: false });`;
+  const { tools, commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW) }));
+  await until(5000, () => tools.size > 0);
+  await sleep(200);
+  if (commands.size !== 0) throw new Error(`registered ${[...commands.keys()].join(", ")}`);
 });
 
 console.log(results.join("\n"));

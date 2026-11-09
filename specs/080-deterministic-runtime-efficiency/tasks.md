@@ -110,9 +110,9 @@ Blocked on task 9: the line drops the always-loaded set.
 
 Tasks 8 and 10 have landed and reached `main` (a62d2328, restored in 9bf198f5), so the second subtask's staging-copy check runs against the pushed tree. A version-bumped pin with no tag halts `--ref=main`, so the real `/ductus` run names this checkout's release build in `[runtime] path`, which `/ductus`'s acquisition Branch 1 uses with a warning.
 
-- [ ] Bootstrap a scratch adopter, with Claude and Auggie selected, from a release before this spec
-- [ ] Before pushing: drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`, per `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that Claude's copies carry the line and Auggie's are byte-identical to before
-- [ ] After pushing: have a subagent run `install.sh` on the scratch adopter, per the same section, with `[runtime] path` naming this checkout's release build. Confirm the hook lands in `.claude/settings.local.json` with no manual step and Auggie's settings are unchanged
+- [x] Bootstrap a scratch adopter, with Claude and Auggie selected, from a release before this spec
+- [x] Before pushing: drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`, per `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that Claude's copies carry the line and Auggie's are byte-identical to before
+- [x] After pushing: have a subagent run `install.sh` on the scratch adopter, per the same section, with `[runtime] path` naming this checkout's release build. Confirm the hook lands in `.claude/settings.local.json` with no manual step and Auggie's settings are unchanged
 
 - **Done when**: `research.md` records both runs and each check (AC10; AC26, Claude Code's half).
 
@@ -120,8 +120,8 @@ Tasks 8 and 10 have landed and reached `main` (a62d2328, restored in 9bf198f5), 
 
 Blocked on task 4: the handler reads `render-status`.
 
-- [ ] Register `{project}-status` in `framework/bootstrap/pi/ductus-bridge.ts`, with `registerCommand` and `sendMessage` added to its `ExtensionAPI` slice
-- [ ] Add the cases to `scripts/tests/pi-bridge-harness.mjs`: the view shown with no turn, and a failure shown the same way
+- [x] Register `{project}-status` in `framework/bootstrap/pi/ductus-bridge.ts`, with `registerCommand` and `sendMessage` added to its `ExtensionAPI` slice
+- [x] Add the cases to `scripts/tests/pi-bridge-harness.mjs`: the view shown with no turn, and a failure shown the same way
 - [ ] Run a real `pi` session, and record in `research.md` whether the view reached the agent's context, whether Pi can add context without a turn, whether a displayed message renders markdown, and whether the command or the prompt template ran
 - [ ] If markdown does not render, add `render-status`'s `format`. If the template ran, stop `/ductus` installing Pi's status template, and run `classify-spec-edit` on 064's edit
 
@@ -232,3 +232,35 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 - [x] Test it in `scripts/tests/`, with a stub runtime that lacks the field and one that has it, and add the test to the workflow that runs the generator's scripts
 
 - **Done when**: the generator halts, naming the runtime, with a binary that lacks the field and passes with one that has it, and the test fails with the check removed.
+
+## 27. Disposition out-of-spec finding: pi 1.0.0 and later ship an MCP client, which the Pi bridge's premise and AGENTS.md's Pi gotcha deny
+
+- [ ] `AGENTS.md` — the Gotchas entry "Pi has no MCP client — its tool surface is the `.pi/extensions/ductus.ts` bridge, and never \"fix\" Pi by registering an MCP server for it", and the header of `framework/bootstrap/pi/ductus-bridge.ts` ("Pi has no built-in MCP client (by design)"), against pi 1.0.4's `pi mcp` command, `--no-mcp` flag and `docs/mcp.md`, which connect stdio servers configured per project in `.pi/mcp.json`; its CHANGELOG has MCP entries from 1.0.0 (2026-10-01) (task 12's run, 2026-11-09)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 28. Pi's `/{project}-status` view names commands Pi can run
+
+- [ ] The view `render-status` returns spells its hints `/{project}:<name>` (each row's next action, the `Next actions:` block, the closing `/{project}:target` prompt). On Pi a command is `/{project}-<name>` (064's D1), and task 12's run showed `/scratch:status` reaching the model as plain text, so on Pi every hint names no command. Decide where the Pi spelling comes from before writing it (owner): the bridge rewriting the view's `/{project}:` to `/{project}-` before it shows it, or `render-status` taking the hint form
+
+- **Done when**: the view Pi's registered command shows spells each hint as a command Pi runs, with a bridge harness case for it.
+
+## 29. Disposition out-of-spec finding: a stale ductus.md of an agent that is not running aborts the run, and the notice says the running session is stale
+
+- [ ] `framework/bootstrap/ductus.md` — §Self-update check marks a selected agent `stale` when its installed copy differs from upstream, "The running session is using instructions other than the resolved source's", and §Pre-flight abort stops the run on any stale agent. An upgrade started with `install.sh claude --ref=main` refreshes Claude's copy only, so with Auggie also selected the run found Claude `current` and Auggie `stale`, overwrote Auggie's, and aborted with "the running session is using the older instructions", though the running copy matched upstream; every multi-agent upgrade that way costs a second session (task 11's update run, 2026-11-09)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 30. An adopter's Claude copies get the ToolSearch line: `apply-manifest` finds `target.md` under the bootstrap's source root
+
+- [ ] `always_loaded_tools` in `runtime/src/primitives/apply_manifest.rs` reads `{source-root}/commands/target.md`, the generator's layout (`--source-root framework`, sources `commands/*.md`). `/ductus` passes `--source-root {framework-root}`, the extracted archive's root, with sources `framework/commands/*.md`, so on every adopter upgrade Claude's `apply-manifest` call halts before writing (`invalid 'entries': an entry sets tool-search-line, and the source root holds no commands/target.md`) and the 17 copies stay as they were (task 11's second update run, 2026-11-09). Decide the lookup before writing it (owner)
+- [ ] Sweep the claim with it: `APPLY_MANIFEST` in `runtime/src/schema/descriptions.rs`, the plan's *Batched (AC29)* decision, and `docs/developing-ductus.md` *Exercising an installer change without a push*, whose staging copy is the generator's layout, which is why task 11's staging check passed
+- [ ] Test `apply-manifest` in the bootstrap's layout, then re-run `/ductus --ref=main` on task 11's scratch adopter with the fixed build and confirm Claude's 14 copies carry the line
+
+- **Done when**: a test drives `apply-manifest` with the bootstrap's source root and sources, and a real adopter `/ductus` run writes the line into Claude's copies (AC29).
+
+## 31. Disposition out-of-spec finding: Auggie's surfaced MCP command names the store when `[runtime] path` names another binary
+
+- [ ] `framework/bootstrap/ductus.md` — §MCP registration's Auggie row surfaces `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"`, the store path, while Runtime acquisition Branch 1 points a project with `[runtime] path` at that binary instead ("The pointer resolves to this path rather than to the store"), so an Auggie session would serve the store's runtime, not the one the project chose (task 11's second update run, 2026-11-09)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
