@@ -68,6 +68,7 @@ prune-plan
 prune-project
 dashboard
 render-status
+render-help
 write-session
 resolve-session
 retarget-sessions

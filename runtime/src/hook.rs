@@ -1,12 +1,16 @@
-//! `ductus hook status` — what Claude Code's `UserPromptExpansion` hook runs to
-//! answer a typed `/{project}:status` with no model turn (spec 080). Its input,
-//! output and exit statuses are spec 080's `data-model.md`, `ductus hook status`.
+//! `ductus hook` — what Claude Code's `UserPromptExpansion` hooks run to answer
+//! a typed `/{project}:status` or `/{project}:help` with no model turn (spec
+//! 080). Their input, output and exit statuses are spec 080's `data-model.md`,
+//! `ductus hook status` and `ductus hook help`.
 //!
 //! A host surface, not a primitive: it adapts one host's hook protocol, and the
-//! capability it adapts, the pipeline view, is served on MCP by `render-status`
-//! (§runtime-boundary principle 5). The view is rendered from the same read
-//! `dashboard` makes ([`dashboard::render_as`]), as fixed-width text, since the
-//! hook's reason is shown in a terminal that renders no markdown (AC17).
+//! capabilities it adapts are served on MCP, the pipeline view by
+//! `render-status` and the guide by `render-help` (§runtime-boundary principle
+//! 5). The view is rendered from the same read `dashboard` makes
+//! ([`dashboard::render_as`]), as fixed-width text, since the hook's reason is
+//! shown in a terminal that renders no markdown (AC17). The guide is shown as
+//! the help copy writes it ([`render_help::guide`]), since the scenario asks
+//! for the guide the model path prints.
 
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -14,7 +18,7 @@ use std::time::SystemTime;
 
 use serde::Serialize;
 
-use crate::primitives::{Result, dashboard, pipeline_view};
+use crate::primitives::{Result, dashboard, pipeline_view, render_help};
 use crate::session;
 
 /// The variable Claude Code sets for each command hook it runs
@@ -33,13 +37,13 @@ pub fn project_root(project_dir: Option<std::ffi::OsString>, cwd: PathBuf) -> Pa
         .map_or(cwd, PathBuf::from)
 }
 
-/// The response that blocks the typed command and shows the view as its
+/// The response that blocks the typed command and shows the answer as its
 /// reason. Fields serialize in declaration order.
 #[derive(Debug, Serialize)]
 pub struct BlockResponse {
     /// Always `block`: the prompt never reaches the model.
     pub decision: &'static str,
-    /// The view, as fixed-width text.
+    /// The answer: the view as fixed-width text, or the guide.
     pub reason: String,
     /// The event-specific half of the response.
     #[serde(rename = "hookSpecificOutput")]
@@ -58,18 +62,36 @@ pub struct HookSpecificOutput {
     pub suppress_original_prompt: bool,
 }
 
-/// Answer the hook for the project at `root`.
-///
-/// `input` is the hook input Claude Code writes to stdin. It is read to its
-/// end, so the host never writes into a closed pipe, and no field of it is
-/// used: arguments typed after the command are ignored, as the model path
-/// ignores them. A failure to read it changes nothing the view shows, so it
-/// is not an error.
+impl BlockResponse {
+    /// The block response showing `reason`.
+    fn showing(reason: String) -> Self {
+        Self {
+            decision: "block",
+            reason,
+            hook_specific_output: HookSpecificOutput {
+                hook_event_name: "UserPromptExpansion",
+                suppress_original_prompt: true,
+            },
+        }
+    }
+}
+
+/// Read the hook input Claude Code writes to stdin to its end, so the host
+/// never writes into a closed pipe. No field of it is used: arguments typed
+/// after the command are ignored, as the model path ignores them. A failure to
+/// read it changes nothing the answer shows, so it is not an error.
+fn drain(input: &mut impl Read) {
+    let _ = io::copy(input, &mut io::sink());
+}
+
+/// Answer status's hook for the project at `root`, `input` being the hook
+/// input Claude Code writes to stdin, which is drained and not used.
 ///
 /// The CLI prints the response and exits 0, or prints the error on stderr,
-/// nothing on stdout, and exits 1 (AC25). Exit 1 is a non-blocking hook
-/// error, after which Claude Code runs the command on the model path. Exit 2
-/// would block the expansion and show nothing, so the hook never uses it.
+/// nothing on stdout, and exits 1 (AC25), as for [`help`]. Exit 1 is a
+/// non-blocking hook error, after which Claude Code runs the command on the
+/// model path. Exit 2 would block the expansion and show nothing, so the hook
+/// never uses it.
 ///
 /// # Errors
 ///
@@ -77,7 +99,7 @@ pub struct HookSpecificOutput {
 /// those of `dashboard`, and [`crate::primitives::PrimitiveError::InvalidReadSize`]
 /// for a malformed `[artifacts] read-size-bytes`.
 pub fn status(root: &Path, input: &mut impl Read) -> Result<BlockResponse> {
-    let _ = io::copy(input, &mut io::sink());
+    drain(input);
     let identity = session::process_identity()?;
     let (view, _project) = dashboard::render_as(
         root,
@@ -85,14 +107,20 @@ pub fn status(root: &Path, input: &mut impl Read) -> Result<BlockResponse> {
         SystemTime::now(),
         pipeline_view::Format::Text,
     )?;
-    Ok(BlockResponse {
-        decision: "block",
-        reason: view,
-        hook_specific_output: HookSpecificOutput {
-            hook_event_name: "UserPromptExpansion",
-            suppress_original_prompt: true,
-        },
-    })
+    Ok(BlockResponse::showing(view))
+}
+
+/// Answer help's hook for the project at `root`, `input` being drained and not
+/// used, with the guide the installed help copy holds. The exits are
+/// [`status`]'s.
+///
+/// # Errors
+///
+/// Every error [`render_help::guide`] returns, among them no installed help
+/// copy.
+pub fn help(root: &Path, input: &mut impl Read) -> Result<BlockResponse> {
+    drain(input);
+    Ok(BlockResponse::showing(render_help::guide(root)?))
 }
 
 #[cfg(test)]

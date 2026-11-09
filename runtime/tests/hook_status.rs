@@ -1,7 +1,8 @@
-//! `ductus hook status`, driven through the binary, since its exit status, its
-//! two streams and the environment it reads are the contract (spec 080's
-//! `data-model.md`, `ductus hook status`): AC16, and AC17 and AC25 on the
-//! runtime's side.
+//! `ductus hook status` and `ductus hook help`, driven through the binary,
+//! since their exit status, their two streams and the environment they read
+//! are the contract (spec 080's `data-model.md`, `ductus hook status` and
+//! `ductus hook help`): AC16, AC17 and AC25 on the runtime's side, and the
+//! scenario `help-answers-with-no-model-turn`.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -52,9 +53,15 @@ fn hook_input(args: &str, cwd: &Path) -> String {
 /// Run `ductus hook status` from `cwd` with `env` set, writing `input` to
 /// its stdin.
 fn run_hook(cwd: &Path, env: &[(&str, &std::ffi::OsStr)], input: &str) -> Output {
+    run_member("status", cwd, env, input)
+}
+
+/// Run `ductus hook {member}` from `cwd` with `env` set, writing `input` to
+/// its stdin.
+fn run_member(member: &str, cwd: &Path, env: &[(&str, &std::ffi::OsStr)], input: &str) -> Output {
     let mut command = ductus_command(env!("CARGO_BIN_EXE_ductus"));
     command
-        .args(["hook", "status"])
+        .args(["hook", member])
         .current_dir(cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -162,9 +169,9 @@ fn arguments_and_every_other_input_field_are_ignored() {
     }
 }
 
-/// The root is `CLAUDE_PROJECT_DIR` when it is set and non-empty, so a session
-/// started below the project root shows the root's view; otherwise it is the
-/// working directory.
+/// The root is `CLAUDE_PROJECT_DIR` when it is set and non-empty, so a hook
+/// run from below the project root with the root in it shows the root's view;
+/// otherwise it is the working directory.
 #[test]
 fn the_root_is_claude_project_dir_when_set_and_the_working_directory_otherwise() {
     let dir = project("001-alpha");
@@ -257,4 +264,89 @@ fn a_view_that_cannot_be_rendered_exits_1_with_the_error_on_stderr_alone() {
         );
         assert!(stderr.contains(named), "stderr: {stderr}");
     }
+}
+
+/// Install the help command's copy as Claude Code's layout holds it, with
+/// `{project}` substituted as the bootstrap substitutes it.
+fn install_help(root: &Path) {
+    let source = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/commands/help.md"),
+    )
+    .unwrap();
+    write(
+        root,
+        ".claude/commands/myapp/help.md",
+        &source.replace("{project}", "myapp"),
+    );
+}
+
+/// A typed help is answered with the guide as a block that suppresses the
+/// typed command, and the guide is the one `render-help` returns, so the hook
+/// and Pi's command show one guide. The input, arguments included, is not read.
+#[test]
+fn help_is_shown_as_a_block_holding_the_installed_guide() {
+    let dir = project("001-alpha");
+    install_help(dir.path());
+    let value = response(&run_member(
+        "help",
+        dir.path(),
+        &[],
+        &hook_input("", dir.path()),
+    ));
+    assert_eq!(value["decision"], "block");
+    assert_eq!(
+        value["hookSpecificOutput"],
+        serde_json::json!({
+            "hookEventName": "UserPromptExpansion",
+            "suppressOriginalPrompt": true,
+        })
+    );
+    let guide = reason(&value);
+    assert!(
+        guide.starts_with("## myapp — Spec-Driven Development Pipeline"),
+        "{guide}"
+    );
+    assert!(guide.contains("| `/myapp:specify` |"), "{guide}");
+    assert!(
+        !guide.contains("{project}") && !guide.contains("<!--"),
+        "{guide}"
+    );
+
+    let rendered = common::ductus_command(env!("CARGO_BIN_EXE_ductus"))
+        .arg("render-help")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(rendered.status.success(), "{rendered:?}");
+    let rendered: serde_json::Value = serde_json::from_slice(&rendered.stdout).unwrap();
+    assert_eq!(rendered["guide"].as_str(), Some(guide.as_str()));
+
+    let with_args = reason(&response(&run_member(
+        "help",
+        dir.path(),
+        &[],
+        &hook_input("foo --bar", dir.path()),
+    )));
+    assert_eq!(with_args, guide);
+}
+
+/// With no installed help copy the hook exits 1, with the error naming the
+/// paths tried on stderr and nothing on stdout, so Claude Code runs help on
+/// the model path.
+#[test]
+fn help_with_no_installed_copy_exits_1_with_the_error_on_stderr_alone() {
+    let dir = project("001-alpha");
+    let output = run_member("help", dir.path(), &[], &hook_input("", dir.path()));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "stderr: {stderr}");
+    assert!(
+        output.stdout.is_empty(),
+        "stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(
+        stderr.contains("no installed copy of the help command")
+            && stderr.contains(".claude/commands/myapp/help.md"),
+        "stderr: {stderr}"
+    );
 }

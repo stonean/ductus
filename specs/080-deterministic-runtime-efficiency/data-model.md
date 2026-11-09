@@ -15,6 +15,17 @@ Arguments: none, since `ductus exec` passes a step's primitive no arguments.
 
 If the Pi verifying run records that a displayed message renders no markdown, the primitive gains `format` (`markdown` by default, or `text`). It does not exist before then.
 
+## `render-help`
+
+Arguments: none.
+
+```json
+{ "guide": "## ductus — Spec-Driven Development Pipeline\n\n…" }
+```
+
+- `guide` — the guide in the installed help copy, the first of `Host::command_file_candidates("help")` that exists. It is the text between the first line after the copy's `## Instructions` heading that is exactly `---` and the last such line. Each line that is wholly an HTML comment is removed, along with a blank line the removal would leave beside another, and the leading and trailing blank lines are trimmed. It is markdown, with the project's name in each command as the copy spells it.
+- No installed copy is an error naming every path tried. A copy with fewer than two such lines is an error naming the copy.
+
 ## The pipeline view
 
 One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`render-status`, model path) or as fixed-width text (`ductus hook status`, hook path). The two differ only in the table and its emphasis; every other line is the same in both. The blocks, in order, separated by blank lines:
@@ -55,7 +66,11 @@ A host surface, not a primitive.
 
 - **Failure.** Exit 1, with the error on stderr and nothing on stdout. Exit 2 would block the expansion, so the hook never uses it.
 
-## The hook entry in `{cli-config-dir}/settings.local.json`
+## `ductus hook help`
+
+As `ductus hook status`, except that the reason is `render-help`'s `guide`, unchanged, and the failures are `render-help`'s errors.
+
+## The hook entries in `{cli-config-dir}/settings.local.json`
 
 ```json
 {
@@ -66,13 +81,19 @@ A host surface, not a primitive.
         "hooks": [
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\" hook status", "timeout": 10 }
         ]
+      },
+      {
+        "matcher": "{project}:help",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\" hook help", "timeout": 10 }
+        ]
       }
     ]
   }
 }
 ```
 
-The entry is ductus's when an inner hook's `command` equals the string above. On Windows the string names `ductus.exe`. Entries are compared by that string alone, and every other entry, whatever its event or matcher, is left as it is.
+An entry is ductus's status entry when an inner hook's `command` equals the first string above, and its help entry when it equals the second. On Windows each string names `ductus.exe`. Entries are compared by those strings alone, and every other entry, whatever its event or matcher, is left as it is. Each matcher holds a `:`, so Claude Code tests it as an unanchored regular expression on the command name.
 
 ## `merge-status-hook`
 
@@ -82,9 +103,9 @@ The entry is ductus's when an inner hook's `command` equals the string above. On
 
 | Result field | Type | Meaning |
 | --- | --- | --- |
-| `action` | `created` / `updated` / `unchanged` / `skipped` | `created` — no file existed; `updated` — the entry was added; `unchanged` — it was already there |
+| `action` | `created` / `updated` / `unchanged` / `skipped` | `created` — no file existed, and both entries were written; `updated` — either entry was added; `unchanged` — both were already there |
 | `claude-version` | string or null | The version `claude --version` reported, null when unreadable |
-| `reason` | string or null | Why the entry was skipped: older than 2.1.101, or the version unreadable |
+| `reason` | string or null | Why the entries were skipped: older than 2.1.101, or the version unreadable |
 
 ## `ManifestEntry.tool-search-line`
 

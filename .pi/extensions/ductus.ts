@@ -8,10 +8,11 @@
  * names and schemas: this file holds no second copy of the registry, and a
  * runtime release that adds or changes a primitive reaches pi with no edit
  * here. It also registers `/{project}-status`, which shows the runtime's
- * pipeline view, or why it cannot, with no model turn (spec 080). That
- * command is why the bridge stays pi's tool surface now that pi 1.0.0 and
- * later ship an MCP client: no MCP registration can add one, and running
- * both would serve every tool twice (spec 064, Resolved Questions).
+ * pipeline view, and `/{project}-help`, which shows the pipeline guide, each
+ * with no model turn, or why it cannot (spec 080). Those commands are why the
+ * bridge stays pi's tool surface now that pi 1.0.0 and later ship an MCP
+ * client: no MCP registration can add one, and running both would serve every
+ * tool twice (spec 064, Resolved Questions).
  *
  * Written to `.pi/extensions/ductus.ts` by /ductus (the Pi layout's Bridge
  * step, strategy `update`). Zero npm dependencies — the MCP-over-stdio transport is
@@ -112,6 +113,17 @@ function statusResult(result: ToolResult): { view: string; project: string } {
     throw new Error(`render-status returned no view: ${textOf(result)}`);
   }
   return { view: parsed["rendered-markdown"], project: parsed.project };
+}
+
+/** `render-help`'s result read back from its text: the guide, or an error
+ *  saying why there is none. */
+function helpResult(result: ToolResult): string {
+  if (result.isError) throw new Error(textOf(result));
+  const parsed = JSON.parse(textOf(result)) as { guide?: unknown };
+  if (typeof parsed.guide !== "string") {
+    throw new Error(`render-help returned no guide: ${textOf(result)}`);
+  }
+  return parsed.guide;
 }
 
 /** The view with each command hint as Pi names the command. The runtime
@@ -354,6 +366,29 @@ export default function (pi: ExtensionAPI) {
           content = `ductus: ${project}-status could not show the view: ${reason(err)}`;
         }
         pi.sendMessage({ customType: "ductus-status", content, display: true }, { triggerTurn: false });
+      },
+    });
+    /* `/{project}-help` shows the guide `/{project}:help` prints, respelled
+     * as the view is, with no model turn (spec 080); a runtime without
+     * `render-help` registers no command, and the help prompt template
+     * answers instead. */
+    if (!tools.some((tool) => tool.name === "render-help")) return;
+    pi.registerCommand(`${project}-help`, {
+      description: "Show the ductus pipeline guide, with no model turn",
+      handler: async () => {
+        let result: ToolResult;
+        try {
+          result = await server.callTool("render-help", {});
+        } catch (err) {
+          result = failure(unavailable(err));
+        }
+        let content: string;
+        try {
+          content = piSpelling(helpResult(result), project);
+        } catch (err) {
+          content = `ductus: ${project}-help could not show the guide: ${reason(err)}`;
+        }
+        pi.sendMessage({ customType: "ductus-help", content, display: true }, { triggerTurn: false });
       },
     });
   });

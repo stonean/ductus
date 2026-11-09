@@ -28,7 +28,7 @@ framework/bootstrap/configure/claude.md steps 2 and 3 through
 merge-permissions, as /ductus:configure's step 1 does. Under `-p` a call
 those rules do not approve is denied (Claude Code's Manual mode); Read,
 Grep, Glob and read-only Bash need no rule. `--hook` also
-installs Claude Code's status hook with merge-status-hook. `--target`
+installs Claude Code's status and help hooks with merge-status-hook. `--target`
 writes the shared session default to that feature before any run, so a
 command that needs a target finds one.
 
@@ -455,7 +455,7 @@ def main(argv) -> int:
                     help="run each command's preset (ROUND), each on a fixture of its own, instead of PROMPTs")
     ap.add_argument("--only", help="with --round, a comma-separated list of the presets to run")
     ap.add_argument("--specs", type=int, default=40)
-    ap.add_argument("--hook", action="store_true", help="install the status hook in the fixture")
+    ap.add_argument("--hook", action="store_true", help="install the status and help hooks in the fixture")
     ap.add_argument("--permissions", choices=["mcp", "adopter"], default="mcp",
                     help="allow mcp__ductus__* alone, or an adopter's bootstrap seed plus configure's canonical sets")
     ap.add_argument("--target", help="feature directory to write as the session target before any run")
@@ -493,7 +493,7 @@ def main(argv) -> int:
     for n, (command, prompt, target, seed) in enumerate(runs, 1):
         if root is None or args.round:
             root = build_fixture(args.specs, binary, args.hook, args.permissions, target, seed)
-            print(f"fixture: {root} ({args.specs} specs, hook {'installed' if args.hook else 'absent'}, "
+            print(f"fixture: {root} ({args.specs} specs, hooks {'installed' if args.hook else 'absent'}, "
                   f"permissions {args.permissions}, target {target or 'none'}, "
                   f"seed {seed.__name__ if seed else 'none'})", file=sys.stderr)
         raw = args.raw / f"{command or f'run-{n}'}.jsonl" if args.raw else None

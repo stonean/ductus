@@ -111,6 +111,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "discover-rule-files"
         | "measure-reopenings"
         | "prune-project"
+        | "render-help"
         | "render-status"
         | "resolve-constitutions"
         | "resolve-session" => call(json!({})),

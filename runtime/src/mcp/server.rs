@@ -66,14 +66,15 @@ use crate::schema::primitives::{
     PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
     PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSpecArgs, ReadSpecResult,
     ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
-    RemoveInboxItemArgs, RemoveInboxItemResult, RenderStatusArgs, RenderStatusResult,
-    ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult,
-    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
-    ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs, RetargetSessionsResult,
-    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
-    SetStatusArgs, SetStatusResult, StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs,
-    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
-    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    RemoveInboxItemArgs, RemoveInboxItemResult, RenderHelpArgs, RenderHelpResult, RenderStatusArgs,
+    RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs,
+    ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
+    ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
+    RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
+    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, StartFixRoundsArgs,
+    StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
+    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -843,6 +844,20 @@ impl GovRuntimeServer {
         // The same history walks as `dashboard`'s, so the blocking pool too.
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::render_status::run(&params.0, repo.as_path())).await
+    }
+
+    #[tool(
+        name = "render-help",
+        description = descriptions::RENDER_HELP
+    )]
+    async fn render_help(
+        &self,
+        params: Parameters<RenderHelpArgs>,
+    ) -> Result<Json<RenderHelpResult>, String> {
+        // One small file read, so it runs inline.
+        primitives::render_help::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
     }
 
     #[tool(

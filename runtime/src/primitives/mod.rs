@@ -76,6 +76,7 @@ pub mod read_spec;
 pub mod read_tasks;
 pub mod relocate_audit_records;
 pub mod remove_inbox_item;
+pub mod render_help;
 pub mod render_status;
 pub mod resolve_anchor;
 pub mod resolve_constitutions;
@@ -349,6 +350,27 @@ pub enum PrimitiveError {
     TemplateNotFound {
         /// Comma-separated repo-relative candidate paths that were tried.
         tried: String,
+    },
+    /// No installed copy of a slash command exists at any path
+    /// `Host::command_file_candidates` gives for it, so a primitive that reads
+    /// the copy, as `render-help` reads help's, has nothing to read.
+    #[error(
+        "no installed copy of the {command} command (tried {tried}); run /ductus to install it"
+    )]
+    CommandCopyNotFound {
+        /// The command's name, as in its source's filename.
+        command: String,
+        /// Comma-separated repo-relative candidate paths that were tried.
+        tried: String,
+    },
+    /// An installed command copy lacks the structure a primitive reads from it,
+    /// as a help copy holding no guide between two `---` lines.
+    #[error("malformed command copy {path}: {reason}")]
+    MalformedCommandCopy {
+        /// The copy, repo-relative.
+        path: String,
+        /// What the copy lacks.
+        reason: String,
     },
     /// Feature path supplied to a primitive does not exist.
     #[error("feature path does not exist: {path}")]

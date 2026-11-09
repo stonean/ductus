@@ -2655,6 +2655,24 @@ pub struct RenderStatusResult {
     pub project: String,
 }
 
+// -- render-help -------------------------------------------------------------
+
+/// Args for `render-help`. It takes none: the guide is read from the installed
+/// help copy, and `ductus exec` dispatches a step's primitive with no arguments.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct RenderHelpArgs {}
+
+/// Result for `render-help`: the guide `/{project}:help` prints (spec 080,
+/// scenario `help-answers-with-no-model-turn`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RenderHelpResult {
+    /// The guide as markdown, read from the installed help copy, with the
+    /// project's name in each command as the copy spells it.
+    pub guide: String,
+}
+
 // -- check-rule-ids ----------------------------------------------------------
 
 /// Args for `check-rule-ids`.
@@ -3248,7 +3266,8 @@ pub struct MergePermissionsResult {
 // -- merge-status-hook -------------------------------------------------------
 
 /// Args for `merge-status-hook` — install Claude Code's `UserPromptExpansion`
-/// hook for `/{project}:status` into a settings file (spec 080).
+/// hooks for `/{project}:status` and `/{project}:help` into a settings file
+/// (spec 080).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct MergeStatusHookArgs {
@@ -3263,13 +3282,13 @@ pub struct MergeStatusHookArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct MergeStatusHookResult {
-    /// One of `created` (no file existed), `updated` (the entry was added),
-    /// `unchanged` (it was already there), or `skipped` (nothing written).
+    /// One of `created` (no file existed), `updated` (either entry was added),
+    /// `unchanged` (both were already there), or `skipped` (nothing written).
     pub action: String,
     /// The version `claude --version` reported, null when it was unreadable.
     pub claude_version: Option<String>,
-    /// Why the entry was skipped: a version older than 2.1.101, or one that
-    /// could not be read. Null unless `action` is `skipped`.
+    /// Why the entries were skipped: a version older than 2.1.101, or one
+    /// that could not be read. Null unless `action` is `skipped`.
     pub reason: Option<String>,
 }
 

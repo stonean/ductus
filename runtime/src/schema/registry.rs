@@ -69,6 +69,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "prune-project",
     "dashboard",
     "render-status",
+    "render-help",
     "write-session",
     "resolve-session",
     "retarget-sessions",

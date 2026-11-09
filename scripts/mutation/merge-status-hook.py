@@ -1,7 +1,7 @@
 """Mutation list for 080's `merge-status-hook` (task 7; AC2, AC20): the hook
-entry is written only on Claude Code 2.1.101 or later, a skip writes nothing,
-ductus's entry is recognized by its command and added beside every other
-entry, and the version probe reads an exit status and a missing `claude`
+entries are written only on Claude Code 2.1.101 or later, a skip writes
+nothing, each of ductus's entries, status's and help's, is recognized by its
+command and added beside every other entry, and the version probe reads an exit status and a missing `claude`
 (`runtime/src/primitives/merge_status_hook.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/merge-status-hook.py
@@ -37,17 +37,17 @@ MUTATIONS = [
         'merge_status_hook::tests::an_older_version_is_skipped_and_writes_nothing',
     ),
     (
-        'M3 the entry recognized by its matcher, not its command',
+        'M3 an entry recognized by its matcher, not its command',
         'src/primitives/merge_status_hook.rs',
-        '            .is_some_and(|inner| inner.iter().any(|hook| hook["command"] == command))\n',
-        '            .is_some_and(|_inner| group["matcher"] == matcher)\n',
-        'merge_status_hook::tests::the_entry_is_recognized_by_its_command_not_its_matcher',
+        '                .is_some_and(|inner| inner.iter().any(|hook| hook["command"] == command))\n',
+        '                .is_some_and(|_inner| group["matcher"] == hook.0.as_str())\n',
+        'merge_status_hook::tests::each_entry_is_recognized_by_its_command_not_its_matcher',
     ),
     (
-        'M4 the entry replaces the other UserPromptExpansion entries',
+        'M4 an entry replaces the other UserPromptExpansion entries',
         'src/primitives/merge_status_hook.rs',
-        '    groups.push(entry);\n',
-        '    *groups = vec![entry];\n',
+        '            groups.push(entry(hook));\n',
+        '            *groups = vec![entry(hook)];\n',
         'merge_status_hook::tests::an_existing_file_is_updated_leaving_every_other_key_and_entry',
     ),
     (
@@ -70,5 +70,19 @@ MUTATIONS = [
         '    if action != "unchanged" {\n',
         '    if true {\n',
         'merge_status_hook::tests::an_unchanged_run_writes_nothing',
+    ),
+    (
+        'M8 a file holding status\'s entry gains no help entry',
+        'src/primitives/merge_status_hook.rs',
+        '    for hook in wanted {\n',
+        '    for hook in wanted.iter().take(1) {\n',
+        'merge_status_hook::tests::a_file_holding_only_status_s_entry_gains_help_s',
+    ),
+    (
+        'M9 a created file holds status\'s entry alone',
+        'src/primitives/merge_status_hook.rs',
+        '        let entries: Vec<Value> = wanted.iter().map(entry).collect();\n',
+        '        let entries: Vec<Value> = wanted.iter().take(1).map(entry).collect();\n',
+        'merge_status_hook::tests::no_file_is_created_holding_both_entries',
     ),
 ]

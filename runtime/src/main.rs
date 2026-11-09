@@ -23,11 +23,11 @@ use ductus::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
     MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
     ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
+    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
+    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -51,6 +51,13 @@ enum HookCommand {
     /// `CLAUDE_PROJECT_DIR`, else the working directory. Exits 1, with the
     /// error on stderr, when the view cannot be rendered.
     Status,
+    /// Claude Code's `UserPromptExpansion` hook for `/{project}:help`.
+    ///
+    /// Reads the hook input from stdin, and prints a block response whose
+    /// reason is the guide the installed help copy holds. The project root is
+    /// `CLAUDE_PROJECT_DIR`, else the working directory. Exits 1, with the
+    /// error on stderr, when the guide cannot be read.
+    Help,
 }
 
 #[derive(Subcommand, Debug)]
@@ -83,6 +90,10 @@ enum Command {
     },
 
     /// Answer an agent host's hook (spec 080).
+    ///
+    /// clap's own `help` subcommand is off, since `hook help` is a member;
+    /// `ductus hook --help` still prints this group's help.
+    #[command(disable_help_subcommand = true)]
     Hook {
         #[command(subcommand)]
         hook: HookCommand,
@@ -224,6 +235,8 @@ enum Command {
     Dashboard(DashboardArgs),
     #[command(about = descriptions::summary(descriptions::RENDER_STATUS), long_about = descriptions::RENDER_STATUS)]
     RenderStatus(RenderStatusArgs),
+    #[command(about = descriptions::summary(descriptions::RENDER_HELP), long_about = descriptions::RENDER_HELP)]
+    RenderHelp(RenderHelpArgs),
     #[command(about = descriptions::summary(descriptions::WRITE_SESSION), long_about = descriptions::WRITE_SESSION)]
     WriteSession(WriteSessionArgs),
     #[command(about = descriptions::summary(descriptions::RESOLVE_SESSION), long_about = descriptions::RESOLVE_SESSION)]
@@ -724,8 +737,8 @@ fn main() -> ExitCode {
     // The runtime's environment variables — the session identity, the fetch
     // allowlist and the proxy variables — are read here, once, for every
     // subcommand (`CFG-ENV-001`), and primitives answer from this reading.
-    // `ductus hook status` reads `CLAUDE_PROJECT_DIR` once at its own start,
-    // since nothing else reads it.
+    // `ductus hook` reads `CLAUDE_PROJECT_DIR` once at its own start, since
+    // nothing else reads it.
     // The inventory is docs/runtime.md's. The certificate variables are the
     // one exception it names: on Linux and other non-Apple Unix,
     // `fetch-archive` reads them once per
@@ -753,14 +766,16 @@ fn main() -> ExitCode {
             };
             run_parse(&path, check)
         }
-        Command::Hook {
-            hook: HookCommand::Status,
-        } => {
+        Command::Hook { hook } => {
             // `CLAUDE_PROJECT_DIR` is read here, once, at the start of the one
             // subcommand that reads it (`CFG-ENV-001`).
             let root =
                 ductus::hook::project_root(std::env::var_os(ductus::hook::PROJECT_DIR_VAR), repo);
-            emit_result(ductus::hook::status(&root, &mut io::stdin().lock()))
+            let mut input = io::stdin().lock();
+            match hook {
+                HookCommand::Status => emit_result(ductus::hook::status(&root, &mut input)),
+                HookCommand::Help => emit_result(ductus::hook::help(&root, &mut input)),
+            }
         }
         Command::ReadSpec(args) => emit_result(primitives::read_spec::run(&args, &repo)),
         Command::ReadTasks(args) => emit_result(primitives::read_tasks::run(&args, &repo)),
@@ -938,6 +953,7 @@ fn main() -> ExitCode {
         Command::PruneProject(args) => emit_result(primitives::prune_project::run(&args, &repo)),
         Command::Dashboard(args) => emit_result(primitives::dashboard::run(&args, &repo)),
         Command::RenderStatus(args) => emit_result(primitives::render_status::run(&args, &repo)),
+        Command::RenderHelp(args) => emit_result(primitives::render_help::run(&args, &repo)),
         Command::WriteSession(args) => emit_result(primitives::write_session::run(&args, &repo)),
         Command::ResolveSession(args) => {
             emit_result(primitives::resolve_session::run(&args, &repo))

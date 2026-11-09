@@ -283,7 +283,7 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 Design it in `plan.md` before any code: the plan has none yet. `merge-status-hook` recognizes its entry by command and matches `{project}:status`, so help is a second entry or a widened matcher, and the plan chooses. On Pi the guide takes task 28's respelling in the bridge. The `hook` surface and `merge-status-hook` are 022's, so 022's task-20 signpost gains help. Verify as task 8 did, by typing it in Claude Code, and with `scripts/measure-command-cost.py --round --only help --hook --permissions adopter`. On Pi, verify with the bridge harness and a real `pi --mode rpc` run, as `658c0ffc`'s message records. A runtime change follows `docs/developing-ductus.md` *Landing a runtime change*.
 
-- [ ] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
+- [x] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
@@ -334,3 +334,9 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 - [ ] Implement the behavior described in `scenarios/the-search-goes-out-with-the-first-call.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 41. Re-measure result and schema sizes after 34–40's new tools
+
+- [ ] Re-run `scripts/measure-result-sizes.sh` once tasks 34–40 have landed, and replace `research.md`'s *Result sizes (AC14)* and *Loaded schema sizes (AC23)* tables, each with its method, units, population, date and commit. Task 34 adds `render-help`, and 35 and 38 may add or change tools, so the recorded tables no longer cover every registry primitive and every tool, and the total no longer adds up. Re-derive the grows-set from the new run, and bound any new member, as task 5 did
+
+- **Done when**: `research.md` names every registry primitive as measured or not measured with its reason, and records each tool's loaded schema size and the total, at a commit after task 40 (AC14, AC23).

@@ -4,13 +4,13 @@ description: Configure settings.local.json with permissions for slash commands.
 
 # Configure
 
-Configure `{cli-config-dir}/settings.local.json` with the permissions needed for slash commands to run without manual approval, and with the hook that answers a typed `/{project}:status` without a model turn.
+Configure `{cli-config-dir}/settings.local.json` with the permissions needed for slash commands to run without manual approval, and with the hooks that answer a typed `/{project}:status` and `/{project}:help` without a model turn.
 
 ## Scope Boundaries
 
 - Read and write only `{cli-config-dir}/settings.local.json`. Do NOT modify any other file.
 - Add missing entries, remove exact-match duplicates from `permissions.allow` and `permissions.deny`, and remove the **retired** entries listed in step 4; do NOT reorder or rewrite any other non-duplicate entry the user (or another command) added beyond the canonical set listed below. Retirement is confined to that explicit list — entries this framework itself once shipped — so an entry an adopter authored is never touched, however closely it resembles one. The `merge-permissions` primitive performs the canonical-presence + dedup passes automatically; only `additionalDirectories` is handled outside the primitive (it has no duplication problem — entries are presence-checked, not deduped).
-- Do NOT scan source code, specs, or git history. This command manages only permissions and the status hook.
+- Do NOT scan source code, specs, or git history. This command manages only permissions and the status and help hooks.
 - Reference: no constitution sections apply — this command operates on agent-specific permission state, not `ductus` artifacts.
 
 ## Instructions
@@ -113,6 +113,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__prune-project`
    - `mcp__ductus__dashboard`
    - `mcp__ductus__render-status`
+   - `mcp__ductus__render-help`
    - `mcp__ductus__write-session`
    - `mcp__ductus__resolve-session`
    - `mcp__ductus__retarget-sessions`
@@ -206,6 +207,6 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
 
    Read the file (post-`merge-permissions` write), add any missing absolute paths to `additionalDirectories`, and write atomically.
 
-6. Invoke `merge-status-hook` (MCP: `merge-status-hook`) with `path` `{cli-config-dir}/settings.local.json` to install the `UserPromptExpansion` hook that answers a typed `/{project}:status` from the runtime with no model turn (spec 080). It runs `claude --version` first. On 2.1.101 or later it adds the hook entry, recognizing its own entry by its command and leaving every other key and entry as they are, and emits `created`, `updated`, or `unchanged`. On an older version, or one it cannot read, it writes nothing and emits `skipped` with its `reason`, so the permissions step 1 merged stay as they are. Without the server, run `.ductus/bin/ductus merge-status-hook --path {cli-config-dir}/settings.local.json`.
+6. Invoke `merge-status-hook` (MCP: `merge-status-hook`) with `path` `{cli-config-dir}/settings.local.json` to install the `UserPromptExpansion` hooks that answer a typed `/{project}:status` and `/{project}:help` from the runtime with no model turn (spec 080). It runs `claude --version` first. On 2.1.101 or later it adds each hook entry that is absent, recognizing each of its entries by its command and leaving every other key and entry as they are, and emits `created`, `updated`, or `unchanged`. On an older version, or one it cannot read, it writes nothing and emits `skipped` with its `reason`, so the permissions step 1 merged stay as they are. Without the server, run `.ductus/bin/ductus merge-status-hook --path {cli-config-dir}/settings.local.json`.
 
-7. Confirm what was added, and report what was retired — name each removed entry, so the adopter sees the change to their permission file rather than finding it by diff. Report the status hook's action, and when it was skipped, its `reason`.
+7. Confirm what was added, and report what was retired — name each removed entry, so the adopter sees the change to their permission file rather than finding it by diff. Report the hooks' action, and when it was skipped, its `reason`.

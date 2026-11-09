@@ -12,7 +12,7 @@ A static, at-a-glance guide to the pipeline: the states a spec moves through, th
 
 ## Scope Boundaries
 
-- Prints a fixed guide. Do NOT read spec files, list directories, run generators, or invoke any primitive — this command has no runtime path and no side effects.
+- Prints a fixed guide. Do NOT read spec files, list directories, run generators, or invoke any primitive — on this path the command calls no runtime and has no side effects. A help the user types in Claude Code or Pi is answered from this same guide by the runtime, with no model turn (spec 080).
 - The command tables in the guide are pre-generated from each command's frontmatter `description:` — print them as written, and do NOT assemble them at print time.
 
 ## Instructions

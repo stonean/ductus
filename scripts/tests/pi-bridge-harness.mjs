@@ -47,12 +47,20 @@ const TIMEOUT_DECL = "const REQUEST_TIMEOUT_MS = 120_000;";
 // `timeoutMs` rewrites the bridge copy's request cap, so a timeout case runs
 // in milliseconds; the rewrite is asserted, so a renamed constant fails the
 // case rather than leaving it waiting out two minutes. `hostProject` writes
-// the `[host] project` the status command is named by.
-function project({ binary = runtime, timeoutMs, hostProject } = {}) {
+// the `[host] project` the commands are named by. `helpCopy` installs
+// help.md as /ductus installs it for Pi, `{project}` substituted, under the
+// `.pi` config dir the session file records.
+function project({ binary = runtime, timeoutMs, hostProject, helpCopy = false } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "pi-bridge-"));
   dirs.push(dir);
   mkdirSync(join(dir, ".ductus", "bin"), { recursive: true });
   if (hostProject) writeFileSync(join(dir, ".ductus", "config.toml"), `[host]\nproject = "${hostProject}"\n`);
+  if (helpCopy) {
+    writeFileSync(join(dir, ".ductus", "session.toml"), `cli-config-dir = ".pi"\n`);
+    mkdirSync(join(dir, ".pi", "prompts"), { recursive: true });
+    const help = readFileSync(join(repo, "framework/commands/help.md"), "utf8").replaceAll("{project}", hostProject);
+    writeFileSync(join(dir, ".pi", "prompts", `${hostProject}-help.md`), help);
+  }
   if (binary) symlinkSync(binary, join(dir, ".ductus", "bin", "ductus"));
   mkdirSync(join(dir, ".pi", "extensions"), { recursive: true });
   let bridge = readFileSync(bridgeSrc, "utf8");
@@ -64,11 +72,11 @@ function project({ binary = runtime, timeoutMs, hostProject } = {}) {
   return dir;
 }
 
-// A stand-in runtime that answers the handshake and lists one tool, `probe`,
-// and answers tools/call with `onCall` — the body of a function given
-// `msg`, `reply(result)`, `raw(bytes)` and the stub's own `dir`. CommonJS,
-// because the pointer it is reached through has no extension.
-function stubRuntime(onCall) {
+// A stand-in runtime that answers the handshake and lists the tools `names`,
+// `probe` alone by default, and answers tools/call with `onCall` — the body
+// of a function given `msg`, `reply(result)`, `raw(bytes)` and the stub's own
+// `dir`. CommonJS, because the pointer it is reached through has no extension.
+function stubRuntime(onCall, names = ["probe"]) {
   const dir = mkdtempSync(join(tmpdir(), "pi-bridge-stub-"));
   dirs.push(dir);
   const stub = join(dir, "stub");
@@ -91,7 +99,7 @@ process.stdin.on("data", (data) => {
       process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result }) + "\\n");
     const raw = (bytes) => process.stdout.write(bytes);
     if (msg.method === "initialize") reply({ protocolVersion: "2025-03-26", capabilities: {}, serverInfo: { name: "stub", version: "0" } });
-    else if (msg.method === "tools/list") reply({ tools: [{ name: "probe", inputSchema: { type: "object" } }] });
+    else if (msg.method === "tools/list") reply({ tools: ${JSON.stringify(names)}.map((name) => ({ name, inputSchema: { type: "object" } })) });
     else if (msg.method === "tools/call") onCall(msg, reply, raw);
   }
 });
@@ -143,7 +151,7 @@ async function load(dir) {
   return { tools, notices, commands, messages };
 }
 
-// The one message a status command sent: displayed, and triggering no turn.
+// The one message a registered command sent: displayed, and triggering no turn.
 function shownWithoutATurn(messages) {
   if (messages.length !== 1) throw new Error(`sent ${messages.length} messages`);
   const [{ message, options }] = messages;
@@ -234,8 +242,8 @@ await check("a runtime that stops answering times out once, then is replaced", a
 
 await check("registers {project}-status, whose handler shows the view and triggers no turn", async () => {
   const { tools, commands, messages } = await load(project({ hostProject: "harness" }));
-  await until(5000, () => commands.size > 0);
-  if (commands.size !== 1 || !commands.has("harness-status"))
+  await until(5000, () => commands.size > 1);
+  if (commands.size !== 2 || !commands.has("harness-status") || !commands.has("harness-help"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
   if (!tools.has("ductus__render-status")) throw new Error("render-status was not registered as a tool");
   await within(5000, commands.get("harness-status").handler("", {}));
@@ -264,6 +272,37 @@ await check("a status command that cannot reach the runtime shows why the same w
   const shown = shownWithoutATurn(messages);
   if (!shown.includes("could not show the view") || !shown.includes("run /ductus"))
     throw new Error(`the failure does not say why: ${shown}`);
+});
+
+await check("registers {project}-help, whose handler shows the guide as Pi spells it and triggers no turn", async () => {
+  const { tools, commands, messages } = await load(project({ hostProject: "harness", helpCopy: true }));
+  await until(5000, () => commands.size > 1);
+  if (!tools.has("ductus__render-help")) throw new Error("render-help was not registered as a tool");
+  await within(5000, commands.get("harness-help").handler("", {}));
+  const guide = shownWithoutATurn(messages);
+  if (!guide.startsWith("## harness — Spec-Driven Development Pipeline")) throw new Error(`no guide: ${guide.slice(0, 200)}`);
+  if (!guide.includes("| `/harness-specify` |")) throw new Error(`no /harness-specify row: ${guide.slice(0, 600)}`);
+  const colon = guide.match(/\/harness:[a-z]+/g) ?? [];
+  if (colon.length) throw new Error(`commands Pi cannot run: ${[...new Set(colon)].join(", ")}`);
+  if (guide.includes("<!--")) throw new Error("the guide carries the generator's markers");
+});
+
+await check("a help command with no installed help copy shows why the same way", async () => {
+  const { commands, messages } = await load(project({ hostProject: "harness" }));
+  await until(5000, () => commands.size > 1);
+  await within(5000, commands.get("harness-help").handler("", {}));
+  const shown = shownWithoutATurn(messages);
+  if (!shown.includes("could not show the guide") || !shown.includes("no installed copy of the help command"))
+    throw new Error(`the failure does not say why: ${shown}`);
+});
+
+await check("a runtime with render-status but no render-help registers only the status command", async () => {
+  const ANSWERS_AS_A_VIEW = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", project: "stub" }) }], isError: false });`;
+  const { tools, commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW, ["render-status"]) }));
+  await until(5000, () => commands.size > 0);
+  await sleep(200);
+  if (tools.size !== 1 || commands.size !== 1 || !commands.has("stub-status"))
+    throw new Error(`registered ${[...commands.keys()].join(", ")}`);
 });
 
 await check("a runtime without render-status registers no status command", async () => {

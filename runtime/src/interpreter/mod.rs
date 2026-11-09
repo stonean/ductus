@@ -83,11 +83,11 @@ use crate::schema::primitives::{
     MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
     PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderStatusArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
-    WriteReviewArgs, WriteSessionArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -1195,6 +1195,7 @@ fn dispatch_primitive(
         "prune-project" => call!(PruneProjectArgs, prune_project),
         "dashboard" => call!(DashboardArgs, dashboard),
         "render-status" => call!(RenderStatusArgs, render_status),
+        "render-help" => call!(RenderHelpArgs, render_help),
         "write-session" => call!(WriteSessionArgs, write_session),
         "resolve-session" => call!(ResolveSessionArgs, resolve_session),
         "retarget-sessions" => call!(RetargetSessionsArgs, retarget_sessions),

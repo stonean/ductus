@@ -1,9 +1,10 @@
-//! `merge-status-hook` — install Claude Code's `UserPromptExpansion` hook for
-//! `/{project}:status` into a settings file, gated on the Claude Code version
-//! (spec 080, AC2 and AC20). The entry, its recognition and the result are
-//! spec 080's `data-model.md`, `The hook entry in {cli-config-dir}/settings.local.json`
-//! and `merge-status-hook`; the hook it installs runs `ductus hook status`
-//! ([`crate::hook`]).
+//! `merge-status-hook` — install Claude Code's `UserPromptExpansion` hooks for
+//! `/{project}:status` and `/{project}:help` into a settings file, gated on the
+//! Claude Code version (spec 080, AC2 and AC20, and the scenario
+//! `help-answers-with-no-model-turn`). The entries, their recognition and the
+//! result are spec 080's `data-model.md`, `The hook entries in {cli-config-dir}/settings.local.json`
+//! and `merge-status-hook`; the hooks it installs run `ductus hook status` and
+//! `ductus hook help` ([`crate::hook`]).
 //!
 //! The gate comes first. Before Claude Code 2.1.101 an unrecognized hook event
 //! made Claude Code ignore the whole settings file, so writing the entry there
@@ -12,10 +13,11 @@
 //! it cannot read, writes nothing and says why. The permissions are a separate
 //! `merge-permissions` call, so a skip leaves them as that call left them.
 //!
-//! The merge then works under `hooks.UserPromptExpansion`. ductus's entry is
-//! recognized by its command string alone, so it is added once and every other
-//! entry, whatever its event or matcher, and every other key are left as they
-//! are. The whole file is written atomically, as `merge-permissions` writes it.
+//! The merge then works under `hooks.UserPromptExpansion`. Each of ductus's
+//! entries is recognized by its own command string alone, so each is added once,
+//! an adopter holding only status's entry gains help's, and every other entry,
+//! whatever its event or matcher, and every other key are left as they are. The
+//! whole file is written atomically, as `merge-permissions` writes it.
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -37,10 +39,15 @@ pub(crate) const MIN_CLAUDE_VERSION: (u64, u64, u64) = (2, 1, 101);
 /// version counts as unreadable (`BE-TIMEOUT-001`).
 pub(crate) const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// The hook entry's own timeout, in seconds, which Claude Code applies to
-/// `ductus hook status`. A timeout takes the hook's failure path, so the
+/// Each hook entry's own timeout, in seconds, which Claude Code applies to its
+/// `ductus hook` command. A timeout takes the hook's failure path, so the
 /// command falls back to the model path.
 const HOOK_TIMEOUT_SECONDS: u64 = 10;
+
+/// The `ductus hook` members the primitive installs an entry for, in the order
+/// the entries are written, each matched to `{project}:{member}`, the slash
+/// command it answers.
+pub const HOOKED_COMMANDS: &[&str] = &["status", "help"];
 
 /// The hook event the entry sits under.
 const EVENT: &str = "UserPromptExpansion";
@@ -54,13 +61,13 @@ const PROBE_PROGRAMS: &[&str] = if cfg!(windows) {
     &["claude"]
 };
 
-/// The command of ductus's hook entry: the project's runtime pointer, quoted
-/// since the project directory may hold a space, running `hook status`. It is
-/// what recognizes the entry as ductus's.
+/// The command of ductus's hook entry for `member`: the project's runtime
+/// pointer, quoted since the project directory may hold a space, running
+/// `hook {member}`. It is what recognizes the entry as ductus's.
 #[must_use]
-pub fn hook_command() -> String {
+pub fn hook_command(member: &str) -> String {
     format!(
-        "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus{}\" hook status",
+        "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus{}\" hook {member}",
         std::env::consts::EXE_SUFFIX
     )
 }
@@ -122,8 +129,12 @@ pub(crate) fn run_with(
             });
         }
     };
-    let matcher = format!("{}:status", Host::load(repo).project);
-    let (merged, action) = merge(existing.as_deref(), &matcher, &hook_command(), &target_path)?;
+    let project = Host::load(repo).project;
+    let hooks: Vec<(String, String)> = HOOKED_COMMANDS
+        .iter()
+        .map(|member| (format!("{project}:{member}"), hook_command(member)))
+        .collect();
+    let (merged, action) = merge(existing.as_deref(), &hooks, &target_path)?;
     if action != "unchanged" {
         write_atomic(
             &target_path,
@@ -261,21 +272,24 @@ fn parse_version(printed: &str) -> Option<(String, (u64, u64, u64))> {
     Some((word.to_owned(), (major, minor, patch)))
 }
 
-/// The settings value with ductus's entry present, and the action: `created`
-/// with no file, `unchanged` when an inner hook already carries `command`,
-/// `updated` when the entry was appended.
+/// The settings value with each of ductus's entries present, one per
+/// `(matcher, command)` in `wanted`, and the action: `created` with no file,
+/// `unchanged` when an inner hook already carries each command, `updated` when
+/// any entry was appended.
 fn merge(
     existing: Option<&str>,
-    matcher: &str,
-    command: &str,
+    wanted: &[(String, String)],
     path: &Path,
 ) -> Result<(Value, &'static str)> {
-    let entry = json!({
-        "matcher": matcher,
-        "hooks": [{ "type": "command", "command": command, "timeout": HOOK_TIMEOUT_SECONDS }],
-    });
+    let entry = |(matcher, command): &(String, String)| {
+        json!({
+            "matcher": matcher,
+            "hooks": [{ "type": "command", "command": command, "timeout": HOOK_TIMEOUT_SECONDS }],
+        })
+    };
     let Some(text) = existing else {
-        return Ok((json!({ "hooks": { EVENT: [entry] } }), "created"));
+        let entries: Vec<Value> = wanted.iter().map(entry).collect();
+        return Ok((json!({ "hooks": { EVENT: entries } }), "created"));
     };
     let mut value: Value = serde_json::from_str(text).map_err(|source| PrimitiveError::Json {
         path: path.into(),
@@ -298,16 +312,20 @@ fn merge(
         .or_insert_with(|| json!([]))
         .as_array_mut()
         .ok_or_else(|| schema("`hooks.UserPromptExpansion` exists but is not a JSON array"))?;
-    let present = groups.iter().any(|group| {
-        group["hooks"]
-            .as_array()
-            .is_some_and(|inner| inner.iter().any(|hook| hook["command"] == command))
-    });
-    if present {
-        return Ok((value, "unchanged"));
+    let mut added = false;
+    for hook in wanted {
+        let command = hook.1.as_str();
+        let present = groups.iter().any(|group| {
+            group["hooks"]
+                .as_array()
+                .is_some_and(|inner| inner.iter().any(|hook| hook["command"] == command))
+        });
+        if !present {
+            groups.push(entry(hook));
+            added = true;
+        }
     }
-    groups.push(entry);
-    Ok((value, "updated"))
+    Ok((value, if added { "updated" } else { "unchanged" }))
 }
 
 #[cfg(test)]
@@ -348,40 +366,51 @@ mod tests {
         serde_json::from_str(&fs::read_to_string(repo.join(SETTINGS)).unwrap()).unwrap()
     }
 
-    /// The `UserPromptExpansion` groups whose inner hook runs ductus's command.
-    fn ductus_entries(value: &Value) -> usize {
+    /// The `UserPromptExpansion` groups whose inner hook runs ductus's command
+    /// for `member`.
+    fn ductus_entries(value: &Value, member: &str) -> usize {
         value["hooks"][EVENT]
             .as_array()
             .unwrap()
             .iter()
-            .filter(|group| group["hooks"][0]["command"] == hook_command().as_str())
+            .filter(|group| group["hooks"][0]["command"] == hook_command(member).as_str())
             .count()
     }
 
-    /// The command is pinned as each platform's literal, never through
-    /// `hook_command()`, since the pointer is `ductus.exe` on Windows.
+    /// Each command is pinned as each platform's literal, never through
+    /// `hook_command`, since the pointer is `ductus.exe` on Windows.
     #[test]
-    fn no_file_is_created_holding_the_entry() {
+    fn no_file_is_created_holding_both_entries() {
         let tmp = project();
         let result = run_with(&args(), tmp.path(), printed("2.1.319 (Claude Code)\n")).unwrap();
         assert_eq!(result.action, "created");
         assert_eq!(result.claude_version.as_deref(), Some("2.1.319"));
         assert_eq!(result.reason, None);
-        let command = if cfg!(windows) {
-            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus.exe\" hook status"
+        let pointer = if cfg!(windows) {
+            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus.exe\""
         } else {
-            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\" hook status"
+            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\""
         };
         assert_eq!(
             settings(tmp.path()),
-            json!({ "hooks": { "UserPromptExpansion": [{
-                "matcher": "myapp:status",
-                "hooks": [{
-                    "type": "command",
-                    "command": command,
-                    "timeout": 10,
-                }],
-            }] } })
+            json!({ "hooks": { "UserPromptExpansion": [
+                {
+                    "matcher": "myapp:status",
+                    "hooks": [{
+                        "type": "command",
+                        "command": format!("{pointer} hook status"),
+                        "timeout": 10,
+                    }],
+                },
+                {
+                    "matcher": "myapp:help",
+                    "hooks": [{
+                        "type": "command",
+                        "command": format!("{pointer} hook help"),
+                        "timeout": 10,
+                    }],
+                },
+            ] } })
         );
     }
 
@@ -413,23 +442,53 @@ mod tests {
         assert_eq!(after["model"], before["model"]);
         assert_eq!(after["hooks"]["PreToolUse"], before["hooks"]["PreToolUse"]);
         let groups = after["hooks"][EVENT].as_array().unwrap();
-        assert_eq!(groups.len(), 2);
+        assert_eq!(groups.len(), 3);
         assert_eq!(groups[0], before["hooks"][EVENT][0]);
         assert_eq!(groups[1]["matcher"], "myapp:status");
-        assert_eq!(ductus_entries(&after), 1);
+        assert_eq!(groups[2]["matcher"], "myapp:help");
+        assert_eq!(ductus_entries(&after, "status"), 1);
+        assert_eq!(ductus_entries(&after, "help"), 1);
     }
 
-    /// A second run finds its entry by its command and writes nothing, so the
-    /// file holds exactly one.
+    /// A settings file holding status's entry alone, as a project bootstrapped
+    /// before help's entry shipped does, gains help's beside it, and status's
+    /// stays as it was.
     #[test]
-    fn a_second_run_is_unchanged_and_leaves_one_entry() {
+    fn a_file_holding_only_status_s_entry_gains_help_s() {
+        let tmp = project();
+        let status = json!({
+            "matcher": "myapp:status",
+            "hooks": [{ "type": "command", "command": hook_command("status"), "timeout": 10 }],
+        });
+        let before = json!({ "hooks": { "UserPromptExpansion": [status] } });
+        fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        fs::write(tmp.path().join(SETTINGS), before.to_string()).unwrap();
+        let result = run_with(&args(), tmp.path(), printed("2.1.319")).unwrap();
+        assert_eq!(result.action, "updated");
+        let after = settings(tmp.path());
+        let groups = after["hooks"][EVENT].as_array().unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0], status);
+        assert_eq!(groups[1]["matcher"], "myapp:help");
+        assert_eq!(
+            groups[1]["hooks"][0]["command"],
+            hook_command("help").as_str()
+        );
+    }
+
+    /// A second run finds each entry by its command and writes nothing, so the
+    /// file holds exactly one of each.
+    #[test]
+    fn a_second_run_is_unchanged_and_leaves_one_of_each_entry() {
         let tmp = project();
         run_with(&args(), tmp.path(), printed("2.1.319")).unwrap();
         let first = fs::read(tmp.path().join(SETTINGS)).unwrap();
         let result = run_with(&args(), tmp.path(), printed("2.1.319")).unwrap();
         assert_eq!(result.action, "unchanged");
         assert_eq!(fs::read(tmp.path().join(SETTINGS)).unwrap(), first);
-        assert_eq!(ductus_entries(&settings(tmp.path())), 1);
+        let after = settings(tmp.path());
+        assert_eq!(ductus_entries(&after, "status"), 1);
+        assert_eq!(ductus_entries(&after, "help"), 1);
     }
 
     /// An unchanged run writes nothing: with the settings directory read-only,
@@ -447,15 +506,21 @@ mod tests {
         assert_eq!(result.unwrap().action, "unchanged");
     }
 
-    /// ductus's entry is recognized by its command alone: one under another
-    /// matcher is still its own, and no second entry is added.
+    /// Each of ductus's entries is recognized by its command alone: one under
+    /// another matcher is still its own, and no second entry is added.
     #[test]
-    fn the_entry_is_recognized_by_its_command_not_its_matcher() {
+    fn each_entry_is_recognized_by_its_command_not_its_matcher() {
         let tmp = project();
-        let before = json!({ "hooks": { "UserPromptExpansion": [{
-            "matcher": "renamed:status",
-            "hooks": [{ "type": "command", "command": hook_command(), "timeout": 10 }],
-        }] } });
+        let before = json!({ "hooks": { "UserPromptExpansion": [
+            {
+                "matcher": "renamed:status",
+                "hooks": [{ "type": "command", "command": hook_command("status"), "timeout": 10 }],
+            },
+            {
+                "matcher": "renamed:help",
+                "hooks": [{ "type": "command", "command": hook_command("help"), "timeout": 10 }],
+            },
+        ] } });
         fs::create_dir_all(tmp.path().join(".claude")).unwrap();
         fs::write(tmp.path().join(SETTINGS), before.to_string()).unwrap();
         let result = run_with(&args(), tmp.path(), printed("2.1.319")).unwrap();

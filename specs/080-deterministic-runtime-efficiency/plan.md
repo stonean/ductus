@@ -65,7 +65,7 @@ The AC19 test renders one model both ways and compares the facts each carries. T
 
 ### Claude Code's hook runs `ductus hook status`, a host surface, not a primitive
 
-`hook` is a subcommand beside `mcp` and `exec`. `hook status` is its one member. It is listed in `NON_PRIMITIVE_SUBCOMMANDS` (`runtime/src/main.rs:1093-1108`) with its reason: it adapts a host's hook protocol, and the capability it adapts is the view, which `render-status` exposes on MCP (§runtime-boundary principle 5). A cli-only primitive would need one of principle 5's three exemptions, and rendering a view meets none.
+`hook` is a subcommand beside `mcp` and `exec`, with two members, `hook status` and `hook help` (*Help answers through the status surfaces*). It is listed in `NON_PRIMITIVE_SUBCOMMANDS` (`runtime/src/main.rs:1093-1108`) with its reason: it adapts a host's hook protocol, and the capability it adapts is the view, which `render-status` exposes on MCP (§runtime-boundary principle 5). A cli-only primitive would need one of principle 5's three exemptions, and rendering a view meets none.
 
 - **Input.** The hook reads Claude Code's hook input from stdin and uses no field of it, so `command_args` is ignored (the spec's arguments edge case). The project root is `CLAUDE_PROJECT_DIR`, which Claude Code exports to command hooks (code.claude.com/docs/en/hooks), else the working directory. The identity comes from `CLAUDE_CODE_SESSION_ID` in the hook's environment, verified 2026-11-08.
 - **Success.** It prints `{"decision":"block","reason":<text view>,"hookSpecificOutput":{"hookEventName":"UserPromptExpansion","suppressOriginalPrompt":true}}` and exits 0 (AC1, AC16). That placement of `suppressOriginalPrompt` is the prototype's, honored on 2.1.319. The hooks reference documents the field only for `UserPromptSubmit`, in the same place.
@@ -77,7 +77,7 @@ The AC19 test renders one model both ways and compares the facts each carries. T
 `merge-status-hook` is a new primitive that takes the settings file's path (AC2, AC20).
 
 - **Version gate.** It runs `claude --version` itself, with a timeout, as `lint-markdown` shells out to `npx`. That works from configure's MCP call, from `/ductus`'s CLI path and under `ductus exec`, and needs no new permission entry. The probe reads the version from inside an MCP server Claude Code spawned, as `research.md` records, so the host never runs it (see Trade-offs). The probe closes its stdin, which carries the server's protocol, and tries `claude.cmd` after `claude` on Windows. A version of 2.1.101 or later merges the entry. An older or unreadable one returns `skipped` with its reason and writes nothing. The permissions are a separate `merge-permissions` call, so a skip leaves them intact.
-- **Merge.** It works under `hooks.UserPromptExpansion` with matcher `{project}:status`, taking the project from `Host::load` (`runtime/src/host.rs:81`). It recognizes its own entry by the command string, adds the entry when absent, reports `unchanged` when present, and never edits another entry. It writes the whole file atomically and preserves every other key, as `merge-permissions` does.
+- **Merge.** It works under `hooks.UserPromptExpansion` with two entries, matcher `{project}:status` running `hook status` and matcher `{project}:help` running `hook help`, taking the project from `Host::load` (`runtime/src/host.rs:81`). It recognizes each entry by its own command string and adds each one that is absent. It reports `created` when there was no file, `updated` when it added either entry, and `unchanged` when both were present. It never edits another entry. It writes the whole file atomically and preserves every other key, as `merge-permissions` does.
 - **Callers.** `framework/bootstrap/configure/claude.md` calls it after `merge-permissions`. `framework/bootstrap/ductus.md` calls it for each Claude agent once the runtime is acquired, so an earlier adopter gets the hook on its next `/ductus` with no manual step (AC26). Claude's seed gains the subcommand's CLI rule, and the seed's count of CLI subcommands is swept.
 
 ### Tool loading derives from each command's parsed steps
@@ -110,6 +110,17 @@ The verifying run settles three assumptions and records them in `research.md` (A
 - **Context.** Whether the displayed message reaches the agent's context. If it does not, and Pi can add context without a turn, the bridge adds the compact form (AC28).
 - **Markdown.** Whether a displayed message renders markdown. If it does not, `render-status` gains a `format` argument whose `text` value the bridge passes.
 - **Templates.** Whether the registered command runs instead of the `{project}-status` prompt template. If the template wins, `/ductus` stops installing it.
+
+### Help answers through the status surfaces
+
+The scenario `help-answers-with-no-model-turn` puts `/{project}:help` on the paths status already has, so each surface gains a second member rather than a new mechanism.
+
+- **The guide.** A function in `runtime/src/primitives/render_help.rs` reads the installed help copy that `Host::command_file_candidates("help")` finds first, as the MCP server finds `target.md`. The guide therefore carries the project's name, as the model path's copy does, and follows a pinned or edited `help.md`. The crate cannot embed `framework/commands/help.md`, for the reason *Always loaded (AC21)* gives. The guide is the text between the first line after the `## Instructions` heading that is exactly `---` and the last such line. Each line that is wholly an HTML comment (the generator's `<!-- generated:… -->` markers) is removed, and the blank lines that leaves are collapsed. On this repo's copy that is 6,110 characters; the model path printed 6,146 in the cost round. A copy that is missing, or that holds fewer than two such lines, is an error.
+- **`render-help`.** A new, argument-free primitive that returns `{guide}` from that function. Principle 5 puts the capability `hook help` adapts on MCP, as `render-status` serves `hook status`'s, and Pi's bridge reaches the guide through it. `help.md`'s steps name no tool, so its model path gains no `ToolSearch` line and no call.
+- **`ductus hook help`.** It answers a typed `/{project}:help` as `hook status` answers status: the same input handling, the `CLAUDE_PROJECT_DIR` root, a block response with `suppressOriginalPrompt`, and exit 1 on failure. Its reason is the guide as written. The scenario asks for the guide the model path prints, so its five pipe tables (28 lines, the longest 480 characters) show as markdown source in the terminal. The `hook` group sets clap's `disable_help_subcommand`, since clap otherwise generates `ductus hook help` itself. `ductus hook --help` still prints the group's help.
+- **The entry.** `merge-status-hook` merges help's entry beside status's, under the same version gate and in the same write (*`merge-status-hook` installs the hook and gates it on the version*). A matcher holding `:` is an unanchored regular expression on the command name (code.claude.com/docs/en/hooks), for both entries alike.
+- **Pi.** When the runtime serves `render-help`, the bridge also registers `{project}-help`. Its handler calls `render-help` and shows the guide as a displayed message that triggers no turn, respelled as status's view is, with a failure shown the same way.
+- **The agent's own invocation.** Claude Code fires `UserPromptExpansion` only for a command the user types (code.claude.com/docs/en/hooks), so a `/{project}:help` the agent invokes takes the model path, as status's does.
 
 ### Corpus-growing results are bounded through `bounded_lists`
 
@@ -146,12 +157,13 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `specs/080-deterministic-runtime-efficiency/research.md` | Create | Measurements, method traps, verifying-run records |
 | `runtime/src/primitives/pipeline_view.rs` | Create | View model, two renderings, bound |
 | `runtime/src/primitives/render_status.rs` | Create | `render-status` primitive |
+| `runtime/src/primitives/render_help.rs` | Create | The guide's extraction; `render-help` primitive |
 | `runtime/src/primitives/merge_status_hook.rs` | Create | `merge-status-hook` primitive |
 | `runtime/tests/merge_status_hook.rs` | Create | The version probe's `PATH` lookup, driven through the binary |
 | `scripts/mutation/merge-status-hook.py` | Create | `merge-status-hook`'s mutations, each with its killing test |
 | `runtime/src/primitives/tool_loading.rs` | Create | Step-tool derivation and the batching line |
-| `runtime/src/hook.rs` | Create | `ductus hook status` surface |
-| `runtime/tests/hook_status.rs` | Create | The hook's output, root and exits, driven through the binary |
+| `runtime/src/hook.rs` | Create | `ductus hook status` and `ductus hook help` surface |
+| `runtime/tests/hook_status.rs` | Create | The hooks' output, root and exits, driven through the binary |
 | `docs/runtime.md` | Modify | `CLAUDE_PROJECT_DIR` in the environment-variable inventory (`CFG-ENV-002`) |
 | `runtime/src/primitives/dashboard.rs` | Modify | Rendering moves out; `rendered-markdown` dropped; bounded |
 | `runtime/src/primitives/read_tasks.rs` | Modify | Bounded result |
@@ -165,15 +177,16 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `runtime/src/main.rs` | Modify | Subcommands; `NON_PRIMITIVE_SUBCOMMANDS` |
 | `runtime/tests/mcp.rs` | Modify | Always-load test |
 | `runtime/tests/golden/status-basic.jsonl` | Modify | Re-blessed status golden |
-| `framework/runtime-tools.txt` | Modify | Two new tools |
+| `framework/runtime-tools.txt` | Modify | Three new tools |
 | `framework/commands/status.md` | Modify | Reads `render-status`; step 3 removed |
+| `framework/commands/help.md` | Modify | Scope Boundaries name the runtime's answer to a typed help |
 | `framework/commands/implement.md` | Modify | `read-tasks` lists-file branch |
 | `framework/commands/review.md` | Modify | `--all` lists-file branch |
 | `framework/commands/target.md` | Modify | Not-found enumeration lists-file branch |
 | `framework/bootstrap/configure/claude.md` | Modify | Calls `merge-status-hook` |
 | `framework/bootstrap/configure/auggie.md` | Modify | Regenerated allow block |
 | `framework/bootstrap/ductus.md` | Modify | Claude rows' field; hook install; seed rule |
-| `framework/bootstrap/pi/ductus-bridge.ts` | Modify | Registered status command |
+| `framework/bootstrap/pi/ductus-bridge.ts` | Modify | Registered status and help commands |
 | `scripts/gen-claude-commands.sh` | Modify | Claude pass drives `apply-manifest` |
 | `.githooks/pre-commit` | Modify | Resolves the binary before the generator runs |
 | `scripts/tests/pi-bridge-harness.mjs` | Modify | Registered-command cases |
@@ -190,7 +203,7 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 - `render-status`'s result;
 - the view's line grammar, its collapse line and its cut line;
 - the hook's input, output and exit statuses;
-- the `settings.local.json` hook entry and how it is recognized;
+- the `settings.local.json` hook entries and how each is recognized;
 - `merge-status-hook`'s arguments and result;
 - the `ManifestEntry` field and the batching line;
 - the `_meta` key;
@@ -211,6 +224,9 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 - **Driving `apply-manifest` from the generator:** costs the generator a built binary, which `generators.yml` already builds. It buys one code path for this repo's copies and adopters'.
 - **Pi's load-time `render-status` call:** costs one view computation per Pi session start, to learn the namespace. The alternatives were parsing `.ductus/config.toml` in TypeScript, or substituting `{project}` into a bridge 064 requires to be verbatim.
 - **No baseline round of the harness:** status's before-figures come from transcripts (spec Motivation). For the other commands there is no before-figure, so a reduction found later is measured against the round 080 records.
+- **One entry for status and help, with a widened matcher:** rejected. It needs a `hook` member that reads `command_name` from the input, a field this project has not observed, and it needs every adopter's `hook status` entry retired, which would otherwise fire beside it. Two entries need neither.
+- **Renaming `merge-status-hook` once it installs help too:** rejected. The name is in 28 live files (115 occurrences, 7 specs), and every adopter's permission entries for the old name would need retiring.
+- **The bridge reading Pi's help copy itself:** rejected. It would be a second copy of the guide's extraction rule, in TypeScript, and the capability `hook help` adapts belongs on MCP in any case.
 - **The settings entry's path:** it names the repository pointer and assumes `CLAUDE_PROJECT_DIR` is the registering root. A per-machine absolute path, as in the prototype, would not travel.
 
 ## Open Questions Resolved
@@ -220,6 +236,6 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 
 ## Cross-spec impact
 
-- **022 — deterministic runtime**, `in-progress`, owner of the runtime core. It owes the new `hook` surface, `render-status`, `merge-status-hook`, the `alwaysLoad` `_meta`, `dashboard`'s dropped field and the bounded results. Discharged by the edits to its data model and its `dashboard-primitive` scenario, which links back to 080.
+- **022 — deterministic runtime**, `in-progress`, owner of the runtime core. It owes the new `hook` surface with its `help` member, `render-status`, `render-help`, `merge-status-hook` with help's entry, the `alwaysLoad` `_meta`, `dashboard`'s dropped field and the bounded results. Discharged by the edits to its data model and its `dashboard-primitive` scenario, which links back to 080.
 - **063 — oversized artifacts warn with a fix**, `in-progress`. `read-size-bytes` now also bounds primitive results and the view. Discharged by a signpost in its `spec.md` linking 080.
-- **064 — Pi host support**, `done`. The bridge registers a command. A blockquote signpost in its `spec.md` is a correction and does not reopen it. Its D1 command surface changes only if the template loses to the command. If `/ductus` then stops installing `{project}-status`, 064's criteria change, and `classify-spec-edit` decides the reopen.
+- **064 — Pi host support**, `done`. The bridge registers two commands, status and help. A blockquote signpost in its `spec.md` is a correction and does not reopen it. Its D1 command surface changes only if the template loses to the command. If `/ductus` then stops installing `{project}-status`, 064's criteria change, and `classify-spec-edit` decides the reopen.
