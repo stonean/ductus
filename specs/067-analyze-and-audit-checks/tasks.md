@@ -193,3 +193,9 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 - [ ] Implement the behavior described in `scenarios/spec-integrity-and-plan-consistency-are-run.md`
 
 - **Done when**: every `/{project}:analyze` path runs §Spec integrity and §Plan consistency, each failure a Blocking finding and each check a path cannot run recorded unexamined, proved to fail on a fixture holding each condition
+
+## 24. check_artifacts.rs's module doc counts the families it owns
+
+- [ ] `runtime/src/primitives/check_artifacts.rs`'s module doc says it "Owns ten families", while it emits eleven family literals since 079 added `cross-spec-impact-drift`: state the count the code holds, or point at `schema::descriptions::CHECK_ARTIFACTS` instead of counting (054's review, 2026-11-09, outside its scope; deferred here by the delegated rule)
+
+- **Done when**: the module doc states no family count the code does not hold
