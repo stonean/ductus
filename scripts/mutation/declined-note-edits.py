@@ -1,8 +1,9 @@
 """Mutation list for 078's task 13: `check-prescriptions` matches a
 prescribed file with every edit applied or with only its MUST and SHOULD
 findings' edits applied, so a NOTE's declined edit forces no re-read, while
-an unapplied MUST or SHOULD edit still differs
-(`runtime/src/primitives/check_prescriptions.rs`, `compare` and `apply_edits`).
+an unapplied MUST or SHOULD edit still differs, and a mode change beside the
+prescribed edits differs too (`runtime/src/primitives/check_prescriptions.rs`,
+`compare` and `apply_edits`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/declined-note-edits.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -36,5 +37,12 @@ MUTATIONS = [
         '        let blocking = apply_edits(text.as_deref(), edits, path, |&(_, _, note, _, _)| !note);',
         '        let blocking = apply_edits(text.as_deref(), edits, path, |&(_, _, note, _, _)| note);',
         'check_prescriptions::tests::a_declined_should_edit_still_differs',
+    ),
+    (
+        "M4 a file's mode is not compared, so a chmod beside the prescribed edit matches",
+        'src/primitives/check_prescriptions.rs',
+        '                .zip(mode);',
+        '                .zip(actual.map(|(_, mode)| mode));',
+        'check_prescriptions::tests::a_mode_change_beside_the_prescribed_edit_differs',
     ),
 ]

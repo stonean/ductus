@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 
 use git2::{IndexAddOption, Oid, Signature};
 
-use crate::primitives::check_stuck::tree_entry_id;
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
@@ -523,7 +522,8 @@ pub(crate) fn round_paths(
 /// Each snapshot's parent is `HEAD` at its time, so those commits are knowable
 /// with nothing reported by the agent. A path qualifies when a commit only other
 /// specs claim changed it, no commit this spec or no spec claims did, and its
-/// content at each snapshot equals its content at that snapshot's parent, so no
+/// entry at each snapshot, blob and mode, equals its entry in the tree `HEAD`
+/// held then (no tree, for a snapshot taken on an unborn branch), so no
 /// uncommitted edit sits on top. Another session's uncommitted edits cannot be
 /// told apart from the run's own, so they stay in the round.
 fn changed_only_by_other_specs(
@@ -558,15 +558,16 @@ fn changed_only_by_other_specs(
         }
     }
 
-    let (base_tree, base_head_tree) = (base.tree()?, base_head.tree()?);
-    let (snapshot_tree, snapshot_head_tree) = (snapshot.tree()?, snapshot_head.tree()?);
+    let (base_tree, base_head_tree) = (base.tree()?, head_tree(&base, &base_head)?);
+    let (snapshot_tree, snapshot_head_tree) =
+        (snapshot.tree()?, head_tree(&snapshot, &snapshot_head)?);
     let mut left = BTreeSet::new();
     for path in others.into_iter().filter(|path| !own.contains(path)) {
         let git_path = project.to_git(&path);
-        let unedited = tree_entry_id(&base_tree, &git_path)
-            == tree_entry_id(&base_head_tree, &git_path)
-            && tree_entry_id(&snapshot_tree, &git_path)
-                == tree_entry_id(&snapshot_head_tree, &git_path);
+        let unedited = tree_entry(Some(&base_tree), &git_path)
+            == tree_entry(base_head_tree.as_ref(), &git_path)
+            && tree_entry(Some(&snapshot_tree), &git_path)
+                == tree_entry(snapshot_head_tree.as_ref(), &git_path);
         if unedited {
             left.insert(path);
         }
@@ -578,13 +579,42 @@ fn changed_only_by_other_specs(
 /// any other commit a caller names as a base is that commit itself. A snapshot
 /// taken on an unborn branch has no parent, and is itself the start.
 fn head_under<'r>(commit: &git2::Commit<'r>) -> git2::Commit<'r> {
-    if commit.message().ok() == Some(SNAPSHOT_MESSAGE)
-        && commit.author().name().ok() == Some(SNAPSHOT_NAME)
+    if is_snapshot(commit)
         && let Ok(parent) = commit.parent(0)
     {
         return parent;
     }
     commit.clone()
+}
+
+/// Whether `commit` is a snapshot this module took.
+fn is_snapshot(commit: &git2::Commit<'_>) -> bool {
+    commit.message().ok() == Some(SNAPSHOT_MESSAGE)
+        && commit.author().name().ok() == Some(SNAPSHOT_NAME)
+}
+
+/// The tree `HEAD` held when `commit` was taken, `head` being [`head_under`]'s
+/// answer for it: none for a snapshot taken on an unborn branch, which had no
+/// `HEAD` and so no committed file. Its own tree in that place would read every
+/// file untracked there as committed, and so as unedited (spec 079, AC3).
+fn head_tree<'r>(
+    commit: &git2::Commit<'r>,
+    head: &git2::Commit<'r>,
+) -> Result<Option<git2::Tree<'r>>> {
+    if head.id() == commit.id() && is_snapshot(commit) {
+        return Ok(None);
+    }
+    Ok(Some(head.tree()?))
+}
+
+/// A path's entry in `tree` as git stores it, its blob and its mode, so a mode
+/// change is an edit as a content change is; none when there is no tree or it
+/// does not hold the path.
+fn tree_entry(tree: Option<&git2::Tree<'_>>, git_path: &str) -> Option<(Oid, i32)> {
+    tree?
+        .get_path(Path::new(git_path))
+        .ok()
+        .map(|entry| (entry.id(), entry.filemode()))
 }
 
 /// The files inside the project that differ between two snapshots, from the

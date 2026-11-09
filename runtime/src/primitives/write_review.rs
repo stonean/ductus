@@ -1399,11 +1399,14 @@ fn render_report(
 }
 
 /// The report's Summary: the caller's, when it supplied one, else the
-/// generated count line. Either is followed by the loop's account, joined
-/// after a space, when the run passed its rounds, so the record names each
-/// exempt and each waived round whoever wrote the Summary (spec 078 AC2;
-/// 066's scenario `a-supplied-summary-carries-the-loops-account`). A supplied
-/// Summary is otherwise rendered exactly as given.
+/// generated count line. Either is followed by the loop's account when the run
+/// passed its rounds, so the record names each exempt and each waived round
+/// whoever wrote the Summary (spec 078 AC2; 066's scenario
+/// `a-supplied-summary-carries-the-loops-account`): after a space on the
+/// generated line, and as a paragraph of its own after a supplied Summary,
+/// whose last line may be a code fence, a table row or a list item that text
+/// joined to it would break. A supplied Summary is otherwise rendered exactly
+/// as given.
 fn report_summary(
     args: &WriteReviewArgs,
     buckets: &Buckets<'_>,
@@ -1412,7 +1415,7 @@ fn report_summary(
 ) -> String {
     if let Some(summary) = args.summary.as_deref().filter(|s| !s.trim().is_empty()) {
         return match record.fix_rounds {
-            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),
+            Some(loop_record) => format!("{}\n\n{}", summary.trim_end(), loop_summary(loop_record)),
             None => summary.to_string(),
         };
     }
@@ -4760,9 +4763,10 @@ mod tests {
     }
 
     /// A Summary the caller supplies is rendered exactly as given when the
-    /// run passed no rounds, and carries the loop's account, joined after a
-    /// space, when it did, so an exempt round is named whoever wrote the
-    /// Summary (spec 078 AC2; 066's scenario
+    /// run passed no rounds, and carries the loop's account as a paragraph of
+    /// its own when it did, so an exempt round is named whoever wrote the
+    /// Summary, and a Summary ending in a code fence keeps the fence closed and
+    /// every later section a heading (spec 078 AC2; 066's scenario
     /// `a-supplied-summary-carries-the-loops-account`).
     #[test]
     fn a_supplied_summary_carries_the_loops_account() {
@@ -4785,11 +4789,20 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(
             report.contains(
-                "## Summary\n\nRead the scope whole 2 fix round(s): 1 re-read, 0 diff-checked, \
+                "## Summary\n\nRead the scope whole\n\n2 fix round(s): 1 re-read, 0 diff-checked, \
                  1 exempt, 0 not re-read. Exempt: round 1.\n\n## MUST"
             ),
             "{report}"
         );
+
+        args.summary = Some("Read the scope whole:\n\n```text\nsrc/a.rs\n```\n".into());
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains("src/a.rs\n```\n\n2 fix round(s): 1 re-read"),
+            "{report}"
+        );
+        assert!(!report.contains("``` 2 fix round(s)"), "{report}");
     }
 
     /// One round is named alone, several in order with the last joined by

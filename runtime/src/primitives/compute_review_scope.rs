@@ -413,16 +413,7 @@ fn recorded_run(
     tree: &Tree<'_>,
     git_path: &str,
 ) -> Result<Option<RecordedRun>> {
-    let Some(path) = feature_file_in_tree(repository, tree, git_path) else {
-        return Ok(None);
-    };
-    let Some(text) = blob_text(repository, tree, &path)? else {
-        return Ok(None);
-    };
-    let Ok((frontmatter, _)) = split_frontmatter(&text, Path::new(git_path)) else {
-        return Ok(None);
-    };
-    let Ok(record) = serde_norway::from_str::<ReviewBlock>(frontmatter) else {
+    let Some(record) = record_at(repository, tree, git_path)? else {
         return Ok(None);
     };
     let held = holds_done_until_reviewed(&record);
@@ -491,8 +482,17 @@ fn record_at(
 /// What a review run reads, for a caller weighing a stored finding that did not fire:
 /// a file the run never opened says nothing about whether it still would (spec 079).
 pub(crate) enum RunScope {
-    /// The entries the run's scope holds, a plan's pattern among them on a first review.
-    Known(PlanEntries),
+    /// The entries the run's scope holds. Each is the path it is, and only those the
+    /// plan's Affected Files gave it are also the patterns they may be, a plan's pattern
+    /// among them on a first review: a changed path holding `*`, `?` or `{` names itself
+    /// and no other file, which [`PlanEntries`], parsing every entry it is given as a
+    /// possible pattern, would not keep (QUAL-DELEG-001).
+    Known {
+        /// Every scope entry, matched as the text it is.
+        read: BTreeSet<String>,
+        /// The scope's entries that are plan entries, matched as [`PlanEntries`] does.
+        plan: PlanEntries,
+    },
     /// The window could not be resolved, so nothing is known to have been read.
     Unreadable,
 }
@@ -505,7 +505,16 @@ impl RunScope {
             since: since.map(str::to_string),
         };
         compute(&args, repo).map_or(Self::Unreadable, |scope| {
-            Self::Known(PlanEntries::new(&scope.scope))
+            let planned: Vec<String> = scope
+                .scope
+                .iter()
+                .filter(|entry| scope.plan_affected.contains(entry))
+                .cloned()
+                .collect();
+            Self::Known {
+                plan: PlanEntries::new(&planned),
+                read: scope.scope.into_iter().collect(),
+            }
         })
     }
 
@@ -515,7 +524,8 @@ impl RunScope {
     pub(crate) fn why_unread(&self, path: &str, repo: &Path) -> Option<String> {
         match self {
             Self::Unreadable => Some("this run's scope could not be read".to_string()),
-            Self::Known(scope) => (!scope.names(path)
+            Self::Known { read, plan } => (!read.contains(path)
+                && !plan.names(path)
                 && repo.join(path).symlink_metadata().is_ok())
             .then(|| format!("this run did not read `{path}`")),
         }
@@ -908,7 +918,9 @@ impl FoldTest<'_> {
 
 /// A plan's `Affected Files` entries, as a test of whether one names a path. An
 /// entry may be a literal path, a directory ending in `/`, or a pattern with
-/// `*`, `?`, `**` or `{a, b}`, as the corpus's plans write them.
+/// `*`, `?`, `**` or `{a, b}`, as the corpus's plans write them. Every entry it
+/// is given is read as a possible pattern, so give it a plan's entries alone: a
+/// path a diff reports is the path it is ([`RunScope`], QUAL-DELEG-001).
 pub(crate) struct PlanEntries {
     literal: BTreeSet<String>,
     patterns: Vec<Regex>,
@@ -1062,7 +1074,8 @@ fn diff_since(project: &ProjectRepository, base_sha: &str) -> Result<Vec<String>
 /// subdirectory does not walk its neighbours' trees. Literal, because that
 /// path may hold `*`, `?` or `[`, which as a glob would match no file and
 /// report no change (QUAL-CLAIM-001). Shared with `brief-re-read`'s
-/// tree-to-tree diff, so the two bound a project alike.
+/// tree-to-tree diff and `commit_attribution`'s per-commit diff, so all three
+/// bound a project alike.
 pub(crate) fn project_diff_options(project: &ProjectRepository) -> DiffOptions {
     let mut opts = DiffOptions::new();
     let project_dir = project.to_git("");
@@ -3424,9 +3437,28 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(&tmp.path().join("src/b.rs"), "b\n");
         write(&tmp.path().join("lib/c.rs"), "c\n");
-        let scope = RunScope::Known(PlanEntries::new(&["src/*.rs".to_string()]));
+        let scope = RunScope::Known {
+            read: BTreeSet::new(),
+            plan: PlanEntries::new(&["src/*.rs".to_string()]),
+        };
         assert_eq!(scope.why_unread("src/b.rs", tmp.path()), None);
         assert!(scope.why_unread("lib/c.rs", tmp.path()).is_some());
+    }
+
+    /// A changed path holding a pattern character is the path it is: only a plan's
+    /// entries are read as patterns, so a window adding `src/{a}.rs` says nothing
+    /// about `src/a.rs`, which no run read, and a stored finding there is kept
+    /// (QUAL-DELEG-001).
+    #[test]
+    fn a_changed_path_holding_a_brace_names_only_itself() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): before the review");
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/{a}.rs", "feat(001): after the review");
+
+        let scope = RunScope::resolve("001-x", None, tmp.path());
+        assert_eq!(scope.why_unread("src/{a}.rs", tmp.path()), None);
+        assert!(scope.why_unread("src/a.rs", tmp.path()).is_some());
     }
 
     #[test]

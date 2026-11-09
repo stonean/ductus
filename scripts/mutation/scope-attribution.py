@@ -484,21 +484,21 @@ MUTATIONS = [
     (
         'M68 an uncommitted edit at the new snapshot does not keep the path',
         'src/primitives/fix_rounds.rs',
-        '            && tree_entry_id(&snapshot_tree, &git_path)\n                == tree_entry_id(&snapshot_head_tree, &git_path);',
+        '            && tree_entry(Some(&snapshot_tree), &git_path)\n                == tree_entry(snapshot_head_tree.as_ref(), &git_path);',
         ';',
         'brief_re_read::tests::an_uncommitted_edit_on_another_specs_path_stays_in_the_round',
     ),
     (
         'M69 an uncommitted edit at the base does not keep the path',
         'src/primitives/fix_rounds.rs',
-        'let unedited = tree_entry_id(&base_tree, &git_path)\n            == tree_entry_id(&base_head_tree, &git_path)\n            && ',
+        'let unedited = tree_entry(Some(&base_tree), &git_path)\n            == tree_entry(base_head_tree.as_ref(), &git_path)\n            && ',
         'let unedited = ',
         'brief_re_read::tests::an_uncommitted_edit_at_the_base_on_another_specs_path_stays_in_the_round',
     ),
     (
         "M70 any base's parent is taken as HEAD at its time",
         'src/primitives/fix_rounds.rs',
-        '    if commit.message().ok() == Some(SNAPSHOT_MESSAGE)\n        && commit.author().name().ok() == Some(SNAPSHOT_NAME)\n        && let Ok(parent) = commit.parent(0)',
+        '    if is_snapshot(commit)\n        && let Ok(parent) = commit.parent(0)',
         '    if let Ok(parent) = commit.parent(0)',
         'brief_re_read::tests::a_base_that_is_no_snapshot_starts_at_itself',
     ),
@@ -827,8 +827,8 @@ MUTATIONS = [
     (
         'M117 a round compares text, so a binary edit reads as none',
         'src/primitives/fix_rounds.rs',
-        '            && tree_entry_id(&snapshot_tree, &git_path)\n                == tree_entry_id(&snapshot_head_tree, &git_path);',
-        '            && (tree_entry_id(&snapshot_tree, &git_path)\n                == tree_entry_id(&snapshot_head_tree, &git_path)\n                || git_path.ends_with(".bin"));',
+        '            && tree_entry(Some(&snapshot_tree), &git_path)\n                == tree_entry(snapshot_head_tree.as_ref(), &git_path);',
+        '            && (tree_entry(Some(&snapshot_tree), &git_path)\n                == tree_entry(snapshot_head_tree.as_ref(), &git_path)\n                || git_path.ends_with(".bin"));',
         'brief_re_read::tests::an_uncommitted_edit_to_a_binary_file_on_another_specs_path_stays_in_the_round',
     ),
     (
@@ -1261,15 +1261,15 @@ MUTATIONS = [
     (
         'M179 a file the run read reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known(scope) => (!scope.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
-        'Self::Known(_) => (repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { read, plan } => (!read.contains(path)\n                && !plan.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { .. } => (repo.join(path).symlink_metadata().is_ok())',
         'process_decisions::tests::a_silent_decision_on_a_file_the_run_read_expires',
     ),
     (
         'M180 a file gone from disk reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known(scope) => (!scope.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
-        'Self::Known(scope) => (!scope.names(path))',
+        'Self::Known { read, plan } => (!read.contains(path)\n                && !plan.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { read, plan } => (!read.contains(path) && !plan.names(path))',
         'process_decisions::tests::a_silent_decision_on_a_file_gone_from_disk_expires',
     ),
     (
@@ -1387,8 +1387,8 @@ MUTATIONS = [
     (
         'M197 a record is read by its name alone',
         'src/primitives/compute_review_scope.rs',
-        '    let Some(path) = feature_file_in_tree(repository, tree, git_path) else {\n        return Ok(None);\n    };\n    let Some(text) = blob_text(repository, tree, &path)? else {',
-        '    let path = git_path;\n    let Some(text) = blob_text(repository, tree, path)? else {',
+        '    let Some(found) = feature_file_in_tree(repository, tree, git_path) else {\n        return Ok(None);\n    };\n    let Some(text) = blob_text(repository, tree, &found)? else {',
+        '    let found = git_path;\n    let Some(text) = blob_text(repository, tree, found)? else {',
         'compute_review_scope::tests::a_rename_after_a_review_does_not_move_the_start',
     ),
     (
@@ -1688,8 +1688,8 @@ MUTATIONS = [
     (
         'M242 a scope pattern does not hold the file it matches',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known(scope) => (!scope.names(path)\n',
-        'Self::Known(scope) => (!scope.literal.contains(path)\n',
+        '                && !plan.names(path)\n',
+        '                && !plan.literal.contains(path)\n',
         'compute_review_scope::tests::a_file_under_a_scope_pattern_reads_as_read',
     ),
     (
@@ -1882,5 +1882,26 @@ MUTATIONS = [
         '    if args.diff_base.is_empty() {\n        return Ok((0, BTreeMap::new()));\n',
         '    if args.diff_base.is_empty() || args.empty_scope {\n        return Ok((0, BTreeMap::new()));\n',
         'write_review::tests::empty_scope_does_not_suppress_the_derived_denominator',
+    ),
+    (
+        'M271 a snapshot on an unborn branch is its own HEAD, so a file untracked at the base reads as committed',
+        'src/primitives/fix_rounds.rs',
+        '    if head.id() == commit.id() && is_snapshot(commit) {\n        return Ok(None);\n    }\n',
+        '',
+        'brief_re_read::tests::an_untracked_file_at_an_unborn_base_stays_in_the_round',
+    ),
+    (
+        "M272 a round compares blobs alone, so a mode change on another spec's path reads as no edit",
+        'src/primitives/fix_rounds.rs',
+        '        .map(|entry| (entry.id(), entry.filemode()))',
+        '        .map(|entry| (entry.id(), 0))',
+        'brief_re_read::tests::an_uncommitted_mode_change_on_another_specs_path_stays_in_the_round',
+    ),
+    (
+        'M273 every scope entry is read as a pattern, so a changed path holding a brace names another file',
+        'src/primitives/compute_review_scope.rs',
+        '                .filter(|entry| scope.plan_affected.contains(entry))',
+        '                .filter(|_| true)',
+        'compute_review_scope::tests::a_changed_path_holding_a_brace_names_only_itself',
     ),
 ]

@@ -529,6 +529,65 @@ mod tests {
         assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
     }
 
+    /// The same for a mode change: an uncommitted `chmod` on top of another
+    /// spec's commit is an edit, so the path stays in the round.
+    #[cfg(unix)]
+    #[test]
+    fn an_uncommitted_mode_change_on_another_specs_path_stays_in_the_round() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/x.sh", "feat(002): its landing");
+        fs::set_permissions(
+            tmp.path().join("src/x.sh"),
+            fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/x.sh"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
+    /// A round started on an unborn branch has no `HEAD` under its base, so a
+    /// file untracked there was no committed file: another spec's first commit
+    /// replacing it leaves it in the round.
+    #[test]
+    fn an_untracked_file_at_an_unborn_base_stays_in_the_round() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = Repository::init(tmp.path()).unwrap();
+        for (feature, title) in [("001-x", "X"), ("002-y", "Y")] {
+            write(
+                &tmp.path().join("specs").join(feature).join("spec.md"),
+                &format!("---\nstatus: in-progress\ndependencies: []\n---\n\n# {title}\n"),
+            );
+        }
+        write(
+            &tmp.path().join("src/a.rs"),
+            "fn edited_before_the_base() {}\n",
+        );
+        let base = start(&tmp);
+        write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
+        let mut index = repository.index().unwrap();
+        index.add_path(Path::new("src/a.rs")).unwrap();
+        let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+        let signature = git2::Signature::now("t", "t@example.com").unwrap();
+        repository
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "feat(002): its landing",
+                &tree,
+                &[],
+            )
+            .unwrap();
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), ["src/a.rs"]);
+        assert_eq!(result.excluded.as_deref().unwrap(), [] as [&str; 0]);
+    }
+
     /// A `base` that is an ordinary commit and not a snapshot starts the walk at
     /// that commit, since its parent was not `HEAD` when it was taken. Here a
     /// commit of this spec's is the base: read as a snapshot, its own change

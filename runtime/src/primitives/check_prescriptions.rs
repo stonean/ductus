@@ -207,9 +207,10 @@ fn edits_by_file<'a>(
 /// the files whose result is not what `now` holds.
 ///
 /// Compared as git stores both — the edited text hashed as a blob against the
-/// blob `now` holds — so a checkout that converts line endings on disk
-/// compares alike. An `old` is matched in that stored text, which is what the
-/// round's `git diff` shows.
+/// blob `now` holds, with the mode the `read` snapshot gave the file, so a mode
+/// change is a change no edit prescribed (spec 078 AC5) — so a checkout that
+/// converts line endings on disk compares alike. An `old` is matched in that
+/// stored text, which is what the round's `git diff` shows.
 ///
 /// # Errors
 ///
@@ -228,8 +229,12 @@ fn compare(
     for (&path, edits) in by_file {
         let git_path = project.to_git(path);
         let text = super::blob_text(repository, &read_tree, &git_path)?;
+        let mode = read_tree
+            .get_path(Path::new(&git_path))
+            .ok()
+            .map(|entry| entry.filemode());
         let actual = match now_tree.get_path(Path::new(&git_path)) {
-            Ok(entry) => Some(entry.id()),
+            Ok(entry) => Some((entry.id(), entry.filemode())),
             Err(err) if err.code() == git2::ErrorCode::NotFound => None,
             Err(err) => return Err(err.into()),
         };
@@ -243,7 +248,8 @@ fn compare(
             let expected = expected
                 .as_ref()
                 .map(|t| Oid::hash_object(ObjectType::Blob, t.as_bytes()))
-                .transpose()?;
+                .transpose()?
+                .zip(mode);
             Ok(failed.is_empty() && expected.is_some() && expected == actual)
         };
         if !matches(&all)? && !matches(&blocking)? {
@@ -366,6 +372,21 @@ mod tests {
         assert_eq!(result.verdict, PrescriptionVerdict::Matched, "{result:?}");
         assert_eq!((result.examined, result.open), (1, 0));
         assert!(result.snapshot.is_some());
+    }
+
+    /// A mode change beside exactly the prescribed edit is a change no edit
+    /// prescribed, so the file differs and the round is re-read (spec 078 AC5).
+    #[cfg(unix)]
+    #[test]
+    fn a_mode_change_beside_the_prescribed_edit_differs() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, base) = briefed(AGAIN);
+        let file = tmp.path().join("a.txt");
+        write(&file, "hello world, once more\n");
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let result = check(&tmp, &base);
+        assert_eq!(result.verdict, PrescriptionVerdict::Differs, "{result:?}");
+        assert_eq!(result.differing.as_deref().unwrap(), ["a.txt"]);
     }
 
     /// In a project below its repository's root, a prescription's path is

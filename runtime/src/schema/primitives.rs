@@ -190,8 +190,8 @@ pub struct RoundWaiver {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum FixRoundCheck {
-    /// Every changed path is an analyze subject of the feature that is not a
-    /// durable contract (`brief-re-read`'s `exempt`), so no re-read.
+    /// `brief-re-read`'s `exempt`: no changed path is left to re-read, each one
+    /// exempt or changed only by commits another spec claims, so no re-read.
     Exempt,
     /// An independent agent re-read the round and finished.
     ReRead,
@@ -924,9 +924,10 @@ pub enum RoundKind {
     /// Nothing changed since the base: no round.
     #[default]
     Empty,
-    /// Every changed path is an analyze subject of the feature that is not a
-    /// durable contract, which `/{project}:analyze` reads again before `done`,
-    /// but for a criterion's tick, outside the analysis digest.
+    /// No changed path is left to re-read: each is an analyze subject of the
+    /// feature that is not a durable contract, which `/{project}:analyze` reads
+    /// again before `done` but for a criterion's tick, outside the analysis
+    /// digest, or was changed only by commits another spec claims (spec 079).
     Exempt,
     /// Anything else: the round needs a re-read.
     ReRead,
@@ -938,8 +939,8 @@ pub enum RoundKind {
 pub struct BriefReReadResult {
     /// What the round needs.
     pub kind: RoundKind,
-    /// Where `paths` is: in this result, or, past the read size, in the file
-    /// `lists-file` names (spec 078, scenario `fix-round-results-have-a-bounded-size`).
+    /// Where `paths`, `exempt` and `excluded` are: in this result, or, past the
+    /// read size, in the file `lists-file` names (spec 078, scenario `fix-round-results-have-a-bounded-size`).
     pub form: ListsForm,
     /// Entries in `paths`, in either form. `kind`, never an absent list, says
     /// whether the round is empty.
@@ -1167,7 +1168,8 @@ pub struct CheckPrescriptionsResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub differing: Option<Vec<String>>,
     /// Files changed since the previous re-read's snapshot that no edit names,
-    /// the feature's own `review.md` left out.
+    /// the feature's own `review.md` and what only commits another spec claims
+    /// changed left out.
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unprescribed: Option<Vec<String>>,

@@ -24,13 +24,6 @@ MUTATIONS = [
         'brief_re_read::tests::the_reviews_own_record_is_no_round_path check_prescriptions::tests::the_reviews_own_record_is_not_unprescribed',
     ),
     (
-        'M2 brief-re-read diffs every path, the record included',
-        'src/primitives/fix_rounds.rs',
-        '        .filter(|path| *path != record)\n',
-        '        .filter(|_| true)\n',
-        'brief_re_read::tests::the_reviews_own_record_is_no_round_path',
-    ),
-    (
         'M3 the switch is reported on a re-read round alone',
         'src/primitives/brief_re_read.rs',
         '        re_reads_off,\n        ..BriefReReadResult::default()',

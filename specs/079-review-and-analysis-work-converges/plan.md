@@ -28,7 +28,7 @@ The lookup finds a spec's files by number when its name is absent from a commit 
 
 ### Fix rounds
 
-`round_paths` (`runtime/src/primitives/fix_rounds.rs`) gains the filter. Each snapshot's parent is `HEAD` at its time, so the commits between two snapshots' parents are knowable with nothing reported by the agent. A path leaves the round when a commit that only other specs claim changed it, and its content at both snapshots equals its content at that snapshot's parent, so no uncommitted edit sits on top. A commit this spec or no spec claims stays in the round. Another session's uncommitted edits cannot be told apart and stay.
+`round_paths` (`runtime/src/primitives/fix_rounds.rs`) gains the filter. Each snapshot's parent is `HEAD` at its time, so the commits between two snapshots' parents are knowable with nothing reported by the agent. A path leaves the round when a commit that only other specs claim changed it, and its entry at both snapshots, blob and mode, equals its entry in the tree `HEAD` held then, a snapshot taken on an unborn branch having none, so no uncommitted edit sits on top (078's review, 2026-11-09). A commit this spec or no spec claims stays in the round. Another session's uncommitted edits cannot be told apart and stay.
 
 `classify` (`runtime/src/primitives/brief_re_read.rs`) keeps its test per path, so an exempt path leaves the brief and `round.toml` even in a mixed round. A finding on one then counts as out of round through `demote_out_of_round`, which is right: `/{project}:analyze` reads that text. The result returns `exempt` and `excluded`, and `write-review` records them per round.
 

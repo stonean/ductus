@@ -269,8 +269,15 @@ MUTATIONS = [
     (
         "M31 a Summary the caller supplies drops the loop's account",
         'src/primitives/write_review.rs',
-        '            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),',
+        '            Some(loop_record) => format!("{}\\n\\n{}", summary.trim_end(), loop_summary(loop_record)),',
         '            Some(_) => summary.to_string(),',
+        'write_review::tests::a_supplied_summary_carries_the_loops_account',
+    ),
+    (
+        "M32 a Summary the caller supplies takes the loop's account on its last line",
+        'src/primitives/write_review.rs',
+        '            Some(loop_record) => format!("{}\\n\\n{}", summary.trim_end(), loop_summary(loop_record)),',
+        '            Some(loop_record) => format!("{} {}", summary.trim_end(), loop_summary(loop_record)),',
         'write_review::tests::a_supplied_summary_carries_the_loops_account',
     ),
 ]

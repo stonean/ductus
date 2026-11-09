@@ -10,14 +10,14 @@ section: "The review record"
 
 ## Behavior
 
-- **The loop's account follows the Summary whoever wrote it.** When the run passes `fix-rounds`, `write-review` appends the account it renders today — the rounds run, the re-reads finished, the rounds diff-checked, each exempt round, each waived one and each un-re-read one without a waiver, and a budget stop — to a Summary the caller supplies, as it does to the one it generates.
+- **The loop's account follows the Summary whoever wrote it.** When the run passes `fix-rounds`, `write-review` appends the account it renders today — the rounds run, the re-reads finished, the rounds diff-checked, each exempt round, each waived one and each un-re-read one without a waiver, and a budget stop — to a Summary the caller supplies, as a paragraph of its own, as it appends it after a space to the one it generates.
 - **A run that passes no `fix-rounds` renders a supplied Summary exactly as given**, as today.
 - **078's data model says the Summary, not the generated Summary, renders the account.**
 
 ## Edge Cases
 
 - **A supplied Summary that already names the rounds.** The account is still appended: the record's own derivation is the one a reader can trust, and a duplicate sentence costs nothing a gate reads.
-- **A supplied Summary ending without a full stop.** The account is joined after a space, as on the generated one.
+- **A supplied Summary ending in a code fence, a table row or a list item.** The account follows as a paragraph of its own, so the fence still closes and every later section of the record stays a heading; text joined to that last line would break it (078's review, 2026-11-09; the owner chose the paragraph).
 
 ## Open Questions
 
