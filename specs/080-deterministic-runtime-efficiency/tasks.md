@@ -168,7 +168,7 @@ Blocked on tasks 4, 8, 10 and 16: the round measures the commands as changed. Th
 
 Blocked on task 17.
 
-- [ ] Name in `research.md`, per command, the reduction that applies or why none does
+- [x] Name in `research.md`, per command, the reduction that applies or why none does
 - [ ] Record each reduction as a scenario through `/ductus:amend`
 
 - **Done when**: every command has a reduction or a reason, and each reduction has its scenario.

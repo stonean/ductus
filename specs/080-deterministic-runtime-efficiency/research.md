@@ -234,7 +234,40 @@ The round cost $7.352. analyze's population effect is the corpus's: on the gener
 - groom: `grep -il …; echo "exit=$?"`, compound. It did not stop the run.
 - configure: step 5's `Edit` of `.claude/settings.local.json`, though the file allows `Edit`. The run reported the step not written.
 
-**The search step.** The `ToolSearch` line's call costs a model step only when the call goes out alone. status's, log's and specify's did: 1.51 s, 1.52 s and 1.70 s from its result to the next model message, by the stream's `assistant` and `user` timestamps. The other ten sent it in the same message as their first step's call, so their next message followed in 0.00 to 0.38 s. That call was `resolve-session`, which loads with the session, for eight of them. consolidate's was two `resolve-feature` calls, and fold's was `check-unfolded-specs` beside `resolve-feature`. configure's 13.28 s is the model composing `merge-permissions`' 119 entries, not the search. plan made a second search, for `derive-boundary`, which its reference's §Validation gate names and its steps do not, at 1.68 s. help, target and link made none.
+**The search step.** The `ToolSearch` line's call costs a model step only when the call goes out alone. status's, log's and specify's did: 1.51 s, 1.52 s and 1.70 s from its result to the next model message, by the stream's `assistant` and `user` timestamps. The other ten sent it in the same message as their first step's call, so their next message followed in 0.00 to 0.38 s. That call was `resolve-session`, which loads with the session, for eight of them. consolidate's was two `resolve-feature` calls, and fold's was `check-unfolded-specs` beside `resolve-feature`. configure's 13.28 s is the model composing `merge-permissions`' 132 entries, not the search. plan made a second search, for `derive-boundary`, which its reference's §Validation gate names and its steps do not, at 1.68 s. help, target and link made none.
+
+### Each command's reduction (task 18)
+
+The reductions the round's figures support, in the spec's order of preference: no model turn, then less read, then less written.
+
+- **R1. help answers with no model turn.** Its whole cost is retyping a static guide: 6,146 characters of reply, 2,204 output tokens, 16.7 s and $0.270, with no tool call.
+- **R2. configure's model types no permission entries.** It passed `merge-permissions` 132 entries, 99 to allow, 20 to deny and 13 to revoke, in 3,897 characters of arguments and a 13.28 s step. The primitive already holds the canonical allow set as its ceiling. Its step-5 `Edit` of `.claude/settings.local.json` was denied with `Edit` allowed, so an interactive session is asked on every run.
+- **R3. One search covers the tools a command's referenced sections call.** plan searched a second time for `derive-boundary`, which its reference's §Validation gate calls and its steps do not name: 1.68 s and a model step. A static diff of each installed copy's line against the primitive names in its reference finds such names for 11 commands, most of them prose mentions. Which ones a run calls depends on its path, and the round ran one path per command.
+- **R4. A command reads only the reference sections its path cites.** analyze read its whole 50,087-character reference in one call, its fourth of 15 model messages, so the 11 after it carried it. clarify read 11,859 characters, groom 10,775, plan 9,781 and fold 5,210, each whole. review listed the headings and read 3,603.
+- **R5. The rules a review or an analysis loads reach the model without shell reads.** review read the rule files in four shell calls: their sizes, their heading counts, their headings, and the Statements of five rules. analyze read them in three, and its `grep` of every rule's Verification line came back as a 44,805-character saved output, read back whole. review needs each rule's ID, tier and Statement; analyze also needs its Verification.
+- **R6. groom finds the covering spec with the primitive specify uses.** It searched spec bodies with three `grep` calls, one denied, where specify's `derive-routing-candidates` derives candidates for the same decision tree.
+
+A *none* below holds for the path measured. For a run that ended at a gate, the work past the gate was not measured.
+
+| Command | Reduction | Why, from the round |
+| --- | --- | --- |
+| help | R1 | the guide retyped, as above |
+| status | none beyond AC1 | the hook answers with no model turn; the model path's 20.0 s stays for hosts without one |
+| target | none | 11.7 s and 684 output tokens, its tools loaded with the session, and loading the constitutions into the model's context is the reason it runs |
+| log | none | 9.6 s and 357 output tokens; its one judgment is whether the item is clear enough to act on later |
+| specify | none | most of its 3,133 output tokens are the spec it writes, 4,459 characters of tool arguments |
+| clarify | R4 | its question is judgment; measured to step 6 |
+| plan | R3, R4 | the plan and tasks it writes are its output |
+| implement | none | its output is the code and the test, with `make test` run once; it read no reference |
+| review | R4, R5 | 91.8 s, 1,502,864 input tokens over 27 turns |
+| analyze | R4, R5 | 80.1 s, 1,266,279 input tokens; measured to step 19's gate |
+| amend | none measured | 14.6 s to its approval gate, its recording unmeasured |
+| groom | R4, R6 | measured to step 3's gate |
+| prune | none measured | 14.5 s to step 6's gate |
+| consolidate | none measured | 16.5 s to step 3's gate |
+| fold | R4 | measured to step 5's gate |
+| link | none | 11.4 s and 870 output tokens for one additive write |
+| configure | R2 | as above |
 
 ## Verifying runs
 
