@@ -137,8 +137,8 @@ Blocked on task 12.
 
 ## 14. OpenCode's scenario
 
-- [ ] Run OpenCode on a version whose TUI plugin's slash command runs local code, and try `/{project}:status` through it
-- [ ] Record the scenario through `/ductus:amend`, with the outcome and the deferral it settles under Resolved Questions, with its trigger
+- [x] Run OpenCode on a version whose TUI plugin's slash command runs local code, and try `/{project}:status` through it
+- [x] Record the scenario through `/ductus:amend`, with the outcome and the deferral it settles under Resolved Questions, with its trigger
 
 - **Done when**: the scenario exists under `scenarios/`, is settled by the run, and has no open question (AC11's half; AC10 for OpenCode).
 
@@ -264,3 +264,9 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 - [ ] `framework/bootstrap/ductus.md` — §MCP registration's Auggie row surfaces `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"`, the store path, while Runtime acquisition Branch 1 points a project with `[runtime] path` at that binary instead ("The pointer resolves to this path rather than to the store"), so an Auggie session would serve the store's runtime, not the one the project chose (task 11's second update run, 2026-11-09)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 32. Scenario: OpenCode keeps the model path
+
+- [x] Implement the behavior described in `scenarios/opencode-keeps-the-model-path.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

@@ -30,7 +30,7 @@ In Claude Code, `/{project}:status` typed by the user is answered by the runtime
 
 In Pi, the `ductus` bridge extension registers the command itself (`registerCommand`), and its handler runs the `ductus` binary and shows the view as a displayed message that triggers no turn (`sendMessage` with `display: true`, `triggerTurn: false`). The run that verifies this records whether that message reached the agent's context. If it did not, and Pi can add text to context without a turn, the bridge also adds the compact form: the target line and the non-done specs grouped by status.
 
-Auggie keeps the model path: its prompt hook cannot block. OpenCode and Antigravity keep it until each one's scenario under this spec settles a model-free path.
+Auggie keeps the model path: its prompt hook cannot block. OpenCode keeps it too, as its scenario under this spec, `opencode-keeps-the-model-path`, settles, and Antigravity keeps it until its own scenario settles a model-free path.
 
 ### A view for each path
 
@@ -108,9 +108,9 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - **Which agents besides Claude Code can answer a typed command without a model turn, and how?** Claude Code and Pi, both in this spec (owner, 2026-11-08).
   - **Claude Code:** a `UserPromptExpansion` hook whose block reason is shown and added to no context; run twice on 2.1.319.
   - **Pi:** an extension's `registerCommand` handler, showing output through `sendMessage` with `display: true` and `triggerTurn: false`, per pi 1.0.4's extension types. Whether that message reaches the agent's context is untested.
-  - **OpenCode 1.17.8:** only by inference, through a TUI plugin's slash command whose handler runs local code. Its server-side `command.execute.before` hook cannot skip the model.
+  - **OpenCode 1.17.8:** through a TUI plugin's slash command whose handler runs local code, verified by a run (`research.md`). Its server-side `command.execute.before` hook cannot skip the model. OpenCode keeps the model path all the same, as its scenario `opencode-keeps-the-model-path` records (owner, 2026-11-09).
   - **Antigravity:** from `agy` 1.4.11, through a `PreInvocation` hook returning `errorMessage` with `terminationBehavior: "terminate"`. The installed 1.0.9 lacks it, and whether the hook sees the raw command name rather than the expanded skill is unknown.
-  - **Deferral:** OpenCode and Antigravity are each deferred to a scenario under this spec, triggered by a verifying run on a version with the mechanism.
+  - **Deferral:** Antigravity is deferred to a scenario under this spec, triggered by a verifying run on a version with the mechanism. OpenCode's deferral is settled by its scenario.
   - **Auggie:** its `PromptSubmit` hook cannot block and its commands are prompt templates, so it keeps the model path.
   - **Sources:** the OpenCode and `agy` binaries' strings; `agy changelog`; opencode.ai's plugin docs and its issue #28292; antigravity.google's hooks docs; docs.augmentcode.com's hooks, custom-commands and plugins pages.
 - **Does a session started below the project root get the view?** No: sessions are expected to start at the project root (owner, 2026-11-09).
