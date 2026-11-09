@@ -302,3 +302,9 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [ ] Implement the behavior described in `scenarios/reference-reads-follow-the-cited-sections.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 38. Scenario: rules load without shell reads
+
+- [ ] Implement the behavior described in `scenarios/rules-load-without-shell-reads.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
