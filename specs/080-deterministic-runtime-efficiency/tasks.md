@@ -290,3 +290,9 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [ ] Implement the behavior described in `scenarios/configure-types-no-permission-entries.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 36. Scenario: one search covers referenced sections
+
+- [ ] Implement the behavior described in `scenarios/one-search-covers-referenced-sections.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
