@@ -296,3 +296,9 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [ ] Implement the behavior described in `scenarios/one-search-covers-referenced-sections.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 37. Scenario: reference reads follow the cited sections
+
+- [ ] Implement the behavior described in `scenarios/reference-reads-follow-the-cited-sections.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
