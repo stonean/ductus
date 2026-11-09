@@ -358,6 +358,8 @@ mod tests {
             .count()
     }
 
+    /// The command is pinned as each platform's literal, never through
+    /// `hook_command()`, since the pointer is `ductus.exe` on Windows.
     #[test]
     fn no_file_is_created_holding_the_entry() {
         let tmp = project();
@@ -365,13 +367,18 @@ mod tests {
         assert_eq!(result.action, "created");
         assert_eq!(result.claude_version.as_deref(), Some("2.1.319"));
         assert_eq!(result.reason, None);
+        let command = if cfg!(windows) {
+            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus.exe\" hook status"
+        } else {
+            "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\" hook status"
+        };
         assert_eq!(
             settings(tmp.path()),
             json!({ "hooks": { "UserPromptExpansion": [{
                 "matcher": "myapp:status",
                 "hooks": [{
                     "type": "command",
-                    "command": "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus\" hook status",
+                    "command": command,
                     "timeout": 10,
                 }],
             }] } })
