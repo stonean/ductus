@@ -6,19 +6,19 @@ section: "Command Set"
 
 ## Context
 
-The 000 spec describes `status` as a "read-only dashboard of all specs, their status, artifacts, **dependencies**, and next actions" (Behavior → Command Set → Utility commands), and the acceptance criterion says the command "displays a dashboard table." The current rendering procedure in `framework/commands/status.md` step 3 lists columns `Feature | Status | Plan | Tasks | Data-model | Scenarios | Next Action` — dependencies are not in the table.
+The 000 spec describes `status` as a "read-only dashboard of all specs, their status, artifacts, **dependencies**, and next actions" (Behavior → Command Set → Utility commands), and the acceptance criterion says the command "displays a dashboard table." The rendering procedure in `framework/commands/status.md` step 3 listed columns `Feature | Status | Plan | Tasks | Data-model | Scenarios | Next Action` — dependencies were not in the table.
 
 The data is already available: the `dashboard` primitive (per [022's dashboard-primitive scenario](../../022-deterministic-runtime/scenarios/dashboard-primitive.md)) returns each spec's `dependencies` array in its per-spec payload. Only the renderer changes.
 
 The user-visible gap: when multiple specs are non-done, the user has no glance-level view of dependency order — they cannot tell which spec to start on without opening each spec file individually. The spec's promise of dependencies in the dashboard isn't being kept.
 
-A second, related rendering defect surfaces in the same table: the session-target marker. Step 3 says "Mark the row matching the session target with a leading `>>`," which produces a first cell like `| >> 022-deterministic-runtime |`. Several markdown renderers (observed 2026-05-23 in the agent's own paste-back of `/ductus:status` output) strip the leading pipe on that row, dropping it out of the table grid; the rendered output visibly breaks alignment exactly on the row the marker is meant to highlight.
+A second, related rendering defect surfaces in the same table: the session-target marker. Step 3 said "Mark the row matching the session target with a leading `>>`," which produces a first cell like `| >> 022-deterministic-runtime |`. Several markdown renderers (observed 2026-05-23 in the agent's own paste-back of `/ductus:status` output) strip the leading pipe on that row, dropping it out of the table grid; the rendered output visibly breaks alignment exactly on the row the marker is meant to highlight.
 
 ## Behavior
 
-`framework/commands/status.md` step 3 (table render) changes in two ways:
+The table render, which lives in the pipeline view `render-status` renders since spec 080, differs from the old step 3 in two ways:
 
-1. **Add a Dependencies column** between Scenarios and Next Action. Cell content: comma-separated NNN prefixes (the leading three digits of each entry in `specs[].dependencies`, sorted ascending), or `—` when the array is empty.
+1. **Add a Dependencies column** between Scenarios and Next Action. Cell content: each entry of `specs[].dependencies` by its sequential number, three digits wide, or by its own name when it is branch-scoped and has none, sorted and comma-separated, or `—` when the array is empty.
 
    Example:
 
@@ -27,7 +27,7 @@ A second, related rendering defect surfaces in the same table: the session-targe
 
 2. **Replace the `>>` row-prefix marker** with one that survives markdown renderers. Wrap the target row's Feature cell in `**…**` (bold) — e.g., `| **022-deterministic-runtime** | ... |`. Bold is a well-supported inline span that does not interact with table-cell parsing the way a leading `>>` does. When no session target is set (`dashboard` returns no `session-target`), no row is bolded.
 
-No primitive change required — both changes are in the rendering procedure; the data is already in the payload.
+Both are in the pipeline view (`runtime/src/primitives/pipeline_view.rs`); the data is in `dashboard`'s payload.
 
 ## Edge Cases
 
