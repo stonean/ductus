@@ -205,6 +205,14 @@ fn modes(name: &str) -> Vec<(&'static str, Value)> {
         )],
         "prune-tasks" | "prune-plan" => vec![("`all`", json!({"all": true}))],
         "check-corpus-links" => vec![("`scope: repository`", json!({"scope": "repository"}))],
+        // review's call, then analyze's: each lists the selected files' rules.
+        "discover-rule-files" => vec![
+            ("`rules`", json!({"rules": true})),
+            (
+                "`all`, `rules` and `verification`",
+                json!({"all": true, "rules": true, "verification": true}),
+            ),
+        ],
         _ => Vec::new(),
     }
 }
