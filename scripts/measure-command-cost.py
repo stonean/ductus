@@ -284,6 +284,23 @@ def write_greet_feature(root: Path, feature: str, status: str, checked: bool) ->
         f"- [{box}] Test it in `src/test_greet.py`, run by `make test`\n\n- **Done when**: `make test` passes.\n")
 
 
+MALFORMED_RULE = ("### qual-claim-099\n\n> A fixture result MUST name the files it did not read.\n\n"
+                  "**Verification:** flag a fixture result that names no unread file.\n\n")
+
+
+def seed_malformed_rule_heading(root: Path) -> None:
+    """analyze's integrity check (spec 080, task 48): one rule under an
+    existing category whose heading the rule-ID grammar refuses, so
+    discover-rule-files lists it under other-headings and nowhere else."""
+    p = root / "specs/rules/quality-cross.md"
+    anchor = "## QUAL-DELEG — Delegation to shared code"
+    text = p.read_text()
+    if text.count(anchor) != 1:
+        raise SystemExit(f"measure-command-cost: {p} does not hold {anchor!r} once")
+    p.write_text(text.replace(anchor, MALFORMED_RULE + anchor))
+    commit(root, "rules: one malformed rule heading")
+
+
 def seed_open_question(root: Path) -> None:
     """clarify: a draft spec with one open question."""
     p = root / "specs/005-feature-5/spec.md"
@@ -385,6 +402,12 @@ ROUND = {
     "fold": ("/fixture:fold cost.1-csv-export", None, seed_branch_spec),
     "link": ("/fixture:link other https://github.com/example/other ../other", None, None),
     "configure": ("/fixture:configure", None, None),
+}
+
+# Verifying runs outside the round, each a preset of the same shape that
+# `--round --only` names; the round itself never runs them.
+CHECKS = {
+    "analyze-malformed-rule-heading": ("/fixture:analyze", "004-feature-4", seed_malformed_rule_heading),
 }
 
 
@@ -515,7 +538,8 @@ def main(argv) -> int:
     ap.add_argument("prompts", nargs="*")
     ap.add_argument("--round", action="store_true",
                     help="run each command's preset (ROUND), each on a fixture of its own, instead of PROMPTs")
-    ap.add_argument("--only", help="with --round, a comma-separated list of the presets to run")
+    ap.add_argument("--only", help="with --round, a comma-separated list of the presets to run, "
+                                   "from ROUND or from the verifying runs in CHECKS")
     ap.add_argument("--specs", type=int, default=40)
     ap.add_argument("--hook", action="store_true", help="install the status and help hooks in the fixture")
     ap.add_argument("--permissions", choices=["mcp", "adopter"], default="mcp",
@@ -542,12 +566,13 @@ def main(argv) -> int:
         args.raw.mkdir(parents=True, exist_ok=True)
     if args.round:
         round_matches_manifest()
+        presets = {**ROUND, **CHECKS}
         names = args.only.split(",") if args.only else list(ROUND)
-        unknown = [n for n in names if n not in ROUND]
+        unknown = [n for n in names if n not in presets]
         if unknown:
             ap.error(f"--only names no preset: {', '.join(unknown)}")
         # (command, prompt, target, seed), one fixture each.
-        runs = [(n, *ROUND[n]) for n in names]
+        runs = [(n, *presets[n]) for n in names]
     else:
         runs = [(None, prompt, args.target, None) for prompt in args.prompts]
     # Read once per run: what the figures were measured on.
