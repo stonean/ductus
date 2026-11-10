@@ -1624,24 +1624,6 @@ fn is_security_first(text: &str) -> bool {
     lead.starts_with("security") || lead.starts_with("leak")
 }
 
-/// Characters of a registered source's `description` a single-line report
-/// carries before truncating. A budget rather than a wrap, because the line is
-/// single-line by contract and a wrapped one would break the list item.
-const DESCRIPTION_BUDGET: usize = 100;
-
-/// Truncate `text` to `budget` characters, appending `…` when it was cut.
-///
-/// Counts **characters**, not bytes, so a multi-byte description cannot be
-/// sliced mid-codepoint. A value already inside the budget is returned as-is,
-/// so the common case carries no ellipsis.
-fn truncate(text: &str, budget: usize) -> String {
-    if text.chars().count() <= budget {
-        return text.to_string();
-    }
-    let kept: String = text.chars().take(budget).collect();
-    format!("{}…", kept.trim_end())
-}
-
 /// Shared constitutions the project registered that this run could not read.
 ///
 /// A registered-but-unreadable source means the review ran under fewer rules than
@@ -1654,10 +1636,7 @@ fn truncate(text: &str, budget: usize) -> String {
 /// those are the same claim from the report's side, because in both cases nothing
 /// went unexamined. The distinction that matters here is unexamined vs not.
 fn render_unexamined_governance(repo: &Path) -> String {
-    let governance = match crate::primitives::resolve_constitutions::run(
-        &crate::schema::primitives::ResolveConstitutionsArgs::default(),
-        repo,
-    ) {
+    let governance = match crate::primitives::resolve_constitutions::run(repo) {
         Ok(result) => result,
         // The registry itself is unreadable, so *nothing* registered was
         // loaded and the run cannot even say how many sources it missed.
@@ -1665,6 +1644,9 @@ fn render_unexamined_governance(repo: &Path) -> String {
         // reported here rather than raised — `write-review`'s job is to record
         // the run, and a config typo must not cost the operator the findings.
         Err(err) => {
+            // A TOML error's display spans lines (location, source line,
+            // caret); flattened, so the bullet stays one line.
+            let err = crate::primitives::flatten_line(&err.to_string());
             return format!(
                 "- the `[constitutions]` registry could not be read ({err}) — **no** shared \
                  constitution was loaded for this review, and the count of what was missed \
@@ -1687,16 +1669,21 @@ fn render_unexamined_governance(repo: &Path) -> String {
             // The description, when the entry carries one. An alias is a
             // config key someone chose — often a bare org name — so it is the
             // description that tells an operator *which* checkout they are
-            // missing without going to look the alias up. Truncated rather
-            // than wrapped: the line is single-line by contract.
+            // missing without going to look the alias up. The primitive has
+            // already collapsed and truncated it: the line is single-line by
+            // contract. The path is the operator's own text, so it is
+            // flattened here, where a newline in it would forge a line.
             let purpose = record
                 .description
                 .as_deref()
-                .map(|text| format!(" — {}", truncate(text, DESCRIPTION_BUDGET)))
+                .map(|text| format!(" — {text}"))
                 .unwrap_or_default();
             format!(
                 "- `{}` ({}){} — {} — its rules were NOT loaded for this review",
-                record.alias, record.path, purpose, reason
+                record.alias,
+                crate::primitives::flatten_line(&record.path),
+                purpose,
+                reason
             )
         })
         .collect::<Vec<_>>()
@@ -5320,7 +5307,7 @@ mod tests {
     #[test]
     fn an_over_long_description_is_truncated_not_wrapped() {
         let tmp = spec_repo("055-x", "status: in-progress");
-        let long = "x".repeat(DESCRIPTION_BUDGET + 40);
+        let long = "x".repeat(crate::primitives::resolve_constitutions::DESCRIPTION_BUDGET + 40);
         with_described_constitution(&tmp, "acme", "nowhere", &long);
         run(&base_args("055-x"), tmp.path()).unwrap();
         let report = review_md(&tmp, "055-x");
@@ -5329,18 +5316,13 @@ mod tests {
             .find(|l| l.starts_with("- `acme`"))
             .expect("the skipped source is named");
         assert!(
-            line.contains(&format!("{}…", "x".repeat(DESCRIPTION_BUDGET))),
+            line.contains(&format!(
+                "{}…",
+                "x".repeat(crate::primitives::resolve_constitutions::DESCRIPTION_BUDGET)
+            )),
             "{line}"
         );
         assert!(!line.contains(&long), "{line}");
-    }
-
-    #[test]
-    fn truncate_counts_characters_not_bytes() {
-        // Slicing this by bytes would panic mid-codepoint.
-        let text = "é".repeat(10);
-        assert_eq!(truncate(&text, 4), "éééé…");
-        assert_eq!(truncate(&text, 10), text);
     }
 
     #[test]
@@ -5374,6 +5356,19 @@ mod tests {
             !report.contains("## Unexamined governance\n\n*None.*"),
             "an unreadable source must not render as None: {report}"
         );
+    }
+
+    /// A registered path is the operator's own text, and TOML lets it carry a
+    /// newline: the report flattens it, so the source it names stays one line.
+    #[test]
+    fn a_registered_path_with_a_newline_forges_no_line() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_constitution(&tmp, "acme", "gone\\n## Forged heading");
+
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(!report.contains("\n## Forged heading"), "{report}");
+        assert!(report.contains("(gone ## Forged heading)"), "{report}");
     }
 
     #[test]
@@ -5432,6 +5427,15 @@ mod tests {
         assert!(
             !report.contains("## Unexamined governance\n\n*None.*"),
             "an unreadable registry must never render as None: {report}"
+        );
+        let section = report
+            .split("## Unexamined governance\n\n")
+            .nth(1)
+            .unwrap()
+            .trim_end();
+        assert!(
+            !section.contains('\n'),
+            "the bullet must stay one line: {section:?}"
         );
     }
 

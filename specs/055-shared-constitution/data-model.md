@@ -17,8 +17,10 @@ description = "Acme engineering house rules"
 | --- | --- | --- |
 | `<alias>` | yes | A bare TOML key — letters, digits, hyphens, underscores; no whitespace, dots, or quotes. Unique within `[constitutions]`. Duplicate aliases are a TOML error, not a ductus one. |
 | `repo` | yes | URL-shaped (a scheme and a host). Recorded verbatim. **Identity and navigation only — never fetched.** |
-| `path` | yes | Local checkout location, relative to the repo root or absolute. `..` is permitted; a sibling checkout is the normal case. Recorded exactly as written. |
-| `description` | no | Free text: what the source governs. No *resolution* behavior depends on it — it never changes which documents load — but it is carried through to every surface that names a source (`/{project}:target`'s loaded and skipped reports, `write-review`'s `## Unexamined governance` section), because an alias is a config key someone chose and does not answer the question attributability asks. Absent is absent: an entry without one renders as it did before. Internal whitespace is collapsed by `resolve-constitutions` so a multi-line value cannot break a single-line report. |
+| `path` | yes | Local checkout location, relative to the repo root or absolute. `..` is permitted; a sibling checkout is the normal case. Recorded exactly as written. Not empty: an empty or whitespace-only value is rejected, since it would resolve to the repository root. |
+| `description` | no | Free text: what the source governs. No *resolution* behavior depends on it — it never changes which documents load — but it is rendered in `/{project}:target`'s loaded, skipped and duplicate-path reports and in `write-review`'s `## Unexamined governance` section, because an alias is a config key someone chose and does not answer the question attributability asks; `/ductus`'s imports block and skipped report name a source by its document path or alias, without it. Absent is absent: an entry without one renders as it did before. Internal whitespace is collapsed, and the value truncated to 100 characters, by `resolve-constitutions`, so a multi-line or over-long value cannot break a single-line report. |
+
+**A malformed entry halts resolution.** A missing, empty or malformed `repo` or `path`, or a malformed alias, halts `resolve-constitutions` with an error naming the alias, the field and `.ductus/config.toml`; a duplicate alias or an unparseable value is a TOML error naming the file and the location. `write-review` and `write-analysis`, which must still record their run, report the registry as unreadable instead (AC8), and `/ductus` applies the same checks before it writes its imports block.
 
 The document read from a resolved checkout is `{path}/constitution.md`. Nothing else in
 the checkout is read — not its `rules/`, not its own `.ductus/config.toml` (see the
@@ -32,8 +34,8 @@ because the spec requires distinct messages for them.
 | Outcome | Condition | Reported as |
 | --- | --- | --- |
 | `loaded` | `path` resolves to a directory containing `constitution.md` | `loaded[]` with alias, checkout path, document path |
-| `not-checked-out` | `path` does not resolve to a directory | `skipped[]` with alias and reason |
-| `no-constitution-document` | `path` resolves, but holds no `constitution.md` | `skipped[]` with alias and reason |
+| `not-checked-out` | `path` does not resolve to a directory | `skipped[]` with alias and outcome |
+| `no-constitution-document` | `path` resolves, but holds no `constitution.md` | `skipped[]` with alias and outcome |
 
 An absent `[constitutions]` table and a present-but-empty one both yield empty `loaded`
 and empty `skipped` — indistinguishable by design (AC1).
@@ -47,7 +49,7 @@ and empty `skipped` — indistinguishable by design (AC1).
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `loaded` | array | Entries that resolved, in alias order |
-| `skipped` | array | Entries that did not, each with its `reason` |
+| `skipped` | array | Entries that did not, each with its `outcome` |
 | `examined` | integer | Total entries considered — the denominator for `loaded` |
 | `duplicate-paths` | array | Aliases sharing a checkout `path`, if any — `{path, aliases}` groups |
 | `threshold` | object | `{bytes, source}`: the read size each `loaded` document was measured against, `[artifacts] read-size-bytes` or the 50,000-byte default (`source` `config` or `default`). Present only when `examined` is above 0 |
@@ -74,14 +76,29 @@ writers resolve through the unmeasured function and `/ductus` passes `unmeasured
 the setting never halts any of the three. With nothing registered nothing new is read: no
 `threshold`, and no halt (AC1).
 
+**Compatibility.** This reopening's change to the result is additive: `unmeasured` is a new
+optional argument, off by default; `threshold`, `bytes`, `over-limit` and `warning` appear
+only on a measured call, so a caller written before them reads the same result. Two
+behaviors are new. A `description` over 100 characters, which the record carried whole
+before this reopening, arrives truncated. And a measured call halts on a
+malformed `[artifacts] read-size-bytes` once an entry is registered, a halt on the project's
+own config that `/{project}:target` shares with `/{project}:clarify`, `/{project}:plan` and
+`/{project}:analyze`.
+
+**Bound.** The result holds one record per registered entry, the `duplicate-paths`
+groups over those entries, their count and, on a measured call, the threshold. Each record's
+free text is the operator's own alias, `repo` and `path`, the `document` path and `warning`
+built from them, and a `description` truncated to 100 characters, so its size is bounded by the project's own registry (`BE-PAYLOAD-001`).
+
 ## Notes
 
 - Ordering is **alias order**, from the registry's `BTreeMap`. AC7 requires two projects
   with the same entries over the same checkout content to load the same documents in the
   same order on any machine. Alias order delivers that; config order would not, because
   it does not survive a TOML reformat — and hash-map traversal order would not either.
-- Two entries naming the same `path` are warned and allowed; the document loads once,
-  and each entry reports its size. This matches `/ductus:link`'s duplicate-`repo`
+- Two entries naming the same `path` are warned and allowed; `/{project}:target` loads
+  the document once, `/ductus`'s imports block holds one line per loaded entry, and each
+  entry reports its size. This matches `/ductus:link`'s duplicate-`repo`
   posture (warn, do not block).
 - No `ref`, `version`, or revision field exists. The checkout's own git state is the
   version, and ductus never fetches — see the spec's Resolved Questions.

@@ -126,4 +126,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - **Done when**: a malformed `[artifacts] read-size-bytes` never halts `/ductus`, `/target` still measures and still halts on it, and the test fails with the argument ignored. Found in task 14's change: `/ductus` called the measured entry; the owner chose on 2026-10-29 to keep it unmeasured (`QUAL-DELEG-001`).
 
-It owes `/ductus:review` while `check-review-gate` says one is owed, then `/ductus:analyze` and the completion gate, which run once no box in this file is open (spec 079), its ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09).
+It owes `/ductus:review` while `check-review-gate` says one is owed, then `/ductus:analyze` and the completion gate, which run once no box in this file is open (spec 079), its ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09). They were verified at `9ebca7b0`, and task 16 records what that verification, the review and the analysis found and fixed before the records.
+
+## 16. What the criteria verification, review and analysis found at `9ebca7b0`, closed before the records
+
+- [x] Criteria verified at `9ebca7b0` (one read-only agent, 797 s, 242k tokens): nine hold; AC1 never held as written and is annotated; AC10 and AC12, changed in part, are annotated
+- [x] Runtime: the governance section flattens a registered `path` (a contract break: a newline in it forged a line in `review.md`); `resolve-constitutions` truncates `description` to 100 characters for every renderer (AC12, and `BE-PAYLOAD-001`'s bound); `run` drops its unread argument; three doc comments corrected; tests and mutants M14, M15
+- [x] Contracts and text: the data model states the malformed-entry halt (`CFG-ENV-003`), the result's compatibility (`BE-COMPAT-001`) and bound, `outcome` for `reason`, the non-empty `path` rule and which surfaces carry a description; the spec, both scenarios, the plan, `docs/shared-constitution.md` and `README.md` corrected by tense or fact (owner, 2026-11-09, option A)
+
+- **Done when**: every criterion holds or carries a true annotation, and no contract or body passage is false about the tree

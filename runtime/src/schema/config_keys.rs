@@ -81,8 +81,9 @@ const SECTIONS: &[Section] = &[
     Section::keys("pinned", &["files"]),
     // `/ductus` and `check-orphaned-references`.
     Section::keys("migrations", &["last_applied"]),
-    // `check-artifact-size` (spec 063), `prune-project` (spec 041) and
-    // `resolve-constitutions`' measured entry (spec 055).
+    // `check-artifact-size` (spec 063), `prune-project` (spec 041),
+    // `resolve-constitutions`' measured entry (spec 055), `bounded_lists`'
+    // results (specs 066, 078, 080) and the status view (spec 080).
     Section::keys("artifacts", &["read-size-bytes"]),
     // `tech-stack-verified`: `/{project}:review` by hand (spec 020).
     // `re-reads-off`: each caller of `fix_rounds::re_reads_off` (spec 078).

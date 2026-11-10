@@ -108,7 +108,7 @@ description = "Acme engineering house rules"
 | `<alias>` | yes | A bare TOML key — letters, digits, hyphens, underscores. How the source is named in every report. |
 | `repo` | yes | Canonical repository URL. **Identity and navigation only — never fetched.** |
 | `path` | yes | Local checkout, relative to the repo root or absolute. `..` is fine; a sibling checkout is the normal case. **The only thing read.** |
-| `description` | no | Free text: what this source governs. It changes nothing about which documents load, and it is shown wherever `ductus` names the source — when `/{project}:target` reports the sources it loaded, when it reports one it could **not** load, and in a review's **Unexamined governance** section. Write one: an alias alone does not tell a contributor what a document governs, and it is the missing-checkout message where the note helps most. |
+| `description` | no | Free text: what this source governs. It changes nothing about which documents load, and it is shown when `/{project}:target` reports the sources it loaded, when it reports one it could **not** load, and in a review's **Unexamined governance** section. Write one: an alias alone does not tell a contributor what a document governs, and it is the missing-checkout message where the note helps most. |
 
 **More than one may be registered**, so an organization-level and a team-level source can layer. They load in alias order — stable across machines, and unaffected by how the TOML happens to be written.
 
@@ -146,9 +146,7 @@ A checkout outside your project directory makes its import an **external** one. 
 
 ## Which document wins
 
-The framework constitution is a **floor**: a shared or project source may add rules and tighten existing ones, never loosen them. Where the framework is silent, the more specific source wins — project > shared > framework.
-
-The canonical statement, with the explicit note that **nothing enforces it**, is [§governance-precedence](../framework/constitution.md#governance-sources-and-which-governs) in the constitution itself. Prose contradiction is not mechanically detectable; the order is the rule for whoever resolves a disagreement, not a check.
+The framework constitution is a **floor**, and where it is silent the more specific source wins. The order, its one exception and the explicit note that **nothing enforces it** are stated once, in [§governance-precedence](../framework/constitution.md#governance-sources-and-which-governs). Prose contradiction is not mechanically detectable; the order is the rule for whoever resolves a disagreement, not a check.
 
 There is also **no per-rule opt-out**. A shared constitution is imported whole, and prose carries no per-statement handle to disable. A project that will not accept one of its rules stops registering that constitution, or takes it up with the publisher. (This differs from rule *files*, which a project can stand down individually via `[[review.disabled-rule-files]]`.)
 

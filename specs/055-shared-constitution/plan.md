@@ -38,8 +38,8 @@ reason). The reason distinguishes `not-checked-out` from `no-constitution-docume
 because the spec's Edge Cases require that "an operator who cloned the wrong
 repository must not read the same message as one who cloned nothing."
 
-That examined/skipped split is the shape `derive-routing-candidates` and
-`derive-dependencies` already return, and it is what makes AC8 mechanical instead of
+That examined/skipped split is the `QUAL-CLAIM-001` shape `data-model.md` records for
+this result, and it is what makes AC8 mechanical instead of
 a discipline: a caller cannot report a clean result over a source the primitive
 placed in `skipped` without dropping a field.
 
@@ -133,10 +133,9 @@ cross-reference to those numbers.
 ### Precedence is documented, never enforced
 
 AC10 is a documentation commitment on purpose. Prose precedence between governance
-documents cannot be checked, and the constitution is explicit that claiming otherwise
-is itself the defect: "A rule that implied enforcement it does not have would be
-committing the defect it describes" (§grounding). The statement lands once in the
-config-schema documentation and says plainly that nothing enforces it.
+documents cannot be checked, so the statement says so: it lands once, in
+`framework/constitution.md` §governance-precedence, which states that nothing
+enforces it.
 
 ## Affected Files
 

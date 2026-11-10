@@ -195,10 +195,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // not be able to suppress it. An unreadable registry is recorded as its
     // own reason instead, which is the honest answer: nothing registered was
     // loaded, and the run cannot say how many sources that was.
-    match crate::primitives::resolve_constitutions::run(
-        &crate::schema::primitives::ResolveConstitutionsArgs::default(),
-        repo,
-    ) {
+    match crate::primitives::resolve_constitutions::run(repo) {
         Ok(governance) if !governance.skipped.is_empty() => {
             let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
             *by_reason

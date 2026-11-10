@@ -68,7 +68,7 @@ const DOCUMENT_NAME: &str = "constitution.md";
 /// when the config exists and cannot be read. Per-entry *resolution* failures
 /// are outcomes, not errors — an absent checkout is a state this primitive
 /// reports, never a condition it fails on.
-pub fn run(_args: &ResolveConstitutionsArgs, repo: &Path) -> Result<ResolveConstitutionsResult> {
+pub fn run(repo: &Path) -> Result<ResolveConstitutionsResult> {
     let registry = load_constitutions(repo)?;
 
     let mut loaded = Vec::new();
@@ -118,7 +118,7 @@ pub fn run(_args: &ResolveConstitutionsArgs, repo: &Path) -> Result<ResolveConst
 /// With nothing registered nothing new is read — the threshold is not
 /// resolved and the result is [`run`]'s, with no `threshold` — so a project
 /// without the feature reads exactly what it did before (AC1), and a
-/// malformed read size halts only a run that has something to measure. The
+/// malformed read size halts only a run with an entry registered, loaded or not. The
 /// `unmeasured` argument returns [`run`]'s result the same way, for `/ductus`,
 /// which writes the imports block and uses no size.
 ///
@@ -132,7 +132,7 @@ pub fn run_measured(
     args: &ResolveConstitutionsArgs,
     repo: &Path,
 ) -> Result<ResolveConstitutionsResult> {
-    let mut result = run(args, repo)?;
+    let mut result = run(repo)?;
     if args.unmeasured || result.examined == 0 {
         return Ok(result);
     }
@@ -251,9 +251,31 @@ fn load_constitutions(repo: &Path) -> Result<Constitutions> {
 /// Whitespace-only is `None`, not `Some("")`: an empty description says
 /// nothing, and rendering an empty parenthetical would be worse than rendering
 /// none — absent is absent.
+///
+/// Truncated here too, to [`DESCRIPTION_BUDGET`] characters, so every surface
+/// that names a source gets the same bounded value and the description has a
+/// stated maximum (`BE-PAYLOAD-001`).
 pub(crate) fn normalize_description(description: Option<&str>) -> Option<String> {
     let collapsed = super::collapse_whitespace(description?);
-    (!collapsed.is_empty()).then_some(collapsed)
+    (!collapsed.is_empty()).then(|| truncate(&collapsed, DESCRIPTION_BUDGET))
+}
+
+/// Characters of a registered source's `description` a record carries before
+/// truncating. A budget rather than a wrap, because every report naming a
+/// source is single-line by contract and a wrapped one would break its line.
+pub(crate) const DESCRIPTION_BUDGET: usize = 100;
+
+/// Truncate `text` to `budget` characters, appending `…` when it was cut.
+///
+/// Counts **characters**, not bytes, so a multi-byte description cannot be
+/// sliced mid-codepoint. A value already inside the budget is returned as-is,
+/// so the common case carries no ellipsis.
+fn truncate(text: &str, budget: usize) -> String {
+    if text.chars().count() <= budget {
+        return text.to_string();
+    }
+    let kept: String = text.chars().take(budget).collect();
+    format!("{}…", kept.trim_end())
 }
 
 /// Classify one entry's `path` against the local filesystem.
@@ -304,7 +326,7 @@ mod tests {
     }
 
     fn run_in(dir: &TempDir) -> ResolveConstitutionsResult {
-        run(&ResolveConstitutionsArgs::default(), dir.path()).unwrap()
+        run(dir.path()).unwrap()
     }
 
     /// The description reaches the record rather than stopping at the parser —
@@ -325,6 +347,32 @@ mod tests {
             result.loaded[0].description.as_deref(),
             Some("Acme platform engineering rules")
         );
+    }
+
+    /// The record carries a bounded description, so every surface that names
+    /// a source gets the same truncated value (AC12, `BE-PAYLOAD-001`).
+    #[test]
+    fn a_long_description_is_truncated_in_the_record() {
+        let long = "y".repeat(DESCRIPTION_BUDGET + 40);
+        let dir = repo_with_config(Some(&format!(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
+             description = \"{long}\"\n"
+        )));
+
+        let result = run_in(&dir);
+        let expected = format!("{}…", "y".repeat(DESCRIPTION_BUDGET));
+        assert_eq!(
+            result.skipped[0].description.as_deref(),
+            Some(expected.as_str())
+        );
+    }
+
+    #[test]
+    fn truncate_counts_characters_not_bytes() {
+        // Slicing this by bytes would panic mid-codepoint.
+        let text = "é".repeat(10);
+        assert_eq!(truncate(&text, 4), "éééé…");
+        assert_eq!(truncate(&text, 10), text);
     }
 
     /// The description comes from the config, not the checkout, so it is
@@ -533,7 +581,7 @@ mod tests {
         // A config that does not parse must not read as "nothing registered" —
         // that would silently drop every rule the project declared.
         let dir = repo_with_config(Some("[constitutions.acme]\nrepo = \n"));
-        let err = run(&ResolveConstitutionsArgs::default(), dir.path());
+        let err = run(dir.path());
         assert!(err.is_err());
     }
 
@@ -542,7 +590,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.acme]\nrepo = \"https://example.test/g\"\n",
         ));
-        assert!(run(&ResolveConstitutionsArgs::default(), dir.path()).is_err());
+        assert!(run(dir.path()).is_err());
     }
 
     /// The bug this validation closes, first half. Reproduced against the
@@ -558,7 +606,7 @@ mod tests {
         fs::create_dir_all(&checkout).unwrap();
         fs::write(checkout.join("constitution.md"), "# House rules\n").unwrap();
 
-        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
+        let err = run(dir.path()).expect_err("halts");
         assert!(
             matches!(
                 &err,
@@ -580,7 +628,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"\"\n",
         ));
-        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
+        let err = run(dir.path()).expect_err("halts");
         let PrimitiveError::InvalidConstitutionEntry { alias, field, .. } = &err else {
             panic!("expected a value rejection, got: {err}");
         };
@@ -614,7 +662,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.\"my org\"]\nrepo = \"https://example.test/g\"\npath = \"gov\"\n",
         ));
-        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
+        let err = run(dir.path()).expect_err("halts");
         let PrimitiveError::InvalidConstitutionEntry { alias, field, .. } = &err else {
             panic!("expected a value rejection, got: {err}");
         };
@@ -627,7 +675,7 @@ mod tests {
     #[test]
     fn an_unparseable_config_stays_a_toml_error_not_a_value_rejection() {
         let dir = repo_with_config(Some("[constitutions.acme]\nrepo = \n"));
-        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
+        let err = run(dir.path()).expect_err("halts");
         assert!(
             matches!(err, PrimitiveError::Toml { .. }),
             "unparseable is not a value rejection: {err}"

@@ -1,8 +1,10 @@
-"""Mutation list for spec 055's `target-reports-each-constitutions-size`: the
-measured entry of `resolve-constitutions`
+"""Mutation list for spec 055: the measured entry of `resolve-constitutions`
 (`runtime/src/primitives/resolve_constitutions.rs`, `run_measured`), which
 measures each loaded shared constitution against `[artifacts] read-size-bytes`
-while `write-review` and `write-analysis` keep the unmeasured `run`.
+while `write-review` and `write-analysis` keep the unmeasured `run` (scenario
+`target-reports-each-constitutions-size`); the description the record carries,
+truncated (scenario `a-registered-source-is-named-with-its-description`); and
+`write-review`'s governance section, kept to one line per source.
 
 Run with `python3 scripts/mutation/run.py
 scripts/mutation/resolve-constitutions-size.py [ID ...]`; see run.py for the
@@ -117,5 +119,26 @@ MUTATIONS = [
         '    if args.unmeasured || result.examined == 0 {',
         '    if result.examined == 0 {',
         'resolve_constitutions::tests::an_unmeasured_call_reads_no_read_size',
+    ),
+    (
+        'M14 a record carries an over-long description untruncated',
+        'src/primitives/resolve_constitutions.rs',
+        '    (!collapsed.is_empty()).then(|| truncate(&collapsed, DESCRIPTION_BUDGET))',
+        '    (!collapsed.is_empty()).then_some(collapsed)',
+        'resolve_constitutions::tests::a_long_description_is_truncated_in_the_record',
+    ),
+    (
+        'M15 the governance section writes a registered path raw',
+        'src/primitives/write_review.rs',
+        '                crate::primitives::flatten_line(&record.path),',
+        '                &record.path,',
+        'write_review::tests::a_registered_path_with_a_newline_forges_no_line',
+    ),
+    (
+        'M16 the unreadable-registry bullet carries a multi-line TOML error',
+        'src/primitives/write_review.rs',
+        '            let err = crate::primitives::flatten_line(&err.to_string());',
+        '            let err = err.to_string();',
+        'write_review::tests::a_malformed_config_still_produces_a_report',
     ),
 ]

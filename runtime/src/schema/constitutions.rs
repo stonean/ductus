@@ -79,9 +79,10 @@ pub struct ConstitutionEntry {
     /// No *resolution* behavior depends on it — it never changes which
     /// documents load, which checkout is read, or how an entry is classified.
     /// It is **not** unread, though: `resolve-constitutions` carries it onto
-    /// every [`crate::schema::primitives::ConstitutionRecord`], so it reaches
-    /// the surfaces that name a source (`/{project}:target`'s loaded and
-    /// skipped reports, `write-review`'s `## Unexamined governance` section).
+    /// every [`crate::schema::primitives::ConstitutionRecord`], so it is
+    /// rendered in `/{project}:target`'s loaded, skipped and duplicate-path
+    /// reports and `write-review`'s `## Unexamined governance` section;
+    /// `/ductus` names a source by its document path or alias without it.
     /// An alias is a config key someone chose and does not say what a document
     /// governs; this is the field that does.
     #[serde(default, skip_serializing_if = "Option::is_none")]

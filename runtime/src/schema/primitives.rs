@@ -4745,9 +4745,11 @@ pub struct ConstitutionRecord {
     pub document: Option<String>,
     /// The entry's optional `description` — what the source governs.
     ///
-    /// Carried through to every surface that names a source, because an alias
-    /// alone does not answer the question attributability asks: it is a config
-    /// key someone chose, often a bare org name. It is reported on a
+    /// Rendered in `/{project}:target`'s reports and `write-review`'s governance
+    /// section, because an alias alone does not answer the question
+    /// attributability asks: it is a config key someone chose, often a bare org
+    /// name; `/ductus` names a source by its document path or alias without it.
+    /// It is reported on a
     /// **skipped** entry too — the description comes from the config, not from
     /// the checkout, so it is available precisely when the document is not,
     /// which is the case where it helps most (spec 055, scenario
@@ -4755,8 +4757,9 @@ pub struct ConstitutionRecord {
     ///
     /// Normalized here, not at each renderer: internal whitespace is collapsed
     /// to single spaces, since TOML multi-line strings make an embedded newline
-    /// reachable and every consumer is a single-line report. Truncation stays
-    /// with the renderer, whose line budget it is.
+    /// reachable and every consumer is a single-line report, and truncated to
+    /// `resolve_constitutions::DESCRIPTION_BUDGET` characters, so every surface
+    /// gets the same bounded value.
     ///
     /// **Absent is absent, not empty.** An entry with no description — or one
     /// that is only whitespace — renders exactly as it does today, so a project
@@ -4784,7 +4787,7 @@ pub struct ConstitutionRecord {
     pub warning: Option<String>,
 }
 
-/// Two or more aliases naming the same checkout. Warned and allowed — the
+/// Two or more aliases naming the same `path`. Warned and allowed — the
 /// document is read once.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

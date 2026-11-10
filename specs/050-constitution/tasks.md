@@ -366,3 +366,10 @@ The routing text, the tree definitions, and the corrections to §Classification 
 - [ ] Implement the behavior described in `scenarios/agents-md-holds-only-what-every-session-needs.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 45. 050's copies of governance precedence and the canonical-sources table catch up with the constitution
+
+- [ ] `specs/050-constitution/spec.md` (its Classification section's floor statement) and `scenarios/governance-is-multi-source.md` restate that a shared source may never loosen a framework rule, without the exception `be893cd0` added (a rule that names itself a default a project may replace): point at §governance-precedence or carry the exception
+- [ ] The constitution's §drift-prevention canonical-sources table names no source for the `[constitutions.*]` schema, which `specs/055-shared-constitution/data-model.md` declares canonical, as it does for `[services]` (055's criteria verification and analysis, 2026-11-09; deferred here, since 050 owns constitution content)
+
+- **Done when**: no 050 artifact restates the precedence order without its exception, and the table names the schema's canonical source, or a recorded reason says why not
