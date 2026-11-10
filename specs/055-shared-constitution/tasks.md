@@ -141,3 +141,19 @@ It owes `/ductus:review` while `check-review-gate` says one is owed, then `/duct
 - [x] 022's task 12, option (b), makes every reader of a `.ductus/config.toml` that does not parse halt naming the file, `write-review` and `write-analysis` included, since the spec root their record goes under cannot be read from it (owner, 2026-11-10: the writers halt too, and 055 reopens). The data model's sentence that both writers still record their run is scoped to a config that parses, where a malformed `[constitutions]` entry is still reported as an unreadable registry, and a signpost in the spec links back to 022, discharging its `cross-spec-impact:` entry. Their tests: `a_malformed_registry_entry_still_records_the_run`, `a_malformed_registry_entry_still_produces_a_report`, and an unparseable-config halt test beside each. The reopening owes a review and an analysis, then its close
 
 - **Done when**: the data model and the writers agree on which config failures halt a run and which are recorded
+
+## 18. What the criteria verification found at `ec6c2088`, corrected before the records
+
+- [x] Criteria verified at `ec6c2088` by one read-only agent, which read the source and drove the release binary on fixtures, with no `cargo` run (364 s), its claims checked by the operator. All 12 hold, and AC1's, AC10's and AC12's annotations are true. AC8 holds against 022's task 12: a config that does not parse halts both writers with no record, and one that parses with a malformed entry records the registry unreadable. AC9's "never rewritten" is annotated never held as written, since `/ductus` rewrites `.ductus/constitution.md` through its manifest row's `update` strategy, which AC3 needs
+- [x] Corrected by fact (owner's delegation for a spec sent to be closed, 2026-11-10):
+  - the three comments in `write_review.rs` and `write_analysis.rs` that said a config which does not parse is recorded rather than halting;
+  - the plan's `TOOL_NAMES`, now the server's `tool_names`, and its review and analyze rows, whose text 071 moved to the reference files (`b772a6ac`);
+  - the Resolved Question that said the installer ships to nobody;
+  - `docs/shared-constitution.md`'s "never touched"
+- [x] Waived:
+  - the plan's `AGENTS.md:116` cite and the ticked tasks' `AGENTS.md` line cites and spent instructions, which record provenance and work done;
+  - the data model's `threshold` row, whose "present only when" states a necessary condition that an unmeasured call meets;
+  - four sibling passages that name only `constitution-unresolved` or a malformed entry's halt, omissions that predate 022's task 12
+- [x] Deferred to 022's task 29: two claims outside 055 that 022's task 12 left stale
+
+- **Done when**: every criterion holds or carries a true annotation, and no contract or body passage is false about the tree

@@ -48,11 +48,11 @@ the same entries to load the same documents in the same order on any machine —
 order delivers that, while config order would not survive a TOML reformat and hash-map
 traversal order is not stable at all.
 
-**Wiring spans eight sites, not two** (`AGENTS.md:99`). `AGENTS.md` names
+**Wiring spans eight sites, not two** (`AGENTS.md:99`). `AGENTS.md` then named
 `parser/mod.rs` for `PRIMITIVE_NAMES`, but that constant is *defined from*
 `PRIMITIVE_REGISTRY` (`runtime/src/schema/registry.rs:16`), which is the single
-source feeding both it and the server's `TOOL_NAMES` — so the registry is the site
-and the parser needs no edit. The set: `runtime/src/schema/constitutions.rs` (new,
+source feeding both it and the server's `tool_names`, the registry less
+`CLI_ONLY_PRIMITIVES` — so the registry is the site and the parser needs no edit. The set: `runtime/src/schema/constitutions.rs` (new,
 modelled on `services.rs`) plus its `pub mod` in `schema/mod.rs`;
 `runtime/src/schema/primitives.rs` (Args/Result);
 `runtime/src/primitives/resolve_constitutions.rs` plus its `pub mod`;
@@ -146,16 +146,16 @@ enforces it.
 | `runtime/src/schema/primitives.rs` | Modify | `ResolveConstitutionsArgs` / `Result` types |
 | `runtime/src/primitives/resolve_constitutions.rs` | Create | Registry read, path resolution, loaded/skipped split |
 | `runtime/src/primitives/mod.rs` | Modify | `pub mod resolve_constitutions` |
-| `runtime/src/mcp/server.rs` | Modify | `TOOL_NAMES` entry + `#[tool]` method |
-| `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` entry (feeds `PRIMITIVE_NAMES` + `TOOL_NAMES`) |
+| `runtime/src/mcp/server.rs` | Modify | `#[tool]` method |
+| `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` entry (feeds `PRIMITIVE_NAMES` and the server's `tool_names`) |
 | `runtime/src/interpreter/mod.rs` | Modify | `dispatch_primitive` match arm |
 | `runtime/src/main.rs` | Modify | `Command` variant + CLI dispatch |
 | `framework/runtime-tools.txt` | Modify | `lint-tool-coverage` coverage |
 | `framework/commands/target.md` | Modify | Step 4 loads registered constitutions |
 | `runtime/src/primitives/write_review.rs` | Modify | Render `## Unexamined governance` (AC8) |
 | `runtime/src/primitives/write_analysis.rs` | Modify | Record `constitution-unresolved` (AC8) |
-| `framework/commands/review.md` | Modify | Document the new report section (AC8) |
-| `framework/commands/analyze.md` | Modify | Document the informational tier entry (AC8) |
+| `framework/commands/review.md` | Modify | Document the new report section (AC8); since 071's split (`b772a6ac`) the text is `framework/reference/review.md` §Unexamined governance |
+| `framework/commands/analyze.md` | Modify | Document the informational tier entry (AC8); since 071's split (`b772a6ac`) the text is `framework/reference/analyze.md` §Unresolved shared constitutions (informational) |
 | `framework/bootstrap/ductus.md` | Modify | Config schema, validation, managed-block step |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of the above (Family 21) |
 | `framework/constitution.md` | Modify | Precedence statement + schema pointer (AC10) |

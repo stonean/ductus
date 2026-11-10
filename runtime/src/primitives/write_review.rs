@@ -527,11 +527,13 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // point of the section is that a report cannot quietly claim clean over
     // rules it never loaded (spec 055, AC8).
     //
-    // Deliberately NOT `?`. A registry that will not parse is itself an
-    // unexamined-governance state — it is the strongest form of one — so it
-    // is rendered, not propagated. Propagating it would mean an unrelated
-    // typo in the project config produced no `review.md` at all, losing the
-    // findings this run just computed.
+    // Deliberately NOT `?`. A registry that cannot be read from a config
+    // that parses, a malformed `[constitutions]` entry among them, is itself
+    // an unexamined-governance state — it is the strongest form of one — so
+    // it is rendered, not propagated. Propagating it would mean a typo in one
+    // entry produced no `review.md` at all, losing the findings this run just
+    // computed. A config that does not parse halted the run at `Paths::load`
+    // above, since the spec root is unknown (spec 022 task 12).
     let governance_section = render_unexamined_governance(repo);
     // Read the spec and resolve the surviving waivers BEFORE either render:
     // the report now carries the full record, waivers included, so both homes
@@ -1643,7 +1645,9 @@ fn render_unexamined_governance(repo: &Path) -> String {
         // loaded and the run cannot even say how many sources it missed.
         // That is the most severe form of this section's subject, so it is
         // reported here rather than raised — `write-review`'s job is to record
-        // the run, and a config typo must not cost the operator the findings.
+        // the run, and a malformed entry must not cost the operator the
+        // findings. A config that does not parse never reaches here: `run`
+        // halted on it first.
         Err(err) => {
             // A TOML error's display spans lines (location, source line,
             // caret); flattened, so the bullet stays one line.

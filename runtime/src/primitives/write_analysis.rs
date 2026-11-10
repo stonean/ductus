@@ -195,11 +195,13 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // standing in for an unexamined one (spec 055, AC8).
     let mut by_reason = by_reason;
     // Deliberately NOT `?`. This primitive's contract is that it writes a
-    // record on every run, because the record's *absence* is what a later
-    // gate reads as "never analyzed" — so a config that will not parse must
-    // not be able to suppress it. An unreadable registry is recorded as its
-    // own reason instead, which is the honest answer: nothing registered was
-    // loaded, and the run cannot say how many sources that was.
+    // record on every run whose config parses, because the record's
+    // *absence* is what a later gate reads as "never analyzed" — so a
+    // malformed `[constitutions]` entry must not be able to suppress it. An
+    // unreadable registry is recorded as its own reason instead, which is the
+    // honest answer: nothing registered was loaded, and the run cannot say
+    // how many sources that was. A config that does not parse halted the run
+    // at `Paths::load` above, since the spec root is unknown (spec 022 task 12).
     match crate::primitives::resolve_constitutions::run(repo) {
         Ok(governance) if !governance.skipped.is_empty() => {
             let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
