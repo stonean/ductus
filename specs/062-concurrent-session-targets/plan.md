@@ -40,8 +40,9 @@ a primitive, `resolve-session`, and the commands invoke it.
 A new module, `runtime/src/session.rs`, holds the whole contract: identity
 resolution, per-process paths, the lock, the per-process record, adoption,
 notices and the expiry sweep. It is called by `write-session`,
-`resolve-session`, `retarget-sessions`, `dashboard` and the exec seed, and by
-nothing else. Before this spec the read logic existed twice, in `dashboard`
+`resolve-session`, `retarget-sessions`, `dashboard`, the exec seed, and since
+spec 080 `render-status` and `ductus hook status`, which read the process's
+identity for the view, and by nothing else. Before this spec the read logic existed twice, in `dashboard`
 (`runtime/src/primitives/dashboard.rs:737-761`) and in the exec seed
 (`runtime/src/main.rs:523-535`), and the write logic once more in
 `runtime/src/primitives/write_session.rs:59-123`. Pin-on-first-resolution

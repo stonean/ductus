@@ -35,7 +35,7 @@ It runs in three places:
 
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 
-> **Signpost:** [080](../080-deterministic-runtime-efficiency/spec.md) made `[artifacts] read-size-bytes` a bound on tool results as well as on artifacts. Past it, each primitive whose result grows with the corpus moves its lists to a JSON file under `.ductus/results/` and keeps their counts inline. The pipeline view `render-status` returns collapses its `done` rows to a count line and then cuts rows to stay within it.
+> **Signpost:** `[artifacts] read-size-bytes` also bounds tool results. 066, 078 and 079 bounded their own results by it, and [080](../080-deterministic-runtime-efficiency/spec.md) extended the bound to every primitive whose result grows with the corpus: past it, the result moves its lists to a JSON file under `.ductus/results/` and keeps their counts inline. The pipeline view `render-status` returns collapses its `done` rows to a count line, then cuts rows, next-action names and each other list to stay within it, and on the model path names the file holding the whole view.
 
 ## The warning names a fix
 
