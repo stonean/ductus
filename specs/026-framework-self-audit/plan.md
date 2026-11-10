@@ -6,6 +6,8 @@ Implements [026 — Framework self-audit](spec.md).
 
 `/audit` ships as a parseable slash command at `framework/commands/audit.md` (NOT scaffolded into adopters). The command orchestrates a check-zero precondition pass over the project's generators and lints, then walks the family checks — the eight defined in the spec at v1, and every family `scripts/audit/run-all.sh` registers since. No count is stated: Family 28 holds the registry, the command's enumeration, and `scripts/audit/README.md` §Scripts in agreement, and a number in prose is the copy nothing updates. Each family check is implemented as a focused shell script under `scripts/audit/{family}.sh`, invoked from the command procedure via the runtime's existing `run-generator` primitive.
 
+**As it runs:** the command has one step, `run-generator` over `scripts/audit/run-all.sh`, which runs check-zero and then every family it registers; `framework/reference/audit.md` enumerates the families. The procedure shape and the per-family designs below are recorded as planned.
+
 Per [Q2's resolution](spec.md#resolved-questions), v1 uses shell-first orchestration with the runtime as the invocation mechanism — no new primitives are added in 026. The pattern is intentional: when a check pattern proves common enough across multiple commands, it graduates to a runtime primitive in a follow-on. Inventing primitives for `/audit` alone would overengineer ahead of data.
 
 Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifact). Exit code is binary (`0` / `1`). CI integration: `.github/workflows/framework-checks.yml` runs `/audit` on every PR; `.github/workflows/runtime-release.yml` runs `/audit` as a pre-tag gate.
@@ -15,6 +17,8 @@ Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifa
 ### Shell-first orchestration via `run-generator`
 
 The `/audit` command procedure is parseable per spec 022's conventions — numbered steps, backtick-quoted primitive names. Each family check appears as a numbered step that invokes `run-generator` with the corresponding shell script path. The runtime's `run-generator` primitive already handles spawn-with-`--dry-run`, capture stdout/stderr/exit, and reports `drift: true` on non-zero exit (extended for `/audit` to also report drift on stdout content even when exit is 0, so a script that prints findings but returns 0 still surfaces).
+
+**Never extended:** `run-generator` reports drift on a non-zero exit alone (`runtime/src/primitives/run_generator.rs`), and a family script exits `1` whenever it prints a finding, which is what surfaces it.
 
 Why not add new `/audit`-specific primitives:
 
@@ -56,7 +60,7 @@ Each family check is one shell script. The contract:
 - Read-only — no file modifications.
 - Idempotent — same inputs produce same output.
 
-The eight scripts, with implementation notes:
+The eight scripts, with implementation notes. **Recorded as planned; each family's behavior as it runs is its criterion's annotation in `spec.md`:** Family 1 AC3, Family 2 AC4 (the installer half retired, the permission half comparing the generated MCP set with `framework/runtime-tools.txt`), Family 4 AC6, Family 5 AC7, Family 6 AC8 (a stub that detects nothing, and says so), Family 7 AC9 and Family 8 AC10 (a hardcoded catalog that judges no tense).
 
 **`scripts/audit/cross-doc-consistency.sh`** (Family 1)
 Two sub-checks composed in one script:
@@ -105,7 +109,7 @@ Heuristic by design — false positives expected on first runs. The maintainer a
 
 ### `/audit`'s command procedure shape
 
-`framework/commands/audit.md` follows the parseable conventions established by spec 022:
+`framework/commands/audit.md` follows the parseable conventions established by spec 022. **Superseded:** its one step runs `run-all.sh`, as the Overview's note says; the shape below is the one planned.
 
 ```markdown
 ## Instructions
@@ -140,7 +144,7 @@ The binary is already built earlier in the workflow; the audit reuses that build
   run: ./runtime/target/release/ductus exec audit
 ```
 
-This is belt-and-suspenders per Q4 — the PR gate above already blocks merge of any drift-bearing PR, so a tagged commit shouldn't have drift in practice; but the release-time check guards against tags pushed directly to main without PR.
+**As delivered:** the release workflow's `audit` job runs `bash scripts/audit/run-all.sh`, as the PR workflow does. This is belt-and-suspenders per Q4 — the PR gate above already blocks merge of any drift-bearing PR, so a tagged commit shouldn't have drift in practice; but the release-time check guards against tags pushed directly to main without PR.
 
 The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 
@@ -151,8 +155,8 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `framework/commands/audit.md` | Create | New parseable slash command — orchestrator for the eight family checks plus the check-zero precondition pass |
 | `.claude/commands/ductus/audit.md` | Generate | Regenerated by `scripts/gen-claude-commands.sh` (the pre-commit hook handles this) |
 | `scripts/audit/check-zero.sh` | Create | Orchestrates the 9 generator/lint scripts as the precondition pass |
-| `scripts/audit/cross-doc-consistency.sh` | Create | Family 1 — README spec-status table, pipeline diagrams, back-edge wording |
-| `scripts/audit/manifest-parity.sh` | Create | Family 2 — installer file list parity, permission-set parity with normalization |
+| `scripts/audit/cross-doc-consistency.sh` | Create | Family 1 — README spec-status table, pipeline diagrams, back-edge wording (the table check retired with `gen-readme-table.sh`, AC3) |
+| `scripts/audit/manifest-parity.sh` | Create | Family 2 — installer file list parity, permission-set parity with normalization (the installer half retired, AC4) |
 | `scripts/audit/adopter-shell-behavior.sh` | Create | Family 22 — the shipped adopter hook and generators run against a generated adopter-shaped fixture |
 | `scripts/audit/placeholder-roundtrip.sh` | Create | Family 4 — hardcoded token detection in `framework/commands/*.md` |
 | `scripts/audit/template-alignment.sh` | Create | Family 5 — `analyze.md` blocking checks ↔ template scaffolding |
@@ -196,7 +200,7 @@ Family 6's curated list of normative rules to track lives in `scripts/audit/ssot
 
 ### Known limitation: Family 8 heuristic emits false positives
 
-Detecting current-tense vs past-tense prose is heuristic. Sentences like *"`/capture` provided…"* (already past tense) might be flagged if the verb is far from the code-span token. Sentences like *"this is how `/capture` worked"* should NOT be flagged (verb already past) but might be on first runs. The maintainer dismisses false positives per-spec via `/ductus:amend` resolution comments — over time, the heuristic's false-positive rate is itself a signal (high rate ⇒ rewrite the heuristic).
+**As delivered** the family judges no tense: it flags every backticked old token outside a blockquote (AC10), so what follows describes the planned heuristic. Detecting current-tense vs past-tense prose is heuristic. Sentences like *"`/capture` provided…"* (already past tense) might be flagged if the verb is far from the code-span token. Sentences like *"this is how `/capture` worked"* should NOT be flagged (verb already past) but might be on first runs. The maintainer dismisses false positives per-spec via `/ductus:amend` resolution comments — over time, the heuristic's false-positive rate is itself a signal (high rate ⇒ rewrite the heuristic).
 
 ### Known limitation: new generators require manual update in two places
 
