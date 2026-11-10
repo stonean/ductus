@@ -25,7 +25,7 @@ An argument that widens what a primitive reads gets a row of its own, since a re
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78eb5f0ccde, with a clean tree, at 2026-11-10T17:49:55Z.
+Measured by `scripts/measure-result-sizes.sh` at e48033c659fa739acb8caa4ce671606b6a482537, with a clean tree, at 2026-11-10T20:31:42Z.
 
 Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenarios, one markdown-lint violation and one broken link; 5 inbox items. Large corpus: 100 specs, each with 50 criteria, 50 tasks of 3 subtasks and 20 scenarios, one markdown-lint violation and one broken link; 50 inbox items. Small and Large are measured at a read size of 1000000000 bytes, past every result; Large at the default read size is the same corpus at 50,000.
 
@@ -134,11 +134,13 @@ Of the 73 registry names, 21 grow with the corpus by the test above, in 25 of th
 
 The measurement at a11079af, after tasks 44 to 52, totalled 142,809 across the same 72, 2,285 more, every change this spec's own (e66f79c2, the only commit to `runtime/src/schema/` since 4025732d): `discover-rule-files` by 408 (task 48), `apply-manifest` by 405 (task 46), `derive-dependencies` by 398, `derive-routing-candidates` by 263 and `traverse-deps` by 223 (each bounded by task 50, routing's naming groom too by task 52), `render-status` by 273 (task 44), `dashboard` by 119 (task 52), `render-help` by 106 (the namespace Pi's bridge reads, task 47) and `read-spec` by 102 (task 45), less 4 each on `process-decisions`, `check-prescriptions` and `read-re-read`, whose descriptions now call their list files pretty-printed rather than one entry per line (task 49). The one below, at 12a7cede, totals 56 more, all on `discover-rule-files`, whose `other-headings` entries gained `body` (task 57); 022's 92120f45, the other commit to `runtime/src/schema/` since a11079af, changed no tool's loaded schema. Of the result rows, only `discover-rule-files` with `all`, `rules` and `verification` moved, from 8,762 to 9,344 characters.
 
+The measurement at e48033c6, after the closing review's fixes (567e6399), totals 143,069 across the same 72, 204 more, each a description the review corrected: `dashboard` by 62, `render-help` by 42, `check-corpus-links` and `check-unfolded-specs` by 41 each, and `render-status` by 18.
+
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78eb5f0ccde, with a clean tree, at 2026-11-10T17:49:55Z.
+Measured by `scripts/measure-result-sizes.sh` at e48033c659fa739acb8caa4ce671606b6a482537, with a clean tree, at 2026-11-10T20:31:42Z.
 
-72 tools, 142865 characters in all.
+72 tools, 143069 characters in all.
 
 | Tool | Description | Input schema | Loaded |
 | --- | --- | --- | --- |
@@ -149,7 +151,7 @@ Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78
 | `compute-review-scope` | 3217 | 704 | 3921 |
 | `process-decisions` | 1563 | 1964 | 3527 |
 | `append-task` | 234 | 3222 | 3456 |
-| `check-corpus-links` | 2035 | 1365 | 3400 |
+| `check-corpus-links` | 2076 | 1365 | 3441 |
 | `retire-feature` | 1522 | 1638 | 3160 |
 | `prune-project` | 986 | 2089 | 3075 |
 | `write-session` | 970 | 2097 | 3067 |
@@ -169,13 +171,13 @@ Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78
 | `brief-re-read` | 1555 | 350 | 1905 |
 | `classify-spec-edit` | 1560 | 339 | 1899 |
 | `resolve-constitutions` | 1471 | 427 | 1898 |
-| `dashboard` | 1615 | 74 | 1689 |
+| `dashboard` | 1677 | 74 | 1751 |
 | `read-re-read` | 1316 | 314 | 1630 |
 | `prune-tasks` | 573 | 973 | 1546 |
 | `append-question` | 666 | 852 | 1518 |
 | `check-promotion-coverage` | 138 | 1360 | 1498 |
+| `render-status` | 1384 | 74 | 1458 |
 | `invalidate-review` | 1159 | 291 | 1450 |
-| `render-status` | 1366 | 74 | 1440 |
 | `diff-cross-spec` | 1200 | 211 | 1411 |
 | `create-plan-artifacts` | 514 | 860 | 1374 |
 | `check-step-references` | 1293 | 74 | 1367 |
@@ -183,15 +185,15 @@ Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78
 | `merge-status-hook` | 987 | 299 | 1286 |
 | `resolve-references` | 1007 | 243 | 1250 |
 | `enforce-manifest` | 66 | 1089 | 1155 |
+| `check-unfolded-specs` | 1013 | 74 | 1087 |
 | `resolve-feature` | 442 | 622 | 1064 |
-| `check-unfolded-specs` | 972 | 74 | 1046 |
 | `check-orphaned-references` | 969 | 74 | 1043 |
 | `check-command-flags` | 938 | 74 | 1012 |
 | `create-scenario` | 193 | 810 | 1003 |
+| `render-help` | 929 | 74 | 1003 |
 | `merge-managed-block` | 76 | 921 | 997 |
 | `start-fix-rounds` | 763 | 224 | 987 |
 | `check-stuck` | 657 | 316 | 973 |
-| `render-help` | 887 | 74 | 961 |
 | `derive-boundary` | 762 | 180 | 942 |
 | `relocate-audit-records` | 698 | 223 | 921 |
 | `fetch-archive` | 64 | 847 | 911 |
