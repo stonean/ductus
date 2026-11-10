@@ -1,7 +1,7 @@
 /**
  * ductus — pi extension bridge to the ductus runtime.
  *
- * Pi shipped no MCP client before 1.0.0, so this extension wraps the
+ * Pi shipped no MCP client before 0.99.0, so this extension wraps the
  * ductus runtime's own MCP server — `.ductus/bin/ductus mcp` — over stdio
  * and re-registers every tool it lists as a pi tool under the `ductus__`
  * prefix. The runtime's MCP server stays the single source of truth for tool
@@ -10,7 +10,7 @@
  * here. It also registers `/{project}-status`, which shows the runtime's
  * pipeline view, and `/{project}-help`, which shows the pipeline guide, each
  * with no model turn, or why it cannot (spec 080). Those commands are why the
- * bridge stays pi's tool surface now that pi 1.0.0 and later ship an MCP
+ * bridge stays pi's tool surface now that pi 0.99.0 and later ship an MCP
  * client: no MCP registration can add one, and running both would serve every
  * tool twice (spec 064, Resolved Questions).
  *

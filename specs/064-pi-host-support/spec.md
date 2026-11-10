@@ -1,6 +1,6 @@
 ---
 status: done
-dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split]
+dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split, 080-deterministic-runtime-efficiency]
 next-criterion: 17
 ---
 
@@ -41,7 +41,8 @@ then split MCP discovery into a per-agent descriptor that
 [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md)'s State-B
 auto-wire consumes. Every registry row so far assumed two things Pi breaks at the root:
 that the host can be given a slash-command directory shape under a per-agent config dir,
-and that the host can **run an MCP server** — Pi's tool surface is extension-only, and
+and that the host can **run an MCP server** — the pi this spec verified had no MCP
+client, so its tool surface was an extension, and
 its command surface is a flat, shared prompt-template directory rather than a
 per-agent namespace directory.
 
@@ -56,7 +57,7 @@ machinery the other four agents use, with the one new mechanism none of them nee
 | --- | --- |
 | Command surface | **Prompt templates** — `.pi/prompts/*.md`, flat, non-recursive, project-trust-gated. Filename is the command name (`/name`). Frontmatter `description` + `argument-hint` honored; other keys ignored. Body expansion supports `$ARGUMENTS`, `$1..$N`, `${N:-default}`, `${@:N}` — a superset of the syntax the pipeline command files already use |
 | Skills (rejected surface) | `.pi/skills/<name>/SKILL.md`, invoked `/skill:<name>` only when `enableSkillCommands: true`; arguments arrive appended as `User: <args>` with **no** `$ARGUMENTS` substitution |
-| Runtime tools | **No built-in MCP client** (by design) on the pi this spec verified. pi 1.0.0 and later ship one, which `ductus` leaves unused (Resolved Questions). The only extension point is a TypeScript extension registering custom tools via `pi.registerTool`; project-local `.pi/extensions/*.ts` is auto-discovered once the project is trusted |
+| Runtime tools | **No built-in MCP client** (by design) on the pi this spec verified. pi 0.99.0 and later ship one, its CHANGELOG's 0.99.0 entry (2026-09-29) adding "MCP support as built-in extensions", which `ductus` leaves unused (Resolved Questions). The surface `ductus` uses is a TypeScript extension registering custom tools via `pi.registerTool`; project-local `.pi/extensions/*.ts` is auto-discovered once the project is trusted |
 | Permissions | **None.** No permission-gating settings surface in `.pi/settings.json` or anywhere else; the model runs tool calls without host prompts. Project trust (`~/.pi/agent/trust.json`, global) controls only whether `.pi/` resources load at all |
 | Native rules | `AGENTS.md` is loaded natively, regardless of project trust |
 | Settings | `.pi/settings.json` (project) / `~/.pi/agent/settings.json` (global) |
@@ -66,11 +67,10 @@ machinery the other four agents use, with the one new mechanism none of them nee
 
 "100% compatibility" for Pi means:
 
-1. Every pipeline command (`specify`, `clarify`, `plan`, `tasks`, `implement`, `review`,
-   `analyze`, `target`, `log`, `groom`, `audit`, `amend`, `consolidate`, `fold`,
-   `status`, `help`, `configure`, and the `/ductus` bootstrap itself) is invokable from
-   Pi and walks the **same** `framework/commands/*.md` procedure — no Pi-specific
-   command variants, no forked procedure.
+1. Every pipeline command — each source in `framework/commands/`, `configure`, and the
+   `/ductus` bootstrap itself — is invokable from Pi and walks the **same** procedure as
+   on every other agent — no Pi-specific command variants, no forked procedure — but for
+   the registered commands among the permitted deviations below.
 2. Every runtime primitive (the canonical set in `framework/runtime-tools.txt`) is
    callable from Pi with the **same bare name and same JSON schema**, delivered through
    the extension bridge of §Design Decisions D3 — the runtime's own MCP server remains
@@ -84,7 +84,10 @@ machinery the other four agents use, with the one new mechanism none of them nee
 Permitted deviations, each an inevitable host difference rather than a capability gap:
 the invocation spelling `/{project}-<name>`; tools arriving under `ductus__<name>`
 extension tools rather than `mcp__ductus__<name>`; the bootstrap's Permission-Setup step
-being a documented no-op for Pi; and Pi's one-time project-trust acceptance. Parity of
+being a documented no-op for Pi; Pi's one-time project-trust acceptance; and
+`/{project}-status` and `/{project}-help`, which the bridge registers to show
+`render-status`'s view and `render-help`'s guide with no model turn, as Claude Code's hook
+does, so their installed templates do not run ([080](../080-deterministic-runtime-efficiency/spec.md)). Parity of
 host UX is **not** claimed: Pi has no permission prompts and no deferred-tool
 mechanism; nothing in the pipeline depends on either.
 
@@ -220,4 +223,4 @@ mechanism; nothing in the pipeline depends on either.
 - **Dogfooded pi surface committed in the framework repo** — settled D6. Uncommitted would make the framework repo's own pi adoption invisible to the audits that exist to protect it; the `.claude/commands/` convention already commits the dogfooded copy.
 - **No `cross-spec-impact:` on 012 / 028 / 029 / 031 / 032** — those specs' documented behavior is untouched: the registry *consumes* the new row, the layout branches are additive, and the State-B wiring branches on the existing `mechanism` vocabulary. The one spec this change modifies is 022 (the runtime), which is the back-link partner. 056 is a body-linked dependency (the archive/installer boundary the bootstrap edits land on both sides of), not an impact: neither side's contract moves.
 - **Typebox/JSON-Schema acceptance** — not a design open question but an implementation-time verification: the two-tool probe outcome (plain JSON-Schema object accepted by `registerTool`, or typebox wrap required) is recorded in the plan at implementation time; either path keeps the schema data server-sourced.
-- **Does `ductus` use the MCP client pi 1.0.0 and later ship?** No: the bridge stays Pi's tool surface (owner, 2026-11-09). It also registers `/{project}-status` (spec 080), which no MCP registration can add, and registering the runtime in pi's MCP client beside it would serve every tool twice. pi 1.5.0's own `pi mcp --help` and `--no-mcp` show the client; moving to it was not weighed with a model turn, since no pi account is at hand and Pi support was contributed.
+- **Does `ductus` use the MCP client pi 0.99.0 and later ship?** No: the bridge stays Pi's tool surface (owner, 2026-11-09). It also registers `/{project}-status` (spec 080), which no MCP registration can add, and registering the runtime in pi's MCP client beside it would serve every tool twice. pi 1.5.0's own `pi mcp --help` and `--no-mcp` show the client, and the CHANGELOG pi 1.0.4 and 1.5.0 install (`@earendil-works/pi-coding-agent`) dates it to 0.99.0, 2026-09-29; moving to it was not weighed with a model turn, since no pi account is at hand and Pi support was contributed.

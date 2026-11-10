@@ -178,7 +178,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 
 - `framework/constitution.md` §runtime-host-integration: Pi's prefix, `ductus__`,
   through the project's `.pi/extensions/ductus.ts` bridge rather than pi's own MCP
-  client, which pi 1.0.0 added (`050-constitution`'s cut shortened every host's
+  client, which pi 0.99.0 added (`050-constitution`'s cut shortened every host's
   entry to its prefix).
   `framework/bootstrap/ductus.md`'s Pi layout states that the bridge wraps the
   runtime's own MCP server over stdio.
