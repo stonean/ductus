@@ -34,9 +34,10 @@ The primitive keeps its name though it now gates on both commands. Renaming is s
 
 **Analyze-state drift** is judged by `/{project}:analyze` from the record it writes, not by the `check-artifacts` family it began as: read during detection, that family judged the record the run was about to replace, so its finding could never clear (058's `analyze-state-drift-judges-the-record-it-writes`). The new record always carries `last-run`, so the check reports a `done` spec whose new record is blocking. It mirrors `review-state-drift` on that gating state and deliberately not on the advisory count, where its sibling *does* check `should-violations`. That asymmetry is stated in both the check and the block's own documentation, because a reader who notices it will otherwise read it as an omission.
 
+> **Signpost:** `read-spec`'s result carries neither audit record since [080](../../080-deterministic-runtime-efficiency/spec.md) bounded it, so a consumer reads `analysis.md` itself, whose absence is the never-run state.
+
 ## Edge Cases
 
-- **`skip_serializing_if` on `ReadSpecResult.analyze`.** Absent stays absent: `read-spec` on a feature with no `analysis.md` emits no `analyze` key rather than a defaulted block, so a consumer can distinguish "no record" from "an empty one".
 - **A newline in `analyzed-at` or `analyzed-against`.** Flattened to a space, not rejected. `write-review` rejects the equivalent because its fields carry operator prose with intent to preserve; these two are a timestamp and a sha, where a newline is a caller defect with no legitimate reading and only a frontmatter injection to defuse.
 - **A record written while the spec is reopened.** `criterion-path-existence` and `body-path-existence` examine `done` specs only, so a spec mid-back-edge has a smaller skipped set than the same spec at `done` — measured on 022 itself, which reported 2 skipped at `done` and 0 while reopened. The record is honest either way (`analyzed-against` names the sha), but it describes a different subject. Write the record last, after the status is settled; the command's own step order already says so.
 - **CRLF specs.** No splice remains to guard: `spec.md` is read and never written, and `analysis.md` is rendered whole on every run.
