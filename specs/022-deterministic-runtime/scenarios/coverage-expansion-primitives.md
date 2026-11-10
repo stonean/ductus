@@ -29,7 +29,7 @@ New primitives, each wired at every site per the AGENTS.md six-site rule (schema
 ## Edge Cases
 
 - Each rewritten step names its primitive; without the server the command stops and says so (spec 079).
-- The `dashboard` render field is returned data the host may restyle, never stdout printing — it stays inside the runtime boundary (no user-facing rendering owned by the runtime).
+- The rendered view is returned data the host may restyle, never stdout printing — `render-status`'s result since spec 080, as the `dashboard` field was — so it stays inside the runtime boundary. The exception is 080's `ductus hook`, whose block response, printed on stdout, the host shows as is.
 - `remove-inbox-item` reports a not-found removal as a domain outcome (no error), mirroring `append-inbox`'s `deduped` (a field 058 later removed with the dedup guard).
 - `append-question`'s dedup uses the same normalized-whitespace comparison amend already specifies.
 

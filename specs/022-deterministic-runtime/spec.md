@@ -94,7 +94,7 @@ Each primitive is deterministic, independently testable, and runs as `ductus <na
 
 ## Surfaces
 
-The runtime binary exposes two interfaces. Agent hosts pick whichever they integrate with; both are first-class.
+The runtime binary exposes two interfaces to the pipeline. Agent hosts pick whichever they integrate with; both are first-class. A third surface, `ductus hook`, answers an agent host's hook rather than running the pipeline (spec 080).
 
 ### MCP server
 

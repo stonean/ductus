@@ -139,17 +139,17 @@ Older tiers are never removed by a primitive — the bootstrap migration is the 
 
 ### Command-file candidates — `Host::command_file_candidates`
 
-`Host::command_file_candidates` (runtime/src/host.rs) is the single place the runtime derives the repo-relative paths where an installed slash-command file may live, in resolution order, at `ductus exec` time and in the `writeCode` payload. It covers the three flat-namespaced layouts:
+`Host::command_file_candidates` (runtime/src/host.rs) is the single place the runtime derives the repo-relative paths where an installed slash-command file may live, in resolution order: at `ductus exec` time, in the `writeCode` payload, when the MCP server flags the tools of the installed `target.md` to load with the session, and when `render-help` and `ductus hook help` read the installed help copy (spec 080). It covers the three flat-namespaced layouts:
 
 1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code, Auggie), tried first;
 2. `{cli-config-dir}/command/{project}/{command_name}.md` — `opencode` (singular `command/`);
 3. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
 
-Each adopter installs into one layout; walking all three resolves any of them without knowing which agent wrote the file, and both resolution callsites (`main::run_exec`, `interpreter::payload::locate_command_file`) consume the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
+Each adopter installs into one layout; walking all three resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
 
 ## Primitive request/response schemas
 
-Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls.
+Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls. A result bounded through `bounded_lists` also carries each list's count inline, a `form`, and in the file form a `lists-file` in place of the lists, which the shapes below omit; spec 080's data model lists those members and keys (*Bounded results*).
 
 ### Severity tiers — three closed sets, not one
 
@@ -612,7 +612,7 @@ The complement of `append-inbox` and the deterministic surface behind `/ductus:g
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries the result's counts and `lists-file`; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
 
 ### `assessSpecQuality`
 
@@ -870,7 +870,7 @@ Schemas evolve in lockstep with the runtime binary per §runtime-boundary's lock
 
 ## Notes
 
-- All paths in request/response payloads are repo-relative (use `/` separators on all platforms).
+- All paths in request/response payloads are repo-relative (use `/` separators on all platforms), except `merge-permissions`' `directories-added`, which names the absolute directories a canonical call appended to `permissions.additionalDirectories`, in the platform's own separators, since that setting holds absolute paths (spec 080).
 - All timestamps are ISO-8601 UTC strings.
 - All commit shas are 40-character lowercase hex strings.
 - Unknown JSON fields in incoming envelopes are ignored. Unknown fields in outgoing envelopes are not emitted (forward-compatibility is reserved for future spec evolution, not stowaway fields).

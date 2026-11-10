@@ -22,7 +22,7 @@ Inputs: none beyond the standard repo-root context every primitive operates on. 
 
 Returns one structured payload:
 
-- `session-target` — `{feature: string, scenario: string|null, scenario-detail: {section, context-summary, open-question-count}|null}` when the session peek resolves a target, otherwise `null`. The `scenario-detail` field is populated when `scenario` is non-null, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the `ductus exec` seed resolves its walker context through the same peek.
+- `session-target` — `{feature: string, scenario?: string, scenario-detail?: {section, context-summary, open-question-count}}` when the session peek resolves a target, otherwise absent. `scenario` and `scenario-detail` are absent when no scenario is targeted, and `scenario-detail` is populated when `scenario` is present, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the `ductus exec` seed resolves its walker context through the same peek.
 - `specs` — array, one entry per feature directory under the configured spec root (040), in either form — sequential `NNN-slug` or branch-scoped `{identifier}.{n}-{slug}` (051) — sequential first by number, then branch-scoped grouped by identifier and ordered by counter:
   - `slug` — the directory basename
   - `status` — frontmatter status (`draft` | `clarified` | `planned` | `in-progress` | `done`)
@@ -36,7 +36,7 @@ Returns one structured payload:
 - `config` — object describing `.ductus/config.toml` review state:
   - `present` — boolean; `true` when `.ductus/config.toml` exists at repo root, `false` otherwise
   - `disabled-rule-files` — array of basenames from `[[review.disabled-rule-files]]`; empty when the section is absent or the array is empty
-- Fields added since: `inbox-standing`, and each spec's `scenario-open-question-count` and `scenarios-with-questions` (022's data model, the `dashboard` addendum); each spec's `folds-into` and `fold-target-missing` (spec 051); the session peek's `session-identity`, `session-source`, `session-notices` and `session-unreadable` (spec 062); and `config`'s `unknown-keys`, every key in a `ductus`-owned section that no reader recognizes, which the view names on an `Unknown config keys:` line (`config-readers-name-unknown-keys`, for spec 019). The `rendered-markdown` field `coverage-expansion-primitives` added is gone: the view is `render-status`'s, rendered from the same read ([080](../../080-deterministic-runtime-efficiency/spec.md)).
+- Fields added since: `inbox-standing`, and each spec's `scenario-open-question-count` and `scenarios-with-questions` (022's data model, the `dashboard` addendum); each spec's `folds-into` and `fold-target-missing` (spec 051); the session peek's `session-identity`, `session-source`, `session-notices` and `session-unreadable` (spec 062); and `config`'s `unknown-keys`, every key in a `ductus`-owned section that no reader recognizes, which the view names on an `Unknown config keys:` line (`config-readers-name-unknown-keys`, for spec 019); `reopenings`, the counts the view's `Reopenings:` line renders (spec 079); and `specs-count`, `tags-union-count`, `form` and `lists-file`, since past `[artifacts] read-size-bytes` `specs` and `tags-union` move to the file `lists-file` names, each with its count inline ([080](../../080-deterministic-runtime-efficiency/spec.md)). The `rendered-markdown` field `coverage-expansion-primitives` added is gone: the view is `render-status`'s, rendered from the same read ([080](../../080-deterministic-runtime-efficiency/spec.md)).
 
 Reasons (the human-readable `reason` field on each disabled-rule-files entry) are not surfaced — the dashboard is a glance, not a pretty-printer; `.ductus/config.toml` remains the source of truth for full context, matching the existing prose rule.
 
@@ -44,7 +44,7 @@ The status command collapses to a single path that always reads the pipeline vie
 
 The `framework/commands/status.md` §Instructions preamble's shell-utility ban gains a positive target: when `render-status` is available via MCP, that IS the deterministic path; when the host's MCP schema is loaded lazily (Claude Code's deferred-tool reminder), the existing `ToolSearch` instruction applies — fetch the schema and call the tool, do not bail to shell.
 
-The primitive is read-only and pure with respect to filesystem state (no atomic-write concerns, no rollback). Standard partial-failure semantics apply: malformed frontmatter on any single spec is an operational error, halts the call, emits structured `error`.
+The primitive is read-only but for the list file it writes under `.ductus/results/` past the read size, which it writes atomically. Standard partial-failure semantics apply: malformed frontmatter on any single spec is an operational error, halts the call, emits structured `error`.
 
 ## Edge Cases
 
@@ -55,7 +55,7 @@ The primitive is read-only and pure with respect to filesystem state (no atomic-
 - **`.ductus/config.toml` present but `[[review.disabled-rule-files]]` section absent or its array empty.** Returns `config: {present: true, disabled-rule-files: []}`. Caller suppresses the callout per the existing prose rule.
 - **`.ductus/config.toml` parse failure.** Operational error, halts the call. Consistent with other primitives' handling of malformed-input files at the repo root.
 - **`scenarios/` exists but contains non-markdown files.** `scenarios-count` reflects only `*.md` files, matching the existing prose ("count the markdown files in its scenarios subdirectory").
-- **`.ductus/session.toml` absent and no per-process target.** `session-target: null`. No error — a fresh project with no `/{project}:target` invocation yet is a valid state.
+- **`.ductus/session.toml` absent and no per-process target.** No `session-target` key. No error — a fresh project with no `/{project}:target` invocation yet is a valid state.
 - **A session file the peek reads is malformed** — the shared default, or the process's own file. Operational error (`PrimitiveError::Toml`), halts the call. Consistent with `.ductus/config.toml` parse failures. Another session's file that does not parse is named in `session-unreadable` instead (062).
 - **Legacy `.claude/{project}-session.json` on disk.** Ignored — `dashboard` reads session state only through `crate::session`, which never reads the legacy JSON. Adopters who haven't yet run the post-0.10.0 `/ductus` bootstrap migration see "no target" until they re-`/{project}:target` or the migration translates the legacy file.
 - **Session file present but its `feature` field names a directory that doesn't exist.** Return the session-target field as-recorded; do not validate against the `specs` array. The caller already handles this — `/{project}:target` is the corrective action, not `/{project}:status`.
