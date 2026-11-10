@@ -281,7 +281,7 @@ Re-verified 2026-10-22 against HEAD: the five readers that halt and the four tha
 Since 030's task 15 (`3cfe8be7`, 2026-11-08), `derive-references` reads the registry through `resolve-references`' reader and halts naming the file on a config that does not parse, the outcome both options give it, so five of the six fallbacks above remain, three of them on the config file.
 
 - [x] Measure and write the measured question here
-- [ ] The owner answers (a) or (b); apply the answer
+- [ ] The owner answers (a) or (b); apply the answer — owner's call (2026-11-10): (b), fail fast on every read naming the file, and keep `write-session`'s repair; re-verified at `01629ccc` before asking, the five fallbacks as measured above (`host.rs`'s `load_host_block` and `load_session_cli_config_dir`, `schema/paths.rs`'s `load_configured`, `check_orphaned_references.rs`'s `read_last_applied`, and `main.rs`'s `seed_context` on the shared default), and 000, now `in-progress`, no longer reopens under either option
 
 ## 13. Decide: known vulnerabilities in the npm lint tooling (BE-DEPS-001, blocking)
 
