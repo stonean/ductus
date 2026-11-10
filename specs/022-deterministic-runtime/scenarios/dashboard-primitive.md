@@ -22,7 +22,7 @@ Inputs: none beyond the standard repo-root context every primitive operates on. 
 
 Returns one structured payload:
 
-- `session-target` — `{feature: string, scenario?: string, scenario-detail?: {section, context-summary, open-question-count}}` when the session peek resolves a target, otherwise absent. `scenario` and `scenario-detail` are absent when no scenario is targeted, and `scenario-detail` is populated when `scenario` is present, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the `ductus exec` seed resolves its walker context through the same peek.
+- `session-target` — `{feature: string, scenario?: string, scenario-detail?: {section, context-summary, open-question-count}}` when the session peek resolves a target, otherwise absent. `scenario` and `scenario-detail` are absent when no scenario is targeted, and `scenario-detail` is populated when `scenario` is present and its file exists with readable frontmatter, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the `ductus exec` seed resolves its walker context through the same peek.
 - `specs` — array, one entry per feature directory under the configured spec root (040), in either form — sequential `NNN-slug` or branch-scoped `{identifier}.{n}-{slug}` (051) — sequential first by number, then branch-scoped grouped by identifier and ordered by counter:
   - `slug` — the directory basename
   - `status` — frontmatter status (`draft` | `clarified` | `planned` | `in-progress` | `done`)
@@ -44,15 +44,15 @@ The status command collapses to a single path that always reads the pipeline vie
 
 The `framework/commands/status.md` §Instructions preamble's shell-utility ban gains a positive target: when `render-status` is available via MCP, that IS the deterministic path; when the host's MCP schema is loaded lazily (Claude Code's deferred-tool reminder), the existing `ToolSearch` instruction applies — fetch the schema and call the tool, do not bail to shell.
 
-The primitive is read-only but for the list file it writes under `.ductus/results/` past the read size, which it writes atomically. Standard partial-failure semantics apply: malformed frontmatter on any single spec is an operational error, halts the call, emits structured `error`.
+The primitive is read-only but past the read size, where it writes the list file under `.ductus/results/` atomically, writes that directory's `.gitignore`, and removes the same directory's list files older than a day (`bounded_lists::place`). Standard partial-failure semantics apply: malformed frontmatter on any single spec is an operational error, halts the call, emits structured `error`.
 
 ## Edge Cases
 
 - **Empty `specs/` directory.** Returns `specs: []`, `config` populated normally. No error — a fresh project with no specs yet is a valid state.
 - **Feature directory missing `spec.md`.** Treat as an operational error (the directory naming convention promises a spec); halt with structured `error` naming the offending directory. Matches `read-spec`'s behavior on missing files and avoids silently hiding broken state from a diagnostic command.
 - **Spec directory whose name is not a feature directory in either form.** Skip silently (not part of the dashboard inventory). `specs/inbox.md`, `specs/templates/`, ad-hoc notes, etc., are out of scope.
-- **`.ductus/config.toml` absent.** Returns `config: {present: false, disabled-rule-files: []}`. The caller distinguishes "no config" from "config with empty array" via the `present` flag to drive the markdown's callout-suppression rule.
-- **`.ductus/config.toml` present but `[[review.disabled-rule-files]]` section absent or its array empty.** Returns `config: {present: true, disabled-rule-files: []}`. Caller suppresses the callout per the existing prose rule.
+- **`.ductus/config.toml` absent.** Returns `config: {present: false, disabled-rule-files: [], unknown-keys: []}`. The caller distinguishes "no config" from "config with empty array" via the `present` flag; the pipeline view renders a disabled-rule-file line only for a present config whose array is non-empty.
+- **`.ductus/config.toml` present but `[[review.disabled-rule-files]]` section absent or its array empty.** Returns `config: {present: true, disabled-rule-files: [], unknown-keys: []}`, and the view renders no disabled-rule-file line.
 - **`.ductus/config.toml` parse failure.** Operational error, halts the call. Consistent with other primitives' handling of malformed-input files at the repo root.
 - **`scenarios/` exists but contains non-markdown files.** `scenarios-count` reflects only `*.md` files, matching the existing prose ("count the markdown files in its scenarios subdirectory").
 - **`.ductus/session.toml` absent and no per-process target.** No `session-target` key. No error — a fresh project with no `/{project}:target` invocation yet is a valid state.

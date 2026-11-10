@@ -149,7 +149,7 @@ Each adopter installs into one layout; walking all three resolves any of them wi
 
 ## Primitive request/response schemas
 
-Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls. A result bounded through `bounded_lists` also carries each list's count inline, a `form`, and in the file form a `lists-file` in place of the lists, which the shapes below omit; spec 080's data model lists those members and keys (*Bounded results*).
+Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls. A result bounded through `bounded_lists` also carries each list's count inline, a `form`, and in the file form a `lists-file` in place of the lists, which the shapes below omit, while `render-status` keeps its cut view inline with no count; spec 080's data model lists those members and keys (*Bounded results*).
 
 ### Severity tiers — three closed sets, not one
 
@@ -425,7 +425,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 Args: none. The view is rendered from the read `dashboard` makes, without its structured payload:
 
 ```json
-{ "rendered-markdown": "Target: 042-widget / planned / next: /ductus:implement\n\n| Feature | Status | … |\n…", "project": "ductus" }
+{ "rendered-markdown": "Target: 042-widget / planned / next: /ductus:implement\n\n| Feature | Status | … |\n…", "project": "ductus", "form": "inline" }
 ```
 
 `rendered-markdown` is the whole view as one markdown fragment, with `/{project}:…` texts in the adopter's namespace, which `project` names. It is data the host may restyle, never printed. The view's blocks, its two renderings and its bound are canonical in spec 080's `data-model.md`, and `runtime/src/primitives/pipeline_view.rs` holds the formats.
@@ -612,7 +612,7 @@ The complement of `append-inbox` and the deterministic surface behind `/ductus:g
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries the result's counts and `lists-file`; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
 
 ### `assessSpecQuality`
 
@@ -870,7 +870,7 @@ Schemas evolve in lockstep with the runtime binary per §runtime-boundary's lock
 
 ## Notes
 
-- All paths in request/response payloads are repo-relative (use `/` separators on all platforms), except `merge-permissions`' `directories-added`, which names the absolute directories a canonical call appended to `permissions.additionalDirectories`, in the platform's own separators, since that setting holds absolute paths (spec 080).
+- All paths in request/response payloads are repo-relative (use `/` separators on all platforms), except the `path` `merge-managed-block` and `merge-permissions` echo, which is absolute, and `merge-permissions`' `directories-added`, which names the absolute directories a canonical call appended to `permissions.additionalDirectories`, in the platform's own separators, since that setting holds absolute paths (spec 080).
 - All timestamps are ISO-8601 UTC strings.
 - All commit shas are 40-character lowercase hex strings.
 - Unknown JSON fields in incoming envelopes are ignored. Unknown fields in outgoing envelopes are not emitted (forward-compatibility is reserved for future spec evolution, not stowaway fields).

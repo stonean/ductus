@@ -18,8 +18,8 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
   - A *host-config write* (`cli-config-dir` supplied, no `feature`) sets `cli-config-dir` and **preserves** the existing target block verbatim. Against a fresh repo it writes a file containing only `cli-config-dir`.
   - `feature` and `path` must be supplied together; `scenario` (with `scenario-path`) requires a target write; a call supplying neither `feature` nor `cli-config-dir` is rejected.
 - `dashboard`'s session reader MUST treat `feature` as optional: a session file carrying only `cli-config-dir` (no target yet) reports no `session-target`, not a parse error.
-- `/ductus` (`framework/bootstrap/ductus.md` §Instructions step 6) MUST write `project` to the committed `.ductus/config.toml` `[host]` block (dropping any legacy `cli-config-dir` the managed block previously carried) and write `cli-config-dir` to `.ductus/session.toml` via a host-config write.
-- `/{project}:target` MUST preserve `cli-config-dir` across a target switch (the merge-writer does this). `/{project}:target --clear` MUST preserve `cli-config-dir`: it rewrites the file to contain only that key when present, and deletes the file only when no `cli-config-dir` is recorded.
+- `/ductus` (`framework/bootstrap/ductus.md` §Instructions steps 6 and 7) MUST write `project` to the committed `.ductus/config.toml` `[host]` block (dropping any legacy `cli-config-dir` the managed block previously carried) and write `cli-config-dir` to `.ductus/session.toml` via a host-config write.
+- `/{project}:target` MUST preserve `cli-config-dir` across a target switch (the merge-writer does this). `/{project}:target --clear` MUST preserve `cli-config-dir`: it rewrites the file to contain only that key when present, and leaves the file empty when no `cli-config-dir` is recorded.
 - Migration is self-healing, no dedicated primitive: the legacy `.govern.toml` `[host]` fallback keeps existing adopters resolving until their next `/ductus`, which drops `cli-config-dir` from the committed managed block and records it in the session file.
 
 ## Edge Cases
@@ -27,7 +27,7 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
 - **Mixed-agent team.** Contributor A (Claude) and contributor B (OpenCode) share one repo. Each runs `/ductus`; each writes their own `.ductus/session.toml` `cli-config-dir` (`.claude` vs `.opencode`). The committed `.ductus/config.toml` `[host]` carries only `project`, identical for both. Neither clobbers the other.
 - **Legacy adopter, not yet re-run.** `.govern.toml` `[host]` still has `cli-config-dir`; no session value yet. The legacy fallback resolves it, unchanged, until the next `/ductus` relocates it.
 - **Target switch.** A `/{project}:target` rewrite changes feature/path/scenario/set-at and preserves `cli-config-dir`.
-- **`--clear` with an agent identity recorded.** The session file is rewritten to contain only `cli-config-dir` (target cleared, agent identity kept) so `ductus exec` keeps resolving command files; `--clear` with no recorded `cli-config-dir` deletes the file as before.
+- **`--clear` with an agent identity recorded.** The session file is rewritten to contain only `cli-config-dir` (target cleared, agent identity kept) so `ductus exec` keeps resolving command files; `--clear` with no recorded `cli-config-dir` leaves the file empty.
 - **Host-config write on a fresh repo.** `/ductus` setting `cli-config-dir` before any target writes a session file containing only that key; `dashboard` reports no target.
 - **Malformed session file.** `Host::load` halts naming the file, as every other reader of it does. `write-session` is the repair: a target write over a malformed shared default replaces it and names it in `unreadable` (its `cli-config-dir` is not carried forward), so `/{project}:target` restores a readable file.
 

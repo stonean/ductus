@@ -38,7 +38,8 @@ content:
 - `discover_rule_files::load_ductus_toml` returns `(DuctusToml, &'static str)`;
   the name flows into `apply_disabled_filter` instead of a second probe.
 - `dashboard::load_config` returns `(DashboardConfig, &'static str)`; the name
-  is threaded through `render_markdown` into `render_callouts`.
+  is carried into the pipeline view's model as `config_name`, which the
+  view's disabled-rule-file line names (spec 080).
 
 `config_path` and `config_display_name` remain for callers that need only one
 half (`host.rs`, `resolve_references`). Their doc comments now direct callers
