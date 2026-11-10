@@ -144,7 +144,7 @@ A primitive in the grows-set takes the shape `process-decisions` and `compute-re
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
 - a `{list}-count` per moved list is present in both forms;
 - each moved list is present only in the inline form, where `scenario-files-unreadable` and `cross-spec-impact` are also absent when empty, as before;
-- in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, and `paths` for `lint-markdown`.
+- in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
 A call that writes, `rewrite-spec-links` or an applied prune, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
 
@@ -152,6 +152,7 @@ A call that writes, `rewrite-spec-links` or an applied prune, has written when i
 | --- | --- |
 | `read-spec` | `sections`, `acceptance-criteria`, `open-questions`, `scenario-open-questions`, `scenario-files-unreadable` |
 | `read-tasks` | `tasks` |
+| `read-section` | `sections` |
 | `derive-boundary` | `boundary` |
 | `lint-markdown` | `violations` |
 | `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |

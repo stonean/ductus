@@ -1144,6 +1144,11 @@ fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
             ],
         ),
         ("read-tasks", feature.clone(), &["tasks"]),
+        (
+            "read-section",
+            json!({ "path": format!("specs/{SUBJECT}/spec.md"), "headings": ["Acceptance Criteria"] }),
+            &["sections"],
+        ),
         ("derive-boundary", feature.clone(), &["boundary"]),
         (
             "lint-markdown",

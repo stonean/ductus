@@ -48,8 +48,19 @@ enum Case {
     /// Call it with these arguments after linking this checkout's
     /// `node_modules` into the copy, since it runs markdownlint.
     CallWithNodeModules(Value),
+    /// Call it with these arguments after installing Claude's help copy, since
+    /// its result is the guide that copy holds.
+    CallWithHelpCopy(Value),
     /// Not measured, for this reason.
     NotMeasured(&'static str),
+}
+
+/// What a copy of the corpus gets before its call.
+#[derive(Clone, Copy)]
+enum Prep {
+    None,
+    NodeModules,
+    HelpCopy,
 }
 
 /// The read size the growth columns are measured at: past any result here, so
@@ -111,7 +122,6 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "discover-rule-files"
         | "measure-reopenings"
         | "prune-project"
-        | "render-help"
         | "render-status"
         | "resolve-constitutions"
         | "resolve-session" => call(json!({})),
@@ -157,6 +167,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         }
         "gate-confirm" => call(json!({"gate": "corpus", "prompt": "Approve the corpus?"})),
         "lint-markdown" => Case::CallWithNodeModules(json!({"paths": ["specs"]})),
+        "render-help" => Case::CallWithHelpCopy(json!({})),
         "mark-criterion" => call(json!({"feature": f, "checked": true, "criterion-index": 0})),
         "mark-task" => call(
             json!({"feature": f, "task-number": ctx.size.tasks.to_string(), "subtask-index": 0, "checked": true}),
@@ -295,20 +306,23 @@ enum Outcome {
 }
 
 fn run_case(template: &Path, name: &str, ctx: &Context) -> Outcome {
-    let (args, link) = match case(name, ctx) {
-        Case::Call(args) => (args, false),
-        Case::CallWithNodeModules(args) => (args, true),
+    let (args, prep) = match case(name, ctx) {
+        Case::Call(args) => (args, Prep::None),
+        Case::CallWithNodeModules(args) => (args, Prep::NodeModules),
+        Case::CallWithHelpCopy(args) => (args, Prep::HelpCopy),
         Case::NotMeasured(reason) => return Outcome::NotMeasured(reason),
     };
-    call_on_copy(template, name, &args, link)
+    call_on_copy(template, name, &args, prep)
 }
 
 /// Call `name` with `args` on a fresh copy of `template`.
-fn call_on_copy(template: &Path, name: &str, args: &Value, link: bool) -> Outcome {
+fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcome {
     let copy = tempfile::tempdir().unwrap();
     common::copy_dir_recursive(template, copy.path());
-    if link {
-        link_node_modules(copy.path());
+    match prep {
+        Prep::None => {}
+        Prep::NodeModules => link_node_modules(copy.path()),
+        Prep::HelpCopy => install_help_copy(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -334,6 +348,26 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, link: bool) -> Outcom
         chars: text.chars().count(),
         bounded,
     }
+}
+
+/// Install Claude's help copy into a copy, as `/ductus` does, so `render-help`
+/// finds its guide: `framework/commands/help.md` with the generator's two
+/// substitutions, at `.claude/commands/corpus/help.md`, with `[host] project`
+/// naming `corpus` so the lookup searches there rather than under the copy's
+/// temporary directory name.
+fn install_help_copy(root: &Path) {
+    let checkout = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let source = std::fs::read_to_string(checkout.join("framework/commands/help.md")).unwrap();
+    let copy = source
+        .replace("{project}", "corpus")
+        .replace("{cli-config-dir}", ".claude");
+    let dest = root.join(".claude/commands/corpus/help.md");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    std::fs::write(dest, copy).unwrap();
+    let config = root.join(".ductus/config.toml");
+    let mut text = std::fs::read_to_string(&config).unwrap();
+    text.push_str("\n[host]\nproject = \"corpus\"\n");
+    std::fs::write(config, text).unwrap();
 }
 
 /// Link this checkout's `node_modules` into a copy, so `lint-markdown`
@@ -377,7 +411,7 @@ fn measure(size: CorpusSize) -> Vec<(String, Outcome)> {
     for name in ductus::schema::registry::PRIMITIVE_REGISTRY {
         rows.push((format!("`{name}`"), run_case(template.path(), name, &ctx)));
         for (label, args) in modes(name) {
-            let outcome = call_on_copy(template.path(), name, &args, false);
+            let outcome = call_on_copy(template.path(), name, &args, Prep::None);
             rows.push((format!("`{name}` with {label}"), outcome));
         }
     }
