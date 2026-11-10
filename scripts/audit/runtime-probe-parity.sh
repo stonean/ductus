@@ -1,42 +1,44 @@
 #!/usr/bin/env bash
 # scripts/audit/runtime-probe-parity.sh — Family 15 of /audit.
 #
-# Verifies the ductus binary probe stays in parity between an agent's bootstrap
-# permission *seed* (the settings_template blob in the §Agent Registry table of
-# framework/bootstrap/ductus.md) and its steady-state permission set
-# (framework/bootstrap/configure/{key}.md).
+# Verifies that each agent whose bootstrap permission *seed* (the
+# settings_template cell of its §Agent Registry row in
+# framework/bootstrap/ductus.md) carries CLI entries also seeds the store
+# probe, `~/.ductus/bin/ductus --version` and its Windows twin.
 #
-# Spec 029 wired a `command -v ductus`-equivalent detection probe into BOTH places
-# per agent so a routine /ductus run does not re-prompt for the State-B/State-C
-# probe. Nothing else guards the pairing: a maintainer who adds or removes the
-# probe in one place but not the other ships a silent gap that only surfaces when
-# a run re-prompts. This family catches that asymmetry.
+# The probe is how ductus runtime detection tells State A from State B, and it
+# runs on every /ductus run that finds no ductus tool. §Permission Setup seeds
+# before the Pre-flight Phase probes, so a seed carrying the probe is what keeps
+# that run from prompting for it. A maintainer who drops the probe from a seed
+# that still grants the CLI ships a prompt on every such run, and nothing else
+# reports it.
 #
-# Scope is the probe ONLY — not the whole seed. The seed and the configure set
-# legitimately diverge: the seed grants bootstrap-only commands (tar, mktemp,
-# git rev-parse, git ls-files, the Read(...ductus-*...) temp globs) the
-# steady-state configure files omit, and the configure files grant pipeline
-# commands the seed omits. Neither is a subset of the other, so a whole-seed
-# parity check would false-positive on the correct repo. The probe is the one
-# permission 029 deliberately placed in both artifacts.
+# The rule is the owner's (2026-11-10, spec 029 task 15). It replaced a
+# both-or-neither comparison of the seed against configure/{key}.md on the
+# retired `command -v` entry, which no step runs, so that check passed without
+# testing the probe. The configure files grant the steady-state pipeline, which
+# runs no probe, so they are not read.
 #
-# Fixed-string presence assertion (no regex interpretation of the grammar),
-# per agent, comparing presence in the registry seed against presence in the
-# configure file:
-#   - present in both     -> ok (parity holds)
-#   - present in neither   -> ok (probe deliberately removed from both)
-#   - present in one only  -> finding (the drift this family guards), either way
+# Scope is each agent's own registry row, never the whole file: the probe's
+# command text also appears in ductus.md's prose, which would satisfy a
+# whole-file match for every agent. A row that is missing or appears twice is a
+# finding, never a pass.
 #
-# Each agent's probe is written in that agent's native grammar:
-#   claude       Bash(command -v *)
-#   auggie       "^command -v "  (the launch-process shellInputRegex)
-#   antigravity  command(which)
-#   opencode     "command -v *": "allow"  (the bash permission-map entry)
+# Each probe is a fixed string in its agent's native grammar, delimiters
+# included, so the Windows twin never satisfies the Unix form:
+#   claude    "Bash(~/.ductus/bin/ductus --version)", and the .exe twin
+#   auggie    "^~/\\.ductus/bin/ductus(\\.exe)? --version$" (one regex, both)
+#   opencode  "~/.ductus/bin/ductus --version": "allow", and the .exe twin
 #
-# Adding another agent that wires the probe is one extra check_agent line below.
-# Adding an agent that does **not** wire it (Pi — no permission-gating settings,
-# spec 064) is a named skip on stderr, never silence: the bound is visible in
-# this family and in its README description.
+# Two agents are skipped by name on stderr, never silently:
+#   antigravity  its seed carries no CLI entry, so every CLI call prompts there,
+#                the probe among them. The skip states that premise, so a CLI
+#                entry in its row (`command(.ductus/bin/ductus` or
+#                `command(~/.ductus/bin/ductus`) is a finding: the rule applies.
+#   pi           no permission-gating settings (spec 064), so no seed. Family 14
+#                holds its settings_template at `{}`.
+#
+# Adding an agent that seeds the CLI is one more check_agent line.
 # macOS bash 3.2: no associative arrays, no mapfile.
 
 set -uo pipefail
@@ -51,53 +53,74 @@ if [ ! -f "$DUCTUS" ]; then
   exit 1
 fi
 
-# check_agent <key> <configure-file> <probe-literal>
-#
-# Seed presence is a whole-file fixed-string match against ductus.md: each probe
-# literal is a permission-grammar string (Bash(...), a ^-anchored regex, or
-# command(...)) that occurs only in its agent's §Agent Registry settings_template
-# cell and nowhere else in the file, so no section scoping is needed and seed-side
-# detection mirrors the configure-side grep exactly.
-check_agent() {
-  key="$1"; configure="$2"; probe="$3"
+# The §Agent Registry table: the lines from its heading to the next heading.
+# §MCP registration's table has rows keyed the same way, so the bound is what
+# keeps a row match to the seed's table.
+REGISTRY="$(awk '/^## Agent Registry$/ { f = 1; next } f && /^#/ { exit } f' "$DUCTUS")"
 
-  if [ ! -f "$configure" ]; then
-    emit "$configure" "configure file for agent '$key' missing" "restore $configure"
-    return
+if [ -z "$REGISTRY" ]; then
+  emit "$DUCTUS" "no §Agent Registry section found" "restore the '## Agent Registry' heading and its table in $DUCTUS"
+  exit 1
+fi
+
+# registry_row <key> — set ROW to the agent's one registry row, or emit and
+# return 1 when there is none or more than one.
+registry_row() {
+  key="$1"
+  ROW="$(printf '%s\n' "$REGISTRY" | grep -F -- "| \`$key\` |")"
+  rows=0
+  if [ -n "$ROW" ]; then
+    rows="$(printf '%s\n' "$ROW" | wc -l | tr -d ' ')"
   fi
-
-  seed_has=0
-  if grep -qF -- "$probe" "$DUCTUS"; then
-    seed_has=1
-  fi
-
-  cfg_has=0
-  if grep -qF -- "$probe" "$configure"; then
-    cfg_has=1
-  fi
-
-  if [ "$seed_has" -eq 1 ] && [ "$cfg_has" -eq 0 ]; then
-    emit "$configure (agent $key)" \
-      "registry settings_template seeds the probe '$probe' but the configure file does not grant it" \
-      "add '$probe' to the canonical permission set in $configure"
-  elif [ "$seed_has" -eq 0 ] && [ "$cfg_has" -eq 1 ]; then
+  if [ "$rows" -ne 1 ]; then
     emit "$DUCTUS (agent $key)" \
-      "configure file grants the probe '$probe' but the registry settings_template seed does not" \
-      "add '$probe' to the '$key' settings_template in the §Agent Registry table of $DUCTUS"
+      "expected one §Agent Registry row for '$key', found $rows" \
+      "keep exactly one '| \`$key\` |' row in the §Agent Registry table"
+    return 1
   fi
 }
 
-check_agent "claude"      "framework/bootstrap/configure/claude.md"      "Bash(command -v *)"
-check_agent "auggie"      "framework/bootstrap/configure/auggie.md"      "^command -v "
-check_agent "antigravity" "framework/bootstrap/configure/antigravity.md" "command(which)"
-check_agent "opencode"    "framework/bootstrap/configure/opencode.md"    '"command -v *": "allow"'
-# Pi is skipped by name: Pi has no permission-gating settings (spec 064
-# §Verified Pi Layout), so there is no settings_template seed and no configure
-# permission set for a probe to live in — the probe concept doesn't apply, and
-# asserting its absence from two files that don't exist would be the
-# check-that-cannot-run failure. Stated here so the bound is visible: if Pi
-# ever gains a permission surface, this skip becomes the check_agent line the
-# generator-wiring entry promises.
-echo "runtime-probe-parity: skipped pi (no permission-gating settings — no seed and no configure set to probe)" >&2
+# check_agent <key> <probe-literal>... — the agent's seed carries every literal.
+check_agent() {
+  key="$1"
+  shift
+  registry_row "$key" || return
+  for probe in "$@"; do
+    if ! printf '%s\n' "$ROW" | grep -qF -- "$probe"; then
+      emit "$DUCTUS (agent $key)" \
+        "the settings_template seed grants the CLI but does not seed the store probe '$probe'" \
+        "add '$probe' to the '$key' settings_template in the §Agent Registry table"
+    fi
+  done
+}
+
+# skip_agent <key> <reason> <cli-marker>... — name the skip on stderr, and emit
+# when the row carries a CLI entry, the skip's stated premise.
+skip_agent() {
+  key="$1"
+  reason="$2"
+  shift 2
+  registry_row "$key" || return
+  for marker in "$@"; do
+    if printf '%s\n' "$ROW" | grep -qF -- "$marker"; then
+      emit "$DUCTUS (agent $key)" \
+        "the settings_template seed now carries a CLI entry ('$marker'), so the store-probe rule applies" \
+        "seed the store probe for '$key' and replace its skip_agent line with a check_agent line"
+    fi
+  done
+  echo "runtime-probe-parity: skipped $key ($reason)" >&2
+}
+
+check_agent "claude" \
+  '"Bash(~/.ductus/bin/ductus --version)"' \
+  '"Bash(~/.ductus/bin/ductus.exe --version)"'
+check_agent "auggie" \
+  '"shellInputRegex": "^~/\\.ductus/bin/ductus(\\.exe)? --version$", "permission": { "type": "allow" }'
+check_agent "opencode" \
+  '"~/.ductus/bin/ductus --version": "allow"' \
+  '"~/.ductus/bin/ductus.exe --version": "allow"'
+skip_agent "antigravity" "its seed carries no CLI entry, so the store probe prompts there" \
+  'command(.ductus/bin/ductus' 'command(~/.ductus/bin/ductus'
+skip_agent "pi" "no permission-gating settings — no seed to carry the probe"
 
 exit "$drift"

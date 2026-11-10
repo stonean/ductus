@@ -13,7 +13,7 @@ section: "Follow-on scenarios"
 
 Surfaced 2026-06-11 during end-to-end Antigravity testing: the adopter entered name/description/languages twice across the wire-then-restart cycle.
 
-`.ductus/config.toml` is the adopter-side configuration database (per [AGENTS.md](../../../AGENTS.md) Workflow and §Project Configuration). It is the proper home for these answers — not a new scratch file, and not a throwaway the abort discards.
+`.ductus/config.toml` is the adopter-side configuration file (`framework/bootstrap/ductus.md` §Project Configuration). It is the proper home for these answers — not a new scratch file, and not a throwaway the abort discards.
 
 ## Behavior
 
