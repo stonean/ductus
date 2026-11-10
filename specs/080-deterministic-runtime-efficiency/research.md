@@ -25,7 +25,7 @@ An argument that widens what a primitive reads gets a row of its own, since a re
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at a11079af3a114a5c4ec81ca87b08cb777e988a29, with a clean tree, at 2026-11-10T16:12:53Z.
+Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78eb5f0ccde, with a clean tree, at 2026-11-10T17:49:55Z.
 
 Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenarios, one markdown-lint violation and one broken link; 5 inbox items. Large corpus: 100 specs, each with 50 criteria, 50 tasks of 3 subtasks and 20 scenarios, one markdown-lint violation and one broken link; 50 inbox items. Small and Large are measured at a read size of 1000000000 bytes, past every result; Large at the default read size is the same corpus at 50,000.
 
@@ -40,7 +40,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `derive-boundary` | 421 | 2717 | 2717 | yes | yes | |
 | `discover-rule-files` | 110 | 110 | 110 | no | no | |
 | `discover-rule-files` with `rules` | 2606 | 2606 | 2606 | no | yes | |
-| `discover-rule-files` with `all`, `rules` and `verification` | 8762 | 8762 | 8762 | no | yes | |
+| `discover-rule-files` with `all`, `rules` and `verification` | 9344 | 9344 | 9344 | no | yes | |
 | `process-waivers` | 54 | 54 | 54 | no | no | |
 | `process-decisions` | 172 | 172 | 172 | no | yes | |
 | `compute-review-scope` | 1631 | 35970 | 35970 | yes | yes | |
@@ -132,13 +132,13 @@ Of the 73 registry names, 21 grow with the corpus by the test above, in 25 of th
 - Four tools changed with this spec's tasks: `discover-rule-files` by 1,391 (task 38), `apply-manifest` by 1,378 (the ToolSearch line, tasks 10, 30 and 36), `merge-permissions` by 820 (task 35) and `merge-status-hook` by 216 (help's entry, task 34).
 - The other 504 are on six tools other specs' work changed since 4294b79a, by `git log` of `runtime/src/schema/`: 058 changed `write-analysis`, 062 `dashboard`, 078 `brief-re-read`, `check-prescriptions` and `write-review`'s input schema, and 079 `check-review-freshness` and `write-review`'s description.
 
-The one below, after tasks 44 to 52, totals 2,285 more across the same 72, every change this spec's own (e66f79c2, the only commit to `runtime/src/schema/` since 4025732d): `discover-rule-files` by 408 (task 48), `apply-manifest` by 405 (task 46), `derive-dependencies` by 398, `derive-routing-candidates` by 263 and `traverse-deps` by 223 (each bounded by task 50, routing's naming groom too by task 52), `render-status` by 273 (task 44), `dashboard` by 119 (task 52), `render-help` by 106 (the namespace Pi's bridge reads, task 47) and `read-spec` by 102 (task 45), less 4 each on `process-decisions`, `check-prescriptions` and `read-re-read`, whose descriptions now call their list files pretty-printed rather than one entry per line (task 49).
+The measurement at a11079af, after tasks 44 to 52, totalled 142,809 across the same 72, 2,285 more, every change this spec's own (e66f79c2, the only commit to `runtime/src/schema/` since 4025732d): `discover-rule-files` by 408 (task 48), `apply-manifest` by 405 (task 46), `derive-dependencies` by 398, `derive-routing-candidates` by 263 and `traverse-deps` by 223 (each bounded by task 50, routing's naming groom too by task 52), `render-status` by 273 (task 44), `dashboard` by 119 (task 52), `render-help` by 106 (the namespace Pi's bridge reads, task 47) and `read-spec` by 102 (task 45), less 4 each on `process-decisions`, `check-prescriptions` and `read-re-read`, whose descriptions now call their list files pretty-printed rather than one entry per line (task 49). The one below, at 12a7cede, totals 56 more, all on `discover-rule-files`, whose `other-headings` entries gained `body` (task 57); 022's 92120f45, the other commit to `runtime/src/schema/` since a11079af, changed no tool's loaded schema. Of the result rows, only `discover-rule-files` with `all`, `rules` and `verification` moved, from 8,762 to 9,344 characters.
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at a11079af3a114a5c4ec81ca87b08cb777e988a29, with a clean tree, at 2026-11-10T16:12:53Z.
+Measured by `scripts/measure-result-sizes.sh` at 12a7cede17e2ec61983f60f6c80ce78eb5f0ccde, with a clean tree, at 2026-11-10T17:49:55Z.
 
-72 tools, 142809 characters in all.
+72 tools, 142865 characters in all.
 
 | Tool | Description | Input schema | Loaded |
 | --- | --- | --- | --- |
@@ -156,8 +156,8 @@ Measured by `scripts/measure-result-sizes.sh` at a11079af3a114a5c4ec81ca87b08cb7
 | `merge-permissions` | 554 | 2324 | 2878 |
 | `derive-references` | 1927 | 735 | 2662 |
 | `derive-dependencies` | 1577 | 1063 | 2640 |
+| `discover-rule-files` | 1264 | 1209 | 2473 |
 | `measure-reopenings` | 1980 | 460 | 2440 |
-| `discover-rule-files` | 1208 | 1209 | 2417 |
 | `prune-plan` | 1173 | 1242 | 2415 |
 | `check-review-gate` | 2109 | 211 | 2320 |
 | `check-prescriptions` | 1904 | 368 | 2272 |
@@ -459,3 +459,5 @@ By token count, the 1 item of at most 8 tokens matched 4 slugs, the 6 of 9 to 20
 **Result.** It cost $0.933 over 79.9 s and 27 turns, result subtype `success`. Its final reply named the heading as a blocking finding: `specs/rules/quality-cross.md:35`, `### qual-claim-099`, "a real rule, with a MUST Statement … But the parser only recognises uppercase rule IDs, so it skips this rule entirely", and asked whether to defer it. So analyze reports a malformed rule heading. It also treated the whole of `quality-cross.md` as unloadable and applied none of its rules, as §Rules has it when any of its checks fails.
 
 **Shell reads.** After reading the rules' list file whole with the host's reader, 11,224 characters, the run queried that file with `jq` three times, the last denied as compound, and read the heading's added lines with `git show 149e3cf -- specs/rules/quality-cross.md`. §Rules says neither the list file nor a rule file is read through the shell, so its sentence on reading the list file with the host's reader, unmeasured at task 38's round, did not hold on this run (task 57).
+
+**After task 57.** At 2026-11-10T17:49:56Z the same check ran at 12a7cede, where each `other-headings` entry carries its `body`, against the release build of that tree, the owner having approved the run with task 57's design (2026-11-10). It cost $0.897 over 85.9 s and 31 turns, result subtype `success`. It again named `specs/rules/quality-cross.md:35`, `### qual-claim-099`, as a blocking finding, and it read no rule file: it took the heading's lines from the entry's `body`. It still queried the list file through the shell, with `jq` five times, the first denied as compound, beside one `Read` of the file with a line limit, so the list-file half of task 57's done-when is not met.
