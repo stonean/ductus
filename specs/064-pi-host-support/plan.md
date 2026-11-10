@@ -186,7 +186,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   (`sh -s -- pi`); the invocation paragraph names `/{project}-<name>` for Pi.
 - `AGENTS.md` (this repo's contributor home): the live registry enumeration updates to
   five agents across four layouts; one new entry records the bridge architecture
-  (never "fix" Pi by registering an MCP server for it; keep the bridge
+  (never also register the runtime in pi's own MCP client; keep the bridge
   dependency-free — the README promise and the live-schema property both depend on
   it).
 - `docs/slash-commands.md`: audited at implementation for agent-shape claims;

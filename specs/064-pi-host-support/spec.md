@@ -1,6 +1,6 @@
 ---
 status: in-progress
-dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split, 080-deterministic-runtime-efficiency]
+dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split]
 next-criterion: 17
 ---
 
@@ -87,7 +87,7 @@ extension tools rather than `mcp__ductus__<name>`; the bootstrap's Permission-Se
 being a documented no-op for Pi; Pi's one-time project-trust acceptance; and
 `/{project}-status` and `/{project}-help`, which the bridge registers to show
 `render-status`'s view and `render-help`'s guide with no model turn, as Claude Code's hook
-does, so their installed templates do not run ([080](../080-deterministic-runtime-efficiency/spec.md)). Parity of
+does, so their installed templates do not run (spec 080). Parity of
 host UX is **not** claimed: Pi has no permission prompts and no deferred-tool
 mechanism; nothing in the pipeline depends on either.
 
@@ -181,7 +181,7 @@ mechanism; nothing in the pipeline depends on either.
   other copies point at; `050-constitution`'s cut later shortened every host's entry
   to its prefix, Pi's `ductus__`); `AGENTS.md`'s live registry
   enumeration updates (five agents, four layouts) plus one entry recording the
-  bridge architecture (never "fix" Pi by registering an MCP server for it; keep the
+  bridge architecture (never also register the runtime in pi's own MCP client; keep the
   bridge dependency-free — the README promise and the live-schema property both
   depend on it). No artifact may say Pi "registers MCP" or that its commands live in
   a namespace directory — Pi's shape is the exact outlier (bridge-not-MCP,
