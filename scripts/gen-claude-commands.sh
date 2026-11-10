@@ -90,12 +90,15 @@ fi
 # pre-commit hook that runs this would otherwise wait on it with no end.
 # DUCTUS_GEN_TIMEOUT_S overrides the bound, in whole seconds.
 runtime_timeout="${DUCTUS_GEN_TIMEOUT_S:-120}"
+refuse_timeout() {
+  echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_S must be a positive whole number of seconds, got '$runtime_timeout'." >&2
+  exit 1
+}
 case "$runtime_timeout" in
-  '' | *[!0-9]* | 0)
-    echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_S must be a positive whole number of seconds, got '$runtime_timeout'." >&2
-    exit 1
-    ;;
+  '' | *[!0-9]*) refuse_timeout ;;
 esac
+# All digits, so a decimal comparison; `00` is zero too.
+if [ "$runtime_timeout" -eq 0 ]; then refuse_timeout; fi
 # Run "$@" as a background job that a watchdog stops once the bound passes,
 # since macOS ships no timeout(1). The watchdog holds none of the caller's
 # output, so a command substitution around this does not wait on its sleep.

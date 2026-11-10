@@ -27,7 +27,7 @@ Arguments: none.
 
 - `guide` — the guide in the installed help copy, the first of `Host::command_file_candidates("help")` that exists. It is the text between the first line after the copy's `## Instructions` heading that is exactly `---` and the last such line. Each line that is wholly an HTML comment is removed, along with a blank line the removal would leave beside another, and the leading and trailing blank lines are trimmed. It is markdown, with the project's name in each command as the copy spells it.
 - `project` — the slash-command namespace `Host::load` resolves, read without any spec, which Pi's bridge names `{project}-status` and `{project}-help` from at load.
-- No installed copy is an error naming every path tried. A copy with fewer than two such lines is an error naming the copy.
+- No installed copy is an error naming every path tried. A copy with no `## Instructions` heading, fewer than two such lines after it, or nothing but blank lines and comments between them is an error naming the copy.
 
 ## `read-section`
 
@@ -188,7 +188,7 @@ A primitive bounded through `bounded_lists::place`, the grows-set and `discover-
 
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
 - a `{list}-count` per moved list is present in both forms, except `dashboard`'s session lists, below;
-- each moved list is present only in the inline form, where `scenario-files-unreadable` and `cross-spec-impact` are also absent when empty, as before;
+- each moved list is present only in the inline form, where `scenario-files-unreadable`, `cross-spec-impact` and `dashboard`'s session lists are also absent when empty, as before;
 - in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, pretty-printed, so a list of strings holds one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
 A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependencies` with `write`, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.

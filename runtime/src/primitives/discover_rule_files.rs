@@ -167,7 +167,8 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
         // as one that does not exist (`QUAL-CLAIM-001`).
         for name in non_file_rule_entries(&dir) {
             notices.push(format!(
-                "rule file {name} is not a regular file — not loaded; replace it with the file itself"
+                "rule file {} is not a regular file — not loaded; replace it with the file itself",
+                flatten_line(&name)
             ));
         }
     }

@@ -605,8 +605,9 @@ pub struct DiscoverRuleFilesResult {
     pub selected: Vec<String>,
     /// Ordered stdout notice lines to emit verbatim: a line per unknown key
     /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
-    /// warnings, then disabled-rule-file notices, then the closing
-    /// `loading rule files: …` line.
+    /// warnings, then disabled-rule-file notices, then a line per `*.md`
+    /// entry that is no regular file, then the closing `loading rule files: …`
+    /// line.
     pub notices: Vec<String>,
     /// With `rules`: each selected file's rules, then each extra file's.
     /// Absent without `rules`, and in the file form.

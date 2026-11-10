@@ -436,18 +436,22 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
     }
     // Notices follow the no-target line too, since a consolidation's notice is
     // exactly what explains a target that has gone (spec 062).
+    // A notice can carry a session file's hand-written feature, and an
+    // unreadable path is a file name, so each is flattened onto one line
+    // too (`BE-INPUT-011`).
     let notices = data
         .notices
         .iter()
-        .map(|notice| format!("Notice: {}", notice.message))
+        .map(|notice| format!("Notice: {}", flatten_line(&notice.message)))
         .collect();
     let unreadable = data
         .unreadable
         .iter()
         .map(|path| {
             format!(
-                "Unreadable: {path} — a session file that does not parse, so whether it shares \
-                 this feature was not checked"
+                "Unreadable: {} — a session file that does not parse, so whether it shares \
+                 this feature was not checked",
+                flatten_line(path)
             )
         })
         .collect();
@@ -1556,8 +1560,9 @@ mod tests {
 
     /// The other hand-written values that join a view line, the session's
     /// feature and scenario, a scenario's `section`, a `folds-into`, a
-    /// dependency with no sequential number and a references line, are
-    /// flattened onto one line too (`BE-INPUT-011`).
+    /// dependency with no sequential number, a references line, a session
+    /// notice, which can carry the session's feature, and an unreadable
+    /// session file's path, are flattened onto one line too (`BE-INPUT-011`).
     #[test]
     fn a_newline_in_any_hand_written_value_cannot_forge_a_view_line() {
         let mut fixture = Fixture::new(None);
@@ -1579,6 +1584,11 @@ mod tests {
             "003-gamma".to_string(),
             vec!["svc\nNotice: forged reference".to_string()],
         )];
+        let notices = [crate::schema::primitives::SessionNotice {
+            kind: crate::schema::primitives::SessionNoticeKind::Adopted,
+            message: "Session s will adopt 002-beta\nNotice: forged notice".to_string(),
+        }];
+        let unreadable = [".ductus/sessions/x\nNotice: forged unreadable.toml".to_string()];
         let model = build(ViewData {
             specs: &fixture.specs,
             questions: &fixture.questions,
@@ -1589,14 +1599,18 @@ mod tests {
             reopenings: &fixture.reopenings,
             session_target: fixture.target.as_ref(),
             session_label: None,
-            notices: &[],
-            unreadable: &[],
+            notices: &notices,
+            unreadable: &unreadable,
             references,
             project: "ductus",
         });
         for format in [Format::Markdown, Format::Text] {
             let view = within(&model, format, u64::MAX);
-            assert!(!view.lines().any(|l| l.starts_with("Notice:")), "{view}");
+            assert_eq!(
+                view.lines().filter(|l| l.starts_with("Notice:")).count(),
+                1,
+                "{view}"
+            );
             for forged in [
                 "feature",
                 "scenario",
@@ -1604,6 +1618,8 @@ mod tests {
                 "fold",
                 "dependency",
                 "reference",
+                "notice",
+                "unreadable",
             ] {
                 assert!(
                     view.contains(&format!("Notice: forged {forged}")),

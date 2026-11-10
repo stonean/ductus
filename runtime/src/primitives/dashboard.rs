@@ -8,7 +8,8 @@
 //! The session target is a peek through [`crate::session`] (spec 062): an identified
 //! process sees its own target, with its session label and the notices its next command
 //! will deliver. The peek pins no adoption, refreshes no `used-at` and consumes no notice,
-//! so the read-only contract holds for the session too — `dashboard` is also called for
+//! so the session is read only, as the specs and config are, the list file the
+//! file form writes aside — `dashboard` is also called for
 //! data, and a delivering read there would take the notices from the command that owns
 //! them.
 //!
