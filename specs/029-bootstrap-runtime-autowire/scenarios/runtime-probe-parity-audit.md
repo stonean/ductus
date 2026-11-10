@@ -16,7 +16,8 @@ The probe runs on every `/ductus` run that finds no `ductus` tool, after §Permi
 
 - the seed carries the probe → no finding;
 - the seed grants the CLI but lacks either form of the probe → a finding naming the agent and the missing literal;
-- the agent's registry row is missing, or appears more than once → a finding, never a pass.
+- the agent's registry row is missing, or appears more than once → a finding, never a pass;
+- an agent the registry lists that the family neither checks nor skips → a finding.
 
 The configure files are not read: they grant the steady-state pipeline, which runs no probe.
 
@@ -28,7 +29,7 @@ The family is wired into `scripts/audit/run-all.sh` as Family 15 and enumerated 
 - **Row-scoped, not file-scoped.** The probe's command text also appears in `ductus.md`'s prose, and §MCP registration has a table keyed by the same agent names, so the family reads only the §Agent Registry table.
 - **Antigravity is skipped by name on stderr.** Its seed carries no CLI entry, so every CLI call prompts there, the probe among them (§Permission Setup). A CLI entry appearing in its row (`command(.ductus/bin/ductus` or `command(~/.ductus/bin/ductus`) is a finding: the rule then applies, and the skip becomes a check.
 - **Pi is skipped by name on stderr.** It has no permission-gating settings (`064-pi-host-support`), so it has no seed; Family 14 holds its `settings_template` at `{}`.
-- **New agent rows.** The script hard-codes the current agents and their probe literals, matching the concreteness of the sibling `installer-registry-parity.sh`: an agent whose seed grants the CLI is one added `check_agent` line, and any other one `skip_agent` line with its reason. Read the count off those calls rather than from this bullet.
+- **New agent rows.** The script names the current agents and their probe literals: an agent whose seed grants the CLI is one added `check_agent` line, and any other one `skip_agent` line with its reason. It takes the agent set from the §Agent Registry rows, so an agent the registry lists that neither line names is a finding, and a new agent cannot pass unchecked. Read the count off the registry rather than from this bullet.
 
 ## Open Questions
 

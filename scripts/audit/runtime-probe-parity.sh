@@ -38,7 +38,10 @@
 #   pi           no permission-gating settings (spec 064), so no seed. Family 14
 #                holds its settings_template at `{}`.
 #
-# Adding an agent that seeds the CLI is one more check_agent line.
+# Adding an agent that seeds the CLI is one more check_agent line. The agent
+# set itself is derived from the registry's rows, so an agent the registry
+# lists that neither a check_agent nor a skip_agent line names is a finding:
+# a new agent cannot pass unchecked (QUAL-GROUND-001).
 # macOS bash 3.2: no associative arrays, no mapfile.
 
 set -uo pipefail
@@ -63,10 +66,15 @@ if [ -z "$REGISTRY" ]; then
   exit 1
 fi
 
+# Each key a check_agent or skip_agent line names, matched against the
+# registry's own keys at the end.
+HANDLED=""
+
 # registry_row <key> — set ROW to the agent's one registry row, or emit and
 # return 1 when there is none or more than one.
 registry_row() {
   key="$1"
+  HANDLED="$HANDLED $key"
   ROW="$(printf '%s\n' "$REGISTRY" | grep -F -- "| \`$key\` |")"
   rows=0
   if [ -n "$ROW" ]; then
@@ -122,5 +130,22 @@ check_agent "opencode" \
 skip_agent "antigravity" "its seed carries no CLI entry, so the store probe prompts there" \
   'command(.ductus/bin/ductus' 'command(~/.ductus/bin/ductus'
 skip_agent "pi" "no permission-gating settings — no seed to carry the probe"
+
+# Every agent the registry lists, its header row aside: the first cell of each
+# row whose first cell is a backticked key.
+KEYS="$(printf '%s\n' "$REGISTRY" | awk -F'|' '/^\| *`[^`]+` *\|/ { k = $2; gsub(/[` ]/, "", k); if (k != "key") print k }')"
+if [ -z "$KEYS" ]; then
+  emit "$DUCTUS" "no agent rows found in the §Agent Registry table" "restore the table's rows, one per agent, keyed by a backticked key"
+fi
+for key in $KEYS; do
+  case " $HANDLED " in
+    *" $key "*) ;;
+    *)
+      emit "$DUCTUS (agent $key)" \
+        "the §Agent Registry lists agent '$key', which this family neither checks nor skips" \
+        "add a check_agent line for '$key' when its seed grants the runtime CLI, else a skip_agent line with its reason"
+      ;;
+  esac
+done
 
 exit "$drift"
