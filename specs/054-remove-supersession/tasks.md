@@ -128,3 +128,9 @@ Reopened done → in-progress by 3297fbd6, the fix round of 051's 2026-10-29 rev
 - [x] `runtime/src/schema/primitives.rs`'s `ArtifactFinding.severity` doc comment, which `606636cc` left naming "reciprocity", points at `schema::descriptions::CHECK_ARTIFACTS` instead of listing families
 
 - **Done when**: every criterion holds or carries a true annotation, no body passage is false about the tree, and the doc comment names no family
+
+## 15. Disposition out-of-spec finding: `fold.md`'s Purpose line
+
+- [x] `framework/commands/fold.md` line 12 says "every inbound pointer moves with it", while `3297fbd6` narrowed `docs/slash-commands.md` to "every inbound pointer it reads"; found by this spec's closing review (`ba2768e4`), outside its scope, with the owner, 051, `done` — owner's call (2026-11-10): reopen 051 for the fix, or waive — waived: the same file's Scope Boundaries (line 26) state which pointers the fold re-points, so the Purpose line's summary misleads no reader of the command, and reopening a `done` spec for an observation about the pipeline's own machinery made while reviewing framework work is what feeds the review loop (`AGENTS.md`)
+
+- **Done when**: the finding carries its disposition
