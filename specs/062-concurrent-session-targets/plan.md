@@ -42,7 +42,8 @@ resolution, per-process paths, the lock, the per-process record, adoption,
 notices and the expiry sweep. It is called by `write-session`,
 `resolve-session`, `retarget-sessions`, `dashboard`, the exec seed, and since
 spec 080 `render-status` and `ductus hook status`, which read the process's
-identity for the view, and by nothing else. Before this spec the read logic existed twice, in `dashboard`
+identity for the view, and for its time helpers and `IDLE_EXPIRY` by
+`measure-reopenings` and the exec walker. Before this spec the read logic existed twice, in `dashboard`
 (`runtime/src/primitives/dashboard.rs:737-761`) and in the exec seed
 (`runtime/src/main.rs:523-535`), and the write logic once more in
 `runtime/src/primitives/write_session.rs:59-123`. Pin-on-first-resolution
@@ -281,12 +282,13 @@ auditable place.
 
 Every list a session tool returns — `write-session`'s `peers`, `expired`,
 `unreadable` and `notices`, `resolve-session`'s `notices` and `unreadable`,
-`retarget-sessions`' `retargeted`, `cleared` and `unreadable`, and the
-dashboard's `session-notices` and `session-unreadable` — holds entries drawn
-only from the session files under `.ductus/sessions/`, whose idle ones the
+`retarget-sessions`' `retargeted`, `cleared` and `unreadable` — holds entries
+drawn only from the session files under `.ductus/sessions/`, whose idle ones the
 expiry sweep removes, and the shared default. So like every tool result it is
 bounded by the project it describes rather than paginated (022 `plan.md`'s
-`BE-PAYLOAD-001` statement).
+`BE-PAYLOAD-001` statement). The dashboard's `session-notices` and
+`session-unreadable` move to its list file past the read size (spec 080), since
+the sweep leaves a session file it cannot parse.
 
 ### Gitignore: two layers
 
