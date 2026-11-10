@@ -7,11 +7,13 @@ The shapes this feature adds or changes. Each one is checked, when it lands, aga
 Arguments: none, since `ductus exec` passes a step's primitive no arguments.
 
 ```json
-{ "rendered-markdown": "Target: …\n\n| Feature | … |\n…", "project": "ductus" }
+{ "rendered-markdown": "Target: …\n\n| Feature | … |\n…", "project": "ductus", "form": "inline" }
 ```
 
-- `rendered-markdown` — the markdown rendering of the view below.
+- `rendered-markdown` — the markdown rendering of the view below, held with the rest of the result to the read size.
 - `project` — the slash-command namespace `Host::load` resolves, the `{project}` of every `/{project}:` hint in the view. Pi's bridge names its registered command from it.
+- `form` — `inline` while the whole view fits, and `file` past it, when the view is cut.
+- `lists-file` — in the file form only: `.ductus/results/render-status/all-specs/{sha256}.json`, which holds `{"view": [line, …]}`, the whole view's lines, one per entry. Every line of the cut view that stands for a cut names it.
 
 If the Pi verifying run records that a displayed message renders no markdown, the primitive gains `format` (`markdown` by default, or `text`). It does not exist before then.
 
@@ -20,11 +22,45 @@ If the Pi verifying run records that a displayed message renders no markdown, th
 Arguments: none.
 
 ```json
-{ "guide": "## ductus — Spec-Driven Development Pipeline\n\n…" }
+{ "guide": "## ductus — Spec-Driven Development Pipeline\n\n…", "project": "ductus" }
 ```
 
 - `guide` — the guide in the installed help copy, the first of `Host::command_file_candidates("help")` that exists. It is the text between the first line after the copy's `## Instructions` heading that is exactly `---` and the last such line. Each line that is wholly an HTML comment is removed, along with a blank line the removal would leave beside another, and the leading and trailing blank lines are trimmed. It is markdown, with the project's name in each command as the copy spells it.
+- `project` — the slash-command namespace `Host::load` resolves, read without any spec, which Pi's bridge names `{project}-status` and `{project}-help` from at load.
 - No installed copy is an error naming every path tried. A copy with fewer than two such lines is an error naming the copy.
+
+## `read-section`
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `path` | string | The document, repo-relative. A path leaving the project is refused |
+| `headings` | list of strings, at least one | Each section's heading text, without the `#` marks. An empty list is refused |
+
+| Result field | Type | Meaning |
+| --- | --- | --- |
+| `path` | string | The document, as passed |
+| `sections` | list of `{heading, text}` | Each heading found, in the order asked, with its section: from its heading line to the next heading of the same or a higher level, outside fenced blocks and HTML comments. Absent in the file form |
+| `sections-count` | integer | Entries in `sections`, in either form |
+| `not-found` | list of strings | Each heading asked for that the document lacks |
+| `form`, `lists-file` | | As *Bounded results* below gives them |
+
+## `discover-rule-files`' rules
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `rules` | boolean, `false` when absent | Also list each selected file's rules, then each `extra-files` entry's |
+| `verification` | boolean, `false` when absent | With `rules`, add each rule's Verification. Without `rules` it is refused |
+| `all` | boolean, `false` when absent | Select every rule file in the directory, past its suffix, `[rules] surfaces` and the disabled entries, neither of which is then validated, as analyze loads them |
+| `extra-files` | list of strings | Repo-relative rule files outside the directory, listed after the selected ones. Without `rules` it is refused, and one leaving the project is refused |
+
+| Result field | Type | Meaning |
+| --- | --- | --- |
+| `rule-files` | list of `{file, rules, other-headings}` | With `rules`, each file read: its rules in heading order, each `{id, heading, tier, statement, verification}`, and under `all` `other-headings`, each `{line, heading}` that opens no rule. Absent in the file form |
+| `rule-files-count` | integer | Entries in `rule-files`, with `rules`, in either form |
+| `unreadable` | list of `{file, reason}` | Each file that could not be read, never dropped |
+| `form`, `lists-file` | | With `rules`, as *Bounded results* below gives them |
+
+`tier` is `must` or `should`, from the Statement's RFC 2119 keyword, and absent when it carries neither. `verification` is present only with the argument of that name.
 
 ## The pipeline view
 
@@ -36,18 +72,27 @@ One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`re
    - *Text:* each column padded to its widest cell, columns separated by two spaces, with no pipes, separator row or emphasis. Every row starts with a two-character gutter: `→` and a space on the target's row, two spaces on every other row.
 3. **Summary.** One item per line, each starting with its label, in this order: `Counts:`, `Blocked:`, `Recovery:`, `Scenario questions:`, `Folds:`, `Tags:`, `Disabled rule files:`, `Unknown config keys:`, then the reopenings line and `Inbox:`.
    - The reopenings line keeps the form spec 079 gave it, `Reopenings since {date}: …` or `Reopenings: ? …`.
-   - Only `Counts:`, the reopenings line and `Inbox:` render on every run; the others render when they apply.
+   - The reopenings line and `Inbox:` render on every run, and `Counts:` whenever a spec exists; the others render when they apply.
    - `Scenario questions: {n} in {m} spec(s)` is followed by one line per unresolved question, indented two spaces: `{spec} · {scenario}`, so a scenario carrying three questions has three lines. The question's text is not in the view.
 4. **References.** `References:`, then each spec that declares references, its slug (bold in markdown) followed by one `- …` line per reference. Present only when a spec declares references.
 5. **Next actions.** `Next actions:`, then one line per next action, indented two spaces: `{next-action}: {spec}, {spec}`. It groups every spec but the target whose Next Action is not `done (spec is complete)`, in order of first appearance in the table. Absent when there is none.
 6. **Prompt.** `Run /{project}:target <feature> to select one.`, the view's only `/{project}:target` hint.
 
-**Bound.** Each rendering is held to `[artifacts] read-size-bytes` in bytes; a rendering exactly at the bound fits. When it is over, a block of its own follows the table, since a line directly under a markdown table would read as a row:
+**Bound.** The result each surface serializes is held to `[artifacts] read-size-bytes` in bytes: `render-status`'s result on the model path, and the block response `ductus hook status` prints. A result exactly at the bound fits. Each line standing for a cut ends `not shown — the view is over the read size`, followed by `; the whole view is in {lists-file}` on the model path. When the result is over, each step applies in turn until it fits:
 
-1. the `done (spec is complete)` rows are removed from the table, and the block's first line is `done (spec is complete): {n} spec(s)`;
-2. if it is still over, the most leading rows that fit are kept, and the block ends `{n} spec(s) not shown — the view is over the read size`.
+1. the `done (spec is complete)` rows are removed from the table, and a block of its own follows the table with the line `done (spec is complete): {n} spec(s)`, since a line directly under a markdown table would read as a row;
+2. the most leading rows that fit are kept, and that block ends `{n} spec(s) not shown — …`;
+3. with no row left, `Next actions:` keeps the most leading names that fit, in group order. A group cut short ends `, … {n} more`, a group with none left reads `{next-action}: {n} spec(s)`, and the block ends with an indented `{n} of {total} spec(s) not shown — …` line;
+4. each of these collapses in turn, and after each the rows, then the names, are fitted again:
+   - the References block, to `References: {n} spec(s) not shown — …`;
+   - `Disabled rule files:` and `Unknown config keys:`, each to its count and config file;
+   - `Tags:`, `Folds:`, `Recovery:` and `Blocked:`, each to its count;
+   - the scenario-question lines, to one indented `{n} question line(s) not shown — …` line under their header;
+   - the out-of-set statuses in `Counts:`, to one `{n} spec(s) in {m} other status(es)` part;
+   - `Next actions:`, to `Next actions: {n} spec(s) under {m} next action(s) not shown — …`;
+   - the Notice and Unreadable lines, to `Notice: {n} notice(s) not shown — …` and `Unreadable: {n} session file(s) not shown — …`.
 
-A cut view therefore never reads as complete. A view whose other blocks alone are over the bound keeps no row and still counts them.
+A cut view therefore never reads as complete. What every step leaves is the floor, about 600 bytes, and a read size below it gets the floor, over the bound.
 
 ## `ductus hook status`
 
@@ -124,7 +169,7 @@ Every other field of the result is as before.
 
 ## `ManifestEntry.tool-search-line`
 
-`tool-search-line`: boolean, `false` when absent. When `true`, `apply-manifest` derives the entry's run tools after substitution: its step tools, and each tool a section it cites invokes (`plan.md`, *Batched (AC29)*). It drops the always-loaded set and CLI-only names from them, and, when any remain, appends to the `## Instructions` preamble blockquote:
+`tool-search-line`: boolean, `false` when absent. When `true`, `apply-manifest` derives the entry's run tools after substitution: its step tools, and each tool the command file invokes anywhere or a section it cites invokes (`plan.md`, *Batched (AC29)*). It drops the always-loaded set and CLI-only names from them, and, when any remain, appends to the `## Instructions` preamble blockquote:
 
 ```markdown
 >
@@ -144,13 +189,13 @@ A primitive in the grows-set takes the shape `process-decisions` and `compute-re
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
 - a `{list}-count` per moved list is present in both forms;
 - each moved list is present only in the inline form, where `scenario-files-unreadable` and `cross-spec-impact` are also absent when empty, as before;
-- in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
+- in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, pretty-printed, so a list of strings holds one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
 A call that writes, `rewrite-spec-links` or an applied prune, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
 
 | Primitive | Lists moved |
 | --- | --- |
-| `read-spec` | `sections`, `acceptance-criteria`, `open-questions`, `scenario-open-questions`, `scenario-files-unreadable` |
+| `read-spec` | `sections`, `acceptance-criteria`, `open-questions`, `scenario-open-questions`, `scenario-files-unreadable`; the result carries no audit record in either form |
 | `read-tasks` | `tasks` |
 | `read-section` | `sections` |
 | `derive-boundary` | `boundary` |
@@ -163,5 +208,11 @@ A call that writes, `rewrite-spec-links` or an applied prune, has written when i
 | `check-corpus-links` | `broken`, `examined`, `skipped` |
 | `check-unfolded-specs` | `unfolded` |
 | `rewrite-spec-links` | `rewritten`, `skipped`, `kept-tails`, `mentions` |
+| `discover-rule-files` | `rule-files`, with `rules` |
+| `derive-dependencies` | `updated`, `unwritten`, `untracked-skipped`, `absent`, `cycles`, `unparseable` |
+| `derive-routing-candidates` | `candidates` |
+| `traverse-deps` | `dependencies`, `cycles` |
+
+`render-status` is bounded in a shape of its own, given under *`render-status`* above: its view stays inline, cut, and its file holds the whole view, with no count.
 
 The counts are each list's `{list}-count`. The prune primitives flatten a summary or a walk into their result, so `form` and `lists-file` sit inside the half that moves lists: `prune-tasks`' summary, and the walk both share. A one-feature result is still its summary on the wire. `prune-plan`'s one-feature summary does not grow with the corpus and carries neither.

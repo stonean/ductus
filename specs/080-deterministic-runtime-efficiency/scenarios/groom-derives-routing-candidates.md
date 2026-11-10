@@ -6,7 +6,7 @@ section: "Behavior"
 
 ## Context
 
-`derive-routing-candidates` derives the existing homes a piece of work could belong to (a runtime-owning spec, a rule file, a spec sharing vocabulary), and its description leaves the semantic call at groom's `routeInboxItem` extension point. Only specify calls it. In the cost round, groom searched spec bodies with three `grep` calls, one denied, before its routing round trip (`research.md`, R6).
+`derive-routing-candidates` derives the existing homes a piece of work could belong to (a runtime-owning spec, a rule file, a spec sharing vocabulary), and its description left the semantic call at groom's `routeInboxItem` extension point. Only specify called it. In the cost round, groom searched spec bodies with three `grep` calls, one denied, before its routing round trip (`research.md`, R6).
 
 ## Behavior
 

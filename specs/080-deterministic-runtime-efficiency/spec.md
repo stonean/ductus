@@ -6,6 +6,8 @@ cross-spec-impact:
   - 064-pi-host-support
   - 063-oversized-artifacts-warn-with-a-fix
   - 023-govern-refinement
+  - 046-scenario-open-question-visibility
+  - 066-audit-records-and-the-completion-gate
 next-criterion: 30
 ---
 
@@ -67,7 +69,7 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - **Pi has a prompt template of the same name.** The command the bridge registers must be the one that runs. The verifying run confirms it, and if the template runs instead, `/ductus` stops installing Pi's status template.
 - **Pi's handler cannot run the runtime.** It shows the failure as a displayed message, again with no turn.
 - **Pi's session identity.** The handler runs the binary with the identity the bridge's MCP server uses, so the view names the same target the agent sees.
-- **A view larger than the read size.** At about 105 bytes a row, this is roughly 450 specs. The `done (spec is complete)` rows collapse to one count line first. If the view is still over, the rows past the bound are cut, and a final line says how many specs were not shown, so a partial view never reads as complete (owner, 2026-11-08). Collapsing took the 77-spec table from 7,625 to 4,271 characters. Paging was rejected because the hook path shows one message and cannot page.
+- **A view larger than the read size.** At about 105 bytes a row, this is roughly 450 specs. The bound measures the result each surface serializes. The `done (spec is complete)` rows collapse to one count line first. If the result is still over, the rows past the bound are cut. With no row left, the `Next actions:` block keeps the leading names that fit, and then each other list collapses to its count. Every cut leaves a line saying what was not shown, so a partial view never reads as complete (owner, 2026-11-08 and 2026-11-10). Collapsing took the 77-spec table from 7,625 to 4,271 characters. On the model path the agent still reaches everything the cut left out, since the result names a list file holding the whole view (owner, 2026-11-10). The hook path shows one message to a person and cannot page, so it writes no file.
 
 ## Acceptance Criteria
 
@@ -91,7 +93,7 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - [ ] AC29: Claude Code's installed copy of every command other than `/{project}:target` loads the `ductus` tools its steps name, and those the sections it cites invoke, in one tool-search call, through a line the generator writes from the command's files. The command sources and other agents' copies are unchanged, and `ductus exec` dispatches no primitive because of that line.
 - [ ] AC23: Each `ductus` tool's loaded schema size, its description plus input schema in characters, is recorded in `research.md` with the total across all tools.
 - [ ] AC7: Every primitive whose result grows with the corpus bounds or pages its result, and a test drives each past its bound on a generated fixture corpus; `read-tasks` is one.
-- [ ] AC24: A view that would exceed the read size collapses its `done (spec is complete)` rows to a count line, then cuts the rows past the bound and ends with a line counting the specs not shown. A test drives a generated fixture corpus past the bound on both renderings.
+- [ ] AC24: A view whose result, as its surface serializes it, would exceed the read size collapses its `done (spec is complete)` rows to a count line. It then cuts the rows past the bound and counts the specs not shown, then the next-action names, then collapses each other list to its count. On the model path the result names a list file holding the whole view. A test drives a generated fixture corpus past the bound on both surfaces.
 - [ ] AC8: Each command `/ductus` installs has its cost recorded in `specs/080-deterministic-runtime-efficiency/research.md`, with method, units, population and date.
 - [ ] AC14: The result sizes recorded in `research.md` come from a script that runs each primitive on a generated fixture corpus and calls no model.
 - [ ] AC15: The time and token figures recorded in `research.md` come from an on-demand harness that drives `claude -p` with stream-json output on a fixture project. No CI job runs it, and its first run records whether `claude -p` executes a custom slash command.
@@ -133,7 +135,7 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
     - A separate setting with the same default: a second key and its validation for the same meaning.
 - **Does the status path keep `dashboard`'s structured payload?** No: on the model path it reads a view-only result, and `/{project}:review --all` keeps the full payload (owner, 2026-11-08).
   - **Size:** the model read the whole 38,815-character result, of which the view was 9,319 characters, 76% less.
-  - **Consumers:** among the command sources only `framework/commands/review.md`'s `--all` enumeration reads the payload; `clarify.md` and `target.md` mention the dashboard only in prose.
+  - **Consumers:** among the command sources only `framework/commands/review.md`'s `--all` enumeration, which reads `specs[].status`, and `target.md`'s step 3, which reads `specs[].slug` to list the features on a not-found, read the payload; `clarify.md` mentions the dashboard only in prose.
   - **Constraint for the plan:** `ductus exec` dispatches a backticked primitive with no per-step arguments, so a flag on `dashboard` would not reach an exec-driven status, and a separate argument-free primitive would.
 - **How is a command's cost measured reproducibly?** Split by what needs a model (owner, 2026-11-08).
   - **Sizes:** measured by a script on a generated fixture corpus, the machinery AC7's test needs anyway, so they run anywhere without a model.
