@@ -50,7 +50,7 @@ const HOOK_TIMEOUT_SECONDS: u64 = 10;
 pub const HOOKED_COMMANDS: &[&str] = &["status", "help"];
 
 /// The hook event the entry sits under.
-const EVENT: &str = "UserPromptExpansion";
+const EVENT: &str = crate::hook::HOOK_EVENT;
 
 /// The programs the probe tries, in order, moving on only when one is not
 /// found. On Windows `Command` resolves `claude` to `claude.exe` itself but
@@ -67,7 +67,8 @@ const PROBE_PROGRAMS: &[&str] = if cfg!(windows) {
 #[must_use]
 pub fn hook_command(member: &str) -> String {
     format!(
-        "\"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus{}\" hook {member}",
+        "\"${}/.ductus/bin/ductus{}\" hook {member}",
+        crate::hook::PROJECT_DIR_VAR,
         std::env::consts::EXE_SUFFIX
     )
 }

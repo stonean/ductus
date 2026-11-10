@@ -79,7 +79,10 @@ fn classify(basename: &str) -> Surface {
 ///
 /// - [`PrimitiveError::InvalidArgument`] when `verification` or
 ///   `extra-files` is given without `rules`, which it would add to.
-/// - [`PrimitiveError::Toml`] when the resolved config file is malformed.
+/// - [`PrimitiveError::Toml`] when the resolved config file is malformed,
+///   [`PrimitiveError::Io`] when it cannot be read, and
+///   [`PrimitiveError::InvalidSpecsRoot`] when its `[paths] specs-root` is
+///   invalid.
 /// - Without `all`, which selects past them: [`PrimitiveError::InvalidSurfacesMember`]
 ///   when `[rules] surfaces` or `detected-surfaces` names a value outside
 ///   `{backend, frontend}`, [`PrimitiveError::InvalidSurfacesType`] when the
@@ -133,9 +136,7 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
             if args.all {
                 selected.push(name.clone());
                 if classify(name) == Surface::Unrecognized {
-                    notices.push(format!(
-                        "rule file {name} has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
-                    ));
+                    notices.push(unrecognized_suffix_notice(name));
                 }
                 continue;
             }
@@ -153,15 +154,21 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
                 Surface::Cross => selected.push(name.clone()),
                 Surface::Unrecognized => {
                     selected.push(name.clone());
-                    notices.push(format!(
-                        "rule file {name} has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
-                    ));
+                    notices.push(unrecognized_suffix_notice(name));
                 }
             }
         }
 
-        if !args.all {
-            apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
+        // Under `all` no entry was validated, so `disabled` is empty and the
+        // filter removes nothing.
+        apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
+        // A `*.md` entry that is no regular file, a symlink among them, is
+        // not loaded: named, so a file that was never examined does not read
+        // as one that does not exist (`QUAL-CLAIM-001`).
+        for name in non_file_rule_entries(&dir) {
+            notices.push(format!(
+                "rule file {name} is not a regular file — not loaded; replace it with the file itself"
+            ));
         }
     }
 
@@ -227,8 +234,10 @@ fn list_rules(
             })
             .collect();
         // What the shared parser gives up, a malformed rule heading, which
-        // opens no rule there: listed with the lines under each heading, so
-        // analyze's integrity checks judge it without reading the file.
+        // opens no rule there, a tab-separated one among them, which the
+        // shared heading parser does not take: listed with the lines under
+        // each heading, so analyze's integrity checks judge it without
+        // reading the file.
         let other_headings = args.all.then(|| {
             other_headings(&content)
                 .into_iter()
@@ -285,6 +294,35 @@ pub(crate) fn resolve_rules_dir(repo: &Path) -> Result<(Option<PathBuf>, String)
         return Ok((Some(own), "framework/rules".to_string()));
     }
     Ok((None, String::new()))
+}
+
+/// The notice for a rule file whose suffix names no surface.
+fn unrecognized_suffix_notice(name: &str) -> String {
+    format!(
+        "rule file {name} has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
+    )
+}
+
+/// The `*.md` entries directly under `dir` that [`list_rule_files`] leaves
+/// out because they are not regular files, sorted. Best effort: an entry that
+/// cannot be inspected is left out, since the listing already read the
+/// directory.
+fn non_file_rule_entries(dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|entry| entry.file_type().is_ok_and(|kind| !kind.is_file()))
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        })
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
 }
 
 /// List `*.md` basenames directly under `dir`, sorted for determinism.
@@ -1055,7 +1093,7 @@ mod tests {
         assert!(matches!(err, PrimitiveError::Toml { .. }));
     }
 
-    /// Two rules: a MUST with a Verification, and one with no tier.
+    /// Three rules: a MUST with a Verification, one with no tier, and a SHOULD.
     const RULES: &str = "# Rules\n\n### QUAL-TEST-001\n\n> A test MUST fail without its behavior.\n\n\
                          **Verification:** Read each test.\n\n### QUAL-TEST-002\n\n> Prefer small tests.\n\n\
                          ### QUAL-TEST-003\n\n> A test SHOULD name the behavior it holds.\n";
@@ -1156,6 +1194,36 @@ mod tests {
         assert_eq!(
             all.notices.last().unwrap(),
             "loading rule files: accessibility-frontend.md, quality-cross.md, security-backend.md"
+        );
+    }
+
+    /// A `*.md` entry that is no regular file is named in a notice rather than
+    /// dropped, so a rule file never examined does not read as one that does
+    /// not exist (`QUAL-CLAIM-001`).
+    #[cfg(unix)]
+    #[test]
+    fn a_rule_entry_that_is_no_regular_file_is_named() {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::write(tmp.path().join("elsewhere.md"), RULES).unwrap();
+        std::os::unix::fs::symlink(
+            tmp.path().join("elsewhere.md"),
+            tmp.path().join("framework/rules/linked-cross.md"),
+        )
+        .unwrap();
+        let all = run(
+            &DiscoverRuleFilesArgs {
+                all: true,
+                ..args(&[])
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(all.selected, vec!["quality-cross.md"]);
+        assert!(
+            all.notices.iter().any(|notice| notice
+                == "rule file linked-cross.md is not a regular file — not loaded; replace it with the file itself"),
+            "{:?}",
+            all.notices
         );
     }
 

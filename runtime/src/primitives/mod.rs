@@ -488,7 +488,7 @@ pub enum PrimitiveError {
     /// error rather than resolved by pass order, because either order
     /// silently discards half of what the caller asked for.
     #[error(
-        "merge-permissions: {count} entr{plural} appear in both the allow set and the revoke set: {entries}"
+        "merge-permissions: the allow set and the revoke set share {count} entr{plural}: {entries}"
     )]
     ConflictingRevoke {
         /// Number of conflicting entries.
@@ -2685,6 +2685,33 @@ impl SkipScanner {
     pub(crate) fn in_fence(&self) -> bool {
         self.in_fence
     }
+}
+
+/// `line` without each HTML comment that opens and closes on it outside an
+/// inline-code span: the content [`SkipScanner`] keeps for a line holding an
+/// inline comment, less the comment, so a reader of that content can treat
+/// the comment as the scanner treats a multi-line one. A line with no such
+/// comment comes back as it is.
+pub(crate) fn without_inline_comments(line: &str) -> std::borrow::Cow<'_, str> {
+    let Some(mut open) = find_outside_code(line, "<!--") else {
+        return std::borrow::Cow::Borrowed(line);
+    };
+    let mut kept = String::with_capacity(line.len());
+    let mut rest = line;
+    loop {
+        let after = &rest[open + 4..];
+        let Some(close) = find_outside_code(after, "-->") else {
+            break;
+        };
+        kept.push_str(&rest[..open]);
+        rest = &after[close + 3..];
+        match find_outside_code(rest, "<!--") {
+            Some(next) => open = next,
+            None => break,
+        }
+    }
+    kept.push_str(rest);
+    std::borrow::Cow::Owned(kept)
 }
 
 /// Byte ranges of `line` that sit inside a markdown inline-code span — the

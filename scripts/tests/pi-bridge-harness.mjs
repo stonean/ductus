@@ -15,7 +15,8 @@
 // entry).
 //
 // Not wired into CI: it loads the bridge's TypeScript directly, which needs
-// Node's built-in type stripping (Node 22.18+ / 23.6+), and CI pins Node 20.
+// Node's built-in type stripping (Node 22.18+ / 23.6+), and CI runs the
+// runner image's own Node, which this repository does not pin.
 // Run it by hand after changing the bridge:
 //
 //   (cd runtime && cargo build --release --locked)
@@ -336,12 +337,14 @@ await check("a runtime with render-status but no render-help registers only the 
 });
 
 await check("a runtime without render-status registers no status command", async () => {
-  // The stub would answer render-status, so only the tool list keeps it out.
-  const ANSWERS_AS_A_VIEW = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", project: "stub" }) }], isError: false });`;
-  const { tools, commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW) }));
-  await until(5000, () => tools.size > 0);
+  // The stub serves render-help and would answer render-status too, so only
+  // the tool list keeps the status command out.
+  const ANSWERS_AS_A_VIEW_AND_A_GUIDE = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", guide: "g", project: "stub" }) }], isError: false });`;
+  const { commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW_AND_A_GUIDE, ["render-help"]) }));
+  await until(5000, () => commands.size > 0);
   await sleep(200);
-  if (commands.size !== 0) throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+  if (commands.size !== 1 || !commands.has("stub-help"))
+    throw new Error(`registered ${[...commands.keys()].join(", ")}`);
 });
 
 console.log(results.join("\n"));

@@ -1,4 +1,5 @@
-//! `dashboard` — single-call pipeline-state surface for `/{project}:status`. What it
+//! `dashboard` — single-call pipeline-state data, which `render-status` renders as
+//! `/{project}:status`'s view. What it
 //! returns is `schema::descriptions::DASHBOARD`. The project config and the session file
 //! resolve through [`crate::schema::paths`]'s three-tier `CONFIG_CHAIN` / `SESSION_CHAIN`
 //! ladders (`.ductus/` → `.govern/` → legacy repo root, newest-wins) — host-agnostic,
@@ -67,7 +68,9 @@ pub fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
 ///
 /// The result is inline while it fits `[artifacts] read-size-bytes`, and past
 /// it carries `specs` and `tags-union` in the file it names and only their
-/// counts inline (`bounded_lists::place`; spec 080, AC7).
+/// counts inline (`bounded_lists::place`; spec 080, AC7). A non-empty
+/// `session-notices` or `session-unreadable` moves with them, its count
+/// inline, since nothing else bounds an unparseable session file's entry.
 pub(crate) fn run_as(
     _args: &DashboardArgs,
     repo: &Path,
@@ -75,10 +78,16 @@ pub(crate) fn run_as(
     now: SystemTime,
 ) -> Result<DashboardResult> {
     let mut result = load(repo, identity, now)?.into_result();
-    let lists = serde_json::json!({
+    let mut lists = serde_json::json!({
         "specs": &result.specs,
         "tags-union": &result.tags_union,
     });
+    if !result.session_notices.is_empty() {
+        lists["session-notices"] = serde_json::json!(&result.session_notices);
+    }
+    if !result.session_unreadable.is_empty() {
+        lists["session-unreadable"] = serde_json::json!(&result.session_unreadable);
+    }
     if let Some(file) = super::bounded_lists::place(
         repo,
         "dashboard",
@@ -89,6 +98,14 @@ pub(crate) fn run_as(
         result.form = ListsForm::File;
         result.specs = None;
         result.tags_union = None;
+        if !result.session_notices.is_empty() {
+            result.session_notices_count = Some(result.session_notices.len());
+            result.session_notices = Vec::new();
+        }
+        if !result.session_unreadable.is_empty() {
+            result.session_unreadable_count = Some(result.session_unreadable.len());
+            result.session_unreadable = Vec::new();
+        }
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -100,8 +117,8 @@ pub(crate) fn run_as(
 ///
 /// # Errors
 ///
-/// Every error [`run`] returns, and the errors resolving a spec's
-/// `references:` index returns for the readout.
+/// Every error [`run`] returns but those of `bounded_lists::place`, and the
+/// errors resolving a spec's `references:` index returns for the readout.
 pub(crate) fn view_model(
     repo: &Path,
     identity: Option<&Identity>,
@@ -154,7 +171,9 @@ impl Loaded {
             session_identity: self.session.identity,
             session_source: self.session.source,
             session_notices: self.session.notices,
+            session_notices_count: None,
             session_unreadable: self.session.unreadable,
+            session_unreadable_count: None,
             specs_count: self.specs.len(),
             specs: Some(self.specs),
             tags_union_count: self.tags_union.len(),
@@ -636,6 +655,51 @@ mod tests {
             super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()),
             Err(PrimitiveError::InvalidReadSize { .. })
         ));
+    }
+
+    /// Past the read size a non-empty `session-unreadable` moves to the list
+    /// file with the specs, its count inline, so the file form stays within
+    /// the bound however many session files fail to parse: the expiry sweep
+    /// leaves each one in place (spec 080, AC7; `BE-PAYLOAD-001`).
+    #[test]
+    fn the_file_form_moves_the_unreadable_session_files() {
+        let tmp = TempDir::new().unwrap();
+        write_spec(tmp.path(), "055-a", "status: planned\n", "");
+        write_ductus_session(tmp.path(), "feature = \"055-a\"\npath = \"specs/055-a\"\n");
+        let review = Identity::named("review").unwrap();
+        session::resolve(tmp.path(), Some(&review), fixed_now()).unwrap();
+        for n in 0..200 {
+            std::fs::write(
+                tmp.path()
+                    .join(format!(".ductus/sessions/broken-{n:03}.toml")),
+                "feature = [",
+            )
+            .unwrap();
+        }
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 2000\n",
+        )
+        .unwrap();
+
+        let result = super::run_as(
+            &DashboardArgs::default(),
+            tmp.path(),
+            Some(&review),
+            fixed_now(),
+        )
+        .unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.session_unreadable.is_empty(), "{result:?}");
+        assert_eq!(result.session_unreadable_count, Some(200));
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 2000, "{size} bytes");
+        let file: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(result.lists_file.as_deref().unwrap()))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(file["session-unreadable"].as_array().unwrap().len(), 200);
     }
 
     fn fixed_now() -> SystemTime {

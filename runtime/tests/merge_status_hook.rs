@@ -26,6 +26,9 @@ fn claude_printing(version: &str) -> tempfile::TempDir {
     )
     .unwrap();
     fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
+    // Run it once with no deadline, so macOS's scan of a new executable is
+    // spent before the probe's 10 s timeout starts (task 52's flake).
+    std::process::Command::new(&claude).output().unwrap();
     dir
 }
 

@@ -12,7 +12,7 @@ specs, then what /ductus installs for Claude Code, each file list read from
 framework/bootstrap/ductus.md's own tables. That is its *ductus-owned shared
 files* and *Project-specific shared files* (constitution, references, rules,
 templates, project documents, hooks) and its *Slash commands* (Claude's 17
-copies with the tool-search line), all through apply-manifest from the
+copies, each entry setting tool-search-line), all through apply-manifest from the
 archive's layout. Then AGENTS.md and CLAUDE.md from their templates, and
 `.gitignore` holding the template's managed block, all as *Shared files with
 conflict handling* writes them. Finally `.mcp.json` registering the runtime,
@@ -511,15 +511,24 @@ def measure(root: Path, prompt: str, raw: Path | None) -> dict:
                     {"tool": d.get("tool_name"),
                      "input": (inp.get("command") or inp.get("file_path") or json.dumps(inp))[:200]})
             row["result_head"] = (ev.get("result") or "")[:160]
+    stuck_at_eof = False
     try:
         proc.wait(timeout=KILL_REAP_TIMEOUT_S)  # stdout is at EOF: the child is ending
     except subprocess.TimeoutExpired:
         kill_group(proc)
-        timed_out.set()
+        stuck_at_eof = True
+        try:
+            proc.wait(timeout=KILL_REAP_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            pass
     finally:
         watchdog.cancel()
         if raw_out:
             raw_out.close()
+    if stuck_at_eof:
+        err.close()
+        raise SystemExit(f"measure-command-cost: `{' '.join(cmd[:3])} ...` closed its output but did not exit "
+                         f"within {KILL_REAP_TIMEOUT_S} s and was killed")
     if timed_out.is_set():
         err.close()
         raise SystemExit(f"measure-command-cost: `{' '.join(cmd[:3])} ...` did not finish within "
@@ -577,7 +586,7 @@ def main(argv) -> int:
         runs = [(None, prompt, args.target, None) for prompt in args.prompts]
     # Read once per run: what the figures were measured on.
     provenance = {"commit": run(["git", "rev-parse", "HEAD"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip(),
-                  "dirty": bool(run(["git", "status", "--porcelain"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip()),
+                  "dirty": bool(run(["git", "--no-optional-locks", "status", "--porcelain"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip()),
                   "claude_version": run(["claude", "--version"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip()}
     failed = False
     root = None

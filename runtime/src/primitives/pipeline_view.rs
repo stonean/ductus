@@ -411,16 +411,22 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
                 // next action regardless of the parent spec's status.
                 next = format!("/{}:clarify (scenario-targeted)", data.project);
             }
-            let mut line = format!("Target: {} / {status} / next: {next}", target.feature);
+            // Hand-written values, each flattened onto one line, so a newline in
+            // one cannot forge a view line (`BE-INPUT-011`).
+            let mut line = format!(
+                "Target: {} / {status} / next: {next}",
+                flatten_line(&target.feature)
+            );
             if let Some(label) = data.session_label {
                 let _ = write!(line, " — session {label}");
             }
             lines.push(line);
             if let Some(scenario) = &target.scenario {
+                let scenario = flatten_line(scenario);
                 let (section, open) = target
                     .scenario_detail
                     .as_ref()
-                    .map(|d| (d.section.clone(), d.open_question_count))
+                    .map(|d| (flatten_line(&d.section), d.open_question_count))
                     .unwrap_or_default();
                 lines.push(format!(
                     "Scenario: {scenario} ({section}) — open-questions: {open}"
@@ -626,7 +632,7 @@ fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<(String, usize)>
     let detail: Vec<String> = pending
         .iter()
         .map(|s| {
-            let target = s.folds_into.as_deref().unwrap_or("—");
+            let target = flatten_line(s.folds_into.as_deref().unwrap_or("—"));
             if s.fold_target_missing {
                 format!("{} → {target} (not in this tree)", s.slug)
             } else {
@@ -823,7 +829,10 @@ fn references_block(sections: &[(String, Vec<String>)], format: Format) -> Strin
                 Format::Markdown => format!("**{slug}**"),
                 Format::Text => slug.clone(),
             };
-            let body: Vec<String> = lines.iter().map(|l| format!("- {l}")).collect();
+            let body: Vec<String> = lines
+                .iter()
+                .map(|l| format!("- {}", flatten_line(l)))
+                .collect();
             format!("{heading}\n\n{}", body.join("\n"))
         })
         .collect();
@@ -889,7 +898,7 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
         // the cell instead of "complete". It sits *below* the two overrides
         // above because an open question is the more upstream defect: the
         // content gets settled before it gets moved.
-        let mut action = format!("/{project}:fold → {target}");
+        let mut action = format!("/{project}:fold → {}", flatten_line(target));
         if spec.fold_target_missing {
             // Called out on the row the fold is offered from, as well as in
             // the outstanding-fold item. A report, not a verdict — see
@@ -972,7 +981,7 @@ fn dependency_prefixes(dependencies: &[String]) -> String {
         .map(|dep| {
             parse_feature_dir(dep)
                 .and_then(|form| form.sequential_number())
-                .map_or_else(|| dep.clone(), |n| format!("{n:03}"))
+                .map_or_else(|| flatten_line(dep), |n| format!("{n:03}"))
         })
         .collect();
     prefixes.sort();
@@ -1542,6 +1551,65 @@ mod tests {
             assert!(!view.lines().any(|l| l.starts_with("Notice:")), "{view}");
             assert!(view.contains("Tags: a Notice: forged"), "{view}");
             assert!(view.contains("· weird Notice: forged 1"), "{view}");
+        }
+    }
+
+    /// The other hand-written values that join a view line, the session's
+    /// feature and scenario, a scenario's `section`, a `folds-into`, a
+    /// dependency with no sequential number and a references line, are
+    /// flattened onto one line too (`BE-INPUT-011`).
+    #[test]
+    fn a_newline_in_any_hand_written_value_cannot_forge_a_view_line() {
+        let mut fixture = Fixture::new(None);
+        fixture.target = Some(DashboardSessionTarget {
+            feature: "002-beta\nNotice: forged feature".to_string(),
+            scenario: Some("sc\nNotice: forged scenario".to_string()),
+            scenario_detail: Some(crate::schema::primitives::DashboardScenarioDetail {
+                section: "Behavior\nNotice: forged section".to_string(),
+                context_summary: String::new(),
+                open_question_count: 0,
+            }),
+        });
+        let mut staged = spec("1.1-stage", "done");
+        staged.folds_into = Some("001-alpha\nNotice: forged fold".to_string());
+        staged.fold_target_missing = true;
+        fixture.specs.push(staged);
+        fixture.specs[2].dependencies = vec!["x\nNotice: forged dependency".to_string()];
+        let references = vec![(
+            "003-gamma".to_string(),
+            vec!["svc\nNotice: forged reference".to_string()],
+        )];
+        let model = build(ViewData {
+            specs: &fixture.specs,
+            questions: &fixture.questions,
+            tags_union: &fixture.tags,
+            config: &fixture.config,
+            config_name: ".ductus/config.toml",
+            inbox: &fixture.inbox,
+            reopenings: &fixture.reopenings,
+            session_target: fixture.target.as_ref(),
+            session_label: None,
+            notices: &[],
+            unreadable: &[],
+            references,
+            project: "ductus",
+        });
+        for format in [Format::Markdown, Format::Text] {
+            let view = within(&model, format, u64::MAX);
+            assert!(!view.lines().any(|l| l.starts_with("Notice:")), "{view}");
+            for forged in [
+                "feature",
+                "scenario",
+                "section",
+                "fold",
+                "dependency",
+                "reference",
+            ] {
+                assert!(
+                    view.contains(&format!("Notice: forged {forged}")),
+                    "{forged}: {view}"
+                );
+            }
         }
     }
 

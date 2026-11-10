@@ -78,7 +78,9 @@ impl RuleSection {
 /// What this gives up: a heading the grammar rejects opens no rule, so a
 /// malformed rule heading, such as `### be-authn-001` or a rule at level 5,
 /// is no rule to [`parse_rule_sections`] and no reader of it sees one.
-/// [`other_headings`] lists those headings, so analyze's integrity checks can
+/// Neither does a heading [`parse_atx_heading`] rejects, though `CommonMark`
+/// renders it as one: a tab after the `#` run, as in `###\tBE-AUTHN-001`.
+/// [`other_headings`] lists both kinds, so analyze's integrity checks can
 /// find one (spec 080).
 pub(crate) fn heading_id_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
@@ -86,6 +88,12 @@ pub(crate) fn heading_id_regex() -> &'static Regex {
         Regex::new(r"(?m)^#{2,4}\s+([A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4})\b")
             .expect("hard-coded regex compiles")
     })
+}
+
+/// An ATX heading whose `#` run, one to six long, is followed by a tab.
+fn tab_heading_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"^[ \t]*#{1,6}\t").expect("hard-coded regex compiles"))
 }
 
 /// Each ATX heading in `content` that opens no rule section, with its
@@ -96,13 +104,22 @@ pub(crate) fn heading_id_regex() -> &'static Regex {
 /// reading the file (spec 080, task 57).
 pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
     let lines: Vec<&str> = content.lines().collect();
+    // A heading here is what `CommonMark` renders as one, which is wider than
+    // what the shared parser takes: it also counts a `#` run followed by a
+    // tab, which `parse_atx_heading` rejects, so that heading opens no rule
+    // and is listed rather than seen nowhere. Kept local, since widening the
+    // shared parser would change every reader of it.
     let headings: Vec<usize> = (0..lines.len())
-        .filter(|&i| parse_atx_heading(lines[i]).is_some())
+        .filter(|&i| {
+            parse_atx_heading(lines[i]).is_some() || tab_heading_regex().is_match(lines[i])
+        })
         .collect();
+    let opens_rule =
+        |line: &str| parse_atx_heading(line).is_some() && heading_id_regex().is_match(line);
     headings
         .iter()
         .enumerate()
-        .filter(|&(_, &i)| !heading_id_regex().is_match(lines[i]))
+        .filter(|&(_, &i)| !opens_rule(lines[i]))
         .map(|(k, &i)| {
             let end = headings.get(k + 1).copied().unwrap_or(lines.len());
             let mut under = &lines[i + 1..end];
@@ -305,6 +322,27 @@ mod tests {
         files.sort();
         assert!(!files.is_empty(), "no rule files under {}", dir.display());
         files
+    }
+
+    /// A rule heading with a tab after its `#` run renders as a heading but
+    /// opens no rule, since the shared heading parser rejects it, so
+    /// `other_headings` lists it with its body rather than leaving it in no
+    /// part of the result (spec 080; `QUAL-DELEG-001`).
+    #[test]
+    fn a_tab_separated_rule_heading_is_an_other_heading() {
+        let content = format!(
+            "{}\n###\tTS-RULE-002\n\n> Tests MUST run.\n",
+            rule("TS-RULE-001", "Tests SHOULD fail.", "v")
+        );
+        assert_eq!(parse_rule_sections(&content).len(), 1);
+        let other = other_headings(&content);
+        assert!(
+            other
+                .iter()
+                .any(|(_, heading, body)| heading == "###\tTS-RULE-002"
+                    && body == "> Tests MUST run."),
+            "{other:?}"
+        );
     }
 
     #[test]

@@ -17,6 +17,8 @@
 #      build the copies (its build writes nothing, so --check reports drift)
 #   D. this checkout's release build passes the check, so a rewording of its
 #      description that drops the field fails here rather than at a commit
+#   E. a runtime that never answers is stopped once DUCTUS_GEN_TIMEOUT_S
+#      passes, and the generator exits non-zero naming it (BE-TIMEOUT-001)
 #
 # Usage: scripts/tests/test-gen-claude-commands.sh
 # D needs a release build: runtime/target/release/ductus, or DUCTUS_BIN.
@@ -134,6 +136,32 @@ else
     *"$REFUSAL"*) fail "D: the release build at $REAL_BIN was refused" ;;
     "1:"*"missing in DEST"*) pass "D: the release build passes the check and builds the copies" ;;
     *) fail "D: --check with the release build gave no drift report to read (exit $rc): $out" ;;
+  esac
+fi
+
+# E. a runtime that never answers
+hung="$work/hung"
+cat > "$hung" <<'EOF2'
+#!/usr/bin/env bash
+# One process, as the runtime is, so stopping it closes its output.
+exec sleep 60
+EOF2
+chmod +x "$hung"
+root="$(scratch_root e)"
+started=$SECONDS
+if out="$(DUCTUS_GEN_TIMEOUT_S=1 DUCTUS_BIN="$hung" "$root/scripts/gen-claude-commands.sh" 2>&1)"; then
+  fail "E: a runtime that never answers exited 0"
+else
+  elapsed=$((SECONDS - started))
+  case "$out" in
+    *"$hung did not answer within 1s"*)
+      if [ "$elapsed" -lt 30 ]; then
+        pass "E: a runtime that never answers is stopped at the bound, named"
+      else
+        fail "E: the generator waited ${elapsed}s, past the 1s bound"
+      fi
+      ;;
+    *) fail "E: the generator failed without naming the bound: $out" ;;
   esac
 fi
 

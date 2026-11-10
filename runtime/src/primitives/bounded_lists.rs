@@ -15,7 +15,7 @@
 //! sha256 of its bytes, so two calls in one tree never overwrite each other's
 //! lists and a repeated call reuses its file. `{key}` is the feature for a
 //! per-feature primitive, [`ALL_SPECS`] for a corpus-wide one, and otherwise
-//! what the data model's table gives. The results directory ignores itself,
+//! what spec 080's data model's *Bounded results* gives. The results directory ignores itself,
 //! as `.ductus/review-rounds/` does, so no list file enters a scope.
 
 use std::path::Path;

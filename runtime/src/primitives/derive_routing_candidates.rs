@@ -28,7 +28,7 @@
 //! neither, so an empty `candidates` list means *examined and matched nothing*
 //! only when `skipped` is empty (`QUAL-CLAIM-001`).
 //!
-//! Read-only. Defined by
+//! Read-only but for the list file past the read size. Defined by
 //! `specs/022-deterministic-runtime/scenarios/specify-routes-before-scaffolding.md`.
 
 use std::collections::BTreeSet;
@@ -119,8 +119,10 @@ pub(crate) struct Derived {
 /// # Errors
 ///
 /// Returns [`crate::primitives::PrimitiveError::InvalidArgument`] when
-/// `description` is empty or whitespace-only — there is nothing to route.
-/// Every other failure is reported as a skipped source rather than raised: a
+/// `description` is empty or whitespace-only — there is nothing to route,
+/// and the error `Paths::load` returns for a project config that does not
+/// parse or names an invalid spec root. Every other failure is reported as a
+/// skipped source rather than raised: a
 /// derivation that cannot run must be distinguishable from one that found
 /// nothing, and an error would collapse the two into "no gate".
 pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result<Derived> {

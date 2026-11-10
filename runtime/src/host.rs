@@ -4,7 +4,8 @@
 //!
 //! The runtime resolves command files at two callsites
 //! (`main::run_exec` and `interpreter::payload::locate_command_file`),
-//! both of which used to bake in Claude Code's config-dir name and
+//! and since spec 080 also in `tool_loading::AlwaysLoaded::resolve` and
+//! `render_help::guide`; the first two used to bake in Claude Code's config-dir name and
 //! this repo's slash-command namespace. This module reads `project` from
 //! the resolved config file's `[host]` block (team-shared — the
 //! slash-command namespace is identical for every contributor) and
@@ -19,7 +20,7 @@
 //! `[host]` value, then to defaults that preserve the framework repo's
 //! behavior (`.claude` and the repo directory basename).
 //!
-//! The two callsites resolve the installed command file via
+//! Each callsite resolves the installed command file via
 //! [`Host::command_file_candidates`], which covers the three flat-namespaced
 //! layouts: `claude-style`'s `commands/` (Claude, Auggie), `opencode`'s
 //! singular `command/`, and `pi`'s flat project-hyphenated `prompts/`
@@ -52,7 +53,7 @@ const FALLBACK_PROJECT: &str = "ductus";
 /// to the registry.
 pub const AGENT_CONFIG_DIRS: &[&str] = &[".claude", ".augment", ".agents", ".opencode", ".pi"];
 
-/// Resolved host config — the values both command-resolution callsites
+/// Resolved host config — the values the command-resolution callsites
 /// need at lookup time. `cli_config_dir` is the host's per-user
 /// config-dir name (e.g., `.claude` for Claude Code, `.augment` for
 /// Auggie); `project` is the slash-command namespace under that dir

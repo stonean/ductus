@@ -11,11 +11,11 @@ Arguments: none, since `ductus exec` passes a step's primitive no arguments.
 ```
 
 - `rendered-markdown` — the markdown rendering of the view below, held with the rest of the result to the read size.
-- `project` — the slash-command namespace `Host::load` resolves, the `{project}` of every `/{project}:` hint in the view. Pi's bridge names its registered command from it.
+- `project` — the slash-command namespace `Host::load` resolves, the `{project}` of every `/{project}:` hint in the view. Pi's bridge names its registered commands from it on a runtime that serves no `render-help`, whose `project` it reads otherwise.
 - `form` — `inline` while the whole view fits, and `file` past it, when the view is cut.
 - `lists-file` — in the file form only: `.ductus/results/render-status/all-specs/{sha256}.json`, which holds `{"view": [line, …]}`, the whole view's lines, one per entry. Every line of the cut view that stands for a cut names it.
 
-If the Pi verifying run records that a displayed message renders no markdown, the primitive gains `format` (`markdown` by default, or `text`). It does not exist before then.
+The primitive takes no `format`: the Pi verifying run recorded that a displayed message renders markdown (`research.md`, task 12).
 
 ## `render-help`
 
@@ -92,7 +92,7 @@ One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`re
    - `Next actions:`, to `Next actions: {n} spec(s) under {m} next action(s) not shown — …`;
    - the Notice and Unreadable lines, to `Notice: {n} notice(s) not shown — …` and `Unreadable: {n} session file(s) not shown — …`.
 
-A cut view therefore never reads as complete. What every step leaves is the floor, about 600 bytes, and a read size below it gets the floor, over the bound.
+A cut view therefore never reads as complete. What every step leaves is the floor, the lines *Bound (AC24)* in `plan.md` lists, and a read size below it gets the floor, over the bound.
 
 ## `ductus hook status`
 
@@ -146,7 +146,7 @@ An entry is ductus's status entry when an inner hook's `command` equals the firs
 | --- | --- | --- |
 | `canonical` | boolean, `false` when absent | Merge Claude's canonical allow, deny and retired sets, which the runtime holds, beside any `allow`, `deny` and `revoke` passed, and ensure the directories below |
 
-Under `canonical`, `allow` is step 2's set of `framework/bootstrap/configure/claude.md` in its order, `deny` is step 3's, and `revoke` is step 4's, each followed by the entries the caller passed. The caller's `allow` entries are still refused past the ceiling. `permissions.additionalDirectories` is created when absent and then holds, compared by exact string, the absolute path of the configured spec root and of `{config-dir}/commands/{project}`, with no trailing slash. `{config-dir}` is the settings file's own directory. Every other entry stays where it is.
+Under `canonical`, `allow` is step 2's set of `framework/bootstrap/configure/claude.md`, its static entries in step 2's order and then each served tool in the registry's order, which is not the order of step 2's generated block; `deny` is step 3's and `revoke` is step 4's, each in its order. Each is followed by the entries the caller passed. The caller's `allow` entries are still refused past the ceiling. `permissions.additionalDirectories` is created when absent and then holds, compared by exact string, the absolute path of the configured spec root and of `{config-dir}/commands/{project}`, with no trailing slash. `{config-dir}` is the settings file's own directory. Every other entry stays where it is.
 
 | Result field | Type | Meaning |
 | --- | --- | --- |
@@ -184,14 +184,14 @@ Each tool the installed `target.md`'s steps name carries `"_meta": { "anthropic/
 
 ## Bounded results
 
-A primitive in the grows-set takes the shape `process-decisions` and `compute-review-scope` already return through `bounded_lists::place`:
+A primitive bounded through `bounded_lists::place`, the grows-set and `discover-rule-files`, takes the shape `process-decisions` and `compute-review-scope` already return:
 
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
-- a `{list}-count` per moved list is present in both forms;
+- a `{list}-count` per moved list is present in both forms, except `dashboard`'s session lists, below;
 - each moved list is present only in the inline form, where `scenario-files-unreadable` and `cross-spec-impact` are also absent when empty, as before;
 - in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, pretty-printed, so a list of strings holds one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
-A call that writes, `rewrite-spec-links` or an applied prune, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
+A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependencies` with `write`, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
 
 | Primitive | Lists moved |
 | --- | --- |
@@ -202,7 +202,7 @@ A call that writes, `rewrite-spec-links` or an applied prune, has written when i
 | `lint-markdown` | `violations` |
 | `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
 | `prune-plan` | `features`, `skipped` under `all` |
-| `dashboard` | `specs`, `tags-union` |
+| `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse |
 | `check-review-gate` | `violations`, `cross-spec-impact` |
 | `check-artifacts` | `findings`, `skipped` |
 | `check-corpus-links` | `broken`, `examined`, `skipped` |

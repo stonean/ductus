@@ -152,7 +152,7 @@ MUTATIONS = [
     (
         'M17 a cited section counts every name it holds, not only those it invokes',
         'src/primitives/tool_loading.rs',
-        '        tools.extend(\n            body.lines()\n                .filter(|line| !skip.skip(line))\n                .flat_map(invoked),\n        );\n',
+        '        tools.extend(\n            body.lines()\n                .filter(|line| !skip.skip(line))\n                .flat_map(|line| invoked(&without_inline_comments(line))),\n        );\n',
         '        tools.extend(registry::served_primitives().filter(|name| names_token(&body, name)));\n',
         'tool_loading::tests::a_cited_section_adds_the_tools_it_invokes_and_not_those_it_names',
     ),
@@ -215,8 +215,8 @@ MUTATIONS = [
     (
         'M26 a reference is read from the source root\'s reference/, not beside target\'s commands/',
         'src/primitives/apply_manifest.rs',
-        '        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)\n        .join("reference");\n',
-        '        .map(|_| source_root.join("reference"))\n        .unwrap_or_default();\n',
+        '        .map_or_else(PathBuf::new, Path::to_path_buf)\n        .join("reference");\n',
+        '        .map(|_| PathBuf::new())\n        .unwrap_or_default()\n        .join("reference");\n',
         'apply_manifest::tests::a_cited_reference_sections_tool_joins_the_line_in_both_layouts',
     ),
     (
@@ -243,8 +243,8 @@ MUTATIONS = [
     (
         'M30 a cited section\'s fenced or commented invocation counts',
         'src/primitives/tool_loading.rs',
-        '                .filter(|line| !skip.skip(line))\n                .flat_map(invoked),\n',
-        '                .filter(|line| { let _ = skip.skip(line); true })\n                .flat_map(invoked),\n',
+        '                .filter(|line| !skip.skip(line))\n                .flat_map(|line| invoked(&without_inline_comments(line))),\n',
+        '                .filter(|line| { let _ = skip.skip(line); true })\n                .flat_map(|line| invoked(&without_inline_comments(line))),\n',
         'tool_loading::tests::a_cited_sections_fenced_or_commented_invocation_adds_nothing',
     ),
     (
@@ -253,5 +253,12 @@ MUTATIONS = [
         '            return match text_step_tools(&source) {\n',
         '            return match parser::parse(&source, ALWAYS_LOADED_COMMAND).map(|procedure| step_tools(&procedure)) {\n',
         'tool_loading::tests::a_legacy_prose_copy_derives_as_apply_manifest_derives_it',
+    ),
+    (
+        'M32 a single-line comment in the command file is scanned',
+        'src/primitives/tool_loading.rs',
+        '        .filter(|line| !skip.skip(line))\n        .map(without_inline_comments)\n',
+        '        .filter(|line| !skip.skip(line))\n        .map(std::borrow::Cow::Borrowed)\n',
+        'tool_loading::tests::a_single_line_comments_invocation_or_citation_adds_nothing',
     ),
 ]

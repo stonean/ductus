@@ -69,13 +69,6 @@ MUTATIONS = [
         'discover_rule_files::tests::all_selects_every_file_past_surfaces_and_the_disabled_filter',
     ),
     (
-        'M7 all still applies the disabled-rule-files filter',
-        'src/primitives/discover_rule_files.rs',
-        '        if !args.all {\n',
-        '        if !args.all || args.all {\n',
-        'discover_rule_files::tests::all_selects_every_file_past_surfaces_and_the_disabled_filter',
-    ),
-    (
         'M8 an extra file is not listed',
         'src/primitives/discover_rule_files.rs',
         '        files.push(extra.clone());\n',

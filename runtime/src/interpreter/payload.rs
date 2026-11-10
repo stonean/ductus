@@ -221,8 +221,9 @@ fn is_walker_internal_key(key: &str) -> bool {
 
 /// The context key naming each list [`restore_lists`] read back from a list
 /// file and the merge kept, so the legacy tail leaves it out: a host reading
-/// that tail sees a bounded result as the primitive returned it, its counts
-/// and `lists-file`, and the typed prefix carries what a request needs. The
+/// that tail sees each bounded result's counts, but `form` and `lists-file`
+/// as the walk's last result left them, so a restored list reaches a request
+/// only through the typed prefix. The
 /// walker keeps it current, dropping a key a later inline result replaced.
 pub(super) const RESTORED_LISTS: &str = "walker:restored-lists";
 

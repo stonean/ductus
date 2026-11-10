@@ -51,7 +51,7 @@
 //! # Ceiling
 //!
 //! An `allow` entry outside Claude's canonical allow set is refused before
-//! anything is read ([`canonical_allow`]), so the primitive grants nothing
+//! the settings file is read ([`canonical_allow`]), so the primitive grants nothing
 //! `/configure` does not (BE-AUTHZ-004; spec 022 task 11, the owner's answer
 //! (a)). A host auto-approves the runtime's tools, and the agent calling one
 //! could otherwise write any rule into the file its own writes are prompted
@@ -95,6 +95,10 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///   bootstrap-substituted `{cli-config-dir}/settings.local.json`); no
 ///   caller needs an out-of-repo destination.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
+/// - Under `canonical`, [`PrimitiveError::Toml`] when the config or session
+///   file `Host::load` and `Paths::load` read does not parse, and
+///   [`PrimitiveError::InvalidSpecsRoot`] for an invalid `[paths] specs-root`,
+///   each naming the file, before the settings file is read.
 /// - [`PrimitiveError::Json`] when an existing file fails JSON parse.
 /// - [`PrimitiveError::JsonSchema`] when `permissions.allow` /
 ///   `permissions.deny`, or under `canonical` `permissions.additionalDirectories`,
@@ -258,9 +262,10 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "mcp__ductus__write-supersession-annotation",
 ];
 
-/// [`canonical_allow`] in step 2's order: [`CANONICAL_ALLOW_STATIC`], then
-/// `mcp__ductus__<name>` for each served primitive in registry order. The
-/// canonical call appends missing entries in this order.
+/// [`canonical_allow`] in the order the canonical call appends missing
+/// entries: [`CANONICAL_ALLOW_STATIC`], in step 2's order, then
+/// `mcp__ductus__<name>` for each served primitive in registry order, which
+/// is not the order of step 2's generated block.
 fn canonical_allow_ordered() -> Vec<String> {
     CANONICAL_ALLOW_STATIC
         .iter()
@@ -1329,7 +1334,10 @@ mod tests {
             message.contains("Write(.ductus/config.toml)"),
             "names the offending entry: {message}"
         );
-        assert!(message.contains("entry appear"), "singular form: {message}");
+        assert!(
+            message.contains("share 1 entry:"),
+            "singular form: {message}"
+        );
         assert!(
             !tmp.path().join("settings.json").exists(),
             "a rejected call writes nothing"
@@ -1351,7 +1359,7 @@ mod tests {
         .unwrap_err();
 
         let message = err.to_string();
-        assert!(message.contains("2 entries appear"), "plural: {message}");
+        assert!(message.contains("share 2 entries:"), "plural: {message}");
         assert!(message.contains("Write(.ductus/config.toml)"), "{message}");
         assert!(message.contains("Write(.ductus/session.toml)"), "{message}");
     }

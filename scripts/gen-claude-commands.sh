@@ -32,7 +32,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) check_mode=1 ;;
     -h|--help)
-      sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -85,12 +85,46 @@ if ! command -v "$ductus_bin" > /dev/null 2>&1; then
   echo "  Build it with (cd runtime && cargo build --release), or set DUCTUS_BIN." >&2
   exit 1
 fi
+# Every wait on the runtime is bounded (BE-TIMEOUT-001): it is a local,
+# deterministic process, so a call that outlasts the bound is hung, and the
+# pre-commit hook that runs this would otherwise wait on it with no end.
+# DUCTUS_GEN_TIMEOUT_S overrides the bound, in whole seconds.
+runtime_timeout="${DUCTUS_GEN_TIMEOUT_S:-120}"
+case "$runtime_timeout" in
+  '' | *[!0-9]* | 0)
+    echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_S must be a positive whole number of seconds, got '$runtime_timeout'." >&2
+    exit 1
+    ;;
+esac
+# Run "$@" as a background job that a watchdog stops once the bound passes,
+# since macOS ships no timeout(1). The watchdog holds none of the caller's
+# output, so a command substitution around this does not wait on its sleep.
+bounded() {
+  local pid rc=0 watchdog
+  "$@" &
+  pid=$!
+  (
+    sleep "$runtime_timeout" &
+    nap=$!
+    trap 'kill "$nap" 2>/dev/null; exit 0' TERM
+    wait "$nap"
+    kill "$pid" 2>/dev/null
+  ) < /dev/null > /dev/null 2>&1 &
+  watchdog=$!
+  wait "$pid" || rc=$?
+  kill "$watchdog" 2>/dev/null || true
+  wait "$watchdog" 2>/dev/null || true
+  if [ "$rc" -eq 143 ]; then
+    echo "gen-claude-commands: $1 did not answer within ${runtime_timeout}s and was stopped." >&2
+  fi
+  return "$rc"
+}
 # A runtime that predates tool-search-line (spec 080) ignores the field, so it
 # would write every Claude copy without its ToolSearch line, and the pre-commit
 # hook would commit them: 81285165 did. Refuse it before anything is written.
 # The help is read whole first: `grep -q` in a pipeline under pipefail can
 # fail a match by closing the pipe early.
-if ! manifest_help="$("$ductus_bin" apply-manifest --help 2>&1)"; then
+if ! manifest_help="$(bounded "$ductus_bin" apply-manifest --help 2>&1)"; then
   echo "gen-claude-commands: $ductus_bin apply-manifest --help failed:" >&2
   printf '%s\n' "$manifest_help" >&2
   exit 1
@@ -132,7 +166,7 @@ write_claude_manifest() {
 build_claude_copies() {
   (
     cd "$1"
-    "$ductus_bin" apply-manifest --source-root framework --target-root . \
+    bounded "$ductus_bin" apply-manifest --source-root framework --target-root . \
       --entries-json "$2/entries.json" --substitutions-json "$2/substitutions.json"
   ) > /dev/null
 }

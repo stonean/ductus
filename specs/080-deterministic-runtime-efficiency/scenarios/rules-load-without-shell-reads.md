@@ -6,7 +6,7 @@ section: "Behavior"
 
 ## Context
 
-review's §Load rules loads every selected rule file inline, and analyze asks about each loaded rule. In the cost round, review read the rule files in four shell calls: their sizes, heading counts, headings, and the Statements of five rules. analyze read them in three, and its `grep` of every Verification line came back as a 44,805-character saved output, read back whole (`research.md`, R5). review ran 27 turns over 1,502,864 input tokens, analyze 27 over 1,266,279.
+review's §Load rules loaded every selected rule file inline, and analyze asked about each loaded rule. In the cost round, review read the rule files in four shell calls: their sizes, heading counts, headings, and the Statements of five rules. analyze read them in three, and its `grep` of every Verification line came back as a 44,805-character saved output, read back whole (`research.md`, R5). review ran 27 turns over 1,502,864 input tokens, analyze 27 over 1,266,279.
 
 ## Behavior
 

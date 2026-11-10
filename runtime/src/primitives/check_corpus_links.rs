@@ -18,7 +18,8 @@
 //! adopter's pre-commit hook runs, so a deletion fails at the commit that makes
 //! it rather than at a reader's next traversal.
 //!
-//! Read-only, and it **reports rather than repairs**. The right fix depends on
+//! Read-only but for the list file past the read size, and it **reports
+//! rather than repairs**. The right fix depends on
 //! why the target went missing — a depth error is re-pointed, a deliberate
 //! removal is named in prose instead of linked — and a rewrite that guessed
 //! wrong is worse than a report that is precise.

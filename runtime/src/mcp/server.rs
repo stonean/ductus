@@ -269,8 +269,10 @@ fn strip_numeric_formats(value: &mut Value) {
 /// `diff-cross-spec`, `measure-reopenings`) run a full-history `libgit2` revwalk that is likewise
 /// CPU-bound and unbounded in a large adopter repo, so they route here too,
 /// as do `check-review-gate`, which shells out to the markdown linter and
-/// reads history for its rename exemption, `dashboard`, which blames the
-/// inbox for its oldest item and measures reopenings, and `classify-spec-edit`,
+/// reads history for its rename exemption, `dashboard` and `render-status`,
+/// which blame the inbox for its oldest item and measure reopenings,
+/// `merge-status-hook`, which waits on `claude --version` under its probe
+/// timeout, and `classify-spec-edit`,
 /// which diffs a tree against the working tree. `write-session`, `resolve-session` and
 /// `retarget-sessions` wait on the sessions lock for up to ten seconds, so
 /// they take the seam as well. The CLI surfaces
@@ -582,9 +584,11 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<MergeStatusHookArgs>,
     ) -> Result<Json<MergeStatusHookResult>, String> {
-        primitives::merge_status_hook::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
+        // Waits on `claude --version` under its probe timeout, so the
+        // blocking pool, as lint-markdown's subprocess does.
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::merge_status_hook::run(&params.0, repo.as_path()))
+            .await
     }
 
     #[tool(

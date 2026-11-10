@@ -2,7 +2,7 @@
 //! server flags the installed `target` command's tools to load up front
 //! ([`AlwaysLoaded`]), and every other Claude Code copy loads its own in one
 //! search through the line [`add_tool_search_line`] writes. Both read the
-//! same derivation, [`step_tools`].
+//! same derivation, [`text_step_tools`].
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -13,7 +13,7 @@ use regex::Regex;
 use crate::host::Host;
 use crate::parser::{self, ParseError};
 use crate::primitives::resolve_anchor::{HeadingLine, cited_heading, heading_lines, section_range};
-use crate::primitives::{SkipScanner, line_ending_of};
+use crate::primitives::{SkipScanner, line_ending_of, without_inline_comments};
 use crate::schema::procedure::{Procedure, Step};
 use crate::schema::registry;
 
@@ -202,8 +202,14 @@ pub fn cited_tools<E>(
     command: &str,
     mut read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<BTreeSet<&'static str>, E> {
+    // A comment is content, not an invocation or a citation, whether it spans
+    // lines or sits on one (plan *Batched (AC29)*).
     let mut skip = SkipScanner::default();
-    let lines: Vec<&str> = text.lines().filter(|line| !skip.skip(line)).collect();
+    let lines: Vec<std::borrow::Cow<'_, str>> = text
+        .lines()
+        .filter(|line| !skip.skip(line))
+        .map(without_inline_comments)
+        .collect();
     let own_reference = lines
         .iter()
         .any(|line| {
@@ -228,6 +234,8 @@ pub fn cited_tools<E>(
             if skip.skip(line) {
                 continue;
             }
+            let line = without_inline_comments(line);
+            let line: &str = &line;
             let named: Vec<Doc> = reference_regex()
                 .captures_iter(line)
                 .map(|cap| Doc::Reference(cap[1].to_owned()))
@@ -285,7 +293,7 @@ pub fn cited_tools<E>(
         tools.extend(
             body.lines()
                 .filter(|line| !skip.skip(line))
-                .flat_map(invoked),
+                .flat_map(|line| invoked(&without_inline_comments(line))),
         );
         cite(&doc, &body, &mut docs, &mut queue)?;
     }
@@ -910,6 +918,24 @@ mod tests {
         );
         let reference = "## Validation gate\n\nInvoke `derive-boundary`.\n\n```text\n\
                          Invoke `mark-task`.\n```\n\n<!--\nInvoke `append-task`.\n-->\n";
+        assert_eq!(
+            cited(&command, &[("x", reference)]),
+            vec!["derive-boundary"]
+        );
+    }
+
+    /// A comment that opens and closes on one line is content too, whether it
+    /// holds an invocation in the command file or in a cited section, or a
+    /// citation: none joins the line (plan *Batched (AC29)*: "outside fenced
+    /// blocks and HTML comments").
+    #[test]
+    fn a_single_line_comments_invocation_or_citation_adds_nothing() {
+        let command = format!(
+            "{OWN}<!-- Invoke `append-task` here later. -->\n\n## Instructions\n\n\
+             1. Run **§Validation gate** in `.ductus/reference/x.md`. <!-- and §Other -->\n"
+        );
+        let reference = "## Validation gate\n\nInvoke `derive-boundary`. <!-- invoke `mark-task` -->\n\n\
+                         ## Other\n\nInvoke `label-criteria`.\n";
         assert_eq!(
             cited(&command, &[("x", reference)]),
             vec!["derive-boundary"]

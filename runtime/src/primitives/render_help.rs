@@ -60,7 +60,7 @@ pub fn guide(repo: &Path) -> Result<String> {
         return extract(&source).ok_or_else(|| PrimitiveError::MalformedCommandCopy {
             path: path.clone(),
             reason: format!(
-                "no guide: fewer than two `{RULE}` lines after its `{INSTRUCTIONS_HEADING}` heading"
+                "no guide: no `{INSTRUCTIONS_HEADING}` heading followed by two `{RULE}` lines with text between them"
             ),
         });
     }
@@ -75,7 +75,8 @@ pub fn guide(repo: &Path) -> Result<String> {
 /// line that is wholly an HTML comment, as the generator's table markers are,
 /// is removed, together with a blank line the removal would leave beside
 /// another, and the leading and trailing blank lines are trimmed. `None` when
-/// the copy has no such heading or fewer than two such lines after it.
+/// the copy has no such heading, fewer than two such lines after it, or
+/// nothing but blank lines and comments between them.
 fn extract(source: &str) -> Option<String> {
     let lines: Vec<&str> = source.lines().collect();
     let heading = lines

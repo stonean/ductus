@@ -23,7 +23,9 @@
 //! Cross-cutting concerns:
 //!
 //! - **Pinned exemption**: the args' `pinned` list short-circuits before
-//!   any read or write — pinned entries record `skipped-pinned`
+//!   the entry's source is read or its destination written (a pinned
+//!   `commands/target.md` under `tool-search-line` is read where it is
+//!   installed, never written) — pinned entries record `skipped-pinned`
 //!   regardless of strategy. Pinned is checked first because it's the
 //!   absolute "do not touch" signal.
 //! - **`keep-literals`**: per-entry list of substitution keys to
@@ -126,8 +128,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   strategy is read.
 /// - [`PrimitiveError::InvalidArgument`] when an entry sets
 ///   `tool-search-line` and the manifest installs no `commands/target.md`,
-///   installs two different ones, or installs one that is missing or does not
-///   parse, checked before any write; and when such an entry is
+///   installs two different ones, or installs an unpinned one that is
+///   missing or does not parse, checked before any write; and when such an entry is
 ///   not UTF-8 text, holds a malformed procedure, or names a reference that
 ///   is not in the source root or is not UTF-8 text, checked before any write
 ///   for a command or skill destination and when the walk reaches it
@@ -549,6 +551,10 @@ struct ToolSearch {
     /// is read from: `reference/` beside the `commands/target.md` entry's
     /// `commands/` directory.
     reference_dir: PathBuf,
+    /// The source root, and `reference_dir` relative to it, so a reference
+    /// is held inside the root as an entry's source is (`BE-INPUT-004`).
+    source_root: PathBuf,
+    reference_rel: PathBuf,
 }
 
 /// The context a `tool-search-line` entry's line is derived against. The
@@ -615,11 +621,12 @@ fn tool_search_context(
         }
     };
     let path = source_root.join(source);
-    let reference_dir = path
+    let reference_rel = Path::new(source)
         .parent()
         .and_then(Path::parent)
-        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)
+        .map_or_else(PathBuf::new, Path::to_path_buf)
         .join("reference");
+    let reference_dir = source_root.join(&reference_rel);
     if let Some(entry) = installing
         .iter()
         .find(|entry| pinned_match(pinned, &entry.dest))
@@ -631,6 +638,8 @@ fn tool_search_context(
         return Ok(ToolSearch {
             always_loaded,
             reference_dir,
+            source_root: source_root.to_path_buf(),
+            reference_rel,
         });
     }
     let text = match fs::read_to_string(&path) {
@@ -652,6 +661,8 @@ fn tool_search_context(
     Ok(ToolSearch {
         always_loaded,
         reference_dir,
+        source_root: source_root.to_path_buf(),
+        reference_rel,
     })
 }
 
@@ -666,7 +677,9 @@ fn tool_search_context(
 /// As [`read_and_substitute`], and [`PrimitiveError::InvalidArgument`] when
 /// an entry setting `tool-search-line` is not UTF-8 text, holds a malformed
 /// procedure, or names a reference that is not in the source root or is not
-/// UTF-8 text.
+/// UTF-8 text. A named reference, or its `reference/` directory, that links
+/// out of the source root is refused with [`super::validate_contained`]'s
+/// error.
 fn read_entry(
     source: &Path,
     entry: &ManifestEntry,
@@ -693,6 +706,11 @@ fn read_entry(
         .unwrap_or_default();
     let cited = tool_loading::cited_tools(&text, command, |name| {
         let path = tool_search.reference_dir.join(format!("{name}.md"));
+        // Held inside the source root before it is opened, as every entry's
+        // source is: a reference, or `reference/`, linked out of the root is
+        // refused rather than followed (`BE-INPUT-004`).
+        let rel = tool_search.reference_rel.join(format!("{name}.md"));
+        super::validate_contained(&tool_search.source_root, &rel.to_string_lossy())?;
         let (bytes, _) = match read_and_substitute(&path, None, substitutions) {
             Err(PrimitiveError::Io { source, .. })
                 if source.kind() == std::io::ErrorKind::NotFound =>
@@ -820,6 +838,22 @@ mod tests {
             .iter()
             .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
             .collect()
+    }
+
+    #[test]
+    fn the_pi_bridge_survives_pis_substitutions() {
+        // `/ductus` installs the bridge through Pi's per-agent apply-manifest
+        // call, with Pi's substitutions, while its Bridge step promises a
+        // verbatim copy (`framework/bootstrap/ductus.md`): the shipped bridge
+        // must hold no key that map substitutes, or the installed copy
+        // registers misnamed commands (spec 080, AC26).
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../framework/bootstrap/pi/ductus-bridge.ts");
+        let bridge = fs::read_to_string(&path).unwrap();
+        let map = subs(&[("project", "acme"), ("cli-config-dir", ".pi")]);
+        let (out, count) = apply_substitutions(&bridge, &map);
+        assert_eq!(count, 0, "the bridge holds a substituted key");
+        assert_eq!(out, bridge);
     }
 
     #[test]
@@ -2539,6 +2573,37 @@ mod tests {
                 "layout `{root}`: {written}"
             );
         }
+    }
+
+    /// A reference a flagged command names that links out of the source root
+    /// is refused, as an entry's source linked out of it is, rather than
+    /// followed into the line (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_named_reference_linked_out_of_the_source_root_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("commands/x.md", CITING), ("commands/target.md", TARGET)],
+        );
+        fs::write(tmp.path().join("outside.md"), REFERENCE).unwrap();
+        fs::create_dir_all(src.join("reference")).unwrap();
+        std::os::unix::fs::symlink(tmp.path().join("outside.md"), src.join("reference/x.md"))
+            .unwrap();
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                flagged("commands/x.md", ".claude/commands/acme/x.md"),
+                flagged("commands/target.md", ".claude/commands/acme/target.md"),
+            ],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(err.to_string().contains("reference/x.md"), "{err}");
+        assert!(!dst.join(".claude/commands/acme/x.md").exists());
     }
 
     /// A reference a flagged command names that the source root lacks halts

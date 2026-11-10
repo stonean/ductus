@@ -281,7 +281,7 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 
 ## 34. Scenario: help answers with no model turn
 
-Design it in `plan.md` before any code: the plan has none yet. `merge-status-hook` recognizes its entry by command and matches `{project}:status`, so help is a second entry or a widened matcher, and the plan chooses. On Pi the guide takes task 28's respelling in the bridge. The `hook` surface and `merge-status-hook` are 022's, so 022's task-20 signpost gains help. Verify as task 8 did, by typing it in Claude Code, and with `scripts/measure-command-cost.py --round --only help --hook --permissions adopter`. On Pi, verify with the bridge harness and a real `pi --mode rpc` run, as `658c0ffc`'s message records. A runtime change follows `docs/developing-ductus.md` *Landing a runtime change*.
+Designed in `plan.md`'s *Help answers through the status surfaces* before any code. `merge-status-hook` recognizes its entry by command and matches `{project}:status`, so help is a second entry or a widened matcher, and the plan chooses. On Pi the guide takes task 28's respelling in the bridge. The `hook` surface and `merge-status-hook` are 022's, so 022's task-20 signpost gains help. Verify as task 8 did, by typing it in Claude Code, and with `scripts/measure-command-cost.py --round --only help --hook --permissions adopter`. On Pi, verify with the bridge harness and a real `pi --mode rpc` run, as `658c0ffc`'s message records. A runtime change follows `docs/developing-ductus.md` *Landing a runtime change*.
 
 - [x] Implement the behavior described in `scenarios/help-answers-with-no-model-turn.md`
 
@@ -393,10 +393,7 @@ Tasks 44 to 54 hold what the first review's passes found. Those passes ran on 20
   - `scripts/gen-claude-commands.sh:20-23`: `--check` also exits 1 when the runtime cannot build the copies
 - [x] Add the runtime sources the generator now depends on to `.github/workflows/generators.yml`'s `pull_request` paths. Add a test that drives the MCP server's stderr notice (`mcp/server.rs:151-154`). Fix `destination-checks.py`'s M3 anchor, which still names `always_loaded`. Then run `run.py --check` on every list touched
 
-- **Done when**:
-  - a test shows a pinned target's tools loading through the line or the server;
-  - one function derives the always-loaded set for both uses;
-  - `run.py --check` passes on `tool-loading.py` and `destination-checks.py`.
+- **Done when**: a test shows a pinned target's tools loading through the line or the server, one function derives the always-loaded set for both uses, and `run.py --check` passes on `tool-loading.py` and `destination-checks.py`.
 
 ## 47. Pi's commands register when the load-time view fails
 
@@ -412,7 +409,7 @@ Tasks 44 to 54 hold what the first review's passes found. Those passes ran on 20
 
 ## 48. Rule loading keeps analyze's integrity checks
 
-The first item's done-when, that analyze reports a malformed rule heading, has not been observed. `discover-rule-files` lists the heading under `other-headings`, and §Rules says to report it, but only an analyze run shows the model doing so. That run is a model call on the owner's account: price it from `research.md`'s *Command cost (AC8)* analyze row ($1.072 on the 40-spec fixture), and ask the owner before running it, on a fixture holding a malformed rule heading.
+The first item's done-when, that analyze reports a malformed rule heading, was observed in an analyze run the owner approved, priced from `research.md`'s *Command cost (AC8)* analyze row, and again after task 57 (`research.md`, *Analyze's malformed-rule-heading check (task 48)*).
 
 `framework/reference/analyze.md` §Rules now checks rule headings "from the rules the result lists". But `rule_sections::heading_id_regex` (`^#{2,4}\s+[A-Z]{2,5}-…`) drops exactly the malformed headings those checks exist to catch (QUAL-DELEG-001, SHOULD). How the checks see a malformed heading is a design question.
 
@@ -446,9 +443,7 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
   - the `# Errors` of `check_artifacts.rs:138-152`, `check_review_gate.rs:30-46` and `dashboard.rs:46-55`.
 - [x] The audit scripts' lists-file branches read a missing list as empty (`scripts/audit/lib.sh:146-150`, `broken-relative-links.sh:96-116`, `manifest-destination-links.sh:170-179`). Halt instead, or waive with the reason
 
-- **Done when**:
-  - each new test fails with its behavior removed;
-  - `run.py --check` passes on `scope-results-bounded.py` and M4 runs killed.
+- **Done when**: each new test fails with its behavior removed, and `run.py --check` passes on `scope-results-bounded.py` and M4 runs killed.
 
 ## 50. AC7's population covers routing, drift and cycles
 

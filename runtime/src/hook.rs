@@ -29,6 +29,10 @@ use crate::session;
 /// root.
 pub const PROJECT_DIR_VAR: &str = "CLAUDE_PROJECT_DIR";
 
+/// The Claude Code hook event the hooks answer, under which
+/// `merge-status-hook` installs their entries.
+pub const HOOK_EVENT: &str = "UserPromptExpansion";
+
 /// The project root the hook acts on: `project_dir`, the startup value of
 /// [`PROJECT_DIR_VAR`], when it is set and non-empty, and `cwd` otherwise.
 #[must_use]
@@ -70,7 +74,7 @@ impl BlockResponse {
             decision: "block",
             reason,
             hook_specific_output: HookSpecificOutput {
-                hook_event_name: "UserPromptExpansion",
+                hook_event_name: HOOK_EVENT,
                 suppress_original_prompt: true,
             },
         }

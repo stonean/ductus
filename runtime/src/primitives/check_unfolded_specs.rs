@@ -7,7 +7,8 @@
 //! merge that ends a branch's life leaves its staging directories behind and
 //! says nothing about them. This check is what notices.
 //!
-//! Read-only, and it **reports rather than repairs**: which upstream section
+//! Read-only but for the list file past the read size, and it **reports
+//! rather than repairs**: which upstream section
 //! a spec's content belongs in is a judgement `/{project}:fold` puts to the
 //! operator, not one a scan can make.
 //!

@@ -600,7 +600,8 @@ pub struct DiscoverRuleFilesResult {
     /// neither exists.
     pub rules_dir: String,
     /// Selected rule-file basenames, sorted, after surface selection and the
-    /// disabled-rule-files filter.
+    /// disabled-rule-files filter, or every rule file in the directory under
+    /// `all`.
     pub selected: Vec<String>,
     /// Ordered stdout notice lines to emit verbatim: a line per unknown key
     /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
@@ -2712,15 +2713,26 @@ pub struct DashboardResult {
     pub session_source: Option<SessionSource>,
     /// Session notices the process's next command will deliver — also
     /// rendered as `Notice:` lines in `render-status`'s view. The dashboard's
-    /// read is a peek, so none is consumed here.
+    /// read is a peek, so none is consumed here. Absent when empty, and in the
+    /// file form, which moves it to the list file.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub session_notices: Vec<SessionNotice>,
+    /// In the file form, the entries `session-notices` moved to the list file;
+    /// absent inline and when there are none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_notices_count: Option<usize>,
     /// Repo-relative session files the peek could not parse while checking
     /// for other sessions on the target's feature — also rendered as
     /// `Unreadable:` lines, so "no co-target" never hides "not checked"
-    /// (AC22). Absent when empty.
+    /// (AC22). Absent when empty, and in the file form, which moves it to the
+    /// list file: the expiry sweep leaves a file it cannot parse, so the list
+    /// has no bound of its own.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub session_unreadable: Vec<String>,
+    /// In the file form, the entries `session-unreadable` moved to the list
+    /// file; absent inline and when there are none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_unreadable_count: Option<usize>,
     /// Per-spec entries in directory-name order. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub specs: Option<Vec<DashboardSpec>>,
@@ -2746,12 +2758,12 @@ pub struct DashboardResult {
     /// how many `in-progress` specs have no unchecked task, rendered as the view's
     /// `Reopenings:` line on every run (spec 079, AC19).
     pub reopenings: ReopeningCounts,
-    /// Where `specs` and `tags-union` are: in this result, or past
-    /// `[artifacts] read-size-bytes` in the file `lists-file` names (spec 080,
-    /// AC7).
+    /// Where `specs` and `tags-union` are, with the session lists when they
+    /// are non-empty: in this result, or past `[artifacts] read-size-bytes` in
+    /// the file `lists-file` names (spec 080, AC7).
     pub form: ListsForm,
-    /// In the file form, the file holding both lists whole, from the project
-    /// root: a JSON object with their two keys.
+    /// In the file form, the file holding the moved lists whole, from the
+    /// project root: a JSON object keyed by their names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -5987,7 +5999,7 @@ pub enum InboxState {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct InboxStanding {
-    /// The inbox's state. With [`Self::oldest`], `dashboard` renders one of
+    /// The inbox's state. With [`Self::oldest`], the pipeline view renders one of
     /// four rows: outstanding with a date, outstanding with age
     /// undeterminable, clean, or no file.
     pub state: InboxState,

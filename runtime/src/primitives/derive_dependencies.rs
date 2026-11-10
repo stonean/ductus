@@ -556,6 +556,42 @@ mod tests {
         format!("---\nstatus: done\n{deps_line}\n---\n\n{body}\n")
     }
 
+    /// A malformed `[artifacts] read-size-bytes` halts a writing call before
+    /// it rewrites any spec, as it halts `prune-tasks` and `rewrite-spec-links`
+    /// (`DERIVE_DEPENDENCIES`; spec 080).
+    #[test]
+    fn a_malformed_read_size_halts_a_writing_call_before_any_write() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let a = tmp.path().join("specs/001-a/spec.md");
+        let b = tmp.path().join("specs/002-b/spec.md");
+        git_fixture::write(&a, &spec("dependencies: []", "nothing"));
+        git_fixture::write(&b, &spec("dependencies: []", "[a](../001-a/spec.md)"));
+        git_fixture::commit_all(&repository, "feat: specs");
+        git_fixture::write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 0\n",
+        );
+        let before = std::fs::read_to_string(&b).unwrap();
+        let err = super::run(
+            &DeriveDependenciesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                crate::primitives::PrimitiveError::InvalidReadSize { .. }
+            ),
+            "{err}"
+        );
+        assert_eq!(std::fs::read_to_string(&b).unwrap(), before);
+    }
+
     /// A project in a subdirectory of its repository, with two tracked specs
     /// and an untracked draft. The project root is not a repository to open,
     /// and the index names every path from the work tree, so every listing
