@@ -352,3 +352,193 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 - [x] Run a real `/ductus` bootstrap on a Claude Code adopter, as task 11 did, by `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that its installed `plan`, `implement` and `prune` copies' lines name `derive-boundary`, `append-task` and `prune-project`, and that each Claude copy's line equals the one this repository's generator writes, the project name substituted, as the staging check at 44284f1a found for all 17. The subject is an upgrade from `ductus-v0.59.11`, Claude only, since tasks 34, 35 and 36 changed `framework/bootstrap/` after task 11's last real run (owner, 2026-11-10). `apply-manifest` now reads each reference a command names from the archive's `framework/reference/`. That read was exercised by the cost harness's fixture, which runs `apply-manifest` from the archive's layout, and by `a_cited_reference_sections_tool_joins_the_line_in_both_layouts`, but not through `/ductus`'s own staging. It precedes the release tag, not the review
 
 - **Done when**: `research.md` records the bootstrap's installed lines, with its method, date and commit.
+
+## 44. The view's bound holds the whole result
+
+Tasks 44 to 54 hold what the first review's passes found. Those passes ran on 2026-11-10 at 6f2e314f over the 168 scope entries from base 150b4dc1, and no record was written. The owner chose to fix every gating item rather than defer it (2026-11-10). Once 44 to 54 are ticked, the spec owes `/ductus:review`, its first record, then `/ductus:analyze` and the completion gate. A task whose prose names a design question puts it to the owner before code, one question at a time, with each option's cost, and writes the choice into `plan.md`.
+
+`render()` in `runtime/src/primitives/pipeline_view.rs` collapses and cuts only table rows. `Next actions:`, the scenario-question lines and the Blocked, Recovery and Folds lists stay whole. With 1,701 planned specs on 31-character slugs, `render-status` returned 56,752 characters and `hook status` 56,766, against the 50,000 default (BE-PAYLOAD-001, MUST; AC24, AC7). The bound also measures the rendering rather than the serialized result. How the bound cuts the other blocks is a design question, for `plan.md`'s *One view model, two renderings, one bound*.
+
+- [ ] Hold every block, and the serialized result, to `[artifacts] read-size-bytes` on both renderings. Add a test that drives the text rendering through the configured read size on disk, too
+- [ ] Correct the claims the defect falsifies: `RENDER_STATUS` in `runtime/src/schema/descriptions.rs`, step 1 of `framework/commands/status.md`, `research.md`'s grows-set line for `render-status`, and `data-model.md:50`
+- [ ] `Counts:` renders only when a spec exists (`pipeline_view.rs:290`). Correct `data-model.md:39` and the doc comment at `pipeline_view.rs:281-282`
+- [ ] Flatten tags and an out-of-set status before they join a view line, as the disabled-rule-file line does, so a newline cannot forge one (`pipeline_view.rs:322-324`, and 118, 448-466 and 600-606). Remove the no-op `gamma.blocked_by = Vec::new();` at `pipeline_view.rs:719`
+- [ ] `plan.md:24` and `runtime/tests/common/corpus.rs:2` say the AC24 tests use `corpus.rs`; none does. Correct both
+
+- **Done when**: the on-disk test holds both renderings' results to the read size past the bound, and fails with the new bound removed.
+
+## 45. `read-spec`'s file form is held to the read size
+
+`read-spec`'s file form moves only its five lists, so `review` and `analyze`, with their digest maps, stay inline (`runtime/src/primitives/read_spec.rs:36-37`). A review record with 474 digest entries gave a 60,591-byte `form: file` result (BE-PAYLOAD-001, MUST; AC7). `bounded_members` in `runtime/tests/mcp.rs` bounds at one byte and asserts no size. What moves to the file is a design question.
+
+- [ ] Move what grows into the list file in the file form, and say so in `READ_SPEC`'s description and in `data-model.md`'s *Bounded results* table
+- [ ] Assert a file-form result's size at a realistic read size
+
+- **Done when**: a test holds a file-form `read-spec` result with large digests to the read size, and fails with the move removed.
+
+## 46. Tool loading: pinned copies, one derivation, shared constants
+
+- [ ] A pinned `target.md`: `tool_search_context` (`runtime/src/primitives/apply_manifest.rs:572-628`) derives the always-loaded set from the manifest's source, while the MCP server reads the installed, pinned copy. A tool the source names and the pinned copy does not then loads from neither, which breaks AC29. The lookup is a design question
+- [ ] One derivation for both uses: `AlwaysLoaded::resolve` (`tool_loading.rs:450-459`) uses `parser::parse` with `step_tools`, while `apply_manifest.rs:615` uses `text_step_tools`. A legacy-prose `target.md` therefore derives two different sets, against the plan's *Tool loading derives from each command's parsed steps*
+- [ ] CFG-CONST-001 (MUST), twice:
+  - build `apply_manifest.rs:581`'s `commands/target.md` from `tool_loading::ALWAYS_LOADED_COMMAND`, moving `scripts/mutation/tool-loading.py`'s M15 anchor with it;
+  - add one shared constant for the `mcp__ductus__` prefix at `tool_loading.rs:318` and `merge_permissions.rs:268` and `:318`, moving `scripts/mutation/destination-checks.py`'s M8 anchor, which already matches twice.
+- [ ] Skip fenced blocks and HTML comments in a cited section's body (`tool_loading.rs:282`, M17's anchor) and in `atx_headings` (`tool_loading.rs:381-407`, M12's anchor), or reuse `resolve_anchor::heading_lines`
+- [ ] Docs:
+  - move `read_and_substitute`'s doc comment back above it (`apply_manifest.rs:538-545`);
+  - name the invoked-anywhere rule in `apply_manifest.rs:33-39`, `tool_loading.rs:291-293`, `primitives.rs:3051-3055`, `data-model.md:127` and `framework/bootstrap/ductus.md:987`, with `govern.md` copied;
+  - in `APPLY_MANIFEST`, name the same rule and correct "halts before any write";
+  - `plan.md:101`: audit's copy carries a line;
+  - `plan.md:96`: the citation resolution order (the code's order is right);
+  - `scripts/gen-claude-commands.sh:20-23`: `--check` also exits 1 when the runtime cannot build the copies
+- [ ] Add the runtime sources the generator now depends on to `.github/workflows/generators.yml`'s `pull_request` paths. Add a test that drives the MCP server's stderr notice (`mcp/server.rs:151-154`). Fix `destination-checks.py`'s M3 anchor, which still names `always_loaded`. Then run `run.py --check` on every list touched
+
+- **Done when**:
+  - a test shows a pinned target's tools loading through the line or the server;
+  - one function derives the always-loaded set for both uses;
+  - `run.py --check` passes on `tool-loading.py` and `destination-checks.py`.
+
+## 47. Pi's commands register when the load-time view fails
+
+`framework/bootstrap/pi/ductus-bridge.ts:351-352` calls `render-status` at load to learn the namespace. Any view error, such as malformed spec frontmatter or a malformed read size, then rejects registration. Neither `{project}-status` nor `{project}-help` registers, and the session notice blames the pointer (scenario `help-answers-with-no-model-turn`). How the bridge learns the namespace is a design question.
+
+- [ ] Register both commands when the load-time call fails, with a notice naming the real error, and add a case for it to `scripts/tests/pi-bridge-harness.mjs`
+- [ ] Docs. Name `/{project}-help` beside `/{project}-status` in:
+  - the harness header (`pi-bridge-harness.mjs:9-10`);
+  - `AGENTS.md`'s Pi gotcha;
+  - `framework/bootstrap/ductus.md:103`, with `govern.md` copied.
+
+- **Done when**: the harness case passes, and a real `pi --mode rpc` run, as task 12's, shows both commands registered while the view fails.
+
+## 48. Rule loading keeps analyze's integrity checks
+
+`framework/reference/analyze.md` §Rules now checks rule headings "from the rules the result lists". But `rule_sections::heading_id_regex` (`^#{2,4}\s+[A-Z]{2,5}-…`) drops exactly the malformed headings those checks exist to catch (QUAL-DELEG-001, SHOULD). How the checks see a malformed heading is a design question.
+
+- [ ] Let analyze report a malformed rule heading. Record what the shared parser gives up both at the call site and in `rule_sections.rs`
+- [ ] QUAL-TEST-001 (SHOULD): add a test asserting the `should` tier (`discover_rule_files.rs:186`), with a SHOULD rule added to the test's `RULES`
+- [ ] Docs:
+  - `discover_rule_files.rs:72-81`'s `# Errors` and its module doc, and `primitives.rs:510-511`;
+  - `merge_permissions.rs:89-106` ("before any filesystem read") and `framework/bootstrap/configure/claude.md:18` (what a created file holds);
+  - `framework/commands/review.md:39`: steps 1, 2, 9 and 12 write lists files;
+  - `framework/commands/analyze.md:69`: `; The` becomes `. The`;
+  - the `configure/claude.md` comment in `.github/workflows/runtime.yml:66-68`: it covers steps 3 and 4 too;
+  - analyze's Scope Boundaries: name the lists file and the rule files.
+- [ ] Fix each of these, or waive it with its reason:
+  - `all` still validates `[rules] surfaces` and the disabled entries;
+  - `extra-files` and `verification` are silently ignored without `rules`;
+  - `read-section`'s `headings` is required on the CLI but may be empty over MCP;
+  - merge-permissions' canonical revoke-overlap message names `--allow`.
+
+- **Done when**: analyze reports a malformed rule heading, and the tier test fails with the mapping removed.
+
+## 49. Bounded results: the walker, writes before a failure, mutation kills
+
+- [ ] `restore_lists` (`runtime/src/interpreter/payload.rs:417`) marks every key in the list file restored, including `compute-review-scope`'s non-list `diff-base`. So past the read size, `diff-base` leaves `performReview`'s legacy tail, against 022's `data-model.md:615`. Filter out the keys the result carries inline, and add a test
+- [ ] Add a test of the walker's halt when `restore_lists` errs (`interpreter/mod.rs:266-282`)
+- [ ] QUAL-TEST-001 (SHOULD): `scripts/mutation/scope-results-bounded.py`'s M4 survives its named test. Add a `diff_cross_spec` unit test of the file form, and point M4 at it
+- [ ] `prune-tasks --apply` and `rewrite-spec-links` parse `[artifacts] read-size-bytes` only after they write (`prune_tasks.rs:126-158`, `rewrite_spec_links.rs:497-528`). Resolve it before any write, and add tests
+- [ ] Docs:
+  - `payload.rs:84-90`: `ListsFileUnreadable`'s causes;
+  - `bounded_lists.rs`' module doc (its members and keys) and its `IRREGULAR_COUNTS` test claim;
+  - "one entry per line", which holds only for lists of strings, in `data-model.md:147` and `bounded_lists.rs:82-84`;
+  - the `# Errors` of `check_artifacts.rs:138-152`, `check_review_gate.rs:30-46` and `dashboard.rs:46-55`.
+- [ ] The audit scripts' lists-file branches read a missing list as empty (`scripts/audit/lib.sh:146-150`, `broken-relative-links.sh:96-116`, `manifest-destination-links.sh:170-179`). Halt instead, or waive with the reason
+
+- **Done when**:
+  - each new test fails with its behavior removed;
+  - `run.py --check` passes on `scope-results-bounded.py` and M4 runs killed.
+
+## 50. AC7's population covers routing, drift and cycles
+
+`runtime/tests/result_sizes.rs:165-167` measures `derive-routing-candidates` with a description that can never match the corpus's `NNN-feature-NNN` slugs, and the corpus never drifts its frontmatter. So two results that grow with the corpus measure as flat:
+
+- `derive-routing-candidates`, with 60,530 characters and no `form` at 300 matching specs;
+- `derive-dependencies`, with 31,395 characters at 801 drifted specs.
+
+`traverse-deps`' `cycles` is never seeded either. AC7 fails as it stands.
+
+- [ ] Seed the corpus with routing-matchable slugs, a drifted variant and a cycle, then measure. Bound each new member through `bounded_lists`, with its `bounded_members` row in `runtime/tests/mcp.rs` and its `data-model.md` row
+- [ ] QUAL-TEST-001 (SHOULD, low confidence): `the_corpus_scales_every_dimension` (`result_sizes.rs:552-613`) builds 4 specs, so the per-ten branch-scoped scaling goes untested
+- [ ] BE-TIMEOUT-001 (MUST, low confidence): `result_sizes.rs:272-287` reads the MCP server with no deadline. Fix it, or waive with the reason
+- [ ] Small items:
+  - the `traverse-deps` comment at `result_sizes.rs:189-190`;
+  - `corpus.rs:84-96`'s unreachable `clarified` arm;
+  - `CorpusSize.defects`, which is always true, so its false branches are dead;
+  - `scripts/measure-result-sizes.sh:33-41`, which reads the sha after the run and checks only `runtime/` for uncommitted changes.
+- [ ] After every description change in tasks 44 to 52, re-run `scripts/measure-result-sizes.sh` and replace `research.md`'s two tables, as task 41 did
+
+- **Done when**: `research.md`'s grows-set names every member, and each member is bounded with its test.
+
+## 51. The cost harness and the generator's environment
+
+- [ ] BE-TIMEOUT-001 (MUST): put a timeout on every child process `scripts/measure-command-cost.py` waits on (lines 85-86, 373-386 and 434)
+- [ ] The rest of the harness:
+  - send stderr to a temporary file, so a full pipe cannot deadlock (379-380, 440);
+  - have `child_env` drop, by name, the Claude Code session variables it now passes (357-361);
+  - have each row record the commit, the dirty state and the Claude Code version (493-495);
+  - check the docstring's `enabledMcpjsonServers` claim against `ductus.md` (23-28, 186-197);
+  - replace `int(d.name[:3])` at 266 (task 39's seed), which breaks AGENTS.md's feature-number gotcha.
+- [ ] CFG-CONST-001 is task 46's. CFG-ENV-002 (MUST, low confidence): `DUCTUS_BIN` (`scripts/gen-claude-commands.sh:76`, `scripts/tests/test-gen-claude-commands.sh:28`) goes into `docs/runtime.md`'s inventory, or that inventory states that maintainer-script variables are out of its scope
+
+- **Done when**: the harness waits on nothing without a timeout, and `--help` and one model-free fixture build still run.
+
+## 52. Descriptions, docs, and the flaky probe test
+
+- [ ] Descriptions:
+  - `DASHBOARD` (`descriptions.rs:49`) is no longer the status surface;
+  - `DERIVE_ROUTING_CANDIDATES` (`:57`): groom calls it too;
+  - `InboxStanding`'s docs (`primitives.rs:5921-5931`).
+- [ ] `runtime/src/main.rs`:
+  - `NON_PRIMITIVE_SUBCOMMANDS`' reason (1161-1167) names `hook help`;
+  - `HookCommand`'s doc (45) says one per slash command;
+  - the `Hook` variant's maintainer note (93-96) becomes a `//` comment.
+- [ ] `merge_status_hook::tests::the_probe_reads_a_version_and_names_each_failure` flakes on macOS: it times out at 5 s on its freshly written `prints` script. The session closing 047 and 026 measured two whole-suite failures and one in five lone runs at b70246f7. Give each probe that must answer a timeout the first run of a new file cannot reach
+- [ ] `merge_status_hook.rs:133-136`: the matcher is unanchored and `[host] project` is not validated (low confidence). Fix it, or waive with the reason
+- [ ] `docs/developing-ductus.md:7-14`: registering a primitive now takes seven sites, the seventh being `result_sizes.rs`' case
+
+- **Done when**: the probe test passes in ten lone runs on macOS, and each description edit is in task 50's re-measure.
+
+## 53. 080's own artifacts
+
+- [ ] `data-model.md`: add a `discover-rule-files` row to *Bounded results*, and the shapes of `read-section`'s arguments and result and of `discover-rule-files`' `rules`, `verification`, `all` and `extra-files` arguments and `rule-files` and `unreadable` fields
+- [ ] `framework/reference/groom.md:22` forbids shell searches of spec bodies with no exception for an item that matches nothing. That contradicts the scenario's amended Edge Case and `plan.md`'s *An item that matches nothing* (task 39). Add the exception
+- [ ] `plan.md`:
+  - `:32`: the grows definition is twice the small result and 200 characters more, as `result_sizes.rs` has it;
+  - `:64`: 062 and 079 are `done`;
+  - `:72`: the assumption is settled by `research.md`'s task 8 run;
+  - `:85`: the figure is 11,347 characters at HEAD by the same method;
+  - `:234-239`: four new tools, not three, and the rows that name lists-file branches the plan rejected;
+  - `:254-265`: the Data Model list lacks render-help, `hook help` and the canonical call;
+  - `:309`: the condition is reversed.
+- [ ] `spec.md`:
+  - `:70` and AC24's "final line": the count line closes the table block, and the data model is right;
+  - `:136`: `target.md`'s step 3 reads `specs[].slug`.
+- [ ] `research.md`: task 43's record says "runtime source unchanged since 56a92b87", which is false, since other specs changed `write_analysis.rs` and `render_status.rs` in between. Correct it
+- [ ] The scenario Contexts that describe the pre-change state in the present tense: `configure-types-no-permission-entries.md:9` and `groom-derives-routing-candidates.md:9`
+- [ ] Owner decides:
+  - AC27, which cannot be ticked as written, since `research.md` records the context check as waived;
+  - the OpenCode and Antigravity `/{project}:` hint gap, which tasks 28, 32 and 33 and those scenarios' Edge Cases leave without a disposition.
+
+- **Done when**: each item is fixed, or decided with its reason written on this task.
+
+## 54. Other specs' claims that 080's work left stale
+
+Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or data model stales 022's review.
+
+- [ ] 022 (`in-progress`):
+  - `scenarios/dashboard-primitive.md:39`, a field list 080 wrote, omits `specs-count`, `tags-union-count`, `form`, `lists-file` and `reopenings`. Its `:47` says read-only, and its `:25` and `:58` say `null` where the key is absent;
+  - `scenarios/coverage-expansion-primitives.md:32` names the render field;
+  - `scenarios/framework-list-dedup.md:24` gives the path a default;
+  - `data-model.md`: `:152` (the count and form fields), `:142` and `:148` (the callers of `command_file_candidates`), `:615` (the legacy tail, and `lists-file-unreadable`), `:873` (the absolute paths);
+  - `spec.md:97`: "two interfaces".
+- [ ] 064 (`done`):
+  - AC12 (`spec.md:207`) still says "Pi has no MCP client". Its fix reopens 064 (`classify-spec-edit` measured `reopens`, `criterion`), and the owner decides;
+  - `:44` and `:59`, "extension-only": the `:44` edit measured as a correction;
+  - `:71-73`, the Compatibility Contract;
+  - `:59` and `:223`, the unsourced "pi 1.0.0".
+- [ ] 063: `spec.md:38`'s signpost says 080 made the read size a bound on tool results, where 080 extended the bound 066 and 078 already applied
+- [ ] 062 (`done`): `plan.md:42-44`'s callers omit `render-status` and `hook status`
+- [ ] 066: `data-model.md:51`. The walker now halts at the `compute-review-scope` step
+- [ ] 007: in `tasks.md:55-56`, the scenario edit should come before the bootstrap edit (low confidence)
+
+- **Done when**: each edit is made or waived with its reason, and each reopen it starts has the owner's decision.
