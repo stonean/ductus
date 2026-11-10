@@ -25,7 +25,7 @@ A second, related rendering defect surfaces in the same table: the session-targe
    - 024-rule-loader depends on 020-code-review and 023-govern-refinement → cell shows `020, 023`.
    - 000-slash-commands has no deps → cell shows `—`.
 
-2. **Replace the `>>` row-prefix marker** with one that survives markdown renderers. Wrap the target row's Feature cell in `**…**` (bold) — e.g., `| **022-deterministic-runtime** | ... |`. Bold is a well-supported inline span that does not interact with table-cell parsing the way a leading `>>` does. When no session target is set (`dashboard` returns `session-target: null`), no row is bolded.
+2. **Replace the `>>` row-prefix marker** with one that survives markdown renderers. Wrap the target row's Feature cell in `**…**` (bold) — e.g., `| **022-deterministic-runtime** | ... |`. Bold is a well-supported inline span that does not interact with table-cell parsing the way a leading `>>` does. When no session target is set (`dashboard` returns no `session-target`), no row is bolded.
 
 No primitive change required — both changes are in the rendering procedure; the data is already in the payload.
 

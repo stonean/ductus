@@ -527,7 +527,7 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
 
 Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or data model stales 022's review.
 
-- [ ] 022 (`in-progress`):
+- [x] 022 (`in-progress`):
   - `scenarios/dashboard-primitive.md:39`, a field list 080 wrote, omits `specs-count`, `tags-union-count`, `form`, `lists-file` and `reopenings`. Its `:47` says read-only, and its `:25` and `:58` say `null` where the key is absent;
   - `scenarios/coverage-expansion-primitives.md:32` names the render field;
   - `scenarios/framework-list-dedup.md:24` gives the path a default;
@@ -538,12 +538,14 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
   - `:44` and `:59`, "extension-only": the `:44` edit measured as a correction;
   - `:71-73`, the Compatibility Contract;
   - `:59` and `:223`, the unsourced "pi 1.0.0".
-- [ ] 063: `spec.md:38`'s signpost says 080 made the read size a bound on tool results, where 080 extended the bound 066 and 078 already applied
-- [ ] 062 (`done`): `plan.md:42-44`'s callers omit `render-status` and `hook status`
-- [ ] 066: `data-model.md:51`. The walker now halts at the `compute-review-scope` step
-- [ ] 007: in `tasks.md:55-56`, the scenario edit should come before the bootstrap edit (low confidence)
-- [ ] 046 (`done`): correct AC24 and the *Many scenarios carrying questions* edge case so that they except the pipeline view past the read size. There the view counts the question lines it does not show, and on the model path it names the file holding them all. Back-link 080, which discharges 080's `cross-spec-impact:` entry. `classify-spec-edit` reads a criterion edit as `reopens`, so 046 goes back to `in-progress` through `set-status` and owes a review, an analysis and its gate (owner, 2026-11-10; plan *Bound (AC24)*). Land it after the runtime change it describes, in a commit touching only 046's directory, so its review window holds that one file
-- [ ] 066 (`in-progress`): remove `scenarios/write-analysis-and-the-second-gate.md`'s edge case on `skip_serializing_if` on `ReadSpecResult.analyze`, since `read-spec` no longer carries either audit record (owner, 2026-11-10; plan *Corpus-growing results are bounded through `bounded_lists`*). Back-link 080, which discharges 080's `cross-spec-impact:` entry. Land it after the runtime change, in its own commit. The edit adds one file to 066's owed review
+
+  Made in bdd2032a, each a correction, so 064 stays `done`: `:44` and `:59`, the Compatibility Contract, which also gains the registered commands as a permitted deviation, and the source, which dates pi's MCP client to 0.99.0 (pi-coding-agent's CHANGELOG, 2026-09-29), swept across the seven live artifacts that said 1.0.0. AC12 waits on the owner.
+- [x] 063: `spec.md:38`'s signpost says 080 made the read size a bound on tool results, where 080 extended the bound 066 and 078 already applied
+- [x] 062 (`done`): `plan.md:42-44`'s callers omit `render-status` and `hook status`
+- [x] 066: `data-model.md:51`. The walker now halts at the `compute-review-scope` step
+- [x] 007: in `tasks.md:55-56`, the scenario edit should come before the bootstrap edit (low confidence)
+- [x] 046 (`done`): correct AC24 and the *Many scenarios carrying questions* edge case so that they except the pipeline view past the read size. There the view counts the question lines it does not show, and on the model path it names the file holding them all. Back-link 080, which discharges 080's `cross-spec-impact:` entry. `classify-spec-edit` reads a criterion edit as `reopens`, so 046 goes back to `in-progress` through `set-status` and owes a review, an analysis and its gate (owner, 2026-11-10; plan *Bound (AC24)*). Land it after the runtime change it describes, in a commit touching only 046's directory, so its review window holds that one file
+- [x] 066 (`in-progress`): remove `scenarios/write-analysis-and-the-second-gate.md`'s edge case on `skip_serializing_if` on `ReadSpecResult.analyze`, since `read-spec` no longer carries either audit record (owner, 2026-11-10; plan *Corpus-growing results are bounded through `bounded_lists`*). Back-link 080, which discharges 080's `cross-spec-impact:` entry. Land it after the runtime change, in its own commit. The edit adds one file to 066's owed review
 
 - **Done when**: each edit is made or waived with its reason, and each reopen it starts has the owner's decision.
 
@@ -555,6 +557,6 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 
 ## 56. Disposition out-of-spec finding: four artifacts say `dashboard` returns `session-target: null`, where the key is absent
 
-- [ ] `framework/commands/target.md` step 2 ("the dashboard's documented \"session file → session-target: null\" reset state holds"), `specs/000-slash-commands/scenarios/target-clear-flag.md` (Context) and `scenarios/dashboard-dependencies-column.md` (item 2), and `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md` ("reports `session-target: null`") — `DashboardResult.session_target` has been `skip_serializing_if = "Option::is_none"` since the primitive landed (07371334), so with no target the result has no `session-target` key. Task 54's edit of 022's `dashboard-primitive` scenario, the claim's source, now says so, which leaves target.md quoting a state the scenario no longer documents (task 54's 022 item, 2026-11-10)
+- [x] `framework/commands/target.md` step 2 ("the dashboard's documented \"session file → session-target: null\" reset state holds"), `specs/000-slash-commands/scenarios/target-clear-flag.md` (Context) and `scenarios/dashboard-dependencies-column.md` (item 2), and `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md` ("reports `session-target: null`") — `DashboardResult.session_target` has been `skip_serializing_if = "Option::is_none"` since the primitive landed (07371334), so with no target the result has no `session-target` key. Task 54's edit of 022's `dashboard-primitive` scenario, the claim's source, now says so, which leaves target.md quoting a state the scenario no longer documents (task 54's 022 item, 2026-11-10) — fixed: the five occurrences, two of them in `target-clear-flag.md`, now say the result has no `session-target`; target.md's `dashboard` stays unbackticked, since `ductus exec` dispatches a backticked primitive and the target-basic golden caught a backticked one as a new step
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
