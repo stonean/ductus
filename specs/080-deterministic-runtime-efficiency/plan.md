@@ -120,7 +120,7 @@ The bridge learns the namespace at load from `render-help`'s `project`. That cal
 
 The verifying run settles three assumptions and records them in `research.md` (AC27):
 
-- **Context.** Whether the displayed message reaches the agent's context. If it does not, and Pi can add context without a turn, the bridge adds the compact form (AC28).
+- **Context.** Whether the displayed message reaches the agent's context. If it does not, and Pi can add context without a turn, the bridge adds the compact form (AC28). Without a model turn to observe, the answer comes from pi's own documentation, and the record says which source it is (owner, 2026-11-10): no pi account was at hand to run a turn, so `research.md` takes it from `docs/message-types.md`.
 - **Markdown.** Whether a displayed message renders markdown. If it does not, `render-status` gains a `format` argument whose `text` value the bridge passes.
 - **Templates.** Whether the registered command runs instead of the `{project}-status` prompt template. If the template wins, `/ductus` stops installing it.
 
