@@ -1,34 +1,38 @@
 ---
 spec: 055-shared-constitution
-last-run: 2026-10-27T01:47:47Z
-analyzed-against: e48df859ac3778879d93557ea4844ff29e6dd444
+last-run: 2026-11-10T00:59:00Z
+analyzed-against: e8f1762716e0eb88ad4d0e49dca8f0ff7d8088a9
 hard-fail: 0
 blocking-findings: 0
-advisory: 0
-unexamined: 5
+advisory: 1
+unexamined: 2
 analyzed-digest:
-  data-model.md: 7d54e3ee75399840c7e55932462ed7580b0e3c1f7c29c0ade4c0d1f00641e158
-  plan.md: 00a9cbdcc00185e85d39260df1744c6b94075df68d435ababac5809fbb1ad155
-  review.md: cf35e1d849358275ad5b0b71d66eff870ef5d50a9f38e0c7ec6c6c5a54708828
-  scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
-  spec.md: 1ea2fa71c72bbfb76adbf82c9141c7e066f0322f955758095e9d35433b159fea
-  tasks.md: 7e51b4cedac42fd50984a655e935ef4ecc371c836aefe231ad76030c73411a83
-unexamined-by-reason:
-  root-absent: 3
-  ships-to-adopter: 2
+  data-model.md: f9318bb945d78c3c9b13a3bc1333c02742584a6a96789638725abc17f915d748
+  plan.md: 9af17b40126d6b4549d8e44aa67792efecbd2562eecdf5c56561587fad471218
+  review.md: f1b6c8c7750533cddf3a6f9b231f0b3c18548c01c5b6a7288958ff3a95c68fff
+  scenarios/a-registered-source-is-named-with-its-description.md: f04ffbef1f2349e9f23d8446c20490833b592ae5edb7dad11ed94bbe9c2166f3
+  scenarios/target-reports-each-constitutions-size.md: 7661b1fccbf76a02af4467a2a40ebf845cfc302b6104f84b831ff25238b6bd3c
+  spec.md: 77700017a2c80fa59d85452f2f4277fb88bac2babdc6011393fca3f102813f9f
+  tasks.md: d2eb90623c7f6071bcfd96dd5cdb9ca7eb0b229ac96b7c1616888aa4ee2746cc
 blocking: false
 dispositions:
-  fixed: 1
-  routed: 0
-  discarded: 0
+  fixed: 9
+  deferred: 0
+  waived: 1
   undispositioned: 0
+decisions:
+  - key: "rule-assessment — CFG-ENV-012: the loader's treatment of an unrecognized key in [constitutions.<alias>] is unstated"
+    outcome: waived
+    reason: "Unrecognized-key handling in .ductus/config.toml is project-wide runtime behaviour, not restated per section: the notice names a key inside a [constitutions.<alias>] table and the file, verified on a fixture (unknown config key: [constitutions.acme] descripton)."
+    decided-at: 2026-11-10T00:59:00Z
+    decided-by: rule
 ---
 
 # Analysis — 055-shared-constitution
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 5 unexamined target(s). Dispositions: 1 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 9 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -40,13 +44,24 @@ dispositions:
 
 ## Advisory findings
 
+- rule-assessment — CFG-ENV-012: the loader's treatment of an unrecognized key in [constitutions.<alias>] is unstated — `specs/055-shared-constitution/data-model.md` — **waived**: Unrecognized-key handling in .ductus/config.toml is project-wide runtime behaviour, not restated per section: the notice names a key inside a [constitutions.<alias>] table and the file, verified on a fixture (unknown config key: [constitutions.acme] descripton). (decided by the rule)
+
+## Deferred to other specs
+
 *None.*
 
 ## Unexamined targets
 
-- root-absent: 3
-- ships-to-adopter: 2
+2 target(s) unexamined; no breakdown recorded.
 
 ## Fixed in this run
 
-- grounding — plan.md §/ductus:target loads what the rules file did not: Claude Code expands an @path line at session start and asks to approve an external import, stated without a source — `specs/055-shared-constitution/plan.md` — **fixed**
+- rule-assessment — CFG-ENV-003: no artifact committed a malformed registry entry's error to naming the alias, the field and .ductus/config.toml — `specs/055-shared-constitution/data-model.md` — **fixed**
+- rule-assessment — BE-PAYLOAD-001: resolve-constitutions' result stated no bound, its description only whitespace-collapsed — `specs/055-shared-constitution/data-model.md` — **fixed**
+- rule-assessment — BE-COMPAT-001: no line classified the reopening's change to resolve-constitutions' arguments and result — `specs/055-shared-constitution/data-model.md` — **fixed**
+- grounding — the plan quoted a §grounding sentence the constitution no longer holds — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
+- grounding — the plan said the precedence statement lands in the config-schema documentation, which the Resolved Question reversed — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
+- grounding — the plan's examined/skipped precedent claim cited nothing — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
+- grounding — rule-file registration by placement cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
+- grounding — the [pinned] files behaviour in the Motivation cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
+- grounding — the duplicate-path edge case's /ductus:link precedent cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
