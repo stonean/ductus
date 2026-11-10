@@ -1,22 +1,22 @@
 ---
 spec: 055-shared-constitution
-last-run: 2026-11-10T00:59:00Z
-analyzed-against: e8f1762716e0eb88ad4d0e49dca8f0ff7d8088a9
+last-run: 2026-11-10T19:07:34Z
+analyzed-against: 3602c737fda2c3fec362f3c25a3145a44c95c862
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
-unexamined: 2
+unexamined: 0
 analyzed-digest:
-  data-model.md: f9318bb945d78c3c9b13a3bc1333c02742584a6a96789638725abc17f915d748
-  plan.md: 9af17b40126d6b4549d8e44aa67792efecbd2562eecdf5c56561587fad471218
-  review.md: f1b6c8c7750533cddf3a6f9b231f0b3c18548c01c5b6a7288958ff3a95c68fff
+  data-model.md: 15cf5405bd3d5f0dd859356aa83fb22d893d4c709b5a5e01895234a3f916fa40
+  plan.md: 4b9c4e6d86f03a433ea5f40dd15ec7ba1df1c9dc9cc6e89ba2237ab252090276
+  review.md: dd89d9c52b3209e8308cdc946d3f29d6a10bf5ceeb25e62a4dd55539984e14ca
   scenarios/a-registered-source-is-named-with-its-description.md: f04ffbef1f2349e9f23d8446c20490833b592ae5edb7dad11ed94bbe9c2166f3
   scenarios/target-reports-each-constitutions-size.md: 7661b1fccbf76a02af4467a2a40ebf845cfc302b6104f84b831ff25238b6bd3c
-  spec.md: 77700017a2c80fa59d85452f2f4277fb88bac2babdc6011393fca3f102813f9f
-  tasks.md: d2eb90623c7f6071bcfd96dd5cdb9ca7eb0b229ac96b7c1616888aa4ee2746cc
+  spec.md: 68e0d756e4f584f845de34c5b7e50844189251146675227083f6475bedb59148
+  tasks.md: 1aa60e99b162dfb9d282333e85b9aa53c9bd3b4483c29c317cd5fe78516bdf9f
 blocking: false
 dispositions:
-  fixed: 9
+  fixed: 0
   deferred: 0
   waived: 1
   undispositioned: 0
@@ -32,7 +32,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 9 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -52,16 +52,8 @@ decisions:
 
 ## Unexamined targets
 
-2 target(s) unexamined; no breakdown recorded.
+*None — every target was examined.*
 
 ## Fixed in this run
 
-- rule-assessment — CFG-ENV-003: no artifact committed a malformed registry entry's error to naming the alias, the field and .ductus/config.toml — `specs/055-shared-constitution/data-model.md` — **fixed**
-- rule-assessment — BE-PAYLOAD-001: resolve-constitutions' result stated no bound, its description only whitespace-collapsed — `specs/055-shared-constitution/data-model.md` — **fixed**
-- rule-assessment — BE-COMPAT-001: no line classified the reopening's change to resolve-constitutions' arguments and result — `specs/055-shared-constitution/data-model.md` — **fixed**
-- grounding — the plan quoted a §grounding sentence the constitution no longer holds — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — the plan said the precedence statement lands in the config-schema documentation, which the Resolved Question reversed — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — the plan's examined/skipped precedent claim cited nothing — `specs/055-shared-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — rule-file registration by placement cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
-- grounding — the [pinned] files behaviour in the Motivation cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
-- grounding — the duplicate-path edge case's /ductus:link precedent cited nothing — `specs/055-shared-constitution/spec.md` — **fixed** (decided by the rule)
+*None.*
