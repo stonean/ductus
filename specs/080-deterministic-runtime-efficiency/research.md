@@ -13,47 +13,48 @@ Ways a measurement of this work went wrong, each of which inflates or misattribu
 
 ## Result sizes (AC14)
 
-**Method.** `scripts/measure-result-sizes.sh` runs the ignored `result_sizes` test in `runtime/tests/result_sizes.rs`. It generates two corpora with `runtime/tests/common/corpus.rs`, sized as the report's first line says, and calls every name in `PRIMITIVE_REGISTRY` through the built binary's MCP server over stdio. Each call runs on a fresh copy of its corpus, so a writing primitive changes nothing the next one reads. Per-feature primitives are pointed at the subject spec, `001-feature-001`, which is `in-progress` with every task ticked; `traverse-deps` is pointed at the last spec, whose chain runs through every other. Every spec carries one markdown-lint violation and one broken link to a file outside the spec root. A primitive that returns findings grows with the defects in what it reads, and on a defect-free corpus that growth would not show. For each ten specs the corpus also holds one branch-scoped spec with a `folds-into:`, so the staging inventory scales as well. `check-orphaned-references` reads only a fixed set of adopter-owned files (`CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit` and the spec root's `system.md`), not the spec corpus, so its result cannot grow with the corpus by its contract.
+**Method.** `scripts/measure-result-sizes.sh` runs the ignored `result_sizes` test in `runtime/tests/result_sizes.rs`. It generates two corpora with `runtime/tests/common/corpus.rs`, sized as the report's first line says, and calls every name in `PRIMITIVE_REGISTRY` through the built binary's MCP server over stdio. Each call runs on a fresh copy of its corpus, so a writing primitive changes nothing the next one reads. Per-feature primitives are pointed at the subject spec, `001-corpus-feature-001`, which is `in-progress` with every task ticked; `traverse-deps` is pointed at the last spec, whose chain runs through every other. Every slug holds the word `corpus`, so a `derive-routing-candidates` description naming it is routed to every spec. Every spec carries one markdown-lint violation and one broken link to a file outside the spec root. A primitive that returns findings grows with the defects in what it reads, and on a defect-free corpus that growth would not show. For each ten specs the corpus also holds one branch-scoped spec with a `folds-into:`, so the staging inventory scales as well. `check-orphaned-references` reads only a fixed set of adopter-owned files (`CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit` and the spec root's `system.md`), not the spec corpus, so its result cannot grow with the corpus by its contract.
 
-An argument that widens what a primitive reads gets a row of its own, since a result can grow in a mode the default call never takes: `read-spec` with `include-body`, the `all` walks of `prune-tasks` and `prune-plan`, `check-corpus-links` with `scope: repository`, and `discover-rule-files` with `rules`, as review calls it, and with `all`, `rules` and `verification`, as analyze calls it. The corpus holds one rule file, `quality-cross.md`, at every size, so those two rows measure that file's rules, not the spec corpus. Every other optional argument narrows a read, names a write, or carries the host's input. `render-help` is called after Claude's help copy is installed in the corpus, as `/ductus` installs it, since its result is that copy's guide. The Small and Large columns are measured with `[artifacts] read-size-bytes` raised past every result, so a bounded result is measured by what it carries rather than by its file form. The third column measures the large corpus at the default read size.
+An argument that widens what a primitive reads gets a row of its own, since a result can grow in a mode the default call never takes: `read-spec` with `include-body`, the `all` walks of `prune-tasks` and `prune-plan`, `check-corpus-links` with `scope: repository`, and `discover-rule-files` with `rules`, as review calls it, and with `all`, `rules` and `verification`, as analyze calls it. The corpus is in sync and acyclic, so what grows only with drift or a cycle has rows measured on a copy that has it: `derive-dependencies` with every spec's `dependencies:` emptied while its body still links its predecessor, and `derive-dependencies` and `traverse-deps` with the chain closed into one cycle through every spec. The corpus holds one rule file, `quality-cross.md`, at every size, so those two rows measure that file's rules, not the spec corpus. Every other optional argument narrows a read, names a write, or carries the host's input. `render-help` is called after Claude's help copy is installed in the corpus, as `/ductus` installs it, since its result is that copy's guide. The Small and Large columns are measured with `[artifacts] read-size-bytes` raised past every result, so a bounded result is measured by what it carries rather than by its file form. The third column measures the large corpus at the default read size.
 
 **Units.** Characters of the result's text, the `text` of the `tools/call` result's content, which is what a host reads.
 
 **Population.** Every registry name, and each argument mode above. A name the fixture cannot exercise has a *not measured* row with its reason.
 
-**Grows with the corpus.** A result grows when its size on the large corpus is at least twice its size on the small one and at least 200 characters more. A count's extra digits pass neither test, and a list that scales with the corpus passes both. *Bounded* means the result carries `bounded_lists`' `form` field, so it moves its lists to a file past `read-size-bytes`. At this measurement `render-status` carried none, so its row reads *no*. Its bound then measured the rendering rather than the result and cut only the table rows, and since task 44 its result carries `form` and is held whole to the read size (AC24).
+**Grows with the corpus.** A result grows when its size on the large corpus is at least twice its size on the small one and at least 200 characters more. A count's extra digits pass neither test, and a list that scales with the corpus passes both. *Bounded* means the result carries `bounded_lists`' `form` field, so it moves its lists to a file past `read-size-bytes`; `render-status` carries it too, beside the view it cuts to the read size (AC24).
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at 4025732df10c51b376959698187214bdc9b76d22, with a clean runtime/, at 2026-11-10T02:57:18Z.
+Measured by `scripts/measure-result-sizes.sh` at a11079af3a114a5c4ec81ca87b08cb777e988a29, with a clean tree, at 2026-11-10T16:12:53Z.
 
 Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenarios, one markdown-lint violation and one broken link; 5 inbox items. Large corpus: 100 specs, each with 50 criteria, 50 tasks of 3 subtasks and 20 scenarios, one markdown-lint violation and one broken link; 50 inbox items. Small and Large are measured at a read size of 1000000000 bytes, past every result; Large at the default read size is the same corpus at 50,000.
 
 | Primitive | Small (chars) | Large (chars) | Large at the default read size (chars) | Grows | Bounded | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `read-spec` | 1138 | 6167 | 6167 | yes | yes | |
-| `read-spec` with `include-body` | 2373 | 18133 | 18133 | yes | yes | |
-| `read-tasks` | 1778 | 17280 | 17280 | yes | yes | |
-| `mark-task` | 72 | 72 | 72 | no | no | |
-| `mark-criterion` | 72 | 72 | 72 | no | no | |
-| `set-status` | 82 | 82 | 82 | no | no | |
-| `derive-boundary` | 386 | 2367 | 2367 | yes | yes | |
+| `read-spec` | 1145 | 6174 | 6174 | yes | yes | |
+| `read-spec` with `include-body` | 2380 | 18140 | 18140 | yes | yes | |
+| `read-tasks` | 1785 | 17287 | 17287 | yes | yes | |
+| `mark-task` | 79 | 79 | 79 | no | no | |
+| `mark-criterion` | 79 | 79 | 79 | no | no | |
+| `set-status` | 89 | 89 | 89 | no | no | |
+| `derive-boundary` | 421 | 2717 | 2717 | yes | yes | |
 | `discover-rule-files` | 110 | 110 | 110 | no | no | |
 | `discover-rule-files` with `rules` | 2606 | 2606 | 2606 | no | yes | |
-| `discover-rule-files` with `all`, `rules` and `verification` | 8392 | 8392 | 8392 | no | yes | |
+| `discover-rule-files` with `all`, `rules` and `verification` | 8762 | 8762 | 8762 | no | yes | |
 | `process-waivers` | 54 | 54 | 54 | no | no | |
 | `process-decisions` | 172 | 172 | 172 | no | yes | |
-| `compute-review-scope` | 1491 | 34570 | 34570 | yes | yes | |
-| `write-review` | 345 | 346 | 346 | no | no | |
-| `write-analysis` | 165 | 165 | 165 | no | no | |
+| `compute-review-scope` | 1631 | 35970 | 35970 | yes | yes | |
+| `write-review` | 359 | 360 | 360 | no | no | |
+| `write-analysis` | 172 | 172 | 172 | no | no | |
 | `check-step-references` | 255 | 255 | 255 | no | no | |
 | `check-stuck` | 101 | 101 | 101 | no | no | |
 | `validate-frontmatter` | 28 | 28 | 28 | no | no | |
 | `resolve-anchor` | 85 | 85 | 85 | no | no | |
-| `traverse-deps` | 133 | 129 | 129 | no | no | |
+| `traverse-deps` | 196 | 192 | 192 | no | yes | |
+| `traverse-deps` with a cycle through every spec | 448 | 2694 | 2694 | yes | yes | |
 | `check-rule-ids` | 58 | 58 | 58 | no | no | |
 | `run-generator` | — | — | — | not measured | — | CLI-only: it runs a project script and is no MCP tool, so no host reads its result as a tool result |
-| `lint-markdown` | 1372 | 13083 | 13083 | yes | yes | |
+| `lint-markdown` | 1442 | 13783 | 13783 | yes | yes | |
 | `gate-confirm` | 70 | 70 | 70 | no | no | |
 | `fetch-archive` | — | — | — | not measured | — | it needs the network |
 | `extract-archive` | — | — | — | not measured | — | it needs a release archive, which a spec corpus does not hold |
@@ -63,86 +64,90 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `merge-permissions` | 245 | 245 | 245 | no | no | |
 | `merge-status-hook` | 61 | 61 | 61 | no | no | |
 | `migrate-session-file` | 114 | 114 | 114 | no | no | |
-| `relocate-audit-records` | 61 | 61 | 61 | no | no | |
-| `create-scenario` | 59 | 59 | 59 | no | no | |
-| `append-task` | 89 | 90 | 90 | no | no | |
-| `label-criteria` | 89 | 90 | 90 | no | no | |
-| `prune-tasks` | 940 | 6921 | 6921 | yes | yes | |
-| `prune-tasks` with `all` | 1350 | 12863 | 12863 | yes | yes | |
-| `prune-plan` | 228 | 228 | 228 | no | no | |
+| `relocate-audit-records` | 68 | 68 | 68 | no | no | |
+| `create-scenario` | 66 | 66 | 66 | no | no | |
+| `append-task` | 96 | 97 | 97 | no | no | |
+| `label-criteria` | 96 | 97 | 97 | no | no | |
+| `prune-tasks` | 947 | 6928 | 6928 | yes | yes | |
+| `prune-tasks` with `all` | 1420 | 13563 | 13563 | yes | yes | |
+| `prune-plan` | 235 | 235 | 235 | no | no | |
 | `prune-plan` with `all` | 150 | 658 | 658 | yes | yes | |
 | `prune-project` | 424 | 424 | 420 | no | no | |
-| `dashboard` | 3680 | 33469 | 33469 | yes | yes | |
-| `render-status` | 1991 | 11570 | 11570 | yes | no | |
-| `render-help` | 6204 | 6204 | 6204 | no | no | |
-| `read-section` | 548 | 4005 | 4005 | yes | yes | |
+| `dashboard` | 3820 | 34932 | 34932 | yes | yes | |
+| `render-status` | 2140 | 12881 | 12881 | yes | yes | |
+| `render-help` | 6223 | 6223 | 6223 | no | no | |
+| `read-section` | 555 | 4012 | 4012 | yes | yes | |
 | `write-session` | 46 | 46 | 46 | no | no | |
 | `resolve-session` | 60 | 60 | 60 | no | no | |
 | `retarget-sessions` | 46 | 46 | 46 | no | no | |
-| `resolve-references` | 140 | 140 | 140 | no | yes | |
+| `resolve-references` | 147 | 147 | 147 | no | yes | |
 | `resolve-constitutions` | 60 | 60 | 60 | no | no | |
-| `resolve-feature` | 120 | 120 | 120 | no | no | |
+| `resolve-feature` | 134 | 134 | 134 | no | no | |
 | `create-feature` | 130 | 130 | 130 | no | no | |
-| `create-plan-artifacts` | 196 | 196 | 196 | no | no | |
-| `check-review-freshness` | 86 | 86 | 86 | no | no | |
-| `check-review-gate` | 951 | 6264 | 6264 | yes | yes | |
+| `create-plan-artifacts` | 217 | 217 | 217 | no | no | |
+| `check-review-freshness` | 93 | 93 | 93 | no | no | |
+| `check-review-gate` | 1000 | 6628 | 6628 | yes | yes | |
 | `classify-spec-edit` | 28 | 28 | 28 | no | no | |
-| `measure-reopenings` | 520 | 4133 | 4133 | yes | yes | |
-| `append-question` | 135 | 135 | 135 | no | no | |
-| `diff-cross-spec` | 434 | 3360 | 3360 | yes | yes | |
+| `measure-reopenings` | 541 | 4315 | 4315 | yes | yes | |
+| `append-question` | 142 | 142 | 142 | no | no | |
+| `diff-cross-spec` | 490 | 4046 | 4046 | yes | yes | |
 | `append-inbox` | 56 | 57 | 57 | no | no | |
 | `remove-inbox-item` | 60 | 61 | 61 | no | no | |
-| `check-artifacts` | 670 | 5045 | 5045 | yes | yes | |
-| `check-artifact-size` | 217 | 218 | 214 | no | no | |
-| `derive-routing-candidates` | 209 | 209 | 209 | no | no | |
-| `check-corpus-links` | 4283 | 130694 | 295 | yes | yes | |
-| `check-corpus-links` with `scope: repository` | 4282 | 130693 | 295 | yes | yes | |
+| `check-artifacts` | 698 | 5199 | 5199 | yes | yes | |
+| `check-artifact-size` | 231 | 232 | 228 | no | no | |
+| `derive-routing-candidates` | 2287 | 20554 | 20554 | yes | yes | |
+| `check-corpus-links` | 4703 | 147494 | 295 | yes | yes | |
+| `check-corpus-links` with `scope: repository` | 4702 | 147493 | 295 | yes | yes | |
 | `check-orphaned-references` | 181 | 181 | 181 | no | no | |
 | `check-command-flags` | 263 | 263 | 263 | no | no | |
 | `check-promotion-coverage` | — | — | — | not measured | — | it audits the framework's own rule file against command sections, which a spec corpus does not hold |
-| `derive-dependencies` | 156 | 157 | 157 | no | no | |
+| `derive-dependencies` | 294 | 295 | 295 | no | yes | |
+| `derive-dependencies` with every spec drifted | 643 | 4155 | 4155 | yes | yes | |
+| `derive-dependencies` with a cycle through every spec | 545 | 2796 | 2796 | yes | yes | |
 | `derive-references` | 168 | 169 | 169 | no | no | |
-| `check-unfolded-specs` | 167 | 1107 | 1107 | yes | yes | |
-| `rewrite-spec-links` | 914 | 7037 | 7037 | yes | yes | |
-| `retire-feature` | 47 | 47 | 47 | no | no | |
-| `invalidate-review` | 62 | 62 | 62 | no | no | |
+| `check-unfolded-specs` | 174 | 1177 | 1177 | yes | yes | |
+| `rewrite-spec-links` | 991 | 7744 | 7744 | yes | yes | |
+| `retire-feature` | 54 | 54 | 54 | no | no | |
+| `invalidate-review` | 69 | 69 | 69 | no | no | |
 | `start-fix-rounds` | 73 | 75 | 75 | no | no | |
-| `brief-re-read` | 971 | 17397 | 17397 | yes | yes | |
-| `read-re-read` | 316 | 316 | 316 | no | yes | |
-| `check-prescriptions` | 406 | 406 | 406 | no | yes | |
+| `brief-re-read` | 1055 | 18111 | 18111 | yes | yes | |
+| `read-re-read` | 323 | 323 | 323 | no | yes | |
+| `check-prescriptions` | 413 | 413 | 413 | no | yes | |
 
 ### Grows with the corpus
 
-Of the 73 registry names, 18 grow with the corpus by the test above, in 21 of the table's rows.
+Of the 73 registry names, 21 grow with the corpus by the test above, in 25 of the table's rows, and every one is bounded.
 
-- **Bounded through `bounded_lists` by this spec, so AC7's population (13):** `read-spec`, `read-tasks`, `read-section`, `derive-boundary`, `lint-markdown`, `prune-tasks`, `prune-plan`, `dashboard`, `check-review-gate`, `check-artifacts`, `check-corpus-links`, `check-unfolded-specs`, `rewrite-spec-links`. The first measurement, at 2b4eaddb, called each primitive in its default mode only and found 11 of them; `prune-plan` grows only in its `all` walk. `read-section`, which task 37 added bounded, is the re-measure's one new member (task 41).
+- **Bounded through `bounded_lists` by this spec, so AC7's population (16):** `read-spec`, `read-tasks`, `read-section`, `derive-boundary`, `lint-markdown`, `prune-tasks`, `prune-plan`, `dashboard`, `check-review-gate`, `check-artifacts`, `check-corpus-links`, `check-unfolded-specs`, `rewrite-spec-links`, `derive-routing-candidates`, `derive-dependencies`, `traverse-deps`. The first measurement, at 2b4eaddb, called each primitive in its default mode only and found 11 of them; `prune-plan` grows only in its `all` walk. `read-section`, which task 37 added bounded, joined at task 41's re-measure, and the last three at task 50's: routing grows only with a description the slugs match, and `derive-dependencies` and `traverse-deps` only over a corpus that drifts or holds a cycle.
 - **Bounded through `bounded_lists` before this spec (4):** `compute-review-scope`, `measure-reopenings`, `diff-cross-spec`, `brief-re-read`.
-- **Bounded in a shape of its own (1):** `render-status`. At this measurement its bound cut only the table rows and measured the rendering, so 1,701 planned specs on 31-character slugs returned 56,752 characters (task 44). Since task 44 it holds its whole result to the read size, cutting every block, and writes the whole view to its list file (AC24).
+- **Bounded in a shape of its own (1):** `render-status`, which cuts the view to the read size and writes the whole view to its list file (AC24). Before task 44 its bound cut only the table rows and measured the rendering, so 1,701 planned specs on 31-character slugs returned 56,752 characters.
 
 ## Loaded schema sizes (AC23)
 
 **Method.** The same run lists the tools with `tools/list` and sizes each as its description's characters plus its input schema serialized as compact JSON, which is the form the server sends. Rows are in descending order of the loaded size.
 
-**Reconciliation with the spec's figure.** Spec 080's Resolved Questions record 132,846 characters across 68 tools. The first measurement, at 2b4eaddb, totalled 129,531 for the same 68 tools in the compact form. The same `tools/list`, read from `runtime/target/release/ductus mcp` over stdio on 2026-11-08, also totalled 129,531 compact, and 132,353 when Python's `json.dumps` serializes the input schemas with its default separators (`", "` and `": "`). The spec's figure was therefore taken with the default separators, and the remaining 493 characters are description changes made since it was taken. The measurement at 4294b79a added `render-status` (task 4) and the sentence each bounded primitive's description gained on its file form (task 5), for 134,535 characters across 70 tools. The one below, after tasks 34 to 40, totals 5,989 more across 72:
+**Reconciliation with the spec's figure.** Spec 080's Resolved Questions record 132,846 characters across 68 tools. The first measurement, at 2b4eaddb, totalled 129,531 for the same 68 tools in the compact form. The same `tools/list`, read from `runtime/target/release/ductus mcp` over stdio on 2026-11-08, also totalled 129,531 compact, and 132,353 when Python's `json.dumps` serializes the input schemas with its default separators (`", "` and `": "`). The spec's figure was therefore taken with the default separators, and the remaining 493 characters are description changes made since it was taken. The measurement at 4294b79a added `render-status` (task 4) and the sentence each bounded primitive's description gained on its file form (task 5), for 134,535 characters across 70 tools. The measurement at 4025732d, after tasks 34 to 40, totalled 140,524 across 72, 5,989 more:
 
 - `render-help` (task 34) and `read-section` (task 37) are new, at 855 and 825.
 - Four tools changed with this spec's tasks: `discover-rule-files` by 1,391 (task 38), `apply-manifest` by 1,378 (the ToolSearch line, tasks 10, 30 and 36), `merge-permissions` by 820 (task 35) and `merge-status-hook` by 216 (help's entry, task 34).
 - The other 504 are on six tools other specs' work changed since 4294b79a, by `git log` of `runtime/src/schema/`: 058 changed `write-analysis`, 062 `dashboard`, 078 `brief-re-read`, `check-prescriptions` and `write-review`'s input schema, and 079 `check-review-freshness` and `write-review`'s description.
 
+The one below, after tasks 44 to 52, totals 2,285 more across the same 72, every change this spec's own (e66f79c2, the only commit to `runtime/src/schema/` since 4025732d): `discover-rule-files` by 408 (task 48), `apply-manifest` by 405 (task 46), `derive-dependencies` by 398, `derive-routing-candidates` by 263 and `traverse-deps` by 223 (each bounded by task 50, routing's naming groom too by task 52), `render-status` by 273 (task 44), `dashboard` by 119 (task 52), `render-help` by 106 (the namespace Pi's bridge reads, task 47) and `read-spec` by 102 (task 45), less 4 each on `process-decisions`, `check-prescriptions` and `read-re-read`, whose descriptions now call their list files pretty-printed rather than one entry per line (task 49).
+
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at 4025732df10c51b376959698187214bdc9b76d22, with a clean runtime/, at 2026-11-10T02:57:18Z.
+Measured by `scripts/measure-result-sizes.sh` at a11079af3a114a5c4ec81ca87b08cb777e988a29, with a clean tree, at 2026-11-10T16:12:53Z.
 
-72 tools, 140524 characters in all.
+72 tools, 142809 characters in all.
 
 | Tool | Description | Input schema | Loaded |
 | --- | --- | --- | --- |
 | `write-review` | 3577 | 17010 | 20587 |
 | `write-analysis` | 1565 | 8721 | 10286 |
 | `rewrite-spec-links` | 2614 | 1486 | 4100 |
+| `apply-manifest` | 1336 | 2667 | 4003 |
 | `compute-review-scope` | 3217 | 704 | 3921 |
-| `apply-manifest` | 1005 | 2593 | 3598 |
-| `process-decisions` | 1567 | 1964 | 3531 |
+| `process-decisions` | 1563 | 1964 | 3527 |
 | `append-task` | 234 | 3222 | 3456 |
 | `check-corpus-links` | 2035 | 1365 | 3400 |
 | `retire-feature` | 1522 | 1638 | 3160 |
@@ -150,33 +155,33 @@ Measured by `scripts/measure-result-sizes.sh` at 4025732df10c51b376959698187214b
 | `write-session` | 970 | 2097 | 3067 |
 | `merge-permissions` | 554 | 2324 | 2878 |
 | `derive-references` | 1927 | 735 | 2662 |
+| `derive-dependencies` | 1577 | 1063 | 2640 |
 | `measure-reopenings` | 1980 | 460 | 2440 |
+| `discover-rule-files` | 1208 | 1209 | 2417 |
 | `prune-plan` | 1173 | 1242 | 2415 |
 | `check-review-gate` | 2109 | 211 | 2320 |
-| `check-prescriptions` | 1908 | 368 | 2276 |
-| `derive-dependencies` | 1179 | 1063 | 2242 |
+| `check-prescriptions` | 1904 | 368 | 2272 |
 | `check-artifacts` | 1990 | 211 | 2201 |
 | `create-feature` | 330 | 1749 | 2079 |
+| `derive-routing-candidates` | 1303 | 742 | 2045 |
 | `retarget-sessions` | 588 | 1443 | 2031 |
-| `discover-rule-files` | 848 | 1161 | 2009 |
 | `process-waivers` | 544 | 1438 | 1982 |
 | `brief-re-read` | 1555 | 350 | 1905 |
 | `classify-spec-edit` | 1560 | 339 | 1899 |
 | `resolve-constitutions` | 1471 | 427 | 1898 |
-| `derive-routing-candidates` | 1040 | 742 | 1782 |
-| `read-re-read` | 1320 | 314 | 1634 |
-| `dashboard` | 1496 | 74 | 1570 |
+| `dashboard` | 1615 | 74 | 1689 |
+| `read-re-read` | 1316 | 314 | 1630 |
 | `prune-tasks` | 573 | 973 | 1546 |
 | `append-question` | 666 | 852 | 1518 |
 | `check-promotion-coverage` | 138 | 1360 | 1498 |
 | `invalidate-review` | 1159 | 291 | 1450 |
+| `render-status` | 1366 | 74 | 1440 |
 | `diff-cross-spec` | 1200 | 211 | 1411 |
 | `create-plan-artifacts` | 514 | 860 | 1374 |
 | `check-step-references` | 1293 | 74 | 1367 |
 | `check-artifact-size` | 1094 | 211 | 1305 |
 | `merge-status-hook` | 987 | 299 | 1286 |
 | `resolve-references` | 1007 | 243 | 1250 |
-| `render-status` | 1093 | 74 | 1167 |
 | `enforce-manifest` | 66 | 1089 | 1155 |
 | `resolve-feature` | 442 | 622 | 1064 |
 | `check-unfolded-specs` | 972 | 74 | 1046 |
@@ -186,6 +191,7 @@ Measured by `scripts/measure-result-sizes.sh` at 4025732df10c51b376959698187214b
 | `merge-managed-block` | 76 | 921 | 997 |
 | `start-fix-rounds` | 763 | 224 | 987 |
 | `check-stuck` | 657 | 316 | 973 |
+| `render-help` | 887 | 74 | 961 |
 | `derive-boundary` | 762 | 180 | 942 |
 | `relocate-audit-records` | 698 | 223 | 921 |
 | `fetch-archive` | 64 | 847 | 911 |
@@ -194,21 +200,20 @@ Measured by `scripts/measure-result-sizes.sh` at 4025732df10c51b376959698187214b
 | `resolve-anchor` | 266 | 611 | 877 |
 | `resolve-session` | 791 | 74 | 865 |
 | `mark-criterion` | 57 | 807 | 864 |
-| `render-help` | 781 | 74 | 855 |
 | `read-section` | 506 | 319 | 825 |
 | `lint-markdown` | 263 | 527 | 790 |
 | `check-review-freshness` | 552 | 211 | 763 |
+| `read-spec` | 443 | 300 | 743 |
 | `append-inbox` | 258 | 407 | 665 |
-| `read-spec` | 341 | 300 | 641 |
 | `extract-archive` | 72 | 546 | 618 |
 | `remove-inbox-item` | 224 | 373 | 597 |
 | `gate-confirm` | 289 | 273 | 562 |
 | `set-status` | 136 | 330 | 466 |
+| `traverse-deps` | 281 | 180 | 461 |
 | `read-tasks` | 246 | 195 | 441 |
 | `check-rule-ids` | 64 | 352 | 416 |
 | `label-criteria` | 163 | 211 | 374 |
 | `validate-frontmatter` | 55 | 187 | 242 |
-| `traverse-deps` | 58 | 180 | 238 |
 
 ## Command cost (AC8)
 

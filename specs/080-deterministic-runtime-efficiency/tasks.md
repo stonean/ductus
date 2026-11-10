@@ -459,15 +459,15 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
 
 `traverse-deps`' `cycles` is never seeded either. AC7 fails as it stands.
 
-- [ ] Seed the corpus with routing-matchable slugs, a drifted variant and a cycle, then measure. Bound each new member through `bounded_lists`, with its `bounded_members` row in `runtime/tests/mcp.rs` and its `data-model.md` row
-- [ ] QUAL-TEST-001 (SHOULD, low confidence): `the_corpus_scales_every_dimension` (`result_sizes.rs:552-613`) builds 4 specs, so the per-ten branch-scoped scaling goes untested
-- [ ] BE-TIMEOUT-001 (MUST, low confidence): `result_sizes.rs:272-287` reads the MCP server with no deadline. Fix it, or waive with the reason
-- [ ] Small items:
+- [x] Seed the corpus with routing-matchable slugs, a drifted variant and a cycle, then measure. Bound each new member through `bounded_lists`, with its `bounded_members` row in `runtime/tests/mcp.rs` and its `data-model.md` row
+- [x] QUAL-TEST-001 (SHOULD, low confidence): `the_corpus_scales_every_dimension` (`result_sizes.rs:552-613`) builds 4 specs, so the per-ten branch-scoped scaling goes untested
+- [x] BE-TIMEOUT-001 (MUST, low confidence): `result_sizes.rs:272-287` reads the MCP server with no deadline. Fix it, or waive with the reason
+- [x] Small items:
   - the `traverse-deps` comment at `result_sizes.rs:189-190`;
   - `corpus.rs:84-96`'s unreachable `clarified` arm;
   - `CorpusSize.defects`, which is always true, so its false branches are dead;
   - `scripts/measure-result-sizes.sh:33-41`, which reads the sha after the run and checks only `runtime/` for uncommitted changes.
-- [ ] After every description change in tasks 44 to 52, re-run `scripts/measure-result-sizes.sh` and replace `research.md`'s two tables, as task 41 did. Run it once those changes are committed, on a clean tree: the script records the tree's state, and fails when HEAD moves during the run. Then replace the figures that cite the tables: the 11,347 characters in `plan.md`'s *Tool loading derives from each command's parsed steps*, the grows-set lines in *Grows with the corpus*, and AC23's total
+- [x] After every description change in tasks 44 to 52, re-run `scripts/measure-result-sizes.sh` and replace `research.md`'s two tables, as task 41 did. Run it once those changes are committed, on a clean tree: the script records the tree's state, and fails when HEAD moves during the run. Then replace the figures that cite the tables: the 11,347 characters in `plan.md`'s *Tool loading derives from each command's parsed steps*, the grows-set lines in *Grows with the corpus*, and AC23's total
 
 - **Done when**: `research.md`'s grows-set names every member, and each member is bounded with its test.
 
@@ -550,5 +550,11 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 ## 55. Disposition out-of-spec finding: command-reference-split.py's M2 and M5 anchor on code that is gone
 
 - [x] `scripts/mutation/command-reference-split.py` — `run.py --check` reports M2 (`headings inside fenced blocks and comments are collected`) and M5 (`the line rule accepts a heading that ends inside a word`) with anchors that occur nowhere in `runtime/src/primitives/resolve_anchor.rs`, which 080's work did not change, so both mutants were already invalid at HEAD and run nothing — fixed: f9991d60, 080's tasks 36 and 40, is what moved both anchors, so the fix was 080's own; re-anchored on `heading_lines`' enumerated filter and `cited_heading`'s word-end check, and M2 and M5 run killed (e66f79c2)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 56. Disposition out-of-spec finding: four artifacts say `dashboard` returns `session-target: null`, where the key is absent
+
+- [ ] `framework/commands/target.md` step 2 ("the dashboard's documented \"session file → session-target: null\" reset state holds"), `specs/000-slash-commands/scenarios/target-clear-flag.md` (Context) and `scenarios/dashboard-dependencies-column.md` (item 2), and `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md` ("reports `session-target: null`") — `DashboardResult.session_target` has been `skip_serializing_if = "Option::is_none"` since the primitive landed (07371334), so with no target the result has no `session-target` key. Task 54's edit of 022's `dashboard-primitive` scenario, the claim's source, now says so, which leaves target.md quoting a state the scenario no longer documents (task 54's 022 item, 2026-11-10)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.

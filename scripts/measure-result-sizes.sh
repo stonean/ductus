@@ -10,9 +10,10 @@
 # result, which is what the growth test reads, and on the large one at the
 # default read size, which is what a host reads. A name the fixture cannot
 # exercise gets a "not measured" row with its reason. The report opens
-# with the commit it was measured at, each uncommitted path under runtime/
-# (the binary is built from the work tree), and the UTC time, and goes to
-# stdout, or to the file given as the first argument.
+# with the commit it was measured at, each uncommitted path in the tree (the
+# binary is built from the work tree, and the corpus copies framework files),
+# and the UTC time, and goes to stdout, or to the file given as the first
+# argument. A HEAD that moves during the run fails it.
 #
 # On demand only: no workflow runs it, and `cargo test` skips the test.
 #
