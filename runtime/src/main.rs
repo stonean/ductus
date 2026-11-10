@@ -598,7 +598,8 @@ fn seed_context(
 }
 
 /// Whether the process acting as `identity` has a per-process record of its own
-/// in `repo` — the one session file the exec seed holds strict.
+/// in `repo`, whose target then overrides the shared default's target keys in
+/// the exec seed.
 fn has_own_record(repo: &std::path::Path, identity: Option<&ductus::session::Identity>) -> bool {
     ductus::session::effective(repo, identity)
         .is_some_and(|identity| ductus::session::own_path(repo, identity).exists())

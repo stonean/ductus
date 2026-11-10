@@ -532,8 +532,9 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // an unexamined-governance state — it is the strongest form of one — so
     // it is rendered, not propagated. Propagating it would mean a typo in one
     // entry produced no `review.md` at all, losing the findings this run just
-    // computed. A config that does not parse halted the run at `Paths::load`
-    // above, since the spec root is unknown (spec 022 task 12).
+    // computed. A config that does not parse, or names a `[paths] specs-root`
+    // it rejects, halted the run at `Paths::load` above, since the spec root
+    // is unknown (spec 022 task 12).
     let governance_section = render_unexamined_governance(repo);
     // Read the spec and resolve the surviving waivers BEFORE either render:
     // the report now carries the full record, waivers included, so both homes
@@ -1646,8 +1647,8 @@ fn render_unexamined_governance(repo: &Path) -> String {
         // That is the most severe form of this section's subject, so it is
         // reported here rather than raised — `write-review`'s job is to record
         // the run, and a malformed entry must not cost the operator the
-        // findings. A config that does not parse never reaches here: `run`
-        // halted on it first.
+        // findings. A config that does not parse, or names a `[paths]
+        // specs-root` it rejects, never reaches here: `run` halted on it first.
         Err(err) => {
             // A TOML error's display spans lines (location, source line,
             // caret); flattened, so the bullet stays one line.
@@ -5470,6 +5471,7 @@ mod tests {
             "no report is written under a guessed spec root"
         );
     }
+
     // -- spec 058 review: decision-record hardening -------------------------
 
     /// A control character or a Unicode line break in a quoted value is

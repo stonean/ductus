@@ -42,7 +42,7 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
   constitution cannot pull in further constitutions. There is no recursion to bound, no cycle to detect, and the set
   of documents in effect is exactly what the project's own config names.
 
-> **Signpost (022 task 12):** a `.ductus/config.toml` that does not parse halts every reader of it, `write-review` and `write-analysis` included, with an error naming the file, since the spec root their record goes under cannot be read from it. A config that parses but holds a malformed `[constitutions]` entry still records the run, the registry reported unreadable. [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md) records the decision (its task 12, owner, 2026-11-10).
+> **Signpost (022 task 12):** a `.ductus/config.toml` that does not parse halts every reader of it, and one whose `[paths] specs-root` is rejected halts every reader of the spec root, `write-review` and `write-analysis` included, each with an error naming the file, since the spec root their record goes under cannot be read from it. A config that parses but holds a malformed `[constitutions]` entry still records the run, the registry reported unreadable. [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md) records the decision (its task 12, owner, 2026-11-10).
 
 ## Non-Goals
 

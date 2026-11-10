@@ -200,8 +200,9 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // malformed `[constitutions]` entry must not be able to suppress it. An
     // unreadable registry is recorded as its own reason instead, which is the
     // honest answer: nothing registered was loaded, and the run cannot say
-    // how many sources that was. A config that does not parse halted the run
-    // at `Paths::load` above, since the spec root is unknown (spec 022 task 12).
+    // how many sources that was. A config that does not parse, or names a
+    // `[paths] specs-root` it rejects, halted the run at `Paths::load` above,
+    // since the spec root is unknown (spec 022 task 12).
     match crate::primitives::resolve_constitutions::run(repo) {
         Ok(governance) if !governance.skipped.is_empty() => {
             let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
@@ -1763,6 +1764,7 @@ mod tests {
             "no record is written under a guessed spec root"
         );
     }
+
     // -- spec 058 review: decision-record hardening -------------------------
 
     /// A control character in a finding's message or a waiver's reason is
