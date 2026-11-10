@@ -82,3 +82,9 @@ Bootstrap flow (added after mid-implement discovery — see plan §Technical Dec
      command resolution to the `.agents/skills/<name>/SKILL.md` layout — a 022
      runtime change. Antigravity ships on the markdown-only path; ductus MCP tools
      are unaffected. See plan.md Technical Decision 6. -->
+
+## 11. Disposition out-of-spec finding: `test-gen-configure-mcp.sh` case C races under `pipefail`
+
+- [x] `scripts/tests/test-gen-configure-mcp.sh` runs `set -euo pipefail` and pipes `mcp_block` (an `awk`) into `grep -qF` at its two case-C checks, so `grep` can exit on its first match while `awk` is still writing, `awk` dies of SIGPIPE, and the case reports the block missing though it is intact; framework-checks failed so on `be613663` (run 42831188004, attempt 1) and passed on re-run, once in the last 61 runs, and 20 of 20 local runs passed. Found while closing 026 (2026-11-10). — owner's call: reopen 028 for the two-line fix; or waive — waived: it fails loudly rather than passing falsely, is cleared by re-running the job, and is rare, while the fix would cost reopening this `done` spec (owner, 2026-11-10, option b)
+
+- **Done when**: the finding carries its disposition
