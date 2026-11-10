@@ -124,7 +124,7 @@ if not d.get("examined"):
 
 sys.stderr.write(
     "step-references: {} file(s) examined, {} carrying one procedure; "
-    "{} with several numbered lists (not resolved: {}); "
+    "{} not one procedure (not resolved: {}); "
     "{} reference(s) outside the Instructions section were counted, not resolved. "
     "A reference that renumbering shifted onto a DIFFERENT existing step is not "
     "detectable here and is not claimed.\n".format(

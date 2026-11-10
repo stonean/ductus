@@ -36,7 +36,7 @@
 #   18b Parse `NON_ASSERTION_MARKERS` out of `check_artifacts.rs` and compare
 #       as a set, plus assert the declared array length matches.
 #   18c Parse `analyze.md`'s restatement and compare as a set.
-#   18d Compare the spelled-out counts in both markdown restatements against
+#   18d Compare the spelled-out counts in all three restatements against
 #       the derived size.
 #   18e Do 18a-18c again for the negated-creation predicate's vocabulary —
 #       the sixth exemption group, which is a clause-scoped predicate rather
