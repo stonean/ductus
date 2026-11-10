@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [009-scenario-targeting, 022-deterministic-runtime]
+status: in-progress
+dependencies: [009-scenario-targeting, 022-deterministic-runtime, 080-deterministic-runtime-efficiency]
 next-criterion: 33
 ---
 
@@ -101,7 +101,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - **A scenario whose Open Questions section holds only a placeholder** — zero, per the placeholder rule above.
 - **An unreadable or malformed scenario file** — contributes no questions, so it never blocks the `done` gate and never produces a finding at any severity. Nothing can be proven about a file that cannot be parsed, and an unknown is not escalated to a defect. It is **not** separately surfaced: the malformed file is markdown lint's to report, and lint runs ahead of the scenario check in the same gate, so the contributor sees it there rather than twice.
 - **Non-`.md` files, and case-varying filenames, under `scenarios/`** — the shared scenario-file listing defines the set, so this feature inherits its behavior rather than defining a second rule.
-- **Many scenarios carrying questions** — all are listed, with no cap and no truncation. A bounded readout that silently dropped scenarios would read as "these are the ones that need attention" while hiding others.
+- **Many scenarios carrying questions** — all are listed, with no cap and no truncation, except by the pipeline view past the read size ([080](../080-deterministic-runtime-efficiency/spec.md)): there the view counts the question lines it does not show and, on the model path, names the file holding them all. A bounded readout that silently dropped scenarios would read as "these are the ones that need attention" while hiding others; the view's count says what it left out, and its file holds it.
 - **A question resolved between the gate check and the status write** — the gate re-reads the scenarios at check time, and `set-status` guards only the `from` status. A resolution landing inside that window is accepted: it can only turn a block into a pass, and the next gate run agrees.
 - **A `done` spec that already carries unresolved scenario questions when this feature ships** — reported as a blocking finding and reverted to `in-progress` by `--fix`, with no grandfather exemption. Unlike an absent `review:` block, which genuinely marks a spec as predating its feature, unresolved scenario questions are a real present-tense defect regardless of when they arrived. Exempting them would preserve exactly the state this spec exists to prevent.
 
@@ -132,7 +132,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - [x] AC21: The gate's blocked message names the scenarios carrying unresolved questions
 - [x] AC22: An unreadable or malformed scenario file never blocks the `done` gate and never produces a blocking finding. **Half superseded.** The gate half still holds exactly — `check-review-gate` yields no block for an unreadable scenario, and the fail-open posture is deliberate (a gate that failed closed on its own inability to read is one people route around). The finding half was reversed by 022's `artifact-unreadable at done` work: `check-artifacts` now emits a **blocking** finding when a `done` spec's own artifact cannot be read, with `scenario-open-questions` named as the motivating family — an unreadable scenario contributed no questions and, as a skip, no finding, so a scenario carrying unresolved questions that would not parse passed the gate this spec built to catch exactly that
 - [x] AC23: A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption
-- [x] AC24: All scenarios carrying questions are listed with no cap or truncation
+- [x] AC24: All scenarios carrying questions are listed with no cap or truncation, except by the pipeline view past the read size, which counts the question lines it does not show and, on the model path, names the file holding them all
 - [x] AC25: The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
 - [x] AC26: A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
 - [x] AC27: No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
