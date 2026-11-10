@@ -533,13 +533,13 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
   - `scenarios/framework-list-dedup.md:24` gives the path a default;
   - `data-model.md`: `:152` (the count and form fields), `:142` and `:148` (the callers of `command_file_candidates`), `:615` (the legacy tail, and `lists-file-unreadable`), `:873` (the absolute paths);
   - `spec.md:97`: "two interfaces".
-- [ ] 064 (`done`):
+- [x] 064 (`done`):
   - AC12 (`spec.md:207`) still says "Pi has no MCP client". Its fix reopens 064 (`classify-spec-edit` measured `reopens`, `criterion`), and the owner decides;
   - `:44` and `:59`, "extension-only": the `:44` edit measured as a correction;
   - `:71-73`, the Compatibility Contract;
   - `:59` and `:223`, the unsourced "pi 1.0.0".
 
-  Made in bdd2032a, each a correction, so 064 stays `done`: `:44` and `:59`, the Compatibility Contract, which also gains the registered commands as a permitted deviation, and the source, which dates pi's MCP client to 0.99.0 (pi-coding-agent's CHANGELOG, 2026-09-29), swept across the seven live artifacts that said 1.0.0. AC12 waits on the owner.
+  Made in bdd2032a, each a correction, so 064 stays `done`: `:44` and `:59`, the Compatibility Contract, which also gains the registered commands as a permitted deviation, and the source, which dates pi's MCP client to 0.99.0 (pi-coding-agent's CHANGELOG, 2026-09-29), swept across the seven live artifacts that said 1.0.0. AC12: corrected in 4b6c5fe4, which reopens 064 alone, by the owner's decision to reopen it and run its review, analysis and gate in this session (2026-11-10).
 - [x] 063: `spec.md:38`'s signpost says 080 made the read size a bound on tool results, where 080 extended the bound 066 and 078 already applied
 - [x] 062 (`done`): `plan.md:42-44`'s callers omit `render-status` and `hook status`
 - [x] 066: `data-model.md:51`. The walker now halts at the `compute-review-scope` step
