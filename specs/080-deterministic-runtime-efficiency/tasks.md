@@ -486,17 +486,17 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
 
 ## 52. Descriptions, docs, and the flaky probe test
 
-- [ ] Descriptions:
+- [x] Descriptions:
   - `DASHBOARD` (`descriptions.rs:49`) is no longer the status surface;
   - `DERIVE_ROUTING_CANDIDATES` (`:57`): groom calls it too;
   - `InboxStanding`'s docs (`primitives.rs:5921-5931`).
-- [ ] `runtime/src/main.rs`:
+- [x] `runtime/src/main.rs`:
   - `NON_PRIMITIVE_SUBCOMMANDS`' reason (1161-1167) names `hook help`;
   - `HookCommand`'s doc (45) says one per slash command;
   - the `Hook` variant's maintainer note (93-96) becomes a `//` comment.
-- [ ] `merge_status_hook::tests::the_probe_reads_a_version_and_names_each_failure` flakes on macOS: it times out at 5 s on its freshly written `prints` script. The session closing 047 and 026 measured two whole-suite failures and one in five lone runs at b70246f7. Give each probe that must answer a timeout the first run of a new file cannot reach
-- [ ] `merge_status_hook.rs:133-136`: the matcher is unanchored and `[host] project` is not validated (low confidence). Fix it, or waive with the reason — waived: `/ductus` validates `[host] project` as lowercase letters, digits and hyphens before writing it (`framework/bootstrap/ductus.md`), and every name of that shape is a literal regular expression. An unanchored matcher could match only a command whose name starts `{project}:status` or `{project}:help`, and `/ductus` installs none. Escaping or anchoring the matcher would change what Claude Code is given on every project, which only a Claude Code run verifies, for a case only a hand-edited config reaches. Validating the name here would refuse a project with no `[host] project`, whose name falls back to its directory's basename.
-- [ ] `docs/developing-ductus.md:7-14`: registering a primitive now takes seven sites, the seventh being `result_sizes.rs`' case
+- [x] `merge_status_hook::tests::the_probe_reads_a_version_and_names_each_failure` flakes on macOS: it times out at 5 s on its freshly written `prints` script. The session closing 047 and 026 measured two whole-suite failures and one in five lone runs at b70246f7. Give each probe that must answer a timeout the first run of a new file cannot reach
+- [x] `merge_status_hook.rs:133-136`: the matcher is unanchored and `[host] project` is not validated (low confidence). Fix it, or waive with the reason — waived: `/ductus` validates `[host] project` as lowercase letters, digits and hyphens before writing it (`framework/bootstrap/ductus.md`), and every name of that shape is a literal regular expression. An unanchored matcher could match only a command whose name starts `{project}:status` or `{project}:help`, and `/ductus` installs none. Escaping or anchoring the matcher would change what Claude Code is given on every project, which only a Claude Code run verifies, for a case only a hand-edited config reaches. Validating the name here would refuse a project with no `[host] project`, whose name falls back to its directory's basename.
+- [x] `docs/developing-ductus.md:7-14`: registering a primitive now takes seven sites, the seventh being `result_sizes.rs`' case
 
 - **Done when**: the probe test passes in ten lone runs on macOS, and each description edit is in task 50's re-measure.
 
@@ -549,6 +549,6 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 
 ## 55. Disposition out-of-spec finding: command-reference-split.py's M2 and M5 anchor on code that is gone
 
-- [ ] `scripts/mutation/command-reference-split.py` — `run.py --check` reports M2 (`headings inside fenced blocks and comments are collected`) and M5 (`the line rule accepts a heading that ends inside a word`) with anchors that occur nowhere in `runtime/src/primitives/resolve_anchor.rs`, which 080's work did not change, so both mutants were already invalid at HEAD and run nothing
+- [x] `scripts/mutation/command-reference-split.py` — `run.py --check` reports M2 (`headings inside fenced blocks and comments are collected`) and M5 (`the line rule accepts a heading that ends inside a word`) with anchors that occur nowhere in `runtime/src/primitives/resolve_anchor.rs`, which 080's work did not change, so both mutants were already invalid at HEAD and run nothing — fixed: f9991d60, 080's tasks 36 and 40, is what moved both anchors, so the fix was 080's own; re-anchored on `heading_lines`' enumerated filter and `cited_heading`'s word-end check, and M2 and M5 run killed (e66f79c2)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
