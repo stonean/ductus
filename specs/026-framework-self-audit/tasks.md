@@ -51,7 +51,7 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
-Blocked on 067 task 14 and 071 task 22: both change files in 026's scope.
+Not blocked on 067 task 14 or 071 task 22: neither changes a file in 026's review scope or its plan's Affected Files, and under 079's AC6 a commit only 067 or 071 claims stays out of that scope, so 026 closes next (owner, 2026-11-10).
 
 It owes its review recorded, then an analysis and the completion gate, which run once no box in this file is open (spec 079), its 26 ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09).
 
