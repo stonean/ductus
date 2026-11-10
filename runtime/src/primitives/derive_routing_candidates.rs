@@ -161,9 +161,9 @@ pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result
         &mut candidates,
         &mut examined,
         &mut skipped,
-    );
-    derive_rule_surfaces(&tokens, repo, &mut candidates, &mut examined, &mut skipped);
-    derive_spec_corpus(&tokens, repo, &mut candidates, &mut examined, &mut skipped);
+    )?;
+    derive_rule_surfaces(&tokens, repo, &mut candidates, &mut examined, &mut skipped)?;
+    derive_spec_corpus(&tokens, repo, &mut candidates, &mut examined, &mut skipped)?;
 
     let derivation_incomplete = !skipped.is_empty();
     Ok(Derived {
@@ -190,12 +190,12 @@ fn derive_runtime_work(
     candidates: &mut Vec<RoutingCandidate>,
     examined: &mut Vec<String>,
     skipped: &mut Vec<RoutingSkip>,
-) {
+) -> Result<()> {
     let Some(signal) = runtime_signal(description) else {
         examined.push("runtime-work".into());
-        return;
+        return Ok(());
     };
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
     if !specs_dir.is_dir() {
         skipped.push(RoutingSkip {
@@ -206,7 +206,7 @@ fn derive_runtime_work(
             ),
             path: layout.specs_root.clone(),
         });
-        return;
+        return Ok(());
     }
     match runtime_home(&specs_dir) {
         Some(slug) => {
@@ -232,6 +232,7 @@ fn derive_runtime_work(
             path: layout.specs_root.clone(),
         }),
     }
+    Ok(())
 }
 
 /// The runtime artifact the description names, phrased for the gate, or `None`
@@ -274,14 +275,14 @@ fn derive_rule_surfaces(
     candidates: &mut Vec<RoutingCandidate>,
     examined: &mut Vec<String>,
     skipped: &mut Vec<RoutingSkip>,
-) {
-    let (dir, dir_rel) = crate::primitives::discover_rule_files::resolve_rules_dir(repo);
+) -> Result<()> {
+    let (dir, dir_rel) = crate::primitives::discover_rule_files::resolve_rules_dir(repo)?;
     let Some(dir) = dir else {
         // No rule directory at all is a real, examined answer: this project
         // has no rule surfaces, so none can be a home. A fresh adopter is
         // exactly this case and must see no new friction.
         examined.push("rule-surface".into());
-        return;
+        return Ok(());
     };
     let files = match crate::primitives::discover_rule_files::list_rule_files(&dir) {
         Ok(files) => files,
@@ -291,7 +292,7 @@ fn derive_rule_surfaces(
                 reason: format!("rule-file directory could not be listed: {err}"),
                 path: dir_rel,
             });
-            return;
+            return Ok(());
         }
     };
     for name in files {
@@ -310,6 +311,7 @@ fn derive_rule_surfaces(
         });
     }
     examined.push("rule-surface".into());
+    Ok(())
 }
 
 /// A rule file's category stem: the basename with its `.md` extension and its
@@ -335,8 +337,8 @@ fn derive_spec_corpus(
     candidates: &mut Vec<RoutingCandidate>,
     examined: &mut Vec<String>,
     skipped: &mut Vec<RoutingSkip>,
-) {
-    let layout = paths::Paths::load(repo);
+) -> Result<()> {
+    let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
     if !specs_dir.is_dir() {
         skipped.push(RoutingSkip {
@@ -344,7 +346,7 @@ fn derive_spec_corpus(
             reason: "spec root is missing or unreadable".into(),
             path: layout.specs_root.clone(),
         });
-        return;
+        return Ok(());
     }
     for slug in list_feature_dirs(&specs_dir) {
         // Already offered by the runtime-work source, which is the more
@@ -370,6 +372,7 @@ fn derive_spec_corpus(
         });
     }
     examined.push("spec-corpus".into());
+    Ok(())
 }
 
 /// A feature slug's words: everything after the `NNN-` prefix.

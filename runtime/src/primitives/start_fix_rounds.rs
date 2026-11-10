@@ -31,7 +31,7 @@ use crate::schema::primitives::{StartFixRoundsArgs, StartFixRoundsResult};
 /// failure. An error is never a base: the host records the run's first round
 /// as not re-read.
 pub fn run(args: &StartFixRoundsArgs, repo: &Path) -> Result<StartFixRoundsResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     fix_rounds::validate_feature("start-fix-rounds", repo, &layout.specs_root, &args.feature)?;
     // Read before the run writes any fix, so a malformed switch halts the run
     // here rather than at the first round, after its fixes have landed.

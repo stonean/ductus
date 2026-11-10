@@ -134,7 +134,7 @@ pub(crate) struct ReviewScope {
 /// including a project no work tree contains, revparse of `--since`,
 /// tree/diff lookup).
 pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ReviewScope> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

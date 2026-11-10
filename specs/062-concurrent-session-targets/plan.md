@@ -273,7 +273,9 @@ auditable place.
 - **Exec seed:** `runtime/src/main.rs:523-535` seeds from the core's peek when
   the process has a record of its own, and otherwise from the shared default
   read leniently as before this spec, so `ductus exec` from an agent's shell
-  tool carries that agent's identity (AC23). The retarget exceptions in
+  tool carries that agent's identity (AC23). **Superseded in part by 022's task
+  12** (2026-11-10): the shared default is read strictly too, so one that does
+  not parse halts the walk with an error naming the file. The retarget exceptions in
   `runtime/src/interpreter/mod.rs:303-316` are unchanged, because they govern
   which keys a walk may overwrite, not where the seed came from.
 

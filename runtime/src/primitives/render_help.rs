@@ -36,7 +36,7 @@ const RULE: &str = "---";
 pub fn run(_args: &RenderHelpArgs, repo: &Path) -> Result<RenderHelpResult> {
     Ok(RenderHelpResult {
         guide: guide(repo)?,
-        project: Host::load(repo).project,
+        project: Host::load(repo)?.project,
     })
 }
 
@@ -49,7 +49,7 @@ pub fn run(_args: &RenderHelpArgs, repo: &Path) -> Result<RenderHelpResult> {
 /// - [`PrimitiveError::Io`] when a copy exists but cannot be read.
 /// - [`PrimitiveError::MalformedCommandCopy`] when the copy holds no guide.
 pub fn guide(repo: &Path) -> Result<String> {
-    let candidates = Host::load(repo).command_file_candidates(HELP_COMMAND);
+    let candidates = Host::load(repo)?.command_file_candidates(HELP_COMMAND);
     for path in &candidates {
         let full = repo.join(path);
         let source = match std::fs::read_to_string(&full) {

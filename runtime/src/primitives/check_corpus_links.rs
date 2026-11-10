@@ -126,7 +126,7 @@ pub fn bound(scan: CorpusLinks, repo: &Path) -> Result<CheckCorpusLinksResult> {
 ///
 /// Never returns `Err`; see [`run`].
 pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> {
-    let specs_dir = paths::specs_dir(repo);
+    let specs_dir = paths::specs_dir(repo)?;
     let specs_root = rel_path(&specs_dir, repo);
 
     let mut result = CorpusLinks {

@@ -112,7 +112,7 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
             joined(&canonical_allow_ordered(), &args.allow),
             joined(&to_strings(CANONICAL_DENY), &args.deny),
             joined(&to_strings(RETIRED_ALLOW), &args.revoke),
-            canonical_directories(repo, &args.path),
+            canonical_directories(repo, &args.path)?,
         )
     } else {
         (
@@ -292,19 +292,22 @@ fn joined(first: &[String], extra: &[String]) -> Vec<String> {
 /// slash: the configured spec root, and `{config-dir}/commands/{project}`,
 /// where `{config-dir}` is the settings file's own directory and `{project}`
 /// the namespace [`Host::load`] resolves.
-fn canonical_directories(repo: &Path, settings_path: &str) -> Vec<String> {
+fn canonical_directories(repo: &Path, settings_path: &str) -> Result<Vec<String>> {
     let config_dir = Path::new(settings_path)
         .parent()
         .unwrap_or_else(|| Path::new(""));
-    let commands = config_dir.join("commands").join(Host::load(repo).project);
-    [repo.join(Paths::load(repo).specs_root), repo.join(commands)]
-        .iter()
-        .map(|dir| {
-            dir.to_string_lossy()
-                .trim_end_matches(['/', '\\'])
-                .to_owned()
-        })
-        .collect()
+    let commands = config_dir.join("commands").join(Host::load(repo)?.project);
+    Ok([
+        repo.join(Paths::load(repo)?.specs_root),
+        repo.join(commands),
+    ]
+    .iter()
+    .map(|dir| {
+        dir.to_string_lossy()
+            .trim_end_matches(['/', '\\'])
+            .to_owned()
+    })
+    .collect())
 }
 
 /// Claude's canonical `permissions.allow` set: [`CANONICAL_ALLOW_STATIC`]

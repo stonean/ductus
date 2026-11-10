@@ -84,7 +84,7 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///   table: the project set a value, so the default never stands in for it.
 /// - [`PrimitiveError::Io`] when the config file exists but cannot be read.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

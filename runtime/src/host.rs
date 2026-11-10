@@ -29,6 +29,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::primitives::{PrimitiveError, Result, read_text_if_present};
 use crate::schema::config_keys;
 use crate::schema::paths;
 
@@ -67,20 +68,25 @@ pub struct Host {
 impl Host {
     /// Load `Host` for `repo`: `project` from the resolved config file's
     /// `[host]` block (team-shared), `cli-config-dir` from the resolved
-    /// per-contributor session file with a config-file `[host]` fallback.
-    /// Returns defaults (`.claude` / repo directory basename) for any value
-    /// not found in those sources.
+    /// per-contributor session file, then the config file's `[host]` value.
+    /// A value found in neither file takes its default (`.claude` / repo
+    /// directory basename).
     ///
-    /// A malformed config or session file is treated as absent, and **both
-    /// cases log a warning to stderr** — command resolution should not fail
-    /// because of an unrelated config error, but it must not resolve a
-    /// silently-wrong value either.
-    /// Mismatches between the resolved values and the on-disk layout surface
-    /// as the existing "command file not found" error at lookup time.
-    #[must_use]
-    pub fn load(repo: &Path) -> Self {
+    /// A file that does not exist is absent, the ordinary state. A config or
+    /// session file that exists but cannot be read or parsed halts with an
+    /// error naming it, never a default in its place (`CFG-ENV-008`): a
+    /// silently-wrong `cli_config_dir` would surface far away, as a "command
+    /// file not found" for an agent the contributor does use. Mismatches
+    /// between the resolved values and the on-disk layout surface as the
+    /// existing "command file not found" error at lookup time.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::Io`] or [`PrimitiveError::Toml`], naming the config
+    /// or session file that failed.
+    pub fn load(repo: &Path) -> Result<Self> {
         let defaults = Self::defaults(repo);
-        let host_block = Self::load_host_block(repo);
+        let host_block = Self::load_host_block(repo)?;
         // `project` is shared across the team — it names the slash-command
         // namespace and is identical for every contributor — so it stays in
         // the committed config file's `[host]` block.
@@ -93,60 +99,50 @@ impl Host {
         // `.agents`), so it must NOT live in committed config. Prefer the
         // gitignored session file; fall back to the config file's `[host]`
         // value for adopters predating the relocation; then the default.
-        let cli_config_dir = Self::load_session_cli_config_dir(repo)
+        let cli_config_dir = Self::load_session_cli_config_dir(repo)?
             .or_else(|| host_block.and_then(|b| b.cli_config_dir))
             .unwrap_or(defaults.cli_config_dir);
-        Self {
+        Ok(Self {
             cli_config_dir,
             project,
-        }
+        })
     }
 
-    /// Read the `[host]` block from the resolved config file. Returns `None`
-    /// when the file is missing, has no `[host]` block, or fails to parse
-    /// (a parse error logs to stderr and yields `None` — command resolution
-    /// should not fail because of an unrelated config error).
-    fn load_host_block(repo: &Path) -> Option<HostBlock> {
+    /// Read the `[host]` block from the resolved config file. `Ok(None)` when
+    /// the file is missing or has no `[host]` block; a file that cannot be
+    /// read or does not parse is an error naming it.
+    fn load_host_block(repo: &Path) -> Result<Option<HostBlock>> {
         let toml_path = paths::config_path(repo);
-        let content = std::fs::read_to_string(&toml_path).ok()?;
+        let Some(content) = read_text_if_present(&toml_path)? else {
+            return Ok(None);
+        };
         config_keys::warn_unknown_keys(&toml_path, &content, &["host"]);
-        match toml::from_str::<HostFile>(&content) {
-            Ok(parsed) => parsed.host,
-            Err(err) => {
-                eprintln!(
-                    "ductus: failed to parse {} for [host] block: {err}; using defaults",
-                    toml_path.display()
-                );
-                None
-            }
-        }
+        let parsed =
+            toml::from_str::<HostFile>(&content).map_err(|source| PrimitiveError::Toml {
+                path: toml_path,
+                source,
+            })?;
+        Ok(parsed.host)
     }
 
     /// Read the per-contributor `cli-config-dir` from the resolved,
-    /// gitignored session file. Best-effort: a missing or malformed session
-    /// file yields `None` so resolution falls through to the config file's
-    /// `[host]` value and then the default.
-    ///
-    /// A **missing** file is silent — not having one is the ordinary state.
-    /// A file that exists but does not parse logs to stderr, matching
-    /// [`Self::load_host_block`]: both are the same failure class, and
-    /// swallowing one of them made a corrupt session file indistinguishable
-    /// from an absent one (`QUAL-CLAIM-001`). The caller then resolved a
-    /// silently-wrong `cli_config_dir` and the mistake surfaced far away, as
-    /// a "command file not found" for an agent the contributor does use.
-    fn load_session_cli_config_dir(repo: &Path) -> Option<String> {
+    /// gitignored session file. `Ok(None)` when the file is missing (the
+    /// ordinary state) or carries no such key, so resolution falls through to
+    /// the config file's `[host]` value and then the default. A file that
+    /// exists but cannot be read or does not parse is an error naming it,
+    /// matching [`Self::load_host_block`] (`CFG-ENV-008`); `write-session`
+    /// replaces such a file, which is how `/target` repairs it.
+    fn load_session_cli_config_dir(repo: &Path) -> Result<Option<String>> {
         let session_path = paths::session_path(repo);
-        let content = std::fs::read_to_string(&session_path).ok()?;
-        match toml::from_str::<SessionHost>(&content) {
-            Ok(parsed) => parsed.cli_config_dir,
-            Err(err) => {
-                eprintln!(
-                    "ductus: failed to parse {} for cli-config-dir: {err}; using defaults",
-                    session_path.display()
-                );
-                None
-            }
-        }
+        let Some(content) = read_text_if_present(&session_path)? else {
+            return Ok(None);
+        };
+        let parsed =
+            toml::from_str::<SessionHost>(&content).map_err(|source| PrimitiveError::Toml {
+                path: session_path,
+                source,
+            })?;
+        Ok(parsed.cli_config_dir)
     }
 
     /// Repo-relative paths where an installed slash-command file named
@@ -273,7 +269,7 @@ mod tests {
     #[test]
     fn missing_file_returns_defaults() {
         let repo = tmp_repo("ductus-fixture");
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".claude");
         assert_eq!(
             host.project,
@@ -285,7 +281,7 @@ mod tests {
     fn empty_file_returns_defaults() {
         let repo = tmp_repo("ductus-fixture");
         std::fs::write(repo.path().join(".govern.toml"), "# empty\n").unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".claude");
     }
 
@@ -297,7 +293,7 @@ mod tests {
             "[pins]\n\"foo\" = \"v1\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".claude");
     }
 
@@ -309,7 +305,7 @@ mod tests {
             "[host]\ncli-config-dir = \".augment\"\nproject = \"acme\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".augment");
         assert_eq!(host.project, "acme");
     }
@@ -322,7 +318,7 @@ mod tests {
             "[host]\nproject = \"acme\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".claude");
         assert_eq!(host.project, "acme");
     }
@@ -344,7 +340,7 @@ mod tests {
             "feature = \"001-x\"\npath = \"specs/001-x\"\nset-at = \"2026-06-20T00:00:00Z\"\ncli-config-dir = \".opencode\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".opencode");
         assert_eq!(host.project, "acme");
     }
@@ -357,12 +353,12 @@ mod tests {
             "cli-config-dir = \".opencode\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".opencode");
     }
 
     #[test]
-    fn malformed_session_falls_back_to_legacy_then_default() {
+    fn a_malformed_session_file_halts_naming_it_rather_than_reading_the_config_value() {
         let repo = tmp_repo("acme-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
@@ -374,8 +370,9 @@ mod tests {
             "cli-config-dir = [broken\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
-        assert_eq!(host.cli_config_dir, ".augment");
+        let err = Host::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Toml { .. }), "{err}");
+        assert!(err.to_string().contains(".govern.session.toml"), "{err}");
     }
 
     #[test]
@@ -404,7 +401,7 @@ mod tests {
             "cli-config-dir = \".pi\"\n",
         )
         .unwrap();
-        let host = Host::load(repo.path());
+        let host = Host::load(repo.path()).unwrap();
         assert_eq!(host.cli_config_dir, ".pi");
         // The project falls back to the repo directory basename, so the pi
         // candidate names the flat project-hyphenated prompt-template form.
@@ -426,10 +423,22 @@ mod tests {
     }
 
     #[test]
-    fn malformed_toml_falls_back_to_defaults() {
+    fn a_malformed_config_halts_naming_the_file_rather_than_using_defaults() {
         let repo = tmp_repo("ductus-fixture");
         std::fs::write(repo.path().join(".govern.toml"), "[host\nbroken").unwrap();
-        let host = Host::load(repo.path());
-        assert_eq!(host.cli_config_dir, ".claude");
+        let err = Host::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Toml { .. }), "{err}");
+        assert!(err.to_string().contains(".govern.toml"), "{err}");
+    }
+
+    /// A file that exists but cannot be read is not an absent one: a directory
+    /// where the session file belongs halts naming it.
+    #[test]
+    fn an_unreadable_session_file_halts_naming_it_rather_than_reading_as_absent() {
+        let repo = tmp_repo("ductus-fixture");
+        std::fs::create_dir_all(repo.path().join(".ductus/session.toml")).unwrap();
+        let err = Host::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err}");
+        assert!(err.to_string().contains("session.toml"), "{err}");
     }
 }

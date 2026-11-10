@@ -52,7 +52,7 @@ const PROJECT_TEMPLATE: &str = "framework/templates/project/inbox.md";
 pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
     super::validate_inbox_text("append-inbox", "text", &args.text)?;
 
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
 
     let (existing, created) = match std::fs::read_to_string(&inbox_path) {

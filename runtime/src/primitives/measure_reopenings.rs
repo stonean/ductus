@@ -163,7 +163,7 @@ pub(crate) fn compute(
     repo: &Path,
     now: SystemTime,
 ) -> Result<Measurement> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     let project = ProjectRepository::discover(repo)?;
     let repository = &project.repository;
     let at = match &args.at {

@@ -1576,8 +1576,8 @@ MUTATIONS = [
     (
         'M224 the unchecked-box check runs ahead of the scenario questions',
         'src/primitives/check_review_gate.rs',
-        '    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {\n        return Ok(blocked);\n    }\n',
-        '    if let Some(blocked) = unchecked_task_block(&feature_dir, &rel_dir)? {\n        return Ok(blocked);\n    }\n    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {\n        return Ok(blocked);\n    }\n',
+        '    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature)? {\n        return Ok(blocked);\n    }\n',
+        '    if let Some(blocked) = unchecked_task_block(&feature_dir, &rel_dir)? {\n        return Ok(blocked);\n    }\n    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature)? {\n        return Ok(blocked);\n    }\n',
         'check_review_gate::tests::an_unchecked_box_blocks_wherever_it_sits',
     ),
     (

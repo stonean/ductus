@@ -12,7 +12,7 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
 
 ## Behavior
 
-- `crate::host::Host::load` MUST resolve `cli_config_dir` in priority order: the per-contributor session file (the newest existing tier of `SESSION_CHAIN` — `.ductus/session.toml`, `.govern/session.toml`, `.govern.session.toml`), then the `[host]` value of the resolved config file (the newest existing tier of `CONFIG_CHAIN` — `.ductus/config.toml`, `.govern/config.toml`, `.govern.toml`) for adopters predating the relocation, then the default `.claude`. `project` continues to load from that resolved config file's `[host]` block (then the repo-directory-basename default). A malformed `.ductus/session.toml` is treated as absent so resolution falls through.
+- `crate::host::Host::load` MUST resolve `cli_config_dir` in priority order: the per-contributor session file (the newest existing tier of `SESSION_CHAIN` — `.ductus/session.toml`, `.govern/session.toml`, `.govern.session.toml`), then the `[host]` value of the resolved config file (the newest existing tier of `CONFIG_CHAIN` — `.ductus/config.toml`, `.govern/config.toml`, `.govern.toml`) for adopters predating the relocation, then the default `.claude`. `project` continues to load from that resolved config file's `[host]` block (then the repo-directory-basename default). A session or config file that exists but cannot be read or parsed halts `Host::load` with an error naming the file (`CFG-ENV-008`); it is never read as absent, so resolution does not fall through to the next tier or the default. Only a file that does not exist is absent.
 - `write-session` becomes a **merge-writer** over `.ductus/session.toml`, with all on-disk keys optional:
   - A *target write* (`feature`+`path` supplied, optional `scenario`) sets the target block and a fresh `set-at`, and **preserves** any existing `cli-config-dir` unless one is supplied in the same call.
   - A *host-config write* (`cli-config-dir` supplied, no `feature`) sets `cli-config-dir` and **preserves** the existing target block verbatim. Against a fresh repo it writes a file containing only `cli-config-dir`.
@@ -29,7 +29,7 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
 - **Target switch.** A `/{project}:target` rewrite changes feature/path/scenario/set-at and preserves `cli-config-dir`.
 - **`--clear` with an agent identity recorded.** The session file is rewritten to contain only `cli-config-dir` (target cleared, agent identity kept) so `ductus exec` keeps resolving command files; `--clear` with no recorded `cli-config-dir` deletes the file as before.
 - **Host-config write on a fresh repo.** `/ductus` setting `cli-config-dir` before any target writes a session file containing only that key; `dashboard` reports no target.
-- **Malformed session file.** `Host::load` and the `write-session` preserve-read both treat it as absent (best-effort) rather than failing command resolution or a target switch.
+- **Malformed session file.** `Host::load` halts naming the file, as every other reader of it does. `write-session` is the repair: a target write over a malformed shared default replaces it and names it in `unreadable` (its `cli-config-dir` is not carried forward), so `/{project}:target` restores a readable file.
 
 ## Open Questions
 

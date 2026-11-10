@@ -560,18 +560,23 @@ fn seed_context(
 
     let mut context = Map::new();
     let session_path = ductus::schema::paths::session_path(repo);
-    if let Ok(text) = std::fs::read_to_string(&session_path)
-        && let Ok(Value::Object(map)) = toml::from_str::<Value>(&text)
-    {
-        context.extend(map);
+    if let Some(text) = ductus::primitives::read_text_if_present(&session_path)? {
+        let parsed = toml::from_str::<Value>(&text).map_err(|source| {
+            ductus::primitives::PrimitiveError::Toml {
+                path: session_path.clone(),
+                source,
+            }
+        })?;
+        if let Value::Object(map) = parsed {
+            context.extend(map);
+        }
     }
     // Only a process with a record of its own overrides the default's keys.
-    // Otherwise the default, read leniently above, seeds exactly as it did
-    // before spec 062 — so a malformed default halts no walk that does not ask
-    // for the session, and the seed is also a general-purpose one, whose `path`
-    // may be a primitive argument with no `feature` beside it (a bootstrap
-    // walk's `merge-managed-block`). Only the process's own file is read
-    // strictly (AC22).
+    // Otherwise the default, read strictly above, seeds as it did before spec
+    // 062 — and the seed is also a general-purpose one, whose `path` may be a
+    // primitive argument with no `feature` beside it (a bootstrap walk's
+    // `merge-managed-block`). A malformed default or own file halts the walk,
+    // naming the file (AC22, `CFG-ENV-008`).
     if !has_own_record(repo, identity) {
         return Ok(context);
     }
@@ -605,7 +610,14 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
     use ductus::parser;
     use serde_json::Value;
 
-    let host = Host::load(repo);
+    let host = match Host::load(repo) {
+        Ok(host) => host,
+        Err(err) => {
+            emit_exec_error("config-unreadable", &err.to_string());
+            eprintln!("{err}");
+            return ExitCode::from(1);
+        }
+    };
     let mut candidates = vec![
         repo.join("framework/commands")
             .join(format!("{command}.md")),
@@ -680,13 +692,20 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
     let stdout = io::stdout();
     let mut reader = stdin.lock();
     let mut writer = stdout.lock();
-    let mut walker = Walker::new(
+    let mut walker = match Walker::new(
         &procedure,
         repo.to_path_buf(),
         context,
         &mut reader,
         &mut writer,
-    );
+    ) {
+        Ok(walker) => walker,
+        Err(err) => {
+            emit_exec_error("config-unreadable", &err.to_string());
+            eprintln!("{err}");
+            return ExitCode::from(1);
+        }
+    };
     match walker.run() {
         Ok(WalkOutcome::Complete) => ExitCode::SUCCESS,
         Ok(WalkOutcome::Errored { .. }) => ExitCode::from(1),
@@ -1117,29 +1136,27 @@ mod tests {
         assert_eq!(context["block"], "x");
     }
 
-    /// A malformed default halts no walk for a process with no record of its
-    /// own — it seeds leniently, as before spec 062 — while a malformed own
-    /// record is still reported (AC22).
+    /// A malformed shared default halts the seed for a process with no record
+    /// of its own, naming the file, as a malformed own record does (AC22,
+    /// `CFG-ENV-008`).
     #[test]
-    fn a_malformed_default_seeds_leniently_but_a_malformed_own_record_does_not() {
+    fn a_malformed_default_halts_the_seed_naming_the_file_as_a_malformed_own_record_does() {
         let tmp = repo_with_default("feature = [\n");
-        assert!(
-            seed_context(tmp.path(), None)
-                .unwrap()
-                .get("feature")
-                .is_none()
-        );
+        let err = seed_context(tmp.path(), None).unwrap_err();
+        assert!(err.to_string().contains("session.toml"), "{err}");
         let review = Identity::named("review").unwrap();
-        let context = seed_context(tmp.path(), Some(&review)).unwrap();
-        assert!(context.get("feature").is_none());
+        let err = seed_context(tmp.path(), Some(&review)).unwrap_err();
+        assert!(err.to_string().contains("session.toml"), "{err}");
 
+        std::fs::write(tmp.path().join(".ductus/session.toml"), "").unwrap();
         std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
         std::fs::write(
             tmp.path().join(".ductus/sessions/review.toml"),
             "feature = [",
         )
         .unwrap();
-        assert!(seed_context(tmp.path(), Some(&review)).is_err());
+        let err = seed_context(tmp.path(), Some(&review)).unwrap_err();
+        assert!(err.to_string().contains("review.toml"), "{err}");
     }
 
     #[test]

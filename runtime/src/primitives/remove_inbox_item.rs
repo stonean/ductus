@@ -28,7 +28,7 @@ pub fn run(args: &RemoveInboxItemArgs, repo: &Path) -> Result<RemoveInboxItemRes
     super::validate_inbox_text("remove-inbox-item", "item", &args.item)?;
     let target = args.item.trim();
 
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
 
     let existing = match std::fs::read_to_string(&inbox_path) {

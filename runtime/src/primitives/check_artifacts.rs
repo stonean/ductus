@@ -200,7 +200,7 @@ pub(crate) struct Checked {
 ///
 /// As [`run`], less the list file's.
 pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     // The argument is checked, the directory's contents are not: this
     // primitive skips a linked sibling as `target-unparseable` and keeps
     // running (scenario `sibling-symlink-trust-boundary`), which the walk in

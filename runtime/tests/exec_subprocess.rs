@@ -178,10 +178,13 @@ fn exec_run_as_an_identified_process_acts_on_its_own_target() {
     assert_eq!(envelopes.last().unwrap()["type"], "complete", "{stdout}");
 }
 
-/// Spec 062: a malformed shared default halts no walk that does not ask for
-/// the session — the seed reads it leniently, as before 062.
+/// A malformed shared default halts the walk with an error naming the file,
+/// even for a walk that does not ask for the session (`CFG-ENV-008`): the
+/// command lookup reads the session's `cli-config-dir` first, and the seed
+/// would halt on the same file next (spec 062's leniency is undone by the
+/// decision recorded in spec 022).
 #[test]
-fn exec_runs_with_a_malformed_default() {
+fn exec_halts_on_a_malformed_default_naming_the_file() {
     ensure_binary_built();
     let tmp = tempfile::tempdir().unwrap();
     write_procedure_repo(
@@ -207,8 +210,13 @@ fn exec_runs_with_a_malformed_default() {
         .output()
         .expect("run runtime");
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(output.status.success(), "{stdout}");
-    assert!(stdout.contains("\"type\":\"complete\""), "{stdout}");
+    assert_eq!(output.status.code(), Some(1), "{stdout}");
+    assert!(
+        stdout.contains("\"code\":\"config-unreadable\""),
+        "{stdout}"
+    );
+    assert!(stdout.contains("session.toml"), "{stdout}");
+    assert!(!stdout.contains("\"type\":\"complete\""), "{stdout}");
 }
 
 #[test]

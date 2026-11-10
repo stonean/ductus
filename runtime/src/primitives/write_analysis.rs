@@ -113,7 +113,7 @@ fn refuse_while_implementation_is_open(
 ///   prior `analysis.md` that opens no block carries no decisions and is
 ///   overwritten.
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
@@ -1711,18 +1711,26 @@ mod tests {
     }
 
     #[test]
-    fn a_malformed_config_still_records_the_run() {
-        // Regression: the registry read was `?`-propagated, so an unrelated
-        // config typo suppressed the analyze record entirely -- and an absent
-        // record is exactly what the pre-done gate reads as "never analyzed".
-        // This primitive writes a record on every run, by contract.
+    fn a_malformed_registry_entry_still_records_the_run() {
+        // Regression: the registry read was `?`-propagated, so a malformed
+        // `[constitutions]` entry suppressed the analyze record entirely -- and
+        // an absent record is exactly what the pre-done gate reads as "never
+        // analyzed". A config that parses records the run (spec 055's data
+        // model); one that does not halts it, below.
         let tmp = spec_repo("status: in-progress\ndependencies: []");
         let cfg = tmp.path().join(".ductus");
         fs::create_dir_all(&cfg).unwrap();
-        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+        fs::write(
+            cfg.join("config.toml"),
+            "[constitutions.acme]\nrepo = \"\"\n",
+        )
+        .unwrap();
 
         let result = run(&args(), tmp.path());
-        assert!(result.is_ok(), "a config typo must not suppress the record");
+        assert!(
+            result.is_ok(),
+            "a malformed entry must not suppress the record"
+        );
 
         let spec = analysis_md(&tmp);
         assert!(
@@ -1732,6 +1740,27 @@ mod tests {
         assert!(spec.contains("unexamined: 1"), "{spec}");
     }
 
+    /// A config that does not parse halts the run naming the file, writing no
+    /// record: the spec root it would be written under is unknown (spec 022
+    /// task 12, option b; spec 055's data model scopes the recorded run to a
+    /// config that parses).
+    #[test]
+    fn an_unparseable_config_halts_the_run_naming_the_file() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+
+        let err = run(&args(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::Toml { path, .. } if path.ends_with(".ductus/config.toml")),
+            "{err}"
+        );
+        assert!(
+            !analysis_exists(&tmp),
+            "no record is written under a guessed spec root"
+        );
+    }
     // -- spec 058 review: decision-record hardening -------------------------
 
     /// A control character in a finding's message or a waiver's reason is

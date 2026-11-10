@@ -56,7 +56,7 @@ const DEFAULT_BASE: &str = "HEAD";
 /// a changed `spec.md` or `tasks.md` returns, so an edit that could not be judged
 /// never reads as a correction.
 pub fn run(args: &ClassifySpecEditArgs, repo: &Path) -> Result<ClassifySpecEditResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
     if !repo.join(&rel_dir).is_dir() {

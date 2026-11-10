@@ -130,7 +130,7 @@ pub(crate) struct Classified {
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classified> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.join("spec.md").is_file() {

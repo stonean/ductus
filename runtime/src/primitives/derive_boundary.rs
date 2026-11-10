@@ -58,7 +58,7 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
 /// the first out-of-spec edit halts with `out-of-boundary-edit` — while the
 /// walk itself reaches a legible next-step instead of dying at step 2.
 pub(crate) fn compute(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

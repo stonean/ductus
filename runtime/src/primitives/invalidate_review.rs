@@ -49,7 +49,7 @@ use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 /// A spec that records no current review is **not** an error — it is
 /// `invalidated: false`, already in the state this primitive produces.
 pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
 
     let feature_dir = repo.join(&root).join(&args.feature);

@@ -68,7 +68,7 @@ pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResul
         validate_slug(slug)?;
     }
 
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let features = list_feature_dirs(&repo.join(&root));
 
     match match_identifier(&features, identifier) {

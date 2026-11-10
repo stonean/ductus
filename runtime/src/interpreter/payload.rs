@@ -97,6 +97,12 @@ pub enum PayloadError {
         /// Why it could not be read.
         reason: String,
     },
+    /// The project config or a session file a builder reads (the spec root,
+    /// the host's command layout) exists but cannot be read or parsed, or its
+    /// `[paths] specs-root` is invalid. The walk halts, naming the file,
+    /// rather than building a request from a default (`CFG-ENV-008`).
+    #[error("config-unreadable: {0}")]
+    ConfigUnreadable(#[from] crate::primitives::PrimitiveError),
 }
 
 /// Machine-readable code emitted in the `error` envelope when payload
@@ -111,6 +117,7 @@ impl PayloadError {
             // for an identifier `validate_response` does not know.
             Self::UnknownExtension { .. } => "unknown-extension",
             Self::ListsFileUnreadable { .. } => "lists-file-unreadable",
+            Self::ConfigUnreadable(_) => "config-unreadable",
         }
     }
 }
@@ -180,18 +187,13 @@ pub fn build_extension_request(
 ) -> Result<Value, PayloadError> {
     match identifier {
         "writeCode" => build_write_code_request(context, repo, command_name),
-        "writeSpecBody" => Ok(build_write_spec_body_request(
-            context,
-            repo,
-            command_name,
-            step_prose,
-        )),
+        "writeSpecBody" => build_write_spec_body_request(context, repo, command_name, step_prose),
         "performReview" => Ok(build_perform_review_request(context, repo)),
         "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo)),
-        "askClarifyQuestion" => Ok(build_ask_clarify_question_request(context, repo)),
-        "routeInboxItem" => Ok(build_route_inbox_item_request(context, repo)),
-        "routeFold" => Ok(build_route_fold_request(context, repo)),
-        "verifyCriteria" => Ok(build_verify_criteria_request(context, repo)),
+        "askClarifyQuestion" => build_ask_clarify_question_request(context, repo),
+        "routeInboxItem" => build_route_inbox_item_request(context, repo),
+        "routeFold" => build_route_fold_request(context, repo),
+        "verifyCriteria" => build_verify_criteria_request(context, repo),
         other => Err(PayloadError::UnknownExtension {
             identifier: other.to_string(),
         }),
@@ -483,7 +485,7 @@ fn build_write_code_request(
         .to_string();
 
     let plan_relevant_files = load_plan_relevant_files(&feature, repo)?;
-    let excerpts = load_constitution_excerpts(command_name, repo);
+    let excerpts = load_constitution_excerpts(command_name, repo)?;
     let write_boundary = string_array(context, "write-boundary");
     let task = load_current_task(&feature, context, repo);
 
@@ -525,9 +527,9 @@ fn build_write_spec_body_request(
     repo: &Path,
     command_name: &str,
     step_prose: &str,
-) -> Value {
+) -> Result<Value, PayloadError> {
     let section = extract_section_name(step_prose).unwrap_or_default();
-    let (template_path, template_content) = load_template(command_name, repo);
+    let (template_path, template_content) = load_template(command_name, repo)?;
     let feature_description = context
         .get("feature-description")
         .and_then(Value::as_str)
@@ -538,7 +540,7 @@ fn build_write_spec_body_request(
     } else {
         let feature = context.get("feature").and_then(Value::as_str);
         let path_hint = context.get("path").and_then(Value::as_str);
-        read_existing_section(&section, feature, path_hint, repo, command_name)
+        read_existing_section(&section, feature, path_hint, repo, command_name)?
     };
     let typed = WriteSpecBodyRequest {
         template_path,
@@ -547,7 +549,7 @@ fn build_write_spec_body_request(
         feature_description,
         existing_content,
     };
-    typed_with_legacy_context(&typed, context)
+    Ok(typed_with_legacy_context(&typed, context))
 }
 
 /// Resolve the template file the running command fills. `/ductus:plan` fills
@@ -558,20 +560,21 @@ fn build_write_spec_body_request(
 /// layout `framework/templates/spec/<file>` (the ductus repo itself).
 /// Returns `(repo-relative path, content)` for the first candidate on
 /// disk, or empty strings when the command fills no template or none
-/// exists.
-fn load_template(command_name: &str, repo: &Path) -> (String, String) {
+/// exists. A config file that cannot be read or parsed is an error, not an
+/// absent spec root.
+fn load_template(command_name: &str, repo: &Path) -> Result<(String, String), PayloadError> {
     let file = match command_name {
         "plan" => "plan.md",
         "specify" => "spec.md",
-        _ => return (String::new(), String::new()),
+        _ => return Ok((String::new(), String::new())),
     };
-    let specs_root = crate::schema::paths::Paths::load(repo).specs_root;
+    let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
     for rel in crate::primitives::template_candidates(&specs_root, file) {
         if let Some(content) = read_repo_file(repo, &rel) {
-            return (rel, content);
+            return Ok((rel, content));
         }
     }
-    (String::new(), String::new())
+    Ok((String::new(), String::new()))
 }
 
 /// Build the `askClarifyQuestion` request (reserved by the
@@ -585,8 +588,11 @@ fn load_template(command_name: &str, repo: &Path) -> (String, String) {
 ///   seeds one (string, or object with `text` / optional `section`),
 ///   falling back to the first entry of `read-spec`'s merged
 ///   `open-questions` result.
-fn build_ask_clarify_question_request(context: &Map<String, Value>, repo: &Path) -> Value {
-    let spec_path = resolve_spec_path(context, repo);
+fn build_ask_clarify_question_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
+    let spec_path = resolve_spec_path(context, repo)?;
     let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
     let question = resolve_clarify_question(context);
     let typed = AskClarifyQuestionRequest {
@@ -594,7 +600,7 @@ fn build_ask_clarify_question_request(context: &Map<String, Value>, repo: &Path)
         spec_content,
         question,
     };
-    typed_only(&typed)
+    Ok(typed_only(&typed))
 }
 
 /// Resolve the repo-relative path of the spec file the walker targets.
@@ -603,7 +609,7 @@ fn build_ask_clarify_question_request(context: &Map<String, Value>, repo: &Path)
 /// the configured specs root; a directory-shaped `path` (the session
 /// target's feature directory) joined with `spec.md`. Empty when the
 /// context carries neither.
-fn resolve_spec_path(context: &Map<String, Value>, repo: &Path) -> String {
+fn resolve_spec_path(context: &Map<String, Value>, repo: &Path) -> Result<String, PayloadError> {
     let path = context
         .get("path")
         .and_then(Value::as_str)
@@ -612,20 +618,20 @@ fn resolve_spec_path(context: &Map<String, Value>, repo: &Path) -> String {
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
     if is_markdown_file {
-        return path.to_string();
+        return Ok(path.to_string());
     }
     let feature = context
         .get("feature")
         .and_then(Value::as_str)
         .unwrap_or_default();
     if !feature.is_empty() {
-        let specs_root = crate::schema::paths::Paths::load(repo).specs_root;
-        return format!("{specs_root}/{feature}/spec.md");
+        let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
+        return Ok(format!("{specs_root}/{feature}/spec.md"));
     }
     if !path.is_empty() {
-        return format!("{path}/spec.md");
+        return Ok(format!("{path}/spec.md"));
     }
-    String::new()
+    Ok(String::new())
 }
 
 /// The walker-context key a clarify walk seeds with the question each
@@ -700,7 +706,10 @@ const INBOX_ROUTES: [&str; 5] = ["rule", "spec", "scenario", "chore", "discard"]
 ///
 /// `item-text` falls back to `description` — the key `/ductus:specify` seeds —
 /// so the specify path needs no second context key for the same value.
-fn build_route_inbox_item_request(context: &Map<String, Value>, repo: &Path) -> Value {
+fn build_route_inbox_item_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
     let item_text = context
         .get("item-text")
         .or_else(|| context.get("description"))
@@ -715,20 +724,21 @@ fn build_route_inbox_item_request(context: &Map<String, Value>, repo: &Path) -> 
     let typed = RouteInboxItemRequest {
         item_text,
         routes: INBOX_ROUTES.iter().map(ToString::to_string).collect(),
-        available_specs: load_available_specs(repo),
+        available_specs: load_available_specs(repo)?,
         candidates,
     };
-    typed_only(&typed)
+    Ok(typed_only(&typed))
 }
 
 /// Scan the configured spec root for `NNN-slug` feature directories and
-/// read each spec's frontmatter `status`. Best-effort: an unreadable
-/// directory yields an empty list, an unreadable or malformed `spec.md`
-/// yields an empty status (the feature's existence still matters to the
-/// router). Sorted by slug for deterministic payloads.
-fn load_available_specs(repo: &Path) -> Vec<RouteInboxSpec> {
-    let specs_dir = crate::schema::paths::specs_dir(repo);
-    crate::primitives::list_feature_dirs(&specs_dir)
+/// read each spec's frontmatter `status`. An unreadable directory yields an
+/// empty list and an unreadable or malformed `spec.md` an empty status (the
+/// feature's existence still matters to the router); a project config that
+/// cannot be read or parsed is an error. Sorted by slug for deterministic
+/// payloads.
+fn load_available_specs(repo: &Path) -> Result<Vec<RouteInboxSpec>, PayloadError> {
+    let specs_dir = crate::schema::paths::specs_dir(repo)?;
+    Ok(crate::primitives::list_feature_dirs(&specs_dir)
         .into_iter()
         .map(|slug| {
             let status = read_spec_status(&specs_dir.join(&slug).join("spec.md"));
@@ -737,7 +747,7 @@ fn load_available_specs(repo: &Path) -> Vec<RouteInboxSpec> {
                 status,
             }
         })
-        .collect()
+        .collect())
 }
 
 /// The fold decision's route vocabulary. Two leaves, and deliberately not
@@ -765,14 +775,18 @@ const FOLD_ROUTES: [&str; 2] = ["body-edit", "scenario"];
 ///   give. The section list is what keeps it naming a heading the file
 ///   actually has.
 ///
-/// Best-effort throughout: an unreadable file yields an empty string rather
-/// than an error, matching every sibling builder. A missing target is not
+/// An unreadable spec file yields an empty string rather than an error,
+/// matching every sibling builder; a project config that cannot be read or
+/// parsed is an error. A missing target is not
 /// special-cased here — `retire-feature` refuses on it at the end of the
 /// fold, which is the moment that check can be made honestly.
-fn build_route_fold_request(context: &Map<String, Value>, repo: &Path) -> Value {
-    let spec_path = resolve_spec_path(context, repo);
+fn build_route_fold_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
+    let spec_path = resolve_spec_path(context, repo)?;
     let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
-    let specs_root = crate::schema::paths::Paths::load(repo).specs_root;
+    let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
     let feature = spec_path
         .strip_prefix(&format!("{specs_root}/"))
         .and_then(|rest| rest.split('/').next())
@@ -811,7 +825,7 @@ fn build_route_fold_request(context: &Map<String, Value>, repo: &Path) -> Value 
         target_sections,
         routes: FOLD_ROUTES.iter().map(ToString::to_string).collect(),
     };
-    typed_only(&typed)
+    Ok(typed_only(&typed))
 }
 
 /// The scenarios a branch-scoped spec carries, sorted by slug through the
@@ -902,8 +916,11 @@ fn read_spec_status(spec_path: &Path) -> String {
 ///   completion gate's `read-spec` step, indexed in body order (the same
 ///   0-based addressing `mark-criterion` consumes). Empty when the
 ///   context carries no criteria — the typed shape is always present.
-fn build_verify_criteria_request(context: &Map<String, Value>, repo: &Path) -> Value {
-    let spec_path = resolve_spec_path(context, repo);
+fn build_verify_criteria_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
+    let spec_path = resolve_spec_path(context, repo)?;
     let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
     let criteria = context
         .get("acceptance-criteria")
@@ -931,7 +948,7 @@ fn build_verify_criteria_request(context: &Map<String, Value>, repo: &Path) -> V
         spec_content,
         criteria,
     };
-    typed_only(&typed)
+    Ok(typed_only(&typed))
 }
 
 /// The walker-context key an `/analyze` walk seeds with the rule each
@@ -1139,7 +1156,7 @@ fn load_plan_relevant_files(
     let Ok(canon_repo) = repo.canonicalize() else {
         return Ok(Vec::new());
     };
-    let plan_path = crate::schema::paths::specs_dir(&canon_repo)
+    let plan_path = crate::schema::paths::specs_dir(&canon_repo)?
         .join(feature)
         .join("plan.md");
     let Ok(plan_content) = std::fs::read_to_string(&plan_path) else {
@@ -1234,37 +1251,40 @@ fn project_relative(canon_repo: &Path, abs: &Path) -> Option<String> {
     Some(parts?.join("/"))
 }
 
-fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionExcerptScan {
-    let Some(command_path) = locate_command_file(command_name, repo) else {
-        return ConstitutionExcerptScan::unexaminable(format!(
+fn load_constitution_excerpts(
+    command_name: &str,
+    repo: &Path,
+) -> Result<ConstitutionExcerptScan, PayloadError> {
+    let Some(command_path) = locate_command_file(command_name, repo)? else {
+        return Ok(ConstitutionExcerptScan::unexaminable(format!(
             "command-file-missing: {command_name}"
-        ));
+        )));
     };
     let Ok(command_content) = std::fs::read_to_string(&command_path) else {
         // Repo-relative: the label rides in an outbound payload, and an
         // absolute path would carry the contributor's home directory with it.
         let shown = command_path.strip_prefix(repo).unwrap_or(&command_path);
-        return ConstitutionExcerptScan::unexaminable(format!(
+        return Ok(ConstitutionExcerptScan::unexaminable(format!(
             "command-file-unreadable: {}",
             shown.display()
-        ));
+        )));
     };
     let anchors = parse_command_references(&command_content);
     if anchors.is_empty() {
         // The one honest empty case: the command declares no `Reference:`
         // line, so there is nothing to load and nothing went unexamined.
-        return ConstitutionExcerptScan::default();
+        return Ok(ConstitutionExcerptScan::default());
     }
     let Some(constitution_rel) = paths::constitution_path(repo) else {
-        return ConstitutionExcerptScan::unexaminable(format!(
+        return Ok(ConstitutionExcerptScan::unexaminable(format!(
             "constitution-unreadable: {}",
             paths::CONSTITUTION_CHAIN.join(" or ")
-        ));
+        )));
     };
     let Ok(constitution) = std::fs::read_to_string(repo.join(constitution_rel)) else {
-        return ConstitutionExcerptScan::unexaminable(format!(
+        return Ok(ConstitutionExcerptScan::unexaminable(format!(
             "constitution-unreadable: {constitution_rel}"
-        ));
+        )));
     };
     let mut scan = ConstitutionExcerptScan::default();
     for anchor in anchors {
@@ -1278,11 +1298,11 @@ fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionEx
                 .push(format!("anchor-unresolved: §{anchor}")),
         }
     }
-    scan
+    Ok(scan)
 }
 
-fn locate_command_file(command_name: &str, repo: &Path) -> Option<PathBuf> {
-    let host = Host::load(repo);
+fn locate_command_file(command_name: &str, repo: &Path) -> Result<Option<PathBuf>, PayloadError> {
+    let host = Host::load(repo)?;
     let mut rels = vec![format!("framework/commands/{command_name}.md")];
     // Installed command file — `commands/` (claude-style), singular
     // `command/` (opencode), or flat `prompts/{project}-{name}.md` (pi);
@@ -1292,10 +1312,10 @@ fn locate_command_file(command_name: &str, repo: &Path) -> Option<PathBuf> {
     for rel in rels {
         let candidate = repo.join(rel);
         if candidate.is_file() {
-            return Some(candidate);
+            return Ok(Some(candidate));
         }
     }
-    None
+    Ok(None)
 }
 
 /// The outcome of a constitution-excerpt load: what was read, and what could
@@ -1409,20 +1429,22 @@ fn read_existing_section(
     path_hint: Option<&str>,
     repo: &Path,
     command_name: &str,
-) -> Option<String> {
+) -> Result<Option<String>, PayloadError> {
     let feature_dir = match feature {
-        Some(f) if !f.is_empty() => crate::schema::paths::specs_dir(repo).join(f),
+        Some(f) if !f.is_empty() => crate::schema::paths::specs_dir(repo)?.join(f),
         _ => repo.join(path_hint.unwrap_or_default()),
     };
     let filenames: &[&str] = match command_name {
         "plan" => &["plan.md"],
         "specify" => &["spec.md"],
-        _ => return None,
+        _ => return Ok(None),
     };
     // BE-INPUT-004: `feature` and `path` arrive in the walker context, so the
     // file is confined to the project before it is read, as every other reader
     // here is — a `../` feature or an absolute path never reaches the payload.
-    let canon_repo = repo.canonicalize().ok()?;
+    let Ok(canon_repo) = repo.canonicalize() else {
+        return Ok(None);
+    };
     for filename in filenames {
         let candidate = feature_dir.join(filename);
         let Contained::Inside(abs) = classify_contained(&canon_repo, &candidate) else {
@@ -1434,12 +1456,12 @@ fn read_existing_section(
         if let Some(body) = extract_section_body(&content, section) {
             let trimmed = body.trim();
             if trimmed.is_empty() {
-                return None;
+                return Ok(None);
             }
-            return Some(trimmed.to_string());
+            return Ok(Some(trimmed.to_string()));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Pull a level-2 (`## …`) section body from a markdown file. The body runs
@@ -1668,7 +1690,7 @@ mod tests {
         write_command_file(tmp.path(), "implement", "§alpha, §ghost");
         write_constitution(tmp.path(), "<!-- §alpha -->\n\nBody of alpha.\n");
 
-        let scan = load_constitution_excerpts("implement", tmp.path());
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
         assert_eq!(
             scan.excerpts.len(),
             1,
@@ -1688,7 +1710,7 @@ mod tests {
         write_command_file(tmp.path(), "implement", "§alpha");
         // No constitution written at all.
 
-        let scan = load_constitution_excerpts("implement", tmp.path());
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
         assert_eq!(scan.excerpts, [] as [String; 0]);
         assert_eq!(scan.unexaminable.len(), 1);
         assert_eq!(
@@ -1715,7 +1737,7 @@ mod tests {
         )
         .unwrap();
 
-        let scan = load_constitution_excerpts("implement", tmp.path());
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
         assert!(scan.unexaminable.is_empty(), "{:?}", scan.unexaminable);
         assert_eq!(scan.excerpts.len(), 1);
         assert!(scan.excerpts[0].contains("Body of alpha."));
@@ -1724,7 +1746,7 @@ mod tests {
     #[test]
     fn excerpt_scan_reports_a_missing_command_file() {
         let tmp = tempdir().unwrap();
-        let scan = load_constitution_excerpts("nonesuch", tmp.path());
+        let scan = load_constitution_excerpts("nonesuch", tmp.path()).unwrap();
         assert_eq!(scan.excerpts, [] as [String; 0]);
         assert_eq!(
             scan.unexaminable,
@@ -1743,7 +1765,7 @@ mod tests {
         )
         .unwrap();
 
-        let scan = load_constitution_excerpts("implement", tmp.path());
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
         assert_eq!(
             scan,
             ConstitutionExcerptScan::default(),
@@ -1823,7 +1845,8 @@ mod tests {
                 assert_eq!(pattern, ".env.*");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1854,7 +1877,8 @@ mod tests {
                 assert_eq!(pattern, ".gitignore");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1901,7 +1925,8 @@ mod tests {
                 assert_eq!(pattern, ".gitignore");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1942,7 +1967,8 @@ mod tests {
                 assert_eq!(pattern, "out-of-repo");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1960,7 +1986,8 @@ mod tests {
             "# Outside\n\n## Motivation\n\nOutside text.\n",
         )
         .unwrap();
-        let climbing = read_existing_section("Motivation", Some("../.."), None, &repo, "specify");
+        let climbing =
+            read_existing_section("Motivation", Some("../.."), None, &repo, "specify").unwrap();
         assert_eq!(climbing, None);
         let absolute = outer.path().canonicalize().unwrap();
         let hinted = read_existing_section(
@@ -1969,7 +1996,8 @@ mod tests {
             Some(absolute.to_str().unwrap()),
             &repo,
             "specify",
-        );
+        )
+        .unwrap();
         assert_eq!(hinted, None);
     }
 
@@ -1979,7 +2007,8 @@ mod tests {
             Err(PayloadError::SecretExfiltration { pattern, .. }) => Some(pattern),
             Err(
                 other @ (PayloadError::UnknownExtension { .. }
-                | PayloadError::ListsFileUnreadable { .. }),
+                | PayloadError::ListsFileUnreadable { .. }
+                | PayloadError::ConfigUnreadable(_)),
             ) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
@@ -2089,7 +2118,8 @@ mod tests {
                 assert_eq!(pattern, "out-of-repo");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2133,7 +2163,8 @@ mod tests {
                 assert_eq!(pattern, "out-of-repo");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2176,7 +2207,8 @@ mod tests {
                 assert_eq!(pattern, "out-of-repo");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2231,7 +2263,8 @@ mod tests {
                 assert_eq!(pattern, ".env");
             }
             other @ (PayloadError::UnknownExtension { .. }
-            | PayloadError::ListsFileUnreadable { .. }) => {
+            | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::ConfigUnreadable(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2281,7 +2314,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("feature".into(), Value::String("123-foo".into()));
         let prose = "Fill the Technical Decisions section of the plan.";
-        let value = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose);
+        let value = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose).unwrap();
         let obj = value.as_object().unwrap();
         assert_eq!(obj["section"], "Technical Decisions");
         assert_eq!(
@@ -2309,7 +2342,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("feature".into(), Value::String("999-empty".into()));
         let prose = "Fill the Motivation section of the spec.";
-        let value = build_write_spec_body_request(&ctx, tmp.path(), "specify", prose);
+        let value = build_write_spec_body_request(&ctx, tmp.path(), "specify", prose).unwrap();
         let obj = value.as_object().unwrap();
         // No existing content found → no `existing-content` key added.
         assert!(!obj.contains_key("existing-content"));
@@ -2340,9 +2373,9 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("feature".into(), Value::String("123-foo".into()));
         let prose = "Fill the Motivation section of the file.";
-        let plan = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose);
+        let plan = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose).unwrap();
         assert_eq!(plan["existing-content"], "Plan motivation.");
-        let spec = build_write_spec_body_request(&ctx, tmp.path(), "specify", prose);
+        let spec = build_write_spec_body_request(&ctx, tmp.path(), "specify", prose).unwrap();
         assert_eq!(spec["existing-content"], "Spec motivation.");
     }
 
@@ -2361,7 +2394,7 @@ mod tests {
             Value::String("webhook delivery".into()),
         );
         let prose = "Fill the Technical Decisions section of the plan.";
-        let value = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose);
+        let value = build_write_spec_body_request(&ctx, tmp.path(), "plan", prose).unwrap();
         assert_eq!(value["template-path"], "specs/templates/plan.md");
         assert_eq!(value["template-content"], "# Plan template\n");
         assert_eq!(value["feature-description"], "webhook delivery");
@@ -2379,12 +2412,12 @@ mod tests {
             "# Spec template\n",
         )
         .unwrap();
-        let (path, content) = load_template("specify", tmp.path());
+        let (path, content) = load_template("specify", tmp.path()).unwrap();
         assert_eq!(path, "framework/templates/spec/spec.md");
         assert_eq!(content, "# Spec template\n");
         // A command that fills no template resolves nothing.
         assert_eq!(
-            load_template("review", tmp.path()),
+            load_template("review", tmp.path()).unwrap(),
             (String::new(), String::new())
         );
     }
@@ -3050,7 +3083,7 @@ mod tests {
         // A dump key that must NOT leak into the typed payload.
         ctx.insert("stdout".into(), Value::String("noise".into()));
 
-        let value = build_route_fold_request(&ctx, tmp.path());
+        let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -3113,7 +3146,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("path".into(), Value::String("specs/1234.1-staged".into()));
 
-        let value = build_route_fold_request(&ctx, tmp.path());
+        let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["feature"], "1234.1-staged");
         assert_eq!(value["fold-target"], "099-elsewhere");
         assert_eq!(value["target-content"], "");
@@ -3148,7 +3181,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("feature".into(), Value::String("1234.1-staged".into()));
 
-        let value = build_route_fold_request(&ctx, &repo);
+        let value = build_route_fold_request(&ctx, &repo).unwrap();
         assert_eq!(value["fold-target"], "../../outside");
         assert_eq!(
             value["target-content"], "",
@@ -3171,7 +3204,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("feature".into(), Value::String("1234.1-standalone".into()));
 
-        let value = build_route_fold_request(&ctx, tmp.path());
+        let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["fold-target"], "");
         assert_eq!(value["target-content"], "");
     }
@@ -3194,7 +3227,7 @@ mod tests {
         // A dump key that must NOT leak into the typed payload.
         ctx.insert("stdout".into(), Value::String("noise".into()));
 
-        let value = build_ask_clarify_question_request(&ctx, tmp.path());
+        let value = build_ask_clarify_question_request(&ctx, tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -3223,7 +3256,7 @@ mod tests {
             "open-questions".into(),
             serde_json::json!([{ "text": "ignored fallback" }]),
         );
-        let value = build_ask_clarify_question_request(&ctx, tmp.path());
+        let value = build_ask_clarify_question_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["question"]["text"], "Cap at 60s?");
         assert_eq!(value["question"]["section"], "Behavior");
     }
@@ -3250,7 +3283,7 @@ mod tests {
         );
         ctx.insert("stdout".into(), Value::String("noise".into()));
 
-        let value = build_route_inbox_item_request(&ctx, tmp.path());
+        let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -3305,7 +3338,7 @@ mod tests {
             }]),
         );
 
-        let value = build_route_inbox_item_request(&ctx, tmp.path());
+        let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["item-text"], "a new check-artifacts family");
         assert_eq!(
             value["candidates"][0]["target"],
@@ -3327,7 +3360,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("item-text".into(), Value::String("the inbox item".into()));
         ctx.insert("description".into(), Value::String("something else".into()));
-        let value = build_route_inbox_item_request(&ctx, tmp.path());
+        let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["item-text"], "the inbox item");
         assert!(value.as_object().unwrap().get("candidates").is_none());
     }
@@ -3353,7 +3386,7 @@ mod tests {
         // A dump key that must NOT leak into the typed payload.
         ctx.insert("stdout".into(), Value::String("noise".into()));
 
-        let value = build_verify_criteria_request(&ctx, tmp.path());
+        let value = build_verify_criteria_request(&ctx, tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -3379,7 +3412,7 @@ mod tests {
         // Missing spec file and no criteria: the typed shape still leads
         // with empty fields rather than reverting to a dump.
         let tmp = tempdir().unwrap();
-        let value = build_verify_criteria_request(&Map::new(), tmp.path());
+        let value = build_verify_criteria_request(&Map::new(), tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()

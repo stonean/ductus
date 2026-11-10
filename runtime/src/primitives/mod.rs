@@ -648,6 +648,20 @@ pub enum PrimitiveError {
         /// The value as TOML renders it, flattened to one line.
         value: String,
     },
+    /// `[paths] specs-root` holds a value [`crate::schema::paths::validate_specs_root`]
+    /// rejects, so every primitive that resolves the spec root halts rather
+    /// than reading a directory the operator did not name (`CFG-ENV-008`).
+    #[error(
+        "invalid [paths] specs-root {value:?} in {path}: {reason} — remove the key to use the default `specs`, or set a valid name"
+    )]
+    InvalidSpecsRoot {
+        /// Path of the config file carrying the value.
+        path: PathBuf,
+        /// The offending value, trimmed.
+        value: String,
+        /// Why the value was rejected, as `validate_specs_root` words it.
+        reason: String,
+    },
     /// An environment variable the runtime reads at startup is set to a
     /// value that does not parse into its declared type, so the primitive
     /// that reads it halts rather than acting as though it were unset
@@ -1156,6 +1170,25 @@ pub(crate) fn with_line_ending(text: &str, ending: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// Read a UTF-8 configuration or session file that may legitimately not
+/// exist: `Ok(None)` only when the file is absent (`NotFound`), the ordinary
+/// state of an optional file. Any other read failure is an error naming the
+/// file, so an unreadable file never reads as an absent one (`CFG-ENV-008`).
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] for every failure but `NotFound`.
+pub fn read_text_if_present(path: &Path) -> Result<Option<String>> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => Ok(Some(text)),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(PrimitiveError::Io {
+            path: path.into(),
+            source,
+        }),
+    }
 }
 
 /// Read a UTF-8 file, surfacing path context on failure.

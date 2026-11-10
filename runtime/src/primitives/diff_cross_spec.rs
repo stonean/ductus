@@ -82,7 +82,7 @@ pub(crate) struct ImpactSurface {
 /// only relocate the halt `derive-boundary` no longer raises — the same
 /// `/{project}:implement` walk hits this primitive at steps 7 and 13.
 pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSurface> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

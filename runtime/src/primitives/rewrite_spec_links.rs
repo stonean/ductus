@@ -576,7 +576,7 @@ pub(crate) fn compute(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept>
     // Both arguments reach a filesystem path below — `from` as a path
     // component to skip, `to` as the directory whose existence is checked —
     // so neither may carry a parent-directory escape (BE-INPUT-004).
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.from)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.to)?;
     let mut target = FoldTarget::parse(&args.to)?;

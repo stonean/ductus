@@ -147,7 +147,7 @@ fn segment(content: &str) -> Vec<Block> {
 ///
 /// Each error writes nothing.
 pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let feature = one_feature_or_all("prune-plan", args.feature.as_deref(), args.all)?;
     // Refused before the `remove` list is checked, so a walk asked to apply is
     // told why it cannot rather than to list a section it then may not remove.

@@ -42,7 +42,7 @@ use crate::schema::primitives::{
 /// unparseable round file is the `could-not-run` verdict, not an error;
 /// neither is ever a match.
 pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescriptionsResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     fix_rounds::validate_feature(
         "check-prescriptions",
         repo,

@@ -124,7 +124,8 @@ fn denying_the_routing_gate_scaffolds_nothing() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let created: Vec<String> = std::fs::read_dir(tmp.path().join("specs"))

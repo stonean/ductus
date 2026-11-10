@@ -73,7 +73,7 @@ pub(crate) struct TaskList {
 /// Returns [`PrimitiveError::FeatureNotFound`] when `specs/<feature>/` does
 /// not exist, or [`PrimitiveError::Io`] when `tasks.md` cannot be read.
 pub(crate) fn compute(args: &ReadTasksArgs, repo: &Path) -> Result<TaskList> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     read_checked(args, repo, &root)
 }

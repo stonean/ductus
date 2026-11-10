@@ -145,19 +145,25 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
     /// carries CLI-supplied bindings (e.g., `feature`) that primitives
     /// deserialize their args from. An `/analyze` walk also binds the list
     /// seeds a session cannot carry (see [`derive_analyze_seeds`]).
+    ///
+    /// # Errors
+    ///
+    /// A project config that cannot be read or parsed, or whose
+    /// `[paths] specs-root` is invalid, when an `/analyze` walk derives its
+    /// seeds, as the error names the file.
     pub fn new(
         procedure: &'a Procedure,
         repo: PathBuf,
         mut context: Map<String, Value>,
         reader: &'a mut R,
         writer: &'a mut W,
-    ) -> Self {
+    ) -> primitives::Result<Self> {
         let analyze = procedure.command == "analyze";
         if analyze {
-            derive_analyze_seeds(&mut context, &repo);
+            derive_analyze_seeds(&mut context, &repo)?;
         }
         let seeded_keys = context.keys().cloned().collect();
-        Self {
+        Ok(Self {
             procedure,
             repo,
             context,
@@ -168,7 +174,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             analyze_tally: analyze.then(analyze_tally::AnalyzeTally::new),
             rules: None,
             gate_confirmed: false,
-        }
+        })
     }
 
     /// Walk the procedure to completion. Emits envelopes as a side effect.
@@ -1244,9 +1250,9 @@ fn spec_file(repo: &Path, path: &str) -> String {
 /// `analyzed-at` and `analyzed-against` are not derived: the caller supplies
 /// them, as `/analyze`'s host does, and a missing one fails by name at
 /// `write-analysis`.
-fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) {
+fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) -> primitives::Result<()> {
     if !context.contains_key("rule-files") {
-        let rule_files = match primitives::discover_rule_files::resolve_rules_dir(repo) {
+        let rule_files = match primitives::discover_rule_files::resolve_rules_dir(repo)? {
             (Some(dir), rel) => primitives::discover_rule_files::list_rule_files(&dir)
                 .unwrap_or_default()
                 .into_iter()
@@ -1259,13 +1265,14 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) {
     if !context.contains_key("paths")
         && let Some(Value::String(feature)) = context.get("feature")
     {
-        let root = crate::schema::paths::Paths::load(repo).specs_root;
+        let root = crate::schema::paths::Paths::load(repo)?.specs_root;
         if primitives::validate_feature_argument(repo, &root, feature).is_ok() {
             let glob =
                 primitives::lint_markdown::feature_markdown_glob(&format!("{root}/{feature}"));
             context.insert("paths".into(), Value::Array(vec![Value::String(glob)]));
         }
     }
+    Ok(())
 }
 
 /// Whether a `verifyCriteria` response affirmatively confirms the criterion
@@ -1413,7 +1420,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let result = serde_json::json!({
             "form": "file",
             "scope-count": 2,
@@ -1458,7 +1466,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<&str> = std::str::from_utf8(&writer).unwrap().lines().collect();
@@ -1486,7 +1495,8 @@ mod tests {
             ctx_with_feature("001-basic"),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<Value> = std::str::from_utf8(&writer)
@@ -1527,7 +1537,8 @@ mod tests {
             ctx_with_feature("999-nonexistent"),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         match outcome {
             WalkOutcome::Errored { code, .. } => assert_eq!(code, "primitive-failure"),
@@ -1566,7 +1577,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<Value> = std::str::from_utf8(&writer)
@@ -1611,7 +1623,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
         let lines: Vec<Value> = std::str::from_utf8(&writer)
             .unwrap()
@@ -1685,7 +1698,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
         // write-review rendered the union of both passes' findings.
@@ -1753,7 +1767,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
         let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
         assert!(
@@ -1810,6 +1825,7 @@ mod tests {
             &mut reader,
             &mut writer,
         )
+        .unwrap()
         .run()
     }
 
@@ -1879,7 +1895,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
         let analysis = std::fs::read_to_string(dir.join("analysis.md")).unwrap();
         // `plan.md` and `tasks.md` are both required at `planned`.
@@ -1934,7 +1951,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
         let analysis = std::fs::read_to_string(dir.join("analysis.md")).unwrap();
         assert!(analysis.contains("\nadvisory: 1\n"), "{analysis}");
@@ -2023,6 +2041,7 @@ mod tests {
             &mut reader,
             &mut writer,
         )
+        .unwrap()
         .run()
         .unwrap();
         let envelopes = String::from_utf8(writer)
@@ -2262,6 +2281,7 @@ mod tests {
             &mut reader,
             &mut writer,
         )
+        .unwrap()
         .run()
         .unwrap();
         let envelopes = String::from_utf8(writer)
@@ -2343,7 +2363,7 @@ mod tests {
         let mut context = Map::new();
         context.insert("feature".into(), Value::String("001-x".into()));
         context.insert("path".into(), Value::String("specs/001-x".into()));
-        derive_analyze_seeds(&mut context, tmp.path());
+        derive_analyze_seeds(&mut context, tmp.path()).unwrap();
         assert_eq!(
             context["rule-files"],
             serde_json::json!([
@@ -2366,7 +2386,7 @@ mod tests {
         context.insert("rule-files".into(), serde_json::json!(["mine.md"]));
         context.insert("paths".into(), serde_json::json!(["specs/001-x/spec.md"]));
         let seeded = context.clone();
-        derive_analyze_seeds(&mut context, tmp.path());
+        derive_analyze_seeds(&mut context, tmp.path()).unwrap();
         assert_eq!(context, seeded);
     }
 
@@ -2376,12 +2396,12 @@ mod tests {
     fn an_absent_or_empty_rule_directory_binds_no_rule_files() {
         let tmp = tempfile::tempdir().unwrap();
         let mut absent = Map::new();
-        derive_analyze_seeds(&mut absent, tmp.path());
+        derive_analyze_seeds(&mut absent, tmp.path()).unwrap();
         assert_eq!(absent["rule-files"], serde_json::json!([]));
 
         std::fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
         let mut empty = Map::new();
-        derive_analyze_seeds(&mut empty, tmp.path());
+        derive_analyze_seeds(&mut empty, tmp.path()).unwrap();
         assert_eq!(empty["rule-files"], serde_json::json!([]));
     }
 
@@ -2392,7 +2412,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut context = Map::new();
         context.insert("feature".into(), Value::String("../elsewhere".into()));
-        derive_analyze_seeds(&mut context, tmp.path());
+        derive_analyze_seeds(&mut context, tmp.path()).unwrap();
         assert!(!context.contains_key("paths"), "{context:?}");
     }
 
@@ -2453,7 +2473,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         match outcome {
             WalkOutcome::Errored { code, .. } => assert_eq!(code, "schema-mismatch"),
@@ -2511,7 +2532,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         walker.merge_primitive_result(
             "derive-boundary",
             serde_json::json!({
@@ -2569,7 +2591,8 @@ mod tests {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         walker.merge_primitive_result(
             "derive-boundary",
             serde_json::json!({
@@ -2595,7 +2618,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         walker.merge_primitive_result(
             "derive-boundary",
             serde_json::json!({
@@ -2626,7 +2650,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         walker.merge_primitive_result(
             "derive-boundary",
             serde_json::json!({ "boundary": ["specs/004-implement/**"] }),
@@ -2657,7 +2682,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<Value> = std::str::from_utf8(&writer)
@@ -2691,7 +2717,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<Value> = std::str::from_utf8(&writer)
@@ -2723,7 +2750,8 @@ mod tests {
             Map::new(),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         let outcome = walker.run().unwrap();
         assert_eq!(outcome, WalkOutcome::Complete);
         let lines: Vec<&str> = std::str::from_utf8(&writer).unwrap().lines().collect();
@@ -2741,7 +2769,7 @@ mod tests {
         let mut context = Map::new();
         context.insert("feature".into(), Value::String("006-specify".into()));
         context.insert("path".into(), Value::String("specs/006-specify".into()));
-        Walker::new(procedure, fixture_repo(), context, reader, writer)
+        Walker::new(procedure, fixture_repo(), context, reader, writer).unwrap()
     }
 
     #[test]
@@ -2777,7 +2805,7 @@ mod tests {
         reader: &'a mut R,
         writer: &'a mut W,
     ) -> Walker<'a, R, W> {
-        Walker::new(procedure, fixture_repo(), Map::new(), reader, writer)
+        Walker::new(procedure, fixture_repo(), Map::new(), reader, writer).unwrap()
     }
 
     #[test]
@@ -3258,11 +3286,11 @@ mod tests {
         let fixture = escape_fixture();
         for feature in ["001-out", "002-in"] {
             let mut context = ctx_with_feature(feature);
-            derive_analyze_seeds(&mut context, &fixture.repo);
+            derive_analyze_seeds(&mut context, &fixture.repo).unwrap();
             assert!(!context.contains_key("paths"), "{feature}: {context:?}");
         }
         let mut context = ctx_with_feature("003-clean");
-        derive_analyze_seeds(&mut context, &fixture.repo);
+        derive_analyze_seeds(&mut context, &fixture.repo).unwrap();
         assert_eq!(
             context["paths"],
             serde_json::json!(["specs/003-clean/**/*.md"])
@@ -3439,7 +3467,7 @@ mod tests {
         let mut writer: Vec<u8> = Vec::new();
         let mut context = Map::new();
         context.insert("write-boundary".into(), serde_json::json!(["runtime/**"]));
-        let mut walker = Walker::new(&procedure, repo, context, &mut reader, &mut writer);
+        let mut walker = Walker::new(&procedure, repo, context, &mut reader, &mut writer).unwrap();
         let outcome = walker.run().unwrap();
         let envelopes = std::str::from_utf8(&writer)
             .unwrap()
@@ -3532,7 +3560,8 @@ mod tests {
             ctx_with_feature("001-x"),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert!(matches!(walker.run().unwrap(), WalkOutcome::Complete));
         let boundary = serde_json::json!(["specs/001-x/**", "src/**"]);
         assert_eq!(walker.context["boundary"], boundary);
@@ -3569,7 +3598,8 @@ mod tests {
             ctx_with_feature("001-x"),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         walker.note_restored_lists(
             &["skipped".into(), "findings".into(), "feature".into()],
             &["skipped".into(), "findings".into(), "feature".into()],
@@ -3631,7 +3661,8 @@ mod tests {
             ctx_with_feature("001-x"),
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert!(matches!(walker.run().unwrap(), WalkOutcome::Complete));
         assert_eq!(walker.context["form"], "file");
         assert_eq!(

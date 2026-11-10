@@ -36,7 +36,7 @@ use std::collections::BTreeSet;
 use std::ops::Range;
 use std::path::Path;
 
-use crate::primitives::Result;
+use crate::primitives::{PrimitiveError, Result, read_text_if_present};
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -169,7 +169,7 @@ pub fn run(
     // Loaded once and shared: both the referrer list and the managed roots are
     // derived from the configured spec root, and reading the config twice to
     // answer one question is work with no second answer behind it.
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     let roots = managed_roots(&layout);
     let registry = read_registry(repo);
     // Paths this repo declares it *ships into* an adopter rather than holds.
@@ -233,7 +233,7 @@ pub fn run(
         } else {
             ATTRIBUTION_WATERMARK.to_string()
         },
-        last_applied: read_last_applied(repo),
+        last_applied: read_last_applied(repo)?,
     })
 }
 
@@ -560,19 +560,18 @@ fn covers(claimed: &str, target: &str) -> bool {
 /// Empty means *no migration has been applied* — the absent-section case the
 /// bootstrap treats as null. It is never rendered as a migration name; the
 /// caller distinguishes it from an id by its emptiness.
-fn read_last_applied(repo: &Path) -> String {
+fn read_last_applied(repo: &Path) -> Result<String> {
     let path = paths::config_path(repo);
-    let Ok(text) = std::fs::read_to_string(&path) else {
-        return String::new();
+    let Some(text) = read_text_if_present(&path)? else {
+        return Ok(String::new());
     };
     config_keys::warn_unknown_keys(&path, &text, &["migrations"]);
-    let Ok(parsed) = toml::from_str::<ConfigFile>(&text) else {
-        return String::new();
-    };
-    parsed
+    let parsed = toml::from_str::<ConfigFile>(&text)
+        .map_err(|source| PrimitiveError::Toml { path, source })?;
+    Ok(parsed
         .migrations
         .map(|section| section.last_applied)
-        .unwrap_or_default()
+        .unwrap_or_default())
 }
 
 #[cfg(test)]
@@ -620,6 +619,29 @@ mod tests {
             "# Constitution\n",
         );
         tmp
+    }
+
+    #[test]
+    fn the_watermark_is_read_from_the_migrations_section() {
+        let tmp = adopter();
+        assert_eq!(read_last_applied(tmp.path()).unwrap(), "ductus-rename");
+        let bare = tempdir().unwrap();
+        assert_eq!(read_last_applied(bare.path()).unwrap(), "");
+    }
+
+    /// A config that does not parse is an error naming it, never an empty
+    /// watermark that reads as "no migration applied" (`CFG-ENV-008`).
+    #[test]
+    fn a_config_that_does_not_parse_halts_the_watermark_read_naming_the_file() {
+        let tmp = adopter();
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[migrations\nbroken",
+        );
+        let err = read_last_applied(tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Toml { .. }), "{err}");
+        assert!(err.to_string().contains("config.toml"), "{err}");
+        assert!(run(&args(), tmp.path()).is_err());
     }
 
     #[test]

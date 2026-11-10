@@ -111,7 +111,8 @@ fn walks_a_procedure_exercising_every_step_kind() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     let outcome = walker.run().unwrap();
     assert_eq!(outcome, WalkOutcome::Complete);
 
@@ -185,7 +186,8 @@ fn walker_halts_on_primitive_failure_with_error_envelope() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     let outcome = walker.run().unwrap();
     match outcome {
         WalkOutcome::Errored { code, .. } => assert_eq!(code, "primitive-failure"),
@@ -322,7 +324,8 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
@@ -404,7 +407,8 @@ fn stray_and_malformed_stdin_lines_are_ignored_while_awaiting_llm_response() {
         Map::new(),
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let types: Vec<String> = std::str::from_utf8(&writer)
@@ -448,7 +452,8 @@ fn stray_and_malformed_stdin_lines_are_ignored_while_awaiting_gate_response() {
         Map::new(),
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
@@ -494,7 +499,8 @@ fn stdin_eof_while_awaiting_response_is_an_operational_error() {
         Map::new(),
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     let err = walker.run().unwrap_err();
     assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
 }
@@ -571,7 +577,8 @@ fn process_waivers_binds_fired_from_accumulated_pass_findings() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let review = std::fs::read_to_string(spec_dir.join("review.md")).unwrap();
@@ -673,7 +680,8 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let review = std::fs::read_to_string(spec_dir.join("review.md")).unwrap();
@@ -728,7 +736,8 @@ fn gate_confirm_primitive_step_blocks_without_the_phrase() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
         .unwrap()
@@ -767,7 +776,8 @@ fn prose_step_with_gate_phrase_blocks() {
         Map::new(),
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
         .unwrap()
@@ -807,7 +817,8 @@ fn primitive_step_with_gate_phrase_keeps_its_dispatch() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
         .unwrap()
@@ -882,7 +893,8 @@ fn prune_command_gate_blocks_on_the_exec_path() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let envelopes: Vec<Value> = std::str::from_utf8(&writer)
@@ -963,7 +975,8 @@ fn prune_command_applies_after_a_confirmed_gate() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let after = std::fs::read_to_string(feature_dir.join("tasks.md")).unwrap();
@@ -1055,7 +1068,8 @@ fn clarify_and_plan_size_checks_warn_without_halting_the_walk() {
             context,
             &mut reader,
             &mut writer,
-        );
+        )
+        .unwrap();
         assert_eq!(walker.run().unwrap(), WalkOutcome::Complete, "{command}");
         let primitives: Vec<String> = std::str::from_utf8(&writer)
             .unwrap()
@@ -1142,7 +1156,8 @@ fn a_scope_past_the_read_size_reaches_the_review_through_its_list_file() {
         context,
         &mut reader,
         &mut writer,
-    );
+    )
+    .unwrap();
     assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
 
     let request = std::str::from_utf8(&writer)

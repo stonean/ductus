@@ -31,7 +31,7 @@ use crate::schema::primitives::{
 /// or the feature directory resolves outside the project, and
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory is absent.
 pub fn run(args: &CheckReviewFreshnessArgs, repo: &Path) -> Result<CheckReviewFreshnessResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

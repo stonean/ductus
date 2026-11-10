@@ -44,7 +44,7 @@ use crate::schema::primitives::{
 /// failures. Pre-existing artifacts are the `kept` **domain outcome**,
 /// never an error.
 pub fn run(args: &CreatePlanArtifactsArgs, repo: &Path) -> Result<CreatePlanArtifactsResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

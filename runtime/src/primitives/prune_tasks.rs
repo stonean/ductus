@@ -126,7 +126,7 @@ impl Block {
 /// that fails partway keeps the reductions written before it; each is
 /// atomic, so running the walk again resumes.
 pub fn run(args: &PruneTasksArgs, repo: &Path) -> Result<PruneTasksResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     // The read size bounds the result only after an applied reduction is
     // written, so a malformed one halts here, before any write, rather than
     // fail a call whose writes stand.

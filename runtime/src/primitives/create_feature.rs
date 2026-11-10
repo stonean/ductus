@@ -49,7 +49,7 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
     }
     let branch = resolve_branch_scope(args)?;
 
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let specs_dir = repo.join(&root);
     let feature = match &branch {
         None => format!("{:03}-{slug}", next_feature_number(&specs_dir)),

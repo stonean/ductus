@@ -290,7 +290,7 @@ pub(crate) fn refuse_missing_work(
     let Some(task) = nonblank(disposition.task.as_deref()).map(str::trim) else {
         return Ok(());
     };
-    let root = crate::schema::paths::Paths::load(repo).specs_root;
+    let root = crate::schema::paths::Paths::load(repo)?.specs_root;
     let feature = tasks_feature(&root, target)
         .ok_or_else(|| refuse("task", format!("`{target}` is not a feature's tasks.md")))?;
     let tasks = super::read_tasks::read_checked(

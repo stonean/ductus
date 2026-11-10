@@ -29,7 +29,7 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// when `args.from` does not match disk, or [`PrimitiveError::Io`] for
 /// filesystem failures.
 pub fn run(args: &SetStatusArgs, repo: &Path) -> Result<SetStatusResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     for (argument, value) in [("from", args.from.as_str()), ("to", args.to.as_str())] {
         if !ALLOWED_STATUSES.contains(&value) {

@@ -135,3 +135,9 @@ It owes `/ductus:review` while `check-review-gate` says one is owed, then `/duct
 - [x] Contracts and text: the data model states the malformed-entry halt (`CFG-ENV-003`), the result's compatibility (`BE-COMPAT-001`) and bound, `outcome` for `reason`, the non-empty `path` rule and which surfaces carry a description; the spec, both scenarios, the plan, `docs/shared-constitution.md` and `README.md` corrected by tense or fact (owner, 2026-11-09, option A)
 
 - **Done when**: every criterion holds or carries a true annotation, and no contract or body passage is false about the tree
+
+## 17. 022's task 12: a config that does not parse halts the record writers
+
+- [x] 022's task 12, option (b), makes every reader of a `.ductus/config.toml` that does not parse halt naming the file, `write-review` and `write-analysis` included, since the spec root their record goes under cannot be read from it (owner, 2026-11-10: the writers halt too, and 055 reopens). The data model's sentence that both writers still record their run is scoped to a config that parses, where a malformed `[constitutions]` entry is still reported as an unreadable registry, and a signpost in the spec links back to 022, discharging its `cross-spec-impact:` entry. Their tests: `a_malformed_registry_entry_still_records_the_run`, `a_malformed_registry_entry_still_produces_a_report`, and an unparseable-config halt test beside each. The reopening owes a review and an analysis, then its close
+
+- **Done when**: the data model and the writers agree on which config failures halt a run and which are recorded

@@ -478,7 +478,7 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 ///   does.
 /// - [`PrimitiveError::Io`] on read/write failure.
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_arguments(args)?;
     let feature_dir = repo.join(&root).join(&args.feature);
@@ -615,7 +615,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // answer matched the bytes being written. With the record in its own
     // artifact — one this call does not touch — reading it from disk *is* the
     // consistent answer.
-    let analyze_freshness = analyze_freshness_of(&feature_dir, &args.feature, repo);
+    let analyze_freshness = analyze_freshness_of(&feature_dir, &args.feature, repo)?;
 
     Ok(WriteReviewResult {
         path: rel_path(&review_path, repo),
@@ -724,13 +724,13 @@ fn refuse_an_empty_scope_over_a_finding(
 }
 
 /// This run's own record, which it writes and does not read.
-fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> String {
-    format!(
+fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
+    Ok(format!(
         "{}/{}/{}",
-        paths::Paths::load(repo).specs_root,
+        paths::Paths::load(repo)?.specs_root,
         args.feature,
         super::REVIEW_RECORD_FILE
-    )
+    ))
 }
 
 /// How many files this review's scope covers — the denominator.
@@ -790,7 +790,7 @@ fn resolve_scope(
         })?;
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
-    let own_record = own_record_path(args, repo);
+    let own_record = own_record_path(args, repo)?;
     let read = result.scope.iter().filter(|path| **path != own_record);
     Ok((
         u32::try_from(read.count()).unwrap_or(u32::MAX),
@@ -810,9 +810,10 @@ fn resolve_scope(
 /// A spec whose frontmatter will not parse yields
 /// [`RecordFreshness::Undeterminable`] rather than an error: the review
 /// itself has already been written by this point, and failing the whole call
-/// over the notice would trade a report for a row.
-fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> RecordFreshness {
-    let root = paths::Paths::load(repo).specs_root;
+/// over the notice would trade a report for a row. A project config that
+/// cannot be read or parsed is an error, as it is for every primitive.
+fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> Result<RecordFreshness> {
+    let root = paths::Paths::load(repo)?.specs_root;
     let rel_dir = format!("{root}/{feature}");
     // An unreadable record is reported as never-run here, deliberately: this
     // is an advisory row in a review's stdout, not a gate, and the gate is
@@ -820,10 +821,10 @@ fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> Recor
     // review's summary line on a damaged analyze record would let one record's
     // damage suppress an unrelated command's output.
     let record = crate::primitives::load_analyze_record(feature_dir);
-    match record.as_present() {
+    Ok(match record.as_present() {
         Some(analyze) => analyze_subjects::analyze_freshness(repo, &rel_dir, Some(analyze)),
         None => RecordFreshness::NeverRun,
-    }
+    })
 }
 
 // -- observation dispositions -----------------------------------------------
@@ -5402,20 +5403,25 @@ mod tests {
     }
 
     #[test]
-    fn a_malformed_config_still_produces_a_report() {
-        // Regression: the registry read was `?`-propagated, so an unrelated
-        // typo in the project config produced no review.md at all and the
-        // findings this run computed were lost. An unreadable registry is a
-        // governance state to report, not a reason to drop the report.
+    fn a_malformed_registry_entry_still_produces_a_report() {
+        // Regression: the registry read was `?`-propagated, so a malformed
+        // `[constitutions]` entry produced no review.md at all and the findings
+        // this run computed were lost. An unreadable registry is a governance
+        // state to report, not a reason to drop the report, in a config that
+        // parses (spec 055's data model); one that does not halts the run, below.
         let tmp = spec_repo("055-x", "status: in-progress");
         let cfg = tmp.path().join(".ductus");
         fs::create_dir_all(&cfg).unwrap();
-        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+        fs::write(
+            cfg.join("config.toml"),
+            "[constitutions.acme]\nrepo = \"\"\n",
+        )
+        .unwrap();
 
         let result = run(&base_args("055-x"), tmp.path());
         assert!(
             result.is_ok(),
-            "a config typo must not cost the operator the report"
+            "a malformed entry must not cost the operator the report"
         );
 
         let report = review_md(&tmp, "055-x");
@@ -5439,6 +5445,27 @@ mod tests {
         );
     }
 
+    /// A config that does not parse halts the run naming the file, writing no
+    /// report: the spec root it would be written under is unknown (spec 022
+    /// task 12, option b; spec 055's data model scopes the recorded run to a
+    /// config that parses).
+    #[test]
+    fn an_unparseable_config_halts_the_review_naming_the_file() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+
+        let err = run(&base_args("055-x"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::Toml { path, .. } if path.ends_with(".ductus/config.toml")),
+            "{err}"
+        );
+        assert!(
+            !tmp.path().join("specs/055-x/review.md").exists(),
+            "no report is written under a guessed spec root"
+        );
+    }
     // -- spec 058 review: decision-record hardening -------------------------
 
     /// A control character or a Unicode line break in a quoted value is

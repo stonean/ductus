@@ -35,7 +35,7 @@ use crate::schema::primitives::{
 /// a malformed `[artifacts] read-size-bytes`. An error is never a clean
 /// re-read: the host counts the round as not re-read.
 pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     fix_rounds::validate_feature("read-re-read", repo, &layout.specs_root, &args.feature)?;
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;

@@ -61,7 +61,7 @@ use crate::schema::primitives::{RelocateAuditRecordsArgs, RelocateAuditRecordsRe
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no `---` fences,
 ///   and [`PrimitiveError::UnclosedFrontmatter`] when its block never closes.
 pub fn run(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<RelocateAuditRecordsResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

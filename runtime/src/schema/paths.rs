@@ -18,13 +18,12 @@
 //! the git-tracked source of truth — the runtime reads the resolved name, it does
 //! not own it.
 //!
-//! Resolution is best-effort, mirroring [`crate::host::Host::load`]: a missing
-//! file, an absent block/key, an empty value, a malformed value, or an
-//! unparseable document all fall back to the default `specs` (the malformed
-//! cases log a one-line warning to stderr) so that path resolution never fails
-//! because of an unrelated or operator config error. Hard rejection of a
-//! malformed value at configuration time is the `/ductus` markdown path's job;
-//! [`validate_specs_root`] is the shared predicate both layers agree on.
+//! A missing file, an absent block/key, or an empty value resolves to the
+//! default `specs`; a file that exists but does not parse, or a value that
+//! [`validate_specs_root`] rejects, halts with an error naming the file
+//! (`CFG-ENV-008`), as [`crate::host::Host::load`] does. [`validate_specs_root`]
+//! is the shared predicate the `/ductus` configuration prompt and the runtime
+//! agree on.
 //!
 //! [§runtime-boundary]: `framework/constitution.md` §runtime-boundary
 
@@ -32,6 +31,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::primitives::{PrimitiveError, Result, read_text_if_present};
 use crate::schema::config_keys;
 
 /// Default spec-root directory name when the project config does not configure
@@ -222,14 +222,14 @@ fn active_path(repo: &Path, chain: &[&'static str; TIERS]) -> PathBuf {
 /// platform, and relaxing a validator is a one-way door — an adopter who
 /// configures a newly-permitted name cannot be un-configured by a later
 /// tightening. See spec 040's review. The predicate is shared so the
-/// runtime's best-effort resolver ([`Paths::load`]) and the `/ductus`
+/// runtime's resolver ([`Paths::load`]) and the `/ductus`
 /// configuration prompt apply the same rule.
 ///
 /// # Errors
 ///
-/// Returns a human-readable reason (suitable for a stderr warning or a
+/// Returns a human-readable reason (suitable for an error message or a
 /// configuration-time rejection message) when `name` is malformed.
-pub fn validate_specs_root(name: &str) -> Result<(), String> {
+pub fn validate_specs_root(name: &str) -> std::result::Result<(), String> {
     if name.is_empty() {
         return Err("spec-root name must not be empty".to_owned());
     }
@@ -257,7 +257,7 @@ pub fn validate_specs_root(name: &str) -> Result<(), String> {
 pub struct Paths {
     /// The spec-root directory name (e.g., `specs` by default, or a
     /// configured value like `governance`). Always well-formed: a malformed
-    /// configured value is rejected during load and replaced by the default.
+    /// configured value makes [`Paths::load`] return an error.
     pub specs_root: String,
 }
 
@@ -268,52 +268,51 @@ impl Paths {
     /// repo root in the common case, or a cross-service checkout root for
     /// `resolve-references` (each service may configure its own spec-root).
     ///
-    /// Best-effort and infallible: a missing file, absent `[paths]` table,
-    /// absent or empty `specs-root`, malformed value, or unparseable document
-    /// all yield the default `specs`. The two malformed cases (bad value, bad
-    /// document) log a one-line warning to stderr so the operator sees the
-    /// fallback rather than silently getting `specs`.
-    #[must_use]
-    pub fn load(base: &Path) -> Self {
+    /// A missing file, absent `[paths]` table, or absent or empty
+    /// `specs-root` yields the default `specs`.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::Io`] when the config file exists but cannot be read,
+    /// [`PrimitiveError::Toml`] when it does not parse, and
+    /// [`PrimitiveError::InvalidSpecsRoot`] when `specs-root` fails
+    /// [`validate_specs_root`]. Each names the file; none falls back to the
+    /// default.
+    pub fn load(base: &Path) -> Result<Self> {
         let specs_root =
-            Self::load_configured(base).unwrap_or_else(|| DEFAULT_SPECS_ROOT.to_owned());
-        Self { specs_root }
+            Self::load_configured(base)?.unwrap_or_else(|| DEFAULT_SPECS_ROOT.to_owned());
+        Ok(Self { specs_root })
     }
 
     /// Read and validate `[paths] specs-root` from `base`'s project config.
-    /// Returns `None` (→ caller uses the default) when the file is missing,
-    /// the key is absent or empty, the value is malformed, or the document
-    /// does not parse. Malformed value/document log to stderr.
-    fn load_configured(base: &Path) -> Option<String> {
+    /// Returns `Ok(None)` (→ caller uses the default) when the file is
+    /// missing or the key is absent or empty; a file that does not parse or a
+    /// value that fails validation is an error naming the file.
+    fn load_configured(base: &Path) -> Result<Option<String>> {
         let toml_path = config_path(base);
-        let content = std::fs::read_to_string(&toml_path).ok()?;
-        config_keys::warn_unknown_keys(&toml_path, &content, &["paths"]);
-        let parsed: PathsFile = match toml::from_str(&content) {
-            Ok(parsed) => parsed,
-            Err(err) => {
-                eprintln!(
-                    "ductus: failed to parse {} for [paths] block: {err}; using default spec-root {DEFAULT_SPECS_ROOT:?}",
-                    toml_path.display()
-                );
-                return None;
-            }
+        let Some(content) = read_text_if_present(&toml_path)? else {
+            return Ok(None);
         };
-        let raw = parsed.paths?.specs_root?;
+        config_keys::warn_unknown_keys(&toml_path, &content, &["paths"]);
+        let parsed: PathsFile =
+            toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
+                path: toml_path.clone(),
+                source,
+            })?;
+        let Some(raw) = parsed.paths.and_then(|block| block.specs_root) else {
+            return Ok(None);
+        };
         let name = raw.trim();
         if name.is_empty() {
-            // Empty/whitespace value is treated as unset → default, no warning.
-            return None;
+            // Empty/whitespace value is treated as unset → default, no error.
+            return Ok(None);
         }
-        match validate_specs_root(name) {
-            Ok(()) => Some(name.to_owned()),
-            Err(reason) => {
-                eprintln!(
-                    "ductus: invalid [paths] specs-root {name:?} in {}: {reason}; using default {DEFAULT_SPECS_ROOT:?}",
-                    toml_path.display()
-                );
-                None
-            }
-        }
+        validate_specs_root(name).map_err(|reason| PrimitiveError::InvalidSpecsRoot {
+            path: toml_path,
+            value: name.to_owned(),
+            reason,
+        })?;
+        Ok(Some(name.to_owned()))
     }
 }
 
@@ -324,9 +323,13 @@ impl Paths {
 /// tree) under the spec root calls `specs_dir(base).join(feature)` instead, so
 /// the configured root is honored uniformly. With no configuration it returns
 /// `base/specs`, preserving today's behavior exactly.
-#[must_use]
-pub fn specs_dir(base: &Path) -> PathBuf {
-    base.join(Paths::load(base).specs_root)
+///
+/// # Errors
+///
+/// Whatever [`Paths::load`] returns for a config file that cannot be read or
+/// parsed, or a `specs-root` it rejects.
+pub fn specs_dir(base: &Path) -> Result<PathBuf> {
+    Ok(base.join(Paths::load(base)?.specs_root))
 }
 
 #[derive(Deserialize, Default)]
@@ -465,43 +468,43 @@ mod tests {
     #[test]
     fn missing_file_defaults_to_specs() {
         let repo = tmp_repo();
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
-        assert_eq!(specs_dir(repo.path()), repo.path().join("specs"));
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
+        assert_eq!(specs_dir(repo.path()).unwrap(), repo.path().join("specs"));
     }
 
     #[test]
     fn empty_file_defaults_to_specs() {
         let repo = tmp_repo();
         write_toml(repo.path(), "# empty\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
     }
 
     #[test]
     fn paths_block_absent_defaults_to_specs() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[review]\ntech-stack-verified = true\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
     }
 
     #[test]
     fn specs_root_key_absent_defaults_to_specs() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nother = \"x\"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
     }
 
     #[test]
     fn empty_value_defaults_to_specs() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"\"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
     }
 
     #[test]
     fn whitespace_only_value_defaults_to_specs() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"   \"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "specs");
     }
 
     // --- Paths::load / specs_dir: configured override ------------------------
@@ -510,15 +513,18 @@ mod tests {
     fn configured_value_overrides_default() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"governance\"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "governance");
-        assert_eq!(specs_dir(repo.path()), repo.path().join("governance"));
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "governance");
+        assert_eq!(
+            specs_dir(repo.path()).unwrap(),
+            repo.path().join("governance")
+        );
     }
 
     #[test]
     fn configured_value_is_trimmed() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"  governance  \"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "governance");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "governance");
     }
 
     #[test]
@@ -528,30 +534,41 @@ mod tests {
             repo.path(),
             "[host]\nproject = \"acme\"\n\n[paths]\nspecs-root = \"design\"\n\n[review]\ntech-stack-verified = true\n",
         );
-        assert_eq!(Paths::load(repo.path()).specs_root, "design");
+        assert_eq!(Paths::load(repo.path()).unwrap().specs_root, "design");
     }
 
-    // --- Paths::load: malformed config falls back to default -----------------
+    // --- Paths::load: a malformed config halts, naming the file --------------
 
     #[test]
-    fn malformed_value_falls_back_to_default() {
+    fn a_value_outside_the_charset_is_rejected_naming_the_setting_value_and_file() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"../escape\"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        let err = Paths::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidSpecsRoot { .. }));
+        let text = err.to_string();
+        assert!(text.contains("[paths] specs-root"), "{text}");
+        assert!(text.contains("../escape"), "{text}");
+        assert!(text.contains("config.toml"), "{text}");
+        assert!(text.contains("remove the key"), "{text}");
     }
 
     #[test]
-    fn separator_value_falls_back_to_default() {
+    fn a_value_with_a_separator_is_rejected_not_defaulted() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths]\nspecs-root = \"nested/specs\"\n");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        let text = Paths::load(repo.path()).unwrap_err().to_string();
+        assert!(text.contains("nested/specs"), "{text}");
+        assert!(text.contains("path separator"), "{text}");
+        assert!(specs_dir(repo.path()).is_err());
     }
 
     #[test]
-    fn malformed_document_falls_back_to_default() {
+    fn a_document_that_does_not_parse_halts_naming_the_file() {
         let repo = tmp_repo();
         write_toml(repo.path(), "[paths\nbroken");
-        assert_eq!(Paths::load(repo.path()).specs_root, "specs");
+        let err = Paths::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Toml { .. }));
+        assert!(err.to_string().contains("config.toml"), "{err}");
     }
 
     // --- config_path / session_path resolvers (specs 042, 049) --------------

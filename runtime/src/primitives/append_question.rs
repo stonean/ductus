@@ -72,7 +72,7 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 /// never closes. A duplicate question is the `appended: false` domain
 /// outcome, not an error.
 pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_single_line("append-question", "question", &args.question)?;
     // Normalize before the dedup comparison below, not after: the stripped

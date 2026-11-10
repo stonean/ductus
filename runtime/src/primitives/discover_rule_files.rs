@@ -116,7 +116,7 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
     } else {
         validate_disabled_entries(config.review.as_ref(), &config_path)?
     };
-    let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
+    let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo)?;
 
     let mut notices: Vec<String> = unknown.iter().map(|key| key.notice(config_name)).collect();
     let mut selected: Vec<String> = Vec::new();
@@ -267,18 +267,19 @@ fn has(surfaces: &[String], member: &str) -> bool {
 /// `{specs-root}/rules/`; ductus's own repo keeps them under
 /// `framework/rules/`. Prefer the adopter path when it exists (that is the
 /// discriminator — a ductus checkout has `framework/rules/` but no
-/// `specs/rules/`). Returns `(None, "")` when neither exists.
-pub(crate) fn resolve_rules_dir(repo: &Path) -> (Option<PathBuf>, String) {
-    let layout = paths::Paths::load(repo);
+/// `specs/rules/`). Returns `(None, "")` when neither exists, and an error
+/// when the project config cannot be read or parsed.
+pub(crate) fn resolve_rules_dir(repo: &Path) -> Result<(Option<PathBuf>, String)> {
+    let layout = paths::Paths::load(repo)?;
     let adopter = repo.join(&layout.specs_root).join("rules");
     if adopter.is_dir() {
-        return (Some(adopter), format!("{}/rules", layout.specs_root));
+        return Ok((Some(adopter), format!("{}/rules", layout.specs_root)));
     }
     let own = repo.join("framework").join("rules");
     if own.is_dir() {
-        return (Some(own), "framework/rules".to_string());
+        return Ok((Some(own), "framework/rules".to_string()));
     }
-    (None, String::new())
+    Ok((None, String::new()))
 }
 
 /// List `*.md` basenames directly under `dir`, sorted for determinism.

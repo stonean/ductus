@@ -110,9 +110,11 @@ pub(crate) struct Resolved {
 /// [`PrimitiveError::Toml`] when the resolved project config is present but
 /// does not parse, and [`PrimitiveError::InvalidServiceEntry`] when a
 /// `[services.<alias>]` entry's `repo` or `path` is absent or empty.
+/// A reachable service checkout whose own project config cannot be read or
+/// parsed, or whose `[paths] specs-root` is invalid, halts the same way.
 /// Per-reference resolution failures are outcomes, not errors.
 pub(crate) fn resolve(args: &ResolveReferencesArgs, repo: &Path) -> Result<Resolved> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let spec_path = repo.join(&root).join(&args.feature).join("spec.md");
     let content = read_text(&spec_path)?;
@@ -129,15 +131,15 @@ pub(crate) fn resolve(args: &ResolveReferencesArgs, repo: &Path) -> Result<Resol
         .references
         .iter()
         .map(|entry| {
-            let (outcome, status) = classify(repo, &services, entry);
-            ResolutionRecord {
+            let (outcome, status) = classify(repo, &services, entry)?;
+            Ok(ResolutionRecord {
                 service: entry.service.clone(),
                 spec: entry.spec.clone(),
                 outcome,
                 status,
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
 
     // A repo under two aliases resolves through one of them silently, so the
     // registry's duplicates are part of the answer (spec 030's data model).
@@ -209,14 +211,14 @@ fn classify(
     repo: &Path,
     services: &Services,
     entry: &IndexEntry,
-) -> (ReferenceOutcome, Option<String>) {
+) -> Result<(ReferenceOutcome, Option<String>)> {
     // Null service (or an alias no longer in the registry) → unregistered:
     // a plain navigational link, status not attempted.
     let Some(alias) = entry.service.as_deref() else {
-        return (ReferenceOutcome::Unregistered, None);
+        return Ok((ReferenceOutcome::Unregistered, None));
     };
     let Some(service) = services.0.get(alias) else {
-        return (ReferenceOutcome::Unregistered, None);
+        return Ok((ReferenceOutcome::Unregistered, None));
     };
 
     // Resolve the local checkout (relative to the repo root, or absolute).
@@ -227,21 +229,21 @@ fn classify(
     // never `broken`.
     let checkout = resolve_path(repo, &service.path);
     if !checkout.is_dir() {
-        return (ReferenceOutcome::NotCheckedOut, None);
+        return Ok((ReferenceOutcome::NotCheckedOut, None));
     }
 
     // Reachable checkout: the target spec either resolves or is provably broken.
-    let target = paths::specs_dir(&checkout)
+    let target = paths::specs_dir(&checkout)?
         .join(&entry.spec)
         .join("spec.md");
     if !target.is_file() {
-        return (ReferenceOutcome::Broken, None);
+        return Ok((ReferenceOutcome::Broken, None));
     }
 
-    match read_target_status(&target) {
+    Ok(match read_target_status(&target) {
         Some(status) => (ReferenceOutcome::Ok, Some(status)),
         None => (ReferenceOutcome::StatusUnreadable, None),
-    }
+    })
 }
 
 /// Read a reachable target spec's `status`, returning `Some(status)` only when

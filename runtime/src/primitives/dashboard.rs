@@ -142,7 +142,7 @@ fn load(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result<Loa
         config_name,
         session_target,
         session,
-        inbox_standing: super::inbox_standing::standing(repo),
+        inbox_standing: super::inbox_standing::standing(repo)?,
         reopenings: super::measure_reopenings::counts(repo, now),
     })
 }
@@ -173,7 +173,7 @@ impl Loaded {
     /// never stdout printing: user-facing rendering stays with the host
     /// (§runtime-boundary).
     fn model(&self, repo: &Path) -> Result<(pipeline_view::Model, String)> {
-        let project = Host::load(repo).project;
+        let project = Host::load(repo)?.project;
         let model = pipeline_view::build(pipeline_view::ViewData {
             specs: &self.specs,
             questions: &self.questions,
@@ -265,7 +265,7 @@ fn reference_line(record: &ResolutionRecord, services: &Services, project: &str)
 /// Beside the entries, each spec carrying unresolved scenario questions with
 /// the scenario of each one, for the view, which lists every one.
 fn load_specs(repo: &Path) -> Result<(Vec<DashboardSpec>, pipeline_view::QuestionsBySpec)> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
     let mut entries: Vec<DashboardSpec> = Vec::new();
     let mut questions = pipeline_view::QuestionsBySpec::new();

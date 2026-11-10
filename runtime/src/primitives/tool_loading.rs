@@ -428,13 +428,31 @@ pub enum AlwaysLoaded {
         /// Why.
         reason: String,
     },
+    /// The host layout that locates the copy could not be resolved, because
+    /// the project config or a session file does not read or parse, so no
+    /// copy was looked for and no tool is flagged. A state of its own, never
+    /// a default layout in its place (`CFG-ENV-008`): the server still starts,
+    /// so `write-session` can repair a malformed session file, and every other
+    /// primitive that reads the file halts naming it.
+    HostUnresolved {
+        /// The error, which names the file.
+        reason: String,
+    },
 }
 
 impl AlwaysLoaded {
     /// Find and derive the installed copy under `repo`.
     #[must_use]
     pub fn resolve(repo: &Path) -> Self {
-        let candidates = Host::load(repo).command_file_candidates(ALWAYS_LOADED_COMMAND);
+        let host = match Host::load(repo) {
+            Ok(host) => host,
+            Err(err) => {
+                return Self::HostUnresolved {
+                    reason: err.to_string(),
+                };
+            }
+        };
+        let candidates = host.command_file_candidates(ALWAYS_LOADED_COMMAND);
         for path in &candidates {
             let source = match std::fs::read_to_string(repo.join(path)) {
                 Ok(source) => source,
@@ -467,7 +485,9 @@ impl AlwaysLoaded {
     pub fn tools(&self) -> BTreeSet<&'static str> {
         match self {
             Self::Derived { tools, .. } => tools.clone(),
-            Self::NoCopy { .. } | Self::Unreadable { .. } => BTreeSet::new(),
+            Self::NoCopy { .. } | Self::Unreadable { .. } | Self::HostUnresolved { .. } => {
+                BTreeSet::new()
+            }
         }
     }
 
@@ -490,6 +510,11 @@ impl AlwaysLoaded {
             Self::Unreadable { path, reason } => Some(format!(
                 "ductus: the installed `{ALWAYS_LOADED_COMMAND}` command at {path} could not be \
                  read ({reason}), so no tool is flagged to load up front (spec 080)"
+            )),
+            Self::HostUnresolved { reason } => Some(format!(
+                "ductus: the host layout could not be resolved ({reason}), so the installed \
+                 `{ALWAYS_LOADED_COMMAND}` command was not looked for and no tool is flagged \
+                 to load up front (spec 080)"
             )),
         }
     }
@@ -746,6 +771,33 @@ mod tests {
         assert_eq!(found.notice(), None);
     }
 
+    /// A session file that does not parse leaves the host layout unresolved:
+    /// no copy is looked for, no tool is flagged, and the notice names the
+    /// file, rather than a default layout standing in (`CFG-ENV-008`). The
+    /// installed copy here would otherwise derive two tools.
+    #[test]
+    fn an_unresolved_host_flags_nothing_and_names_the_file() {
+        let tmp = project(Some(
+            "## Instructions\n\n1. Invoke `resolve-session`.\n2. Invoke `write-session`.\n",
+        ));
+        fs::write(
+            tmp.path().join(".ductus/session.toml"),
+            "cli-config-dir = [\n",
+        )
+        .unwrap();
+        let found = AlwaysLoaded::resolve(tmp.path());
+        let AlwaysLoaded::HostUnresolved { reason } = &found else {
+            panic!("expected an unresolved host, got {found:?}");
+        };
+        assert!(reason.contains("session.toml"), "{reason}");
+        assert!(found.tools().is_empty());
+        let notice = found.notice().unwrap();
+        assert!(
+            notice.contains("could not be resolved") && notice.contains("session.toml"),
+            "{notice}"
+        );
+    }
+
     #[test]
     fn no_copy_flags_nothing_and_names_every_path_tried() {
         let tmp = project(None);
@@ -755,7 +807,9 @@ mod tests {
         };
         assert_eq!(
             candidates,
-            &Host::load(tmp.path()).command_file_candidates("target")
+            &Host::load(tmp.path())
+                .unwrap()
+                .command_file_candidates("target")
         );
         assert!(found.tools().is_empty());
         let notice = found.notice().unwrap();

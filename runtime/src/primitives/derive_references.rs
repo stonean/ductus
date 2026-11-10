@@ -106,7 +106,7 @@ struct RegisteredService {
 /// the listing of which specs to derive then has no answer, and guessing one
 /// would rewrite drafts or skip specs silently.
 pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesResult> {
-    let specs_root = paths::Paths::load(repo).specs_root;
+    let specs_root = paths::Paths::load(repo)?.specs_root;
     let registry = load_registry(repo)?;
 
     // Every tracked spec is enumerated, exactly as `derive-dependencies` does,
@@ -209,7 +209,9 @@ fn load_registry(repo: &Path) -> Result<BTreeMap<String, RegisteredService>> {
         let checkout = resolved.is_dir().then_some(resolved);
         // Reachable checkout → require that checkout's own root. Unreachable
         // → `None`, the permissive tier.
-        let specs_root = checkout.map(|dir| paths::Paths::load(&dir).specs_root);
+        let specs_root = checkout
+            .map(|dir| paths::Paths::load(&dir).map(|layout| layout.specs_root))
+            .transpose()?;
         registry.insert(
             services::normalize_repo(&entry.repo),
             RegisteredService { alias, specs_root },

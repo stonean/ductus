@@ -78,7 +78,7 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 ///   be read.
 /// - [`PrimitiveError::Io`] when a write fails.
 pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     let subjects = subjects(&root);
     check_args(args, &subjects)?;
     let (threshold, notices) = resolve_threshold(repo)?;

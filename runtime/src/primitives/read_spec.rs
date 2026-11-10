@@ -89,7 +89,7 @@ pub(crate) struct SpecRead {
 /// [`PrimitiveError::UnclosedFrontmatter`] when its block never closes,
 /// or [`PrimitiveError::Yaml`] when the frontmatter is not valid YAML.
 pub(crate) fn compute(args: &ReadSpecArgs, repo: &Path) -> Result<SpecRead> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     read_checked(args, repo, &root)
 }

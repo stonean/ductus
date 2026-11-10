@@ -88,7 +88,7 @@ pub(crate) struct Traversed {
 /// likewise the cycle walker tolerates missing or malformed downstream
 /// nodes by treating them as sinks (no outgoing edges).
 pub(crate) fn compute(args: &TraverseDepsArgs, repo: &Path) -> Result<Traversed> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let specs_dir = repo.join(&root);
     let feature_dir = specs_dir.join(&args.feature);

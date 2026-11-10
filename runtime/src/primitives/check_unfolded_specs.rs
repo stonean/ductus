@@ -82,7 +82,7 @@ pub(crate) fn compute(
     _args: &CheckUnfoldedSpecsArgs,
     repo: &Path,
 ) -> Result<(Vec<UnfoldedSpec>, u32)> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
 
     let mut unfolded: Vec<UnfoldedSpec> = Vec::new();

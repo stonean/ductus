@@ -98,7 +98,7 @@ pub(crate) fn run_with_lint(
     repo: &Path,
     lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<lint_markdown::Lint>,
 ) -> Result<Verdict> {
-    let root = paths::Paths::load(repo).specs_root;
+    let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
@@ -126,7 +126,7 @@ pub(crate) fn run_with_lint(
             path: spec_path.clone(),
             source,
         })?;
-    let project = Host::load(repo).project;
+    let project = Host::load(repo)?.project;
 
     // Gate check 0: the spec is not already `done`.
     //
@@ -148,7 +148,7 @@ pub(crate) fn run_with_lint(
 
     // Gate check 2: no scenario under this feature carries an unresolved
     // open question (spec 046).
-    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {
+    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature)? {
         return Ok(blocked);
     }
     // Then no box is left unchecked: a spec with work owed is no candidate for `done`,
@@ -1297,7 +1297,11 @@ fn unchecked_task_block(feature_dir: &Path, rel_dir: &str) -> Result<Option<Verd
 ///
 /// Reads through `read-spec`'s collector rather than re-deriving the list,
 /// so the gate blocks on exactly the questions the user was shown.
-fn scenario_question_block(feature_dir: &Path, repo: &Path, feature: &str) -> Option<Verdict> {
+fn scenario_question_block(
+    feature_dir: &Path,
+    repo: &Path,
+    feature: &str,
+) -> Result<Option<Verdict>> {
     let scan = read_spec::collect_scenario_open_questions(feature_dir);
     let questions = scan.questions;
     if questions.is_empty() {
@@ -1306,11 +1310,11 @@ fn scenario_question_block(feature_dir: &Path, repo: &Path, feature: &str) -> Op
         // its own inability to read. It is reported by `read-spec` and by
         // `check-artifacts`' skipped list instead, so the pass is still
         // distinguishable from a fully-examined one.
-        return None;
+        return Ok(None);
     }
     let scenarios = read_spec::scenario_names(&questions);
-    let project = Host::load(repo).project;
-    Some(Verdict {
+    let project = Host::load(repo)?.project;
+    Ok(Some(Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ScenarioOpenQuestions),
         message: Some(format!(
@@ -1326,7 +1330,7 @@ fn scenario_question_block(feature_dir: &Path, repo: &Path, feature: &str) -> Op
         )),
         violations: vec![],
         cross_spec_impact: vec![],
-    })
+    }))
 }
 
 #[cfg(test)]

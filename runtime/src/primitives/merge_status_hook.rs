@@ -129,7 +129,7 @@ pub(crate) fn run_with(
             });
         }
     };
-    let project = Host::load(repo).project;
+    let project = Host::load(repo)?.project;
     let hooks: Vec<(String, String)> = HOOKED_COMMANDS
         .iter()
         .map(|member| (format!("{project}:{member}"), hook_command(member)))

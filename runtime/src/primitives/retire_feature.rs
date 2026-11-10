@@ -93,7 +93,7 @@ pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult>
         });
     }
 
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.fold_target)?;
 

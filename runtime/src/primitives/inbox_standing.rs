@@ -22,28 +22,30 @@ use std::path::{Path, PathBuf};
 
 use git2::Repository;
 
+use crate::primitives::Result;
 use crate::schema::paths;
 use crate::schema::primitives::{InboxStanding, InboxState};
 
 /// Resolve the standing inbox backlog at `{specs-root}/inbox.md`.
 ///
-/// Never fails: every unknown is a *state*, because a row that silently
-/// disappeared or reported a confident zero over a file it could not read
-/// would be the `QUAL-CLAIM-001` conflation the row exists to remove from the
-/// report's own surface.
-pub(crate) fn standing(repo: &Path) -> InboxStanding {
-    let specs_root = paths::Paths::load(repo).specs_root;
+/// Every unknown about the inbox file is a *state*, because a row that
+/// silently disappeared or reported a confident zero over a file it could not
+/// read would be the `QUAL-CLAIM-001` conflation the row exists to remove from
+/// the report's own surface. A project config that cannot be read or parsed
+/// is not an inbox state: it is an error naming the file.
+pub(crate) fn standing(repo: &Path) -> Result<InboxStanding> {
+    let specs_root = paths::Paths::load(repo)?.specs_root;
     let rel = format!("{specs_root}/inbox.md");
     let Ok(content) = std::fs::read_to_string(repo.join(&rel)) else {
         // No file, or one that is not readable UTF-8. Distinct from clean: a
         // project with no `inbox.md` has not been examined-and-found-empty,
         // and the two must not render alike.
-        return InboxStanding {
+        return Ok(InboxStanding {
             state: InboxState::NoFile,
             outstanding: 0,
             oldest: None,
             path: rel,
-        };
+        });
     };
 
     // The shared comment- and fence-aware bullet grammar, not a second parser:
@@ -51,20 +53,20 @@ pub(crate) fn standing(repo: &Path) -> InboxStanding {
     // guidance block, and counting those once reported ~30 phantom items.
     let bullets: Vec<usize> = super::iter_bullets(&content).map(|(idx, _)| idx).collect();
     if bullets.is_empty() {
-        return InboxStanding {
+        return Ok(InboxStanding {
             state: InboxState::Clean,
             outstanding: 0,
             oldest: None,
             path: rel,
-        };
+        });
     }
 
-    InboxStanding {
+    Ok(InboxStanding {
         outstanding: u32::try_from(bullets.len()).unwrap_or(u32::MAX),
         oldest: oldest_bullet_date(repo, &rel, &content, &bullets),
         state: InboxState::Outstanding,
         path: rel,
-    }
+    })
 }
 
 /// The `YYYY-MM-DD` (UTC) date of the oldest surviving bullet, by `git blame`.
@@ -236,7 +238,7 @@ mod tests {
     #[test]
     fn an_absent_inbox_is_its_own_state_not_a_clean_one() {
         let tmp = tempdir().unwrap();
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.state, InboxState::NoFile);
         assert_eq!(result.outstanding, 0);
         assert_eq!(result.oldest, None);
@@ -249,7 +251,7 @@ mod tests {
             tmp.path(),
             "# Inbox\n\n<!-- Rules:\n- do not frontfill\n- groom regularly\n-->\n",
         );
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.state, InboxState::Clean);
         assert_eq!(
             result.outstanding, 0,
@@ -261,7 +263,7 @@ mod tests {
     fn outstanding_items_are_counted() {
         let tmp = tempdir().unwrap();
         seed_inbox(tmp.path(), "# Inbox\n\n- one\n- two\n- [ ] three\n");
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.state, InboxState::Outstanding);
         assert_eq!(result.outstanding, 3);
     }
@@ -273,7 +275,7 @@ mod tests {
     fn an_unblameable_inbox_still_counts_and_reports_no_age() {
         let tmp = tempdir().unwrap();
         seed_inbox(tmp.path(), "# Inbox\n\n- one\n");
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 1);
         assert_eq!(result.oldest, None);
     }
@@ -322,7 +324,7 @@ mod tests {
         seed_inbox(tmp.path(), "# Inbox\n\n- the old one\n- a fresh one\n");
         commit_all(&repo, "capture a second item", 1_789_516_800);
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.state, InboxState::Outstanding);
         assert_eq!(result.outstanding, 2);
         assert_eq!(
@@ -348,7 +350,7 @@ mod tests {
 
         // Groomed away, not yet committed.
         seed_inbox(tmp.path(), "# Inbox\n\n- a fresh one\n");
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 1);
         assert_eq!(
             result.oldest,
@@ -375,7 +377,7 @@ mod tests {
             tmp.path(),
             "# Inbox\n\n- logged just now\n- y\n<!-- end -->\n",
         );
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 2);
         assert_eq!(result.oldest, Some(format_utc_date(1_747_612_800)));
     }
@@ -393,7 +395,7 @@ mod tests {
         commit_all(&repo, "capture newer", 1_609_459_200);
 
         seed_inbox(tmp.path(), "# Inbox\n\n- just logged\n- newer\n");
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 2);
         assert_eq!(result.oldest, Some(format_utc_date(1_609_459_200)));
     }
@@ -414,7 +416,7 @@ mod tests {
         let blob = committed_text(&repo, Path::new("specs/inbox.md")).unwrap();
         assert!(!blob.contains('\r'), "autocrlf must store the blob as LF");
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.oldest, Some(format_utc_date(1_577_836_800)));
     }
 
@@ -434,7 +436,7 @@ mod tests {
         let repo = Repository::open(tmp.path()).unwrap();
         assert!(repo.is_shallow());
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 1);
         assert_eq!(result.oldest, None, "the cut hides the real date");
     }
@@ -466,7 +468,7 @@ mod tests {
         seed_inbox(tmp.path(), "# Inbox\n\n- [ ] ancient\n- [ ] recent\n");
         commit_all(&repo, "capture recent", 1_640_995_200);
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 2);
         assert_eq!(
             result.oldest, None,
@@ -493,7 +495,7 @@ mod tests {
             "# Inbox\n\n- [ ] recent\n- [ ] logged just now\n",
         );
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 2);
         assert_eq!(result.oldest, Some(format_utc_date(1_640_995_200)));
     }
@@ -522,7 +524,7 @@ mod tests {
         .unwrap();
         assert!(removed.removed);
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 1);
         assert_eq!(
             result.oldest,
@@ -549,7 +551,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = standing(tmp.path());
+        let result = standing(tmp.path()).unwrap();
         assert_eq!(result.outstanding, 2);
         assert_eq!(result.oldest, Some(format_utc_date(1_577_836_800)));
     }
@@ -564,7 +566,7 @@ mod tests {
         seed_inbox(&project, "# Inbox\n\n- old item\n");
         commit_all(&repo, "capture", 1_577_836_800);
 
-        let result = standing(&project);
+        let result = standing(&project).unwrap();
         assert_eq!(result.oldest, Some(format_utc_date(1_577_836_800)));
     }
 

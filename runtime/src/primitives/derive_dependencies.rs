@@ -161,7 +161,7 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
 /// it blocks.
 pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
     super::check_artifact_size::resolve_threshold(repo)?;
-    let specs_root = paths::Paths::load(repo).specs_root;
+    let specs_root = paths::Paths::load(repo)?.specs_root;
     let specs_dir = repo.join(&specs_root);
 
     let tracked = super::list_tracked_specs(repo, &specs_root)?;

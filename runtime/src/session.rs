@@ -2146,6 +2146,28 @@ mod tests {
         );
     }
 
+    /// The repair path (`CFG-ENV-008`): a malformed shared default halts every
+    /// read naming it — resolution and `Host::load` — while a `write-session`
+    /// target write replaces it, names it in `unreadable`, and leaves the
+    /// project readable again.
+    #[test]
+    fn a_malformed_default_halts_reads_until_a_target_write_repairs_it() {
+        let tmp = repo();
+        let default = tmp.path().join(".ductus/session.toml");
+        std::fs::write(&default, "cli-config-dir = [broken\n").unwrap();
+
+        let err = resolve(tmp.path(), None, t0()).unwrap_err();
+        assert!(err.to_string().contains("session.toml"), "{err}");
+        let err = crate::host::Host::load(tmp.path()).unwrap_err();
+        assert!(err.to_string().contains("session.toml"), "{err}");
+
+        let out = set(tmp.path(), None, "055-a", at(1));
+        assert_eq!(out.unreadable, vec![default]);
+        assert!(crate::host::Host::load(tmp.path()).is_ok());
+        let resolved = resolve(tmp.path(), None, at(2)).unwrap();
+        assert_eq!(feature_of(&resolved), Some("055-a"));
+    }
+
     /// A write that fails part-way — here, storing the shared default — leaves
     /// the own record, and the notice it holds, for the next resolution.
     #[test]

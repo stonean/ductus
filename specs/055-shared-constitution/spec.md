@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 next-criterion: 13
 ---
@@ -41,6 +41,8 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
 - **Registration is not transitive.** A registered checkout's own `.ductus/config.toml` is never read, so a shared
   constitution cannot pull in further constitutions. There is no recursion to bound, no cycle to detect, and the set
   of documents in effect is exactly what the project's own config names.
+
+> **Signpost (022 task 12):** a `.ductus/config.toml` that does not parse halts every reader of it, `write-review` and `write-analysis` included, with an error naming the file, since the spec root their record goes under cannot be read from it. A config that parses but holds a malformed `[constitutions]` entry still records the run, the registry reported unreadable. [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md) records the decision (its task 12, owner, 2026-11-10).
 
 ## Non-Goals
 

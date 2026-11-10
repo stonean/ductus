@@ -52,7 +52,7 @@ const RESULT_CONTRACT: &str = r#"```json
 /// `[artifacts] read-size-bytes`. An error is never an empty round: the host
 /// counts the round as not re-read.
 pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
-    let layout = paths::Paths::load(repo);
+    let layout = paths::Paths::load(repo)?;
     fix_rounds::validate_feature("brief-re-read", repo, &layout.specs_root, &args.feature)?;
     let feature_rel = format!("{}/{}", layout.specs_root, args.feature);
     // Read before anything is written, so a malformed switch halts the round
