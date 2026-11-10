@@ -32,9 +32,11 @@
 //!   substitutes them per their project, not this one's.
 //! - **`tool-search-line`**: per-entry flag, set on Claude Code's command
 //!   copies only (spec 080). After substitution the entry's
-//!   `## Instructions` preamble gains a line that loads its step tools in one
-//!   `ToolSearch`, less those named by the `commands/target.md` the manifest
-//!   installs ([`tool_loading::add_tool_search_line`]).
+//!   `## Instructions` preamble gains a line that loads its step tools, and
+//!   the tools its cited sections invoke, in one `ToolSearch`, less those
+//!   named by the `commands/target.md` the manifest installs
+//!   ([`tool_loading::add_tool_search_line`]). A reference it names is read
+//!   from `reference/` beside that entry's `commands/` directory.
 //! - **Source missing**: when the staging tree doesn't contain an
 //!   entry's source, the action is `source-missing` (not an
 //!   operational error — the host surfaces it so the operator can
@@ -66,7 +68,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::primitives::host_config::{self, HostRow};
 use crate::primitives::tool_loading;
@@ -125,7 +127,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   `tool-search-line` and the manifest installs no `commands/target.md`,
 ///   installs two different ones, or installs one that is missing or does not
 ///   parse, checked before any write; and when such an entry is
-///   not UTF-8 text or holds a malformed procedure, checked before any write
+///   not UTF-8 text, holds a malformed procedure, or names a reference that
+///   is not in the source root or is not UTF-8 text, checked before any write
 ///   for a command or skill destination and when the walk reaches it
 ///   otherwise.
 /// - [`PrimitiveError::InvalidSubstitutionKey`] when a substitution key is
@@ -144,8 +147,8 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
         super::validate_contained(&target_root, &entry.dest)?;
     }
 
-    let always_loaded = if args.entries.iter().any(|entry| entry.tool_search_line) {
-        Some(always_loaded_tools(&source_root, &args.entries)?)
+    let tool_search = if args.entries.iter().any(|entry| entry.tool_search_line) {
+        Some(tool_search_context(&source_root, &args.entries)?)
     } else {
         None
     };
@@ -160,7 +163,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             &target_root,
             &pinned,
             &args.substitutions,
-            always_loaded.as_ref(),
+            tool_search.as_ref(),
         )?);
     }
 
@@ -174,7 +177,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             &target_root,
             &pinned,
             &args.substitutions,
-            always_loaded.as_ref(),
+            tool_search.as_ref(),
             judged,
         )?;
         if let Some(count) = substitutions_applied {
@@ -254,7 +257,7 @@ fn check_host_destination(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
-    always_loaded: Option<&BTreeSet<&'static str>>,
+    tool_search: Option<&ToolSearch>,
 ) -> Result<Option<Judged>> {
     let dest = target_root.join(Path::new(&entry.dest));
     let row = host_config::check_destination(repo, &dest, &entry.dest)?;
@@ -277,7 +280,7 @@ fn check_host_destination(
             })?;
             (bytes, None)
         }
-        "update" | "create" => read_entry(&source, entry, substitutions, always_loaded)?,
+        "update" | "create" => read_entry(&source, entry, substitutions, tool_search)?,
         _ => return Ok(None),
     };
     host_config::check_frontmatter("apply-manifest", &entry.dest, &bytes)?;
@@ -303,7 +306,7 @@ fn process_entry(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
-    always_loaded: Option<&BTreeSet<&'static str>>,
+    tool_search: Option<&ToolSearch>,
     judged: Option<Judged>,
 ) -> Result<(&'static str, Option<u32>)> {
     // 1. Pinned short-circuit: do not read, do not write.
@@ -346,7 +349,7 @@ fn process_entry(
             dest_exists,
             entry,
             substitutions,
-            always_loaded,
+            tool_search,
             content,
         ),
         "create" => apply_create(
@@ -355,7 +358,7 @@ fn process_entry(
             dest_exists,
             entry,
             substitutions,
-            always_loaded,
+            tool_search,
             content,
         ),
         "skip-if-conflict" => {
@@ -374,12 +377,12 @@ fn apply_update(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
-    always_loaded: Option<&BTreeSet<&'static str>>,
+    tool_search: Option<&ToolSearch>,
     content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     let (new_bytes, applied) = match content {
         Some(content) => content,
-        None => read_entry(source, entry, substitutions, always_loaded)?,
+        None => read_entry(source, entry, substitutions, tool_search)?,
     };
 
     if dest_exists {
@@ -406,7 +409,7 @@ fn apply_create(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
-    always_loaded: Option<&BTreeSet<&'static str>>,
+    tool_search: Option<&ToolSearch>,
     content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
@@ -414,7 +417,7 @@ fn apply_create(
     }
     let (new_bytes, applied) = match content {
         Some(content) => content,
-        None => read_entry(source, entry, substitutions, always_loaded)?,
+        None => read_entry(source, entry, substitutions, tool_search)?,
     };
     write_atomic_bytes(dest, &new_bytes)?;
     mirror_source_mode(source, dest)?;
@@ -539,13 +542,25 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
 /// Returns the bytes and how many replacements were applied — `None` for a
 /// file whose bytes are not UTF-8, which is never examined for placeholders
 /// and so has no count to report rather than a count of zero.
-/// The tools a `tool-search-line` entry's line leaves out: those named by the
-/// `target.md` this manifest installs, the entry whose source ends in
-/// `commands/target.md`, which load with the session (spec 080). That source
-/// is the copy the MCP server reads once the install completes, in either
-/// layout a caller stages: `/ductus` passes the archive's root with sources
-/// `framework/commands/*.md`, and this repository's generator the framework
-/// directory with sources `commands/*.md`.
+/// What a `tool-search-line` entry's line is derived against (spec 080).
+struct ToolSearch {
+    /// The tools the line leaves out, which load with the session.
+    always_loaded: BTreeSet<&'static str>,
+    /// Where a reference the command names as `.ductus/reference/<name>.md`
+    /// is read from: `reference/` beside the `commands/target.md` entry's
+    /// `commands/` directory.
+    reference_dir: PathBuf,
+}
+
+/// The context a `tool-search-line` entry's line is derived against. The
+/// tools it leaves out are those named by the `target.md` this manifest
+/// installs, the entry whose source ends in `commands/target.md`, which load
+/// with the session. That source is the copy the MCP server reads once the
+/// install completes, in either layout a caller stages: `/ductus` passes the
+/// archive's root with sources `framework/commands/*.md`, and this
+/// repository's generator the framework directory with sources
+/// `commands/*.md`. The references the commands cite sit beside its
+/// `commands/` directory in both.
 ///
 /// # Errors
 ///
@@ -554,10 +569,7 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
 /// the one installed is missing or does not parse, since the line would
 /// otherwise name the wrong tools; [`PrimitiveError::Io`] when it cannot be
 /// read.
-fn always_loaded_tools(
-    source_root: &Path,
-    entries: &[ManifestEntry],
-) -> Result<BTreeSet<&'static str>> {
+fn tool_search_context(source_root: &Path, entries: &[ManifestEntry]) -> Result<ToolSearch> {
     let invalid = |reason: String| PrimitiveError::InvalidArgument {
         primitive: "apply-manifest".into(),
         argument: "entries".into(),
@@ -600,32 +612,44 @@ fn always_loaded_tools(
         }
         Err(err) => return Err(PrimitiveError::Io { path, source: err }),
     };
-    tool_loading::text_step_tools(&text).map_err(|err| {
+    let always_loaded = tool_loading::text_step_tools(&text).map_err(|err| {
         invalid(format!(
             "an entry sets tool-search-line, and the commands/target.md it installs, \
              `{source}`, does not parse: {err}"
         ))
+    })?;
+    let reference_dir = path
+        .parent()
+        .and_then(Path::parent)
+        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)
+        .join("reference");
+    Ok(ToolSearch {
+        always_loaded,
+        reference_dir,
     })
 }
 
 /// An `update` or `create` entry's bytes and substitution count: its source
 /// substituted, then, when it sets `tool-search-line`, with that line added
-/// (spec 080, [`tool_loading::add_tool_search_line`]).
+/// (spec 080, [`tool_loading::add_tool_search_line`]). Its cited sections
+/// are read from the references it names, under the same substitutions
+/// ([`tool_loading::cited_tools`]).
 ///
 /// # Errors
 ///
 /// As [`read_and_substitute`], and [`PrimitiveError::InvalidArgument`] when
-/// an entry setting `tool-search-line` is not UTF-8 text or holds a malformed
-/// procedure.
+/// an entry setting `tool-search-line` is not UTF-8 text, holds a malformed
+/// procedure, or names a reference that is not in the source root or is not
+/// UTF-8 text.
 fn read_entry(
     source: &Path,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
-    always_loaded: Option<&BTreeSet<&'static str>>,
+    tool_search: Option<&ToolSearch>,
 ) -> Result<(Vec<u8>, Option<u32>)> {
     let (bytes, applied) =
         read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
-    let Some(always_loaded) = always_loaded.filter(|_| entry.tool_search_line) else {
+    let Some(tool_search) = tool_search.filter(|_| entry.tool_search_line) else {
         return Ok((bytes, applied));
     };
     let invalid = |reason: String| PrimitiveError::InvalidArgument {
@@ -637,7 +661,31 @@ fn read_entry(
         ),
     };
     let text = String::from_utf8(bytes).map_err(|_| invalid("it is not UTF-8 text".into()))?;
-    let with_line = tool_loading::add_tool_search_line(&text, always_loaded)
+    let command = Path::new(&entry.source)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or_default();
+    let cited = tool_loading::cited_tools(&text, command, |name| {
+        let path = tool_search.reference_dir.join(format!("{name}.md"));
+        let (bytes, _) = match read_and_substitute(&path, None, substitutions) {
+            Err(PrimitiveError::Io { source, .. })
+                if source.kind() == std::io::ErrorKind::NotFound =>
+            {
+                return Err(invalid(format!(
+                    "it names `.ductus/reference/{name}.md`, which is not in the source root at \
+                     `{}`",
+                    path.display()
+                )));
+            }
+            other => other?,
+        };
+        String::from_utf8(bytes).map_err(|_| {
+            invalid(format!(
+                "it names `.ductus/reference/{name}.md`, which is not UTF-8 text"
+            ))
+        })
+    })?;
+    let with_line = tool_loading::add_tool_search_line(&text, &tool_search.always_loaded, &cited)
         .map_err(|err| invalid(format!("its procedure does not parse: {err}")))?;
     Ok((with_line.into_bytes(), applied))
 }
@@ -2282,8 +2330,9 @@ mod tests {
         assert!(
             written.contains(
                 "> **For agent runtimes**: call the tools.\n>\n> **Claude Code:** load this \
-                 command's `ductus` tools in one `ToolSearch` call before step 1: \
-                 `select:mcp__ductus__read-spec`\n\n1. Invoke"
+                 command's `ductus` tools in one `ToolSearch` call, and send the command's \
+                 first `ductus` call in that same message, since a tool can be called beside the \
+                 search that loads it: `select:mcp__ductus__read-spec`\n\n1. Invoke"
             ),
             "{written}"
         );
@@ -2355,7 +2404,7 @@ mod tests {
         assert_eq!(result.created, 2);
         let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
         assert!(
-            written.contains("`ToolSearch` call before step 1: `select:mcp__ductus__read-spec`\n"),
+            written.contains("search that loads it: `select:mcp__ductus__read-spec`\n"),
             "{written}"
         );
         let target = fs::read_to_string(dst.join(".claude/commands/acme/target.md")).unwrap();
@@ -2363,6 +2412,90 @@ mod tests {
             target, TARGET,
             "target's own tools all load with the session"
         );
+    }
+
+    /// A command citing a section of its reference, whose heading holds a
+    /// placeholder, as both sides are written before substitution.
+    const CITING: &str = "# X\n\n## Instructions\n\n> **For agent runtimes**: call the tools.\n\n\
+                          1. Invoke `read-spec`, then run **§Gate for {project}** in \
+                          `.ductus/reference/x.md`.\n";
+    const REFERENCE: &str = "## Gate for {project}\n\nInvoke `derive-boundary` to evaluate it.\n";
+
+    /// Scenario `one-search-covers-referenced-sections`, in both layouts: the
+    /// reference a command names is read beside the `commands/` directory of
+    /// the `commands/target.md` entry, with the entry's substitutions, and
+    /// the tool its cited section invokes joins the line.
+    #[test]
+    fn a_cited_reference_sections_tool_joins_the_line_in_both_layouts() {
+        for root in ["", "framework/"] {
+            let tmp = tempfile::tempdir().unwrap();
+            let command = format!("{root}commands/x.md");
+            let target = format!("{root}commands/target.md");
+            let reference = format!("{root}reference/x.md");
+            let src = write_source(
+                tmp.path(),
+                &[
+                    (command.as_str(), CITING),
+                    (target.as_str(), TARGET),
+                    (reference.as_str(), REFERENCE),
+                ],
+            );
+            let dst = tmp.path().join("dst");
+            let args = args_for(
+                &src,
+                &dst,
+                vec![
+                    flagged(&command, ".claude/commands/acme/x.md"),
+                    flagged(&target, ".claude/commands/acme/target.md"),
+                ],
+                vec![],
+                subs(&[("project", "acme")]),
+            );
+            run(&args, tmp.path()).unwrap();
+            let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
+            assert!(
+                written.contains(
+                    "loads it: `select:mcp__ductus__derive-boundary,mcp__ductus__read-spec`\n"
+                ),
+                "layout `{root}`: {written}"
+            );
+        }
+    }
+
+    /// A reference a flagged command names that the source root lacks halts
+    /// the call before any write, naming it, rather than writing a line
+    /// without its tools.
+    #[test]
+    fn a_named_reference_missing_from_the_source_root_halts_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("commands/x.md", CITING), ("commands/target.md", TARGET)],
+        );
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("commands/x.md", "plain.md", "update"),
+                flagged("commands/x.md", ".claude/commands/acme/x.md"),
+                flagged("commands/target.md", ".claude/commands/acme/target.md"),
+            ],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        match run(&args, tmp.path()) {
+            Err(PrimitiveError::InvalidArgument { reason, .. }) => {
+                assert!(
+                    reason.contains(
+                        "names `.ductus/reference/x.md`, which is not in the source root"
+                    ),
+                    "{reason}"
+                );
+            }
+            other => panic!("expected InvalidArgument, got {other:?}"),
+        }
+        assert!(!dst.join("plain.md").exists(), "nothing is written");
     }
 
     /// Two different `target.md` sources leave target's tools ambiguous, and

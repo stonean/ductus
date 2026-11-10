@@ -4,12 +4,16 @@
 //! search through the line [`add_tool_search_line`] writes. Both read the
 //! same derivation, [`step_tools`].
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::OnceLock;
+
+use regex::Regex;
 
 use crate::host::Host;
 use crate::parser::{self, ParseError};
-use crate::primitives::line_ending_of;
+use crate::primitives::resolve_anchor::{HeadingLine, cited_heading, heading_lines};
+use crate::primitives::{SkipScanner, line_ending_of};
 use crate::schema::procedure::{Procedure, Step};
 use crate::schema::registry;
 
@@ -96,12 +100,196 @@ pub fn section_tools(text: &str) -> BTreeSet<&'static str> {
         .collect()
 }
 
+/// Where a command names a reference: `.ductus/reference/<name>.md`, as its
+/// "Where a named section lives" paragraph and its qualified citations write
+/// it.
+#[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
+fn reference_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new(r"\.ductus/reference/([A-Za-z0-9_-]+)\.md").expect("hard-coded regex compiles")
+    })
+}
+
+/// A bold span, which cites a section when its text equals a heading.
+#[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
+fn bold_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\*\*([^*]+)\*\*").expect("hard-coded regex compiles"))
+}
+
+/// A name written as an invocation: `invoke`, `invokes` or `invoking`, an
+/// optional `the`, then the backticked name.
+#[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
+fn invoked_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new(r"\b[Ii]nvok(?:e|es|ing)\s+(?:the\s+)?`([A-Za-z0-9_-]+)`")
+            .expect("hard-coded regex compiles")
+    })
+}
+
+/// The documents a citation can reach: the command file, or a reference it
+/// names by `.ductus/reference/<name>.md`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+enum Doc {
+    Command,
+    Reference(String),
+}
+
+/// A document's lines and headings, for the citation walk.
+struct Indexed {
+    lines: Vec<String>,
+    headings: Vec<HeadingLine>,
+    texts: Vec<String>,
+}
+
+impl Indexed {
+    fn new(text: &str) -> Self {
+        let headings = heading_lines(text);
+        let mut texts: Vec<String> = headings.iter().map(|h| h.text.clone()).collect();
+        texts.sort_unstable();
+        texts.dedup();
+        Self {
+            lines: text.lines().map(str::to_owned).collect(),
+            headings,
+            texts,
+        }
+    }
+
+    /// The section under the first heading reading `heading`: its heading
+    /// line up to the next heading of the same or a higher level.
+    fn section(&self, heading: &str) -> Option<String> {
+        let at = self.headings.iter().position(|h| h.text == heading)?;
+        let start = &self.headings[at];
+        let end = self.headings[at + 1..]
+            .iter()
+            .find(|h| h.level <= start.level)
+            .map_or(self.lines.len(), |h| h.line);
+        Some(self.lines[start.line..end].join("\n"))
+    }
+}
+
+/// The served tools a command's cited sections invoke (spec 080, scenario
+/// `one-search-covers-referenced-sections`). A line of the command file
+/// cites a section with a `§` followed by its heading, matched longest
+/// first and ending where a word ends ([`cited_heading`]), or with a bold
+/// span equal to its heading. A line naming `.ductus/reference/<name>.md`
+/// resolves only against the references it names; any other line against
+/// its own document, then the command file, then the command's own
+/// reference, the one its text names as `.ductus/reference/<command>.md`.
+/// Each cited section's own citations are followed in turn. Inside a cited
+/// section a name counts only where it is invoked ([`invoked_regex`]), so a
+/// section that only mentions a tool adds nothing. Lines inside fenced
+/// blocks and HTML comments cite nothing.
+///
+/// `read_reference` returns a named reference's text, after the same
+/// substitutions as the command's.
+///
+/// # Errors
+///
+/// What `read_reference` returns for a reference it cannot read, so a named
+/// reference that is missing is never a line that silently lacks its tools.
+pub fn cited_tools<E>(
+    text: &str,
+    command: &str,
+    mut read_reference: impl FnMut(&str) -> Result<String, E>,
+) -> Result<BTreeSet<&'static str>, E> {
+    let mut skip = SkipScanner::default();
+    let own_reference = text
+        .lines()
+        .filter(|line| !skip.skip(line))
+        .any(|line| {
+            reference_regex()
+                .captures_iter(line)
+                .any(|cap| &cap[1] == command)
+        })
+        .then(|| Doc::Reference(command.to_owned()));
+    let mut docs: BTreeMap<Doc, Indexed> = BTreeMap::new();
+    docs.insert(Doc::Command, Indexed::new(text));
+    let mut seen: BTreeSet<(Doc, String)> = BTreeSet::new();
+    let mut queue: Vec<(Doc, String)> = Vec::new();
+    let mut tools = BTreeSet::new();
+
+    let mut cite = |from: &Doc,
+                    body: &str,
+                    docs: &mut BTreeMap<Doc, Indexed>,
+                    queue: &mut Vec<(Doc, String)>|
+     -> Result<(), E> {
+        let mut skip = SkipScanner::default();
+        for line in body.lines() {
+            if skip.skip(line) {
+                continue;
+            }
+            let named: Vec<Doc> = reference_regex()
+                .captures_iter(line)
+                .map(|cap| Doc::Reference(cap[1].to_owned()))
+                .collect();
+            let candidates: Vec<Doc> = if named.is_empty() {
+                let mut c = vec![from.clone(), Doc::Command];
+                c.extend(own_reference.clone());
+                c.dedup();
+                c
+            } else {
+                named
+            };
+            for doc in &candidates {
+                if let Doc::Reference(name) = doc
+                    && !docs.contains_key(doc)
+                {
+                    let reference = read_reference(name)?;
+                    docs.insert(doc.clone(), Indexed::new(&reference));
+                }
+            }
+            for (at, _) in line.match_indices('§') {
+                if let Some((doc, heading)) = candidates.iter().find_map(|doc| {
+                    cited_heading(&docs[doc].texts, &line[at..]).map(|h| (doc, h.to_owned()))
+                }) {
+                    queue.push((doc.clone(), heading));
+                }
+            }
+            for cap in bold_regex().captures_iter(line) {
+                let inner = &cap[1];
+                if inner.starts_with('§') {
+                    continue;
+                }
+                if let Some(doc) = candidates
+                    .iter()
+                    .find(|doc| docs[*doc].texts.iter().any(|h| h == inner))
+                {
+                    queue.push((doc.clone(), inner.to_owned()));
+                }
+            }
+        }
+        Ok(())
+    };
+
+    cite(&Doc::Command, text, &mut docs, &mut queue)?;
+    while let Some((doc, heading)) = queue.pop() {
+        if !seen.insert((doc.clone(), heading.clone())) {
+            continue;
+        }
+        let Some(body) = docs[&doc].section(&heading) else {
+            continue;
+        };
+        tools.extend(
+            invoked_regex()
+                .captures_iter(&body)
+                .filter_map(|cap| registry::served_primitives().find(|name| *name == &cap[1])),
+        );
+        cite(&doc, &body, &mut docs, &mut queue)?;
+    }
+    Ok(tools)
+}
+
 /// `text`, a command copy after substitution, with a last paragraph added to
-/// its `## Instructions` preamble blockquote that loads its step tools, less
-/// `always_loaded`, in one Claude Code `ToolSearch` (spec 080, AC29). The
-/// names are sorted, as one `select:` query, and the line takes the file's
-/// own line ending. A preamble is opened when the section has none. `text`
-/// comes back unchanged when no tool remains.
+/// its `## Instructions` preamble blockquote that loads its run tools, less
+/// `always_loaded`, in one Claude Code `ToolSearch`, asking for the command's
+/// first `ductus` call to go in the same message (spec 080, AC29). The run tools are
+/// its step tools and `cited`, the tools its cited sections invoke
+/// ([`cited_tools`]). The names are sorted, as one `select:` query, and the
+/// line takes the file's own line ending. A preamble is opened when the
+/// section has none. `text` comes back unchanged when no tool remains.
 ///
 /// The parser reads a preamble code span as a reference, never a dispatch,
 /// so the copy parses to its source's procedure.
@@ -114,11 +302,11 @@ pub fn section_tools(text: &str) -> BTreeSet<&'static str> {
 pub fn add_tool_search_line(
     text: &str,
     always_loaded: &BTreeSet<&'static str>,
+    cited: &BTreeSet<&'static str>,
 ) -> Result<String, ParseError> {
-    let remaining: Vec<&str> = text_step_tools(text)?
-        .difference(always_loaded)
-        .copied()
-        .collect();
+    let mut run_tools = text_step_tools(text)?;
+    run_tools.extend(cited);
+    let remaining: Vec<&str> = run_tools.difference(always_loaded).copied().collect();
     if remaining.is_empty() {
         return Ok(text.to_owned());
     }
@@ -129,8 +317,9 @@ pub fn add_tool_search_line(
         .join(",");
     let eol = line_ending_of(text);
     let line = format!(
-        "> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before \
-         step 1: `select:{query}`"
+        "> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send \
+         the command's first `ductus` call in that same message, since a tool can be called beside \
+         the search that loads it: `select:{query}`"
     );
 
     let lines: Vec<&str> = text.split_inclusive('\n').collect();
@@ -393,13 +582,15 @@ mod tests {
     }
 
     const LINE: &str = "> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` \
-                        call before step 1: ";
+                        call, and send the command's first `ductus` call in that same message, \
+                        since a tool can be called beside the search that loads it: ";
 
     #[test]
     fn the_line_closes_the_preamble_naming_the_tools_left_sorted() {
         let text = "# X\n\n## Instructions\n\n> **For agent runtimes**: a.\n>\n> b.\n\n\
                     1. Invoke `write-session`.\n2. Invoke `read-spec`.\n3. Then mark-task.\n";
-        let out = add_tool_search_line(text, &BTreeSet::from(["write-session"])).unwrap();
+        let out = add_tool_search_line(text, &BTreeSet::from(["write-session"]), &BTreeSet::new())
+            .unwrap();
         assert_eq!(
             out,
             format!(
@@ -414,12 +605,13 @@ mod tests {
     fn no_tool_left_and_no_procedure_leave_the_text_as_it_is() {
         let text = "## Instructions\n\n> a.\n\n1. Invoke `write-session`.\n";
         assert_eq!(
-            add_tool_search_line(text, &BTreeSet::from(["write-session"])).unwrap(),
+            add_tool_search_line(text, &BTreeSet::from(["write-session"]), &BTreeSet::new())
+                .unwrap(),
             text
         );
         let prose = "# Help\n\nNo steps, though resolve-session is named.\n";
         assert_eq!(
-            add_tool_search_line(prose, &BTreeSet::new()).unwrap(),
+            add_tool_search_line(prose, &BTreeSet::new(), &BTreeSet::new()).unwrap(),
             prose
         );
     }
@@ -428,7 +620,7 @@ mod tests {
     fn a_section_with_no_preamble_gets_one() {
         let text = "## Instructions\n\n1. Invoke `read-spec`.\n";
         assert_eq!(
-            add_tool_search_line(text, &BTreeSet::new()).unwrap(),
+            add_tool_search_line(text, &BTreeSet::new(), &BTreeSet::new()).unwrap(),
             format!(
                 "## Instructions\n\n{LINE}`select:mcp__ductus__read-spec`\n\n1. Invoke `read-spec`.\n"
             )
@@ -438,7 +630,7 @@ mod tests {
     #[test]
     fn the_line_takes_the_files_line_ending() {
         let text = "## Instructions\r\n\r\n> a.\r\n\r\n1. Invoke `read-spec`.\r\n";
-        let out = add_tool_search_line(text, &BTreeSet::new()).unwrap();
+        let out = add_tool_search_line(text, &BTreeSet::new(), &BTreeSet::new()).unwrap();
         assert!(
             out.contains(&format!(
                 "> a.\r\n>\r\n{LINE}`select:mcp__ductus__read-spec`\r\n\r\n1."
@@ -468,7 +660,7 @@ mod tests {
             vec!["append-task", "read-spec"],
             "neither the preamble's tool nor one past the section's end"
         );
-        let out = add_tool_search_line(LEGACY, &BTreeSet::new()).unwrap();
+        let out = add_tool_search_line(LEGACY, &BTreeSet::new(), &BTreeSet::new()).unwrap();
         assert!(
             out.contains(&format!(
                 "> Invoke `resolve-session` first.\n>\n{LINE}\
@@ -482,7 +674,7 @@ mod tests {
     fn a_heading_inside_a_fence_is_not_the_section() {
         let text = "# X\n\n```markdown\n## Instructions\n```\n\n## Instructions\n\n\
                     1. Invoke `read-spec`.\n";
-        let out = add_tool_search_line(text, &BTreeSet::new()).unwrap();
+        let out = add_tool_search_line(text, &BTreeSet::new(), &BTreeSet::new()).unwrap();
         assert_eq!(
             out,
             format!(
@@ -566,6 +758,113 @@ mod tests {
         assert!(
             notice.contains("legacy prose"),
             "the parse error is the reason: {notice}"
+        );
+    }
+
+    /// `cited_tools` over `command`, as command `x`, reading references from
+    /// `refs` by name and failing the test on any other.
+    fn cited(command: &str, refs: &[(&str, &str)]) -> Vec<&'static str> {
+        cited_tools(command, "x", |name: &str| -> Result<String, String> {
+            refs.iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, text)| (*text).to_owned())
+                .ok_or_else(|| format!("no reference {name}"))
+        })
+        .unwrap()
+        .into_iter()
+        .collect()
+    }
+
+    /// Names `.ductus/reference/x.md` as the command's reference.
+    const OWN: &str = "This command's reference is `.ductus/reference/x.md`.\n\n";
+
+    /// Scenario `one-search-covers-referenced-sections`: a section a step
+    /// cites adds the tool it invokes, and not one it only names.
+    #[test]
+    fn a_cited_section_adds_the_tools_it_invokes_and_not_those_it_names() {
+        let command = format!(
+            "{OWN}## Instructions\n\n1. Run **§Validation gate** in `.ductus/reference/x.md`.\n"
+        );
+        let reference = "## Validation gate\n\nInvoke `derive-boundary` to evaluate it. \
+                         Then `write-review` records a later run.\n\n## Other\n\n\
+                         Invoke `mark-task`.\n";
+        assert_eq!(
+            cited(&command, &[("x", reference)]),
+            vec!["derive-boundary"],
+            "the cited section's invocation counts, its mention and an uncited section do not"
+        );
+    }
+
+    /// prune's `--project` route: a bold span equal to a heading of the
+    /// command's own file cites that section, with no `§`, and the walk reads
+    /// citations anywhere in the file, not only in the steps.
+    #[test]
+    fn a_bold_heading_cites_a_section_of_the_command_file() {
+        let command = "Under `--project`, work **Project files (`--project`)** below.\n\n\
+                       ## Instructions\n\n1. Invoke `prune-tasks`.\n\n\
+                       ## Project files (`--project`)\n\n- Invoke `prune-project` with no `apply`.\n";
+        assert_eq!(cited(command, &[]), vec!["prune-project"]);
+    }
+
+    /// A line naming a reference resolves only against it, even where the
+    /// command's own reference has a heading of the same name.
+    #[test]
+    fn a_line_naming_a_reference_resolves_only_against_it() {
+        let command = format!(
+            "{OWN}## Instructions\n\n1. Walk **§Groom decision tree** in \
+             `.ductus/reference/groom.md`.\n"
+        );
+        let own = "## Groom decision tree\n\nInvoke `mark-task`.\n";
+        let groom = "## Groom decision tree\n\nInvoke `remove-inbox-item`.\n";
+        assert_eq!(
+            cited(&command, &[("x", own), ("groom", groom)]),
+            vec!["remove-inbox-item"]
+        );
+    }
+
+    /// A cited section's own citations are followed, against its own
+    /// document first, and a heading is matched longest first.
+    #[test]
+    fn citations_are_followed_and_matched_longest_first() {
+        let command = format!("{OWN}## Instructions\n\n1. Follow §Walk through tasks.\n");
+        let reference = "## Walk through tasks\n\nEach finding follows §Setup details.\n\n\
+                         ## Setup\n\nInvoke `mark-task`.\n\n\
+                         ## Setup details\n\nInvoke `append-task`.\n";
+        assert_eq!(cited(&command, &[("x", reference)]), vec!["append-task"]);
+    }
+
+    /// With no `.ductus/reference/<command>.md` in its text, a command has no
+    /// own reference, so a bare `§` never reads one; and a citation inside a
+    /// fenced block cites nothing.
+    #[test]
+    fn no_named_reference_is_read_and_a_fenced_citation_cites_nothing() {
+        let command = "## Instructions\n\n1. Follow §Gate.\n\n```text\n**§Fenced** in \
+                       `.ductus/reference/x.md`\n```\n";
+        assert_eq!(cited(command, &[]), Vec::<&str>::new());
+    }
+
+    /// A named reference that cannot be read is an error, never a line that
+    /// lacks its tools.
+    #[test]
+    fn a_named_reference_that_cannot_be_read_is_an_error() {
+        let command = "## Instructions\n\n1. Follow **§Gate** in `.ductus/reference/gone.md`.\n";
+        let err = cited_tools(command, "x", |name: &str| -> Result<String, String> {
+            Err(format!("no reference {name}"))
+        })
+        .unwrap_err();
+        assert_eq!(err, "no reference gone");
+    }
+
+    /// The line names the cited tools beside the step tools.
+    #[test]
+    fn the_line_names_the_cited_tools_beside_the_step_tools() {
+        let text = "## Instructions\n\n> a.\n\n1. Invoke `read-spec`.\n";
+        let out =
+            add_tool_search_line(text, &BTreeSet::new(), &BTreeSet::from(["derive-boundary"]))
+                .unwrap();
+        assert!(
+            out.contains("`select:mcp__ductus__derive-boundary,mcp__ductus__read-spec`"),
+            "{out}"
         );
     }
 }

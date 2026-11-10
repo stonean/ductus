@@ -360,3 +360,26 @@ A *none* below holds for the path measured. For a run that ended at a gate, the 
 **Method.** On 2026-11-09 at 22:22:22Z, at 3965f6f3 with task 35's change uncommitted, `python3 scripts/measure-command-cost.py --round --only configure --permissions adopter --specs 40` ran Claude Code 2.1.321 (`claude -p`, `stream-json`, model `claude-opus-5-5`) against this checkout's release build of that change. The adopter fixture's settings now come from the bootstrap seed and then `merge-permissions --canonical`, as configure's step 1 now makes the call. Beforehand, the same build's canonical call ran twice on a copy of this checkout's `.claude/settings.local.json`, in a scratch project named `ductus`.
 
 **Result.** The run's one `merge-permissions` call passed `{"path": ".claude/settings.local.json", "canonical": true}`, 58 characters of arguments, and returned `unchanged` with empty `revoked` and `directories-added`. The run had no permission denial and no host write of the settings file. It took 8.197 s to its result, 420 output tokens, 4 turns and 192,703 input tokens, at $0.428, its largest tool result 257 characters. The round's configure run had taken 28.859 s, 3,047 output tokens, 6 turns and 252,649 input tokens, at $0.414. This run wrote 48,803 input tokens to the prompt cache, and cache writes are billed above cache reads. On the copy of this checkout's file, the first call returned `updated`: one allow entry added, task 34's `mcp__ductus__render-help`, no retired entry, and both scratch directories appended. The second call returned `unchanged`.
+
+### One search, sent with the first call (tasks 36 and 40)
+
+**Method.** On 2026-11-09, at 9ebca7b0 with tasks 36 and 40's change uncommitted, `python3 scripts/measure-command-cost.py --round --only <commands> --permissions adopter --specs 40 --bin <copy>` ran Claude Code 2.1.321 (`claude -p`, `stream-json`, model `claude-opus-5-5`). Each run used a copy of this checkout's release build of the change. The fixture's copies were made by `apply-manifest` from the archive's layout, with `framework/reference/` staged. Two rounds ran:
+
+- **Round 1**, 23:51:21Z to 23:54:19Z. It ran plan, status, log, specify, configure and fold, with the line worded "…in one `ToolSearch` call, sent in the same message as the command's first `ductus` call unless that call needs an earlier result: …". The binary's sha256 begins `9c74bcfc82612b8d`.
+- **Round 2**, 23:58:48Z to 00:00:28Z on 2026-11-10. It ran the five whose first `ductus` call is a deferred tool, with the wording the generator now writes, "…in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: …". The binary's sha256 begins `328bd93a6c3579aa`.
+
+Each run's searches, and the tools sent in each search's message, were read from its raw stream, grouping `assistant` events by message id. A lone search's step is the seconds from its result to the next `assistant` event.
+
+**One search (task 36).** All 11 runs made one `ToolSearch` each. plan's line named `derive-boundary`, and plan called it at §Validation gate with no second search. In the cost round, plan had searched again for it and paid 1.68 s. Every result subtype was `success`, and no call was denied.
+
+**The search with the first call (task 40).** These are the runs whose first `ductus` call is a deferred tool, and the tool sent in the search's message, if any.
+
+| Command | First deferred call | Cost round (14c88044) | Round 1 | Round 2 |
+| --- | --- | --- | --- | --- |
+| status | `render-status` | alone | alone, 3.66 s | alone, 1.48 s |
+| log | `append-inbox` | alone | alone, 3.03 s | alone, 3.33 s |
+| specify | `derive-routing-candidates` | alone | alone, 2.92 s | with it |
+| configure | `merge-permissions` | alone | alone, 3.07 s | alone, 2.46 s |
+| fold | `check-unfolded-specs` | with it | `resolve-feature` only | with it, and `resolve-feature` |
+
+That is 1 of 5, 0 of 5 and 2 of 5, from one run per command each time. In round 2, specify's and fold's calls sent in the search's message both returned their results, with no error. The cost-round figures come from *The search step* above, which measured a lone search's step at 1.51 to 1.70 s, by the stream's `assistant` and `user` timestamps. Round 1 cost $2.333 and round 2 $1.659.

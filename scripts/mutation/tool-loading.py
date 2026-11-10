@@ -8,7 +8,13 @@ the tools left after target's, in the file's own line ending, and only a
 flagged `apply-manifest` entry gets it, taking target's tools from the
 `target.md` the manifest installs, in the bootstrap's layout and the
 generator's alike (`runtime/src/primitives/tool_loading.rs`,
-`apply_manifest.rs`).
+`apply_manifest.rs`). Tasks 36 and 40: the line also names each tool a cited
+section invokes, a section being cited by a `§` or a bold heading, matched
+longest first, outside fences, through the references a line names, and
+followed transitively; a reference the command names is read beside target's
+`commands/` directory under the entry's substitutions, and one missing is an
+error; and the line asks for the search to go out with the first call
+(`resolve_anchor.rs`'s `cited_heading`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/tool-loading.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -94,8 +100,8 @@ MUTATIONS = [
     (
         'M10 the line names the tools that load with the session',
         'src/primitives/tool_loading.rs',
-        '        .difference(always_loaded)\n',
-        '        .difference(&BTreeSet::new())\n',
+        '    let remaining: Vec<&str> = run_tools.difference(always_loaded).copied().collect();\n',
+        '    let remaining: Vec<&str> = run_tools.difference(&BTreeSet::new()).copied().collect();\n',
         'tool_loading::tests::the_line_closes_the_preamble_naming_the_tools_left_sorted',
     ),
     (
@@ -115,8 +121,8 @@ MUTATIONS = [
     (
         'M13 an unflagged entry gets the line',
         'src/primitives/apply_manifest.rs',
-        '    let Some(always_loaded) = always_loaded.filter(|_| entry.tool_search_line) else {\n',
-        '    let Some(always_loaded) = always_loaded else {\n',
+        '    let Some(tool_search) = tool_search.filter(|_| entry.tool_search_line) else {\n',
+        '    let Some(tool_search) = tool_search else {\n',
         'apply_manifest::tests::a_flagged_copy_carries_the_line_and_parses_to_its_sources_procedure',
     ),
     (
@@ -139,5 +145,82 @@ MUTATIONS = [
         '        [source] => *source,\n',
         '        [source, ..] => *source,\n',
         'apply_manifest::tests::an_ambiguous_or_absent_target_md_halts_before_any_write',
+    ),
+    (
+        'M17 a cited section counts every name it holds, not only those it invokes',
+        'src/primitives/tool_loading.rs',
+        '            invoked_regex()\n                .captures_iter(&body)\n                .filter_map(|cap| registry::served_primitives().find(|name| *name == &cap[1])),\n',
+        '            registry::served_primitives().filter(|name| names_token(&body, name)),\n',
+        'tool_loading::tests::a_cited_section_adds_the_tools_it_invokes_and_not_those_it_names',
+    ),
+    (
+        'M18 a bold heading cites nothing',
+        'src/primitives/tool_loading.rs',
+        '                if inner.starts_with(\'§\') {\n',
+        '                if inner.starts_with(\'§\') || inner.is_empty() || !inner.is_empty() {\n',
+        'tool_loading::tests::a_bold_heading_cites_a_section_of_the_command_file',
+    ),
+    (
+        'M19 a line naming a reference also resolves against the command\'s own documents',
+        'src/primitives/tool_loading.rs',
+        '            let candidates: Vec<Doc> = if named.is_empty() {\n',
+        '            let candidates: Vec<Doc> = if named.is_empty() || !named.is_empty() {\n',
+        'tool_loading::tests::a_line_naming_a_reference_resolves_only_against_it',
+    ),
+    (
+        'M20 a cited section\'s own citations are not followed',
+        'src/primitives/tool_loading.rs',
+        '        cite(&doc, &body, &mut docs, &mut queue)?;\n',
+        '        let _ = &doc;\n',
+        'tool_loading::tests::citations_are_followed_and_matched_longest_first',
+    ),
+    (
+        'M21 the shortest heading the text begins with is the one cited',
+        'src/primitives/resolve_anchor.rs',
+        '        .max_by_key(|h| h.len())\n',
+        '        .min_by_key(|h| h.len())\n',
+        'tool_loading::tests::citations_are_followed_and_matched_longest_first',
+    ),
+    (
+        'M22 a citation inside a fenced block cites',
+        'src/primitives/tool_loading.rs',
+        '            if skip.skip(line) {\n                continue;\n            }\n',
+        '            let _ = skip.skip(line);\n',
+        'tool_loading::tests::no_named_reference_is_read_and_a_fenced_citation_cites_nothing',
+    ),
+    (
+        'M23 a reference that cannot be read is skipped',
+        'src/primitives/tool_loading.rs',
+        '                    let reference = read_reference(name)?;\n',
+        '                    let reference = read_reference(name).unwrap_or_default();\n',
+        'tool_loading::tests::a_named_reference_that_cannot_be_read_is_an_error',
+    ),
+    (
+        'M24 the cited tools are left out of the line',
+        'src/primitives/tool_loading.rs',
+        '    run_tools.extend(cited);\n',
+        '    let _ = cited;\n',
+        'tool_loading::tests::the_line_names_the_cited_tools_beside_the_step_tools',
+    ),
+    (
+        'M25 the line no longer asks for the search to go out with the first call',
+        'src/primitives/tool_loading.rs',
+        '        "> **Claude Code:** load this command\'s `ductus` tools in one `ToolSearch` call, and send \\\n         the command\'s first `ductus` call in that same message, since a tool can be called beside \\\n         the search that loads it: `select:{query}`"\n',
+        '        "> **Claude Code:** load this command\'s `ductus` tools in one `ToolSearch` call before \\\n         step 1: `select:{query}`"\n',
+        'tool_loading::tests::the_line_closes_the_preamble_naming_the_tools_left_sorted',
+    ),
+    (
+        'M26 a reference is read from the source root\'s reference/, not beside target\'s commands/',
+        'src/primitives/apply_manifest.rs',
+        '        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)\n        .join("reference");\n',
+        '        .map(|_| source_root.join("reference"))\n        .unwrap_or_default();\n',
+        'apply_manifest::tests::a_cited_reference_sections_tool_joins_the_line_in_both_layouts',
+    ),
+    (
+        'M27 a reference is read without the entry\'s substitutions',
+        'src/primitives/apply_manifest.rs',
+        '        let (bytes, _) = match read_and_substitute(&path, None, substitutions) {\n',
+        '        let (bytes, _) = match read_and_substitute(&path, None, &BTreeMap::new()) {\n',
+        'apply_manifest::tests::a_cited_reference_sections_tool_joins_the_line_in_both_layouts',
     ),
 ]

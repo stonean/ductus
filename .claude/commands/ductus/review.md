@@ -112,7 +112,7 @@ records `must-violations: > 0`. See **§Blocking semantics** in `.ductus/referen
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__brief-re-read,mcp__ductus__check-prescriptions,mcp__ductus__compute-review-scope,mcp__ductus__discover-rule-files,mcp__ductus__gate-confirm,mcp__ductus__process-decisions,mcp__ductus__process-waivers,mcp__ductus__read-re-read,mcp__ductus__set-status,mcp__ductus__start-fix-rounds,mcp__ductus__write-review`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__brief-re-read,mcp__ductus__check-prescriptions,mcp__ductus__compute-review-scope,mcp__ductus__discover-rule-files,mcp__ductus__gate-confirm,mcp__ductus__process-decisions,mcp__ductus__process-waivers,mcp__ductus__read-re-read,mcp__ductus__set-status,mcp__ductus__start-fix-rounds,mcp__ductus__write-review`
 
 **Where a named section lives.** This command's reference is `.ductus/reference/review.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

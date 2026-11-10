@@ -299,7 +299,7 @@ Design it in `plan.md` first. `merge-permissions` holds the canonical allow set 
 
 36 and 40 both change the generated `ToolSearch` line (`tool-search-line` in `runtime/src/primitives/apply_manifest.rs`, the derivation in `runtime/src/primitives/tool_loading.rs`), so design them together in `plan.md`'s *Batched (AC29)* decision and land them as one runtime change. Verify with `--round --only plan,status,log,specify,configure --permissions adopter`: one search per run.
 
-- [ ] Implement the behavior described in `scenarios/one-search-covers-referenced-sections.md`
+- [x] Implement the behavior described in `scenarios/one-search-covers-referenced-sections.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
@@ -331,7 +331,7 @@ The smallest of the seven: `framework/commands/groom.md`'s routing step calls `d
 
 Lands with task 36 (see its note). Verify that each run's first call goes out in the search's own message, read from the raw stream as `research.md`'s *The search step* does. Once 34–40 are ticked, task 41 re-measures, and once 41 is ticked the spec owes `/ductus:review`, `/ductus:analyze` and the completion gate, none of which a task schedules. Each harness run is a model call on the owner's account; `research.md`'s *Command cost (AC8)* table gives each command's price.
 
-- [ ] Implement the behavior described in `scenarios/the-search-goes-out-with-the-first-call.md`
+- [x] Implement the behavior described in `scenarios/the-search-goes-out-with-the-first-call.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 

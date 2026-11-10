@@ -145,8 +145,11 @@ if [ "$check_mode" -eq 1 ]; then
   trap 'rm -rf "$tmpdir"' EXIT
   # The Claude copies, built over a staged copy of their sources.
   claudetmp="$tmpdir/claude"
-  mkdir -p "$claudetmp/framework/commands" "$claudetmp/framework/bootstrap/configure"
+  mkdir -p "$claudetmp/framework/commands" "$claudetmp/framework/bootstrap/configure" \
+    "$claudetmp/framework/reference"
   cp "$SRC"/*.md "$claudetmp/framework/commands/"
+  # apply-manifest reads the references the commands cite (spec 080).
+  cp "$REF_SRC"/*.md "$claudetmp/framework/reference/"
   cp "$CONFIGURE_SRC" "$claudetmp/framework/bootstrap/configure/claude.md"
   write_claude_manifest "$tmpdir"
   build_claude_copies "$claudetmp" "$tmpdir"

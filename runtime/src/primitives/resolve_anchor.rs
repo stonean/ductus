@@ -404,20 +404,48 @@ fn document_regex() -> &'static Regex {
 /// example record in review's reference holds `## Summary`, which names no
 /// section a pointer can reach.
 fn collect_headings(content: &str) -> Vec<String> {
-    let mut skip = SkipScanner::default();
-    let mut headings: Vec<String> = content
-        .lines()
-        .filter(|line| !skip.skip(line))
-        .filter_map(|line| {
-            let trimmed = line.trim_start_matches('#');
-            (trimmed.len() < line.len() && trimmed.starts_with(' '))
-                .then(|| trimmed.trim().to_string())
-        })
-        .filter(|h| !h.is_empty())
+    let mut headings: Vec<String> = heading_lines(content)
+        .into_iter()
+        .map(|heading| heading.text)
         .collect();
     headings.sort_unstable();
     headings.dedup();
     headings
+}
+
+/// One ATX heading of a document, as [`heading_lines`] finds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct HeadingLine {
+    /// Its 0-based index among the document's [`str::lines`].
+    pub(crate) line: usize,
+    /// The number of `#` that open it.
+    pub(crate) level: usize,
+    /// Its text, trimmed.
+    pub(crate) text: String,
+}
+
+/// Each ATX heading of a document in order. A line inside a fenced code
+/// block or an HTML comment is content, not structure ([`SkipScanner`]).
+/// The heading rules every `§` judgement here uses, shared with the
+/// batching line's citations (spec 080, `tool_loading::cited_tools`).
+pub(crate) fn heading_lines(content: &str) -> Vec<HeadingLine> {
+    let mut skip = SkipScanner::default();
+    content
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| !skip.skip(line))
+        .filter_map(|(index, line)| {
+            let trimmed = line.trim_start_matches('#');
+            let text = trimmed.trim();
+            (trimmed.len() < line.len() && trimmed.starts_with(' ') && !text.is_empty()).then(
+                || HeadingLine {
+                    line: index,
+                    level: line.len() - trimmed.len(),
+                    text: text.to_string(),
+                },
+            )
+        })
+        .collect()
 }
 
 /// Whether the text starting at the `§` begins with one of `headings` — the
@@ -428,18 +456,30 @@ fn collect_headings(content: &str) -> Vec<String> {
 /// instead (`Shipped::pairs`). `rest` begins with
 /// the `§`, so the heading is compared against what follows it.
 fn names_local_heading(headings: &[String], rest: &str) -> bool {
+    cited_heading(headings, rest).is_some()
+}
+
+/// The heading of `headings` that the text starting at the `§` names, under
+/// [`names_local_heading`]'s rule: the longest the text begins with, ending
+/// where a word ends, so `§Setup details` names `Setup details` over
+/// `Setup`. `None` when it names none of them.
+pub(crate) fn cited_heading<'h>(headings: &'h [String], rest: &str) -> Option<&'h str> {
     let after = rest.strip_prefix('§').unwrap_or(rest);
-    headings.iter().any(|h| {
-        after.strip_prefix(h.as_str()).is_some_and(|tail| {
-            // The heading must end where a word ends: `§Groundingx` does
-            // not name `Grounding`, while `§Hook Installation` may still
-            // name a heading `Hook`, since nothing marks where prose ends.
-            !tail
-                .chars()
-                .next()
-                .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    headings
+        .iter()
+        .filter(|h| {
+            after.strip_prefix(h.as_str()).is_some_and(|tail| {
+                // The heading must end where a word ends: `§Groundingx` does
+                // not name `Grounding`, while `§Hook Installation` may still
+                // name a heading `Hook`, since nothing marks where prose ends.
+                !tail
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')
+            })
         })
-    })
+        .max_by_key(|h| h.len())
+        .map(String::as_str)
 }
 
 fn collect_markers(content: &str) -> HashSet<String> {

@@ -25,7 +25,7 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 >
 > **For this command specifically**: the single deterministic tool for the pipeline view is `render-status`. One MCP call returns the pre-rendered view — the session target, the table of every spec, the summary, the cross-service references readout, the specs with work left grouped by next action, and the `/ductus:target` prompt. Do not substitute shell utilities (no `ls`, no `for` loops over spec directories, no `cat .ductus/config.toml`) for that call. Cross-service reference resolution for specs that carry a `references:` index is folded into the same call (the runtime resolves each index internally for the readout).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__render-status`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__render-status`
 
 **Where a named section lives.** This command's reference is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

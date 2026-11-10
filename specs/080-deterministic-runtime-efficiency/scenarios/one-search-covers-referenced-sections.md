@@ -6,7 +6,7 @@ section: "Loading tools"
 
 ## Context
 
-Each Claude Code copy carries one `ToolSearch` line, generated from the `ductus` tools its `## Instructions` steps name (AC29). A step can point at a reference section that calls a tool the steps do not name. In the cost round, plan searched a second time for `derive-boundary`, which its reference's §Validation gate calls: a model step, 1.68 s (`research.md`, R3). A static diff finds primitive names in 11 commands' references that their lines lack, most of them prose mentions. Which ones a run calls depends on its path, and the round ran one path per command.
+Each Claude Code copy carried one `ToolSearch` line, generated from the `ductus` tools its `## Instructions` steps name (AC29). A step can point at a reference section that calls a tool the steps do not name. In the cost round, plan searched a second time for `derive-boundary`, which its reference's §Validation gate calls: a model step, 1.68 s (`research.md`, R3). A static diff finds primitive names in 11 commands' references that their lines lack, most of them prose mentions. Which ones a run calls depends on its path, and the round ran one path per command.
 
 ## Behavior
 

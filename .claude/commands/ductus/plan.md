@@ -42,7 +42,7 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__check-artifact-size,mcp__ductus__create-plan-artifacts,mcp__ductus__gate-confirm,mcp__ductus__lint-markdown,mcp__ductus__set-status`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__check-artifact-size,mcp__ductus__create-plan-artifacts,mcp__ductus__derive-boundary,mcp__ductus__gate-confirm,mcp__ductus__lint-markdown,mcp__ductus__set-status`
 
 **Where a named section lives.** This command's reference is `.ductus/reference/plan.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

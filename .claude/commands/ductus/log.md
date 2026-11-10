@@ -25,7 +25,7 @@ This command does not require a session target — items in the inbox span the w
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__append-inbox,mcp__ductus__lint-markdown`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__append-inbox,mcp__ductus__lint-markdown`
 
 **Where a named section lives.** This command's reference is `.ductus/reference/log.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 

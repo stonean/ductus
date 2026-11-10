@@ -50,7 +50,7 @@ On the model path, `/{project}:status` reads the view alone, not `dashboard`'s s
 Claude Code defers each MCP tool's schema until the agent searches for it. Each search costs an extra model step, while the search itself returns in about 0.01 s.
 
 - **Always loaded:** the tools `framework/commands/target.md`'s steps name, the session-opening command's, set `_meta["anthropic/alwaysLoad"]`. The set is derived from that file, so it follows the file's edits.
-- **Batched:** every other command loads the `ductus` tools its steps name in one search, generated from its steps.
+- **Batched:** every other command loads the `ductus` tools its steps name, and those the sections it cites invoke, in one search, generated from its files.
 - **Measured:** every tool's loaded schema, its description plus input schema, is measured.
 - **Revisited:** always-loading every tool was decided again once the schemas were measured, and target's tools stay the only ones loaded with the session (owner, 2026-11-09).
 
@@ -88,7 +88,7 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - [ ] AC6: `rendered-markdown` lists the non-done specs grouped by next action, followed by the `/{project}:target` prompt, and `framework/commands/status.md` no longer asks the model to compose either.
 - [ ] AC13: The tool result `/{project}:status` reads on the model path carries the view without `dashboard`'s structured payload, and `/{project}:review --all` still reads `specs[].status`.
 - [ ] AC21: The tools that `framework/commands/target.md`'s steps name set `_meta["anthropic/alwaysLoad"]`, and no other `ductus` tool does. The set is derived from that file, and a test fails when a tool named there lacks the flag or one not named there has it.
-- [ ] AC29: Claude Code's installed copy of every command other than `/{project}:target` loads the `ductus` tools its steps name in one tool-search call, through a line the generator writes from those steps. The command sources and other agents' copies are unchanged, and `ductus exec` dispatches no primitive because of that line.
+- [ ] AC29: Claude Code's installed copy of every command other than `/{project}:target` loads the `ductus` tools its steps name, and those the sections it cites invoke, in one tool-search call, through a line the generator writes from the command's files. The command sources and other agents' copies are unchanged, and `ductus exec` dispatches no primitive because of that line.
 - [ ] AC23: Each `ductus` tool's loaded schema size, its description plus input schema in characters, is recorded in `research.md` with the total across all tools.
 - [ ] AC7: Every primitive whose result grows with the corpus bounds or pages its result, and a test drives each past its bound on a generated fixture corpus; `read-tasks` is one.
 - [ ] AC24: A view that would exceed the read size collapses its `done (spec is complete)` rows to a count line, then cuts the rows past the bound and ends with a line counting the specs not shown. A test drives a generated fixture corpus past the bound on both renderings.

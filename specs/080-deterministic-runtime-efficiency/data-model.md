@@ -124,11 +124,11 @@ Every other field of the result is as before.
 
 ## `ManifestEntry.tool-search-line`
 
-`tool-search-line`: boolean, `false` when absent. When `true`, `apply-manifest` derives the entry's step tools after substitution. It drops the always-loaded set and CLI-only names from them, and, when any remain, appends to the `## Instructions` preamble blockquote:
+`tool-search-line`: boolean, `false` when absent. When `true`, `apply-manifest` derives the entry's run tools after substitution: its step tools, and each tool a section it cites invokes (`plan.md`, *Batched (AC29)*). It drops the always-loaded set and CLI-only names from them, and, when any remain, appends to the `## Instructions` preamble blockquote:
 
 ```markdown
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call before step 1: `select:mcp__ductus__{a},mcp__ductus__{b}`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__{a},mcp__ductus__{b}`
 ```
 
 The names are sorted. When none remain, nothing is written.
