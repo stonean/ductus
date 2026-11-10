@@ -234,8 +234,9 @@ With capture gone, the writer has to be given the findings.
 ### `/{project}:status` renders the standing row, and the runtime now renders its strings
 
 `DashboardResult` (`primitives.rs:1604-1624`) gains `inbox-standing`.
-`render_callouts` (`runtime/src/primitives/dashboard.rs:191-309`) gains an
-`Inbox:` line. Today the four state strings exist only in command prose
+The view gains an `Inbox:` line, rendered at this spec by `render_callouts`
+(`runtime/src/primitives/dashboard.rs:191-309`) and since spec 080 by the
+pipeline view's `inbox_line`. Today the four state strings exist only in command prose
 (`framework/commands/implement.md:93-96`, `framework/commands/review.md:780-783`),
 and `dashboard` never reads the inbox (`review.md:767-768`). Rendering them in
 `dashboard` makes the row deterministic and covers it with `status.md`'s
