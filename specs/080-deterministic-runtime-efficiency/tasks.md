@@ -337,7 +337,7 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 
 ## 41. Re-measure result and schema sizes after 34–40's new tools
 
-- [ ] Re-run `scripts/measure-result-sizes.sh` once tasks 34–40 have landed, and replace `research.md`'s *Result sizes (AC14)* and *Loaded schema sizes (AC23)* tables, each with its method, units, population, date and commit. Task 34 adds `render-help`, and 35 and 38 may add or change tools, so the recorded tables no longer cover every registry primitive and every tool, and the total no longer adds up. Re-derive the grows-set from the new run, and bound any new member, as task 5 did
+- [x] Re-run `scripts/measure-result-sizes.sh` once tasks 34–40 have landed, and replace `research.md`'s *Result sizes (AC14)* and *Loaded schema sizes (AC23)* tables, each with its method, units, population, date and commit. Task 34 adds `render-help`, and 35 and 38 may add or change tools, so the recorded tables no longer cover every registry primitive and every tool, and the total no longer adds up. Re-derive the grows-set from the new run, and bound any new member, as task 5 did
 
 - **Done when**: `research.md` names every registry primitive as measured or not measured with its reason, and records each tool's loaded schema size and the total, at a commit after task 40 (AC14, AC23).
 
