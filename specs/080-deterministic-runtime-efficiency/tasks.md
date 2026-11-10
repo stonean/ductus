@@ -416,7 +416,7 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
 
 `framework/reference/analyze.md` §Rules now checks rule headings "from the rules the result lists". But `rule_sections::heading_id_regex` (`^#{2,4}\s+[A-Z]{2,5}-…`) drops exactly the malformed headings those checks exist to catch (QUAL-DELEG-001, SHOULD). How the checks see a malformed heading is a design question.
 
-- [ ] Let analyze report a malformed rule heading. Record what the shared parser gives up both at the call site and in `rule_sections.rs`
+- [x] Let analyze report a malformed rule heading. Record what the shared parser gives up both at the call site and in `rule_sections.rs`
 - [x] QUAL-TEST-001 (SHOULD): add a test asserting the `should` tier (`discover_rule_files.rs:186`), with a SHOULD rule added to the test's `RULES`
 - [x] Docs:
   - `discover_rule_files.rs:72-81`'s `# Errors` and its module doc, and `primitives.rs:510-511`;
@@ -560,3 +560,9 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 - [x] `framework/commands/target.md` step 2 ("the dashboard's documented \"session file → session-target: null\" reset state holds"), `specs/000-slash-commands/scenarios/target-clear-flag.md` (Context) and `scenarios/dashboard-dependencies-column.md` (item 2), and `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md` ("reports `session-target: null`") — `DashboardResult.session_target` has been `skip_serializing_if = "Option::is_none"` since the primitive landed (07371334), so with no target the result has no `session-target` key. Task 54's edit of 022's `dashboard-primitive` scenario, the claim's source, now says so, which leaves target.md quoting a state the scenario no longer documents (task 54's 022 item, 2026-11-10) — fixed: the five occurrences, two of them in `target-clear-flag.md`, now say the result has no `session-target`; target.md's `dashboard` stays unbackticked, since `ductus exec` dispatches a backticked primitive and the target-basic golden caught a backticked one as a new step
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 57. analyze reads the rules' list file and a rule file through the shell, against §Rules
+
+- [ ] Task 48's run (research.md, *Analyze's malformed-rule-heading check (task 48)*): after reading `discover-rule-files`' list file whole with the host's reader, analyze queried it with `jq` three times, one denied as compound, and read the malformed heading's lines with `git show 149e3cf -- specs/rules/quality-cross.md`. `framework/reference/analyze.md` §Rules says neither the list file nor a rule file is read through the shell, and the `rules-load-without-shell-reads` scenario rules out a shell read of a rule file. `other-headings` gives each heading's line and text only, while §Rules asks the model to judge each against the file's structure, which the model read from git. How analyze sees the text under such a heading without the shell is a design question for the owner, priced before code
+
+- **Done when**: an analyze run of the `analyze-malformed-rule-heading` check reads neither the list file nor a rule file through the shell, or the owner waives it with its reason written on this task.
