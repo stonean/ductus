@@ -77,3 +77,12 @@ Implements `scenarios/analyze-run-durability.md`. Findings outlived the session;
 It owes `/ductus:review` and `/ductus:analyze` over the correction, its ticked criteria re-verified against the tree before they run, then the completion gate and the owner's approval of `done`, which run once no box in this file is open (spec 079).
 
 - **Done when**: 047's review and analysis are recorded and not stale, AC2 holds against the tree, and the owner has approved `done`.
+
+## 8. What the criteria verification found at `60c28d26`, corrected before the records
+
+- [x] Criteria verified at `60c28d26` by one read-only agent reading the source, with no test run (262 s), and AC8 by the operator (`scripts/gen-claude-commands.sh --check` exit 0; `markdownlint-cli2` 0 issues in 875 files): AC1–AC4, AC6–AC8 and AC11–AC13 hold; AC9's, AC14's and AC15's annotations are corrected, superseded by `29ec6cc2` (079's refusal while a task is open), `2a4779c0` (057's whole-file exclusion of `analysis.md`) and `6a08a7ad` (066's normalized criterion ticks); AC5's names what the record does count; AC10's passing-verdict clause is annotated never held as written (`97ca0294`)
+- [x] Body, scenarios and plan, corrected by tense or fact (owner's delegation, 2026-11-10): the spec header's two "unchanged" claims; `analyze-run-durability.md`'s Behavior note, record rule, added fields, gate blocks, re-analysis and newline edge cases, and 076's disposition names; `analyze-record-freshness.md`'s whole-`spec.md` digest and its gate order; the plan's capture design, annotated as reversed by 058
+- [x] Runtime: the doc comment on `check_review_gate.rs`'s `advisory_findings_and_unexamined_targets_do_not_block` says the counts ride an `analyze-findings` block, never a passing verdict
+- [x] Waived: `framework/reference/analyze.md` `## Record fields` says the digest excludes "`analysis.md`'s own record", which reads true of the file as the record, so it takes no edit
+
+- **Done when**: every criterion holds or carries a true annotation, and no contract or body passage is false about the tree

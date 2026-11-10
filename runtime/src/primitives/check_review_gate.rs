@@ -1848,9 +1848,9 @@ mod tests {
 
     /// Advisory findings are recorded and never gate — the deliberate
     /// asymmetry with the review gate's treatment of an outstanding SHOULD.
-    /// The unexamined count rides along in the guidance rather than being
-    /// dropped, so a passing gate still says what the analysis could not look
-    /// at.
+    /// Neither they nor the unexamined targets block, so a record carrying
+    /// only those passes; their counts ride an `analyze-findings` block's
+    /// guidance, never a passing verdict's.
     #[test]
     fn advisory_findings_and_unexamined_targets_do_not_block() {
         let tmp = tempdir().unwrap();
