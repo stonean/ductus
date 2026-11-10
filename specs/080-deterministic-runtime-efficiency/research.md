@@ -394,3 +394,23 @@ That is 1 of 5, 0 of 5 and 2 of 5, from one run per command each time. In round 
 - **Task 38.** No run read a rule file. analyze called `discover-rule-files` with `all`, `rules` and `verification`, and review with `rules`. Each result moved its rules to its `lists-file`. analyze read that file with `jq`, with one call denied as compound. review read it with the host's reader after one `python3` call was denied.
 - **Task 39.** groom called `derive-routing-candidates`, which matched nothing for the item, then ran three `grep`s of spec bodies, one of them denied as compound. Its verifying criterion, no `grep` of spec bodies, was not met.
 - **Other denials.** review had five more, which the cost round's runs also showed: `make test` chained, `rm -r`, `git checkout`, a chained `git diff`, and `git -C`. analyze had one more, a `grep` of its own saved output.
+
+### Routing candidates on the main path (task 39)
+
+**Why the earlier round could not pass.** No inbox item can match a slug of the harness's generated corpus. Its specs are `NNN-feature-N`, `feature` is a `derive-routing-candidates` stopword, and a number is under the four-character minimum. So the failed round above ran the scenario's no-candidate Edge Case. There, groom's three `grep`s took 6.99 s, from the primitive's result at 01:12:08.952Z to the last `grep`'s result at 01:12:15.942Z, and 3 of the run's 7 model requests, by message id.
+
+**Lexical matching, measured.** The method is a Python copy of the primitive's tokenizer (`tokenize`, `STOPWORDS`, `MIN_TOKEN_LEN` 4 in `runtime/src/primitives/derive_routing_candidates.rs`). The population is the 390 distinct bullet lines added across `specs/inbox.md`'s git history, a rewritten item counting again. They were matched against the 78 `specs/NNN-*/spec.md` at 56a92b87 by three subjects: the slug's words after its number, the H1 title, and the body below the frontmatter. Each figure is the number of specs an item shares a token with.
+
+| Subject | Median specs matched | Items matching none |
+| --- | --- | --- |
+| slug, as the primitive matches today | 20.5 | 0 of 390 |
+| title | 22.5 | 0 of 390 |
+| body | 78, every spec, for every item | 0 of 390 |
+
+By token count, the 1 item of at most 8 tokens matched 4 slugs, the 6 of 9 to 20 a median of 6, the 111 of 21 to 50 a median of 11, and the 272 of more than 50 a median of 29.5. On a generated 40-spec corpus, the seeded item matches no spec by slug, title or body.
+
+**The run.** From 01:32:02Z to 01:32:30Z on 2026-11-10, `python3 scripts/measure-command-cost.py --round --only groom --permissions adopter --specs 40 --bin <copy>` ran Claude Code 2.1.321 (`claude -p`, `stream-json`, model `claude-opus-5-5`) at 56a92b87, with this task's harness change uncommitted. The copy was of this checkout's release build of 56a92b87's runtime source, whose sha256 begins `596ff1b15fcc5af4`. groom's preset now seeds `041-status-view`, a `done` spec whose slug shares `status` and `view` with the item, beside the inbox item.
+
+- **Result.** One `ToolSearch`, no `grep` and no other shell read of a spec, and no denial. Its one `Bash` call listed the config, the spec root and the inbox. It read 041 with `read-spec` and three sections of its reference with `read-section`, then routed the item to a spec edit of 041 at step 3's gate. It took 27.04 s, 9 turns and 2,060 output tokens, and cost $0.403. Its largest tool result was the three sections, 9,863 characters.
+- **`routed-by`.** groom's first `derive-routing-candidates` call passed `routed-by: "groom"`, which derives nothing and returns `gate-required: false`. Its second call, without it, returned 041. Step 2 of `framework/commands/groom.md` said "as `/{project}:specify` does", and specify passes `routed-by` when groom has already routed. The argument's schema doc also gives `groom` as its example. Step 2 now says to pass no `routed-by`, which marks a tree that has already run.
+- **Step 2's wording, verified.** From 01:36:34Z to 01:37:02Z the same command ran once more, on the same copy, with step 2's new wording. groom's one `derive-routing-candidates` call passed no `routed-by` and returned 041. It made no `grep` and no denial. It read 041's `spec.md` with the host's reader, listed that spec's directory, and routed the item to a scenario under 041 at step 3's gate. It took 26.73 s, 10 turns and 1,838 output tokens, and cost $0.405.

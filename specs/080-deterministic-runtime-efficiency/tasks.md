@@ -321,9 +321,9 @@ Put the mechanism to the owner before code, with each option's cost: extend `dis
 
 ## 39. Scenario: groom derives routing candidates
 
-The smallest of the seven: `framework/commands/groom.md`'s routing step calls `derive-routing-candidates` before `routeInboxItem`, as `framework/commands/specify.md` step 1 does. Verify with `--round --only groom --permissions adopter`: no `grep` of spec bodies. That change landed with tasks 37 and 38, and its design is in `plan.md`'s *groom derives its routing candidates*. Its round failed the check, by `research.md`'s *Sections, rules and routing candidates as tool results*. groom called the primitive, which matched nothing for the item, and then grepped spec bodies three times, one of them denied. What comes next goes to the owner before code, with each option's cost. Options include rewording Step 2 of the decision tree in `framework/reference/groom.md` to forbid searching spec bodies, amending the scenario's first Behavior bullet as task 40's was, or giving the primitive's spec-corpus source more than slugs to match. Each groom run costs about $0.39.
+The smallest of the seven: `framework/commands/groom.md`'s routing step calls `derive-routing-candidates` before `routeInboxItem`, as `framework/commands/specify.md` step 1 does. Verify with `--round --only groom --permissions adopter`: no `grep` of spec bodies. That change landed with tasks 37 and 38. Its first round ran the no-candidate Edge Case, since no item can match the generated corpus's slugs. The owner chose to leave the body search to the model there, and to verify the main path with a seeded spec whose slug shares the item's words (2026-11-10). `plan.md`'s *groom derives its routing candidates* holds the design, and `research.md`'s *Routing candidates on the main path* holds both runs.
 
-- [ ] Implement the behavior described in `scenarios/groom-derives-routing-candidates.md`
+- [x] Implement the behavior described in `scenarios/groom-derives-routing-candidates.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 

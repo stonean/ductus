@@ -15,7 +15,7 @@ section: "Behavior"
 
 ## Edge Cases
 
-- An item the primitive matches to nothing: the routing round trip runs as before, with no candidate shown.
+- An item the primitive matches to nothing: the routing round trip runs as before, with no candidate shown, and whether it also searches spec bodies is the model's call. A slug list that matches nothing says nothing of what the bodies cover (`research.md`, *Routing candidates on the main path*; owner, 2026-11-10).
 - A source the primitive could not examine is shown as skipped, never as a source that matched nothing.
 
 ## Open Questions

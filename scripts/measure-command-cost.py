@@ -256,10 +256,24 @@ def seed_open_question(root: Path) -> None:
 
 
 def seed_inbox_item(root: Path) -> None:
-    """groom: one inbox item, through the primitive /log calls."""
+    """groom: one inbox item, through the primitive /log calls, and a done
+    spec whose slug shares the item's words, numbered after the corpus. No
+    item can match a generated `NNN-feature-N` slug, `feature` being a
+    derive-routing-candidates stopword, so without it groom would route only
+    the no-candidate edge case (spec 080, task 39)."""
     run([str(root / ".ductus/bin/ductus"), "append-inbox", "--text",
          "The status view could show how long each spec has been in its status"], cwd=root, env=child_env())
-    commit(root, "log: one inbox item")
+    n = max(int(d.name[:3]) for d in (root / "specs").iterdir() if re.match(r"\d{3}-", d.name)) + 1
+    d = root / f"specs/{n:03d}-status-view"
+    d.mkdir()
+    (d / "spec.md").write_text(
+        f"---\nstatus: done\ndependencies: []\n---\n\n# {n:03d} — Status view\n\n## Behavior\n\n"
+        "The status view lists every spec with its status and its next action.\n\n## Acceptance Criteria\n\n"
+        "- [x] each spec's row shows its status and its next action\n\n## Open Questions\n\n*None — all resolved.*\n")
+    (d / "plan.md").write_text(f"# {n:03d} — Status view Plan\n\n## Overview\n\nBuild it.\n")
+    (d / "tasks.md").write_text(f"# {n:03d} — Status view Tasks\n\n## 1. Build it\n\n- [x] write it\n- [x] test it\n\n"
+                                "- **Done when**: it works.\n")
+    commit(root, "log: one inbox item, and the status view's spec")
 
 
 def seed_branch_spec(root: Path) -> None:
