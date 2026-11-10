@@ -1,39 +1,42 @@
 ---
 spec: 062-concurrent-session-targets
-last-run: 2026-10-28T20:22:39Z
-analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
+last-run: 2026-11-10T02:08:31Z
+analyzed-against: bf1072ce875dd275b7f45f1a911665a40b0bb9cb
 hard-fail: 0
 blocking-findings: 0
-advisory: 1
-unexamined: 2
+advisory: 2
+unexamined: 0
 analyzed-digest:
-  data-model.md: 9ce5458a99a6ba857f8778df877a8b2b0a2708037b23b05319588b4c06aaa10f
-  plan.md: 1a1af13432e0aa2fbecc51866970fde39d22126a44621ac3b63ffa6365aa2132
-  review.md: a9a4c17a55fe01541930ab48495c959777d02a6d7aa1ae310b22941dff96a324
-  scenarios/first-writers-create-the-ignore-file-once.md: 02149b44fd9c6d76d8e9d97af6235df746bf028cad34e693bb57302dea1b1f15
-  spec.md: 8c549249116b45e677a6e0578872ea5a0f8da4a1d03ab55e48e1dc2559c556e4
-  tasks.md: fcd240a48b55f24218b9390819226914d55b3992d39cdc4332aa3ab95cd61207
-unexamined-by-reason:
-  root-absent: 2
+  data-model.md: 2a8f4408441a0f65666c7c86a648abc95036e837d91406b99e1a857965e474d8
+  plan.md: b7d3280858426869678e727ab9ff2627fe5b923c4acc52d3db7d8936b7d04122
+  review.md: 8fcb169d49bab581eb6fa0db348689ed3fd72eaf75bf8119333cafffd3428554
+  scenarios/first-writers-create-the-ignore-file-once.md: 150b95396db7f7e774f4da1726618b953070531f1810c4272a5c080f7e47c0b8
+  spec.md: 4300a10626518bb7f758c08ef4bf1d4a96d90cb1663a29c1edefe4b9449ce73f
+  tasks.md: 2f73cf5253eac741c9354af1006de66ba77451bf059c9e9f635dc412a6d2c515
 blocking: false
 dispositions:
-  fixed: 5
-  routed: 0
-  discarded: 1
+  fixed: 4
+  deferred: 0
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the new resolve-session and retarget-sessions MCP handlers name no RED metrics"
-    outcome: discarded
+    outcome: waived
     reason: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability, not to 062
     decided-at: 2026-09-30T00:02:11Z
     decided-by: andy@stone.dev
+  - key: grounding — plan.md says the lock poll's jitter comes from the standard library's randomly seeded hasher, with no source
+    outcome: waived
+    reason: a claim about the Rust standard library, not about the system 062 changes, whose grounding needs a documentation fetch this run did not make; the jitter's behavior is held by the session-lock-backoff mutants, not by this sentence
+    decided-at: 2026-11-10T02:08:31Z
+    decided-by: rule
 ---
 
 # Analysis — 062-concurrent-session-targets
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 5 fixed, 0 routed, 1 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 0 unexamined target(s). Dispositions: 4 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -45,16 +48,20 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-METRIC-001: the new resolve-session and retarget-sessions MCP handlers name no RED metrics — `specs/062-concurrent-session-targets/plan.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability, not to 062
+- rule-assessment — BE-METRIC-001: the new resolve-session and retarget-sessions MCP handlers name no RED metrics — `specs/062-concurrent-session-targets/plan.md` — **waived**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability, not to 062
+- grounding — plan.md says the lock poll's jitter comes from the standard library's randomly seeded hasher, with no source — `specs/062-concurrent-session-targets/plan.md` — **waived**: a claim about the Rust standard library, not about the system 062 changes, whose grounding needs a documentation fetch this run did not make; the jitter's behavior is held by the session-lock-backoff mutants, not by this sentence (decided by the rule)
+
+## Deferred to other specs
+
+*None.*
 
 ## Unexamined targets
 
-- root-absent: 2
+*None — every target was examined.*
 
 ## Fixed in this run
 
-- rule-assessment — BE-RETRY-001: the session lock poll retries at a fixed interval with no exponential backoff or jitter — `specs/062-concurrent-session-targets/plan.md` — **fixed**
-- rule-assessment — BE-RETRY-003: the session lock poll does not name which try_lock failures it retries and which it surfaces immediately — `specs/062-concurrent-session-targets/plan.md` — **fixed**
-- grounding — spec.md says status transitions are guarded on the expected current value, with no source — `specs/062-concurrent-session-targets/spec.md` — **fixed**
-- grounding — plan.md says File::lock is stable from Rust 1.89, with no source, beside a toolchain pin it misstates — `specs/062-concurrent-session-targets/plan.md` — **fixed**
-- grounding — plan.md says an advisory lock is released by the OS when its holder dies, with no source — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+- rule-assessment — BE-PAYLOAD-001: the session tools' lists — write-session's, resolve-session's, retarget-sessions' and the dashboard's — stated no bound and no pagination — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+- rule-assessment — BE-REPR-001: write-session's peers[].last-used named no timestamp representation — `specs/062-concurrent-session-targets/data-model.md` — **fixed**
+- grounding — spec.md's existing atomic-write guarantee cited no source — `specs/062-concurrent-session-targets/spec.md` — **fixed** (decided by the rule)
+- grounding — plan.md's claim that the next /ductus run migrates a legacy layout cited no migration — `specs/062-concurrent-session-targets/plan.md` — **fixed** (decided by the rule)
