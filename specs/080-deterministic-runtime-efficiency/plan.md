@@ -198,6 +198,8 @@ It runs one round after the view, the hook and tool loading land. That round rec
 
 None of the three gets the hook, the batching line or a bridge change (AC10). OpenCode's scenario and Antigravity's are recorded through `/{project}:amend` after a run on a version that has the mechanism: an OpenCode TUI plugin's slash command, and `agy` 1.4.11 or later with a `PreInvocation` hook (AC11). Each scenario records its outcome, and the deferral it settles, under Resolved Questions with its trigger. An open question there would hold 080 short of `done`.
 
+On OpenCode and Antigravity the view's `/{project}:<name>` hints name no command, since those hosts run one as `/{project}/<name>` and `/{project}-<name>`. That gap is waived for this spec (owner, 2026-11-10): it predates 080, since `/ductus` substitutes only `{project}` and every installed command's prose on those hosts already spells the colon form, as status's model-composed prompt did before; it is not the view's alone; and AC10 holds.
+
 ## Affected Files
 
 | File | Action | Purpose |

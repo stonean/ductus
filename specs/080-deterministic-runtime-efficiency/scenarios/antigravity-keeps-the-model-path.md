@@ -15,7 +15,7 @@ Antigravity runs `/{project}:status` on the model path: `/ductus` installs `fram
 
 ## Edge Cases
 
-- The view's hints spell `/{project}:<name>`, while the bootstrap's §Derived values gives Antigravity's invocation as `/{project}-<name>`, so on Antigravity a hint names no command, as on OpenCode. On Pi the bridge respells each hint as Pi names the command.
+- The view's hints spell `/{project}:<name>`, while the bootstrap's §Derived values gives Antigravity's invocation as `/{project}-<name>`, so on Antigravity a hint names no command, as on OpenCode. On Pi the bridge respells each hint as Pi names the command. Waived for this spec, as on OpenCode (owner, 2026-11-10; plan *Auggie, OpenCode and Antigravity*).
 
 ## Open Questions
 

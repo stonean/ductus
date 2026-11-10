@@ -517,9 +517,9 @@ The first item's done-when, that analyze reports a malformed rule heading, has n
   - `:136`: `target.md`'s step 3 reads `specs[].slug`.
 - [x] `research.md`: task 43's record says "runtime source unchanged since 56a92b87", which is false, since other specs changed `write_analysis.rs` and `render_status.rs` in between. Correct it
 - [x] The scenario Contexts that describe the pre-change state in the present tense: `configure-types-no-permission-entries.md:9` and `groom-derives-routing-candidates.md:9`
-- [ ] Owner decides:
+- [x] Owner decides:
   - AC27, which cannot be ticked as written, since `research.md` records the context check as waived — decided: reworded so that, with no model turn to run, the answer comes from pi's documentation and the record says so; `research.md`'s task 12 record now states it (owner, 2026-11-10);
-  - the OpenCode and Antigravity `/{project}:` hint gap, which tasks 28, 32 and 33 and those scenarios' Edge Cases leave without a disposition.
+  - the OpenCode and Antigravity `/{project}:` hint gap, which tasks 28, 32 and 33 and those scenarios' Edge Cases leave without a disposition — waived: it predates 080, since `/ductus` substitutes only `{project}` and every installed command's prose on those hosts already spells the colon form, so it is not the view's alone, and AC10 holds; recorded in the plan's *Auggie, OpenCode and Antigravity* and both scenarios' Edge Cases (owner, 2026-11-10).
 
 - **Done when**: each item is fixed, or decided with its reason written on this task.
 
