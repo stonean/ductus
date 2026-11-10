@@ -346,3 +346,9 @@ Lands with task 36 (see its note). Verify that each run's first call goes out in
 - [x] Make the `dir` helper in `runtime/src/primitives/merge_permissions.rs`'s tests join its relative path one component at a time, as `canonical_directories` does. The runtime workflow's Windows build + test failed `a_canonical_call_writes_the_canonical_sets_and_both_directories` and `a_canonical_call_retires_names_and_keeps_the_adopters_entries` at daf517be (run 42713267146): the primitive writes `…\.claude\commands\acme`, and the helper joined `.claude/commands/acme` whole, so it expected `…\.claude/commands/acme`
 
 - **Done when**: the runtime workflow's Windows build + test job passes at the commit that lands the fix, since a local pass proves only the Unix branch.
+
+## 43. An adopter bootstrap across task 36's reference read
+
+- [ ] Run a real `/ductus` bootstrap on a Claude Code adopter, as task 11 did, by `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that its installed `plan`, `implement` and `prune` copies' lines name `derive-boundary`, `append-task` and `prune-project`, and that no other copy's line changed. `apply-manifest` now reads each reference a command names from the archive's `framework/reference/`. That read was exercised by the cost harness's fixture, which runs `apply-manifest` from the archive's layout, and by `a_cited_reference_sections_tool_joins_the_line_in_both_layouts`, but not through `/ductus`'s own staging. It precedes the release tag, not the review
+
+- **Done when**: `research.md` records the bootstrap's installed lines, with its method, date and commit.
