@@ -54,8 +54,7 @@ rather than riding along as unknown keys.
 and `AnalyzeBlock` (`:136`). `None` means the record predates 058.
 `Some(zeros)` means a run that found nothing. The two states must never
 collapse, the same rule `examined: Option<u32>` already follows
-(`primitives.rs:90-95`). Neither struct denies unknown fields; nothing in
-`runtime/src` does, and `runtime/src/mcp/server.rs:131` explains why. So a
+(`primitives.rs:90-95`). Neither struct denies unknown fields, nor does any primitive's `Args` struct, and `runtime/src/mcp/server.rs:131` explains why. So a
 record that still carries `captured-issues` parses unchanged. The full shapes
 are in [data-model.md](data-model.md).
 
@@ -88,13 +87,19 @@ not wait for it: `/{project}:review` calls `process-waivers` at step 8, before
     dimension-restricting flag, or an empty scope that skipped them all), or
     an analysis could not read a target it meant to examine or could not
     resolve a registered shared constitution
-    (scenario `only-unreadable-targets-retain-decisions`).
+    (scenario `only-unreadable-targets-retain-decisions`);
+  - `since`: a review's `--since`, so a decision on a file that window's
+    scope does not hold is retained.
 - **Result:**
   - `matched`: stored decisions whose key fired, each with its outcome and
     target or reason;
   - `expired`: stored decisions whose key did not fire on an unrestricted run;
-  - `retained`: stored decisions whose key did not fire on a restricted run;
+  - `retained`: stored decisions whose key did not fire on a restricted run,
+    or on a file a review's scope does not hold;
+  - `lapsed`: firing deferrals whose work is complete (076);
   - `notices`.
+- **Size:** bounded as `specs/066-audit-records-and-the-completion-gate/data-model.md`
+  states under `process-decisions`, **Size**.
 - **Malformed entries** are reported and never expired. Duplicates warn, and
   the first one wins. The data model names the two cases a re-render drops.
 
@@ -113,8 +118,9 @@ There is no `new-decisions` list. Each writer derives its new decisions from
 the findings it is handed: every deferred or waived live finding whose key
 and outcome — and, for a deferral, its work — are not already stored becomes an entry, stamped
 with the run's own timestamp (`reviewed-at` or `analyzed-at`) as `decided-at`
-and with `decided-by` as its author. `decided-by` is required only when at
-least one entry is new. Deriving the list, rather than accepting it, means the
+and with `decided-by` as its author, or `rule` when the disposition rule
+decided it (079). `decided-by` is required only when at least one entry is new
+and no rule decided it. Deriving the list, rather than accepting it, means the
 stored decisions and the rendered dispositions come from one input and cannot
 disagree.
 
@@ -306,13 +312,13 @@ doc on `CheckArtifactsResult.findings` is corrected in passing.
 `append-task` dedups only on a scenario slug (`append_task.rs:85-103`). A
 slug-less body appends every time, by design (`a_slugless_body_still_appends_every_time`).
 A disposition task has no scenario to point at, so a re-run of an interrupted
-`/{project}:implement` would append the same finding twice. That breaks the
-constitution's "Re-capture is idempotent" rule, which this spec carries forward
-rather than drops.
+`/{project}:implement` would append the same finding twice. That would break the
+"Re-capture is idempotent" rule the constitution stated until `1f045b12` (058
+task 12) removed it, a guarantee this spec carries forward rather than drops.
 
 `AppendTaskArgs` (`primitives.rs:2364-2415`) gains `dedup-title: bool`, default
 `false`. When set, an existing **pending** section with an identical title
-returns its number with `appended: false`. A spent section with the same title
+and identical checkbox items returns its number with `appended: false`. A spent section with the same title
 does not match, because the same finding surfacing again after being
 dispositioned is new work.
 
@@ -463,8 +469,8 @@ This follows the 057 precedent (`d6c1ee8a`, `ddfd95ed`). Each affected spec is:
 A blockquote signpost discharges the obligation, because
 `cross_spec_impact_states` reads back-links with the `Pointers` scope, which
 keeps blockquote lines (`check_review_gate.rs`, the doc above
-`cross_spec_impact_states`). It also induces no `dependencies:` edge, which
-would close a cycle with 058's own links.
+`cross_spec_impact_states`). It also induces no `dependencies:` edge in
+`derive-dependencies`' output, an edge that would close a cycle with 058's own links.
 
 | Spec | What changes | Destination file | Re-run cost |
 | --- | --- | --- | --- |

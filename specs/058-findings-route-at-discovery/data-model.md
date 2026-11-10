@@ -83,7 +83,8 @@ decisions:
   resolve a registered shared constitution. A target excluded by construction
   does not count
   ([only-unreadable-targets-retain-decisions](scenarios/only-unreadable-targets-retain-decisions.md)).
-  The entry is re-rendered unchanged.
+  On the review record a key naming a file still on disk that the run's scope
+  does not hold is retained too (079). The entry is re-rendered unchanged.
 - **Malformed.** A required field is missing, the outcome's companion is missing
   (a deferral's `target` and `work-item` both, or a waiver's `reason`), or a
   field its outcome forbids is present (076's data model). It produces a notice, is never expired, and
@@ -140,7 +141,8 @@ next time its writer runs.
 Neither writer takes a list of new decisions. Each derives them from the
 dispositioned findings it is handed — every deferred or waived live finding
 not already stored with the same outcome and, for a deferral, the same work
-(076's data model) — and requires `decided-by` only when
+(076's data model), except that a decision the rule made never replaces a person's
+standing one (079) — and requires `decided-by` only when
 at least one is new and no rule decided it. The shared disposition shape is `Disposition`
 (`outcome`, a `DispositionOutcome`, plus `target` and `reason`, and 076's
 `task` and `work-item`).
@@ -151,7 +153,7 @@ at least one is new and no rule decided it. The shared disposition shape is `Dis
 | --- | --- | --- |
 | `observations` | list of `ReviewObservation` | Each now carries its disposition (below). |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived other than `by-rule`, or any violation newly deferred (076). |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived other than `by-rule`, or any violation newly deferred (076), or any `new-waivers` item is passed (079). |
 
 ### `ReviewObservation` — the `write-review` `observations` entry
 
@@ -162,6 +164,8 @@ at least one is new and no rule decided it. The shared disposition shape is `Dis
 | `disposition.outcome` | `fixed` \| `deferred` \| `waived` \| `undispositioned` | New. Defaults to `undispositioned`. |
 | `disposition.target` | string | Required when `deferred` without a `work-item`. |
 | `disposition.reason` | string | Required when `waived`. |
+| `disposition.by-rule` | bool, optional | The disposition rule decided it (079): a fix, or a waiver stored with `decided-by: rule`. Allowed only with `fixed` or `waived`. |
+| `contract-break` | bool, optional | The observation shows the spec's own code breaks its contract (079): fixed or deferred, never waived by the rule. |
 | `decision-key` | string, optional | The key of a stored decision the host matched this observation to. |
 
 ### `write-analysis` args
@@ -209,6 +213,7 @@ findings sharing a summary apart. A spent section never matches.
 | `record` | `review` \| `analysis` | Which record's `decisions:` to read. |
 | `fired` | list of strings | This run's finding keys (MCP only, as `process-waivers`' `fired` is). |
 | `restricted` | bool | The run did not evaluate every source: a review pass did not run, or an analysis could not read a target it meant to examine or could not resolve a registered shared constitution. |
+| `since` | string, optional | A review's `--since`. On the review record a decision whose key names a file still on disk that this window's scope does not hold is retained (079). |
 
 | Result field | Type | Notes |
 | --- | --- | --- |
@@ -216,6 +221,7 @@ findings sharing a summary apart. A spent section never matches.
 | `expired` | list of decision refs | Passed to the writer as `expired-decisions`. |
 | `retained` | list of decision refs | Re-rendered unchanged. |
 | `notices` | list of strings | Malformed, duplicate, expired, and retained entries, each named, and 076's lapsed deferrals and unreadable deferral targets. |
+| `form`, `lists-file`, each list's `-count` | | The bound 066's data model states (`process-decisions`, **Size**): past the read size the lists move to the file `lists-file` names, and each count stays inline. |
 
 [076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) adds the `lapsed` result field and a decision ref's `task` and `work-item`.
 
@@ -226,8 +232,10 @@ findings sharing a summary apart. A spent section never matches.
 | `record-predates-dispositions` | An `in-progress` spec's `review.md` or `analysis.md` has no `dispositions:` map | The record, and the command to re-run |
 | `undispositioned-findings` | An outstanding gating finding: the review record's MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, neither waived nor released by its deferral, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, each deferral that holds `done` with its work (076), and the command to re-run |
 
-Both are checked after every existing review and analyze check, in the order
-predates (review, then analysis), then outstanding gating findings (review, then analysis).
+Since 079 each is checked with its record's half of the gate: the review
+record's predates and gating checks with the rest of what only a review clears,
+before the fix-round and review-owed checks, and the analysis record's after the
+analyze record checks. Each message names one record.
 
 ## New `check-artifacts` family — `disposition-drift`
 
@@ -241,8 +249,9 @@ it after writing it, from the record it wrote
 ## `DashboardResult.inbox-standing`
 
 The existing `InboxStanding` (in `primitives.rs`), moved from the
-`write-review` and `diff-cross-spec` results. `render_callouts` renders it as
-one `Inbox:` line in one of four states:
+`write-review` and `diff-cross-spec` results. `pipeline_view::inbox_line`
+renders it, in `render-status`'s view (080), as one `Inbox:` line in one of
+four states:
 
 - `Inbox: N item(s) outstanding, oldest YYYY-MM-DD — run /{project}:groom to route`
 - `Inbox: N item(s) outstanding, age undeterminable — run /{project}:groom to route`

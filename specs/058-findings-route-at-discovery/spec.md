@@ -61,12 +61,12 @@ kept finding them after the transition. The costliest case was `055`: an
 obligation owed to `050` was moved to the inbox at 055's completion gate, and
 `ductus-v0.47.0` was published before anyone noticed it, as the
 [`AGENTS.md`](../../AGENTS.md) entry *`done` is not the same as discharged*
-records.
+recorded until `4eebe91a` cut that file to one read.
 
 The volume came from the machines. On 2026-09-13, 20 items stood open, and 14
 of them had been captured by `/{project}:review` or `/{project}:analyze` passes,
 as the [`AGENTS.md`](../../AGENTS.md) entry *The inbox is a queue to drain*
-records. A person's `/{project}:log` entries were a minority of their own backlog.
+recorded until the same cut. A person's `/{project}:log` entries were a minority of their own backlog.
 
 The constitution sanctioned the gap. §design-principles listed "an inbox item"
 among the ways to *record [outstanding work] where the pipeline will surface it
@@ -197,10 +197,11 @@ neither waived nor released by its deferral —
 never on a record's `undispositioned` count, which does not split by tier. An
 undecided advisory finding or review observation stays recorded and visible,
 any decision made on it persists, and it does not block, so analyze's advisory checks are
-not promoted to blocking. The check runs after every existing review and
-analyze check, because each of those names a more upstream defect, so in
-practice it is where such a SHOULD binds, and its message names each deferral
-that holds `done` with its work (076).
+not promoted to blocking. Since 079 the review record's check runs with the
+rest of what only a review clears, before the fix-round, review-owed and
+analyze checks, and the analysis record's after the analyze record checks; in
+practice the review one is where such a SHOULD binds, and its message names
+each deferral that holds `done` with its work (076).
 
 Until that scenario the gate blocked while either record's `undispositioned`
 count was above zero, asking for a decision rather than a fix. Its cost, in
@@ -311,7 +312,7 @@ it.
 
 `specs/inbox.md` holds the todos a person captures with `/{project}:log`.
 `/{project}:groom` walks them through its five routes, unchanged, and remains
-the only command that removes an item. `/{project}:status` renders the
+the only command that removes a logged item. `/{project}:status` renders the
 standing inbox row — the outstanding count and the oldest item's date — on
 every run, including when the inbox is clean. Its four states are unchanged
 from the row `/{project}:review` and `/{project}:implement` rendered before,
@@ -378,8 +379,8 @@ primitives:
 - `compute-review-scope` and `diff-cross-spec` stop computing an inbox-additions
   window.
 - The standing inbox row leaves the `/{project}:review` and
-  `/{project}:implement` output and moves to `dashboard`, which renders it in
-  `/{project}:status` (see §The inbox).
+  `/{project}:implement` output and moves to `/{project}:status`, rendered from
+  `dashboard`'s read, through `render-status` since 080 (see §The inbox).
 - `write-analysis` renders the disposition sections in place of captured issues.
 - `append-inbox` and `remove-inbox-item` remain, serving `/{project}:log` and
   `/{project}:groom`.
@@ -394,8 +395,8 @@ primitives:
   run, and a chore logged by hand lives in the inbox until it is done.
 - §brownfield-inbox describes the inbox as manual capture, and its Automatic
   issue capture subsection is replaced by the three-disposition rule.
-- The Frontmatter Schema declares the disposition counts in place of
-  `captured-issues`.
+- The Frontmatter Schema declares the `dispositions:` map of counts and the
+  `decisions:` list in place of `captured-issues`.
 
 [050 — constitution](../050-constitution/spec.md)'s `findings-route-by-scope`
 scenario carries two edge cases this reverses: a chore found during spec work
@@ -404,7 +405,7 @@ went to the inbox, and so did a finding made while no spec was in progress.
 ### Cross-spec impact
 
 Each spec named in `cross-spec-impact:` gets a signpost linking back here,
-written as a blockquote. The dependency generator skips blockquote lines, so
+written as a blockquote. The dependency generator, `derive-dependencies`, skips blockquote lines, so
 the back-link adds no `dependencies:` edge that would close a cycle with this
 spec's links to it. Each also gets the contract change itself:
 
@@ -412,14 +413,15 @@ spec's links to it. Each also gets the contract change itself:
   analyze-state drift family it added to `check-artifacts`, which `/{project}:analyze`
   now judges from the record it writes.
 - **022:** the `review-observations-write-through`, `the-inbox-row`, and
-  `the-analyze-record-states-what-it-captured` scenarios, plus any other 022
+  `the-analyze-record-states-what-it-captured` scenarios, which `379ffa31` has
+  since retired, plus any other 022
   scenario that names the inbox-additions window; and the `check-artifacts`
   registry, which gains `disposition-drift` and loses `analyze-state-drift`.
 - **020:** `review.md`'s `captured-issues` field and its Captured issues section.
 - **057:** `analysis.md`'s captured-issues section and field.
 - **050:** the `findings-route-by-scope` edge cases above.
-- **054:** AC10's `check-artifacts` family count, nine again with a different
-  membership.
+- **054:** AC10's `check-artifacts` family count, nine again then, with a
+  different membership; it has grown since.
 - **008:** the adoption audit's inbox write.
 
 ## Edge Cases
@@ -465,7 +467,7 @@ spec's links to it. Each also gets the contract change itself:
   unchecked task. A forced reset is the operator discarding the work
   deliberately.
 - **An adopter inbox keeps its original guidance comment.** The inbox is
-  installed once and never updated, so the header in an existing adopter's
+  installed once (`framework/bootstrap/ductus.md`, strategy `create`) and never updated, so the header in an existing adopter's
   inbox still describes automatic capture. A registry migration replaces that
   comment block with the current template's, or removes it now that the
   template carries none, and the introduction too when it is the old
@@ -477,7 +479,7 @@ spec's links to it. Each also gets the contract change itself:
 
 - [x] AC1: `/{project}:log` is the only framework command that invokes `append-inbox`, and no runtime primitive other than `append-inbox` writes an item to `{specs-root}/inbox.md`. A search of `framework/commands/`, `framework/bootstrap/`, and `runtime/src/` finds no other writer.
 - [x] AC2: A `/{project}:review` run with one or more observations appends nothing to the inbox, and `review.md`'s Observations section records each observation with its disposition (fixed, deferred with its work, or waived with its reason).
-- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection gives each live finding at most one disposition and performs a gating finding's deferral only after `gate-confirm` returns a confirmed decision.
+- [x] AC3: `/{project}:analyze`'s detection steps write no file. A fix-and-route step after detection gives each live finding at most one disposition and performs a gating finding's deferral only after `gate-confirm` returns a confirmed decision. **Superseded in part:** since `ece1ed5a` (080 task 5) a detection step's primitive writes its lists to a file under `.ductus/results/` past `[artifacts] read-size-bytes`, as `resolve-references` has since `3cfe8be7`; detection still modifies no artifact it audits.
 - [x] AC4: After the fix-and-route step writes anything, `/{project}:analyze` re-runs detection and writes `analysis.md` from the re-check. `check-review-gate` run immediately afterwards does not report that analysis stale.
 - [x] AC5: A `/{project}:implement` run that surfaces an issue outside the targeted spec captures nothing to the inbox. It appends an unchecked `Disposition out-of-spec finding:` task to the targeted spec's `tasks.md` before continuing the task in hand, and its completion summary lists the appended task.
 - [x] AC6: `review.md`, `analyze.md`, and `implement.md` route findings by referencing the Groom decision tree in `groom.md` rather than restating it, as `specify.md` already does.
@@ -485,11 +487,11 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC8: A finding with no covering spec is deferred to a spec only when the operator creates one through `/{project}:specify`'s procedure in the same run. A declined creation leaves the finding waived with a reason or undispositioned, and the record never counts it as deferred to that spec.
 - [x] AC9: `review.md` and `analysis.md` frontmatter carry a `dispositions:` map (`fixed`, `deferred`, `waived`, `undispositioned`) and a `decisions:` list in place of `captured-issues`. The constitution's Frontmatter Schema declares each field and its type, and `validate-frontmatter` validates them.
 - [x] AC10: The Captured issues section is removed from `review.md`'s and `analysis.md`'s skeletons. `compute-review-scope` no longer returns its `captured-issues` window, and `diff-cross-spec` no longer returns `inbox-additions` or `inbox-standing`.
-- [x] AC11: The standing inbox row no longer appears in `/{project}:review` or `/{project}:implement` output. `/{project}:status` renders it from `dashboard` on every run, in the four existing states: outstanding count with the oldest item's date, outstanding with age undeterminable, clean, and no inbox file.
+- [x] AC11: The standing inbox row no longer appears in `/{project}:review` or `/{project}:implement` output. `/{project}:status` renders it from `dashboard` on every run, in the four existing states: outstanding count with the oldest item's date, outstanding with age undeterminable, clean, and no inbox file. **Superseded in part:** since `57a63c35` (080 task 4) `/{project}:status` renders the row through `render-status`, from the read `dashboard` makes, which still returns `inbox-standing`; the four states are unchanged.
 - [x] AC12: The `/ductus` brownfield security audit writes no inbox item. It reports each finding with its spec and points to `/{project}:analyze`.
 - [x] AC13: The constitution's §design-principles no longer lists an inbox item as a disposition for known-outstanding work. §grounding routes an implementation-time assumption to a task or open question. §bug-handling's chore paragraph states that a chore found by a run is fixed in that run. §brownfield-inbox describes the inbox as manual capture, with Automatic issue capture replaced by the three-disposition rule.
 - [x] AC14: `/{project}:amend`'s chore branch fixes the chore rather than directing the user to `/{project}:log`.
-- [x] AC15: The inbox template's header, and this repository's `specs/inbox.md` header, document the manual entry form only; the auto-capture and audit-finding forms are gone.
+- [x] AC15: The inbox template's header, and this repository's `specs/inbox.md` header, document the manual entry form only; the auto-capture and audit-finding forms are gone. **Superseded in part:** since `bca9a2fd` both headers document no entry form at all, a heading and an introduction only; the auto-capture and audit-finding forms are still gone.
 - [x] AC16: `/{project}:log` and `/{project}:groom` behave as before. An item captured automatically before this change is walked by `/{project}:groom` through the same five routes as a logged one.
 - [x] AC17: `/{project}:help` describes the inbox as the place for manually captured todos.
 - [x] AC18: Each spec in `cross-spec-impact:` carries a blockquote signpost linking back to this spec, together with the contract change it owes, and `check-review-gate` reports the impact discharged.
@@ -498,9 +500,9 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC21: The generated per-agent command mirrors match their updated sources, and the command-parity audit passes.
 - [x] AC22: The change adds one `framework/migrations.toml` entry, with its `framework/migrations/{id}.md` procedure. The procedure replaces the guidance comment in an adopter's existing inbox with the current template's, or removes it when the template carries none, leaves every item byte-identical, and is idempotent. The migration-coverage audit (Family 10) passes.
 - [x] AC35: A later `framework/migrations.toml` entry removes the guidance comment, whatever its text, and the template's former placeholder item, only as that exact text, from an adopter's existing inbox that already ran `inbox-guidance-refresh` against a template carrying the comment. It leaves every other item byte-identical and is idempotent.
-- [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history.
+- [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history. **Never held as written:** the search also hits pre-058 review records that carry a `Captured issues` section (031's, 033's, 046's and 049's), `runtime/CHANGELOG.md`'s release notes, runtime tests that assert each shape's absence, and test harnesses and `scripts/measure-command-cost.py` that call `append-inbox` directly; none of them captures a finding automatically.
 - [x] AC24: Full markdown lint passes across every file the change touches.
-- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — a review MUST or SHOULD violation, or a hard-fail or blocking analyze finding, neither waived nor released by its deferral — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
+- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — a review MUST or SHOULD violation, or a hard-fail or blocking analyze finding, neither waived nor released by its deferral — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed. **Superseded in part:** since `9129d914` (079) the review record's check runs with the rest of what only a review clears, before the fix-round, review-owed and analyze checks, and the analysis record's after the analyze record checks.
 - [x] AC26: `/{project}:analyze` runs its fix-and-route step on every invocation without a flag. Under `ductus exec` it writes no fix or deferral, and records each live finding that matches no stored decision as undispositioned.
 - [x] AC27: `/{project}:analyze` reports a `done` spec whose `analysis.md` or `review.md` records undispositioned findings as advisory disposition drift, and `--fix` does not revert it.
 - [x] AC28: `/{project}:analyze --all` groups fix-and-route proposals by spec, and each prompt offers to leave that spec's remaining findings undispositioned.
@@ -548,7 +550,7 @@ spec's links to it. Each also gets the contract change itself:
   collapses the scope tiers into one rule: anything outside the task in hand
   becomes a task on the spec in hand.
 - **Where does the standing inbox count go?** To `/{project}:status`, rendered
-  by `dashboard` in its four existing states, and out of the
+  by `dashboard` (by `render-status` since 080) in its four existing states, and out of the
   `/{project}:review` and `/{project}:implement` output. The row was added
   because items older than the feature in hand were invisible, and one of them
   was an obligation a release was cut over (`AGENTS.md`, the "`done` is not the

@@ -57,8 +57,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AnalysisFinding, AnalysisTier, DecisionRef, DispositionOutcome, Dispositions,
-    WriteAnalysisArgs, WriteAnalysisResult,
+    AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
+    Dispositions, WriteAnalysisArgs, WriteAnalysisResult,
 };
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
@@ -143,6 +143,11 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     if single_line(&args.analyzed_at).is_empty() {
         return Err(invalid("analyzed-at", "the run's timestamp is empty"));
     }
+    // Before anything is counted or rendered: a rule's waiver of a finding a
+    // person already decided carries that person's decision, which `decisions:`
+    // keeps, so the record says one thing.
+    let settled = settled(args, &feature_dir)?;
+    let args = settled.as_ref();
     let gating = gating_counts(args, repo, &root);
     let blocking = gating.hard_fail > 0 || gating.blocking_findings > 0;
     let dispositions = count_dispositions(args)?;
@@ -359,6 +364,66 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
     counts.undispositioned =
         live_total.saturating_sub(counts.deferred.saturating_add(counts.waived));
     Ok(counts)
+}
+
+/// The arguments as this run records them: a finding the rule waived again
+/// carrying the stored decision of the person it cannot replace, as
+/// `write-review` settles an observation (spec 079).
+fn settled<'a>(
+    args: &'a WriteAnalysisArgs,
+    feature_dir: &Path,
+) -> Result<std::borrow::Cow<'a, WriteAnalysisArgs>> {
+    let stored = decisions::read_decisions(feature_dir, crate::primitives::ANALYSIS_RECORD_FILE)?;
+    let overruled: Vec<(usize, Disposition)> = args
+        .findings
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, finding)| {
+            standing_decision(finding, &stored, &args.expired_decisions)
+                .map(|decision| (idx, decision))
+        })
+        .collect();
+    if overruled.is_empty() {
+        return Ok(std::borrow::Cow::Borrowed(args));
+    }
+    let mut args = args.clone();
+    for (idx, decision) in overruled {
+        args.findings[idx].disposition = decision;
+    }
+    Ok(std::borrow::Cow::Owned(args))
+}
+
+/// The stored decision, when the rule waives this finding again: the rule never
+/// replaces a person's unless this run expired it, so the count and the body
+/// follow it rather than contradict what the record stores (spec 079).
+fn standing_decision(
+    finding: &AnalysisFinding,
+    stored: &[decisions::RawDecision],
+    expired: &[DecisionRef],
+) -> Option<Disposition> {
+    let disposition = &finding.disposition;
+    if !disposition.by_rule || disposition.outcome != DispositionOutcome::Waived {
+        return None;
+    }
+    let key = finding_key(finding);
+    if expired
+        .iter()
+        .any(|gone| decisions::same_key(&gone.key, &key))
+    {
+        return None;
+    }
+    let decision = decisions::stored_decision(stored, &key)?;
+    Some(Disposition {
+        outcome: match decision.outcome {
+            DecisionOutcome::Deferred => DispositionOutcome::Deferred,
+            DecisionOutcome::Waived => DispositionOutcome::Waived,
+        },
+        target: decision.target,
+        task: decision.task,
+        work_item: decision.work_item,
+        reason: decision.reason,
+        by_rule: decision.by_rule,
+    })
 }
 
 /// The record's stored decisions, read once every new deferral among the
@@ -2071,6 +2136,64 @@ mod tests {
                 .any(|d| d.decided_by.as_deref() == Some("dev@example.com")),
             "{stored:?}"
         );
+    }
+
+    /// A person's standing decision wins: the next run's rule-decided waiver of
+    /// the same finding changes nothing in the record, its counts and body
+    /// included, as in `write-review` (spec 058, §Decisions persist across runs).
+    #[test]
+    fn a_stored_decision_by_a_person_wins_over_the_rule() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.advisory = 1;
+        a.decided_by = Some("dev@example.com".into());
+        a.findings = vec![finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Deferred,
+            Some("specs/042-demo/spec.md"),
+        )];
+        run(&a, tmp.path()).unwrap();
+
+        let mut next = args();
+        next.advisory = 1;
+        next.decided_by = None;
+        let mut again = finding(
+            AnalysisTier::Advisory,
+            "grounding",
+            "cites a gone path",
+            DispositionOutcome::Waived,
+            Some("the rule's reason"),
+        );
+        again.disposition.by_rule = true;
+        next.findings = vec![again];
+        let result = run(&next, tmp.path()).unwrap();
+        assert_eq!(result.dispositions.deferred, 1);
+        assert_eq!(result.dispositions.waived, 0);
+        let report = analysis_md(&tmp);
+        assert!(report.contains("decided-by: dev@example.com"), "{report}");
+        assert!(!report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("outcome: deferred"), "{report}");
+        // The count and the body say what the record holds rather than contradict it.
+        assert!(report.contains("  deferred: 1\n  waived: 0\n"), "{report}");
+        assert!(!report.contains("decided by the rule"), "{report}");
+        assert!(!report.contains("the rule's reason"), "{report}");
+
+        // Unless this run expired it: then the rule decides afresh.
+        next.expired_decisions = vec![DecisionRef {
+            key: "grounding — cites a gone path".into(),
+            outcome: DecisionOutcome::Deferred,
+            target: Some("specs/042-demo/spec.md".into()),
+            task: None,
+            work_item: None,
+            reason: None,
+            by_rule: false,
+        }];
+        run(&next, tmp.path()).unwrap();
+        let report = analysis_md(&tmp);
+        assert!(report.contains("decided-by: rule"), "{report}");
+        assert!(report.contains("  deferred: 0\n  waived: 1\n"), "{report}");
     }
 
     /// The rule never waives or defers what gates `done`.
