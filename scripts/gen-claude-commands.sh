@@ -75,7 +75,8 @@ substitute_shared() {
 
 # The runtime that builds the Claude copies. The pre-commit hook passes the one
 # it resolved as DUCTUS_BIN; a relative path is taken from where this started.
-ductus_bin="${DUCTUS_BIN:-$ROOT/runtime/target/release/ductus}"
+DEFAULT_DUCTUS_BIN="$ROOT/runtime/target/release/ductus"
+ductus_bin="${DUCTUS_BIN:-$DEFAULT_DUCTUS_BIN}"
 case "$ductus_bin" in
   /*) ;;
   */*) ductus_bin="$PWD/$ductus_bin" ;;
@@ -88,10 +89,11 @@ fi
 # Every wait on the runtime is bounded (BE-TIMEOUT-001): it is a local,
 # deterministic process, so a call that outlasts the bound is hung, and the
 # pre-commit hook that runs this would otherwise wait on it with no end.
-# DUCTUS_GEN_TIMEOUT_S overrides the bound, in whole seconds.
-runtime_timeout="${DUCTUS_GEN_TIMEOUT_S:-120}"
+# DUCTUS_GEN_TIMEOUT_SECONDS overrides the bound, in whole seconds.
+DEFAULT_GEN_TIMEOUT_SECONDS=120
+runtime_timeout="${DUCTUS_GEN_TIMEOUT_SECONDS:-$DEFAULT_GEN_TIMEOUT_SECONDS}"
 refuse_timeout() {
-  echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_S must be a positive whole number of seconds, got '$runtime_timeout'." >&2
+  echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_SECONDS must be a positive whole number of seconds, got '$runtime_timeout'." >&2
   exit 1
 }
 case "$runtime_timeout" in

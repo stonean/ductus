@@ -29,6 +29,16 @@ use crate::schema::primitives::{
 };
 use crate::schema::status::ALLOWED_STATUSES;
 
+/// `value` as text in one view line: each tab and every [`flatten_line`]
+/// hazard a space, trimmed. Every value the view takes from a file name or
+/// from frontmatter passes through it, so none can add a line, carry an
+/// escape sequence, or shift a fixed-width column (`BE-INPUT-011`). The tab
+/// is replaced here rather than in [`flatten_line`], since 058's stored
+/// decision keys normalize through that.
+fn view_text(value: &str) -> String {
+    flatten_line(&value.replace('\t', " "))
+}
+
 /// Which rendering to produce.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Format {
@@ -186,6 +196,14 @@ pub(crate) struct Model {
 
 /// Build the view's model.
 pub(crate) fn build(data: ViewData<'_>) -> Model {
+    // The namespace is `[host] project`, or the project directory's name when
+    // that key is absent, so it is flattened like any other file-derived value
+    // before a line names it (`BE-INPUT-011`).
+    let project_text = view_text(data.project);
+    let data = ViewData {
+        project: &project_text,
+        ..data
+    };
     let project = data.project;
     let target_slug = data.session_target.map(|t| t.feature.as_str());
     let rows = data
@@ -193,7 +211,7 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
         .iter()
         .map(|spec| Row {
             cells: [
-                spec.slug.clone(),
+                view_text(&spec.slug),
                 status_cell(spec),
                 mark(spec.has_plan).to_string(),
                 mark(spec.has_tasks).to_string(),
@@ -213,8 +231,8 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
             continue;
         }
         match next_actions.iter_mut().find(|(a, _)| *a == action) {
-            Some((_, slugs)) => slugs.push(spec.slug.clone()),
-            None => next_actions.push((action, vec![spec.slug.clone()])),
+            Some((_, slugs)) => slugs.push(view_text(&spec.slug)),
+            None => next_actions.push((action, vec![view_text(&spec.slug)])),
         }
     }
     let (target, notices, unreadable) = target_lines(&data);
@@ -400,7 +418,7 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
                 .find(|s| s.slug == target.feature)
                 .map_or_else(
                     || ("unknown".to_string(), "—".to_string()),
-                    |s| (flatten_line(&s.status), next_action(s, data.project)),
+                    |s| (view_text(&s.status), next_action(s, data.project)),
                 );
             if target
                 .scenario_detail
@@ -415,18 +433,18 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
             // one cannot forge a view line (`BE-INPUT-011`).
             let mut line = format!(
                 "Target: {} / {status} / next: {next}",
-                flatten_line(&target.feature)
+                view_text(&target.feature)
             );
             if let Some(label) = data.session_label {
                 let _ = write!(line, " — session {label}");
             }
             lines.push(line);
             if let Some(scenario) = &target.scenario {
-                let scenario = flatten_line(scenario);
+                let scenario = view_text(scenario);
                 let (section, open) = target
                     .scenario_detail
                     .as_ref()
-                    .map(|d| (flatten_line(&d.section), d.open_question_count))
+                    .map(|d| (view_text(&d.section), d.open_question_count))
                     .unwrap_or_default();
                 lines.push(format!(
                     "Scenario: {scenario} ({section}) — open-questions: {open}"
@@ -442,7 +460,7 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
     let notices = data
         .notices
         .iter()
-        .map(|notice| format!("Notice: {}", flatten_line(&notice.message)))
+        .map(|notice| format!("Notice: {}", view_text(&notice.message)))
         .collect();
     let unreadable = data
         .unreadable
@@ -451,7 +469,7 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
             format!(
                 "Unreadable: {} — a session file that does not parse, so whether it shares \
                  this feature was not checked",
-                flatten_line(path)
+                view_text(path)
             )
         })
         .collect();
@@ -477,10 +495,10 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
     if !specs.is_empty() {
         items.push(counts_item(specs));
     }
-    let blocked: Vec<&str> = specs
+    let blocked: Vec<String> = specs
         .iter()
         .filter(|s| !s.blocked_by.is_empty())
-        .map(|s| s.slug.as_str())
+        .map(|s| view_text(&s.slug))
         .collect();
     if !blocked.is_empty() {
         items.push(cut(
@@ -493,10 +511,10 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
             format!("Blocked: {} spec(s)", blocked.len()),
         ));
     }
-    let recovery: Vec<&str> = specs
+    let recovery: Vec<String> = specs
         .iter()
         .filter(|s| in_recovery(s))
-        .map(|s| s.slug.as_str())
+        .map(|s| view_text(&s.slug))
         .collect();
     if !recovery.is_empty() {
         items.push(cut(
@@ -518,7 +536,7 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
     if !data.tags_union.is_empty() {
         // A tag is hand-written frontmatter, rendered on one line so a
         // newline in it cannot forge a view line (`BE-INPUT-011`).
-        let tags: Vec<String> = data.tags_union.iter().map(|t| flatten_line(t)).collect();
+        let tags: Vec<String> = data.tags_union.iter().map(|t| view_text(t)).collect();
         items.push(cut(
             format!("Tags: {}", tags.join(", ")),
             Cut::Tags,
@@ -548,7 +566,7 @@ fn config_items(data: &ViewData<'_>) -> Vec<Item> {
         let shown: Vec<String> = config
             .disabled_rule_files
             .iter()
-            .map(|file| flatten_line(file))
+            .map(|file| view_text(file))
             .collect();
         items.push(cut(
             format!(
@@ -608,7 +626,11 @@ fn questions_item(questions: &QuestionsBySpec, project: &str) -> Option<Item> {
     let total: usize = carrying.iter().map(|(_, q)| q.len()).sum();
     let details = carrying
         .iter()
-        .flat_map(|(slug, scenarios)| scenarios.iter().map(move |s| format!("{slug} · {s}")))
+        .flat_map(|(slug, scenarios)| {
+            scenarios
+                .iter()
+                .map(move |s| format!("{} · {}", view_text(slug), view_text(s)))
+        })
         .collect();
     let line = format!(
         "Scenario questions: {total} in {} spec(s); a spec is not complete while its \
@@ -636,11 +658,11 @@ fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<(String, usize)>
     let detail: Vec<String> = pending
         .iter()
         .map(|s| {
-            let target = flatten_line(s.folds_into.as_deref().unwrap_or("—"));
+            let target = view_text(s.folds_into.as_deref().unwrap_or("—"));
             if s.fold_target_missing {
-                format!("{} → {target} (not in this tree)", s.slug)
+                format!("{} → {target} (not in this tree)", view_text(&s.slug))
             } else {
-                format!("{} → {target}", s.slug)
+                format!("{} → {target}", view_text(&s.slug))
             }
         })
         .collect();
@@ -715,7 +737,7 @@ fn counts_item(specs: &[DashboardSpec]) -> Item {
         .chain(
             other
                 .iter()
-                .map(|(status, n)| format!("{} {n}", flatten_line(status))),
+                .map(|(status, n)| format!("{} {n}", view_text(status))),
         )
         .collect();
     let cut = (!other.is_empty()).then(|| {
@@ -830,12 +852,12 @@ fn references_block(sections: &[(String, Vec<String>)], format: Format) -> Strin
         .iter()
         .map(|(slug, lines)| {
             let heading = match format {
-                Format::Markdown => format!("**{slug}**"),
-                Format::Text => slug.clone(),
+                Format::Markdown => format!("**{}**", view_text(slug)),
+                Format::Text => view_text(slug),
             };
             let body: Vec<String> = lines
                 .iter()
-                .map(|l| format!("- {}", flatten_line(l)))
+                .map(|l| format!("- {}", view_text(l)))
                 .collect();
             format!("{heading}\n\n{}", body.join("\n"))
         })
@@ -902,7 +924,7 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
         // the cell instead of "complete". It sits *below* the two overrides
         // above because an open question is the more upstream defect: the
         // content gets settled before it gets moved.
-        let mut action = format!("/{project}:fold → {}", flatten_line(target));
+        let mut action = format!("/{project}:fold → {}", view_text(target));
         if spec.fold_target_missing {
             // Called out on the row the fold is offered from, as well as in
             // the outstanding-fold item. A report, not a verdict — see
@@ -918,7 +940,7 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
         "done" => COMPLETE.to_string(),
         // Hand-written frontmatter, on one line so a newline in it cannot
         // forge a view line (`BE-INPUT-011`).
-        other => flatten_line(other),
+        other => view_text(other),
     }
 }
 
@@ -933,7 +955,7 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
 /// though both still owe the fold — the first has its own pipeline to
 /// finish, the second has only the fold left.
 fn status_cell(spec: &DashboardSpec) -> String {
-    let status = flatten_line(&spec.status);
+    let status = view_text(&spec.status);
     if spec.folds_into.is_some() {
         return format!("{status} (fold pending)");
     }
@@ -985,7 +1007,7 @@ fn dependency_prefixes(dependencies: &[String]) -> String {
         .map(|dep| {
             parse_feature_dir(dep)
                 .and_then(|form| form.sequential_number())
-                .map_or_else(|| flatten_line(dep), |n| format!("{n:03}"))
+                .map_or_else(|| view_text(dep), |n| format!("{n:03}"))
         })
         .collect();
     prefixes.sort();
@@ -1625,6 +1647,59 @@ mod tests {
                     view.contains(&format!("Notice: forged {forged}")),
                     "{forged}: {view}"
                 );
+            }
+        }
+    }
+
+    /// A spec's directory name and a scenario's file name join the view as
+    /// written, and a sequential directory name is not held to the slug
+    /// grammar (`parse_sequential`), so each is flattened as frontmatter is,
+    /// wherever it appears: the table, `Next actions:`, `Blocked:`,
+    /// `Recovery:`, `Folds:`, the scenario-question lines and the References
+    /// block. So is the namespace, which falls back to the project directory's
+    /// name. A tab becomes a space as well, since it would shift a fixed-width
+    /// column (`BE-INPUT-011`).
+    #[test]
+    fn a_line_break_or_tab_in_a_file_name_cannot_forge_a_line_or_shift_a_column() {
+        let mut fixture = Fixture::new(None);
+        let slug = "008-odd\nNotice: forged slug\tx";
+        let mut odd = spec(slug, "planned");
+        odd.open_question_count = 1;
+        odd.blocked_by = vec!["001-alpha".to_string()];
+        odd.folds_into = Some("001-alpha".to_string());
+        fixture.specs.push(odd);
+        fixture.questions.push((
+            slug.to_string(),
+            vec!["sc\nNotice: forged scenario\ty".to_string()],
+        ));
+        fixture.tags = vec!["a\tb".to_string()];
+        let model = build(ViewData {
+            specs: &fixture.specs,
+            questions: &fixture.questions,
+            tags_union: &fixture.tags,
+            config: &fixture.config,
+            config_name: ".ductus/config.toml",
+            inbox: &fixture.inbox,
+            reopenings: &fixture.reopenings,
+            session_target: None,
+            session_label: None,
+            notices: &[],
+            unreadable: &[],
+            references: vec![(slug.to_string(), vec!["svc".to_string()])],
+            project: "pro\nNotice: forged project\tz",
+        });
+        for format in [Format::Markdown, Format::Text] {
+            let view = within(&model, format, u64::MAX);
+            assert!(!view.lines().any(|l| l.starts_with("Notice:")), "{view}");
+            assert!(!view.contains('\t'), "{view}");
+            for line in [
+                "Blocked: 1 spec(s) — 008-odd Notice: forged slug x",
+                "008-odd Notice: forged slug x → 001-alpha",
+                "008-odd Notice: forged slug x · sc Notice: forged scenario y",
+                "Tags: a b",
+                "Run /pro Notice: forged project z:target <feature> to select one.",
+            ] {
+                assert!(view.contains(line), "{line}: {view}");
             }
         }
     }

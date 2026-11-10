@@ -17,7 +17,7 @@
 #      build the copies (its build writes nothing, so --check reports drift)
 #   D. this checkout's release build passes the check, so a rewording of its
 #      description that drops the field fails here rather than at a commit
-#   E. a runtime that never answers is stopped once DUCTUS_GEN_TIMEOUT_S
+#   E. a runtime that never answers is stopped once DUCTUS_GEN_TIMEOUT_SECONDS
 #      passes, and the generator exits non-zero naming it (BE-TIMEOUT-001)
 #
 # Usage: scripts/tests/test-gen-claude-commands.sh
@@ -149,7 +149,7 @@ EOF2
 chmod +x "$hung"
 root="$(scratch_root e)"
 started=$SECONDS
-if out="$(DUCTUS_GEN_TIMEOUT_S=1 DUCTUS_BIN="$hung" "$root/scripts/gen-claude-commands.sh" 2>&1)"; then
+if out="$(DUCTUS_GEN_TIMEOUT_SECONDS=1 DUCTUS_BIN="$hung" "$root/scripts/gen-claude-commands.sh" 2>&1)"; then
   fail "E: a runtime that never answers exited 0"
 else
   elapsed=$((SECONDS - started))
