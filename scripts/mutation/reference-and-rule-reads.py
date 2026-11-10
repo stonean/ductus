@@ -8,7 +8,9 @@ with `verification`, selects every file with `all` past `[rules] surfaces`
 and the disabled-rule-files filter, lists an extra file after the selected
 ones and refuses one leaving the project, names a file it cannot read under
 `unreadable`, and moves its rules to a file past the read size
-(`runtime/src/primitives/read_section.rs`, `discover_rule_files.rs`).
+(`runtime/src/primitives/read_section.rs`, `discover_rule_files.rs`). Task
+48: a SHOULD Statement is should-tier, `all` lists each file's headings that
+open no rule, and `all` validates no review-only setting.
 
 Run with `python3 scripts/mutation/run.py
 scripts/mutation/reference-and-rule-reads.py [ID ...]`; see run.py for the
@@ -105,5 +107,26 @@ MUTATIONS = [
         '            heading: self.heading,\n',
         '            heading: String::new(),\n',
         'discover_rule_files::tests::rules_lists_each_selected_files_rules',
+    ),
+    (
+        'M13 a SHOULD Statement is listed with no tier',
+        'src/primitives/discover_rule_files.rs',
+        '                    Some(RuleSeverity::Should) => Some("should".to_owned()),\n',
+        '                    Some(RuleSeverity::Should) => None,\n',
+        'discover_rule_files::tests::rules_lists_each_selected_files_rules',
+    ),
+    (
+        'M14 all lists no heading that opens no rule',
+        'src/primitives/discover_rule_files.rs',
+        '        let other_headings = args.all.then(|| {\n',
+        '        let other_headings = (args.all && false).then(|| {\n',
+        'discover_rule_files::tests::all_lists_each_files_headings_that_open_no_rule',
+    ),
+    (
+        'M15 all still validates the disabled entries',
+        'src/primitives/discover_rule_files.rs',
+        '    let disabled = if args.all {\n',
+        '    let disabled = if false {\n',
+        'discover_rule_files::tests::all_does_not_validate_review_only_settings',
     ),
 ]

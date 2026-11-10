@@ -42,7 +42,8 @@ struct Cli {
     command: Command,
 }
 
-/// The hooks `ductus hook` answers, one per host event it adapts.
+/// The hooks `ductus hook` answers, one per slash command it answers, both
+/// on Claude Code's `UserPromptExpansion` event.
 #[derive(Subcommand, Debug)]
 enum HookCommand {
     /// Claude Code's `UserPromptExpansion` hook for `/{project}:status`.
@@ -91,9 +92,8 @@ enum Command {
     },
 
     /// Answer an agent host's hook (spec 080).
-    ///
-    /// clap's own `help` subcommand is off, since `hook help` is a member;
-    /// `ductus hook --help` still prints this group's help.
+    // clap's own `help` subcommand is off, since `hook help` is a member;
+    // `ductus hook --help` still prints this group's help.
     #[command(disable_help_subcommand = true)]
     Hook {
         #[command(subcommand)]
@@ -929,15 +929,20 @@ fn main() -> ExitCode {
             emit_result(primitives::check_prescriptions::run(&args, &repo))
         }
         Command::DeriveDependencies(args) => {
-            let outcome = primitives::derive_dependencies::run(&args, &repo);
-            if let Ok(result) = &outcome {
-                report_cycles(&result.cycles);
+            // The whole derivation is reported and gated on before the result
+            // is bounded, so a cycle the bound moves to a file still blocks and
+            // is still named on stderr (spec 080).
+            let derived = primitives::derive_dependencies::compute(&args, &repo);
+            if let Ok(derived) = &derived {
+                report_cycles(&derived.cycles);
             }
+            let outcome =
+                derived.and_then(|derived| primitives::derive_dependencies::bound(&repo, derived));
             // A cycle always blocks. Drift blocks only on a *report-only*
             // run, which is the CI check ("the committed indexes are stale");
             // on a writing run the drift was just resolved, so it is not a
             // failure.
-            emit_result_gated(outcome, |r| !r.cycles.is_empty() || (!r.wrote && r.drift))
+            emit_result_gated(outcome, |r| r.cycles_count > 0 || (!r.wrote && r.drift))
         }
         Command::DeriveReferences(args) => {
             // No graph here, so stale-on-a-report-only-run is the only blocker.
@@ -1159,10 +1164,11 @@ mod tests {
     /// (§runtime-boundary), not capabilities it exposes; `parse` is the
     /// parseability check `scripts/lint-procedure-parseability.sh` and CI
     /// drive, plus the `--emit-schema` debug surface. `hook` adapts an agent
-    /// host's hook protocol, and the capability it adapts is the pipeline
-    /// view, which `render-status` serves on MCP (§runtime-boundary
-    /// principle 5; spec 080) — a cli-only primitive would need one of that
-    /// principle's three exemptions, and rendering a view meets none. None of
+    /// host's hook protocol, and the capabilities it adapts, the pipeline view
+    /// `hook status` shows and the guide `hook help` shows, are served on MCP
+    /// by `render-status` and `render-help` (§runtime-boundary principle 5;
+    /// spec 080) — a cli-only primitive would need one of that principle's
+    /// three exemptions, and rendering a view or a guide meets none. None of
     /// the four is a primitive, so none appears in [`PRIMITIVE_REGISTRY`].
     /// `help` is synthesised by clap rather than declared here at all.
     ///

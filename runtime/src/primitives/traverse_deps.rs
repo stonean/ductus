@@ -25,11 +25,57 @@ use std::path::Path;
 use crate::primitives::{PrimitiveError, Result, frontmatter_status, read_text, split_frontmatter};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    DependencyEdge, Frontmatter, TraverseDepsArgs, TraverseDepsResult,
+    DependencyEdge, Frontmatter, ListsForm, TraverseDepsArgs, TraverseDepsResult,
 };
 use crate::schema::status::COMPATIBLE_STATUSES;
 
-/// Execute the `traverse-deps` primitive.
+/// Execute the `traverse-deps` primitive: [`compute`], returned inline while
+/// it fits `[artifacts] read-size-bytes`, and past it with `dependencies` and
+/// `cycles` in the file it names and only their counts inline
+/// (`bounded_lists::place`; spec 080, AC7). A cycle through the reachable
+/// specs grows with the corpus.
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(args: &TraverseDepsArgs, repo: &Path) -> Result<TraverseDepsResult> {
+    let traversed = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "dependencies": traversed.dependencies,
+        "cycles": traversed.cycles,
+    });
+    let mut result = TraverseDepsResult {
+        dependencies_count: traversed.dependencies.len(),
+        dependencies: Some(traversed.dependencies),
+        compatible: traversed.compatible,
+        cycles_count: traversed.cycles.len(),
+        cycles: Some(traversed.cycles),
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "traverse-deps", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.dependencies = None;
+        result.cycles = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// One traversal, whole: what `traverse-deps` returns before its result is
+/// bounded. Each field is [`TraverseDepsResult`]'s of the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Traversed {
+    pub(crate) dependencies: Vec<DependencyEdge>,
+    pub(crate) compatible: bool,
+    pub(crate) cycles: Vec<Vec<String>>,
+}
+
+/// Traverse the targeted feature's dependencies and the cycles in what it
+/// reaches.
 ///
 /// # Errors
 ///
@@ -41,7 +87,7 @@ use crate::schema::status::COMPATIBLE_STATUSES;
 /// malformed dependency specs are reported as findings, not errors;
 /// likewise the cycle walker tolerates missing or malformed downstream
 /// nodes by treating them as sinks (no outgoing edges).
-pub fn run(args: &TraverseDepsArgs, repo: &Path) -> Result<TraverseDepsResult> {
+pub(crate) fn compute(args: &TraverseDepsArgs, repo: &Path) -> Result<Traversed> {
     let root = paths::Paths::load(repo).specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let specs_dir = repo.join(&root);
@@ -94,7 +140,7 @@ pub fn run(args: &TraverseDepsArgs, repo: &Path) -> Result<TraverseDepsResult> {
         overall = false;
     }
 
-    Ok(TraverseDepsResult {
+    Ok(Traversed {
         dependencies: edges,
         compatible: overall,
         cycles,
@@ -251,6 +297,12 @@ mod tests {
 
     use super::*;
     use std::path::PathBuf;
+
+    /// The tests read the whole traversal: [`super::compute`], which
+    /// [`super::run`] bounds.
+    fn run(args: &TraverseDepsArgs, repo: &Path) -> Result<Traversed> {
+        compute(args, repo)
+    }
 
     fn fixture_repo() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")

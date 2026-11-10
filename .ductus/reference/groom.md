@@ -19,7 +19,7 @@ For each item, walk the steps in order; the first matching step names the route.
 
 **Step 2: Does a spec exist for this behavior?** (route: `spec`, no matched feature)
 
-- Search `specs/` for a feature directory that covers this area, starting from the candidates `derive-routing-candidates` returned where the command derived them, as `/ductus:groom` and `/ductus:specify` do, rather than searching spec bodies through the shell. The candidates are advisory: whether one covers the item is the routing judgment.
+- Search `specs/` for a feature directory that covers this area, starting from the candidates `derive-routing-candidates` returned where the command derived them, as `/ductus:groom` and `/ductus:specify` do, rather than searching spec bodies through the shell. The one exception is an item no candidate matches: a slug list that matches nothing says nothing of what the bodies cover, so whether to search them as well is the model's call (§grounding). The candidates are advisory: whether one covers the item is the routing judgment.
 - If no spec exists — recommend creating one via `/ductus:specify`. Ask the user whether to create the spec now or skip this item. (If the item is a chore rather than a feature gap — see Step 4 — it never needs a spec; do it in this pass and remove it.)
 
 **Step 3: Is the spec ambiguous or incomplete?** (route: `spec`, matched feature)

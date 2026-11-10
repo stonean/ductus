@@ -168,9 +168,10 @@ fn traverse_deps_resolves_configured_root() {
         repo,
     )
     .unwrap();
-    assert_eq!(result.dependencies.len(), 1);
-    assert!(result.dependencies[0].exists, "dep found under governance/");
-    assert!(result.dependencies[0].compatible);
+    let dependencies = result.dependencies.as_deref().expect("an inline result");
+    assert_eq!(dependencies.len(), 1);
+    assert!(dependencies[0].exists, "dep found under governance/");
+    assert!(dependencies[0].compatible);
     assert!(result.compatible);
 }
 

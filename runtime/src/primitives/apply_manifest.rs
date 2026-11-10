@@ -33,8 +33,9 @@
 //! - **`tool-search-line`**: per-entry flag, set on Claude Code's command
 //!   copies only (spec 080). After substitution the entry's
 //!   `## Instructions` preamble gains a line that loads its step tools, and
-//!   the tools its cited sections invoke, in one `ToolSearch`, less those
-//!   named by the `commands/target.md` the manifest installs
+//!   the tools the command file or a section it cites invokes, in one
+//!   `ToolSearch`, less those named by the `commands/target.md` the manifest
+//!   installs, or by its installed copy when that entry is pinned
 //!   ([`tool_loading::add_tool_search_line`]). A reference it names is read
 //!   from `reference/` beside that entry's `commands/` directory.
 //! - **Source missing**: when the staging tree doesn't contain an
@@ -147,13 +148,18 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
         super::validate_contained(&target_root, &entry.dest)?;
     }
 
+    let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
     let tool_search = if args.entries.iter().any(|entry| entry.tool_search_line) {
-        Some(tool_search_context(&source_root, &args.entries)?)
+        Some(tool_search_context(
+            &source_root,
+            &target_root,
+            &pinned,
+            &args.entries,
+        )?)
     } else {
         None
     };
 
-    let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
     let mut judged = Vec::with_capacity(args.entries.len());
     for entry in &args.entries {
         judged.push(check_host_destination(
@@ -535,13 +541,6 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
     }
 }
 
-/// Read `source` and, if its bytes decode as UTF-8, apply the
-/// substitution map (with `keep_literals` masking specific keys). Binary
-/// files are passed through unchanged.
-///
-/// Returns the bytes and how many replacements were applied — `None` for a
-/// file whose bytes are not UTF-8, which is never examined for placeholders
-/// and so has no count to report rather than a count of zero.
 /// What a `tool-search-line` entry's line is derived against (spec 080).
 struct ToolSearch {
     /// The tools the line leaves out, which load with the session.
@@ -562,39 +561,53 @@ struct ToolSearch {
 /// `commands/*.md`. The references the commands cite sit beside its
 /// `commands/` directory in both.
 ///
+/// A pinned entry is skipped, so the installed copy at its destination under
+/// `target_root` stays, and the server reads that one: the tools are then
+/// derived from it, and a copy that is missing or does not parse gives none,
+/// since the server then flags none (spec 080's plan, *Batched (AC29)*). Both
+/// derive through [`tool_loading::text_step_tools`].
+///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidArgument`] when no entry installs a
 /// `commands/target.md`, when entries install two different ones, or when
-/// the one installed is missing or does not parse, since the line would
+/// an unpinned one is missing or does not parse, since the line would
 /// otherwise name the wrong tools; [`PrimitiveError::Io`] when it cannot be
 /// read.
-fn tool_search_context(source_root: &Path, entries: &[ManifestEntry]) -> Result<ToolSearch> {
+fn tool_search_context(
+    source_root: &Path,
+    target_root: &Path,
+    pinned: &[String],
+    entries: &[ManifestEntry],
+) -> Result<ToolSearch> {
     let invalid = |reason: String| PrimitiveError::InvalidArgument {
         primitive: "apply-manifest".into(),
         argument: "entries".into(),
         reason,
     };
-    let mut targets: Vec<&str> = entries
+    let target_file = format!("commands/{}.md", tool_loading::ALWAYS_LOADED_COMMAND);
+    let installing: Vec<&ManifestEntry> = entries
+        .iter()
+        .filter(|entry| Path::new(&entry.source).ends_with(&target_file))
+        .collect();
+    let mut targets: Vec<&str> = installing
         .iter()
         .map(|entry| entry.source.as_str())
-        .filter(|source| Path::new(source).ends_with("commands/target.md"))
         .collect();
     targets.sort_unstable();
     targets.dedup();
     let source = match targets.as_slice() {
         [source] => *source,
         [] => {
-            return Err(invalid(
+            return Err(invalid(format!(
                 "an entry sets tool-search-line, and no entry installs the \
-                 commands/target.md naming the tools that load with the session"
-                    .into(),
-            ));
+                 {target_file} naming the tools that load with the session"
+            )));
         }
         several => {
             return Err(invalid(format!(
                 "an entry sets tool-search-line, and entries install {} different \
-                 commands/target.md sources ({}), so which tools load with the session is \
+                 {target_file} sources ({}), so which tools load with the session is \
                  ambiguous",
                 several.len(),
                 several.join(", ")
@@ -602,11 +615,29 @@ fn tool_search_context(source_root: &Path, entries: &[ManifestEntry]) -> Result<
         }
     };
     let path = source_root.join(source);
+    let reference_dir = path
+        .parent()
+        .and_then(Path::parent)
+        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)
+        .join("reference");
+    if let Some(entry) = installing
+        .iter()
+        .find(|entry| pinned_match(pinned, &entry.dest))
+    {
+        let always_loaded = fs::read_to_string(target_root.join(Path::new(&entry.dest)))
+            .ok()
+            .and_then(|text| tool_loading::text_step_tools(&text).ok())
+            .unwrap_or_default();
+        return Ok(ToolSearch {
+            always_loaded,
+            reference_dir,
+        });
+    }
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
             return Err(invalid(format!(
-                "an entry sets tool-search-line, and the commands/target.md it installs, \
+                "an entry sets tool-search-line, and the {target_file} it installs, \
                  `{source}`, is not in the source root"
             )));
         }
@@ -614,15 +645,10 @@ fn tool_search_context(source_root: &Path, entries: &[ManifestEntry]) -> Result<
     };
     let always_loaded = tool_loading::text_step_tools(&text).map_err(|err| {
         invalid(format!(
-            "an entry sets tool-search-line, and the commands/target.md it installs, \
+            "an entry sets tool-search-line, and the {target_file} it installs, \
              `{source}`, does not parse: {err}"
         ))
     })?;
-    let reference_dir = path
-        .parent()
-        .and_then(Path::parent)
-        .map_or_else(|| source_root.to_path_buf(), Path::to_path_buf)
-        .join("reference");
     Ok(ToolSearch {
         always_loaded,
         reference_dir,
@@ -690,6 +716,13 @@ fn read_entry(
     Ok((with_line.into_bytes(), applied))
 }
 
+/// Read `source` and, if its bytes decode as UTF-8, apply the
+/// substitution map (with `keep_literals` masking specific keys). Binary
+/// files are passed through unchanged.
+///
+/// Returns the bytes and how many replacements were applied — `None` for a
+/// file whose bytes are not UTF-8, which is never examined for placeholders
+/// and so has no count to report rather than a count of zero.
 fn read_and_substitute(
     source: &Path,
     keep_literals: Option<&[String]>,
@@ -2337,6 +2370,52 @@ mod tests {
             "{written}"
         );
         assert_eq!(steps(&written), steps(&plain));
+    }
+
+    /// A pinned `target.md` keeps its installed copy, which the MCP server
+    /// reads, so the line leaves out the tools that copy names, not the new
+    /// source's: a tool the source names and the pinned copy does not still
+    /// loads, through the line. A pinned copy that is gone gives the line
+    /// every tool, since the server then flags none (spec 080's plan,
+    /// *Batched (AC29)*).
+    #[test]
+    fn a_pinned_target_md_is_read_where_it_is_installed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("commands/x.md", COMMAND), ("commands/target.md", TARGET)],
+        );
+        let dst = tmp.path().join("dst");
+        let pinned = ".claude/commands/acme/target.md";
+        let manifest = || {
+            args_for(
+                &src,
+                &dst,
+                vec![
+                    flagged("commands/x.md", ".claude/commands/acme/x.md"),
+                    flagged("commands/target.md", pinned),
+                ],
+                vec![pinned.to_string()],
+                subs(&[("project", "acme")]),
+            )
+        };
+        let line = || {
+            let written = fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap();
+            let (_, query) = written.split_once("`select:").expect("a line");
+            query[..query.find('`').unwrap()].to_string()
+        };
+        fs::create_dir_all(dst.join(".claude/commands/acme")).unwrap();
+        fs::write(
+            dst.join(pinned),
+            "## Instructions\n\n1. Invoke `read-spec`.\n",
+        )
+        .unwrap();
+        let result = run(&manifest(), tmp.path()).unwrap();
+        assert_eq!(result.skipped_pinned, 1);
+        assert_eq!(line(), "mcp__ductus__write-session");
+        fs::remove_file(dst.join(pinned)).unwrap();
+        run(&manifest(), tmp.path()).unwrap();
+        assert_eq!(line(), "mcp__ductus__read-spec,mcp__ductus__write-session");
     }
 
     /// A flagged entry needs target's tools from the `target.md` the manifest

@@ -25,8 +25,7 @@ use rmcp::model::CallToolRequestParams;
 use serde_json::{Value, json};
 
 use ductus::mcp::server::{ALWAYS_LOAD_META, GovRuntimeServer, tool_names};
-use ductus::parser;
-use ductus::primitives::tool_loading::step_tools;
+use ductus::primitives::tool_loading::text_step_tools;
 use ductus::schema::descriptions;
 use ductus::schema::registry::CLI_ONLY_PRIMITIVES;
 
@@ -196,11 +195,11 @@ async fn the_tools_targets_steps_name_are_always_loaded_and_no_other_is() {
     .unwrap();
 
     let source = fs::read_to_string(workspace_root().join("framework/commands/target.md")).unwrap();
-    let expected: std::collections::BTreeSet<String> =
-        step_tools(&parser::parse(&source, "target").unwrap())
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+    let expected: std::collections::BTreeSet<String> = text_step_tools(&source)
+        .unwrap()
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
     assert!(
         !expected.is_empty(),
         "target.md's steps name no tool, so the flag has no subject"
@@ -239,6 +238,47 @@ async fn with_no_installed_target_no_tool_carries_meta() {
     let tools = client.list_tools(Option::default()).await.unwrap().tools;
     let (_, with_meta) = flagged_and_with_meta(&tools);
     assert!(with_meta.is_empty(), "{with_meta:?}");
+}
+
+/// With no installed `target.md`, the server says so on stderr when it starts,
+/// naming each path it tried, so flagging no tool is never silent (AC21). The
+/// server is the binary, run with its stdin closed, so it ends once it has
+/// started; a deadline fails the test rather than hang it.
+#[test]
+fn with_no_installed_target_the_server_says_so_on_stderr() {
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        "[host]\nproject = \"acme\"\n",
+    )
+    .unwrap();
+    let mut child = common::ductus_command(env!("CARGO_BIN_EXE_ductus"))
+        .arg("mcp")
+        .current_dir(tmp.path())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() > deadline {
+            let _ = child.kill();
+            panic!("`ductus mcp` did not end within 30 s of its stdin closing");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let output = child.wait_with_output().unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ductus: no installed `target` command at "),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains(".claude/commands/acme/target.md"),
+        "{stderr}"
+    );
 }
 
 /// What `ductus <subcommand> --help` prints above its usage: its `long_about`.
@@ -1084,17 +1124,27 @@ async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list
 /// Vendor a `markdownlint-cli2` that reports three violations and exits 1, so
 /// a lint, and the review gate's lint check, return a list to move.
 fn vendor_a_violating_markdownlint(root: &Path) {
+    use common::corpus::slug;
     let bin = root.join("node_modules").join(".bin");
     fs::create_dir_all(&bin).unwrap();
     let lines = [
-        "specs/001-feature-001/spec.md:1 MD041/first-line-heading First line in a file should be a top-level heading",
-        "specs/001-feature-001/tasks.md:2 MD012/no-multiple-blanks Multiple consecutive blank lines",
-        "specs/002-feature-002/spec.md:3 MD009/no-trailing-spaces Trailing spaces",
+        format!(
+            "specs/{}/spec.md:1 MD041/first-line-heading First line in a file should be a top-level heading",
+            slug(1)
+        ),
+        format!(
+            "specs/{}/tasks.md:2 MD012/no-multiple-blanks Multiple consecutive blank lines",
+            slug(1)
+        ),
+        format!(
+            "specs/{}/spec.md:3 MD009/no-trailing-spaces Trailing spaces",
+            slug(2)
+        ),
     ];
     #[cfg(windows)]
     {
         let mut body = String::new();
-        for line in lines {
+        for line in &lines {
             body.push_str("@echo ");
             body.push_str(line);
             body.push_str("\r\n");
@@ -1108,7 +1158,7 @@ fn vendor_a_violating_markdownlint(root: &Path) {
     #[cfg(not(windows))]
     {
         let mut body = String::new();
-        for line in lines {
+        for line in &lines {
             body.push_str("echo '");
             body.push_str(line);
             body.push_str("'\n");
@@ -1189,7 +1239,40 @@ fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
             json!({ "from": slug(2), "to": SUBJECT }),
             &["rewritten", "skipped", "kept-tails", "mentions"],
         ),
+        (
+            "derive-dependencies",
+            json!({}),
+            &[
+                "updated",
+                "unwritten",
+                "untracked-skipped",
+                "absent",
+                "cycles",
+                "unparseable",
+            ],
+        ),
+        (
+            "derive-routing-candidates",
+            json!({ "description": "handle a corpus case" }),
+            &["candidates"],
+        ),
+        (
+            "traverse-deps",
+            json!({ "feature": slug(4) }),
+            &["dependencies", "cycles"],
+        ),
     ]
+}
+
+/// Drift spec 3's frontmatter from its body, which still links spec 2, so
+/// `derive-dependencies` has a drifted spec to list.
+fn drift_one_spec(root: &Path) {
+    use common::corpus::slug;
+    let path = root.join("specs").join(slug(3)).join("spec.md");
+    let text = fs::read_to_string(&path).unwrap();
+    let drifted = text.replace(&format!("dependencies: [{}]", slug(2)), "dependencies: []");
+    assert_ne!(drifted, text, "spec 3 declared its dependency");
+    fs::write(path, drifted).unwrap();
 }
 
 /// `name` called with `args` over MCP on a fresh copy of `template`, with
@@ -1229,6 +1312,7 @@ async fn every_result_that_grows_with_the_corpus_moves_its_lists_past_the_read_s
     let template = tempfile::tempdir().unwrap();
     common::corpus::generate(template.path(), &common::corpus::SMALL);
     vendor_a_violating_markdownlint(template.path());
+    drift_one_spec(template.path());
     for (name, args, lists) in bounded_members() {
         let (inline, _) = call_on_a_copy(template.path(), name, &args, None).await;
         assert_eq!(inline["form"], "inline", "{name} {args}: {inline:?}");

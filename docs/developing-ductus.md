@@ -4,7 +4,7 @@ Procedures for changing this repository, each read when doing the job it names. 
 
 ## Adding or removing a runtime primitive
 
-Registering one is six sites, and two of them are found only by tests; removing one is the same six:
+Registering one is seven sites, and three of them are found only by tests; removing one is the same seven:
 
 - `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
 - its one description, a constant in `runtime/src/schema/descriptions.rs`, which the `#[tool]` and the `Command` below name
@@ -12,6 +12,7 @@ Registering one is six sites, and two of them are found only by tests; removing 
 - a `dispatch_primitive` arm in `runtime/src/interpreter/mod.rs`
 - a `Command` in `runtime/src/main.rs`
 - a tool or a `# cli-only:` line in `framework/runtime-tools.txt`
+- a case in `runtime/tests/result_sizes.rs`' `case`, which measures its result, or a not-measured row with its reason; `every_registry_name_has_a_case` fails without one
 
 **A result with two shapes** returns one struct with two flattened `Option` halves, and the halves must never share a key. rmcp requires an object output schema, which rules out an untagged enum (`prune-tasks`, `prune-plan`), and serde's flatten consumes a shared key even when that half fails. Keep a round-trip test per shape.
 

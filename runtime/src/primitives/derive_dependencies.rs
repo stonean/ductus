@@ -46,20 +46,121 @@ use crate::primitives::spec_links::{
 };
 use crate::primitives::{Result, read_text, rel_path, write_atomic};
 use crate::schema::paths;
-use crate::schema::primitives::{DeriveDependenciesArgs, DeriveDependenciesResult};
+use crate::schema::primitives::{DeriveDependenciesArgs, DeriveDependenciesResult, ListsForm};
 
-/// Execute the `derive-dependencies` primitive.
+/// Execute the `derive-dependencies` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its six
+/// lists in the file it names and only their counts inline ([`bound`]; spec
+/// 080, AC7).
 ///
 /// # Errors
 ///
-/// Returns [`super::PrimitiveError::Io`] when a spec cannot be read or the
-/// rewrite cannot be persisted, and [`super::PrimitiveError::Git`] when a
+/// Every error [`compute`] returns, and a list file that cannot be written,
+/// which `bounded_lists::place` returns; a writing run has written by then.
+pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenciesResult> {
+    bound(repo, compute(args, repo)?)
+}
+
+/// One derivation, whole: what `derive-dependencies` returns before its
+/// result is bounded. Each field is [`DeriveDependenciesResult`]'s of the
+/// same name. The CLI gates and reports on this, so a cycle the bound moves
+/// to a file still blocks a commit and is still named on stderr.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Derived {
+    /// As [`DeriveDependenciesResult`]'s `drift`, whole.
+    pub drift: bool,
+    /// As [`DeriveDependenciesResult`]'s `updated`, whole.
+    pub updated: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `unwritten`, whole.
+    pub unwritten: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `examined`, whole.
+    pub examined: u32,
+    /// As [`DeriveDependenciesResult`]'s `untracked-skipped`, whole.
+    pub untracked_skipped: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `absent`, whole.
+    pub absent: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `cycles`, whole.
+    pub cycles: Vec<Vec<String>>,
+    /// As [`DeriveDependenciesResult`]'s `unparseable`, whole.
+    pub unparseable: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `specs-root`, whole.
+    pub specs_root: String,
+    /// As [`DeriveDependenciesResult`]'s `wrote`, whole.
+    pub wrote: bool,
+}
+
+/// `derived` held to `[artifacts] read-size-bytes`: past it, its six lists go
+/// to the file it names, with their counts inline (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> {
+    let lists = serde_json::json!({
+        "updated": derived.updated,
+        "unwritten": derived.unwritten,
+        "untracked-skipped": derived.untracked_skipped,
+        "absent": derived.absent,
+        "cycles": derived.cycles,
+        "unparseable": derived.unparseable,
+    });
+    let mut result = DeriveDependenciesResult {
+        drift: derived.drift,
+        updated_count: derived.updated.len(),
+        updated: Some(derived.updated),
+        unwritten_count: derived.unwritten.len(),
+        unwritten: Some(derived.unwritten),
+        examined: derived.examined,
+        untracked_skipped_count: derived.untracked_skipped.len(),
+        untracked_skipped: Some(derived.untracked_skipped),
+        absent_count: derived.absent.len(),
+        absent: Some(derived.absent),
+        cycles_count: derived.cycles.len(),
+        cycles: Some(derived.cycles),
+        unparseable_count: derived.unparseable.len(),
+        unparseable: Some(derived.unparseable),
+        specs_root: derived.specs_root,
+        wrote: derived.wrote,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "derive-dependencies",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.updated = None;
+        result.unwritten = None;
+        result.untracked_skipped = None;
+        result.absent = None;
+        result.cycles = None;
+        result.unparseable = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Derive every tracked spec's `dependencies:` and the graph's cycles,
+/// writing the rewrite under `write`.
+///
+/// # Errors
+///
+/// Returns [`super::PrimitiveError::InvalidReadSize`] for a malformed
+/// `[artifacts] read-size-bytes`, before any write, since the result is
+/// bounded by it only once the rewrite is on disk;
+/// [`super::PrimitiveError::Io`] when a spec cannot be read or the rewrite
+/// cannot be persisted; and [`super::PrimitiveError::Git`] when a
 /// repository contains the project but its index or status cannot be read —
 /// the listing of which specs to derive then has no answer, and guessing one
 /// would rewrite drafts or skip specs silently. A cycle is a **domain
 /// outcome** reported in the result, not an error: the caller decides whether
 /// it blocks.
-pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenciesResult> {
+pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
+    super::check_artifact_size::resolve_threshold(repo)?;
     let specs_root = paths::Paths::load(repo).specs_root;
     let specs_dir = repo.join(&specs_root);
 
@@ -130,7 +231,7 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
 
     let cycles = find_cycles(&graph);
 
-    Ok(DeriveDependenciesResult {
+    Ok(Derived {
         drift: !updated.is_empty(),
         updated,
         unwritten,
@@ -444,6 +545,12 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    /// The tests read the whole derivation: [`super::compute`], which
+    /// [`super::run`] bounds.
+    fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
+        compute(args, repo)
+    }
 
     fn spec(deps_line: &str, body: &str) -> String {
         format!("---\nstatus: done\n{deps_line}\n---\n\n{body}\n")

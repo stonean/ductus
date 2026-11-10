@@ -25,7 +25,10 @@ const INSTRUCTIONS_HEADING: &str = "## Instructions";
 /// The line that opens and closes the guide.
 const RULE: &str = "---";
 
-/// Execute the `render-help` primitive.
+/// Execute the `render-help` primitive: the guide, and the namespace Pi's
+/// bridge names its commands from, which reads no spec, so a view that
+/// cannot be rendered does not stop the bridge's registration (spec 080's
+/// plan, *Pi registers the command in the bridge*).
 ///
 /// # Errors
 ///
@@ -33,6 +36,7 @@ const RULE: &str = "---";
 pub fn run(_args: &RenderHelpArgs, repo: &Path) -> Result<RenderHelpResult> {
     Ok(RenderHelpResult {
         guide: guide(repo)?,
+        project: Host::load(repo).project,
     })
 }
 
@@ -225,7 +229,28 @@ Print the following guide exactly:
             fs::write(&path, COPY).unwrap();
             let result = run(&RenderHelpArgs {}, tmp.path()).unwrap();
             assert!(result.guide.starts_with("## acme — Pipeline"), "{copy}");
+            assert_eq!(
+                result.project, "acme",
+                "the namespace Pi's bridge names its commands from"
+            );
         }
+    }
+
+    /// The namespace comes without reading a spec, so a spec whose frontmatter
+    /// does not parse, which fails the view, leaves the result whole (spec
+    /// 080's plan, *Pi registers the command in the bridge*).
+    #[test]
+    fn a_spec_that_does_not_parse_leaves_the_namespace_readable() {
+        let tmp = project(".pi");
+        let path = tmp.path().join(".pi/prompts/acme-help.md");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, COPY).unwrap();
+        let spec = tmp.path().join("specs/001-broken/spec.md");
+        fs::create_dir_all(spec.parent().unwrap()).unwrap();
+        fs::write(&spec, "---\nstatus: [\n---\n").unwrap();
+        let args = crate::schema::primitives::DashboardArgs::default();
+        assert!(crate::primitives::dashboard::run(&args, tmp.path()).is_err());
+        assert_eq!(run(&RenderHelpArgs {}, tmp.path()).unwrap().project, "acme");
     }
 
     /// No installed copy is an error naming every path tried, never an empty

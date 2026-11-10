@@ -103,6 +103,8 @@ impl Block {
 ///
 /// # Errors
 ///
+/// - [`PrimitiveError::InvalidReadSize`] for a malformed `[artifacts]
+///   read-size-bytes`, before any write.
 /// - [`PrimitiveError::MissingArgument`] when neither `feature` nor `all` is
 ///   given, and [`PrimitiveError::InvalidArgument`] when both are, or when
 ///   `all` comes with `force`.
@@ -125,6 +127,10 @@ impl Block {
 /// atomic, so running the walk again resumes.
 pub fn run(args: &PruneTasksArgs, repo: &Path) -> Result<PruneTasksResult> {
     let root = paths::Paths::load(repo).specs_root;
+    // The read size bounds the result only after an applied reduction is
+    // written, so a malformed one halts here, before any write, rather than
+    // fail a call whose writes stand.
+    super::check_artifact_size::resolve_threshold(repo)?;
     let Some(feature) = one_feature_or_all("prune-tasks", args.feature.as_deref(), args.all)?
     else {
         if args.force {
@@ -638,6 +644,26 @@ mod tests {
     }
 
     const FLAT: &str = "# 041 — Task Pruning Tasks\n\nTasks derived from the [plan](plan.md). Complete in order.\n\n## 1. Done task\n\n- [x] a\n- [x] b\n\n## 2. Pending task\n\n- [ ] c\n- [x] d\n\n## 3. Prose task\n\nNo checkboxes here.\n";
+
+    /// A malformed read size halts an applying call before it writes, so no
+    /// reduction stands under an error.
+    #[test]
+    fn a_malformed_read_size_halts_an_applying_call_before_any_write() {
+        let (_tmp, repo) = write_repo(FLAT, Some("in-progress"));
+        fs::create_dir_all(repo.join(".ductus")).unwrap();
+        fs::write(
+            repo.join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 0\n",
+        )
+        .unwrap();
+        let tasks = repo.join("specs/041-task-pruning/tasks.md");
+        let err = run(&args(false, false, true), &repo).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(tasks).unwrap(), FLAT, "nothing written");
+    }
 
     /// Past the read size one feature's `sections` move to a file, while its
     /// `removed-count` and `kept-count`, which count no list, stay inline

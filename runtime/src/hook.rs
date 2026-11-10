@@ -6,8 +6,8 @@
 //! A host surface, not a primitive: it adapts one host's hook protocol, and the
 //! capabilities it adapts are served on MCP, the pipeline view by
 //! `render-status` and the guide by `render-help` (§runtime-boundary principle
-//! 5). The view is rendered from the same read `dashboard` makes
-//! ([`dashboard::render_as`]), as fixed-width text, since the hook's reason is
+//! 5). The view is built from the same read `dashboard` makes
+//! ([`dashboard::view_model`]) and rendered as fixed-width text, since the hook's reason is
 //! shown in a terminal that renders no markdown (AC17). The guide is shown as
 //! the help copy writes it ([`render_help::guide`]), since the scenario asks
 //! for the guide the model path prints.
@@ -18,6 +18,7 @@ use std::time::SystemTime;
 
 use serde::Serialize;
 
+use crate::primitives::check_artifact_size::resolve_threshold;
 use crate::primitives::{Result, dashboard, pipeline_view, render_help};
 use crate::session;
 
@@ -93,21 +94,31 @@ fn drain(input: &mut impl Read) {
 /// model path. Exit 2 would block the expansion and show nothing, so the hook
 /// never uses it.
 ///
+/// The view is held to `[artifacts] read-size-bytes` measured on the response
+/// as printed, so a long view is cut as the model path's is (AC24). No file
+/// holds the whole view here: the response is shown to a person, and never
+/// reaches the model.
+///
 /// # Errors
 ///
-/// An invalid `DUCTUS_SESSION`, and every error rendering the view returns:
+/// An invalid `DUCTUS_SESSION`, and every error building the view returns:
 /// those of `dashboard`, and [`crate::primitives::PrimitiveError::InvalidReadSize`]
 /// for a malformed `[artifacts] read-size-bytes`.
 pub fn status(root: &Path, input: &mut impl Read) -> Result<BlockResponse> {
     drain(input);
     let identity = session::process_identity()?;
-    let (view, _project) = dashboard::render_as(
-        root,
-        identity.as_ref(),
-        SystemTime::now(),
+    let (model, _project) = dashboard::view_model(root, identity.as_ref(), SystemTime::now())?;
+    let (threshold, _) = resolve_threshold(root)?;
+    let fits = |view: &str| {
+        serde_json::to_vec(&BlockResponse::showing(view.to_string()))
+            .is_ok_and(|bytes| u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= threshold.bytes)
+    };
+    Ok(BlockResponse::showing(pipeline_view::render(
+        &model,
         pipeline_view::Format::Text,
-    )?;
-    Ok(BlockResponse::showing(view))
+        &fits,
+        None,
+    )))
 }
 
 /// Answer help's hook for the project at `root`, `input` being drained and not
@@ -146,6 +157,32 @@ mod tests {
         assert_eq!(
             project_root(Some(OsString::new()), PathBuf::from("/cwd")),
             PathBuf::from("/cwd")
+        );
+    }
+
+    /// A malformed read size halts the view, as it halts every reader of the
+    /// setting, rather than rendering at the default.
+    #[test]
+    fn a_malformed_read_size_halts_the_view() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (rel, body) in [
+            (".ductus/config.toml", "[artifacts]\nread-size-bytes = 0\n"),
+            (
+                "specs/001-alpha/spec.md",
+                "---\nstatus: draft\ndependencies: []\n---\n\n# A\n",
+            ),
+        ] {
+            let path = tmp.path().join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
+        let err = status(tmp.path(), &mut io::empty()).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                crate::primitives::PrimitiveError::InvalidReadSize { .. }
+            ),
+            "{err:?}"
         );
     }
 }

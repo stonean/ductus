@@ -36,11 +36,12 @@ From that session on, the pipeline takes the deterministic path. File writes are
 
 ## Environment variables
 
-This is the one inventory of the environment variables that configure ductus — the runtime, and the installer and `/ductus` that acquire it. None is required, and with none set ductus is adopted from `stonean/ductus`, and the runtime behaves as a single session on the shared default and fetches over a direct connection.
+This is the one inventory of the environment variables that configure ductus — the runtime, the installer and `/ductus` that acquire it, and the maintainer script that regenerates the command copies. None is required, and with none set ductus is adopted from `stonean/ductus`, and the runtime behaves as a single session on the shared default and fetches over a direct connection.
 
 | Variable | Required | Default when unset | Purpose |
 | --- | --- | --- | --- |
 | `DUCTUS_REPO` | no | `stonean/ductus` | The GitHub `owner/repo` that `install.sh` and `/ductus` fetch from — the bootstrap, the version pin, the framework archive and the runtime binary — so a fork can be adopted or tested (spec 065). Any other value is announced before the first fetch. Empty counts as unset. Not read by the runtime. |
+| `DUCTUS_BIN` | no | `runtime/target/release/ductus` in the ductus checkout | The path of the runtime binary that `scripts/gen-claude-commands.sh` and its test run, a relative path taken from where the script started. The pre-commit hook passes the one it resolved. A maintainer of this repository sets it; adopters never do. Not read by the runtime. |
 | `DUCTUS_SESSION` | no | the agent's own session id, below | Names this process's session, so it keeps a target of its own (spec 062). Processes launched with the same value share one target. The value is sanitized by the slug rule; empty counts as unset, and a value that sanitizes to nothing is refused with an error naming the variable. |
 | `CLAUDE_CODE_SESSION_ID` | no | no identity: the shared default `.ductus/session.toml` | Set by Claude Code in every MCP server and shell it spawns — not by you. Read as that agent's session identity when `DUCTUS_SESSION` is unset. |
 | `CLAUDE_PROJECT_DIR` | no | the working directory | Set by Claude Code for each hook it runs — not by you — to the directory the session started in. Read only by `ductus hook status` and `ductus hook help`, as the project root, since sessions start at the project root (spec 080). Empty counts as unset. |

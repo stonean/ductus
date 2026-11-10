@@ -4,34 +4,69 @@
 //!
 //! It takes no arguments, because `ductus exec` dispatches a step's primitive with
 //! none, so a flag on `dashboard` would never reach an exec-driven status. The view is
-//! rendered from the same read `dashboard` makes ([`super::dashboard::render_as`]), so
+//! built from the same read `dashboard` makes ([`super::dashboard::view_model`]), so
 //! the two cannot disagree about the pipeline state.
+//!
+//! Past the read size the agent still reaches everything the cut leaves out: the
+//! whole view's lines go to a list file through [`bounded_lists::place`], and the
+//! cut view names it (spec 080's plan, *What the agent gets past the bound*).
 
 use std::path::Path;
 use std::time::SystemTime;
 
-use crate::primitives::{Result, dashboard, pipeline_view};
-use crate::schema::primitives::{RenderStatusArgs, RenderStatusResult};
+use crate::primitives::check_artifact_size::resolve_threshold;
+use crate::primitives::{Result, bounded_lists, dashboard, pipeline_view};
+use crate::schema::primitives::{ListsForm, RenderStatusArgs, RenderStatusResult};
 use crate::session;
 
 /// Execute the `render-status` primitive.
 ///
 /// # Errors
 ///
-/// Every error `dashboard` returns, [`crate::primitives::PrimitiveError::InvalidReadSize`]
-/// for a malformed `[artifacts] read-size-bytes`, and the errors resolving a
-/// spec's `references:` index returns.
+/// Every error `dashboard` returns, the errors resolving a spec's
+/// `references:` index returns, and every error [`bounded_lists::place`]
+/// returns: among them [`crate::primitives::PrimitiveError::InvalidReadSize`]
+/// for a malformed `[artifacts] read-size-bytes`, and a list file that cannot
+/// be written, since a cut view never names a file that is not on disk.
 pub fn run(_args: &RenderStatusArgs, repo: &Path) -> Result<RenderStatusResult> {
     let identity = session::process_identity()?;
-    let (rendered_markdown, project) = dashboard::render_as(
+    let (model, project) = dashboard::view_model(repo, identity.as_ref(), SystemTime::now())?;
+    let inline = RenderStatusResult {
+        rendered_markdown: pipeline_view::whole(&model, pipeline_view::Format::Markdown),
+        project,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    let lines: Vec<&str> = inline.rendered_markdown.lines().collect();
+    let Some(file) = bounded_lists::place(
         repo,
-        identity.as_ref(),
-        SystemTime::now(),
-        pipeline_view::Format::Markdown,
-    )?;
+        "render-status",
+        bounded_lists::ALL_SPECS,
+        &inline,
+        &serde_json::json!({ "view": lines }),
+    )?
+    else {
+        return Ok(inline);
+    };
+    let (threshold, _) = resolve_threshold(repo)?;
+    let project = inline.project;
+    let fits = |view: &str| {
+        let candidate = RenderStatusResult {
+            rendered_markdown: view.to_string(),
+            project: project.clone(),
+            form: ListsForm::File,
+            lists_file: Some(file.clone()),
+        };
+        serde_json::to_vec(&candidate)
+            .is_ok_and(|bytes| u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= threshold.bytes)
+    };
+    let rendered_markdown =
+        pipeline_view::render(&model, pipeline_view::Format::Markdown, &fits, Some(&file));
     Ok(RenderStatusResult {
         rendered_markdown,
         project,
+        form: ListsForm::File,
+        lists_file: Some(file),
     })
 }
 
@@ -70,7 +105,8 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(keys, ["rendered-markdown", "project"]);
+        assert_eq!(keys, ["rendered-markdown", "project", "form"]);
+        assert_eq!(result.form, ListsForm::Inline);
         assert_eq!(result.project, "myapp");
         assert!(
             result.rendered_markdown.contains("| 001-alpha | planned |"),
@@ -83,6 +119,31 @@ mod tests {
                 .ends_with("Run /myapp:target <feature> to select one."),
             "{}",
             result.rendered_markdown
+        );
+    }
+
+    /// A malformed read size halts the view, as it halts every reader of the
+    /// setting, rather than rendering at the default.
+    #[test]
+    fn a_malformed_read_size_halts_the_view() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            ".ductus/config.toml",
+            "[artifacts]\nread-size-bytes = 0\n",
+        );
+        write(
+            tmp.path(),
+            "specs/001-alpha/spec.md",
+            "---\nstatus: draft\ndependencies: []\n---\n\n# A\n",
+        );
+        let err = run(&RenderStatusArgs::default(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                crate::primitives::PrimitiveError::InvalidReadSize { .. }
+            ),
+            "{err:?}"
         );
     }
 

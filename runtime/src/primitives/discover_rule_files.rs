@@ -1,4 +1,10 @@
-//! `discover-rule-files` — deterministic rule-file selection for `/ductus:review`.
+//! `discover-rule-files` — deterministic rule-file selection for `/ductus:review`,
+//! and with `all` for `/ductus:analyze`, which loads every file.
+//!
+//! With `rules` it also lists each selected file's rules, as the shared
+//! `rule_sections` parser reads them, so neither command reads a rule file
+//! through the shell; under `all` each file's headings that open no rule come
+//! back too, for analyze's integrity checks (spec 080).
 //!
 //! Owns `/ductus:review`'s rule-file selection end-to-end: list the rule-file
 //! directory
@@ -22,13 +28,13 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::primitives::rule_sections::parse_rule_sections;
+use crate::primitives::rule_sections::{other_headings, parse_rule_sections};
 use crate::primitives::{PrimitiveError, Result, flatten_line, read_text};
 use crate::schema::config_keys::{self, UnknownKey};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    DiscoverRuleFilesArgs, DiscoverRuleFilesResult, ListsForm, LoadedRule, RuleFileRules,
-    UnreadableRuleFile,
+    DiscoverRuleFilesArgs, DiscoverRuleFilesResult, ListsForm, LoadedRule, OtherHeading,
+    RuleFileRules, UnreadableRuleFile,
 };
 use crate::schema::severity::RuleSeverity;
 
@@ -71,21 +77,45 @@ fn classify(basename: &str) -> Surface {
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::Toml`] when the resolved config file is malformed,
-/// [`PrimitiveError::InvalidSurfacesMember`] when `[rules] surfaces` names a
-/// value outside `{backend, frontend}`, [`PrimitiveError::InvalidSurfacesType`]
-/// when the key is not a list of strings,
-/// [`PrimitiveError::InvalidDisabledRuleFile`] when a
-/// `[[review.disabled-rule-files]]` entry is malformed, or
-/// [`PrimitiveError::Io`] on filesystem failures listing the rule-file
-/// directory.
+/// - [`PrimitiveError::InvalidArgument`] when `verification` or
+///   `extra-files` is given without `rules`, which it would add to.
+/// - [`PrimitiveError::Toml`] when the resolved config file is malformed.
+/// - Without `all`, which selects past them: [`PrimitiveError::InvalidSurfacesMember`]
+///   when `[rules] surfaces` or `detected-surfaces` names a value outside
+///   `{backend, frontend}`, [`PrimitiveError::InvalidSurfacesType`] when the
+///   key is not a list of strings, and [`PrimitiveError::InvalidDisabledRuleFile`]
+///   when a `[[review.disabled-rule-files]]` entry is malformed.
+/// - [`PrimitiveError::Io`] on filesystem failures listing the rule-file
+///   directory.
+/// - With `rules`, [`PrimitiveError::InvalidPath`] for an `extra-files` entry
+///   leaving the project, and every error `bounded_lists::place` returns: a
+///   malformed read size, or a list file that cannot be written.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
+    for (argument, given) in [
+        ("verification", args.verification),
+        ("extra-files", !args.extra_files.is_empty()),
+    ] {
+        if given && !args.rules {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "discover-rule-files".into(),
+                argument: argument.into(),
+                reason: "it adds to the rules `rules` lists, so without `rules` it does nothing"
+                    .into(),
+            });
+        }
+    }
     // Resolved once: the same probe backs both the read below and the
     // provenance tag in the disabled-rule-file notice.
     let (config, unknown, config_name, config_path) = load_ductus_toml(repo)?;
     // Every entry is validated before any rule file is selected, so a
     // malformed one halts the run instead of leaving a partial selection.
-    let disabled = validate_disabled_entries(config.review.as_ref(), &config_path)?;
+    // Under `all` the entries select nothing, so a malformed review setting
+    // cannot halt an analysis.
+    let disabled = if args.all {
+        Vec::new()
+    } else {
+        validate_disabled_entries(config.review.as_ref(), &config_path)?
+    };
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
     let mut notices: Vec<String> = unknown.iter().map(|key| key.notice(config_name)).collect();
@@ -93,7 +123,11 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
 
     if let Some(dir) = rules_dir_path {
         let all = list_rule_files(&dir)?;
-        let surfaces = resolve_surfaces(config.rules.as_ref(), &args.detected_surfaces)?;
+        let surfaces = if args.all {
+            Vec::new()
+        } else {
+            resolve_surfaces(config.rules.as_ref(), &args.detected_surfaces)?
+        };
 
         for name in &all {
             if args.all {
@@ -192,7 +226,19 @@ fn list_rules(
                 statement: section.statement,
             })
             .collect();
-        rule_files.push(RuleFileRules { file, rules });
+        // What the shared parser gives up, a malformed rule heading, which
+        // opens no rule there: listed for analyze's integrity checks.
+        let other_headings = args.all.then(|| {
+            other_headings(&content)
+                .into_iter()
+                .map(|(line, heading)| OtherHeading { line, heading })
+                .collect()
+        });
+        rule_files.push(RuleFileRules {
+            file,
+            rules,
+            other_headings,
+        });
     }
     result.rule_files_count = Some(rule_files.len());
     result.rule_files = Some(rule_files);
@@ -1005,7 +1051,8 @@ mod tests {
 
     /// Two rules: a MUST with a Verification, and one with no tier.
     const RULES: &str = "# Rules\n\n### QUAL-TEST-001\n\n> A test MUST fail without its behavior.\n\n\
-                         **Verification:** Read each test.\n\n### QUAL-TEST-002\n\n> Prefer small tests.\n";
+                         **Verification:** Read each test.\n\n### QUAL-TEST-002\n\n> Prefer small tests.\n\n\
+                         ### QUAL-TEST-003\n\n> A test SHOULD name the behavior it holds.\n";
 
     fn with_rules(args: DiscoverRuleFilesArgs) -> DiscoverRuleFilesArgs {
         DiscoverRuleFilesArgs {
@@ -1036,7 +1083,7 @@ mod tests {
         let files = result.rule_files.unwrap();
         assert_eq!(files[0].file, "framework/rules/quality-cross.md");
         let rules = &files[0].rules;
-        assert_eq!(rules.len(), 2);
+        assert_eq!(rules.len(), 3);
         assert_eq!(rules[0].id, "QUAL-TEST-001");
         assert_eq!(rules[0].heading, "### QUAL-TEST-001");
         assert_eq!(rules[0].tier.as_deref(), Some("must"));
@@ -1048,6 +1095,15 @@ mod tests {
         assert_eq!(
             rules[1].tier, None,
             "a Statement with no keyword has no tier"
+        );
+        assert_eq!(
+            rules[2].tier.as_deref(),
+            Some("should"),
+            "a SHOULD Statement is should-tier"
+        );
+        assert_eq!(
+            files[0].other_headings, None,
+            "no other headings without `all`"
         );
 
         let verified = run(
@@ -1097,6 +1153,92 @@ mod tests {
         );
     }
 
+    /// Under `all` each file also lists the headings that open no rule, a
+    /// malformed rule heading among them, since the parser sees no rule there
+    /// and analyze's integrity checks must (spec 080's plan).
+    #[test]
+    fn all_lists_each_files_headings_that_open_no_rule() {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            format!("{RULES}\n## Testing\n\n### qual-test-004\n\n> Lowercase.\n"),
+        )
+        .unwrap();
+        let result = run(
+            &DiscoverRuleFilesArgs {
+                all: true,
+                ..with_rules(args(&[]))
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let files = result.rule_files.unwrap();
+        let others: Vec<(usize, &str)> = files[0]
+            .other_headings
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|h| (h.line, h.heading.as_str()))
+            .collect();
+        assert_eq!(
+            others,
+            [
+                (1, "# Rules"),
+                (17, "## Testing"),
+                (19, "### qual-test-004")
+            ]
+        );
+        assert_eq!(files[0].rules.len(), 3, "the malformed heading is no rule");
+    }
+
+    /// Under `all`, `[rules] surfaces` and the disabled entries select
+    /// nothing, so a malformed one halts review's call but not analyze's.
+    #[test]
+    fn all_does_not_validate_review_only_settings() {
+        let toml =
+            "[rules]\nsurfaces = [\"middle\"]\n\n[[review.disabled-rule-files]]\nfile = \"x.md\"\n";
+        let tmp = setup(THREE, Some(toml));
+        assert!(run(&args(&[]), tmp.path()).is_err());
+        let all = run(
+            &DiscoverRuleFilesArgs {
+                all: true,
+                ..args(&[])
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(all.selected.len(), 3);
+    }
+
+    /// `verification` and `extra-files` add to what `rules` lists, so either
+    /// without it is refused rather than ignored.
+    #[test]
+    fn verification_or_extra_files_without_rules_is_refused() {
+        let tmp = setup(&["quality-cross.md"], None);
+        for (call, argument) in [
+            (
+                DiscoverRuleFilesArgs {
+                    verification: true,
+                    ..args(&[])
+                },
+                "verification",
+            ),
+            (
+                DiscoverRuleFilesArgs {
+                    extra_files: vec!["docs/rules/x.md".to_string()],
+                    ..args(&[])
+                },
+                "extra-files",
+            ),
+        ] {
+            let err = run(&call, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { argument: a, .. } if a == argument),
+                "{err:?}"
+            );
+        }
+    }
+
     /// A rule file outside the directory is listed after the selected ones,
     /// one that cannot be read is named under `unreadable`, and a path
     /// leaving the project is refused.
@@ -1121,7 +1263,7 @@ mod tests {
         let files = result.rule_files.unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].file, "docs/rules/internal-api.md");
-        assert_eq!(files[0].rules.len(), 2);
+        assert_eq!(files[0].rules.len(), 3);
         assert_eq!(result.unreadable.len(), 1);
         assert_eq!(
             result.unreadable[0].file,

@@ -6,8 +6,9 @@
 // from the live tools/list, a round-tripped call, a multi-byte character split
 // across two chunks, the missing-binary load path, respawn after the
 // runtime exits, recovery after a call fails, and retiring a runtime that
-// stops answering — and the `{project}-status` command it registers, which
-// shows the view, or a failure, as a displayed message that triggers no turn.
+// stops answering — and the `{project}-status` and `{project}-help` commands
+// it registers under the namespace `render-help` gives at load, each showing
+// its answer, or a failure, as a displayed message that triggers no turn.
 // What it does not: pi's own extension loader (jiti), how pi renders a
 // result or a message, and whether a message reaches the agent's context —
 // a real `pi` run is still the only test of those (AGENTS.md, the Pi bridge
@@ -241,7 +242,7 @@ await check("a runtime that stops answering times out once, then is replaced", a
 });
 
 await check("registers {project}-status, whose handler shows the view and triggers no turn", async () => {
-  const { tools, commands, messages } = await load(project({ hostProject: "harness" }));
+  const { tools, commands, messages } = await load(project({ hostProject: "harness", helpCopy: true }));
   await until(5000, () => commands.size > 1);
   if (commands.size !== 2 || !commands.has("harness-status") || !commands.has("harness-help"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
@@ -252,7 +253,7 @@ await check("registers {project}-status, whose handler shows the view and trigge
 });
 
 await check("{project}-status spells each command hint as Pi names the command", async () => {
-  const { commands, messages } = await load(project({ hostProject: "harness" }));
+  const { commands, messages } = await load(project({ hostProject: "harness", helpCopy: true }));
   await until(5000, () => commands.size > 0);
   await within(5000, commands.get("harness-status").handler("", {}));
   const view = shownWithoutATurn(messages);
@@ -262,7 +263,7 @@ await check("{project}-status spells each command hint as Pi names the command",
 });
 
 await check("a status command that cannot reach the runtime shows why the same way", async () => {
-  const dir = project({ hostProject: "harness" });
+  const dir = project({ hostProject: "harness", helpCopy: true });
   const { commands, messages } = await load(dir);
   await until(5000, () => commands.size > 0);
   rmSync(join(dir, ".ductus/bin/ductus"));
@@ -287,13 +288,42 @@ await check("registers {project}-help, whose handler shows the guide as Pi spell
   if (guide.includes("<!--")) throw new Error("the guide carries the generator's markers");
 });
 
-await check("a help command with no installed help copy shows why the same way", async () => {
-  const { commands, messages } = await load(project({ hostProject: "harness" }));
+await check("a help command whose help copy has gone shows why the same way", async () => {
+  const dir = project({ hostProject: "harness", helpCopy: true });
+  const { commands, messages } = await load(dir);
   await until(5000, () => commands.size > 1);
+  rmSync(join(dir, ".pi", "prompts", "harness-help.md"));
   await within(5000, commands.get("harness-help").handler("", {}));
   const shown = shownWithoutATurn(messages);
   if (!shown.includes("could not show the guide") || !shown.includes("no installed copy of the help command"))
     throw new Error(`the failure does not say why: ${shown}`);
+});
+
+await check("a view that cannot be rendered at load still registers both commands, and status shows why", async () => {
+  const dir = project({ hostProject: "harness", helpCopy: true });
+  mkdirSync(join(dir, "specs", "001-broken"), { recursive: true });
+  writeFileSync(join(dir, "specs", "001-broken", "spec.md"), "---\nstatus: [\n---\n");
+  const { commands, messages, notices } = await load(dir);
+  await until(5000, () => commands.size > 1);
+  if (!commands.has("harness-status") || !commands.has("harness-help"))
+    throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+  await sleep(200);
+  if (notices.length) throw new Error(`a notice for a load that registered: ${notices.join("; ")}`);
+  await within(5000, commands.get("harness-status").handler("", {}));
+  const shown = shownWithoutATurn(messages);
+  if (!shown.includes("could not show the view") || !shown.includes("001-broken"))
+    throw new Error(`the failure does not name the spec: ${shown}`);
+});
+
+await check("with no help copy at load, no command registers, and the notice names render-help's error", async () => {
+  const { tools, commands, notices } = await load(project({ hostProject: "harness" }));
+  await until(5000, () => notices.length > 0);
+  if (commands.size !== 0) throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+  if (!tools.has("ductus__render-help")) throw new Error("the tools were not registered");
+  const [notice] = notices;
+  if (!notice.includes("not registered, since render-help failed at load") || !notice.includes("no installed copy of the help command"))
+    throw new Error(`the notice does not name the error: ${notice}`);
+  if (notice.includes("missing or unusable")) throw new Error(`the notice blames the pointer: ${notice}`);
 });
 
 await check("a runtime with render-status but no render-help registers only the status command", async () => {

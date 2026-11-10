@@ -39,8 +39,8 @@ MUTATIONS = [
     (
         'M3 raw bytes judged for update',
         'src/primitives/apply_manifest.rs',
-        '        "update" | "create" => read_entry(&source, entry, substitutions, always_loaded)?,',
-        '        "update" | "create" => {\n            let _ = (substitutions, always_loaded); (fs::read(&source).unwrap(), None)\n        }',
+        '        "update" | "create" => read_entry(&source, entry, substitutions, tool_search)?,',
+        '        "update" | "create" => {\n            let _ = (substitutions, tool_search); (fs::read(&source).unwrap(), None)\n        }',
         'apply_manifest',
     ),
     (
@@ -81,7 +81,7 @@ MUTATIONS = [
     (
         'M8 MCP half dropped',
         'src/primitives/merge_permissions.rs',
-        '            crate::schema::registry::served_primitives().map(|name| format!("mcp__ductus__{name}")),',
+        '            crate::schema::registry::served_primitives()\n                .map(crate::schema::registry::claude_code_tool_name),',
         '            std::iter::empty::<String>(),',
         'merge_permissions',
     ),

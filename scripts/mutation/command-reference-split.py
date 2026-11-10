@@ -26,8 +26,8 @@ MUTATIONS = [
     (
         'M2 headings inside fenced blocks and comments are collected',
         'src/primitives/resolve_anchor.rs',
-        '        .filter(|line| !skip.skip(line))\n',
-        '        .filter(|line| { let _ = &mut skip; !line.is_empty() })\n',
+        '        .filter(|(_, line)| !skip.skip(line))\n',
+        '        .filter(|(_, line)| { let _ = &mut skip; !line.is_empty() })\n',
         'resolve_anchor',
     ),
     (
@@ -47,8 +47,8 @@ MUTATIONS = [
     (
         'M5 the line rule accepts a heading that ends inside a word',
         'src/primitives/resolve_anchor.rs',
-        '            !tail\n                .chars()',
-        '            true || !tail\n                .chars()',
+        '                !tail\n                    .chars()',
+        '                true || !tail\n                    .chars()',
         'resolve_anchor',
     ),
     (

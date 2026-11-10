@@ -226,6 +226,50 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         }
     }
 
+    /// Take a primitive's result into the walk: read a file-form result's
+    /// lists back from its list file, before the tally and the merge, so no
+    /// step sees a list as empty and no later result's `lists-file` replaces
+    /// this one's unread (spec 080). A list file that cannot be read halts
+    /// the walk with its error, merging nothing.
+    fn take_result(
+        &mut self,
+        name: &str,
+        mut result: Value,
+        location: crate::schema::procedure::SourceRange,
+        step_label: &str,
+    ) -> std::io::Result<Option<WalkOutcome>> {
+        let restored = match payload::restore_lists(name, &mut result, &self.repo) {
+            Ok(restored) => restored,
+            Err(err) => {
+                let code = err.code().to_string();
+                let message = err.to_string();
+                self.emit_error(
+                    code.clone(),
+                    message.clone(),
+                    Some(ErrorLocation {
+                        file: self.procedure.command.clone(),
+                        line: location.start_line,
+                        col: location.start_col,
+                    }),
+                )?;
+                return Ok(Some(WalkOutcome::Errored { code, message }));
+            }
+        };
+        let keys: Vec<String> = result
+            .as_object()
+            .map(|map| map.keys().cloned().collect())
+            .unwrap_or_default();
+        if let Some(tally) = &mut self.analyze_tally {
+            tally.record_primitive(name, &result, &self.context);
+        }
+        for line in session_report_lines(name, &result) {
+            self.emit_progress(line, Some(step_label.to_owned()), Some(name.into()))?;
+        }
+        self.merge_primitive_result(name, result);
+        self.note_restored_lists(&keys, &restored);
+        Ok(None)
+    }
+
     fn handle_primitive(
         &mut self,
         number: &StepNumber,
@@ -258,42 +302,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             dispatch_primitive(name, &self.context, &self.repo)
         };
         match dispatched {
-            Ok(mut result) => {
-                // A result past the read size moved its lists to a file; the
-                // walk reads them back now, before the tally and the merge,
-                // so no step sees a list as empty and no later result's
-                // `lists-file` replaces this one's unread (spec 080).
-                let restored = match payload::restore_lists(name, &mut result, &self.repo) {
-                    Ok(restored) => restored,
-                    Err(err) => {
-                        let code = err.code().to_string();
-                        let message = err.to_string();
-                        self.emit_error(
-                            code.clone(),
-                            message.clone(),
-                            Some(ErrorLocation {
-                                file: self.procedure.command.clone(),
-                                line: location.start_line,
-                                col: location.start_col,
-                            }),
-                        )?;
-                        return Ok(Some(WalkOutcome::Errored { code, message }));
-                    }
-                };
-                let keys: Vec<String> = result
-                    .as_object()
-                    .map(|map| map.keys().cloned().collect())
-                    .unwrap_or_default();
-                if let Some(tally) = &mut self.analyze_tally {
-                    tally.record_primitive(name, &result, &self.context);
-                }
-                for line in session_report_lines(name, &result) {
-                    self.emit_progress(line, Some(step_label.clone()), Some(name.into()))?;
-                }
-                self.merge_primitive_result(name, result);
-                self.note_restored_lists(&keys, &restored);
-                Ok(None)
-            }
+            Ok(result) => self.take_result(name, result, location, &step_label),
             Err(err) => {
                 let code = match &err {
                     DispatchError::UnknownPrimitive(_) => "unknown-primitive".to_string(),
@@ -1383,6 +1392,56 @@ mod tests {
             result.is_ok(),
             "exec path must ignore an unknown context key, got: {result:?}"
         );
+    }
+
+    /// A result past the read size whose list file cannot be read halts the
+    /// walk with `lists-file-unreadable`, naming the file, and merges
+    /// nothing, since a list the context lacked would read as empty (spec
+    /// 080).
+    #[test]
+    fn a_result_whose_list_file_cannot_be_read_halts_the_walk() {
+        let procedure = Procedure {
+            command: "test".into(),
+            steps: vec![],
+        };
+        let tmp = tempfile::tempdir().unwrap();
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            tmp.path().to_path_buf(),
+            Map::new(),
+            &mut reader,
+            &mut writer,
+        );
+        let result = serde_json::json!({
+            "form": "file",
+            "scope-count": 2,
+            "lists-file": ".ductus/results/compute-review-scope/x/gone.json",
+        });
+        let outcome = walker
+            .take_result("compute-review-scope", result, loc(), "1")
+            .unwrap();
+        let Some(WalkOutcome::Errored { code, message }) = outcome else {
+            panic!("expected the walk to halt, got {outcome:?}");
+        };
+        assert_eq!(code, "lists-file-unreadable");
+        assert!(message.contains("gone.json"), "{message}");
+        assert!(
+            !walker.context.contains_key("scope-count"),
+            "a halted step merges nothing"
+        );
+        drop(walker);
+        let last: Value = serde_json::from_str(
+            std::str::from_utf8(&writer)
+                .unwrap()
+                .lines()
+                .last()
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(last["type"], "error", "{last}");
+        assert_eq!(last["code"], "lists-file-unreadable", "{last}");
     }
 
     #[test]

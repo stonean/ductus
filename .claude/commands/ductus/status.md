@@ -30,10 +30,10 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 **Where a named section lives.** This command's reference is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 <!-- audit:ignore-promotion -->
-1. Invoke `render-status` to load the pipeline view in one call. Its `rendered-markdown` holds the whole view as one markdown fragment, rendered by the runtime from the pipeline state — the target block, the table, the summary one item per line, the cross-service references readout, the specs with work left grouped by next action, and the closing `/ductus:target` prompt — held to the configured read size. Its `project` names the slash-command namespace the view's hints use.
+1. Invoke `render-status` to load the pipeline view in one call. Its `rendered-markdown` holds the view as one markdown fragment, rendered by the runtime from the pipeline state — the target block, the table, the summary one item per line, the cross-service references readout, the specs with work left grouped by next action, and the closing `/ductus:target` prompt — held with the rest of the result to the configured read size. Past it, `form` is `file`, the view is cut, and `lists-file` names the file holding the whole view's lines, which each line standing for a cut names too. Its `project` names the slash-command namespace the view's hints use.
 
 <!-- audit:ignore-promotion -->
-1. Emit the `rendered-markdown` fragment as the pipeline view. It is returned data the host may restyle — do not recompute or re-list the facts it carries, the specs with work left and the prompt to select one included, since the fragment already holds them.
+1. Emit the `rendered-markdown` fragment as the pipeline view. It is returned data the host may restyle — do not recompute or re-list the facts it carries, the specs with work left and the prompt to select one included, since the fragment already holds them. Read `lists-file` only when asked for what a cut view left out.
 
 ## Status → next action
 

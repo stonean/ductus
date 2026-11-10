@@ -38,8 +38,11 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory does
 /// not exist, [`PrimitiveError::Io`] when `spec.md` is unreadable or
 /// `npx` cannot be spawned, or [`PrimitiveError::Yaml`] for a malformed
-/// frontmatter block. Every gate verdict — including every block reason
-/// [`ReviewGateBlock`] names — is a domain outcome in the result.
+/// frontmatter block, and what `bounded_lists::place` returns:
+/// [`PrimitiveError::InvalidReadSize`] for a malformed `[artifacts]
+/// read-size-bytes`, or a list file that cannot be written. Every gate
+/// verdict — including every block reason [`ReviewGateBlock`] names — is a
+/// domain outcome in the result.
 ///
 /// The result is inline while it fits `[artifacts] read-size-bytes`, and past
 /// it carries `violations` and `cross-spec-impact` in the file it names and

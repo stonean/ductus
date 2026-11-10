@@ -96,7 +96,12 @@ except ValueError:
 if data.get("form") == "file":
     try:
         with open(data["lists-file"], encoding="utf-8") as handle:
-            data.update(json.load(handle))
+            lists = json.load(handle)
+        # A list the file lacks would read as none broken, so it halts too.
+        missing = [key for key in ("broken", "examined", "skipped") if not isinstance(lists.get(key), list)]
+        if missing:
+            raise ValueError("it holds no %s list" % ", ".join(missing))
+        data.update(lists)
     except (KeyError, TypeError, OSError, ValueError) as err:
         print("\t".join(["(precondition)",
                          "check-corpus-links moved its lists to a file that could not be read (%s), so no link was checked" % err,

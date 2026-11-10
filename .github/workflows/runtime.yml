@@ -65,7 +65,8 @@ on:
       - 'framework/bootstrap/ductus.md'
       # src/primitives/merge_permissions.rs holds merge-permissions' ceiling
       # to the canonical allow set in this file's step 2 (spec 022 task 11),
-      # so an edit to that set is an edit to the test's subject.
+      # and its canonical call's deny and retired sets to steps 3 and 4
+      # (spec 080), so an edit to any of them is an edit to the tests' subject.
       - 'framework/bootstrap/configure/claude.md'
   push:
     branches:

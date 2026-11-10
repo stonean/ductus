@@ -118,6 +118,18 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
 ///   applied, that allow reaches them.
 pub const CLI_ONLY_PRIMITIVES: &[&str] = &["run-generator"];
 
+/// The prefix Claude Code gives each served tool: `mcp__`, the server's name
+/// in `.mcp.json`, then `__` (§runtime-host-integration).
+pub const CLAUDE_CODE_TOOL_PREFIX: &str = "mcp__ductus__";
+
+/// `name` as Claude Code names the served tool: [`CLAUDE_CODE_TOOL_PREFIX`]
+/// then the name. The tool-search line and `merge-permissions`' canonical
+/// entries both spell a tool this way.
+#[must_use]
+pub fn claude_code_tool_name(name: &str) -> String {
+    format!("{CLAUDE_CODE_TOOL_PREFIX}{name}")
+}
+
 /// The primitives the MCP server serves: [`PRIMITIVE_REGISTRY`] less
 /// [`CLI_ONLY_PRIMITIVES`], in registry order. The server's tool list and
 /// `merge-permissions`' canonical `mcp__ductus__*` entries both follow it.

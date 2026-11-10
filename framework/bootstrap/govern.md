@@ -100,7 +100,7 @@ MCP discovery is **not** layout-derived — it is a per-agent property. A host c
 - **`write-file`** — ductus writes `target` additively at State-B wire time (the additive merge in §MCP wiring), except Pi's bridge, whose source is in the framework archive, so the **Bridge** step of **Pi layout** writes it once the archive is extracted. The `project-committed` agents and Pi use it.
 - **`surface-instruction`** — ductus writes **no** MCP file; State B surfaces the instruction in the **Closing restart** and the user runs it once per machine, then restarts. Required for `user-global` / `home-level` agents, whose MCP config lives outside the repo and which ductus must not silently mutate.
 - **Antigravity** loads MCP servers only from home-level `~/.gemini/config/mcp_config.json`; project-local `.agents/mcp_config.json` is **ignored** (verified against the live `agy` CLI). There is no scriptable `agy mcp add`, so registration is a config-file edit plus a `/mcp` reload.
-- **Pi** takes the runtime's tools through an extension bridge, not its own MCP client. [Spec 064](https://github.com/stonean/ductus/blob/main/specs/064-pi-host-support/spec.md) §Verified Pi Layout verified the bridge on a pi with no MCP client. pi 1.0.0 and later ship one (`pi mcp`, `.pi/mcp.json`), and the bridge stays, since it also registers `/{project}-status` (spec 080), which an MCP registration cannot. Its `mechanism` is `write-file` because the operation is identical — write a file additively — but the file is a TypeScript **extension bridge** (`.pi/extensions/ductus.ts`) rather than an MCP config, copied from the framework archive once it is extracted rather than at pre-flight wiring time (the **Bridge** step of **Pi layout**): the bridge spawns the runtime's own MCP server over stdio and re-registers every tool under `ductus__<name>` (spec 064 D3). The write is to the project-local, gitignored `.pi/` directory, so the scope is `project-local` rather than `project-committed`: each contributor's bridge is re-scaffolded by every `/ductus` run and repaired by `/{project}:configure`. The tools appear after the pi process **restarts** (project-local extensions load at session start, trust-gated) — the same restart cadence as the MCP hosts, surfaced in the **Closing restart**.
+- **Pi** takes the runtime's tools through an extension bridge, not its own MCP client. [Spec 064](https://github.com/stonean/ductus/blob/main/specs/064-pi-host-support/spec.md) §Verified Pi Layout verified the bridge on a pi with no MCP client. pi 1.0.0 and later ship one (`pi mcp`, `.pi/mcp.json`), and the bridge stays, since it also registers `/{project}-status` and `/{project}-help` (spec 080), which an MCP registration cannot. Its `mechanism` is `write-file` because the operation is identical — write a file additively — but the file is a TypeScript **extension bridge** (`.pi/extensions/ductus.ts`) rather than an MCP config, copied from the framework archive once it is extracted rather than at pre-flight wiring time (the **Bridge** step of **Pi layout**): the bridge spawns the runtime's own MCP server over stdio and re-registers every tool under `ductus__<name>` (spec 064 D3). The write is to the project-local, gitignored `.pi/` directory, so the scope is `project-local` rather than `project-committed`: each contributor's bridge is re-scaffolded by every `/ductus` run and repaired by `/{project}:configure`. The tools appear after the pi process **restarts** (project-local extensions load at session start, trust-gated) — the same restart cadence as the MCP hosts, surfaced in the **Closing restart**.
 
 ### Adding a new agent
 
@@ -682,7 +682,8 @@ last_applied = "rule-files-relocate"
 # report of each loaded shared constitution's size (spec 055), by every
 # primitive result that grows with the corpus, which moves its lists to a
 # file past it (specs 066, 078 and 080), and by /{project}:status's view,
-# which collapses and cuts its rows past it (spec 080). The size, in bytes, above
+# which cuts each of its blocks past it and, on the model path, names a file
+# holding the whole view (spec 080). The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
 # scenario) may not be read in one call by an agent's file reader; each
 # command warns on every artifact over it and names the fixes. A whole number
@@ -984,7 +985,7 @@ Fetch each command template and copy it into `{config_dir}/commands/{project}/`.
 
 The configure row uses the agent-specific source `framework/bootstrap/configure/{key}.md` and writes it as the canonical `configure.md` in the project's command directory.
 
-For the `claude` agent, every entry above also sets `tool-search-line: true`, so each copy loads the `ductus` tools its steps name, and those the sections it cites invoke, in one `ToolSearch` (spec 080). The field is keyed by agent, not by layout: Auggie's entries leave it unset.
+For the `claude` agent, every entry above also sets `tool-search-line: true`, so each copy loads the `ductus` tools its steps name, and those it or the sections it cites invoke, in one `ToolSearch` (spec 080). The field is keyed by agent, not by layout: Auggie's entries leave it unset.
 
 ### Slash command cleanup
 

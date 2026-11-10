@@ -10,11 +10,15 @@
 //! work left listed by next action, and the view's one `/{project}:target`
 //! hint at the end (AC6, AC18).
 //!
-//! Each rendering is held to a bound in bytes, the configured read size
-//! (AC24): past it, the `done (spec is complete)` rows collapse to a count
-//! line, and if it is still over, the rows past the bound are cut and a line
-//! counts the specs not shown, so a partial view never reads as complete.
-//! Paging is no option, since the hook path shows one message.
+//! Each rendering is held to a bound in bytes, the configured read size,
+//! measured on the result its caller serializes (AC24). Past it, the
+//! `done (spec is complete)` rows collapse to a count line; then the rows past
+//! the bound are cut and counted; then, with no row left, the `Next actions:`
+//! block keeps the leading names that fit; then each other list collapses to
+//! its count, in [`CUT_ORDER`]. So a partial view never reads as complete, and
+//! each line standing for what was cut can name the file holding the whole
+//! view, which `render-status` writes for the model path. The hook path shows
+//! one message, so it cannot page and writes no file.
 
 use std::fmt::Write as _;
 
@@ -92,12 +96,87 @@ struct Row {
 struct Item {
     line: String,
     details: Vec<String>,
+    /// The list the item collapses as past the bound, with its lines once
+    /// collapsed, the last of which the not-shown words end. `None` for an
+    /// item the bound never cuts.
+    cut: Option<(Cut, Vec<String>)>,
+}
+
+/// A list the bound collapses to its count once no row and no next-action
+/// name is left, one at a time in [`CUT_ORDER`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Cut {
+    References,
+    DisabledRuleFiles,
+    UnknownConfigKeys,
+    Tags,
+    Folds,
+    Recovery,
+    Blocked,
+    ScenarioQuestions,
+    /// The out-of-set statuses in `Counts:`.
+    OtherStatuses,
+    /// The `Next actions:` block's lines, once they name no spec.
+    NextActionGroups,
+    /// The `Notice:` and `Unreadable:` lines.
+    SessionLines,
+}
+
+/// The order the lists collapse in (spec 080's plan, *Bound (AC24)*). The
+/// session lines go last, since they explain the target the view opens with.
+const CUT_ORDER: [Cut; 11] = [
+    Cut::References,
+    Cut::DisabledRuleFiles,
+    Cut::UnknownConfigKeys,
+    Cut::Tags,
+    Cut::Folds,
+    Cut::Recovery,
+    Cut::Blocked,
+    Cut::ScenarioQuestions,
+    Cut::OtherStatuses,
+    Cut::NextActionGroups,
+    Cut::SessionLines,
+];
+
+/// How much of the model a rendering shows.
+#[derive(Clone, Copy, Debug)]
+struct Shown {
+    /// Whether the `done (spec is complete)` rows are collapsed to a count
+    /// line.
+    done_collapsed: bool,
+    /// The leading rows kept, of those the table holds.
+    rows: usize,
+    /// The leading next-action names kept, `None` for every one.
+    names: Option<usize>,
+    /// How many lists of [`CUT_ORDER`], from its start, are collapsed.
+    collapsed: usize,
+}
+
+impl Shown {
+    /// The whole view.
+    fn all(model: &Model) -> Self {
+        Self {
+            done_collapsed: false,
+            rows: model.rows.len(),
+            names: None,
+            collapsed: 0,
+        }
+    }
+
+    fn cuts(&self, cut: Cut) -> bool {
+        CUT_ORDER[..self.collapsed].contains(&cut)
+    }
 }
 
 /// The view, ready to render either way.
 #[derive(Debug)]
 pub(crate) struct Model {
+    /// The target line, then the scenario line when one is targeted.
     target: Vec<String>,
+    /// One `Notice:` line per session notice.
+    notices: Vec<String>,
+    /// One `Unreadable:` line per session file that does not parse.
+    unreadable: Vec<String>,
     rows: Vec<Row>,
     summary: Vec<Item>,
     references: Vec<(String, Vec<String>)>,
@@ -138,8 +217,11 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
             None => next_actions.push((action, vec![spec.slug.clone()])),
         }
     }
+    let (target, notices, unreadable) = target_lines(&data);
     Model {
-        target: target_lines(&data),
+        target,
+        notices,
+        unreadable,
         rows,
         summary: summary(&data),
         references: data.references,
@@ -148,82 +230,164 @@ pub(crate) fn build(data: ViewData<'_>) -> Model {
     }
 }
 
-/// Render the model as `format`, held to `bound` bytes.
+/// The whole view as `format`, nothing cut.
+pub(crate) fn whole(model: &Model, format: Format) -> String {
+    compose(model, format, &Shown::all(model), None)
+}
+
+/// Render the model as `format`: the most of it for which `fits` holds,
+/// `fits` measuring the result the caller serializes the rendering in.
+/// `whole_at`, when the caller has written the whole view to a file, names
+/// that file, and every line standing for what was cut names it too.
 ///
-/// Within the bound the whole view renders. Past it, the
-/// `done (spec is complete)` rows collapse to one count line; if it is still
-/// over, the most rows that fit are kept and a line counts the specs not
-/// shown. A view whose summary alone is over the bound keeps no row and says
-/// how many it cut, which is the most it can do.
-pub(crate) fn render(model: &Model, format: Format, bound: u64) -> String {
-    let all: Vec<&Row> = model.rows.iter().collect();
-    let full = compose(model, format, &all, &[]);
-    if fits(&full, bound) {
-        return full;
+/// Within the bound the whole view renders. Past it, spec 080's plan,
+/// *Bound (AC24)*, applies its steps in turn until the view fits: the
+/// `done (spec is complete)` rows collapse to a count line; the rows past
+/// the bound are cut and counted; with no row left, the `Next actions:` block
+/// keeps the leading names that fit; and each list of [`CUT_ORDER`] collapses
+/// to its count, the rows and then the names being fitted again after each.
+/// What is left then is the floor, which a read size below it gets, over the
+/// bound, since it is the least a view can say.
+pub(crate) fn render(
+    model: &Model,
+    format: Format,
+    fits: &dyn Fn(&str) -> bool,
+    whole_at: Option<&str>,
+) -> String {
+    let view = |shown: &Shown| compose(model, format, shown, whole_at);
+    let whole = view(&Shown::all(model));
+    if fits(&whole) {
+        return whole;
     }
-    let open: Vec<&Row> = model.rows.iter().filter(|row| !row.complete).collect();
-    let collapsed = model.rows.len() - open.len();
-    let mut trailer = Vec::new();
-    if collapsed > 0 {
-        trailer.push(format!("{COMPLETE}: {collapsed} spec(s)"));
-        let view = compose(model, format, &open, &trailer);
-        if fits(&view, bound) {
-            return view;
+    let open = model.rows.iter().filter(|row| !row.complete).count();
+    let names: usize = model
+        .next_actions
+        .iter()
+        .map(|(_, slugs)| slugs.len())
+        .sum();
+    for collapsed in 0..=CUT_ORDER.len() {
+        let rowless = Shown {
+            done_collapsed: true,
+            rows: 0,
+            names: None,
+            collapsed,
+        };
+        if fits(&view(&rowless)) {
+            let rows = largest(open, |rows| fits(&view(&Shown { rows, ..rowless })));
+            return view(&Shown { rows, ..rowless });
+        }
+        if fits(&view(&Shown {
+            names: Some(0),
+            ..rowless
+        })) {
+            let names = Some(largest(names, |kept| {
+                fits(&view(&Shown {
+                    names: Some(kept),
+                    ..rowless
+                }))
+            }));
+            return view(&Shown { names, ..rowless });
         }
     }
-    // Keeping more rows only lengthens the view, so the largest count that
-    // fits is found by bisection.
-    let with = |kept: usize| {
-        let mut lines = trailer.clone();
-        lines.push(format!(
-            "{} spec(s) not shown — the view is over the read size",
-            open.len() - kept
-        ));
-        compose(model, format, &open[..kept], &lines)
-    };
-    let (mut lo, mut hi) = (0, open.len());
+    view(&Shown {
+        done_collapsed: true,
+        rows: 0,
+        names: Some(0),
+        collapsed: CUT_ORDER.len(),
+    })
+}
+
+/// The largest count up to `max` that `holds`, given that zero holds. Keeping
+/// more only lengthens the view, so it is found by bisection.
+fn largest(max: usize, holds: impl Fn(usize) -> bool) -> usize {
+    let (mut lo, mut hi) = (0, max);
     while lo < hi {
         let mid = (lo + hi).div_ceil(2);
-        if fits(&with(mid), bound) {
+        if holds(mid) {
             lo = mid;
         } else {
             hi = mid - 1;
         }
     }
-    with(lo)
+    lo
 }
 
-fn fits(view: &str, bound: u64) -> bool {
-    u64::try_from(view.len()).unwrap_or(u64::MAX) <= bound
+/// The words that end each line standing for what the bound cut.
+fn not_shown(whole_at: Option<&str>) -> String {
+    match whole_at {
+        Some(file) => {
+            format!("not shown — the view is over the read size; the whole view is in {file}")
+        }
+        None => "not shown — the view is over the read size".to_string(),
+    }
 }
 
-/// The view with `rows` in its table, and `trailer` as a block of its own
-/// under it: a line directly under a markdown table would read as a row.
-fn compose(model: &Model, format: Format, rows: &[&Row], trailer: &[String]) -> String {
+/// The view as `shown` cuts it. The lines standing for the cut rows sit in a
+/// block of their own under the table, since a line directly under a
+/// markdown table would read as a row.
+fn compose(model: &Model, format: Format, shown: &Shown, whole_at: Option<&str>) -> String {
+    let marker = not_shown(whole_at);
+    let mut target = model.target.clone();
+    if shown.cuts(Cut::SessionLines) {
+        if !model.notices.is_empty() {
+            target.push(format!(
+                "Notice: {} notice(s) {marker}",
+                model.notices.len()
+            ));
+        }
+        if !model.unreadable.is_empty() {
+            target.push(format!(
+                "Unreadable: {} session file(s) {marker}",
+                model.unreadable.len()
+            ));
+        }
+    } else {
+        target.extend(model.notices.iter().cloned());
+        target.extend(model.unreadable.iter().cloned());
+    }
+    let table: Vec<&Row> = model
+        .rows
+        .iter()
+        .filter(|row| !(shown.done_collapsed && row.complete))
+        .collect();
+    let rows = &table[..shown.rows.min(table.len())];
+    let mut trailer = Vec::new();
+    let done = model.rows.len() - table.len();
+    if done > 0 {
+        trailer.push(format!("{COMPLETE}: {done} spec(s)"));
+    }
+    if rows.len() < table.len() {
+        trailer.push(format!("{} spec(s) {marker}", table.len() - rows.len()));
+    }
     let mut blocks = vec![
-        model.target.join("\n"),
+        target.join("\n"),
         match format {
             Format::Markdown => markdown_table(rows),
             Format::Text => text_table(rows),
         },
         trailer.join("\n"),
-        summary_block(&model.summary),
+        summary_block(&model.summary, shown, &marker),
     ];
     if !model.references.is_empty() {
-        blocks.push(references_block(&model.references, format));
+        blocks.push(if shown.cuts(Cut::References) {
+            format!("References: {} spec(s) {marker}", model.references.len())
+        } else {
+            references_block(&model.references, format)
+        });
     }
     if !model.next_actions.is_empty() {
-        blocks.push(next_actions_block(&model.next_actions));
+        blocks.push(next_actions_block(&model.next_actions, shown, &marker));
     }
     blocks.push(model.prompt.clone());
     blocks.retain(|b| !b.is_empty());
     blocks.join("\n\n")
 }
 
-/// The target line, then the scenario, notice and unreadable-session lines.
-/// Without a target, the first line says so; the hint to set one is the
-/// view's closing prompt.
-fn target_lines(data: &ViewData<'_>) -> Vec<String> {
+/// The target block, in three parts: the target line and the scenario line,
+/// then the notice lines, then the unreadable-session lines. Without a
+/// target, the first line says so; the hint to set one is the view's closing
+/// prompt.
+fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) {
     let mut lines = Vec::new();
     match data.session_target {
         None => lines.push("No session target.".to_string()),
@@ -236,7 +400,7 @@ fn target_lines(data: &ViewData<'_>) -> Vec<String> {
                 .find(|s| s.slug == target.feature)
                 .map_or_else(
                     || ("unknown".to_string(), "—".to_string()),
-                    |s| (s.status.clone(), next_action(s, data.project)),
+                    |s| (flatten_line(&s.status), next_action(s, data.project)),
                 );
             if target
                 .scenario_detail
@@ -266,29 +430,42 @@ fn target_lines(data: &ViewData<'_>) -> Vec<String> {
     }
     // Notices follow the no-target line too, since a consolidation's notice is
     // exactly what explains a target that has gone (spec 062).
-    for notice in data.notices {
-        lines.push(format!("Notice: {}", notice.message));
-    }
-    for path in data.unreadable {
-        lines.push(format!(
-            "Unreadable: {path} — a session file that does not parse, so whether it shares \
-             this feature was not checked"
-        ));
-    }
-    lines
+    let notices = data
+        .notices
+        .iter()
+        .map(|notice| format!("Notice: {}", notice.message))
+        .collect();
+    let unreadable = data
+        .unreadable
+        .iter()
+        .map(|path| {
+            format!(
+                "Unreadable: {path} — a session file that does not parse, so whether it shares \
+                 this feature was not checked"
+            )
+        })
+        .collect();
+    (lines, notices, unreadable)
 }
 
-/// The summary items, one fact each, in a fixed order. `Counts:`,
-/// `Reopenings` and `Inbox:` render on every run; the rest when they apply.
+/// The summary items, one fact each, in a fixed order. `Counts:` renders
+/// when a spec exists, and `Reopenings` and `Inbox:` on every run; the rest
+/// when they apply.
 fn summary(data: &ViewData<'_>) -> Vec<Item> {
     let (specs, project) = (data.specs, data.project);
-    let item = |line: String| Item {
+    let whole = |line: String| Item {
         line,
         details: Vec::new(),
+        cut: None,
+    };
+    let cut = |line: String, cut: Cut, collapsed: String| Item {
+        line,
+        details: Vec::new(),
+        cut: Some((cut, vec![collapsed])),
     };
     let mut items = Vec::new();
     if !specs.is_empty() {
-        items.push(item(counts_line(specs)));
+        items.push(counts_item(specs));
     }
     let blocked: Vec<&str> = specs
         .iter()
@@ -296,11 +473,15 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
         .map(|s| s.slug.as_str())
         .collect();
     if !blocked.is_empty() {
-        items.push(item(format!(
-            "Blocked: {} spec(s) — {}",
-            blocked.len(),
-            blocked.join(", ")
-        )));
+        items.push(cut(
+            format!(
+                "Blocked: {} spec(s) — {}",
+                blocked.len(),
+                blocked.join(", ")
+            ),
+            Cut::Blocked,
+            format!("Blocked: {} spec(s)", blocked.len()),
+        ));
     }
     let recovery: Vec<&str> = specs
         .iter()
@@ -308,20 +489,47 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
         .map(|s| s.slug.as_str())
         .collect();
     if !recovery.is_empty() {
-        items.push(item(format!(
-            "Recovery: {} spec(s) past clarification with open questions again — {}. Run \
-             /{project}:clarify on each; the spec reverts to draft and advances forward again.",
-            recovery.len(),
-            recovery.join(", ")
-        )));
+        items.push(cut(
+            format!(
+                "Recovery: {} spec(s) past clarification with open questions again — {}. Run \
+                 /{project}:clarify on each; the spec reverts to draft and advances forward \
+                 again.",
+                recovery.len(),
+                recovery.join(", ")
+            ),
+            Cut::Recovery,
+            format!("Recovery: {} spec(s)", recovery.len()),
+        ));
     }
     items.extend(questions_item(data.questions, project));
-    if let Some(line) = folds_line(specs, project) {
-        items.push(item(line));
+    if let Some((line, pending)) = folds_line(specs, project) {
+        items.push(cut(line, Cut::Folds, format!("Folds: {pending} spec(s)")));
     }
     if !data.tags_union.is_empty() {
-        items.push(item(format!("Tags: {}", data.tags_union.join(", "))));
+        // A tag is hand-written frontmatter, rendered on one line so a
+        // newline in it cannot forge a view line (`BE-INPUT-011`).
+        let tags: Vec<String> = data.tags_union.iter().map(|t| flatten_line(t)).collect();
+        items.push(cut(
+            format!("Tags: {}", tags.join(", ")),
+            Cut::Tags,
+            format!("Tags: {}", tags.len()),
+        ));
     }
+    items.extend(config_items(data));
+    items.push(whole(reopenings_line(data.reopenings)));
+    items.push(whole(inbox_line(data.inbox, project)));
+    items
+}
+
+/// The config items: the disabled rule files and the unknown config keys,
+/// each when it applies, each collapsing to its count past the bound.
+fn config_items(data: &ViewData<'_>) -> Vec<Item> {
+    let cut = |line: String, cut: Cut, collapsed: String| Item {
+        line,
+        details: Vec::new(),
+        cut: Some((cut, vec![collapsed])),
+    };
+    let mut items = Vec::new();
     let config = data.config;
     if config.present && !config.disabled_rule_files.is_empty() {
         // Each basename is committed config, rendered on one line so a
@@ -332,25 +540,39 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
             .iter()
             .map(|file| flatten_line(file))
             .collect();
-        items.push(item(format!(
-            "Disabled rule files: {} ({}) — {}",
-            config.disabled_rule_files.len(),
-            data.config_name,
-            shown.join(", ")
-        )));
+        items.push(cut(
+            format!(
+                "Disabled rule files: {} ({}) — {}",
+                config.disabled_rule_files.len(),
+                data.config_name,
+                shown.join(", ")
+            ),
+            Cut::DisabledRuleFiles,
+            format!(
+                "Disabled rule files: {} ({})",
+                config.disabled_rule_files.len(),
+                data.config_name
+            ),
+        ));
     }
     if !config.unknown_keys.is_empty() {
         // Each entry is already one line: a key that needs it is quoted and
         // escaped by the registry (`BE-INPUT-011`).
-        items.push(item(format!(
-            "Unknown config keys: {} ({}) — {} — this version of ductus does not read them",
-            config.unknown_keys.len(),
-            data.config_name,
-            config.unknown_keys.join(", ")
-        )));
+        items.push(cut(
+            format!(
+                "Unknown config keys: {} ({}) — {} — this version of ductus does not read them",
+                config.unknown_keys.len(),
+                data.config_name,
+                config.unknown_keys.join(", ")
+            ),
+            Cut::UnknownConfigKeys,
+            format!(
+                "Unknown config keys: {} ({})",
+                config.unknown_keys.len(),
+                data.config_name
+            ),
+        ));
     }
-    items.push(item(reopenings_line(data.reopenings)));
-    items.push(item(inbox_line(data.inbox, project)));
     items
 }
 
@@ -363,8 +585,10 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
 /// Rendered whether or not a spec is also in recovery: only the Next Action
 /// cell is exclusive, and suppressing this item would hide questions that
 /// still need resolving after the recovery walk (spec 046). Every question is
-/// listed, with no cap: a truncated list reads as "these are the ones needing
-/// attention" while hiding others.
+/// listed, with no cap, within the read size: a truncated list reads as
+/// "these are the ones needing attention" while hiding others. Past it, the
+/// lines collapse to one counting them, which names the file holding them on
+/// the model path, so none is hidden (046's AC24; spec 080's plan).
 fn questions_item(questions: &QuestionsBySpec, project: &str) -> Option<Item> {
     let carrying: Vec<&(String, Vec<String>)> =
         questions.iter().filter(|(_, q)| !q.is_empty()).collect();
@@ -376,19 +600,25 @@ fn questions_item(questions: &QuestionsBySpec, project: &str) -> Option<Item> {
         .iter()
         .flat_map(|(slug, scenarios)| scenarios.iter().map(move |s| format!("{slug} · {s}")))
         .collect();
+    let line = format!(
+        "Scenario questions: {total} in {} spec(s); a spec is not complete while its \
+         scenarios carry questions, so clarify each with /{project}:clarify.",
+        carrying.len()
+    );
     Some(Item {
-        line: format!(
-            "Scenario questions: {total} in {} spec(s); a spec is not complete while its \
-             scenarios carry questions, so clarify each with /{project}:clarify.",
-            carrying.len()
-        ),
+        cut: Some((
+            Cut::ScenarioQuestions,
+            vec![line.clone(), format!("  {total} question line(s)")],
+        )),
+        line,
         details,
     })
 }
 
-/// The pending-fold item: the backlog the rows' qualification marks, on one
-/// line so it reads without scanning the table.
-fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<String> {
+/// The pending-fold item, with how many specs it names: the backlog the
+/// rows' qualification marks, on one line so it reads without scanning the
+/// table.
+fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<(String, usize)> {
     let pending: Vec<&DashboardSpec> = specs.iter().filter(|s| s.folds_into.is_some()).collect();
     if pending.is_empty() {
         return None;
@@ -404,14 +634,17 @@ fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<String> {
             }
         })
         .collect();
-    Some(format!(
-        "Folds: {} spec(s) with an outstanding fold — {}. Run /{project}:fold on each once it is \
-         done; a fold never holds done, and fold-back retires the branch-scoped spec. A target \
-         reported as not in this tree is the normal state before the merge — it lives on the \
-         upstream branch, and the fold waits for the tree that holds both — so correct it only \
-         when it is a typo.",
+    Some((
+        format!(
+            "Folds: {} spec(s) with an outstanding fold — {}. Run /{project}:fold on each once it \
+             is done; a fold never holds done, and fold-back retires the branch-scoped spec. A \
+             target reported as not in this tree is the normal state before the merge — it lives \
+             on the upstream branch, and the fold waits for the tree that holds both — so \
+             correct it only when it is a typo.",
+            pending.len(),
+            detail.join("; ")
+        ),
         pending.len(),
-        detail.join("; ")
     ))
 }
 
@@ -444,25 +677,54 @@ fn reopenings_line(reopenings: &ReopeningCounts) -> String {
 }
 
 /// The `Counts:` item, in lifecycle order. An out-of-set status (a
-/// hand-edited frontmatter) still counts, appended after the known tiers.
-fn counts_line(specs: &[DashboardSpec]) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    let mut counted: Vec<&str> = Vec::new();
+/// hand-edited frontmatter) still counts, appended after the known tiers on
+/// one line, so a newline in it cannot forge a view line (`BE-INPUT-011`).
+/// Past the bound the out-of-set statuses collapse to one part counting
+/// them, since every distinct one adds a part.
+fn counts_item(specs: &[DashboardSpec]) -> Item {
+    let mut known: Vec<String> = Vec::new();
     for status in ALLOWED_STATUSES {
         let n = specs.iter().filter(|s| s.status == *status).count();
         if n > 0 {
-            parts.push(format!("{status} {n}"));
-            counted.push(status);
+            known.push(format!("{status} {n}"));
         }
     }
+    let mut other: Vec<(&str, usize)> = Vec::new();
     for spec in specs {
-        if !counted.contains(&spec.status.as_str()) {
-            let n = specs.iter().filter(|s| s.status == spec.status).count();
-            parts.push(format!("{} {n}", spec.status));
-            counted.push(spec.status.as_str());
+        if ALLOWED_STATUSES.contains(&spec.status.as_str()) {
+            continue;
+        }
+        match other.iter_mut().find(|(status, _)| *status == spec.status) {
+            Some((_, n)) => *n += 1,
+            None => other.push((spec.status.as_str(), 1)),
         }
     }
-    format!("Counts: {}", parts.join(" · "))
+    let parts: Vec<String> = known
+        .iter()
+        .cloned()
+        .chain(
+            other
+                .iter()
+                .map(|(status, n)| format!("{} {n}", flatten_line(status))),
+        )
+        .collect();
+    let cut = (!other.is_empty()).then(|| {
+        let specs_in_other: usize = other.iter().map(|(_, n)| n).sum();
+        let mut collapsed = known.clone();
+        collapsed.push(format!(
+            "{specs_in_other} spec(s) in {} other status(es)",
+            other.len()
+        ));
+        (
+            Cut::OtherStatuses,
+            vec![format!("Counts: {}", collapsed.join(" · "))],
+        )
+    });
+    Item {
+        line: format!("Counts: {}", parts.join(" · ")),
+        details: Vec::new(),
+        cut,
+    }
 }
 
 /// The standing inbox item, rendered on **every** run in one of four states.
@@ -532,12 +794,23 @@ fn text_table(rows: &[&Row]) -> String {
     lines.join("\n")
 }
 
-/// One line per item, each item's details indented two spaces beneath it.
-fn summary_block(items: &[Item]) -> String {
+/// One line per item, each item's details indented two spaces beneath it,
+/// or the item's collapsed lines when `shown` cuts its list.
+fn summary_block(items: &[Item], shown: &Shown, marker: &str) -> String {
     let mut lines = Vec::new();
     for item in items {
-        lines.push(item.line.clone());
-        lines.extend(item.details.iter().map(|d| format!("  {d}")));
+        match &item.cut {
+            Some((cut, collapsed)) if shown.cuts(*cut) => {
+                if let Some((last, leading)) = collapsed.split_last() {
+                    lines.extend(leading.iter().cloned());
+                    lines.push(format!("{last} {marker}"));
+                }
+            }
+            _ => {
+                lines.push(item.line.clone());
+                lines.extend(item.details.iter().map(|d| format!("  {d}")));
+            }
+        }
     }
     lines.join("\n")
 }
@@ -557,12 +830,40 @@ fn references_block(sections: &[(String, Vec<String>)], format: Format) -> Strin
     format!("References:\n\n{}", rendered.join("\n\n"))
 }
 
-fn next_actions_block(groups: &[(String, Vec<String>)]) -> String {
-    let lines: Vec<String> = groups
-        .iter()
-        .map(|(action, slugs)| format!("  {action}: {}", slugs.join(", ")))
-        .collect();
-    format!("Next actions:\n{}", lines.join("\n"))
+/// The `Next actions:` block with `shown`'s leading names: a group cut short
+/// ends `… N more`, a group with none left counts its specs, and a line
+/// counts the names not shown. Once its list is cut, one line counts them
+/// all.
+fn next_actions_block(groups: &[(String, Vec<String>)], shown: &Shown, marker: &str) -> String {
+    let total: usize = groups.iter().map(|(_, slugs)| slugs.len()).sum();
+    if shown.cuts(Cut::NextActionGroups) {
+        return format!(
+            "Next actions: {total} spec(s) under {} next action(s) {marker}",
+            groups.len()
+        );
+    }
+    let named = shown.names.unwrap_or(total).min(total);
+    let mut left = named;
+    let mut lines = vec!["Next actions:".to_string()];
+    for (action, slugs) in groups {
+        let kept = left.min(slugs.len());
+        left -= kept;
+        lines.push(if kept == slugs.len() {
+            format!("  {action}: {}", slugs.join(", "))
+        } else if kept == 0 {
+            format!("  {action}: {} spec(s)", slugs.len())
+        } else {
+            format!(
+                "  {action}: {}, … {} more",
+                slugs[..kept].join(", "),
+                slugs.len() - kept
+            )
+        });
+    }
+    if named < total {
+        lines.push(format!("  {} of {total} spec(s) {marker}", total - named));
+    }
+    lines.join("\n")
 }
 
 /// The Status → next action mapping, with the `clarify (recovery)`
@@ -602,7 +903,9 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
         "clarified" => format!("/{project}:plan"),
         "planned" | "in-progress" => format!("/{project}:implement"),
         "done" => COMPLETE.to_string(),
-        other => other.to_string(),
+        // Hand-written frontmatter, on one line so a newline in it cannot
+        // forge a view line (`BE-INPUT-011`).
+        other => flatten_line(other),
     }
 }
 
@@ -617,10 +920,11 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
 /// though both still owe the fold — the first has its own pipeline to
 /// finish, the second has only the fold left.
 fn status_cell(spec: &DashboardSpec) -> String {
+    let status = flatten_line(&spec.status);
     if spec.folds_into.is_some() {
-        return format!("{} (fold pending)", spec.status);
+        return format!("{status} (fold pending)");
     }
-    spec.status.clone()
+    status
 }
 
 /// Recovery state: a spec past clarification whose body has re-acquired
@@ -716,7 +1020,6 @@ mod tests {
         fn new(target: Option<&str>) -> Self {
             let mut gamma = spec("003-gamma", "planned");
             gamma.dependencies = vec!["002-beta".to_string()];
-            gamma.blocked_by = Vec::new();
             let mut delta = spec("004-delta", "clarified");
             delta.scenarios_count = 2;
             delta.scenario_open_question_count = 2;
@@ -828,7 +1131,7 @@ mod tests {
 
     #[test]
     fn the_text_table_aligns_its_columns_with_two_space_gaps_and_no_markdown() {
-        let rendered = render(
+        let rendered = within(
             &Fixture::new(Some("002-beta")).model(),
             Format::Text,
             u64::MAX,
@@ -864,8 +1167,8 @@ mod tests {
     #[test]
     fn both_renderings_carry_the_same_facts_from_one_model() {
         let model = Fixture::new(Some("002-beta")).model();
-        let markdown = render(&model, Format::Markdown, u64::MAX);
-        let text = render(&model, Format::Text, u64::MAX);
+        let markdown = within(&model, Format::Markdown, u64::MAX);
+        let text = within(&model, Format::Text, u64::MAX);
         assert!(markdown.contains("| **002-beta** |"), "{markdown}");
         let rows = markdown_rows(&markdown);
         assert_eq!(rows, text_rows(&text));
@@ -895,7 +1198,7 @@ mod tests {
     fn the_summary_is_one_item_per_line_and_ends_with_the_one_target_hint() {
         let model = Fixture::new(Some("002-beta")).model();
         for format in [Format::Markdown, Format::Text] {
-            let rendered = render(&model, format, u64::MAX);
+            let rendered = within(&model, format, u64::MAX);
             let lines: Vec<&str> = rendered.lines().collect();
             for item in [
                 "Counts: draft 1 · clarified 1 · planned 1 · in-progress 1 · done 2",
@@ -926,7 +1229,7 @@ mod tests {
 
     #[test]
     fn the_specs_with_work_left_are_grouped_by_next_action_without_the_target() {
-        let rendered = render(
+        let rendered = within(
             &Fixture::new(Some("002-beta")).model(),
             Format::Text,
             u64::MAX,
@@ -944,7 +1247,7 @@ mod tests {
 
     #[test]
     fn with_no_target_the_view_says_so_and_still_closes_with_the_one_hint() {
-        let rendered = render(&Fixture::new(None).model(), Format::Markdown, u64::MAX);
+        let rendered = within(&Fixture::new(None).model(), Format::Markdown, u64::MAX);
         assert!(rendered.starts_with("No session target.\n\n"), "{rendered}");
         assert_eq!(rendered.matches(":target").count(), 1, "{rendered}");
         assert!(
@@ -980,12 +1283,18 @@ mod tests {
         u64::try_from(view.len()).unwrap()
     }
 
+    /// `render` held to `bound` bytes of the view itself, with no file
+    /// holding the whole view.
+    fn within(model: &Model, format: Format, bound: u64) -> String {
+        render(model, format, &|view| size(view) <= bound, None)
+    }
+
     #[test]
     fn a_view_at_the_bound_renders_whole() {
         let model = generated(60).model();
         for format in [Format::Markdown, Format::Text] {
-            let full = render(&model, format, u64::MAX);
-            assert_eq!(render(&model, format, size(&full)), full);
+            let full = within(&model, format, u64::MAX);
+            assert_eq!(within(&model, format, size(&full)), full);
             assert_eq!(table_rows(&full, format).len(), 60);
         }
     }
@@ -994,9 +1303,9 @@ mod tests {
     fn past_the_bound_the_done_rows_collapse_to_a_count_line() {
         let model = generated(60).model();
         for format in [Format::Markdown, Format::Text] {
-            let full = render(&model, format, u64::MAX);
+            let full = within(&model, format, u64::MAX);
             let bound = size(&full) - 1;
-            let view = render(&model, format, bound);
+            let view = within(&model, format, bound);
             assert!(size(&view) <= bound, "{view}");
             let rows = table_rows(&view, format);
             assert_eq!(rows.len(), 30, "{view}");
@@ -1010,10 +1319,10 @@ mod tests {
     fn still_over_the_bound_the_rows_past_it_are_cut_and_counted() {
         let model = generated(60).model();
         for format in [Format::Markdown, Format::Text] {
-            let full = render(&model, format, u64::MAX);
-            let collapsed = render(&model, format, size(&full) - 1);
+            let full = within(&model, format, u64::MAX);
+            let collapsed = within(&model, format, size(&full) - 1);
             let bound = size(&collapsed) - 500;
-            let view = render(&model, format, bound);
+            let view = within(&model, format, bound);
             assert!(size(&view) <= bound, "{view}");
             let rows = table_rows(&view, format);
             let trailer: Vec<&str> = blocks(&view)[2].lines().collect();
@@ -1031,6 +1340,208 @@ mod tests {
             let longest = rows.iter().map(|row| row.len()).max().unwrap();
             let room = usize::try_from(bound - size(&view)).unwrap();
             assert!(room <= longest, "{room} bytes left, a row takes {longest}");
+        }
+    }
+
+    /// With no row left, the `Next actions:` block keeps its leading names,
+    /// the group cut short says how many more it holds, a line counts the
+    /// names not shown, and one more name would not fit.
+    #[test]
+    fn with_no_row_left_the_next_actions_keep_the_leading_names_that_fit() {
+        let mut fixture = Fixture::new(None);
+        fixture.specs = (1..=120)
+            .map(|i| spec(&format!("{i:03}-named-{i:03}"), "planned"))
+            .collect();
+        fixture.questions = Vec::new();
+        let model = fixture.model();
+        for format in [Format::Markdown, Format::Text] {
+            let shown = |names| Shown {
+                done_collapsed: true,
+                rows: 0,
+                names,
+                collapsed: 0,
+            };
+            let bound = size(&compose(&model, format, &shown(None), None)) - 1;
+            let view = within(&model, format, bound);
+            assert!(size(&view) <= bound, "{view}");
+            assert!(table_rows(&view, format).is_empty(), "{view}");
+            assert_eq!(
+                blocks(&view)[2],
+                "120 spec(s) not shown — the view is over the read size"
+            );
+            let block = blocks(&view)
+                .into_iter()
+                .find(|b| b.starts_with("Next actions:"))
+                .unwrap_or_else(|| panic!("{view}"));
+            let lines: Vec<&str> = block.lines().collect();
+            let (kept, more) = lines[1]
+                .strip_prefix("  /ductus:implement: ")
+                .and_then(|names| names.rsplit_once(", … "))
+                .unwrap_or_else(|| panic!("{block}"));
+            assert!(kept.starts_with("001-named-001, 002-named-002"), "{kept}");
+            let kept = kept.split(", ").count();
+            let more: usize = more.strip_suffix(" more").unwrap().parse().unwrap();
+            assert!(kept > 0 && more > 0, "{block}");
+            assert_eq!(kept + more, 120, "every spec is named or counted");
+            assert_eq!(
+                lines[2],
+                format!("  {more} of 120 spec(s) not shown — the view is over the read size")
+            );
+            let one_more = compose(&model, format, &shown(Some(kept + 1)), None);
+            assert!(size(&one_more) > bound, "the most names that fit are kept");
+        }
+    }
+
+    /// A view carrying every list [`CUT_ORDER`] names, and done rows.
+    fn every_list() -> Model {
+        let mut specs: Vec<DashboardSpec> = (1..=40)
+            .map(|i| {
+                let status = ["done", "planned", "draft", "clarified"][i % 4];
+                let mut s = spec(&format!("{i:03}-listed-{i:03}"), status);
+                s.tags = vec![format!("tag-{i:03}")];
+                s
+            })
+            .collect();
+        for s in specs.iter_mut().filter(|s| s.status == "planned").take(4) {
+            s.open_question_count = 1;
+        }
+        for s in specs.iter_mut().filter(|s| s.status == "clarified").take(4) {
+            s.blocked_by = vec!["002-listed-002".to_string()];
+        }
+        for s in specs.iter_mut().filter(|s| s.status == "done").take(3) {
+            s.folds_into = Some("099-upstream".to_string());
+            s.fold_target_missing = true;
+        }
+        specs.push(spec("041-odd", "weird-a"));
+        specs.push(spec("042-odd", "weird-b"));
+        let questions: QuestionsBySpec = specs
+            .iter()
+            .filter(|s| s.status == "draft")
+            .take(5)
+            .map(|s| {
+                (
+                    s.slug.clone(),
+                    vec!["a-scenario".to_string(), "b-scenario".to_string()],
+                )
+            })
+            .collect();
+        let tags: Vec<String> = specs.iter().flat_map(|s| s.tags.clone()).collect();
+        let fixture = Fixture::new(Some("002-listed-002"));
+        build(ViewData {
+            specs: &specs,
+            questions: &questions,
+            tags_union: &tags,
+            config: &DashboardConfig {
+                present: true,
+                disabled_rule_files: vec!["a-cross.md".to_string(), "b-cross.md".to_string()],
+                unknown_keys: vec!["[review] stray".to_string()],
+            },
+            config_name: ".ductus/config.toml",
+            inbox: &fixture.inbox,
+            reopenings: &fixture.reopenings,
+            session_target: fixture.target.as_ref(),
+            session_label: Some("fx"),
+            notices: &[SessionNotice {
+                kind: crate::schema::primitives::SessionNoticeKind::CoTarget,
+                message: "Session fx-2 also targets 002-listed-002.".to_string(),
+            }],
+            unreadable: &[".ductus/sessions/broken.toml".to_string()],
+            references: vec![(
+                "003-listed-003".to_string(),
+                vec!["svc/010-upstream → done".to_string()],
+            )],
+            project: "ductus",
+        })
+    }
+
+    /// The lists a rendering shows collapsed, read from its lines.
+    fn collapsed(view: &str) -> Vec<Cut> {
+        let cut = |prefix: &str| {
+            view.lines()
+                .any(|line| line.starts_with(prefix) && line.contains(" not shown — "))
+        };
+        CUT_ORDER
+            .into_iter()
+            .filter(|list| match list {
+                Cut::References => cut("References: "),
+                Cut::DisabledRuleFiles => cut("Disabled rule files: "),
+                Cut::UnknownConfigKeys => cut("Unknown config keys: "),
+                Cut::Tags => cut("Tags: "),
+                Cut::Folds => cut("Folds: "),
+                Cut::Recovery => cut("Recovery: "),
+                Cut::Blocked => cut("Blocked: "),
+                Cut::ScenarioQuestions => cut("  10 question line(s)"),
+                Cut::OtherStatuses => cut("Counts: "),
+                Cut::NextActionGroups => cut("Next actions: "),
+                Cut::SessionLines => cut("Notice: ") && cut("Unreadable: "),
+            })
+            .collect()
+    }
+
+    /// Past the rows and the names, the lists collapse one at a time in
+    /// [`CUT_ORDER`], each smaller bound collapsing no fewer, every view
+    /// above the floor fits, and the floor collapses them all and still
+    /// opens with the target and closes with the one hint.
+    #[test]
+    fn past_the_rows_and_names_each_list_collapses_in_its_order() {
+        let model = every_list();
+        for format in [Format::Markdown, Format::Text] {
+            let floor = within(&model, format, 1);
+            assert_eq!(collapsed(&floor), CUT_ORDER, "{floor}");
+            assert!(
+                floor.starts_with("Target: 002-listed-002 / draft / "),
+                "{floor}"
+            );
+            assert!(
+                floor.ends_with("\n\nRun /ductus:target <feature> to select one."),
+                "{floor}"
+            );
+            let mut last: Vec<Cut> = Vec::new();
+            let mut bound = size(&whole(&model, format));
+            while bound > size(&floor) {
+                let view = within(&model, format, bound);
+                assert!(size(&view) <= bound, "over {bound}:\n{view}");
+                let cuts = collapsed(&view);
+                assert_eq!(cuts, CUT_ORDER[..cuts.len()], "{view}");
+                assert!(cuts.len() >= last.len(), "{view}");
+                last = cuts;
+                bound -= 23;
+            }
+            assert!(
+                last.len() >= CUT_ORDER.len() - 1,
+                "the sweep reached the floor's lists"
+            );
+        }
+    }
+
+    /// When the caller holds the whole view in a file, every line standing
+    /// for what was cut names it.
+    #[test]
+    fn each_line_standing_for_a_cut_names_the_file_holding_the_whole_view() {
+        let file = ".ductus/results/render-status/all-specs/0a.json";
+        let floor = render(&every_list(), Format::Markdown, &|_| false, Some(file));
+        let ending =
+            format!("not shown — the view is over the read size; the whole view is in {file}");
+        let cut: Vec<&str> = floor.lines().filter(|l| l.contains("not shown")).collect();
+        assert_eq!(cut.len(), CUT_ORDER.len() + 2, "{floor}");
+        for line in cut {
+            assert!(line.ends_with(&ending), "{line}");
+        }
+    }
+
+    /// A status or a tag is hand-written frontmatter, so each is flattened
+    /// onto one line before it joins the view (`BE-INPUT-011`).
+    #[test]
+    fn a_newline_in_a_status_or_a_tag_cannot_forge_a_view_line() {
+        let mut fixture = Fixture::new(Some("007-odd"));
+        fixture.specs.push(spec("007-odd", "weird\nNotice: forged"));
+        fixture.tags = vec!["a\nNotice: forged".to_string()];
+        let model = fixture.model();
+        for format in [Format::Markdown, Format::Text] {
+            let view = within(&model, format, u64::MAX);
+            assert!(!view.lines().any(|l| l.starts_with("Notice:")), "{view}");
+            assert!(view.contains("Tags: a Notice: forged"), "{view}");
+            assert!(view.contains("· weird Notice: forged 1"), "{view}");
         }
     }
 

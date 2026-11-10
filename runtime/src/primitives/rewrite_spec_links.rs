@@ -490,11 +490,16 @@ impl Sweep<'_> {
 ///
 /// # Errors
 ///
-/// Every error [`compute`] returns, and those `bounded_lists::place` returns
-/// for a malformed read size or a list file that cannot be written. The
-/// rewrite is on disk by then, so a list file that cannot be written fails a
-/// run whose edits stand; a re-run re-points nothing and lists the rest.
+/// [`PrimitiveError::InvalidReadSize`] for a malformed `[artifacts]
+/// read-size-bytes`, before the sweep writes anything; every error
+/// [`compute`] returns; and a list file that cannot be written, which
+/// `bounded_lists::place` returns. The rewrite is on disk by then, so a list
+/// file that cannot be written fails a run whose edits stand; a re-run
+/// re-points nothing and lists the rest.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
+    // The read size bounds the result only once the sweep has written, so a
+    // malformed one halts here, with nothing rewritten.
+    super::check_artifact_size::resolve_threshold(repo)?;
     let sweep = compute(args, repo)?;
     let lists = serde_json::json!({
         "rewritten": sweep.rewritten,
@@ -1225,6 +1230,38 @@ mod tests {
             repo,
             &format!("{feature}/spec.md"),
             "---\nstatus: done\ndependencies: []\n---\n\n# target\n",
+        );
+    }
+
+    /// A malformed read size halts the sweep before it rewrites anything,
+    /// since the result is bounded only once the edits are on disk.
+    #[test]
+    fn a_malformed_read_size_halts_the_sweep_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let beta =
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [staged](../1234.1-staged/spec.md).\n";
+        write(tmp.path(), "060-beta/spec.md", beta);
+        write(
+            tmp.path(),
+            "1234.1-staged/spec.md",
+            "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-alpha\n---\n\n# staged\n",
+        );
+        seed_target(tmp.path(), "050-alpha");
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 0\n",
+        )
+        .unwrap();
+        let err = super::run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err:?}"
+        );
+        assert_eq!(
+            read(tmp.path(), "060-beta/spec.md"),
+            beta,
+            "nothing rewritten"
         );
     }
 

@@ -364,6 +364,37 @@ mod tests {
         assert_ne!(result.current_head, "");
     }
 
+    /// Past the read size the paths move to the list file the result names,
+    /// absent inline with their count kept, so a caller reading the result
+    /// alone never takes the inline list for the whole (066 scenario
+    /// `scope-results-have-a-bounded-size`).
+    #[test]
+    fn past_the_read_size_the_paths_move_to_a_file() {
+        let tmp = seeded_repo();
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert_eq!(result.cross_spec_paths, None, "the list is not inline");
+        assert_eq!(result.cross_spec_count, 1);
+        let file = result.lists_file.clone().expect("a list file");
+        let held: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(
+            held["cross-spec-paths"],
+            serde_json::json!(["specs/007-sibling/spec.md"])
+        );
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "diff-cross-spec",
+            &serde_json::to_value(&result).unwrap(),
+            &held,
+        );
+    }
+
     /// A project in a subdirectory of its repository, beside another project
     /// whose spec changes in the same window. History and the diff name
     /// every path from the work tree, so asked by the path from the project

@@ -507,8 +507,9 @@ pub struct DiscoverRuleFilesArgs {
     #[serde(default)]
     #[arg(long = "detected-surface")]
     pub detected_surfaces: Vec<String>,
-    /// Also list each selected file's rules: ID, tier and Statement (spec
-    /// 080). `false` when absent.
+    /// Also list each selected file's rules: ID, heading line, tier and
+    /// Statement, then each `extra-files` entry's (spec 080). `false` when
+    /// absent.
     #[serde(default)]
     #[arg(long)]
     pub rules: bool,
@@ -558,6 +559,22 @@ pub struct RuleFileRules {
     pub file: String,
     /// Its rules in heading order. Empty when it holds no rule heading.
     pub rules: Vec<LoadedRule>,
+    /// Under `all`, each heading that opens no rule, in order. A heading the
+    /// rule-ID grammar rejects is no rule to the parser, so analyze's
+    /// integrity checks judge these for a malformed rule heading (spec 080).
+    /// Absent without `all`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub other_headings: Option<Vec<OtherHeading>>,
+}
+
+/// A heading of a rule file that opens no rule.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OtherHeading {
+    /// Its 1-based line.
+    pub line: usize,
+    /// Its heading line, trimmed, `#` marks included.
+    pub heading: String,
 }
 
 /// A rule file that could not be read.
@@ -827,7 +844,7 @@ pub struct ProcessDecisionsResult {
     pub notices: Option<Vec<String>>,
     /// In the file form, the file holding the lists whole, from the project
     /// root: a JSON object with `matched`, `expired`, `retained`, `lapsed` and
-    /// `notices`, one entry per line.
+    /// `notices`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -1169,7 +1186,7 @@ pub struct ReadReReadResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub findings: Option<Vec<ReReadFinding>>,
     /// In the file form, the file holding `findings` whole, from the project
-    /// root: a JSON object with `findings`, one entry per line.
+    /// root: a JSON object with `findings`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -1259,7 +1276,7 @@ pub struct CheckPrescriptionsResult {
     pub failed: Option<Vec<FailedEdit>>,
     /// In the file form, the file holding the three lists whole, from the
     /// project root: a JSON object with `differing`, `unprescribed` and
-    /// `failed`, one entry per line.
+    /// `failed`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// The previous re-read's MUST and SHOULD findings with no `edits`, which
@@ -1846,26 +1863,11 @@ pub struct ScenarioOpenQuestion {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReadSpecResult {
-    /// Parsed frontmatter.
+    /// Parsed frontmatter. The audit records are not part of the result: a
+    /// caller reads them from `review.md` and `analysis.md`, which own them
+    /// (spec 057), since nothing read them here and in the file form they were
+    /// what passed the read size (spec 080).
     pub frontmatter: Frontmatter,
-    /// The review record, read from `review.md`, when the feature has one.
-    ///
-    /// Composed at read time from the artifact that owns it — **not** a second
-    /// storage location, which is the thing spec 057 removed. Nothing writes
-    /// the record here; this field exists so a caller that wants the record
-    /// alongside the spec gets it in one call rather than reaching for a second
-    /// path, exactly as it did when the block lived in the frontmatter above.
-    ///
-    /// `None` covers both an absent artifact and an unreadable one. A caller
-    /// that needs to tell those apart is a gate, and gates load the record
-    /// directly so the distinction survives.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub review: Option<ReviewBlock>,
-    /// The analyze record, read from `analysis.md`, when the feature has one.
-    /// The counterpart to [`Self::review`], with the same read-time-only
-    /// caveat.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub analyze: Option<AnalyzeBlock>,
     /// Body sections in document order. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sections: Option<Vec<SpecSection>>,
@@ -2126,31 +2128,49 @@ pub struct DeriveDependenciesResult {
     /// Whether any spec was rewritten (or, without `write`, would be).
     pub drift: bool,
     /// Repo-relative paths of the drifted specs, sorted: rewritten under
-    /// `write`, and only reported without it.
-    pub updated: Vec<String>,
+    /// `write`, and only reported without it. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated: Option<Vec<String>>,
+    /// Entries in `updated`, in either form.
+    pub updated_count: usize,
     /// Specs examined and found drifted but deliberately not written —
     /// the `staged` case. Neither "in sync" nor "not examined", so they are
-    /// reported separately rather than folded into either.
-    pub unwritten: Vec<String>,
+    /// reported separately rather than folded into either. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unwritten: Option<Vec<String>>,
+    /// Entries in `unwritten`, in either form.
+    pub unwritten_count: usize,
     /// Count of tracked specs actually read. Excludes any listed in
     /// `absent`, so it never overstates what the run inspected.
     pub examined: u32,
     /// Untracked specs in the worktree, which are never enumerated or
     /// rewritten (spec 017). Reported so an empty `updated` cannot be read as
-    /// "everything is in sync" — these were not examined at all.
-    pub untracked_skipped: Vec<String>,
+    /// "everything is in sync" — these were not examined at all. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub untracked_skipped: Option<Vec<String>>,
+    /// Entries in `untracked-skipped`, in either form.
+    pub untracked_skipped_count: usize,
     /// Specs tracked in the git index but absent from the worktree — deleted
     /// without the deletion being staged. Nothing can be derived from them, so
     /// they are named rather than dropped: they are excluded from `examined`,
     /// and reporting neither would let `examined` assert a subject the run
     /// never read (`QUAL-CLAIM-001`, recorded by 022's review on 2026-08-27).
-    #[serde(default)]
-    pub absent: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub absent: Option<Vec<String>>,
+    /// Entries in `absent`, in either form.
+    pub absent_count: usize,
     /// Dependency cycles in the derived graph, each listing its members
     /// sorted, the cycles themselves sorted by least member. A single-member
     /// entry is a self-link. Empty means acyclic. This is a **domain
-    /// outcome**: the caller decides whether it blocks.
-    pub cycles: Vec<Vec<String>>,
+    /// outcome**: the caller decides whether it blocks. Absent in the file
+    /// form, where `cycles-count` says whether there is one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cycles: Option<Vec<Vec<String>>>,
+    /// Entries in `cycles`, in either form.
+    pub cycles_count: usize,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
     /// be derived from them, or whose derived rewrite would leave a block that
     /// does not parse as YAML, so it was not written. Reported rather than
@@ -2159,13 +2179,23 @@ pub struct DeriveDependenciesResult {
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
     /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
-    /// pairing `check-artifacts` has with `skipped`.
-    pub unparseable: Vec<String>,
+    /// pairing `check-artifacts` has with `skipped`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unparseable: Option<Vec<String>>,
+    /// Entries in `unparseable`, in either form.
+    pub unparseable_count: usize,
     /// Repo-relative spec-root directory the run enumerated (spec 040), so a
     /// caller can tell a genuinely empty corpus from a misconfigured root.
     pub specs_root: String,
     /// Whether the run actually wrote.
     pub wrote: bool,
+    /// Where the lists are: in this result, or, past the read size, in the
+    /// file `lists-file` names (spec 080, AC7).
+    pub form: ListsForm,
+    /// In the file form, the file holding the six lists whole, from the
+    /// project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- derive-references -------------------------------------------------------
@@ -2494,18 +2524,30 @@ pub struct DependencyEdge {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TraverseDepsResult {
-    /// All dependency edges.
-    pub dependencies: Vec<DependencyEdge>,
+    /// All dependency edges. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dependencies: Option<Vec<DependencyEdge>>,
+    /// Entries in `dependencies`, in either form.
+    pub dependencies_count: usize,
     /// Overall compatibility (logical AND across direct edges, plus
-    /// `cycles.is_empty()`).
+    /// no cycle).
     pub compatible: bool,
     /// Strongly-connected components forming cycles in the reachable dep
     /// subgraph rooted at the targeted feature. Each entry is one SCC as
     /// a list of slugs in traversal order — multi-node cycles (size ≥ 2)
     /// and self-cycles (size 1 with a self-edge) both surface here.
-    /// Empty when the walked subgraph is acyclic.
-    #[serde(default)]
-    pub cycles: Vec<Vec<String>>,
+    /// Empty when the walked subgraph is acyclic. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cycles: Option<Vec<Vec<String>>>,
+    /// Entries in `cycles`, in either form.
+    pub cycles_count: usize,
+    /// Where the lists are: in this result, or, past the read size, in the
+    /// file `lists-file` names (spec 080, AC7).
+    pub form: ListsForm,
+    /// In the file form, the file holding `dependencies` and `cycles` whole,
+    /// from the project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- dashboard ---------------------------------------------------------------
@@ -2728,13 +2770,21 @@ pub struct RenderStatusResult {
     /// table, the summary one item per line, the cross-service references
     /// readout (each spec's `references:` index resolved internally), the
     /// specs with work left grouped by next action, and the
-    /// `/{project}:target` prompt — held to `[artifacts] read-size-bytes`: past
-    /// it the done rows collapse to a count line, then the rows past the bound
-    /// are cut and counted. Returned data the host may restyle, never printed
-    /// by the runtime.
+    /// `/{project}:target` prompt — held, with the rest of this result, to
+    /// `[artifacts] read-size-bytes`. Past it the view is cut as spec 080's
+    /// `data-model.md` *The pipeline view* states, and each line standing for
+    /// what was cut names `lists-file`. Returned data the host may restyle,
+    /// never printed by the runtime.
     pub rendered_markdown: String,
     /// The slash-command namespace the view's `/{project}:` hints name.
     pub project: String,
+    /// `inline` while the whole view fits the read size, and `file` past it,
+    /// when the view is cut and `lists-file` holds it whole.
+    pub form: ListsForm,
+    /// In the file form, the file holding the whole view, from the project
+    /// root: a JSON object whose `view` is its lines, one per entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- render-help -------------------------------------------------------------
@@ -2753,6 +2803,9 @@ pub struct RenderHelpResult {
     /// The guide as markdown, read from the installed help copy, with the
     /// project's name in each command as the copy spells it.
     pub guide: String,
+    /// The slash-command namespace `Host::load` resolves, which Pi's bridge
+    /// names its commands from at load.
+    pub project: String,
 }
 
 // -- read-section ------------------------------------------------------------
@@ -3050,9 +3103,10 @@ pub struct ManifestEntry {
     pub keep_literals: Option<Vec<String>>,
     /// Claude Code's command copies only (spec 080, AC29): after
     /// substitution, end the `## Instructions` preamble with a line loading
-    /// the command's step tools, and the tools its cited sections invoke, in
-    /// one `ToolSearch`, less the tools named by the `commands/target.md` the
-    /// manifest installs, which load with the session.
+    /// the command's step tools, and the tools the command file or a section
+    /// it cites invokes, in one `ToolSearch`, less the tools named by the
+    /// `commands/target.md` the manifest installs, which load with the
+    /// session, or by its installed copy when that entry is pinned.
     /// No line is written when none remain. `false` when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub tool_search_line: bool,
@@ -5918,8 +5972,9 @@ pub enum InboxState {
 /// The **standing** inbox — the todos a person has logged and nobody has
 /// groomed.
 ///
-/// Reported by `dashboard`, which renders it as `/{project}:status`'s `Inbox:`
-/// line; it moved there from `write-review` and `diff-cross-spec` when findings
+/// Reported by `dashboard`, and rendered as the pipeline view's `Inbox:` line
+/// by `render-status` and `ductus hook status` (spec 080); it moved to
+/// `dashboard` from `write-review` and `diff-cross-spec` when findings
 /// stopped reaching the inbox (spec 058), because a count of personal todos
 /// has no bearing on the spec a review or implementation run is working on.
 /// **It is a notice, never a gate** — gating on it would make logging a todo
@@ -6373,8 +6428,11 @@ pub struct DeriveRoutingCandidatesResult {
     pub description: String,
     /// Derived homes, ordered by source precedence (`runtime-work`,
     /// `rule-surface`, `spec-corpus`), then by descending match strength,
-    /// then by target for a stable render.
-    pub candidates: Vec<RoutingCandidate>,
+    /// then by target for a stable render. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidates: Option<Vec<RoutingCandidate>>,
+    /// Entries in `candidates`, in either form.
+    pub candidates_count: usize,
     /// Sources that ran to completion. A source appears here or in
     /// `skipped`, never both and never neither.
     pub sources_examined: Vec<String>,
@@ -6388,6 +6446,13 @@ pub struct DeriveRoutingCandidatesResult {
     /// `true` when at least one source could not be examined, so the caller
     /// reports *could not derive candidates* rather than *none found*.
     pub derivation_incomplete: bool,
+    /// Where `candidates` is: in this result, or, past the read size, in the
+    /// file `lists-file` names (spec 080, AC7).
+    pub form: ListsForm,
+    /// In the file form, the file holding `candidates` whole, from the
+    /// project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-orphaned-references -------------------------------------------------
@@ -7220,8 +7285,6 @@ mod tests {
                 folds_into: None,
                 cross_spec_impact: vec![],
             },
-            review: None,
-            analyze: None,
             sections: Some(vec![SpecSection {
                 heading: "Motivation".into(),
                 level: 2,
@@ -7913,26 +7976,34 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = TraverseDepsResult {
-            dependencies: vec![DependencyEdge {
+            dependencies: Some(vec![DependencyEdge {
                 feature: "021-runtime-boundary".into(),
                 exists: true,
                 status: "done".into(),
                 compatible: true,
-            }],
+            }]),
+            dependencies_count: 1,
             compatible: true,
-            cycles: Vec::new(),
+            cycles: Some(Vec::new()),
+            cycles_count: 0,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         assert_eq!(round_trip(&result), result);
         // Cycle-bearing payload round-trips with the new field populated.
         let with_cycles = TraverseDepsResult {
-            dependencies: vec![DependencyEdge {
+            dependencies: Some(vec![DependencyEdge {
                 feature: "100-a".into(),
                 exists: true,
                 status: "planned".into(),
                 compatible: true,
-            }],
+            }]),
+            dependencies_count: 1,
             compatible: false,
-            cycles: vec![vec!["100-a".into(), "101-b".into()]],
+            cycles: Some(vec![vec!["100-a".into(), "101-b".into()]]),
+            cycles_count: 1,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         assert_eq!(round_trip(&with_cycles), with_cycles);
     }

@@ -36,7 +36,9 @@ mod common;
 use std::fmt::Write as _;
 use std::io::{BufRead, BufReader, Write as _};
 use std::path::Path;
-use std::process::{Child, ChildStdin, ChildStdout, Stdio};
+use std::process::{Child, ChildStdin, Stdio};
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
+use std::time::{Duration, Instant};
 
 use common::corpus::{self, CorpusSize, SUBJECT};
 use serde_json::{Value, json};
@@ -61,6 +63,13 @@ enum Prep {
     None,
     NodeModules,
     HelpCopy,
+    /// Every spec's frontmatter drifted from its body: each `dependencies:`
+    /// emptied while its body still links its predecessor, so
+    /// `derive-dependencies` lists every spec but the first.
+    Drift,
+    /// The chain closed into one cycle: spec 1 links the last spec, so the
+    /// cycle runs through every spec.
+    Cycle,
 }
 
 /// The read size the growth columns are measured at: past any result here, so
@@ -162,8 +171,10 @@ fn case(name: &str, ctx: &Context) -> Case {
         "create-scenario" => call(
             json!({"feature-path": p, "slug": "a-new-case", "section": "Behavior", "body": "## Context\n\nA new case.\n"}),
         ),
+        // `corpus` is in every spec's slug, so the description is routed to
+        // every spec, and the candidates scale with the count.
         "derive-routing-candidates" => {
-            call(json!({"description": "handle a case the general path does not expect"}))
+            call(json!({"description": "handle a corpus case the general path does not expect"}))
         }
         "gate-confirm" => call(json!({"gate": "corpus", "prompt": "Approve the corpus?"})),
         "lint-markdown" => Case::CallWithNodeModules(json!({"paths": ["specs"]})),
@@ -186,8 +197,10 @@ fn case(name: &str, ctx: &Context) -> Case {
         }
         "rewrite-spec-links" => call(json!({"from": corpus::slug(2), "to": f})),
         "set-status" => call(json!({"feature": f, "from": "in-progress", "to": "done"})),
-        // The last spec's chain runs through every spec, so its traversal is
-        // the one that scales.
+        // The last spec reaches every spec through the chain, so its walk is
+        // the one that scales. Its result lists only its own dependency, and
+        // grows with the corpus through `cycles`, measured with a cycle in a
+        // row of its own ([`modes`]).
         "traverse-deps" => call(json!({"feature": corpus::slug(ctx.size.specs)})),
         "write-analysis" => call(
             json!({"feature": f, "analyzed-at": "2026-11-08T00:00:00Z", "analyzed-against": head}),
@@ -202,37 +215,62 @@ fn case(name: &str, ctx: &Context) -> Case {
     }
 }
 
-/// The argument modes of `name` that widen what it reads, each with its label
-/// and its arguments: measured in rows of their own, since a result can grow
-/// in a mode the default call never takes. Every other optional argument of
+/// The modes of `name` that widen what it reads, each with its label, its
+/// arguments and the prep its copy takes: measured in rows of their own,
+/// since a result can grow in a mode the default call never takes, or only
+/// over a corpus that drifts or holds a cycle. Every other optional argument of
 /// a registry primitive narrows a read, names a write, or carries the host's
 /// input.
-fn modes(name: &str) -> Vec<(&'static str, Value)> {
+fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
     let f = SUBJECT;
     match name {
         "read-spec" => vec![(
             "`include-body`",
             json!({"feature": f, "include-body": true}),
+            Prep::None,
         )],
-        "prune-tasks" | "prune-plan" => vec![("`all`", json!({"all": true}))],
-        "check-corpus-links" => vec![("`scope: repository`", json!({"scope": "repository"}))],
+        "prune-tasks" | "prune-plan" => vec![("`all`", json!({"all": true}), Prep::None)],
+        "check-corpus-links" => vec![(
+            "`scope: repository`",
+            json!({"scope": "repository"}),
+            Prep::None,
+        )],
         // review's call, then analyze's: each lists the selected files' rules.
         "discover-rule-files" => vec![
-            ("`rules`", json!({"rules": true})),
+            ("`rules`", json!({"rules": true}), Prep::None),
             (
                 "`all`, `rules` and `verification`",
                 json!({"all": true, "rules": true, "verification": true}),
+                Prep::None,
             ),
         ],
+        // The corpus is in sync and acyclic, so what grows only with drift or
+        // a cycle is measured on a copy that has it (spec 080's task 50).
+        "derive-dependencies" => vec![
+            ("every spec drifted", json!({}), Prep::Drift),
+            ("a cycle through every spec", json!({}), Prep::Cycle),
+        ],
+        "traverse-deps" => vec![(
+            "a cycle through every spec",
+            json!({"feature": corpus::slug(ctx.size.specs)}),
+            Prep::Cycle,
+        )],
         _ => Vec::new(),
     }
 }
 
-/// The MCP server of the built binary, rooted at `repo`, initialized.
+/// How long one request may wait for its answer before the measurement
+/// fails, rather than wait forever on a server that stopped answering
+/// (BE-TIMEOUT-001): far past the slowest primitive on the large corpus.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// The MCP server of the built binary, rooted at `repo`, initialized. Its
+/// stdout is read on a thread of its own, so a request can wait with a
+/// deadline.
 struct Server {
     child: Child,
     stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
+    lines: Receiver<String>,
     next_id: u64,
 }
 
@@ -250,10 +288,18 @@ impl Server {
             .unwrap();
         let stdin = child.stdin.take().unwrap();
         let stdout = BufReader::new(child.stdout.take().unwrap());
+        let (sender, lines) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            for line in stdout.lines().map_while(Result::ok) {
+                if sender.send(line).is_err() {
+                    break;
+                }
+            }
+        });
         let mut server = Self {
             child,
             stdin,
-            stdout,
+            lines,
             next_id: 1,
         };
         server.request(
@@ -273,12 +319,19 @@ impl Server {
         let id = self.next_id;
         self.next_id += 1;
         self.send(&json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}));
+        let deadline = Instant::now() + REQUEST_TIMEOUT;
         loop {
-            let mut line = String::new();
-            assert!(
-                self.stdout.read_line(&mut line).unwrap() > 0,
-                "the server closed stdout before answering `{method}`"
-            );
+            let left = deadline.saturating_duration_since(Instant::now());
+            let line = match self.lines.recv_timeout(left) {
+                Ok(line) => line,
+                Err(RecvTimeoutError::Timeout) => panic!(
+                    "`{method}` got no answer within {} s",
+                    REQUEST_TIMEOUT.as_secs()
+                ),
+                Err(RecvTimeoutError::Disconnected) => {
+                    panic!("the server closed stdout before answering `{method}`")
+                }
+            };
             let message: Value = serde_json::from_str(&line).unwrap();
             if message.get("id") == Some(&json!(id)) {
                 return message;
@@ -323,6 +376,8 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         Prep::None => {}
         Prep::NodeModules => link_node_modules(copy.path()),
         Prep::HelpCopy => install_help_copy(copy.path()),
+        Prep::Drift => drift_every_spec(copy.path()),
+        Prep::Cycle => close_the_chain(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -348,6 +403,45 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         chars: text.chars().count(),
         bounded,
     }
+}
+
+/// The sequential specs of a copy, by number, from the corpus's own count.
+fn sequential_specs(root: &Path) -> Vec<std::path::PathBuf> {
+    let mut specs: Vec<std::path::PathBuf> = std::fs::read_dir(root.join("specs"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.join("spec.md").is_file())
+        .filter(|path| {
+            path.file_name()
+                .is_some_and(|name| name.to_string_lossy().contains("-corpus-feature-"))
+        })
+        .collect();
+    specs.sort();
+    specs
+}
+
+/// Empty every spec's frontmatter `dependencies:`, its body unchanged.
+fn drift_every_spec(root: &Path) {
+    let specs = sequential_specs(root);
+    for (i, dir) in specs.iter().enumerate().skip(1) {
+        let path = dir.join("spec.md");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let from = format!("dependencies: [{}]", corpus::slug(i));
+        assert!(text.contains(&from), "{} declares {from}", path.display());
+        std::fs::write(&path, text.replace(&from, "dependencies: []")).unwrap();
+    }
+}
+
+/// Link spec 1 to the last spec, in its body and its frontmatter alike, so
+/// the chain is one cycle and no spec drifts.
+fn close_the_chain(root: &Path) {
+    let last = corpus::slug(sequential_specs(root).len());
+    let path = root.join("specs").join(SUBJECT).join("spec.md");
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("dependencies: []"), "{text}");
+    let closed = text.replacen("dependencies: []", &format!("dependencies: [{last}]"), 1)
+        + &format!("\nIt closes on [the last feature](../{last}/spec.md).\n");
+    std::fs::write(&path, closed).unwrap();
 }
 
 /// Install Claude's help copy into a copy, as `/ductus` does, so `render-help`
@@ -410,8 +504,8 @@ fn measure(size: CorpusSize) -> Vec<(String, Outcome)> {
     let mut rows = Vec::new();
     for name in ductus::schema::registry::PRIMITIVE_REGISTRY {
         rows.push((format!("`{name}`"), run_case(template.path(), name, &ctx)));
-        for (label, args) in modes(name) {
-            let outcome = call_on_copy(template.path(), name, &args, Prep::None);
+        for (label, args, prep) in modes(name, &ctx) {
+            let outcome = call_on_copy(template.path(), name, &args, prep);
             rows.push((format!("`{name}` with {label}"), outcome));
         }
     }
@@ -554,7 +648,7 @@ fn every_registry_name_has_a_case() {
 #[test]
 fn the_corpus_scales_every_dimension() {
     let size = CorpusSize {
-        specs: 4,
+        specs: 21,
         criteria: 3,
         tasks: 6,
         subtasks: 2,
@@ -576,13 +670,16 @@ fn the_corpus_scales_every_dimension() {
             .count()
     };
     assert_eq!(count("-feature-"), size.specs);
-    assert_eq!(count("-staged-"), 1);
-    let staged =
-        std::fs::read_to_string(specs.join(corpus::branch_slug(1)).join("spec.md")).unwrap();
-    assert!(
-        staged.contains(&format!("folds-into: {}\n", corpus::slug(size.specs))),
-        "{staged}"
-    );
+    // One branch-scoped spec per ten specs, each folding into the tenth.
+    assert_eq!(count("-staged-"), 2);
+    for (k, target) in [(1, 10), (2, 20)] {
+        let staged =
+            std::fs::read_to_string(specs.join(corpus::branch_slug(k)).join("spec.md")).unwrap();
+        assert!(
+            staged.contains(&format!("folds-into: {}\n", corpus::slug(target))),
+            "{staged}"
+        );
+    }
     let subject = specs.join(SUBJECT);
     let spec = std::fs::read_to_string(subject.join("spec.md")).unwrap();
     assert!(spec.starts_with("---\nstatus: in-progress\n"), "{spec}");

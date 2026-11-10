@@ -24,8 +24,8 @@ MUTATIONS = [
     (
         'M1 the view is rendered for no process',
         'src/primitives/render_status.rs',
-        '        identity.as_ref(),\n',
-        '        None,\n',
+        '    let (model, project) = dashboard::view_model(repo, identity.as_ref(), SystemTime::now())?;\n',
+        '    let (model, project) = dashboard::view_model(repo, None, SystemTime::now())?;\n',
         'render_status::tests::the_view_names_this_process_target_and_session',
     ),
 ]

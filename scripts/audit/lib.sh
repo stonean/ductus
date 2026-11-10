@@ -136,7 +136,8 @@ agent_config_dirs() {
 #
 # Past `[artifacts] read-size-bytes`, `dashboard` moves `specs` to the file its
 # `lists-file` names (spec 080), so the list is read there; a file that cannot
-# be read exits non-zero too, rather than reading as an empty corpus.
+# be read, or holds no `specs`, exits non-zero too, rather than reading as an
+# empty corpus.
 spec_corpus() {
   "$1" dashboard 2> /dev/null | python3 -c '
 import json, sys
@@ -145,6 +146,8 @@ try:
     if data.get("form") == "file":
         with open(data["lists-file"], encoding="utf-8") as handle:
             data = json.load(handle)
+        if not isinstance(data.get("specs"), list):
+            sys.exit(1)
 except (ValueError, KeyError, TypeError, OSError):
     sys.exit(1)
 for spec in data.get("specs", []):

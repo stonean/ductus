@@ -572,7 +572,7 @@ MUTATIONS = [
     (
         'M83 the reopenings row is dropped',
         'src/primitives/pipeline_view.rs',
-        '    items.push(item(reopenings_line(data.reopenings)));\n',
+        '    items.push(whole(reopenings_line(data.reopenings)));\n',
         '',
         'dashboard::tests::the_reopenings_row_renders_on_every_run_just_before_the_inbox_row',
     ),

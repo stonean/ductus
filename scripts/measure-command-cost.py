@@ -20,8 +20,13 @@ conflict handling* writes them. Finally `.mcp.json` registering the runtime,
 `cli-config-dir`. It installs no `/ductus` command and no managed blocks in
 AGENTS.md or CLAUDE.md, and leaves the git hooks inactive.
 
-`.claude/settings.local.json` allows `mcp__ductus__*` alone by default.
-`--permissions adopter` instead holds what an adopter's file holds: the
+`.claude/settings.local.json` allows `mcp__ductus__*` by default, and in both
+modes also carries `"enabledMcpjsonServers": ["ductus"]`, which this script
+adds so Claude Code approves the fixture's `.mcp.json` server without a prompt:
+ductus.md's Permission Setup and configure/claude.md write no such key, so no
+adopter's file holds it (no file under framework/ names it).
+`--permissions adopter` instead holds what an adopter's file holds, that key
+aside: the
 bootstrap seed of ductus.md's `claude` registry row, as its Permission
 Setup merges it, then the canonical allow, deny and retired sets and
 directories of framework/bootstrap/configure/claude.md steps 2 to 5, through
@@ -70,9 +75,27 @@ import re
 import shutil
 import subprocess
 import sys
+import signal
 import tempfile
+import threading
 import time
 from pathlib import Path
+
+# BE-TIMEOUT-001: every child this script waits on has a deadline; passing it
+# kills the child and exits non-zero naming the command and the bound.
+# A quick probe (`claude --version`, `git rev-parse`, `git status`).
+PROBE_TIMEOUT_S = 30
+# A fixture-building step: git init/add/commit over a generated corpus, and the
+# runtime's primitives (apply-manifest copies a few hundred files).
+BUILD_TIMEOUT_S = 180
+# One `claude -p` run: a command such as /implement or /review makes dozens of
+# model turns and tool calls, so a short bound would kill a healthy run; 20
+# minutes is far past any run measured and still ends a hung one.
+CLAUDE_RUN_TIMEOUT_S = 20 * 60
+# How long a killed child gets to be reaped before the script gives up on it.
+KILL_REAP_TIMEOUT_S = 10
+# Characters of a child's stderr kept in a row.
+STDERR_TAIL_CHARS = 300
 
 REPO = Path(__file__).resolve().parent.parent
 PROJECT = "fixture"
@@ -82,8 +105,22 @@ SUBSTITUTIONS = {"project": PROJECT, "cli-config-dir": ".claude", "project-name"
                  "One-line project description.": "A generated project for measuring command cost."}
 
 
-def run(cmd, cwd, **kw):
-    return subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True, **kw)
+def run(cmd, cwd, timeout=BUILD_TIMEOUT_S, **kw):
+    """Run `cmd` to completion within `timeout` seconds, or exit naming it."""
+    try:
+        return subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True, timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"measure-command-cost: `{' '.join(map(str, cmd))}` did not finish within {timeout} s "
+                         "and was killed") from None
+
+
+def kill_group(proc) -> None:
+    """Kill the child and everything it started (claude's MCP server holds its
+    stdout pipe open past claude's own death)."""
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def generate_corpus(root: Path, count: int) -> None:
@@ -205,7 +242,7 @@ def build_fixture(specs: int, binary: Path, hook: bool, permissions: str, target
     commit(root, "fixture")
     if seed:
         seed(root)
-    if run(["git", "status", "--porcelain"], cwd=root).stdout:
+    if run(["git", "status", "--porcelain"], cwd=root, timeout=PROBE_TIMEOUT_S).stdout:
         raise SystemExit(f"measure-command-cost: the seeded fixture {root} has uncommitted changes")
     return root
 
@@ -263,7 +300,12 @@ def seed_inbox_item(root: Path) -> None:
     the no-candidate edge case (spec 080, task 39)."""
     run([str(root / ".ductus/bin/ductus"), "append-inbox", "--text",
          "The status view could show how long each spec has been in its status"], cwd=root, env=child_env())
-    n = max(int(d.name[:3]) for d in (root / "specs").iterdir() if re.match(r"\d{3}-", d.name)) + 1
+    # A sequential directory is `NNN-slug` with at least three digits (`1234-slug`
+    # is valid): take the digits before the first `-`. A branch-scoped
+    # `{identifier}.{n}-{slug}` directory has a number of its own counter, so it
+    # is skipped (constitution, Numbering Convention).
+    n = max(int(m.group(1)) for d in (root / "specs").iterdir()
+            if (m := re.fullmatch(r"(\d{3,})-.+", d.name))) + 1
     d = root / f"specs/{n:03d}-status-view"
     d.mkdir()
     (d / "spec.md").write_text(
@@ -357,8 +399,12 @@ def round_matches_manifest() -> None:
 def child_env() -> dict:
     """This environment less the variables that mark a Claude Code session,
     so the child is a session of its own."""
+    # The child must not inherit this shell's session identity (spec 062): the
+    # runtime reads DUCTUS_SESSION, else CLAUDE_CODE_SESSION_ID, and an
+    # inherited one would make the fixture's runs adopt this session's target.
+    # Dropped by name, and every other CLAUDE_CODE_* marker with them.
     drop = {"CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_ENTRYPOINT", "DUCTUS_SESSION"}
-    return {k: v for k, v in os.environ.items() if k not in drop}
+    return {k: v for k, v in os.environ.items() if k not in drop and not k.startswith("CLAUDE_CODE_")}
 
 
 def text_chars(content) -> int:
@@ -376,8 +422,19 @@ def measure(root: Path, prompt: str, raw: Path | None) -> dict:
            "--mcp-config", str(root / ".mcp.json"), "--strict-mcp-config"]
     start = time.monotonic()
     # stdin closed: otherwise claude waits 3 s for piped input, inside the timings.
+    # stderr goes to a file: a pipe nobody drains while stdout is read would fill
+    # and block the child. Its own session, so the deadline kills its whole group.
+    err = tempfile.TemporaryFile("w+")
     proc = subprocess.Popen(cmd, cwd=root, env=child_env(), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True)
+                            stderr=err, text=True, start_new_session=True)
+    timed_out = threading.Event()
+
+    def expire():
+        timed_out.set()
+        kill_group(proc)
+
+    watchdog = threading.Timer(CLAUDE_RUN_TIMEOUT_S, expire)
+    watchdog.start()
     row = {"prompt": prompt, "first_output_s": None, "result_s": None, "output_tokens": None,
            "largest_tool_result_chars": 0, "listed_slash_command": None,
            "num_turns": None, "hook_events": [], "tools_called": [], "tool_search_queries": [], "model": None, "is_error": None,
@@ -431,13 +488,25 @@ def measure(root: Path, prompt: str, raw: Path | None) -> dict:
                     {"tool": d.get("tool_name"),
                      "input": (inp.get("command") or inp.get("file_path") or json.dumps(inp))[:200]})
             row["result_head"] = (ev.get("result") or "")[:160]
-    proc.wait()
-    if raw_out:
-        raw_out.close()
+    try:
+        proc.wait(timeout=KILL_REAP_TIMEOUT_S)  # stdout is at EOF: the child is ending
+    except subprocess.TimeoutExpired:
+        kill_group(proc)
+        timed_out.set()
+    finally:
+        watchdog.cancel()
+        if raw_out:
+            raw_out.close()
+    if timed_out.is_set():
+        err.close()
+        raise SystemExit(f"measure-command-cost: `{' '.join(cmd[:3])} ...` did not finish within "
+                         f"{CLAUDE_RUN_TIMEOUT_S} s and was killed")
     if row["first_output_s"] is None:
         row["first_output_s"] = row["result_s"]
     row["exit_code"] = proc.returncode
-    row["stderr_tail"] = proc.stderr.read()[-300:] if proc.stderr else ""
+    err.seek(0)
+    row["stderr_tail"] = err.read()[-STDERR_TAIL_CHARS:]
+    err.close()
     return row
 
 
@@ -481,6 +550,10 @@ def main(argv) -> int:
         runs = [(n, *ROUND[n]) for n in names]
     else:
         runs = [(None, prompt, args.target, None) for prompt in args.prompts]
+    # Read once per run: what the figures were measured on.
+    provenance = {"commit": run(["git", "rev-parse", "HEAD"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip(),
+                  "dirty": bool(run(["git", "status", "--porcelain"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip()),
+                  "claude_version": run(["claude", "--version"], cwd=REPO, timeout=PROBE_TIMEOUT_S).stdout.strip()}
     failed = False
     root = None
     for n, (command, prompt, target, seed) in enumerate(runs, 1):
@@ -492,7 +565,7 @@ def main(argv) -> int:
         raw = args.raw / f"{command or f'run-{n}'}.jsonl" if args.raw else None
         row = {"date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "command": command,
                "specs": args.specs, "hook": args.hook, "permissions": args.permissions, "target": target,
-               "seed": seed.__name__ if seed else None, **measure(root, prompt, raw)}
+               "seed": seed.__name__ if seed else None, **provenance, **measure(root, prompt, raw)}
         line = json.dumps(row)
         print(line, flush=True)
         if args.out:

@@ -37,7 +37,8 @@ use std::path::Path;
 use crate::primitives::{Result, list_feature_dirs, rel_path};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, RoutingCandidate, RoutingSkip,
+    DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, ListsForm, RoutingCandidate,
+    RoutingSkip,
 };
 
 /// Tokens too common to carry routing signal. Kept deliberately short: a
@@ -59,7 +60,61 @@ const MIN_TOKEN_LEN: usize = 4;
 /// work is derived from the corpus (see [`runtime_home`]), never named here.
 const RUNTIME_PATH_PREFIX: &str = "runtime/";
 
-/// Execute the `derive-routing-candidates` primitive.
+/// Execute the `derive-routing-candidates` primitive: [`compute`], returned
+/// inline while it fits `[artifacts] read-size-bytes`, and past it with
+/// `candidates`, which grows with the specs a description shares vocabulary
+/// with, in the file it names and only its count inline
+/// (`bounded_lists::place`; spec 080, AC7).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a malformed read size or a list file that cannot be written.
+pub fn run(
+    args: &DeriveRoutingCandidatesArgs,
+    repo: &Path,
+) -> Result<DeriveRoutingCandidatesResult> {
+    let derived = compute(args, repo)?;
+    let lists = serde_json::json!({ "candidates": derived.candidates });
+    let mut result = DeriveRoutingCandidatesResult {
+        description: derived.description,
+        candidates_count: derived.candidates.len(),
+        candidates: Some(derived.candidates),
+        sources_examined: derived.sources_examined,
+        skipped: derived.skipped,
+        gate_required: derived.gate_required,
+        derivation_incomplete: derived.derivation_incomplete,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "derive-routing-candidates",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.candidates = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// One derivation, whole: what `derive-routing-candidates` returns before its
+/// result is bounded. Each field is [`DeriveRoutingCandidatesResult`]'s of
+/// the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Derived {
+    pub(crate) description: String,
+    pub(crate) candidates: Vec<RoutingCandidate>,
+    pub(crate) sources_examined: Vec<String>,
+    pub(crate) skipped: Vec<RoutingSkip>,
+    pub(crate) gate_required: bool,
+    pub(crate) derivation_incomplete: bool,
+}
+
+/// Derive the routing candidates for `args`' description.
 ///
 /// # Errors
 ///
@@ -68,10 +123,7 @@ const RUNTIME_PATH_PREFIX: &str = "runtime/";
 /// Every other failure is reported as a skipped source rather than raised: a
 /// derivation that cannot run must be distinguishable from one that found
 /// nothing, and an error would collapse the two into "no gate".
-pub fn run(
-    args: &DeriveRoutingCandidatesArgs,
-    repo: &Path,
-) -> Result<DeriveRoutingCandidatesResult> {
+pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result<Derived> {
     if args.description.trim().is_empty() {
         return Err(crate::primitives::PrimitiveError::InvalidArgument {
             primitive: "derive-routing-candidates".into(),
@@ -88,7 +140,7 @@ pub fn run(
         .map(str::trim)
         .filter(|s| !s.is_empty())
     {
-        return Ok(DeriveRoutingCandidatesResult {
+        return Ok(Derived {
             description: args.description.clone(),
             candidates: Vec::new(),
             sources_examined: vec![format!("routed-by:{routed_by}")],
@@ -114,7 +166,7 @@ pub fn run(
     derive_spec_corpus(&tokens, repo, &mut candidates, &mut examined, &mut skipped);
 
     let derivation_incomplete = !skipped.is_empty();
-    Ok(DeriveRoutingCandidatesResult {
+    Ok(Derived {
         description: args.description.clone(),
         candidates,
         sources_examined: examined,
@@ -377,6 +429,12 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::{TempDir, tempdir};
+
+    /// The tests read the whole derivation: [`super::compute`], which
+    /// [`super::run`] bounds.
+    fn run(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result<Derived> {
+        compute(args, repo)
+    }
 
     fn args(description: &str) -> DeriveRoutingCandidatesArgs {
         DeriveRoutingCandidatesArgs {

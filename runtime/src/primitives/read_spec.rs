@@ -8,8 +8,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AcceptanceCriterion, AnalyzeBlock, Frontmatter, ListsForm, OpenQuestion, ReadSpecArgs,
-    ReadSpecResult, ReviewBlock, ScenarioOpenQuestion, SpecSection,
+    AcceptanceCriterion, Frontmatter, ListsForm, OpenQuestion, ReadSpecArgs, ReadSpecResult,
+    ReviewBlock, ScenarioOpenQuestion, SpecSection,
 };
 
 /// Execute the `read-spec` primitive: [`compute`], returned inline while it
@@ -33,8 +33,6 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
     let unreadable = spec.scenario_files_unreadable;
     let mut result = ReadSpecResult {
         frontmatter: spec.frontmatter,
-        review: spec.review,
-        analyze: spec.analyze,
         sections_count: spec.sections.len(),
         sections: Some(spec.sections),
         acceptance_criteria_count: spec.acceptance_criteria.len(),
@@ -64,12 +62,14 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
 }
 
 /// A spec read whole: what `read-spec` returns, before its result is
-/// bounded. Each field is [`ReadSpecResult`]'s of the same name.
+/// bounded, with the review record beside it. Each other field is
+/// [`ReadSpecResult`]'s of the same name.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SpecRead {
     pub(crate) frontmatter: Frontmatter,
+    /// The review record, read from `review.md`, for `check-artifacts`' drift
+    /// family. `read-spec`'s result does not carry it (spec 080's plan).
     pub(crate) review: Option<ReviewBlock>,
-    pub(crate) analyze: Option<AnalyzeBlock>,
     pub(crate) sections: Vec<SpecSection>,
     pub(crate) acceptance_criteria: Vec<AcceptanceCriterion>,
     pub(crate) open_questions: Vec<OpenQuestion>,
@@ -126,21 +126,17 @@ pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Resu
     let scenario_open_questions = scan.questions;
     let scenario_files_unreadable = scan.unreadable;
 
-    // The records, from the artifacts that own them (spec 057). Read here so a
-    // caller gets the spec and its records in one call; absent and unreadable
-    // both collapse to `None`, because a caller that must tell them apart is a
-    // gate and gates load the record directly.
+    // The review record, from the artifact that owns it (spec 057), for
+    // `check-artifacts`' drift family; absent and unreadable both collapse to
+    // `None`, because a caller that must tell them apart is a gate and gates
+    // load the record directly.
     let review = crate::primitives::load_review_record(&feature_dir)
-        .as_present()
-        .cloned();
-    let analyze = crate::primitives::load_analyze_record(&feature_dir)
         .as_present()
         .cloned();
 
     Ok(SpecRead {
         frontmatter,
         review,
-        analyze,
         sections,
         acceptance_criteria,
         open_questions,
@@ -491,13 +487,12 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    /// `read-spec` still hands back the record — composed from the artifact
-    /// that owns it, rather than read out of the spec's frontmatter.
-    ///
-    /// The storage moved; the interface did not. A caller that wanted the spec
-    /// and its record in one call still gets exactly that (spec 057).
+    /// The review record `check-artifacts` reads is composed from the
+    /// artifact that owns it (spec 057), while `read-spec`'s result carries
+    /// neither record: nothing read them there, and in the file form they
+    /// were what passed the read size (spec 080's plan).
     #[test]
-    fn the_records_are_composed_from_their_artifacts() {
+    fn the_review_record_is_composed_and_the_result_carries_no_record() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         std::fs::create_dir_all(&dir).unwrap();
@@ -517,26 +512,87 @@ mod tests {
         )
         .unwrap();
 
-        let result = compute(
-            &ReadSpecArgs {
-                feature: "001-x".into(),
-                include_body: false,
-            },
-            tmp.path(),
-        )
-        .unwrap();
-
-        let review = result.review.expect("review record");
+        let args = ReadSpecArgs {
+            feature: "001-x".into(),
+            include_body: false,
+        };
+        let review = compute(&args, tmp.path())
+            .unwrap()
+            .review
+            .expect("review record");
         assert_eq!(review.must_violations, 2);
         assert!(review.blocking);
-        let analyze = result.analyze.expect("analyze record");
-        assert_eq!(analyze.advisory, 3);
+        let result = serde_json::to_value(run(&args, tmp.path()).unwrap()).unwrap();
+        assert!(result.get("review").is_none(), "{result}");
+        assert!(result.get("analyze").is_none(), "{result}");
     }
 
-    /// No artifacts, no records — and no error. An unreviewed feature is a
+    /// The file form fits the read size beside large audit records: with 474
+    /// digest entries in each, the records alone pass 110,000 bytes, and none
+    /// of them is in the result (spec 080, AC7).
+    #[test]
+    fn a_file_form_result_beside_large_records_fits_the_read_size() {
+        use std::fmt::Write as _;
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        std::fs::create_dir_all(&dir).unwrap();
+        let body = (0..1000).fold(String::new(), |mut out, i| {
+            let _ = write!(
+                out,
+                "## Section {i}\n\nThe body text that fills section {i}.\n\n"
+            );
+            out
+        });
+        std::fs::write(
+            dir.join("spec.md"),
+            format!("---\nstatus: in-progress\ndependencies: []\n---\n\n# X\n\n{body}"),
+        )
+        .unwrap();
+        let digest = (0..474).fold(String::new(), |mut out, i| {
+            let _ = writeln!(
+                out,
+                "  scenarios/scenario-{i:03}-with-a-realistic-slug.md: {i:064x}"
+            );
+            out
+        });
+        std::fs::write(
+            dir.join("review.md"),
+            format!(
+                "---\nspec: 001-x\nlast-run: 2026-11-10T00:00:00Z\nmust-violations: 0\n\
+                 should-violations: 0\nlow-confidence: 0\nblocking: false\nreviewed-digest:\n\
+                 {digest}---\n\n# Review\n"
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("analysis.md"),
+            format!(
+                "---\nspec: 001-x\nlast-run: 2026-11-10T00:00:00Z\nhard-fail: 0\n\
+                 blocking-findings: 0\nadvisory: 0\nunexamined: 0\nblocking: false\n\
+                 analyzed-digest:\n{digest}---\n\n# Analysis\n"
+            ),
+        )
+        .unwrap();
+        let args = ReadSpecArgs {
+            feature: "001-x".into(),
+            include_body: true,
+        };
+        let digests = compute(&args, tmp.path())
+            .unwrap()
+            .review
+            .and_then(|review| review.reviewed_digest)
+            .map(|digest| digest.len());
+        assert_eq!(digests, Some(474), "the fixture's record parses");
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 50_000, "a {size}-byte file-form result");
+    }
+
+    /// No artifact, no record — and no error. An unreviewed feature is a
     /// state, not a failure.
     #[test]
-    fn a_feature_with_no_record_artifacts_reports_none() {
+    fn a_feature_with_no_review_artifact_reports_none() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         std::fs::create_dir_all(&dir).unwrap();
@@ -555,7 +611,6 @@ mod tests {
         )
         .unwrap();
         assert!(result.review.is_none());
-        assert!(result.analyze.is_none());
     }
 
     use std::path::PathBuf;

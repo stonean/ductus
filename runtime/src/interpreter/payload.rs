@@ -82,9 +82,11 @@ pub enum PayloadError {
         identifier: String,
     },
     /// A primitive returned its lists in a file — its result was past
-    /// `[artifacts] read-size-bytes` — and that file cannot be read or holds
-    /// no JSON object, so [`restore_lists`] cannot give the walk the lists
-    /// the result moved there. The walk halts: a later step reading a list
+    /// `[artifacts] read-size-bytes` — and [`restore_lists`] cannot give the
+    /// walk the lists the result moved there: the result names no file, the
+    /// file is missing or resolves outside the project, it cannot be read,
+    /// it is not JSON or holds no JSON object, or it lacks a list the result
+    /// counts. The walk halts: a later step reading a list
     /// the context lacks would read it as empty, as a review whose scope is
     /// missing would read as a pass over nothing (066 scenario
     /// `scope-results-have-a-bounded-size`; spec 080).
@@ -414,8 +416,16 @@ pub(super) fn restore_lists(
             return Err(unreadable(format!("it holds no `{list}` list")));
         }
     }
-    let keys = lists.keys().cloned().collect();
-    map.extend(lists);
+    // Only what the result does not carry inline is restored: a key it
+    // does carry, such as `compute-review-scope`'s `diff-base`, keeps its
+    // inline value and stays in the legacy tail (022's data model).
+    let mut keys = Vec::new();
+    for (key, value) in lists {
+        if !map.contains_key(&key) {
+            map.insert(key.clone(), value);
+            keys.push(key);
+        }
+    }
     Ok(keys)
 }
 
@@ -2790,6 +2800,25 @@ mod tests {
         let files = load_scope_files(result.as_object().unwrap(), tmp.path());
         let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
+    }
+
+    /// A key the list file holds and the result carries inline, as
+    /// `compute-review-scope`'s `diff-base` is, keeps its inline value and is
+    /// not named restored, so it stays in the legacy tail (022's data model).
+    #[test]
+    fn a_key_the_result_carries_inline_is_not_restored() {
+        let tmp = tempdir().unwrap();
+        fs::write(
+            tmp.path().join("lists.json"),
+            r#"{"diff-base": "from-the-file", "scope": ["src/a.rs"]}"#,
+        )
+        .unwrap();
+        let mut result = file_form_result("lists.json");
+        result["diff-base"] = serde_json::json!("inline");
+        let restored = restore_lists("compute-review-scope", &mut result, tmp.path()).unwrap();
+        assert_eq!(restored, ["scope"]);
+        assert_eq!(result["diff-base"], "inline");
+        assert_eq!(result["scope"], serde_json::json!(["src/a.rs"]));
     }
 
     /// An inline result, and a value that is no object, are left as they are,

@@ -86,8 +86,8 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///
 /// - [`PrimitiveError::InvalidArgument`] when an `allow` entry is outside
 ///   Claude's canonical allow set ([`canonical_allow`], the ceiling).
-///   Checked before any filesystem read, after the `revoke` overlap check
-///   below, so a retired entry passed in `allow` is named as the overlap.
+///   Checked before the settings file is read or written, after the
+///   `revoke` overlap check below, so a retired entry passed in `allow` is named as the overlap.
 /// - [`PrimitiveError::InvalidPath`] when `path` is absolute, empty, or
 ///   contains a parent-directory component, or when a symlink on it
 ///   resolves outside the project — the BE-INPUT-004 check a primitive
@@ -100,8 +100,9 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///   `permissions.deny`, or under `canonical` `permissions.additionalDirectories`,
 ///   exists but is not an array (e.g., null, object, string).
 /// - [`PrimitiveError::ConflictingRevoke`] when an entry appears in
-///   both `allow` and `revoke`. Checked before any filesystem read,
-///   so a contradictory call never leaves a partial write.
+///   both `allow` and `revoke`, the canonical sets included under
+///   `canonical`. Checked before the settings file is read or written, so a
+///   contradictory call never leaves a partial write.
 pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsResult> {
     super::validate_contained(repo, &args.path)?;
     let target_path = repo.join(&args.path);
@@ -265,7 +266,8 @@ fn canonical_allow_ordered() -> Vec<String> {
         .iter()
         .map(|entry| (*entry).to_string())
         .chain(
-            crate::schema::registry::served_primitives().map(|name| format!("mcp__ductus__{name}")),
+            crate::schema::registry::served_primitives()
+                .map(crate::schema::registry::claude_code_tool_name),
         )
         .collect()
 }
@@ -311,13 +313,7 @@ fn canonical_directories(repo: &Path, settings_path: &str) -> Vec<String> {
 /// `framework/runtime-tools.txt`, which `runtime/tests/mcp.rs` holds equal to
 /// the served set.
 pub(crate) fn canonical_allow() -> std::collections::BTreeSet<String> {
-    CANONICAL_ALLOW_STATIC
-        .iter()
-        .map(|entry| (*entry).to_string())
-        .chain(
-            crate::schema::registry::served_primitives().map(|name| format!("mcp__ductus__{name}")),
-        )
-        .collect()
+    canonical_allow_ordered().into_iter().collect()
 }
 
 /// Refuse any `allow` entry outside [`canonical_allow`] (the ceiling).

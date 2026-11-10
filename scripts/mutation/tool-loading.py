@@ -14,7 +14,10 @@ longest first, outside fences, through the references a line names, and
 followed transitively; a reference the command names is read beside target's
 `commands/` directory under the entry's substitutions, and one missing is an
 error; and the line asks for the search to go out with the first call
-(`resolve_anchor.rs`'s `cited_heading`).
+(`resolve_anchor.rs`'s `cited_heading`). Task 46: a pinned `target.md` is
+read where it is installed, a cited section's fenced block or comment invokes
+nothing, a heading in a comment is none, and the server and `apply-manifest`
+derive target's tools through one function.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/tool-loading.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -114,8 +117,8 @@ MUTATIONS = [
     (
         'M12 a heading inside a fence is a heading',
         'src/primitives/tool_loading.rs',
-        '        if let Some(open) = fence {\n',
-        '        if let Some(open) = fence.filter(|_| false) {\n',
+        '        if skip.skip(content) {\n',
+        '        if skip.skip(content) && false {\n',
         'tool_loading::tests::a_heading_inside_a_fence_is_not_the_section',
     ),
     (
@@ -128,15 +131,15 @@ MUTATIONS = [
     (
         'M14 a manifest installing no target.md is not refused for that',
         'src/primitives/apply_manifest.rs',
-        '        [] => {\n            return Err(invalid(\n',
-        '        [] if false => {\n            return Err(invalid(\n',
+        '        [] => {\n            return Err(invalid(format!(\n',
+        '        [] if false => {\n            return Err(invalid(format!(\n',
         'apply_manifest::tests::a_flagged_entry_without_target_md_halts_before_any_write',
     ),
     (
         'M15 target is read from the source root\'s commands/target.md, not the manifest\'s',
         'src/primitives/apply_manifest.rs',
-        '        .filter(|source| Path::new(source).ends_with("commands/target.md"))\n',
-        '        .filter(|source| *source == "commands/target.md")\n',
+        '        .filter(|entry| Path::new(&entry.source).ends_with(&target_file))\n',
+        '        .filter(|entry| entry.source == target_file)\n',
         'apply_manifest::tests::the_bootstraps_layout_takes_target_from_the_manifest',
     ),
     (
@@ -149,7 +152,7 @@ MUTATIONS = [
     (
         'M17 a cited section counts every name it holds, not only those it invokes',
         'src/primitives/tool_loading.rs',
-        '        tools.extend(invoked(&body));\n',
+        '        tools.extend(\n            body.lines()\n                .filter(|line| !skip.skip(line))\n                .flat_map(invoked),\n        );\n',
         '        tools.extend(registry::served_primitives().filter(|name| names_token(&body, name)));\n',
         'tool_loading::tests::a_cited_section_adds_the_tools_it_invokes_and_not_those_it_names',
     ),
@@ -229,5 +232,26 @@ MUTATIONS = [
         "    let mut tools: BTreeSet<&'static str> = lines.iter().flat_map(|line| invoked(line)).collect();\n",
         "    let mut tools: BTreeSet<&'static str> = BTreeSet::new();\n",
         'tool_loading::tests::a_name_invoked_outside_the_steps_counts',
+    ),
+    (
+        'M29 a pinned target.md is read from the source, not where it is installed',
+        'src/primitives/apply_manifest.rs',
+        '        .find(|entry| pinned_match(pinned, &entry.dest))\n',
+        '        .find(|entry| pinned_match(pinned, &entry.dest) && false)\n',
+        'apply_manifest::tests::a_pinned_target_md_is_read_where_it_is_installed',
+    ),
+    (
+        'M30 a cited section\'s fenced or commented invocation counts',
+        'src/primitives/tool_loading.rs',
+        '                .filter(|line| !skip.skip(line))\n                .flat_map(invoked),\n',
+        '                .filter(|line| { let _ = skip.skip(line); true })\n                .flat_map(invoked),\n',
+        'tool_loading::tests::a_cited_sections_fenced_or_commented_invocation_adds_nothing',
+    ),
+    (
+        'M31 the server derives target without apply-manifest\'s legacy-prose reading',
+        'src/primitives/tool_loading.rs',
+        '            return match text_step_tools(&source) {\n',
+        '            return match parser::parse(&source, ALWAYS_LOADED_COMMAND).map(|procedure| step_tools(&procedure)) {\n',
+        'tool_loading::tests::a_legacy_prose_copy_derives_as_apply_manifest_derives_it',
     ),
 ]

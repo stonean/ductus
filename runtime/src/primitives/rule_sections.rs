@@ -74,12 +74,30 @@ impl RuleSection {
 /// category segment follows the schema grammar `[A-Z][A-Z0-9]*` (digits are
 /// permitted after the first letter, e.g. `FE-A11YFORM-001`), per
 /// `specs/008-security-rules/data-model.md`.
+///
+/// What this gives up: a heading the grammar rejects opens no rule, so a
+/// malformed rule heading, such as `### be-authn-001` or a rule at level 5,
+/// is no rule to [`parse_rule_sections`] and no reader of it sees one.
+/// [`other_headings`] lists those headings, so analyze's integrity checks can
+/// find one (spec 080).
 pub(crate) fn heading_id_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
         Regex::new(r"(?m)^#{2,4}\s+([A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4})\b")
             .expect("hard-coded regex compiles")
     })
+}
+
+/// Each ATX heading in `content` that opens no rule section, with its
+/// 1-based line and its text, trimmed: what [`parse_rule_sections`] gives up,
+/// a malformed rule heading among them.
+pub(crate) fn other_headings(content: &str) -> Vec<(usize, String)> {
+    content
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| parse_atx_heading(line).is_some() && !heading_id_regex().is_match(line))
+        .map(|(index, line)| (index + 1, line.trim().to_owned()))
+        .collect()
 }
 
 /// Every rule section in `content`, in heading order.

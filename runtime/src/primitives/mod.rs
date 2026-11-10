@@ -488,7 +488,7 @@ pub enum PrimitiveError {
     /// error rather than resolved by pass order, because either order
     /// silently discards half of what the caller asked for.
     #[error(
-        "merge-permissions: {count} entr{plural} appear in both --allow and --revoke: {entries}"
+        "merge-permissions: {count} entr{plural} appear in both the allow set and the revoke set: {entries}"
     )]
     ConflictingRevoke {
         /// Number of conflicting entries.

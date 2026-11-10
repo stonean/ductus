@@ -696,7 +696,11 @@ mod tests {
             fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
             path
         };
-        let timeout = Duration::from_secs(5);
+        // A probe that must answer gets a deadline the first run of a freshly
+        // written script cannot reach: macOS scans a new executable before it
+        // runs it, which took this test past 5 s (two whole-suite failures and
+        // one in five lone runs at b70246f7). Only the hang is cut short.
+        let timeout = Duration::from_secs(120);
         let prints = script("prints", "echo \"2.1.200 (Claude Code)\"");
         assert!(matches!(
             probe_program(prints.as_os_str(), timeout),

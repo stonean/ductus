@@ -30,16 +30,27 @@ fi
 body="$(mktemp -t measure-result-sizes-XXXXXX)"
 trap 'rm -f "$body"' EXIT
 
+# The tree is read before the run, since the run measures what it builds and
+# reads then: the runtime, and the framework files the corpus copies (the rule
+# files, the templates, the help command). The whole tree is checked, not only
+# runtime/, and a HEAD that moves during the run fails it, so the record never
+# names a tree other than the one measured.
+sha="$(git -C "$ROOT" rev-parse HEAD)"
+tree="a clean tree"
+changed="$(git -C "$ROOT" status --porcelain | cut -c4- | paste -sd, - | sed 's/,/, /g')"
+if [ -n "$changed" ]; then
+  tree="these uncommitted: $changed"
+fi
+stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 (cd "$ROOT/runtime" && DUCTUS_RESULT_SIZES_OUT="$body" \
   cargo test --test result_sizes -- --ignored --nocapture --exact result_sizes >&2)
 
-sha="$(git -C "$ROOT" rev-parse HEAD)"
-tree="a clean runtime/"
-changed="$(git -C "$ROOT" status --porcelain -- runtime | cut -c4- | paste -sd, - | sed 's/,/, /g')"
-if [ -n "$changed" ]; then
-  tree="these uncommitted under runtime/: $changed"
+after="$(git -C "$ROOT" rev-parse HEAD)"
+if [ "$after" != "$sha" ]; then
+  echo "measure-result-sizes: HEAD moved from $sha to $after during the run; measure again" >&2
+  exit 1
 fi
-stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 report() {
   printf "Measured by \`scripts/measure-result-sizes.sh\` at %s, with %s, at %s.\n\n" "$sha" "$tree" "$stamp"

@@ -11,9 +11,10 @@
 //! data, and a delivering read there would take the notices from the command that owns
 //! them.
 //!
-//! The pipeline view is rendered from the same load by [`render_as`], which
-//! `render-status` and the hook surface call (spec 080): the view travels without the
-//! structured payload, and the payload without the view.
+//! The pipeline view's model is built from the same load by [`view_model`], which
+//! `render-status` and the hook surface render, each held to the read size measured on
+//! the result it serializes (spec 080): the view travels without the structured
+//! payload, and the payload without the view.
 //!
 //! Defined by `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`.
 
@@ -49,8 +50,11 @@ use crate::session::{self, Identity};
 /// directory under `specs/` lacks a `spec.md` (the directory naming
 /// convention promises one), [`PrimitiveError::Io`] on filesystem
 /// failures, [`PrimitiveError::Yaml`] when any spec's frontmatter is
-/// malformed, or [`PrimitiveError::Toml`] when the resolved project config
-/// or session file is malformed. A *targeted scenario* with
+/// malformed, [`PrimitiveError::Toml`] when the resolved project config
+/// or session file is malformed, an invalid `DUCTUS_SESSION`, and what
+/// `bounded_lists::place` returns: [`PrimitiveError::InvalidReadSize`] for a
+/// malformed `[artifacts] read-size-bytes`, or a list file that cannot be
+/// written. A *targeted scenario* with
 /// missing or malformed frontmatter is NOT an error — it degrades to a
 /// detail-less session target (see [`load_scenario_detail`]).
 pub fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
@@ -90,22 +94,20 @@ pub(crate) fn run_as(
     Ok(result)
 }
 
-/// The pipeline view as `identity` at `now`, rendered as `format`, with the
-/// slash-command namespace its hints name.
+/// The pipeline view's model as `identity` at `now`, with the
+/// slash-command namespace its hints name. Each surface renders it held to
+/// the read size, measured on the result that surface serializes.
 ///
 /// # Errors
 ///
-/// Every error [`run`] returns; [`PrimitiveError::InvalidReadSize`] for a
-/// malformed `[artifacts] read-size-bytes`, as every reader of the setting
-/// halts; and the errors resolving a spec's `references:` index returns for
-/// the readout.
-pub(crate) fn render_as(
+/// Every error [`run`] returns, and the errors resolving a spec's
+/// `references:` index returns for the readout.
+pub(crate) fn view_model(
     repo: &Path,
     identity: Option<&Identity>,
     now: SystemTime,
-    format: pipeline_view::Format,
-) -> Result<(String, String)> {
-    load(repo, identity, now)?.render(repo, format)
+) -> Result<(pipeline_view::Model, String)> {
+    load(repo, identity, now)?.model(repo)
 }
 
 /// Everything one read of the pipeline state holds: the payload's fields, and
@@ -165,13 +167,12 @@ impl Loaded {
         }
     }
 
-    /// Build the view's model and render it as `format`, held to the
-    /// configured read size, `[artifacts] read-size-bytes` (AC24). The
-    /// references readout is omitted entirely when no spec declares
+    /// Build the view's model, with the project's slash-command namespace.
+    /// The references readout is omitted entirely when no spec declares
     /// references (a single-service adopter sees no change). Returned data,
     /// never stdout printing: user-facing rendering stays with the host
     /// (§runtime-boundary).
-    fn render(&self, repo: &Path, format: pipeline_view::Format) -> Result<(String, String)> {
+    fn model(&self, repo: &Path) -> Result<(pipeline_view::Model, String)> {
         let project = Host::load(repo).project;
         let model = pipeline_view::build(pipeline_view::ViewData {
             specs: &self.specs,
@@ -188,11 +189,7 @@ impl Loaded {
             references: resolve_references_readout(repo, &self.specs, &project)?,
             project: &project,
         });
-        let (threshold, _) = super::check_artifact_size::resolve_threshold(repo)?;
-        Ok((
-            pipeline_view::render(&model, format, threshold.bytes),
-            project,
-        ))
+        Ok((model, project))
     }
 }
 
@@ -596,7 +593,8 @@ mod tests {
         now: SystemTime,
     ) -> Result<Viewed> {
         let loaded = load(repo, identity, now)?;
-        let (rendered_markdown, _) = loaded.render(repo, pipeline_view::Format::Markdown)?;
+        let (model, _) = loaded.model(repo)?;
+        let rendered_markdown = pipeline_view::whole(&model, pipeline_view::Format::Markdown);
         Ok(Viewed {
             result: loaded.into_result(),
             rendered_markdown,
@@ -1633,58 +1631,6 @@ reason = "Deferred until v2 perf budget lands."
             format!("[host]\nproject = \"ductus\"\n{extra}"),
         )
         .unwrap();
-    }
-
-    /// The view is held to the configured read size (spec 080, AC24): a
-    /// small `read-size-bytes` collapses the done rows and cuts the rest.
-    #[test]
-    fn the_view_is_held_to_the_configured_read_size() {
-        let tmp = TempDir::new().unwrap();
-        pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 900\n");
-        for n in 1..=12 {
-            let status = if n % 2 == 0 { "done" } else { "planned" };
-            write_spec(
-                tmp.path(),
-                &format!("{n:03}-spec"),
-                &format!("status: {status}\ndependencies: []\n"),
-                "",
-            );
-        }
-        let rendered = run(&DashboardArgs::default(), tmp.path())
-            .unwrap()
-            .rendered_markdown;
-        assert!(
-            rendered.len() <= 900,
-            "{} bytes:\n{rendered}",
-            rendered.len()
-        );
-        assert!(
-            rendered.contains("\n\ndone (spec is complete): 6 spec(s)\n"),
-            "{rendered}"
-        );
-        assert!(
-            rendered.contains(" spec(s) not shown — the view is over the read size"),
-            "{rendered}"
-        );
-    }
-
-    /// A malformed read size halts the view, as it halts every reader of the
-    /// setting, rather than rendering at the default.
-    #[test]
-    fn a_malformed_read_size_halts_the_view() {
-        let tmp = TempDir::new().unwrap();
-        pin_project(tmp.path(), "[artifacts]\nread-size-bytes = 0\n");
-        write_spec(
-            tmp.path(),
-            "001-alpha",
-            "status: draft\ndependencies: []\n",
-            "",
-        );
-        let err = run(&DashboardArgs::default(), tmp.path()).unwrap_err();
-        assert!(
-            matches!(err, PrimitiveError::InvalidReadSize { .. }),
-            "{err:?}"
-        );
     }
 
     #[test]

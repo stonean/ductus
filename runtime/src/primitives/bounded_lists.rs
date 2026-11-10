@@ -1,19 +1,22 @@
-//! Bounding a result that carries path lists to one read (066 scenario
-//! `scope-results-have-a-bounded-size`).
+//! Bounding a result whose lists grow to one read (066 scenario
+//! `scope-results-have-a-bounded-size`; spec 080, AC7).
 //!
-//! `compute-review-scope` and `diff-cross-spec` return lists that grow with
-//! the history since their base, and a result over a host's tool-output cap
-//! arrives as an error with no result at all. So each result is returned
-//! inline while its serialized form fits `[artifacts] read-size-bytes` — the
-//! size spec 063 treats as one read, 50,000 bytes by default — and past it the
-//! lists are written whole to a file the result names, with their counts
-//! inline. One contract serves the MCP tool, the CLI and the `ductus exec`
-//! walker alike.
+//! A result over a host's tool-output cap arrives as an error with no result
+//! at all. So each primitive whose result grows with the corpus or with a
+//! history, `research.md`'s grows-set and spec 080's `data-model.md`
+//! *Bounded results* table, returns inline while its serialized form fits
+//! `[artifacts] read-size-bytes`, the size spec 063 treats as one read,
+//! 50,000 bytes by default. Past it, the lists are written whole to a file the
+//! result names, with their counts inline. `render-status` keeps its cut view
+//! inline and writes the whole view. One contract serves the MCP tool, the CLI
+//! and the `ductus exec` walker alike.
 //!
-//! The file sits under `.ductus/results/{primitive}/{feature}/`, named by the
+//! The file sits under `.ductus/results/{primitive}/{key}/`, named by the
 //! sha256 of its bytes, so two calls in one tree never overwrite each other's
-//! lists and a repeated call reuses its file. The results directory ignores
-//! itself, as `.ductus/review-rounds/` does, so no list file enters a scope.
+//! lists and a repeated call reuses its file. `{key}` is the feature for a
+//! per-feature primitive, [`ALL_SPECS`] for a corpus-wide one, and otherwise
+//! what the data model's table gives. The results directory ignores itself,
+//! as `.ductus/review-rounds/` does, so no list file enters a scope.
 
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -79,9 +82,9 @@ pub(crate) fn counted_lists(primitive: &str, result: &Map<String, Value>) -> Vec
 /// configured read size; otherwise the path, from the project root, of the
 /// file `lists` was written to whole.
 ///
-/// A result exactly at the size fits. `lists` is written as pretty JSON, one
-/// entry per line, so a host whose reader cannot take the file in one call
-/// reads it in parts by line offset.
+/// A result exactly at the size fits. `lists` is written as pretty JSON, so
+/// a list of strings holds one entry per line, and a host whose reader cannot
+/// take the file in one call reads it in parts by line offset.
 ///
 /// # Errors
 ///

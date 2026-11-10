@@ -73,16 +73,21 @@ pub const LARGE: CorpusSize = CorpusSize {
 };
 
 /// The subject spec: the one a per-feature primitive is pointed at.
-pub const SUBJECT: &str = "001-feature-001";
+pub const SUBJECT: &str = "001-corpus-feature-001";
 
-/// The directory name of spec `n` (1-based).
+/// The directory name of spec `n` (1-based). `corpus` is a word routing can
+/// match, where `feature` is a stop word and a number too short, so a
+/// description naming it is routed to every spec and `derive-routing-candidates`
+/// grows with the count (spec 080's task 50).
 #[must_use]
 pub fn slug(n: usize) -> String {
-    format!("{n:03}-feature-{n:03}")
+    format!("{n:03}-corpus-feature-{n:03}")
 }
 
 /// The status spec `n` ends at. Spec 1 is the in-progress subject; the rest
-/// cycle through every status a corpus normally holds.
+/// cycle through `planned`, `in-progress` and `done`, the statuses the
+/// history writes: every spec starts `planned`, and only a started spec's
+/// status is written again.
 fn final_status(n: usize) -> &'static str {
     if n == 1 {
         return "in-progress";
@@ -90,8 +95,7 @@ fn final_status(n: usize) -> &'static str {
     match n % 4 {
         0 => "done",
         1 => "in-progress",
-        2 => "planned",
-        _ => "clarified",
+        _ => "planned",
     }
 }
 

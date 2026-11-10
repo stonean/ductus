@@ -169,7 +169,11 @@ try:
     # names, from the synthetic tree the scan ran in (spec 080).
     if data.get("form") == "file":
         with open(os.path.join(os.environ["SYNTH"], data["lists-file"]), encoding="utf-8") as handle:
-            data.update(json.load(handle))
+            lists = json.load(handle)
+        # A list the file lacks would read as none broken, so it halts too.
+        if any(not isinstance(lists.get(key), list) for key in ("broken", "examined", "skipped")):
+            sys.exit(1)
+        data.update(lists)
 except (ValueError, KeyError, TypeError, OSError):
     sys.exit(1)
 for item in data.get("broken", []):

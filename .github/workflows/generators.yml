@@ -6,7 +6,13 @@ on:
       - 'framework/**'
       - 'specs/**'
       - 'scripts/gen-*.sh'
-      - 'runtime/src/primitives/derive_*.rs'
+      # The generators run the release build: derive-dependencies,
+      # derive-references, and apply-manifest, which reaches the parser, the
+      # registry, the citation rules and the host checks (spec 080). Any runtime
+      # source or dependency can move their output, and a list of the files
+      # they reach would go stale.
+      - 'runtime/src/**'
+      - 'runtime/Cargo.lock'
       - 'scripts/tests/**'
       - 'AGENTS.md'
       - '.githooks/**'

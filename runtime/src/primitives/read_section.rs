@@ -22,11 +22,21 @@ use crate::schema::primitives::{ListsForm, ReadSectionArgs, ReadSectionResult, S
 ///
 /// # Errors
 ///
-/// [`crate::primitives::PrimitiveError::InvalidPath`] when `path` leaves the
-/// project; [`crate::primitives::PrimitiveError::Io`] when the document cannot
-/// be read, or is not UTF-8 text; and what `bounded_lists::place` returns for
-/// a malformed read size or a list file that cannot be written.
+/// [`crate::primitives::PrimitiveError::InvalidArgument`] when `headings` is
+/// empty, as the CLI requires one `--heading`, since such a call reads
+/// nothing; [`crate::primitives::PrimitiveError::InvalidPath`] when `path`
+/// leaves the project; [`crate::primitives::PrimitiveError::Io`] when the
+/// document cannot be read, or is not UTF-8 text; and what
+/// `bounded_lists::place` returns for a malformed read size or a list file
+/// that cannot be written.
 pub fn run(args: &ReadSectionArgs, repo: &Path) -> Result<ReadSectionResult> {
+    if args.headings.is_empty() {
+        return Err(crate::primitives::PrimitiveError::InvalidArgument {
+            primitive: "read-section".into(),
+            argument: "headings".into(),
+            reason: "it names no section, so the call would read nothing".into(),
+        });
+    }
     super::validate_contained(repo, &args.path)?;
     let content = read_text(&repo.join(&args.path))?;
     let lines: Vec<&str> = content.lines().collect();
@@ -95,6 +105,19 @@ mod tests {
             path: ".ductus/reference/plan.md".into(),
             headings: headings.iter().map(|h| (*h).to_owned()).collect(),
         }
+    }
+
+    /// No heading is refused on every surface, as the CLI's required
+    /// `--heading` refuses it, rather than read as a call for nothing.
+    #[test]
+    fn no_heading_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("doc.md"), "# Doc\n").unwrap();
+        let err = run(&args(&[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, crate::primitives::PrimitiveError::InvalidArgument { argument, .. } if argument == "headings"),
+            "{err:?}"
+        );
     }
 
     /// Each heading asked for comes back with its section, subsections

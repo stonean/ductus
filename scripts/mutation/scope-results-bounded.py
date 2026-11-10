@@ -51,7 +51,7 @@ MUTATIONS = [
         'src/primitives/diff_cross_spec.rs',
         '        result.cross_spec_paths = None;\n',
         '',
-        'interpreter::tests::a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file',
+        'diff_cross_spec::tests::past_the_read_size_the_paths_move_to_a_file',
     ),
     (
         'M5 the list file holds no lists',
@@ -177,5 +177,33 @@ MUTATIONS = [
         '        .filter(|list| !result.contains_key(list))\n',
         '',
         'bounded_lists::tests::a_result_counts_the_lists_its_counts_name',
+    ),
+    (
+        'M22 a key the result carries inline is restored from the file',
+        'src/interpreter/payload.rs',
+        '        if !map.contains_key(&key) {\n',
+        '        if true {\n',
+        'interpreter::payload::tests::a_key_the_result_carries_inline_is_not_restored',
+    ),
+    (
+        'M23 a list file that cannot be read does not halt the walk',
+        'src/interpreter/mod.rs',
+        '                return Ok(Some(WalkOutcome::Errored { code, message }));\n',
+        '                let _ = (code, message);\n                return Ok(None);\n',
+        'interpreter::tests::a_result_whose_list_file_cannot_be_read_halts_the_walk',
+    ),
+    (
+        'M24 prune-tasks reads the read size only after it writes',
+        'src/primitives/prune_tasks.rs',
+        '    super::check_artifact_size::resolve_threshold(repo)?;\n',
+        '',
+        'prune_tasks::tests::a_malformed_read_size_halts_an_applying_call_before_any_write',
+    ),
+    (
+        'M25 rewrite-spec-links reads the read size only after it writes',
+        'src/primitives/rewrite_spec_links.rs',
+        '    super::check_artifact_size::resolve_threshold(repo)?;\n',
+        '',
+        'rewrite_spec_links::tests::a_malformed_read_size_halts_the_sweep_before_any_write',
     ),
 ]

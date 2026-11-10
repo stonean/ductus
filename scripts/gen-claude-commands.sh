@@ -20,7 +20,9 @@
 # Flags:
 #   --check    Compare generated content against the current destination;
 #              exit 0 when in sync, 1 when drift exists (prints a unified
-#              diff to stdout). Used by `/audit`'s check-zero precondition
+#              diff to stdout) or when the runtime cannot build the Claude
+#              copies (unreachable, predating tool-search-line, or failing
+#              apply-manifest). Used by `/audit`'s check-zero precondition
 #              pass to surface generator drift without writing.
 
 set -euo pipefail

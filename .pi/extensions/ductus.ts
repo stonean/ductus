@@ -24,7 +24,10 @@
  * Failures are loud, never silent. When the runtime cannot start at load, no
  * `ductus__*` tool is registered — a placeholder would read as a live runtime
  * to /ductus, which must instead acquire it — and session start shows a notice
- * naming the pointer and pointing at `/ductus`. When the runtime dies or goes
+ * naming the pointer and pointing at `/ductus`. When the runtime starts but the
+ * call naming the commands answers with an error, as with no installed help
+ * copy, the tools are registered and the commands are not, and the notice
+ * names that error. When the runtime dies or goes
  * missing mid-session, the call returns an error envelope saying the same, and
  * the next call respawns it. When it stops answering, the call times out and the
  * runtime is retired, so the next call respawns it rather than waiting out the
@@ -115,16 +118,21 @@ function statusResult(result: ToolResult): { view: string; project: string } {
   return { view: parsed["rendered-markdown"], project: parsed.project };
 }
 
-/** `render-help`'s result read back from its text: the guide, or an error
- *  saying why there is none. */
-function helpResult(result: ToolResult): string {
+/** `render-help`'s result read back from its text: the guide and the
+ *  slash-command namespace, or an error saying why there is none. */
+function helpResult(result: ToolResult): { guide: string; project: string } {
   if (result.isError) throw new Error(textOf(result));
-  const parsed = JSON.parse(textOf(result)) as { guide?: unknown };
-  if (typeof parsed.guide !== "string") {
+  const parsed = JSON.parse(textOf(result)) as { guide?: unknown; project?: unknown };
+  if (typeof parsed.guide !== "string" || typeof parsed.project !== "string") {
     throw new Error(`render-help returned no guide: ${textOf(result)}`);
   }
-  return parsed.guide;
+  return { guide: parsed.guide, project: parsed.project };
 }
+
+/** A load whose namespace call answered with an error: the runtime is up and
+ *  its tools are registered, so the notice names that error, not the
+ *  pointer. */
+class CommandsUnregistered extends Error {}
 
 /** The view with each command hint as Pi names the command. The runtime
  *  spells a hint `/{project}:<name>`, which Pi runs as plain text to the
@@ -342,15 +350,29 @@ export default function (pi: ExtensionAPI) {
         },
       });
     }
+    /* The namespace the commands are named under, learnt at load from
+     * `render-help`, which reads the installed help copy and no spec, so a
+     * view that cannot be rendered never stops the registration (spec 080);
+     * from `render-status` on a runtime that serves no `render-help`. A
+     * runtime serving neither registers no command. */
+    const serves = (name: string) => tools.some((tool) => tool.name === name);
+    const source = serves("render-help") ? "render-help" : serves("render-status") ? "render-status" : null;
+    if (source === null) return;
+    const answer = await server.callTool(source, {});
+    let project: string;
+    try {
+      project = source === "render-help" ? helpResult(answer).project : statusResult(answer).project;
+    } catch (err) {
+      throw new CommandsUnregistered(
+        `ductus: the ductus commands are not registered, since ${source} failed at load: ${reason(err)}`,
+      );
+    }
     /* `/{project}-status` shows the pipeline view with no model turn (spec
      * 080): its handler calls `render-status` through this same server
      * process, so the view resolves this session's target, and shows the view,
      * or the failure, as a displayed message that triggers no turn. A runtime
-     * without `render-status` registers no command. The call at load learns
-     * the namespace the command is named under. */
-    if (!tools.some((tool) => tool.name === "render-status")) return;
-    const { project } = statusResult(await server.callTool("render-status", {}));
-    pi.registerCommand(`${project}-status`, {
+     * without `render-status` registers no status command. */
+    if (serves("render-status")) pi.registerCommand(`${project}-status`, {
       description: "Show the ductus pipeline view, with no model turn",
       handler: async () => {
         let result: ToolResult;
@@ -370,9 +392,9 @@ export default function (pi: ExtensionAPI) {
     });
     /* `/{project}-help` shows the guide `/{project}:help` prints, respelled
      * as the view is, with no model turn (spec 080); a runtime without
-     * `render-help` registers no command, and the help prompt template
+     * `render-help` registers no help command, and the help prompt template
      * answers instead. */
-    if (!tools.some((tool) => tool.name === "render-help")) return;
+    if (!serves("render-help")) return;
     pi.registerCommand(`${project}-help`, {
       description: "Show the ductus pipeline guide, with no model turn",
       handler: async () => {
@@ -384,7 +406,7 @@ export default function (pi: ExtensionAPI) {
         }
         let content: string;
         try {
-          content = piSpelling(helpResult(result), project);
+          content = piSpelling(helpResult(result).guide, project);
         } catch (err) {
           content = `ductus: ${project}-help could not show the guide: ${reason(err)}`;
         }
@@ -400,7 +422,7 @@ export default function (pi: ExtensionAPI) {
     try {
       await registration;
     } catch (err) {
-      ctx.ui.notify(unavailable(err), "error");
+      ctx.ui.notify(err instanceof CommandsUnregistered ? err.message : unavailable(err), "error");
     }
   });
 }

@@ -144,8 +144,10 @@ use crate::schema::status::COMPATIBLE_STATUSES;
 /// [`PrimitiveError::UnclosedFrontmatter`] / [`PrimitiveError::Yaml`] when
 /// `spec.md` has no parseable frontmatter (the frontmatter-schema family is
 /// `validate-frontmatter`'s job — this primitive needs a readable `status` to
-/// classify tiers at all), or
-/// [`PrimitiveError::Io`] on filesystem failures.
+/// classify tiers at all), [`PrimitiveError::Io`] on filesystem failures,
+/// and what `bounded_lists::place` returns: [`PrimitiveError::InvalidReadSize`]
+/// for a malformed `[artifacts] read-size-bytes`, or a list file that cannot
+/// be written.
 ///
 /// The result is inline while it fits `[artifacts] read-size-bytes`, and past
 /// it carries `findings` and `skipped` in the file it names and only their

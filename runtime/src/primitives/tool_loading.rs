@@ -279,7 +279,14 @@ pub fn cited_tools<E>(
         let Some(body) = docs[&doc].section(&heading) else {
             continue;
         };
-        tools.extend(invoked(&body));
+        // A fenced block or a comment in the section is content, not an
+        // invocation, as in the command file.
+        let mut skip = SkipScanner::default();
+        tools.extend(
+            body.lines()
+                .filter(|line| !skip.skip(line))
+                .flat_map(invoked),
+        );
         cite(&doc, &body, &mut docs, &mut queue)?;
     }
     Ok(tools)
@@ -288,9 +295,9 @@ pub fn cited_tools<E>(
 /// `text`, a command copy after substitution, with a last paragraph added to
 /// its `## Instructions` preamble blockquote that loads its run tools, less
 /// `always_loaded`, in one Claude Code `ToolSearch`, asking for the command's
-/// first `ductus` call to go in the same message (spec 080, AC29). The run tools are
-/// its step tools and `cited`, the tools its cited sections invoke
-/// ([`cited_tools`]). The names are sorted, as one `select:` query, and the
+/// first `ductus` call to go in the same message (spec 080, AC29). The run
+/// tools are its step tools and `cited`, the tools the command file or a
+/// section it cites invokes ([`cited_tools`]). The names are sorted, as one `select:` query, and the
 /// line takes the file's own line ending. A preamble is opened when the
 /// section has none. `text` comes back unchanged when no tool remains.
 ///
@@ -315,7 +322,7 @@ pub fn add_tool_search_line(
     }
     let query = remaining
         .iter()
-        .map(|name| format!("mcp__ductus__{name}"))
+        .map(|name| registry::claude_code_tool_name(name))
         .collect::<Vec<_>>()
         .join(",");
     let eol = line_ending_of(text);
@@ -376,27 +383,18 @@ fn instructions_heading(lines: &[&str]) -> Option<usize> {
         .map(|h| h.0)
 }
 
-/// Each ATX heading outside a fenced code block, as its line index, its
-/// level and its text.
+/// Each ATX heading outside a fenced code block and an HTML comment, as its
+/// line index, its level and its text ([`SkipScanner`], the rule the
+/// citations use).
 fn atx_headings<'a>(lines: &[&'a str]) -> Vec<(usize, usize, &'a str)> {
     let mut headings = Vec::new();
-    let mut fence: Option<&str> = None;
+    let mut skip = SkipScanner::default();
     for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.trim_end_matches(['\n', '\r']).trim_start();
-        if let Some(open) = fence {
-            if trimmed.starts_with(open) {
-                fence = None;
-            }
+        let content = line.trim_end_matches(['\n', '\r']);
+        if skip.skip(content) {
             continue;
         }
-        if trimmed.starts_with("```") {
-            fence = Some("```");
-            continue;
-        }
-        if trimmed.starts_with("~~~") {
-            fence = Some("~~~");
-            continue;
-        }
+        let trimmed = content.trim_start();
         let level = trimmed.chars().take_while(|&c| c == '#').count();
         let rest = &trimmed[level..];
         if (1..=6).contains(&level) && rest.starts_with([' ', '\t']) {
@@ -410,7 +408,8 @@ fn atx_headings<'a>(lines: &[&'a str]) -> Vec<(usize, usize, &'a str)> {
 /// the first of [`Host::command_file_candidates`] that exists.
 #[derive(Debug, PartialEq, Eq)]
 pub enum AlwaysLoaded {
-    /// The copy at `path` parsed, and its steps name `tools`.
+    /// The copy at `path` parsed, and its steps name `tools`, through
+    /// [`text_step_tools`], as `apply-manifest` derives them.
     Derived {
         /// The copy, repo-relative.
         path: String,
@@ -447,10 +446,12 @@ impl AlwaysLoaded {
                     };
                 }
             };
-            return match parser::parse(&source, ALWAYS_LOADED_COMMAND) {
-                Ok(procedure) => Self::Derived {
+            // The one derivation `apply-manifest` makes too, so a legacy-prose
+            // copy flags what its line leaves out (spec 080's plan).
+            return match text_step_tools(&source) {
+                Ok(tools) => Self::Derived {
                     path: path.clone(),
-                    tools: step_tools(&procedure),
+                    tools,
                 },
                 Err(err) => Self::Unreadable {
                     path: path.clone(),
@@ -470,12 +471,16 @@ impl AlwaysLoaded {
         }
     }
 
-    /// The line the server writes to stderr when it flags nothing because it
-    /// found no usable copy, so that state is never silent. `None` once
-    /// derived.
+    /// The line the server writes to stderr when it flags nothing, because
+    /// it found no usable copy or one naming no tool, so that state is never
+    /// silent. `None` once a copy names a tool.
     #[must_use]
     pub fn notice(&self) -> Option<String> {
         match self {
+            Self::Derived { path, tools } if tools.is_empty() => Some(format!(
+                "ductus: the installed `{ALWAYS_LOADED_COMMAND}` command at {path} names no \
+                 tool in its steps, so no tool is flagged to load up front (spec 080)"
+            )),
             Self::Derived { .. } => None,
             Self::NoCopy { candidates } => Some(format!(
                 "ductus: no installed `{ALWAYS_LOADED_COMMAND}` command at {}, so no tool is \
@@ -687,6 +692,22 @@ mod tests {
         );
     }
 
+    /// A heading inside an HTML comment is no heading either, as the
+    /// citations read it.
+    #[test]
+    fn a_heading_inside_a_comment_is_not_the_section() {
+        let text = "# X\n\n<!--\n## Instructions\n-->\n\n## Instructions\n\n\
+                    1. Invoke `read-spec`.\n";
+        let out = add_tool_search_line(text, &BTreeSet::new(), &BTreeSet::new()).unwrap();
+        assert_eq!(
+            out,
+            format!(
+                "# X\n\n<!--\n## Instructions\n-->\n\n## Instructions\n\n{LINE}\
+                 `select:mcp__ductus__read-spec`\n\n1. Invoke `read-spec`.\n"
+            )
+        );
+    }
+
     /// A project named `acme`, with `target.md` installed at Claude's
     /// layout when `target` is given.
     fn project(target: Option<&str>) -> tempfile::TempDir {
@@ -746,7 +767,9 @@ mod tests {
 
     #[test]
     fn a_copy_that_does_not_parse_flags_nothing_and_says_why() {
-        let tmp = project(Some("# Target\n\nNo steps here.\n"));
+        let tmp = project(Some(
+            "## Instructions\n\n1. Invoke `read-spec` and `write-session`.\n",
+        ));
         let found = AlwaysLoaded::resolve(tmp.path());
         let AlwaysLoaded::Unreadable { path, .. } = &found else {
             panic!("expected an unreadable copy, got {found:?}");
@@ -759,9 +782,35 @@ mod tests {
             "{notice}"
         );
         assert!(
-            notice.contains("legacy prose"),
+            notice.contains("names 2 primitives"),
             "the parse error is the reason: {notice}"
         );
+    }
+
+    /// A copy whose steps name no tool flags none, and says so, so an empty
+    /// derivation is never silent.
+    #[test]
+    fn a_copy_naming_no_tool_flags_nothing_and_says_so() {
+        let tmp = project(Some("# Target\n\nNo steps here.\n"));
+        let found = AlwaysLoaded::resolve(tmp.path());
+        assert!(found.tools().is_empty(), "{found:?}");
+        let notice = found.notice().unwrap();
+        assert!(
+            notice.contains("at .claude/commands/acme/target.md names no tool"),
+            "{notice}"
+        );
+    }
+
+    /// A legacy-prose copy gives the server the tools `apply-manifest`
+    /// leaves out of each line, since both derive through one function.
+    #[test]
+    fn a_legacy_prose_copy_derives_as_apply_manifest_derives_it() {
+        let tmp = project(Some(LEGACY));
+        let found = AlwaysLoaded::resolve(tmp.path());
+        let expected = text_step_tools(LEGACY).unwrap();
+        assert!(!expected.is_empty());
+        assert_eq!(found.tools(), expected);
+        assert_eq!(found.notice(), None);
     }
 
     /// `cited_tools` over `command`, as command `x`, reading references from
@@ -795,6 +844,21 @@ mod tests {
             cited(&command, &[("x", reference)]),
             vec!["derive-boundary"],
             "the cited section's invocation counts, its mention and an uncited section do not"
+        );
+    }
+
+    /// An invocation inside a fenced block or an HTML comment of a cited
+    /// section is content, so it adds nothing.
+    #[test]
+    fn a_cited_sections_fenced_or_commented_invocation_adds_nothing() {
+        let command = format!(
+            "{OWN}## Instructions\n\n1. Run **§Validation gate** in `.ductus/reference/x.md`.\n"
+        );
+        let reference = "## Validation gate\n\nInvoke `derive-boundary`.\n\n```text\n\
+                         Invoke `mark-task`.\n```\n\n<!--\nInvoke `append-task`.\n-->\n";
+        assert_eq!(
+            cited(&command, &[("x", reference)]),
+            vec!["derive-boundary"]
         );
     }
 
