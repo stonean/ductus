@@ -10,7 +10,9 @@ ones and refuses one leaving the project, names a file it cannot read under
 `unreadable`, and moves its rules to a file past the read size
 (`runtime/src/primitives/read_section.rs`, `discover_rule_files.rs`). Task
 48: a SHOULD Statement is should-tier, `all` lists each file's headings that
-open no rule, and `all` validates no review-only setting.
+open no rule, and `all` validates no review-only setting. Task 57: each such
+heading carries its body, the lines under it to the next heading, blank lines
+at either end dropped (`rule_sections.rs`).
 
 Run with `python3 scripts/mutation/run.py
 scripts/mutation/reference-and-rule-reads.py [ID ...]`; see run.py for the
@@ -128,5 +130,33 @@ MUTATIONS = [
         '    let disabled = if args.all {\n',
         '    let disabled = if false {\n',
         'discover_rule_files::tests::all_does_not_validate_review_only_settings',
+    ),
+    (
+        'M16 a heading that opens no rule carries no body',
+        'src/primitives/rule_sections.rs',
+        '            (i + 1, lines[i].trim().to_owned(), under.join("\\n"))',
+        '            (i + 1, lines[i].trim().to_owned(), { let _ = under; String::new() })',
+        'discover_rule_files::tests::all_lists_each_files_headings_that_open_no_rule',
+    ),
+    (
+        'M17 a body runs past the next heading',
+        'src/primitives/rule_sections.rs',
+        '            let end = headings.get(k + 1).copied().unwrap_or(lines.len());',
+        '            let end = { let _ = k; lines.len() };',
+        'discover_rule_files::tests::all_lists_each_files_headings_that_open_no_rule',
+    ),
+    (
+        'M18 a body keeps its leading blank lines',
+        'src/primitives/rule_sections.rs',
+        '            while let [first, rest @ ..] = under\n                && first.trim().is_empty()',
+        '            while let [first, rest @ ..] = under\n                && false && first.trim().is_empty()',
+        'discover_rule_files::tests::all_lists_each_files_headings_that_open_no_rule',
+    ),
+    (
+        'M19 a body keeps its trailing blank lines',
+        'src/primitives/rule_sections.rs',
+        '            while let [rest @ .., last] = under\n                && last.trim().is_empty()',
+        '            while let [rest @ .., last] = under\n                && false && last.trim().is_empty()',
+        'discover_rule_files::tests::all_lists_each_files_headings_that_open_no_rule',
     ),
 ]

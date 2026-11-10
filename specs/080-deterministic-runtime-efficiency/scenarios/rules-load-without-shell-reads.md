@@ -11,7 +11,7 @@ review's §Load rules loads every selected rule file inline, and analyze asks ab
 ## Behavior
 
 - The rules a review or an analysis loads reach the model as tool results, with no shell read of a rule file.
-- review gets each loaded rule's ID, tier and Statement. analyze also gets its Verification.
+- review gets each loaded rule's ID, tier and Statement. analyze also gets its Verification, and each heading that opens no rule with the lines under it, so it judges a malformed rule heading without reading the file.
 - Whether a rule applies to the code or artifact in hand stays the model's judgment.
 
 ## Edge Cases

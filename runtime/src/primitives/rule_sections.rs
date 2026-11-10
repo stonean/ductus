@@ -89,14 +89,35 @@ pub(crate) fn heading_id_regex() -> &'static Regex {
 }
 
 /// Each ATX heading in `content` that opens no rule section, with its
-/// 1-based line and its text, trimmed: what [`parse_rule_sections`] gives up,
-/// a malformed rule heading among them.
-pub(crate) fn other_headings(content: &str) -> Vec<(usize, String)> {
-    content
-        .lines()
+/// 1-based line, its text, trimmed, and its body: what [`parse_rule_sections`]
+/// gives up, a malformed rule heading among them. The body is the lines under
+/// the heading up to the next heading of any level, blank lines at either end
+/// dropped, so a reader judges whether the heading heads a rule without
+/// reading the file (spec 080, task 57).
+pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
+    let lines: Vec<&str> = content.lines().collect();
+    let headings: Vec<usize> = (0..lines.len())
+        .filter(|&i| parse_atx_heading(lines[i]).is_some())
+        .collect();
+    headings
+        .iter()
         .enumerate()
-        .filter(|(_, line)| parse_atx_heading(line).is_some() && !heading_id_regex().is_match(line))
-        .map(|(index, line)| (index + 1, line.trim().to_owned()))
+        .filter(|&(_, &i)| !heading_id_regex().is_match(lines[i]))
+        .map(|(k, &i)| {
+            let end = headings.get(k + 1).copied().unwrap_or(lines.len());
+            let mut under = &lines[i + 1..end];
+            while let [first, rest @ ..] = under
+                && first.trim().is_empty()
+            {
+                under = rest;
+            }
+            while let [rest @ .., last] = under
+                && last.trim().is_empty()
+            {
+                under = rest;
+            }
+            (i + 1, lines[i].trim().to_owned(), under.join("\n"))
+        })
         .collect()
 }
 

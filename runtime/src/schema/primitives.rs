@@ -575,6 +575,10 @@ pub struct OtherHeading {
     pub line: usize,
     /// Its heading line, trimmed, `#` marks included.
     pub heading: String,
+    /// The lines under it up to the next heading, blank lines at either end
+    /// dropped; empty when none. analyze judges from it whether the heading
+    /// heads a rule, reading no rule file (spec 080, task 57).
+    pub body: String,
 }
 
 /// A rule file that could not be read.

@@ -227,11 +227,16 @@ fn list_rules(
             })
             .collect();
         // What the shared parser gives up, a malformed rule heading, which
-        // opens no rule there: listed for analyze's integrity checks.
+        // opens no rule there: listed with the lines under each heading, so
+        // analyze's integrity checks judge it without reading the file.
         let other_headings = args.all.then(|| {
             other_headings(&content)
                 .into_iter()
-                .map(|(line, heading)| OtherHeading { line, heading })
+                .map(|(line, heading, body)| OtherHeading {
+                    line,
+                    heading,
+                    body,
+                })
                 .collect()
         });
         rule_files.push(RuleFileRules {
@@ -1162,7 +1167,10 @@ mod tests {
         let tmp = setup(&["quality-cross.md"], None);
         std::fs::write(
             tmp.path().join("framework/rules/quality-cross.md"),
-            format!("{RULES}\n## Testing\n\n### qual-test-004\n\n> Lowercase.\n"),
+            format!(
+                "{RULES}\n## Testing\n\n### qual-test-004\n  \n> Lowercase.\n\n\
+                 **Verification:** Read it.\n\n   \n"
+            ),
         )
         .unwrap();
         let result = run(
@@ -1174,19 +1182,26 @@ mod tests {
         )
         .unwrap();
         let files = result.rule_files.unwrap();
-        let others: Vec<(usize, &str)> = files[0]
+        let others: Vec<(usize, &str, &str)> = files[0]
             .other_headings
             .as_ref()
             .unwrap()
             .iter()
-            .map(|h| (h.line, h.heading.as_str()))
+            .map(|h| (h.line, h.heading.as_str(), h.body.as_str()))
             .collect();
+        // Each heading carries the lines under it up to the next heading,
+        // blank lines at either end dropped, so the malformed rule's
+        // Statement and Verification can be judged without reading the file.
         assert_eq!(
             others,
             [
-                (1, "# Rules"),
-                (17, "## Testing"),
-                (19, "### qual-test-004")
+                (1, "# Rules", ""),
+                (17, "## Testing", ""),
+                (
+                    19,
+                    "### qual-test-004",
+                    "> Lowercase.\n\n**Verification:** Read it."
+                )
             ]
         );
         assert_eq!(files[0].rules.len(), 3, "the malformed heading is no rule");

@@ -55,7 +55,7 @@ Arguments: none.
 
 | Result field | Type | Meaning |
 | --- | --- | --- |
-| `rule-files` | list of `{file, rules, other-headings}` | With `rules`, each file read: its rules in heading order, each `{id, heading, tier, statement, verification}`, and under `all` `other-headings`, each `{line, heading}` that opens no rule. Absent in the file form |
+| `rule-files` | list of `{file, rules, other-headings}` | With `rules`, each file read: its rules in heading order, each `{id, heading, tier, statement, verification}`, and under `all` `other-headings`, each `{line, heading, body}` that opens no rule, `body` being the lines under it up to the next heading, blank lines at either end dropped. Absent in the file form |
 | `rule-files-count` | integer | Entries in `rule-files`, with `rules`, in either form |
 | `unreadable` | list of `{file, reason}` | Each file that could not be read, never dropped |
 | `form`, `lists-file` | | With `rules`, as *Bounded results* below gives them |
