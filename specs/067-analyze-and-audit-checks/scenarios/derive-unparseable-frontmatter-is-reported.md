@@ -47,15 +47,16 @@ same sense as the other list fields.
 
 A spec lands there when its frontmatter fence is never closed — the condition
 both splices already detect implicitly by never finding their anchor, made
-explicit and reported instead of swallowed. It lands there too when the
-rewritten frontmatter would not parse as YAML: each primitive re-parses the
+explicit and reported instead of swallowed. A rewritten frontmatter that
+would not parse as YAML is a different case: each primitive re-parses the
 block it is about to write and never writes one that fails, leaving the file
 byte-identical (since 2026-10-26, 071's re-review of 067, after a YAML
 indentless sequence was spliced into invalid frontmatter and reported
-`updated`).
+`updated`). Since task 14 such a spec is named in `unwritable`, not here, as
+the data model records.
 
 The contract a caller can then rely on: **an empty `updated` means
-examined-and-clean only when `unparseable` is also empty.** That is the same
+examined-and-clean only when `unparseable` and `unwritable` are also empty.** That is the same
 pairing `check-artifacts` established with `skipped` and `derive-boundary`
 with `guidance`, so this introduces no new idea — it applies the existing one
 where it was missing.
@@ -67,7 +68,10 @@ it was not asked about would be worse than one that names it and moves on.
 
 The CLI's blocking contract is unchanged — an unparseable spec does not fail
 the check, because it is not drift. It is an unknown, and the existing rule
-that an unknown is never escalated into a defect holds here too.
+that an unknown is never escalated into a defect holds here too. A refused
+rewrite is not an unknown: the index it could not write is stale, so since
+task 14 the CLI fails on `unwritable`, naming each spec on stderr (owner,
+2026-11-10).
 
 ## Edge Cases
 

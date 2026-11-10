@@ -73,8 +73,8 @@ use std::path::Path;
 
 use crate::primitives::resolve_references::load_services;
 use crate::primitives::spec_links::{
-    continues_key, frontmatter_parses, harvestable_lines, has_unterminated_frontmatter,
-    is_frontmatter_fence,
+    continues_key, flow_value_end, frontmatter_parses, harvestable_lines,
+    has_unterminated_frontmatter, is_frontmatter_fence,
 };
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
 use crate::schema::paths;
@@ -128,6 +128,7 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
     let mut updated = Vec::new();
     let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
+    let mut unwritable = Vec::new();
     let mut absent = Vec::new();
     let mut read_count: usize = 0;
     for spec in &tracked {
@@ -154,9 +155,10 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         }
         if !frontmatter_parses(&rewritten) {
             // The splice's output is not YAML: a value shape its line rules
-            // do not cover. Never written, and named as an unterminated block
-            // is, before the staged filter, for `derive-dependencies`' reason.
-            unparseable.push(spec.clone());
+            // do not cover, or a block invalid before it. Never written, and
+            // named `unwritable` before the staged filter, for
+            // `derive-dependencies`' reason.
+            unwritable.push(spec.clone());
             continue;
         }
         // Differs. Whether it is written depends on the staged filter.
@@ -181,6 +183,7 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         examined: u32::try_from(read_count).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
         unparseable,
+        unwritable,
         absent,
         registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),
         specs_root,
@@ -479,6 +482,11 @@ fn build_block(records: &[Reference]) -> Option<Vec<String>> {
 /// entry follows as one), the same rule that decides where a stale
 /// `references:` block ends.
 ///
+/// A multi-line flow value on either key (`[`, entries, then `]` at column
+/// zero) is skipped through its balancing bracket ([`flow_value_end`]) before
+/// [`continues_key`] applies, so neither a stale block nor the `dependencies:`
+/// entry is cut short.
+///
 /// Absent-when-empty: with no records the block is removed and not replaced.
 fn splice_references(content: &str, records: &[Reference]) -> String {
     let block = build_block(records);
@@ -492,6 +500,9 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
     // Inside the `dependencies:` entry, waiting for its last continuation
     // line to pass before the block goes in.
     let mut pending = false;
+    // The last line of a multi-line flow value on the key being skipped or
+    // waited out.
+    let mut flow_end = 0;
     let lines: Vec<&str> = content
         .lines()
         .map(|raw| raw.strip_suffix('\r').unwrap_or(raw))
@@ -525,13 +536,13 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
 
         if in_fm {
             if skipping {
-                if continues_key(&lines, idx) {
+                if idx <= flow_end || continues_key(&lines, idx) {
                     continue;
                 }
                 skipping = false;
             }
             if pending {
-                if continues_key(&lines, idx) {
+                if idx <= flow_end || continues_key(&lines, idx) {
                     out.push(line.to_string());
                     continue;
                 }
@@ -544,11 +555,13 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
             }
             if line.starts_with("references:") {
                 skipping = true;
+                flow_end = flow_value_end(&lines, idx);
                 continue;
             }
             if !inserted && block.is_some() && line.starts_with("dependencies:") {
                 out.push(line.to_string());
                 pending = true;
+                flow_end = flow_value_end(&lines, idx);
                 continue;
             }
         }
@@ -925,16 +938,47 @@ mod tests {
         }
     }
 
-    /// A stale block whose rewrite would not parse — a flow sequence closing
-    /// at column zero, which the line rules do not cover — is reported
-    /// `unparseable` and never written, on a dry run and a write alike.
+    /// A stale `references:` flow list closing at column zero is valid YAML,
+    /// and the splice skips through its balancing bracket, so the block is
+    /// replaced whole. The same holds for a `dependencies:` flow list the new
+    /// block goes after.
     #[test]
-    fn a_splice_that_would_not_parse_is_reported_and_never_written() {
+    fn a_flow_list_closing_at_column_zero_is_rewritten() {
         use crate::primitives::git_fixture;
         let tmp = tempfile::tempdir().unwrap();
         let repository = git2::Repository::init(tmp.path()).unwrap();
-        let original = "---\nstatus: done\ndependencies: []\nreferences: [\n  {service: null, spec: 003-old}\n]\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n";
+        let original = "---\nstatus: done\ndependencies: [\n  002-b\n]\nreferences: [\n  {service: null, spec: 003-old}\n]\nnext-criterion: 1\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n";
         assert!(frontmatter_parses(original), "the fixture starts as YAML");
+        let path = tmp.path().join("specs/001-a/spec.md");
+        git_fixture::write(&path, original);
+        git_fixture::commit_all(&repository, "feat: spec");
+        let result = run(
+            &DeriveReferencesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.updated, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.unwritable, [] as [String; 0]);
+        assert_eq!(result.unparseable, [] as [String; 0]);
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "---\nstatus: done\ndependencies: [\n  002-b\n]\nreferences:\n  - service: null\n    spec: 004-new\nnext-criterion: 1\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n"
+        );
+    }
+
+    /// A rewrite that would leave a block that does not parse — here the block
+    /// was invalid before it, in another key — is `unwritable`, not
+    /// `unparseable`, and never written, on a dry run and a write alike.
+    #[test]
+    fn a_splice_that_would_not_parse_is_unwritable_and_never_written() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let original = "---\nstatus: done\ntitle: [oops\ndependencies: []\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n";
+        assert!(!frontmatter_parses(original), "the fixture starts invalid");
         let path = tmp.path().join("specs/001-a/spec.md");
         git_fixture::write(&path, original);
         git_fixture::commit_all(&repository, "feat: spec");
@@ -948,10 +992,11 @@ mod tests {
             )
             .unwrap();
             assert_eq!(
-                result.unparseable,
+                result.unwritable,
                 vec!["specs/001-a/spec.md"],
                 "write {write}"
             );
+            assert_eq!(result.unparseable, [] as [String; 0], "write {write}");
             assert_eq!(result.updated, [] as [String; 0], "write {write}");
             assert!(!result.drift, "write {write}");
             assert_eq!(result.examined, 1, "write {write}");
@@ -961,6 +1006,31 @@ mod tests {
                 "write {write}"
             );
         }
+    }
+
+    /// A block that opens and never closes has nothing derived from it: it
+    /// stays `unparseable`, and is not `unwritable`.
+    #[test]
+    fn an_unterminated_fence_is_unparseable_not_unwritable() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let path = tmp.path().join("specs/001-a/spec.md");
+        git_fixture::write(
+            &path,
+            "---\nstatus: done\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n",
+        );
+        git_fixture::commit_all(&repository, "feat: spec");
+        let result = run(
+            &DeriveReferencesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unparseable, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.unwritable, [] as [String; 0]);
     }
 
     #[test]

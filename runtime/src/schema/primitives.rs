@@ -2127,6 +2127,12 @@ pub struct DeriveDependenciesArgs {
     pub staged: bool,
 }
 
+/// Whether a count is zero: `serde`'s `skip_serializing_if` takes a function.
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde's `skip_serializing_if` passes a reference
+fn is_zero(count: &usize) -> bool {
+    *count == 0
+}
+
 /// Result for `derive-dependencies`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -2178,18 +2184,31 @@ pub struct DeriveDependenciesResult {
     /// Entries in `cycles`, in either form.
     pub cycles_count: usize,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them, or whose derived rewrite would leave a block that
-    /// does not parse as YAML, so it was not written. Reported rather than
-    /// repaired — `validate-frontmatter` owns diagnosing a malformed block —
-    /// and never an error: an unparseable spec is an unknown, not drift.
+    /// be derived from them. Reported rather than repaired —
+    /// `validate-frontmatter` owns diagnosing a malformed block — and never an
+    /// error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
-    /// pairing `check-artifacts` has with `skipped`. Absent in the file form.
+    /// only when `unparseable` and `unwritable` are also empty
+    /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
+    /// `skipped`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unparseable: Option<Vec<String>>,
     /// Entries in `unparseable`, in either form.
     pub unparseable_count: usize,
+    /// Specs whose derived `dependencies:` differs from the frontmatter's but
+    /// whose rewrite would leave a block that does not parse as YAML, so it
+    /// was not written: a value shape the splice's line rules do not cover, or
+    /// a block that was invalid before the rewrite. The index is stale and
+    /// the primitive cannot fix it, so unlike `unparseable` this is a failure:
+    /// the CLI exits non-zero, report-only and `write` alike, naming each spec
+    /// on stderr, and the key is edited by hand. Absent when empty, and inline
+    /// in both forms.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unwritable: Vec<String>,
+    /// Entries in `unwritable`; absent when zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unwritable_count: usize,
     /// Repo-relative spec-root directory the run enumerated (spec 040), so a
     /// caller can tell a genuinely empty corpus from a misconfigured root.
     pub specs_root: String,
@@ -2264,15 +2283,24 @@ pub struct DeriveReferencesResult {
     /// identical in `updated` alone. One that cannot be read halts the run.
     pub registered_services: u32,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them, or whose derived rewrite would leave a block that
-    /// does not parse as YAML, so it was not written. Reported rather than
-    /// repaired — `validate-frontmatter` owns diagnosing a malformed block —
-    /// and never an error: an unparseable spec is an unknown, not drift.
+    /// be derived from them. Reported rather than repaired —
+    /// `validate-frontmatter` owns diagnosing a malformed block — and never an
+    /// error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
-    /// pairing `check-artifacts` has with `skipped`.
+    /// only when `unparseable` and `unwritable` are also empty
+    /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
+    /// `skipped`.
     pub unparseable: Vec<String>,
+    /// Specs whose derived `references:` differs from the frontmatter's but
+    /// whose rewrite would leave a block that does not parse as YAML, so it
+    /// was not written: a value shape the splice's line rules do not cover, or
+    /// a block that was invalid before the rewrite. The index is stale and
+    /// the primitive cannot fix it, so unlike `unparseable` this is a failure:
+    /// the CLI exits non-zero, report-only and `write` alike, naming each spec
+    /// on stderr, and the key is edited by hand. Absent when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unwritable: Vec<String>,
     /// Specs tracked in the git index but absent from the worktree — deleted
     /// without the deletion being staged. Nothing can be derived from them, so
     /// they are named rather than dropped: they are excluded from `examined`,

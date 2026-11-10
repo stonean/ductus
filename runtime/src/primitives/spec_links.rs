@@ -113,6 +113,86 @@ pub(crate) fn continues_key(lines: &[&str], idx: usize) -> bool {
         .is_some_and(|next| is_key_continuation(next))
 }
 
+/// The index of the last line of the multi-line flow value (`[...]` or
+/// `{...}`) that the key on `lines[key_idx]` opens, or `key_idx` when its
+/// value is not a flow collection, closes on its own line, or never balances
+/// before the closing fence.
+///
+/// YAML lets a flow sequence close at column zero:
+///
+/// ```text
+/// dependencies: [
+///   009-old
+/// ]
+/// ```
+///
+/// [`continues_key`] reads that `]` as a new key's line, so a splice replacing
+/// the value stopped one line short and left the bracket behind. A splice
+/// skips through the line this returns before it applies [`continues_key`].
+/// Brackets inside a quoted scalar or after a `#` comment are not counted;
+/// a value that never balances before the fence is not skipped as a flow
+/// value, so the splice falls back to [`continues_key`] alone. What that
+/// yields is judged by the re-parse guard ([`frontmatter_parses`]): output
+/// that parses (an unclosed `[` whose lines are all indented) is written,
+/// output that does not is refused.
+pub(crate) fn flow_value_end(lines: &[&str], key_idx: usize) -> usize {
+    let Some(value) = lines
+        .get(key_idx)
+        .and_then(|line| line.split_once(':'))
+        .map(|(_, value)| value.trim_start())
+    else {
+        return key_idx;
+    };
+    if !(value.starts_with('[') || value.starts_with('{')) {
+        return key_idx;
+    }
+    let mut depth = flow_depth_change(value);
+    if depth <= 0 {
+        return key_idx;
+    }
+    for (offset, line) in lines.iter().enumerate().skip(key_idx + 1) {
+        if is_frontmatter_fence(line) {
+            return key_idx;
+        }
+        depth += flow_depth_change(line);
+        if depth <= 0 {
+            return offset;
+        }
+    }
+    key_idx
+}
+
+/// Opening minus closing flow brackets on one line, outside quoted scalars
+/// and `#` comments.
+fn flow_depth_change(line: &str) -> i32 {
+    let mut depth = 0;
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+    let mut previous = ' ';
+    for c in line.chars() {
+        match quote {
+            Some(q) => {
+                if escaped {
+                    escaped = false;
+                } else if q == '"' && c == '\\' {
+                    escaped = true;
+                } else if c == q {
+                    quote = None;
+                }
+            }
+            None => match c {
+                '"' | '\'' => quote = Some(c),
+                '#' if previous.is_whitespace() => break,
+                '[' | '{' => depth += 1,
+                ']' | '}' => depth -= 1,
+                _ => {}
+            },
+        }
+        previous = c;
+    }
+    depth
+}
+
 /// Whether the leading frontmatter block of `content` parses as YAML, with
 /// the block's bounds found by [`is_frontmatter_fence`], as both splices find
 /// them.
@@ -490,5 +570,21 @@ x: 1
         ));
         // Nothing to judge: no block at all.
         assert!(frontmatter_parses("just a body: [\n"));
+    }
+
+    #[test]
+    fn a_flow_value_ends_at_its_balancing_bracket() {
+        let ends = |text: &str, idx: usize| {
+            let lines: Vec<&str> = text.lines().collect();
+            flow_value_end(&lines, idx)
+        };
+        assert_eq!(ends("k: [\n  a,\n  [b]\n]\nn: 1", 0), 3);
+        assert_eq!(ends("k: {\n  a: 1\n}\nn: 1", 0), 2);
+        // Closed on its own line, not a flow value, or never balanced.
+        assert_eq!(ends("k: [a]\nn: 1", 0), 0);
+        assert_eq!(ends("k: x[\n]\n", 0), 0);
+        assert_eq!(ends("k: [\n  a\n---\n]\n", 0), 0);
+        // A bracket in a quote or a comment is not counted.
+        assert_eq!(ends("k: [\n  \"]\", # ]\n]\n", 0), 2);
     }
 }

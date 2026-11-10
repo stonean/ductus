@@ -5,7 +5,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-use std::io;
+use std::io::{self, Write as _};
 
 use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
@@ -17,18 +17,18 @@ use ductus::schema::primitives::{
     CheckReviewFreshnessArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
     CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
-    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
-    FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
-    MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
-    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs,
-    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
-    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs,
+    DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
+    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -363,6 +363,45 @@ where
             eprintln!("{err}");
             ExitCode::from(1)
         }
+    }
+}
+
+/// Whether `derive-dependencies` exits non-zero: a cycle, a rewrite that could
+/// not be written (a stale index nothing here can fix, on a report-only run
+/// and a writing one alike), or drift on a report-only run, which is the CI
+/// check ("the committed indexes are stale"). On a writing run the drift was
+/// just resolved, so it is not a failure.
+fn derive_dependencies_blocks(r: &DeriveDependenciesResult) -> bool {
+    r.cycles_count > 0 || r.unwritable_count > 0 || (!r.wrote && r.drift)
+}
+
+/// Whether `derive-references` exits non-zero: a rewrite that could not be
+/// written, or drift on a report-only run.
+fn derive_references_blocks(r: &DeriveReferencesResult) -> bool {
+    !r.unwritable.is_empty() || (!r.wrote && r.drift)
+}
+
+/// The stderr line for each spec whose `key` rewrite the re-parse guard
+/// refused, so an author whose commit the hook stops knows which spec and what
+/// to do.
+fn unwritable_lines(primitive: &str, key: &str, specs: &[String]) -> Vec<String> {
+    specs
+        .iter()
+        .map(|spec| {
+            format!(
+                "{primitive}: {spec}: the derived `{key}:` could not be written without breaking its frontmatter; edit that key by hand."
+            )
+        })
+        .collect()
+}
+
+/// Write [`unwritable_lines`] to stderr. A write that fails is dropped, as
+/// `warn_unknown_keys` drops one: `eprintln!` panics when stderr is a pipe
+/// whose reader has gone, and a report must not fail the run it reports on.
+fn report_unwritable(primitive: &str, key: &str, specs: &[String]) {
+    let mut stderr = io::stderr().lock();
+    for line in unwritable_lines(primitive, key, specs) {
+        let _ = writeln!(stderr, "{line}");
     }
 }
 
@@ -955,6 +994,7 @@ fn main() -> ExitCode {
             let derived = primitives::derive_dependencies::compute(&args, &repo);
             if let Ok(derived) = &derived {
                 report_cycles(&derived.cycles);
+                report_unwritable("derive-dependencies", "dependencies", &derived.unwritable);
             }
             let outcome =
                 derived.and_then(|derived| primitives::derive_dependencies::bound(&repo, derived));
@@ -962,13 +1002,16 @@ fn main() -> ExitCode {
             // run, which is the CI check ("the committed indexes are stale");
             // on a writing run the drift was just resolved, so it is not a
             // failure.
-            emit_result_gated(outcome, |r| r.cycles_count > 0 || (!r.wrote && r.drift))
+            emit_result_gated(outcome, derive_dependencies_blocks)
         }
         Command::DeriveReferences(args) => {
-            // No graph here, so stale-on-a-report-only-run is the only blocker.
-            emit_result_gated(primitives::derive_references::run(&args, &repo), |r| {
-                !r.wrote && r.drift
-            })
+            // No graph here, so a stale index on a report-only run and a
+            // rewrite that could not be written are the blockers.
+            let outcome = primitives::derive_references::run(&args, &repo);
+            if let Ok(result) = &outcome {
+                report_unwritable("derive-references", "references", &result.unwritable);
+            }
+            emit_result_gated(outcome, derive_references_blocks)
         }
         Command::CheckArtifacts(args) => {
             emit_result(primitives::check_artifacts::run(&args, &repo))
@@ -1018,7 +1061,112 @@ mod tests {
     use ductus::schema::registry::PRIMITIVE_REGISTRY;
     use ductus::session::Identity;
 
-    use super::{Cli, seed_context};
+    use super::{
+        Cli, derive_dependencies_blocks, derive_references_blocks, seed_context, unwritable_lines,
+    };
+    use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
+
+    fn dependencies_result() -> DeriveDependenciesResult {
+        DeriveDependenciesResult {
+            drift: false,
+            updated: Some(vec![]),
+            updated_count: 0,
+            unwritten: Some(vec![]),
+            unwritten_count: 0,
+            examined: 1,
+            untracked_skipped: Some(vec![]),
+            untracked_skipped_count: 0,
+            absent: Some(vec![]),
+            absent_count: 0,
+            cycles: Some(vec![]),
+            cycles_count: 0,
+            unparseable: Some(vec![]),
+            unparseable_count: 0,
+            unwritable: vec![],
+            unwritable_count: 0,
+            specs_root: "specs".into(),
+            wrote: false,
+            form: ListsForm::Inline,
+            lists_file: None,
+        }
+    }
+
+    fn references_result() -> DeriveReferencesResult {
+        DeriveReferencesResult {
+            drift: false,
+            updated: vec![],
+            unwritten: vec![],
+            examined: 1,
+            untracked_skipped: vec![],
+            registered_services: 0,
+            unparseable: vec![],
+            unwritable: vec![],
+            absent: vec![],
+            specs_root: "specs".into(),
+            wrote: false,
+        }
+    }
+
+    /// An unwritable rewrite fails both derivations, report-only and writing,
+    /// where an unparseable spec alone does not.
+    #[test]
+    fn an_unwritable_rewrite_exits_non_zero_and_an_unparseable_spec_does_not() {
+        for wrote in [false, true] {
+            let mut deps = dependencies_result();
+            deps.wrote = wrote;
+            assert!(!derive_dependencies_blocks(&deps), "clean, wrote {wrote}");
+            deps.unparseable = Some(vec!["specs/001-a/spec.md".into()]);
+            deps.unparseable_count = 1;
+            assert!(
+                !derive_dependencies_blocks(&deps),
+                "unparseable, wrote {wrote}"
+            );
+            deps.unwritable = vec!["specs/001-a/spec.md".into()];
+            deps.unwritable_count = 1;
+            assert!(
+                derive_dependencies_blocks(&deps),
+                "unwritable, wrote {wrote}"
+            );
+
+            let mut refs = references_result();
+            refs.wrote = wrote;
+            assert!(!derive_references_blocks(&refs), "clean, wrote {wrote}");
+            refs.unparseable = vec!["specs/001-a/spec.md".into()];
+            assert!(
+                !derive_references_blocks(&refs),
+                "unparseable, wrote {wrote}"
+            );
+            refs.unwritable = vec!["specs/001-a/spec.md".into()];
+            assert!(derive_references_blocks(&refs), "unwritable, wrote {wrote}");
+        }
+    }
+
+    /// One stderr line per unwritable spec, naming the spec and the key and
+    /// saying to edit it by hand.
+    #[test]
+    fn each_unwritable_spec_gets_one_line_naming_it_and_saying_to_edit_by_hand() {
+        let lines = unwritable_lines(
+            "derive-references",
+            "references",
+            &[
+                "specs/001-a/spec.md".to_string(),
+                "specs/002-b/spec.md".to_string(),
+            ],
+        );
+        assert_eq!(lines.len(), 2);
+        for (line, spec) in lines
+            .iter()
+            .zip(["specs/001-a/spec.md", "specs/002-b/spec.md"])
+        {
+            assert!(line.contains(spec), "{line}");
+            assert!(line.contains("`references:`"), "{line}");
+            assert!(line.contains("edit that key by hand"), "{line}");
+        }
+        assert_eq!(
+            unwritable_lines("derive-references", "references", &[]),
+            [] as [String; 0]
+        );
+    }
 
     /// Each primitive's `about` is the start of its `long_about`, so `-h` and the
     /// `ductus --help` list summarise the text `--help` prints whole (spec 079, AC9),

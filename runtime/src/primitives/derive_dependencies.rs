@@ -41,8 +41,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::primitives::spec_links::{
-    continues_key, frontmatter_parses, harvestable_lines, has_unterminated_frontmatter,
-    is_frontmatter_fence,
+    continues_key, flow_value_end, frontmatter_parses, harvestable_lines,
+    has_unterminated_frontmatter, is_frontmatter_fence,
 };
 use crate::primitives::{Result, read_text, rel_path, write_atomic};
 use crate::schema::paths;
@@ -83,6 +83,8 @@ pub struct Derived {
     pub cycles: Vec<Vec<String>>,
     /// As [`DeriveDependenciesResult`]'s `unparseable`, whole.
     pub unparseable: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `unwritable`, whole.
+    pub unwritable: Vec<String>,
     /// As [`DeriveDependenciesResult`]'s `specs-root`, whole.
     pub specs_root: String,
     /// As [`DeriveDependenciesResult`]'s `wrote`, whole.
@@ -120,6 +122,12 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         cycles: Some(derived.cycles),
         unparseable_count: derived.unparseable.len(),
         unparseable: Some(derived.unparseable),
+        // Inline in both forms, so it is not among `lists` and the file form's
+        // moved set is unchanged; moving it later is adding it to `lists`,
+        // clearing it with the other lists below, and `unwritable_count`
+        // already names it for `bounded_lists::counted_lists`.
+        unwritable_count: derived.unwritable.len(),
+        unwritable: derived.unwritable,
         specs_root: derived.specs_root,
         wrote: derived.wrote,
         form: ListsForm::Inline,
@@ -176,6 +184,7 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
     let mut updated = Vec::new();
     let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
+    let mut unwritable = Vec::new();
     let mut absent = Vec::new();
     let mut read_count: usize = 0;
 
@@ -207,11 +216,13 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
         }
         if !frontmatter_parses(&rewritten) {
             // The splice edits lines, and this block held a value shape its
-            // line rules do not cover, so its output is not YAML. Writing it
-            // would corrupt the spec while reporting it updated; it is named
-            // the way an unterminated block is, before the staged filter, so
-            // a dry run, a write and a staged run all say the same thing.
-            unparseable.push(spec.clone());
+            // line rules do not cover, or was not YAML to begin with, so its
+            // output is not YAML. Writing it would corrupt the spec while
+            // reporting it updated. The index is stale and cannot be fixed
+            // here, so it is `unwritable` (a failure on the CLI), not
+            // `unparseable` (an unknown), and is named before the staged
+            // filter so a dry run, a write and a staged run say the same.
+            unwritable.push(spec.clone());
             continue;
         }
         // Differs. Whether it is written depends on the staged filter.
@@ -238,6 +249,7 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
         examined: u32::try_from(read_count).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
         unparseable,
+        unwritable,
         absent,
         cycles,
         specs_root: rel_path(&specs_dir, repo),
@@ -372,9 +384,12 @@ fn leading_slug(s: &str) -> Option<&str> {
 /// still below it. A blank line or comment before the next key is not part of
 /// the list and is kept.
 ///
-/// A shape the line rules still do not cover (a flow sequence closing at
-/// column zero) leaves a block that does not parse; [`run`] checks the output and reports such a spec `unparseable`
-/// rather than writing it.
+/// A multi-line flow value (`dependencies: [`, entries, then `]`, which YAML
+/// lets close at column zero) is skipped through its balancing bracket
+/// ([`flow_value_end`]) before [`continues_key`] applies. A shape the line
+/// rules still do not cover leaves a block that does not parse; [`compute`]
+/// checks the output and reports such a spec `unwritable` rather than writing
+/// it.
 ///
 /// A spec with no `dependencies:` key is left untouched rather than having
 /// one inserted: where the key belongs in the frontmatter is an authoring
@@ -395,6 +410,8 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
     let mut in_fm = false;
     let mut replaced = false;
     let mut skipping = false;
+    // The last line of a multi-line flow value on the replaced key.
+    let mut flow_end = 0;
     let lines: Vec<&str> = content
         .lines()
         .map(|raw| raw.strip_suffix('\r').unwrap_or(raw))
@@ -418,7 +435,7 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
 
         if in_fm && skipping {
             // Continuation lines of the replaced key belong to its old value.
-            if continues_key(&lines, idx) {
+            if idx <= flow_end || continues_key(&lines, idx) {
                 continue;
             }
             skipping = false;
@@ -428,6 +445,7 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
             out.push(new_line.clone());
             replaced = true;
             skipping = true;
+            flow_end = flow_value_end(&lines, idx);
             continue;
         }
 
@@ -848,15 +866,50 @@ mod tests {
         );
     }
 
-    /// A value shape the splice's line rules do not cover — here a flow
-    /// sequence whose `]` closes at column zero — yields a block that does
-    /// not parse. It is reported `unparseable` and never written, on a dry
-    /// run and a write alike, and its body still feeds the cycle check.
+    /// A multi-line flow value closing at column zero is valid YAML, and the
+    /// splice skips through its balancing bracket, so the stale list is
+    /// replaced whole instead of leaving the `]` behind.
     #[test]
-    fn a_splice_that_would_not_parse_is_reported_and_never_written() {
+    fn a_flow_list_closing_at_column_zero_is_rewritten() {
         let tmp = tempfile::tempdir().unwrap();
-        let original = "---\nstatus: draft\ndependencies: [\n  009-old\n]\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n";
+        let original = "---\nstatus: draft\ndependencies: [\n  009-old\n]\nnext-criterion: 1\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n";
         assert!(frontmatter_parses(original), "the fixture starts as YAML");
+        tracked_repo(
+            tmp.path(),
+            &[
+                ("001-a", original),
+                (
+                    "002-b",
+                    "---\nstatus: draft\ndependencies: []\n---\n\n# B\n",
+                ),
+            ],
+        );
+        let result = run(
+            &DeriveDependenciesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.updated, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.unwritable, [] as [String; 0]);
+        assert_eq!(result.unparseable, [] as [String; 0]);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("specs/001-a/spec.md")).unwrap(),
+            "---\nstatus: draft\ndependencies: [002-b]\nnext-criterion: 1\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n"
+        );
+    }
+
+    /// A rewrite that would still leave a block that does not parse — here the
+    /// block was invalid before it, in another key — is `unwritable`, not
+    /// `unparseable`, and is never written, on a dry run and a write alike.
+    /// Its body still feeds the cycle check.
+    #[test]
+    fn a_splice_that_would_not_parse_is_unwritable_and_never_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        let original = "---\nstatus: draft\ntitle: [oops\ndependencies: []\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n";
+        assert!(!frontmatter_parses(original), "the fixture starts invalid");
         tracked_repo(
             tmp.path(),
             &[
@@ -877,10 +930,11 @@ mod tests {
             )
             .unwrap();
             assert_eq!(
-                result.unparseable,
+                result.unwritable,
                 vec!["specs/001-a/spec.md"],
                 "write {write}"
             );
+            assert_eq!(result.unparseable, [] as [String; 0], "write {write}");
             assert_eq!(result.updated, [] as [String; 0], "write {write}");
             assert!(!result.drift, "write {write}");
             assert_eq!(result.examined, 2, "write {write}");
@@ -893,7 +947,33 @@ mod tests {
                 original,
                 "write {write}"
             );
+            let bounded = bound(tmp.path(), result).unwrap();
+            assert_eq!(bounded.unwritable_count, 1, "write {write}");
         }
+    }
+
+    /// A block that opens and never closes has nothing derived from it: it
+    /// stays `unparseable`, and is not `unwritable`.
+    #[test]
+    fn an_unterminated_fence_is_unparseable_not_unwritable() {
+        let tmp = tempfile::tempdir().unwrap();
+        tracked_repo(
+            tmp.path(),
+            &[(
+                "001-a",
+                "---\nstatus: draft\ndependencies: []\n\n# A\n\n[b](../002-b/spec.md)\n",
+            )],
+        );
+        let result = run(
+            &DeriveDependenciesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unparseable, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.unwritable, [] as [String; 0]);
     }
 
     /// A spec tracked in the index but deleted from the work tree cannot be
