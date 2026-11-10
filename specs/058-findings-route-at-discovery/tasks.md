@@ -75,8 +75,10 @@ The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sortin
 
 ## 5. Close 058 after 079's changes land
 
-This task waits until the changes of `079-review-and-analysis-work-converges` land (owner, 2026-11-04), so it runs under their scope and disposition rules and counts toward that spec's AC20. 058's own change since its reopen is `f47d2b03`'s edit of its spec body and one scenario, which owes a review because it touched a scenario.
+This task waits until the changes of `079-review-and-analysis-work-converges` land (owner, 2026-11-04), so it runs under their scope and disposition rules and counts toward that spec's AC20. Since its reopen, `f47d2b03` edited its spec body and one scenario, and 079's commits its spec body, plan, data model and two scenarios; the scenario and data-model edits owe a review.
 
 It owes `/ductus:review`, `/ductus:analyze` and the completion gate, which run once no box in this file is open (spec 079), its ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09).
+
+Its criteria were verified at `9ebca7b0` (2026-11-09): 30 hold, AC3, AC11, AC15 and AC25 changed in part, AC23 never held as written, and passages in the spec body, three scenarios (step numbers one lower than the command's) and the data model are false now. The review's passes and the analysis's rule and grounding steps ran there too: 0 MUST and 0 SHOULD, seven observations, one a broken contract — `write-analysis` counts and renders a rule's waiver sent over a person's standing decision while `decisions:` keeps the person's, which `write-review`'s `standing_decision` already prevents — and one blocking rule finding, `BE-PAYLOAD-001` on `process-decisions`, whose bound 066's data model states and 058's artifacts do not point at (its deferral to 066 task 14 has lapsed). The owner delegated closing it as 055 was closed (2026-11-10): fix the broken contract in this spec's review run with a test and a mutant, fix every observation the disposition rule decides, point at 066's bound, correct the false passages by tense or fact, and annotate the changed criteria, all before the review and analysis records; a design change beyond what the code does, a blocking deferral, `done` and a push carrying another session's commits are still asked.
 
 - **Done when**: 058 is `done`
