@@ -157,6 +157,10 @@ The scenario `rules-load-without-shell-reads` has the rules a review or an analy
 - **The bound.** The rules list is bounded through `bounded_lists`. By an estimate replicating the parser in Python, the 12 shipped files hold 310 rules, about 138,000 characters with their Statements and about 341,000 with their Verifications. Both are past the read size, so the list moves to a file, which the model reads as it reads any bounded result.
 - **The commands.** review's §Load rules and analyze's §Rules read the rules from that result instead of reading the files. analyze's directory walk becomes the primitive's `all`.
 
+### groom derives its routing candidates
+
+The scenario `groom-derives-routing-candidates` has groom call `derive-routing-candidates` for each inbox item before its routing judgment, as specify's step 1 does. groom's step 2 names it bare, since the item's text is a per-item argument the exec walker cannot supply, so the walker dispatches nothing there and the line still loads it. The decision tree's Step 2 in groom's reference starts from those candidates where the command derived them. implement, review and analyze walk the same tree for findings and derive none, so for them the step reads as before.
+
 ### Corpus-growing results are bounded through `bounded_lists`
 
 Each primitive in `research.md`'s grows-set returns through `bounded_lists::place` (`runtime/src/primitives/bounded_lists.rs:53`) (AC7). The result is inline while it fits `read-size-bytes`. Past that, its lists go to the file `lists-file` names, with their counts inline, as with `compute-review-scope` (`runtime/src/schema/primitives.rs:752`).
@@ -203,6 +207,10 @@ None of the three gets the hook, the batching line or a bridge change (AC10). Op
 | `framework/commands/*.md` | Modify | Each "Where a named section lives" paragraph invokes `read-section` |
 | `framework/reference/review.md` | Modify | §Load rules reads the rules from `discover-rule-files` |
 | `framework/reference/analyze.md` | Modify | §Rules reads every file's rules from `discover-rule-files` with `all` |
+| `runtime/src/primitives/rule_sections.rs` | Modify | Each rule section keeps its heading line |
+| `scripts/mutation/reference-and-rule-reads.py` | Create | `read-section`'s and the rules listing's mutations |
+| `framework/commands/groom.md` | Modify | Step 2 derives routing candidates per item |
+| `framework/reference/groom.md` | Modify | The decision tree's Step 2 starts from those candidates |
 | `framework/reference/plan.md` | Modify | §Validation gate invokes `derive-boundary` |
 | `framework/reference/implement.md` | Modify | §Walk through tasks invokes `append-task` |
 | `runtime/src/hook.rs` | Create | `ductus hook status` and `ductus hook help` surface |

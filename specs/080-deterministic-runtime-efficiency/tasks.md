@@ -307,7 +307,7 @@ Design it in `plan.md` first. `merge-permissions` holds the canonical allow set 
 
 Put the mechanism to the owner before code, with each option's cost: no primitive returns a section's text, since `resolve-anchor` only checks that a `§` anchor resolves. Verify with `--round --only analyze,clarify,groom,plan,fold,review --permissions adopter`: no whole-reference read.
 
-- [ ] Implement the behavior described in `scenarios/reference-reads-follow-the-cited-sections.md`
+- [x] Implement the behavior described in `scenarios/reference-reads-follow-the-cited-sections.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
@@ -315,13 +315,13 @@ Put the mechanism to the owner before code, with each option's cost: no primitiv
 
 Put the mechanism to the owner before code, with each option's cost: extend `discover-rule-files`, or a primitive returning each loaded rule's ID, tier, Statement and Verification, named by review's §Load rules and analyze's steps 11–12. Verify with `--round --only review,analyze --permissions adopter`: no shell read of a rule file.
 
-- [ ] Implement the behavior described in `scenarios/rules-load-without-shell-reads.md`
+- [x] Implement the behavior described in `scenarios/rules-load-without-shell-reads.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 39. Scenario: groom derives routing candidates
 
-The smallest of the seven: `framework/commands/groom.md`'s routing step calls `derive-routing-candidates` before `routeInboxItem`, as `framework/commands/specify.md` step 1 does. Verify with `--round --only groom --permissions adopter`: no `grep` of spec bodies.
+The smallest of the seven: `framework/commands/groom.md`'s routing step calls `derive-routing-candidates` before `routeInboxItem`, as `framework/commands/specify.md` step 1 does. Verify with `--round --only groom --permissions adopter`: no `grep` of spec bodies. That change landed with tasks 37 and 38, and its design is in `plan.md`'s *groom derives its routing candidates*. Its round failed the check, by `research.md`'s *Sections, rules and routing candidates as tool results*. groom called the primitive, which matched nothing for the item, and then grepped spec bodies three times, one of them denied. What comes next goes to the owner before code, with each option's cost. Options include rewording Step 2 of the decision tree in `framework/reference/groom.md` to forbid searching spec bodies, amending the scenario's first Behavior bullet as task 40's was, or giving the primitive's spec-corpus source more than slugs to match. Each groom run costs about $0.39.
 
 - [ ] Implement the behavior described in `scenarios/groom-derives-routing-candidates.md`
 

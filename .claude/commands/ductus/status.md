@@ -25,9 +25,9 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 >
 > **For this command specifically**: the single deterministic tool for the pipeline view is `render-status`. One MCP call returns the pre-rendered view — the session target, the table of every spec, the summary, the cross-service references readout, the specs with work left grouped by next action, and the `/ductus:target` prompt. Do not substitute shell utilities (no `ls`, no `for` loops over spec directories, no `cat .ductus/config.toml`) for that call. Cross-service reference resolution for specs that carry a `references:` index is folded into the same call (the runtime resolves each index internally for the readout).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__render-status`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__read-section,mcp__ductus__render-status`
 
-**Where a named section lives.** This command's reference is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/status.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 <!-- audit:ignore-promotion -->
 1. Invoke `render-status` to load the pipeline view in one call. Its `rendered-markdown` holds the whole view as one markdown fragment, rendered by the runtime from the pipeline state — the target block, the table, the summary one item per line, the cross-service references readout, the specs with work left grouped by next action, and the closing `/ductus:target` prompt — held to the configured read size. Its `project` names the slash-command namespace the view's hints use.

@@ -448,6 +448,25 @@ pub(crate) fn heading_lines(content: &str) -> Vec<HeadingLine> {
         .collect()
 }
 
+/// The lines of the section under the first of `headings` reading `heading`:
+/// its heading line up to the next heading of the same or a higher level, or
+/// to `line_count`, the document's line count. `None` when no heading reads
+/// it. One boundary for every reader of a section: the batching line's
+/// citations and `read-section` (spec 080).
+pub(crate) fn section_range(
+    headings: &[HeadingLine],
+    heading: &str,
+    line_count: usize,
+) -> Option<std::ops::Range<usize>> {
+    let at = headings.iter().position(|h| h.text == heading)?;
+    let start = &headings[at];
+    let end = headings[at + 1..]
+        .iter()
+        .find(|h| h.level <= start.level)
+        .map_or(line_count, |h| h.line);
+    Some(start.line..end)
+}
+
 /// Whether the text starting at the `§` begins with one of `headings` — the
 /// citing file's own, or a shipped source's under the line rule. A `§` in
 /// running prose has nothing marking where its name ends, so a heading the

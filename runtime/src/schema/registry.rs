@@ -70,6 +70,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "dashboard",
     "render-status",
     "render-help",
+    "read-section",
     "write-session",
     "resolve-session",
     "retarget-sessions",

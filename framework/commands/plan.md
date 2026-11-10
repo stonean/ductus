@@ -42,7 +42,7 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference is `.ductus/reference/plan.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/plan.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 **Exec-path scope** (`ductus exec plan`): steps 4–6 cross the boundary at the `writeSpecBody` extension point, but the task breakdown (step 7) and the substantive readiness checks (**§Validation gate** in `.ductus/reference/plan.md`) are spec-wide semantic host work with no extension marker, so the subprocess walker no-ops them by design — the runtime owns no primitive for the task breakdown or the criteria/consistency judgments. A host driving `ductus exec` performs them itself before accepting the step-9 gate. `markdownlint` (steps 2, 11) and the artifact-size check (step 8) are advisory on every path — neither blocks the clarified → planned transition. This scope reduction mirrors clarify's and is not a silent gap.
 

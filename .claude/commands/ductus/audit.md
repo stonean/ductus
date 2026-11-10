@@ -27,8 +27,10 @@ See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-s
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools, except step 1's `run-generator`, which is not one and runs through the CLI; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
+>
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__read-section`
 
-**Where a named section lives.** This command's reference is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. `run-generator` is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), so invoke it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`; `ductus exec` dispatches it in-process. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 

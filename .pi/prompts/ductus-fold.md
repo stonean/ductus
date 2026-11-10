@@ -32,7 +32,7 @@ With no argument, use the session target — resolve it with `resolve-session` a
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference is `.ductus/reference/fold.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/fold.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 Process specs **one at a time**. Complete steps 3–13 for one branch-scoped spec — route, confirm, writes, retirement — before returning to step 3 for the next. That granularity is the atomicity this command offers.
 

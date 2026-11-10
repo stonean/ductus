@@ -102,6 +102,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:dashboard", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:render-status", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:render-help", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:read-section", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:write-session", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:resolve-session", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:retarget-sessions", "permission": { "type": "allow" } }`

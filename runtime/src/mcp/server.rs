@@ -64,17 +64,17 @@ use crate::schema::primitives::{
     MergeStatusHookArgs, MergeStatusHookResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
     PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
-    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSpecArgs, ReadSpecResult,
-    ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
-    RemoveInboxItemArgs, RemoveInboxItemResult, RenderHelpArgs, RenderHelpResult, RenderStatusArgs,
-    RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs,
-    ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
-    RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, StartFixRoundsArgs,
-    StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSectionArgs, ReadSectionResult,
+    ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs,
+    RelocateAuditRecordsResult, RemoveInboxItemArgs, RemoveInboxItemResult, RenderHelpArgs,
+    RenderHelpResult, RenderStatusArgs, RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult,
+    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
+    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult,
+    StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult,
+    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
+    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -844,6 +844,20 @@ impl GovRuntimeServer {
         // The same history walks as `dashboard`'s, so the blocking pool too.
         let repo = Arc::clone(&self.repo);
         dispatch_blocking(move || primitives::render_status::run(&params.0, repo.as_path())).await
+    }
+
+    #[tool(
+        name = "read-section",
+        description = descriptions::READ_SECTION
+    )]
+    async fn read_section(
+        &self,
+        params: Parameters<ReadSectionArgs>,
+    ) -> Result<Json<ReadSectionResult>, String> {
+        // One document read, so it runs inline.
+        primitives::read_section::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
     }
 
     #[tool(

@@ -507,6 +507,67 @@ pub struct DiscoverRuleFilesArgs {
     #[serde(default)]
     #[arg(long = "detected-surface")]
     pub detected_surfaces: Vec<String>,
+    /// Also list each selected file's rules: ID, tier and Statement (spec
+    /// 080). `false` when absent.
+    #[serde(default)]
+    #[arg(long)]
+    pub rules: bool,
+    /// With `rules`, also give each rule's Verification.
+    #[serde(default)]
+    #[arg(long)]
+    pub verification: bool,
+    /// Select every rule file in the directory, whatever its suffix,
+    /// `[rules] surfaces` and the disabled-rule-files filter say, as
+    /// `/{project}:analyze` loads them.
+    #[serde(default)]
+    #[arg(long)]
+    pub all: bool,
+    /// Repo-relative rule files outside the directory, which review loads
+    /// when `AGENTS.md` references them. With `rules`, listed after the
+    /// selected files.
+    #[serde(default)]
+    #[arg(long = "extra-file")]
+    pub extra_files: Vec<String>,
+}
+
+/// One rule `discover-rule-files` lists.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LoadedRule {
+    /// Its ID, from its heading.
+    pub id: String,
+    /// Its heading line, `#` marks included, so its level and any text
+    /// beside the ID can be checked without reading the file.
+    pub heading: String,
+    /// `must` or `should`, from its Statement's RFC 2119 keyword. Absent
+    /// when the Statement carries neither.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<String>,
+    /// Its Statement, `>` markers stripped and lines joined.
+    pub statement: String,
+    /// With `verification`, its Verification paragraph, when it has one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verification: Option<String>,
+}
+
+/// One rule file's rules.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RuleFileRules {
+    /// The file, repo-relative.
+    pub file: String,
+    /// Its rules in heading order. Empty when it holds no rule heading.
+    pub rules: Vec<LoadedRule>,
+}
+
+/// A rule file that could not be read.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreadableRuleFile {
+    /// The file, repo-relative.
+    pub file: String,
+    /// Why.
+    pub reason: String,
 }
 
 /// Result for `discover-rule-files`.
@@ -525,6 +586,25 @@ pub struct DiscoverRuleFilesResult {
     /// warnings, then disabled-rule-file notices, then the closing
     /// `loading rule files: …` line.
     pub notices: Vec<String>,
+    /// With `rules`: each selected file's rules, then each extra file's.
+    /// Absent without `rules`, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule_files: Option<Vec<RuleFileRules>>,
+    /// With `rules`: entries in `rule-files`, in either form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule_files_count: Option<usize>,
+    /// With `rules`: each file that could not be read, or is not UTF-8
+    /// text, with its reason.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreadable: Vec<UnreadableRuleFile>,
+    /// With `rules`: where the rules are, in this result or past the read
+    /// size in the file `lists-file` names.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form: Option<ListsForm>,
+    /// In the file form, the file holding `rule-files` whole, from the
+    /// project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- process-waivers ---------------------------------------------------------
@@ -2671,6 +2751,55 @@ pub struct RenderHelpResult {
     /// The guide as markdown, read from the installed help copy, with the
     /// project's name in each command as the copy spells it.
     pub guide: String,
+}
+
+// -- read-section ------------------------------------------------------------
+
+/// Args for `read-section`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadSectionArgs {
+    /// Repo-relative path of the document.
+    #[arg(long)]
+    pub path: String,
+    /// Each section's heading text, without the `#` marks.
+    #[arg(long = "heading", required = true)]
+    pub headings: Vec<String>,
+}
+
+/// One section `read-section` returns.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct Section {
+    /// The heading asked for.
+    pub heading: String,
+    /// Its heading line up to the next heading of the same or a higher
+    /// level.
+    pub text: String,
+}
+
+/// Result for `read-section` (spec 080, scenario
+/// `reference-reads-follow-the-cited-sections`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadSectionResult {
+    /// The document, as passed.
+    pub path: String,
+    /// Each heading found, with its section, in the order asked. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sections: Option<Vec<Section>>,
+    /// Entries in `sections`, in either form.
+    pub sections_count: usize,
+    /// Each heading asked for that the document has no heading reading.
+    pub not_found: Vec<String>,
+    /// Where the sections are: in this result, or past the read size in the
+    /// file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding the sections whole, from the
+    /// project root: a JSON object with its `sections` key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-rule-ids ----------------------------------------------------------

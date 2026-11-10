@@ -53,7 +53,7 @@ Default is unset — without the flag, the user confirms each task as today.
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference is `.ductus/reference/implement.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/implement.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 1. Invoke `read-tasks` against the targeted feature to load the ordered task list and the per-task "done when" conditions. The host threads the per-primitive addressing arguments (task-number, subtask-index, checked, write-boundary, threshold, criterion-index) as **typed** context to the calls that consume them: per-call inputs, not session-file state and (on `ductus exec`) not string CLI overrides.
 

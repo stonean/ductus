@@ -60,7 +60,7 @@ There are two ways to look at the work before the removal lands:
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference is `.ductus/reference/consolidate.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/consolidate.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 **An interrupted consolidation is completed by re-running it.** The runtime provides no transaction spanning the rewrite and the removal — the condition `/ductus:fold` documents for the same pair of steps — so the recovery is a second run, and each write is built so a re-run is a no-op where the first attempt landed:
 

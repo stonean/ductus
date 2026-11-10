@@ -31,6 +31,9 @@ use crate::schema::severity::RuleSeverity;
 pub(crate) struct RuleSection {
     /// The rule ID its heading carries (e.g. `CFG-CONST-001`).
     pub(crate) id: String,
+    /// Its heading line, trimmed, so a reader can check its level and that
+    /// it holds the ID alone (spec 080).
+    pub(crate) heading: String,
     /// The section's first block quote, `>` markers stripped and lines
     /// joined with single spaces. Empty when the section has none.
     pub(crate) statement: String,
@@ -101,7 +104,7 @@ pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
                 sections.push(section.finish());
             }
             match (rule_id, open.as_mut()) {
-                (Some(id), _) => open = Some(OpenSection::new(id, level)),
+                (Some(id), _) => open = Some(OpenSection::new(id, line.trim().to_owned(), level)),
                 // A subsection heading ends a paragraph in progress.
                 (None, Some(section)) => section.end_paragraphs(),
                 (None, None) => {}
@@ -137,6 +140,7 @@ enum Paragraph {
 /// A rule section being read, line by line.
 struct OpenSection {
     id: String,
+    heading: String,
     level: u8,
     statement: Vec<String>,
     quote: Quote,
@@ -145,9 +149,10 @@ struct OpenSection {
 }
 
 impl OpenSection {
-    fn new(id: String, level: u8) -> Self {
+    fn new(id: String, heading: String, level: u8) -> Self {
         Self {
             id,
+            heading,
             level,
             statement: Vec::new(),
             quote: Quote::NotStarted,
@@ -210,6 +215,7 @@ impl OpenSection {
         let verification = self.verification.join(" ");
         RuleSection {
             id: self.id,
+            heading: self.heading,
             statement: self.statement.join(" "),
             verification: (!verification.is_empty()).then_some(verification),
         }

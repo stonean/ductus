@@ -138,6 +138,7 @@ fn case(name: &str, ctx: &Context) -> Case {
             call(json!({"feature": f, "base": base}))
         }
         "resolve-anchor" | "validate-frontmatter" => call(json!({"path": spec})),
+        "read-section" => call(json!({"path": spec, "headings": ["Acceptance Criteria"]})),
         "append-inbox" => call(json!({"text": "A new corpus todo"})),
         "append-question" => call(json!({"feature": f, "question": "Is case zero handled?"})),
         "append-task" => call(

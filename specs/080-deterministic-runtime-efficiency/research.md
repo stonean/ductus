@@ -383,3 +383,14 @@ Each run's searches, and the tools sent in each search's message, were read from
 | fold | `check-unfolded-specs` | with it | `resolve-feature` only | with it, and `resolve-feature` |
 
 That is 1 of 5, 0 of 5 and 2 of 5, from one run per command each time. In round 2, specify's and fold's calls sent in the search's message both returned their results, with no error. The cost-round figures come from *The search step* above, which measured a lone search's step at 1.51 to 1.70 s, by the stream's `assistant` and `user` timestamps. Round 1 cost $2.333 and round 2 $1.659.
+
+### Sections, rules and routing candidates as tool results (tasks 37, 38 and 39)
+
+**Method.** From 01:10:40Z to 01:15:31Z on 2026-11-10, `python3 scripts/measure-command-cost.py --round --only analyze,clarify,groom,plan,fold,review --permissions adopter --specs 40 --bin <copy>` ran Claude Code 2.1.321 (`claude -p`, `stream-json`, model `claude-opus-5-5`) at 696c04c0 with the three tasks' change uncommitted. It ran against a copy of this checkout's release build of the change. Each run's calls were read from its raw stream, and its denials from `permission_denials`. The round ran before review's step 2 and analyze's §Rules gained the sentence on reading the `lists-file` with the host's reader, so that sentence's effect is not measured.
+
+**Result.** It cost $4.211. Every result subtype was `success`, and each run made one `ToolSearch`.
+
+- **Task 37.** No run read a whole reference. clarify asked `read-section` for one section, which returned 4,892 characters against the cost round's 11,859 for the whole file. fold asked for one, 1,473 against 5,210. plan asked for six, 7,370 against 9,781. review asked for two, 3,707. groom and analyze read nothing of their references, and analyze's largest tool result was 2,189 characters, against 50,087.
+- **Task 38.** No run read a rule file. analyze called `discover-rule-files` with `all`, `rules` and `verification`, and review with `rules`. Each result moved its rules to its `lists-file`. analyze read that file with `jq`, with one call denied as compound. review read it with the host's reader after one `python3` call was denied.
+- **Task 39.** groom called `derive-routing-candidates`, which matched nothing for the item, then ran three `grep`s of spec bodies, one of them denied as compound. Its verifying criterion, no `grep` of spec bodies, was not met.
+- **Other denials.** review had five more, which the cost round's runs also showed: `make test` chained, `rm -r`, `git checkout`, a chained `git diff`, and `git -C`. analyze had one more, a `grep` of its own saved output.

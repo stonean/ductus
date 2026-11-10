@@ -80,10 +80,11 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
 
 Load these inputs inline as the authoritative review criteria:
 
-- Every rule file selected by the suffix-based discovery in item 5 of
-  [Resolve target and scope](#resolve-target-and-scope)
-- Any rule file outside the rule-file directory (e.g., `docs/rules/internal-api.md`)
-  referenced from `AGENTS.md` — see [Notes for adopters](#notes-for-adopters)
+- The rules of every rule file selected by the suffix-based discovery in item 5 of
+  [Resolve target and scope](#resolve-target-and-scope), as step 2's
+  `discover-rule-files` returns them under `rules`
+- The rules of any rule file outside the rule-file directory (e.g., `docs/rules/internal-api.md`)
+  referenced from `AGENTS.md`, passed as step 2's `extra-files` — see [Notes for adopters](#notes-for-adopters)
 - `AGENTS.md` `Code Style`, `Testing`, `Gotchas`, and `Boundaries` sections
 - The target spec's acceptance criteria and any `scenarios/*.md` files
 

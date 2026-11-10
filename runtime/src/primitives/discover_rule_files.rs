@@ -22,10 +22,15 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::primitives::rule_sections::parse_rule_sections;
 use crate::primitives::{PrimitiveError, Result, flatten_line, read_text};
 use crate::schema::config_keys::{self, UnknownKey};
 use crate::schema::paths;
-use crate::schema::primitives::{DiscoverRuleFilesArgs, DiscoverRuleFilesResult};
+use crate::schema::primitives::{
+    DiscoverRuleFilesArgs, DiscoverRuleFilesResult, ListsForm, LoadedRule, RuleFileRules,
+    UnreadableRuleFile,
+};
+use crate::schema::severity::RuleSeverity;
 
 /// Recognized, selectable surface members for `[rules] surfaces`.
 /// Cross-cutting (`-cross.md`) files are unconditional and are not a
@@ -91,6 +96,15 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
         let surfaces = resolve_surfaces(config.rules.as_ref(), &args.detected_surfaces)?;
 
         for name in &all {
+            if args.all {
+                selected.push(name.clone());
+                if classify(name) == Surface::Unrecognized {
+                    notices.push(format!(
+                        "rule file {name} has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
+                    ));
+                }
+                continue;
+            }
             match classify(name) {
                 Surface::Backend => {
                     if has(&surfaces, "backend") {
@@ -112,17 +126,90 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
             }
         }
 
-        apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
+        if !args.all {
+            apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
+        }
     }
 
     selected.sort();
     notices.push(format!("loading rule files: {}", selected.join(", ")));
 
-    Ok(DiscoverRuleFilesResult {
+    let mut result = DiscoverRuleFilesResult {
         rules_dir: rules_dir_rel,
         selected,
         notices,
-    })
+        ..DiscoverRuleFilesResult::default()
+    };
+    if args.rules {
+        list_rules(args, repo, &mut result)?;
+    }
+    Ok(result)
+}
+
+/// With `rules`, each selected file's rules and then each extra file's,
+/// parsed by [`parse_rule_sections`], the reading `check-rule-ids` and the
+/// exec walker share; a file that cannot be read is listed under
+/// `unreadable`. The list is returned inline while the result fits
+/// `[artifacts] read-size-bytes`, and past it in the file the result names
+/// (`bounded_lists::place`; spec 080, AC7).
+fn list_rules(
+    args: &DiscoverRuleFilesArgs,
+    repo: &Path,
+    result: &mut DiscoverRuleFilesResult,
+) -> Result<()> {
+    let mut files: Vec<String> = result
+        .selected
+        .iter()
+        .map(|name| format!("{}/{name}", result.rules_dir))
+        .collect();
+    for extra in &args.extra_files {
+        super::validate_contained(repo, extra)?;
+        files.push(extra.clone());
+    }
+    let mut rule_files = Vec::new();
+    for file in files {
+        let content = match std::fs::read_to_string(repo.join(&file)) {
+            Ok(content) => content,
+            Err(err) => {
+                result.unreadable.push(UnreadableRuleFile {
+                    file,
+                    reason: err.to_string(),
+                });
+                continue;
+            }
+        };
+        let rules = parse_rule_sections(&content)
+            .into_iter()
+            .map(|section| LoadedRule {
+                tier: match section.tier() {
+                    Some(RuleSeverity::Must) => Some("must".to_owned()),
+                    Some(RuleSeverity::Should) => Some("should".to_owned()),
+                    _ => None,
+                },
+                verification: section.verification.clone().filter(|_| args.verification),
+                id: section.id,
+                heading: section.heading,
+                statement: section.statement,
+            })
+            .collect();
+        rule_files.push(RuleFileRules { file, rules });
+    }
+    result.rule_files_count = Some(rule_files.len());
+    result.rule_files = Some(rule_files);
+    result.form = Some(ListsForm::Inline);
+    let lists = serde_json::json!({ "rule-files": &result.rule_files });
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "discover-rule-files",
+        super::bounded_lists::ALL_SPECS,
+        &*result,
+        &lists,
+    )? {
+        result.form = Some(ListsForm::File);
+        result.rule_files = None;
+        result.lists_file = Some(file);
+    }
+    Ok(())
 }
 
 /// `true` when `surfaces` contains `member`.
@@ -462,6 +549,7 @@ mod tests {
     fn args(detected: &[&str]) -> DiscoverRuleFilesArgs {
         DiscoverRuleFilesArgs {
             detected_surfaces: detected.iter().map(|s| (*s).to_string()).collect(),
+            ..DiscoverRuleFilesArgs::default()
         }
     }
 
@@ -913,5 +1001,169 @@ mod tests {
         let tmp = setup(THREE, Some("[[review.broken\n"));
         let err = run(&args(&[]), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Toml { .. }));
+    }
+
+    /// Two rules: a MUST with a Verification, and one with no tier.
+    const RULES: &str = "# Rules\n\n### QUAL-TEST-001\n\n> A test MUST fail without its behavior.\n\n\
+                         **Verification:** Read each test.\n\n### QUAL-TEST-002\n\n> Prefer small tests.\n";
+
+    fn with_rules(args: DiscoverRuleFilesArgs) -> DiscoverRuleFilesArgs {
+        DiscoverRuleFilesArgs {
+            rules: true,
+            ..args
+        }
+    }
+
+    /// Scenario `rules-load-without-shell-reads`: with `rules`, each selected
+    /// file's rules come back, ID, tier and Statement, and the Verification
+    /// only with `verification`. Without `rules` the result keeps its old
+    /// shape.
+    #[test]
+    fn rules_lists_each_selected_files_rules() {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::write(tmp.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
+
+        let plain = run(&args(&[]), tmp.path()).unwrap();
+        let value = serde_json::to_value(&plain).unwrap();
+        assert!(
+            value.get("rule-files").is_none() && value.get("form").is_none(),
+            "{value}"
+        );
+
+        let result = run(&with_rules(args(&[])), tmp.path()).unwrap();
+        assert_eq!(result.form, Some(ListsForm::Inline));
+        assert_eq!(result.rule_files_count, Some(1));
+        let files = result.rule_files.unwrap();
+        assert_eq!(files[0].file, "framework/rules/quality-cross.md");
+        let rules = &files[0].rules;
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].id, "QUAL-TEST-001");
+        assert_eq!(rules[0].heading, "### QUAL-TEST-001");
+        assert_eq!(rules[0].tier.as_deref(), Some("must"));
+        assert_eq!(rules[0].statement, "A test MUST fail without its behavior.");
+        assert_eq!(
+            rules[0].verification, None,
+            "no Verification without the flag"
+        );
+        assert_eq!(
+            rules[1].tier, None,
+            "a Statement with no keyword has no tier"
+        );
+
+        let verified = run(
+            &DiscoverRuleFilesArgs {
+                verification: true,
+                ..with_rules(args(&[]))
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(
+            verified.rule_files.unwrap()[0].rules[0]
+                .verification
+                .as_deref(),
+            Some("Read each test.")
+        );
+    }
+
+    /// `all` selects every file in the directory, past `[rules] surfaces` and
+    /// the disabled-rule-files filter, as analyze loads them.
+    #[test]
+    fn all_selects_every_file_past_surfaces_and_the_disabled_filter() {
+        let toml = "[rules]\nsurfaces = [\"backend\"]\n\n[[review.disabled-rule-files]]\n\
+                    file = \"security-backend.md\"\nreason = \"Not adopting it on this surface yet.\"\n";
+        let tmp = setup(THREE, Some(toml));
+        let review = run(&args(&[]), tmp.path()).unwrap();
+        assert_eq!(review.selected, vec!["quality-cross.md"]);
+        let all = run(
+            &DiscoverRuleFilesArgs {
+                all: true,
+                ..args(&[])
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(
+            all.selected,
+            vec![
+                "accessibility-frontend.md",
+                "quality-cross.md",
+                "security-backend.md"
+            ]
+        );
+        assert_eq!(
+            all.notices.last().unwrap(),
+            "loading rule files: accessibility-frontend.md, quality-cross.md, security-backend.md"
+        );
+    }
+
+    /// A rule file outside the directory is listed after the selected ones,
+    /// one that cannot be read is named under `unreadable`, and a path
+    /// leaving the project is refused.
+    #[test]
+    fn extra_files_are_listed_and_an_unreadable_file_is_named() {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::create_dir_all(tmp.path().join("docs/rules")).unwrap();
+        std::fs::write(tmp.path().join("docs/rules/internal-api.md"), RULES).unwrap();
+        std::fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            [0xff, 0xfe],
+        )
+        .unwrap();
+        let result = run(
+            &DiscoverRuleFilesArgs {
+                extra_files: vec!["docs/rules/internal-api.md".into()],
+                ..with_rules(args(&[]))
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let files = result.rule_files.unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].file, "docs/rules/internal-api.md");
+        assert_eq!(files[0].rules.len(), 2);
+        assert_eq!(result.unreadable.len(), 1);
+        assert_eq!(
+            result.unreadable[0].file,
+            "framework/rules/quality-cross.md"
+        );
+
+        let err = run(
+            &DiscoverRuleFilesArgs {
+                extra_files: vec!["../outside.md".into()],
+                ..with_rules(args(&[]))
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+    }
+
+    /// Past the read size the rules move to the file the result names, with
+    /// their count inline (AC7).
+    #[test]
+    fn past_the_read_size_the_rules_move_to_a_file() {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 300\n",
+        )
+        .unwrap();
+        std::fs::write(tmp.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
+        let result = run(&with_rules(args(&[])), tmp.path()).unwrap();
+        assert_eq!(result.form, Some(ListsForm::File));
+        assert!(result.rule_files.is_none());
+        assert_eq!(result.rule_files_count, Some(1));
+        let file = result.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(lists["rule-files"][0]["rules"][0]["id"], "QUAL-TEST-001");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "discover-rule-files",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 }

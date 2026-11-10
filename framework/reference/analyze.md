@@ -209,9 +209,9 @@ A newly introduced advisory check that fires across `done` specs therefore surfa
 
 ## Rules (blocking and advisory)
 
-Rules are the cross-cutting tier of the framework's three-tier requirement model (see §rules in `.ductus/constitution.md`). Discover rule files by directory walk: list every `*.md` file in the project's rule-file directory and classify each by basename suffix per the closed-suffix policy there. `/{project}:analyze` loads **every** discovered file, shipped or project-authored, regardless of detected stack and of `[rules] surfaces` (`ductus.md`, **Project Configuration**), because citation verification spans surfaces: a backend project that cites `FE-XSS-001` in a scenario covering HTML output still needs that citation verified. `[rules] surfaces` scopes `/{project}:review` enforcement only.
+Rules are the cross-cutting tier of the framework's three-tier requirement model (see §rules in `.ductus/constitution.md`). Invoke `discover-rule-files` with `all`, `rules` and `verification`: it lists every `*.md` file in the project's rule-file directory, classifies each by basename suffix per the closed-suffix policy there, and returns each file's rules, with each rule's ID, heading line, tier, Statement and Verification, in its `rule-files`, or past the read size in the file `lists-file` names. Read that file with the host's file reader, in parts by line offset when it is long. Neither it nor a rule file is read through the shell. `/{project}:analyze` loads **every** discovered file, shipped or project-authored, regardless of detected stack and of `[rules] surfaces` (`ductus.md`, **Project Configuration**), because citation verification spans surfaces: a backend project that cites `FE-XSS-001` in a scenario covering HTML output still needs that citation verified. `[rules] surfaces` scopes `/{project}:review` enforcement only.
 
-For each file with an unrecognized suffix, emit one stdout line:
+Emit the notice lines it returns verbatim. For each file with an unrecognized suffix, that is one stdout line:
 
 ```text
 rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md
@@ -231,7 +231,7 @@ No rule files found, skipping rule checks
 
 An empty `loading rule files:` line renders identically whether the rule-file directory held nothing, does not exist, or could not be read (§design-principles in `.ductus/constitution.md`, `QUAL-CLAIM-001`). The finding is **advisory, never blocking**: a project with no rule files is a legitimate state, and the rest of the pass still runs.
 
-For each loaded rule file:
+For each loaded rule file, checked from the rules the result lists:
 
 - Every rule heading is level-3 and contains only the rule ID (no surrounding text)
 - Every rule has the two required fields: a block-quoted Statement and a `**Verification:**` paragraph. A `**Rationale:**` paragraph is ignored, never malformed
@@ -246,7 +246,7 @@ For each loaded rule file:
 
 If any check above fails, the affected rule file is treated as unloadable for the remainder of this analyze pass — no rule from it is applied to the per-rule assessments (steps 11 and 12) — and the failure is reported as a **Blocking** finding, one of the following, since a file whose rules drop out without a finding makes a malformed rule set indistinguishable from a clean one:
 
-- `Malformed rule file {path} at {location}: {reason}` — a missing required field, an ID-format violation, a malformed heading, or a file that does not parse
+- `Malformed rule file {path} at {location}: {reason}` — a missing required field, an ID-format violation, a malformed heading, or a file that does not parse, among them each file the result names under `unreadable`
 - `Duplicate rule ID {ID} in {file}; refusing to load` — two rules in the same file share an ID
 
 A citation step 5 resolves is reported in the same way, naming the citing artifact:

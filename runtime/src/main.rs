@@ -23,11 +23,12 @@ use ductus::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
     MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
     ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadReReadArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
-    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
-    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -237,6 +238,8 @@ enum Command {
     RenderStatus(RenderStatusArgs),
     #[command(about = descriptions::summary(descriptions::RENDER_HELP), long_about = descriptions::RENDER_HELP)]
     RenderHelp(RenderHelpArgs),
+    #[command(about = descriptions::summary(descriptions::READ_SECTION), long_about = descriptions::READ_SECTION)]
+    ReadSection(ReadSectionArgs),
     #[command(about = descriptions::summary(descriptions::WRITE_SESSION), long_about = descriptions::WRITE_SESSION)]
     WriteSession(WriteSessionArgs),
     #[command(about = descriptions::summary(descriptions::RESOLVE_SESSION), long_about = descriptions::RESOLVE_SESSION)]
@@ -954,6 +957,7 @@ fn main() -> ExitCode {
         Command::Dashboard(args) => emit_result(primitives::dashboard::run(&args, &repo)),
         Command::RenderStatus(args) => emit_result(primitives::render_status::run(&args, &repo)),
         Command::RenderHelp(args) => emit_result(primitives::render_help::run(&args, &repo)),
+        Command::ReadSection(args) => emit_result(primitives::read_section::run(&args, &repo)),
         Command::WriteSession(args) => emit_result(primitives::write_session::run(&args, &repo)),
         Command::ResolveSession(args) => {
             emit_result(primitives::resolve_session::run(&args, &repo))

@@ -54,9 +54,9 @@ Scenario-targeted:
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__check-artifact-size,mcp__ductus__gate-confirm,mcp__ductus__label-criteria,mcp__ductus__lint-markdown,mcp__ductus__set-status,mcp__ductus__traverse-deps`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__check-artifact-size,mcp__ductus__gate-confirm,mcp__ductus__label-criteria,mcp__ductus__lint-markdown,mcp__ductus__read-section,mcp__ductus__set-status,mcp__ductus__traverse-deps`
 
-**Where a named section lives.** This command's reference is `.ductus/reference/clarify.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/clarify.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 Steps 1–13 are the feature-targeted walk; a scenario-targeted session runs steps 1, 6, and 14. The detailed walk lives in the reference — the question-resolution sub-procedure under **§Feature-targeted clarify (hot path: `draft` spec)** in `.ductus/reference/clarify.md`, the recovery prompt wording under **§Recovery path: non-`draft` spec with open questions** in `.ductus/reference/clarify.md`, and the scenario-targeted variant under **§Scenario-targeted clarify** in `.ductus/reference/clarify.md`.
 

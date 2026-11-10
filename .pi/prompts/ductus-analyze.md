@@ -39,7 +39,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-**Where a named section lives.** This command's reference is `.ductus/reference/analyze.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/analyze.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 1. Invoke `read-spec` (with `include-body`) against the targeted feature. When the spec's `tasks.md` holds an unchecked box under any heading but a task this run's own deferral names, stop this feature's run naming the boxes, unless the spec is `done`: an analysis runs once implementation is complete, since nothing can say whether a task still open would change what it reads, and the write-analysis primitive refuses before then too. A `done` spec holding one has drifted instead, so its run goes on: step 22 reports the drift and, with `--fix`, reverts it, and step 21 records nothing, since the writer refuses. Its status governs which artifact-completeness checks apply, and its parsed `sections` feed step 14's `## Applicable Rules` scan, so the body needs no re-read.
 

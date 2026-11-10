@@ -149,8 +149,8 @@ MUTATIONS = [
     (
         'M17 a cited section counts every name it holds, not only those it invokes',
         'src/primitives/tool_loading.rs',
-        '            invoked_regex()\n                .captures_iter(&body)\n                .filter_map(|cap| registry::served_primitives().find(|name| *name == &cap[1])),\n',
-        '            registry::served_primitives().filter(|name| names_token(&body, name)),\n',
+        '        tools.extend(invoked(&body));\n',
+        '        tools.extend(registry::served_primitives().filter(|name| names_token(&body, name)));\n',
         'tool_loading::tests::a_cited_section_adds_the_tools_it_invokes_and_not_those_it_names',
     ),
     (
@@ -158,7 +158,7 @@ MUTATIONS = [
         'src/primitives/tool_loading.rs',
         '                if inner.starts_with(\'§\') {\n',
         '                if inner.starts_with(\'§\') || inner.is_empty() || !inner.is_empty() {\n',
-        'tool_loading::tests::a_bold_heading_cites_a_section_of_the_command_file',
+        'tool_loading::tests::a_bold_heading_cites_a_section',
     ),
     (
         'M19 a line naming a reference also resolves against the command\'s own documents',
@@ -222,5 +222,12 @@ MUTATIONS = [
         '        let (bytes, _) = match read_and_substitute(&path, None, substitutions) {\n',
         '        let (bytes, _) = match read_and_substitute(&path, None, &BTreeMap::new()) {\n',
         'apply_manifest::tests::a_cited_reference_sections_tool_joins_the_line_in_both_layouts',
+    ),
+    (
+        'M28 a name invoked outside the steps and the cited sections is left out',
+        'src/primitives/tool_loading.rs',
+        "    let mut tools: BTreeSet<&'static str> = lines.iter().flat_map(|line| invoked(line)).collect();\n",
+        "    let mut tools: BTreeSet<&'static str> = BTreeSet::new();\n",
+        'tool_loading::tests::a_name_invoked_outside_the_steps_counts',
     ),
 ]

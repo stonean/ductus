@@ -32,9 +32,9 @@ With no argument, use the session target — resolve it with `resolve-session` a
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__append-task,mcp__ductus__check-unfolded-specs,mcp__ductus__create-scenario,mcp__ductus__gate-confirm,mcp__ductus__invalidate-review,mcp__ductus__retarget-sessions,mcp__ductus__retire-feature,mcp__ductus__rewrite-spec-links,mcp__ductus__set-status`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__append-task,mcp__ductus__check-unfolded-specs,mcp__ductus__create-scenario,mcp__ductus__gate-confirm,mcp__ductus__invalidate-review,mcp__ductus__read-section,mcp__ductus__retarget-sessions,mcp__ductus__retire-feature,mcp__ductus__rewrite-spec-links,mcp__ductus__set-status`
 
-**Where a named section lives.** This command's reference is `.ductus/reference/fold.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
+**Where a named section lives.** This command's reference is `.ductus/reference/fold.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
 Process specs **one at a time**. Complete steps 3–13 for one branch-scoped spec — route, confirm, writes, retirement — before returning to step 3 for the next. That granularity is the atomicity this command offers.
 

@@ -12,7 +12,7 @@ use regex::Regex;
 
 use crate::host::Host;
 use crate::parser::{self, ParseError};
-use crate::primitives::resolve_anchor::{HeadingLine, cited_heading, heading_lines};
+use crate::primitives::resolve_anchor::{HeadingLine, cited_heading, heading_lines, section_range};
 use crate::primitives::{SkipScanner, line_ending_of};
 use crate::schema::procedure::{Procedure, Step};
 use crate::schema::registry;
@@ -129,6 +129,14 @@ fn invoked_regex() -> &'static Regex {
     })
 }
 
+/// The served names `text` invokes ([`invoked_regex`]).
+fn invoked(text: &str) -> Vec<&'static str> {
+    invoked_regex()
+        .captures_iter(text)
+        .filter_map(|cap| registry::served_primitives().find(|name| *name == &cap[1]))
+        .collect()
+}
+
 /// The documents a citation can reach: the command file, or a reference it
 /// names by `.ductus/reference/<name>.md`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -160,18 +168,17 @@ impl Indexed {
     /// The section under the first heading reading `heading`: its heading
     /// line up to the next heading of the same or a higher level.
     fn section(&self, heading: &str) -> Option<String> {
-        let at = self.headings.iter().position(|h| h.text == heading)?;
-        let start = &self.headings[at];
-        let end = self.headings[at + 1..]
-            .iter()
-            .find(|h| h.level <= start.level)
-            .map_or(self.lines.len(), |h| h.line);
-        Some(self.lines[start.line..end].join("\n"))
+        let range = section_range(&self.headings, heading, self.lines.len())?;
+        Some(self.lines[range].join("\n"))
     }
 }
 
-/// The served tools a command's cited sections invoke (spec 080, scenario
-/// `one-search-covers-referenced-sections`). A line of the command file
+/// The served tools a command file and its cited sections invoke (spec 080,
+/// scenarios `one-search-covers-referenced-sections` and
+/// `reference-reads-follow-the-cited-sections`). A name invoked anywhere in
+/// the command file counts, so a paragraph outside the steps that invokes a
+/// tool, as "Where a named section lives" invokes `read-section`, loads it.
+/// A line of the command file
 /// cites a section with a `§` followed by its heading, matched longest
 /// first and ending where a word ends ([`cited_heading`]), or with a bold
 /// span equal to its heading. A line naming `.ductus/reference/<name>.md`
@@ -196,9 +203,9 @@ pub fn cited_tools<E>(
     mut read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<BTreeSet<&'static str>, E> {
     let mut skip = SkipScanner::default();
-    let own_reference = text
-        .lines()
-        .filter(|line| !skip.skip(line))
+    let lines: Vec<&str> = text.lines().filter(|line| !skip.skip(line)).collect();
+    let own_reference = lines
+        .iter()
         .any(|line| {
             reference_regex()
                 .captures_iter(line)
@@ -209,7 +216,7 @@ pub fn cited_tools<E>(
     docs.insert(Doc::Command, Indexed::new(text));
     let mut seen: BTreeSet<(Doc, String)> = BTreeSet::new();
     let mut queue: Vec<(Doc, String)> = Vec::new();
-    let mut tools = BTreeSet::new();
+    let mut tools: BTreeSet<&'static str> = lines.iter().flat_map(|line| invoked(line)).collect();
 
     let mut cite = |from: &Doc,
                     body: &str,
@@ -272,11 +279,7 @@ pub fn cited_tools<E>(
         let Some(body) = docs[&doc].section(&heading) else {
             continue;
         };
-        tools.extend(
-            invoked_regex()
-                .captures_iter(&body)
-                .filter_map(|cap| registry::served_primitives().find(|name| *name == &cap[1])),
-        );
+        tools.extend(invoked(&body));
         cite(&doc, &body, &mut docs, &mut queue)?;
     }
     Ok(tools)
@@ -795,15 +798,26 @@ mod tests {
         );
     }
 
-    /// prune's `--project` route: a bold span equal to a heading of the
-    /// command's own file cites that section, with no `§`, and the walk reads
-    /// citations anywhere in the file, not only in the steps.
+    /// A bold span equal to a heading cites that section, with no `§`, and
+    /// the walk reads citations anywhere in the file, not only in the steps.
     #[test]
-    fn a_bold_heading_cites_a_section_of_the_command_file() {
-        let command = "Under `--project`, work **Project files (`--project`)** below.\n\n\
-                       ## Instructions\n\n1. Invoke `prune-tasks`.\n\n\
-                       ## Project files (`--project`)\n\n- Invoke `prune-project` with no `apply`.\n";
-        assert_eq!(cited(command, &[]), vec!["prune-project"]);
+    fn a_bold_heading_cites_a_section() {
+        let command = "Under `--project`, work **Project files** in `.ductus/reference/x.md`.\n\n\
+                       ## Instructions\n\n1. Run prune-tasks.\n";
+        let reference = "## Project files\n\n- Invoke `prune-project` with no `apply`.\n";
+        assert_eq!(cited(command, &[("x", reference)]), vec!["prune-project"]);
+    }
+
+    /// Scenario `reference-reads-follow-the-cited-sections`: a name the
+    /// command file invokes outside its steps and outside any cited section,
+    /// as the "Where a named section lives" paragraph invokes `read-section`,
+    /// joins the line; one it only names does not.
+    #[test]
+    fn a_name_invoked_outside_the_steps_counts() {
+        let command = "## Instructions\n\n> a.\n\n**Where a named section lives.** Invoke \
+                       `read-section` with the reference and each section a step names; \
+                       `write-review` records a later run.\n\n1. Run mark-task.\n";
+        assert_eq!(cited(command, &[]), vec!["read-section"]);
     }
 
     /// A line naming a reference resolves only against it, even where the
