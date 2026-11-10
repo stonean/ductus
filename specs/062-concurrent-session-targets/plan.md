@@ -19,17 +19,16 @@ files stop reading the session file by hand and invoke `resolve-session`. The co
 
 ### Resolution moves into the runtime
 
-Today every targeted command resolves its target with a host read of the
-session file. `amend`, `analyze`, `clarify`, `fold`, `implement`, `plan`,
-`prune`, `review` and `target` all instruct "Read `.ductus/session.toml`" or
+Before this spec every targeted command resolved its target with a host read of
+the session file. `amend`, `analyze`, `clarify`, `fold`, `implement`, `plan`,
+`prune`, `review` and `target` all instructed "Read `.ductus/session.toml`" or
 "use the session target from `.ductus/session.toml`" (for example
 `framework/commands/clarify.md:22`, `framework/commands/implement.md:98`,
-`framework/commands/target.md:29`). Only writes go through a primitive
+`framework/commands/target.md:29`). Only writes went through a primitive
 (`write-session`). A host read cannot be made per-process: the identity is an
-environment variable, and the host may not read its environment on the
-markdown-only path (`framework/constitution.md:617`). On the MCP path it could
-only do so by the model running a shell command before every command, which is
-the diligence dependency the spec's Resolved Questions reject.
+environment variable, and the host could read it only by the model running a
+shell command before every command, which is the diligence dependency the
+spec's Resolved Questions reject.
 
 The runtime can read the environment: each agent process spawns its own
 `ductus mcp` server, and that server's environment carries the agent's session
@@ -42,21 +41,25 @@ A new module, `runtime/src/session.rs`, holds the whole contract: identity
 resolution, per-process paths, the lock, the per-process record, adoption,
 notices and the expiry sweep. It is called by `write-session`,
 `resolve-session`, `retarget-sessions`, `dashboard` and the exec seed, and by
-nothing else. Today the read logic exists twice, in `dashboard`
+nothing else. Before this spec the read logic existed twice, in `dashboard`
 (`runtime/src/primitives/dashboard.rs:737-761`) and in the exec seed
 (`runtime/src/main.rs:523-535`), and the write logic once more in
 `runtime/src/primitives/write_session.rs:59-123`. Pin-on-first-resolution
 and once-only notices only hold if every reader follows the same rule, so
 duplicated read logic would reproduce the defect this spec removes.
 
-The module takes the identity as a **parameter**. Only the edges (each session
-primitive's `run`, which the MCP handlers and the CLI call, and the exec seed)
-ask for the process's own, through
+The module takes the identity as a **parameter**. Only the edges (each `run`
+that reads the process's session — the session primitives', `dashboard`'s and
+`render-status`'s, which the MCP handlers and the CLI call — the
+`ductus hook status` entry, and the exec seed) ask for the process's own, through
 `session::process_identity`, which answers from the identity variables the
 binary's `main` captured once at startup (`session::init_process_identity`;
 `CFG-ENV-001`). A per-call read of the environment was tried first and
 rejected (review): a test binary never captures the variables, so in-process
-tests and walks are unidentified by construction, whatever shell runs them.
+tests and walks are unidentified by construction, whatever shell runs them. An
+invalid `DUCTUS_SESSION` fails each call that asks for the identity, naming the
+variable, rather than stopping the process at startup, so a session setting
+cannot take down the MCP server's other tools.
 Tests then pass identities directly instead of mutating process environment,
 which is `unsafe` in edition 2024 (`runtime/Cargo.toml:4`) and racy across
 parallel tests. `identity_from_env` itself takes a lookup closure, so the
@@ -118,7 +121,8 @@ file is a legacy tier (`.govern/session.toml` or the root
 the process as unidentified. Otherwise it would create `.ductus/` state while
 a legacy file lingers, which 042's cutover rule forbids
 (`runtime/src/schema/paths.rs:159-164`). A legacy layout exists only until the
-next `/ductus` run migrates it.
+next `/ductus` run migrates it (`framework/migrations/govern-dir-consolidate.md`
+step 3, then `framework/migrations/ductus-rename.md` step 2).
 
 ### Synchronization: one advisory lock (`BE-RACE-001`)
 
@@ -208,7 +212,9 @@ The existing three write shapes stay (`runtime/src/primitives/write_session.rs:7
     writer is told about peers in the result, so the next resolution does not
     tell it again.
   - The result gains `identity` and `peers`. Each peer entry carries a label,
-    a feature, an optional scenario, and `last-used` (AC19).
+    a feature, an optional scenario, and `last-used`: the peer's `used-at`, an
+    RFC 3339 date-time in UTC with the `Z` offset, or `null` when its record
+    holds none (AC19).
 - **Clear write:**
   - With an identity, the own file becomes `cleared = true` with no target
     keys.
@@ -231,7 +237,7 @@ them in place: a file that cannot be read cannot be proven idle.
 A new primitive replaces fold's `write-session` re-target
 (`framework/commands/fold.md:75`, step 13) and consolidate's host-conditional
 clear (`framework/commands/consolidate.md:77`, step 6). Consolidate's clear
-step currently reads the session file by hand to decide whether to act.
+step read the session file by hand to decide whether to act.
 
 - **Arguments:** `from` (the removed feature), then either a new target
   (`feature`, `path`, optional `scenario` and `scenario-path`) or `clear`, and
@@ -259,15 +265,25 @@ auditable place.
   `session-source` and `session-notices`, and the pipeline view (`render-status`'s
   since spec 080) renders the process label on the target line and each notice
   beneath it (AC8).
-  `framework/commands/status.md` describes the new line. A delivering read was tried first
+  The view's target block is described by `render-status`'s description. A delivering read was tried first
   and rejected (task 12): `dashboard` is also called for data —
   `scripts/audit/lib.sh` enumerates the corpus with it — and every such call
   pinned the caller's session and would consume its notices unseen.
-- **Exec seed:** `runtime/src/main.rs:523-535` seeds from the core's resolve
-  instead of parsing the session path, so `ductus exec` from an agent's shell
+- **Exec seed:** `runtime/src/main.rs:523-535` seeds from the core's peek when
+  the process has a record of its own, and otherwise from the shared default
+  read leniently as before this spec, so `ductus exec` from an agent's shell
   tool carries that agent's identity (AC23). The retarget exceptions in
   `runtime/src/interpreter/mod.rs:303-316` are unchanged, because they govern
   which keys a walk may overwrite, not where the seed came from.
+
+Every list a session tool returns — `write-session`'s `peers`, `expired`,
+`unreadable` and `notices`, `resolve-session`'s `notices` and `unreadable`,
+`retarget-sessions`' `retargeted`, `cleared` and `unreadable`, and the
+dashboard's `session-notices` and `session-unreadable` — holds entries drawn
+only from the session files under `.ductus/sessions/`, whose idle ones the
+expiry sweep removes, and the shared default. So like every tool result it is
+bounded by the project it describes rather than paginated (022 `plan.md`'s
+`BE-PAYLOAD-001` statement).
 
 ### Gitignore: two layers
 
@@ -362,9 +378,8 @@ discharges the declared impact.
   read, modify and replace state every session shares. It would need the same
   lock anyway, and one malformed file would take every session down. Per-file
   confinement is `BE-RACE-002`'s preferred form.
-- **Identity passed as an argument by the host: rejected.** The markdown-only
-  host cannot read its environment. On the MCP path the model would have to
-  fetch and pass the identity on every call, a diligence dependency.
+- **Identity passed as an argument by the host: rejected.** The model would
+  have to fetch and pass the identity on every call, a diligence dependency.
 - **A locking crate (`fs2`, `fd-lock`) or a lock file created with
   `create_new`: rejected.** The crate adds a dependency for what the standard
   library now provides. A `create_new` lock file needs stale-lock recovery when
@@ -381,7 +396,7 @@ discharges the declared impact.
 - **Leaving the default set on clear: rejected.** A restarted agent would adopt
   the target its operator had just cleared.
 - **Known limitation: the platform table has one row.** Only
-  `CLAUDE_CODE_SESSION_ID` is verified. Augment, OpenCode and Antigravity
+  `CLAUDE_CODE_SESSION_ID` is verified. Auggie, OpenCode, Antigravity and Pi
   sessions get isolation only through `DUCTUS_SESSION` until their variables
   are verified and added.
 - **Known limitation: legacy layouts get no per-process targets.** A

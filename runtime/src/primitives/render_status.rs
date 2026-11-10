@@ -85,4 +85,66 @@ mod tests {
             result.rendered_markdown
         );
     }
+
+    /// The view names the target of the process that runs it, labelled with
+    /// its session, not the shared default's (spec 062, AC8). The identity is
+    /// captured once at startup, so the test re-runs itself as a child test
+    /// process with `DUCTUS_SESSION` set and captures it there, as the binary's
+    /// `main` does; the parent asserts that the child passed.
+    #[test]
+    fn the_view_names_this_process_target_and_session() {
+        const NAME: &str =
+            "primitives::render_status::tests::the_view_names_this_process_target_and_session";
+        const CHILD: &str = "DUCTUS_TEST_RENDER_STATUS_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", NAME, "--test-threads=1"])
+                .env(CHILD, "1")
+                .env("DUCTUS_SESSION", "alpha")
+                .env_remove("CLAUDE_CODE_SESSION_ID")
+                .output()
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            assert!(
+                output.status.success() && stdout.contains("1 passed"),
+                "the child run, with an identity set, did not pass: {stdout}"
+            );
+            return;
+        }
+        session::init_process_identity();
+        let alpha = session::process_identity().unwrap().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        let target = |feature: &str| crate::schema::primitives::SessionTarget {
+            feature: feature.into(),
+            path: format!("specs/{feature}"),
+            scenario: None,
+            scenario_path: None,
+        };
+        let now = SystemTime::now();
+        session::write(
+            tmp.path(),
+            Some(&alpha),
+            &session::WriteShape::Target(target("055-a")),
+            None,
+            now,
+        )
+        .unwrap();
+        // A later unidentified write moves the shared default elsewhere, so a
+        // view rendered for no process would show that target, unlabelled.
+        session::write(
+            tmp.path(),
+            None,
+            &session::WriteShape::Target(target("056-b")),
+            None,
+            now,
+        )
+        .unwrap();
+        let result = run(&RenderStatusArgs::default(), tmp.path()).unwrap();
+        let first = result.rendered_markdown.lines().next().unwrap_or_default();
+        assert!(
+            first.starts_with("Target: 055-a ") && first.ends_with("— session alpha"),
+            "the target line names this process's own target and session: {first:?}"
+        );
+    }
 }

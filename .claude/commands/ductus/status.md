@@ -17,7 +17,7 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 - This is a read-only command. Do NOT modify any files.
 - The pipeline view is acquired through the single `render-status` primitive — one runtime call returns the pre-rendered view alone, without `dashboard`'s structured payload, which nothing here reads (spec 080). The procedure does not read individual spec files, list directories, or shell out for that view.
 - Cross-service reference resolution is read-only and folded into that same call: the runtime resolves each spec's `references:` index internally (the same classification the resolve-references primitive exposes) to render the readout, reading only `.ductus/config.toml` and the registered local checkouts — the canonical repo URL is never fetched.
-- Reference: §text-first-artifacts (the schema is the authoritative source for which fields appear in the payload); [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
+- Reference: §text-first-artifacts (the schema is the authoritative source for the frontmatter fields the view renders); [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
 
 ## Instructions
 

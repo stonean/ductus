@@ -169,7 +169,17 @@ fn a_write_in_one_process_never_moves_the_other() {
     );
     assert_eq!(resolved(tmp.path(), a).as_deref(), Some("055-a"));
 
-    // The pipeline view agrees with resolve-session, per process.
+    // The pipeline view agrees with resolve-session, per process (AC8): its
+    // target line names this process's own target, labelled with its session.
+    let view = run(tmp.path(), a, &["render-status"]);
+    let first = view["rendered-markdown"]
+        .as_str()
+        .and_then(|md| md.lines().next())
+        .unwrap_or_default();
+    assert!(
+        first.starts_with("Target: 055-a ") && first.ends_with("— session alpha"),
+        "the view's target line: {first:?}"
+    );
     let dash = run(tmp.path(), a, &["dashboard"]);
     assert_eq!(dash["session-target"]["feature"], "055-a");
     assert_eq!(dash["session-identity"], "alpha");

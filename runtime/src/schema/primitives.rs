@@ -2643,15 +2643,17 @@ pub struct DashboardSessionTarget {
     pub scenario_detail: Option<DashboardScenarioDetail>,
 }
 
-/// Result for `dashboard`. One call returns everything `/ductus:status` needs
-/// to render the full pipeline view: the per-spec inventory, the
-/// repo-wide `tags-union`, the config review-state summary, and
-/// the optional session target.
+/// Result for `dashboard`: the pipeline state as data — the per-spec
+/// inventory, the repo-wide `tags-union`, the config review-state summary,
+/// the standing inbox, the reopenings counts and the optional session
+/// target. The view `/{project}:status` shows is `render-status`'s (spec 080).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DashboardResult {
-    /// Session target when the session file (`.ductus/session.toml`;
-    /// legacy root fallback) exists and names a target; `None` otherwise.
+    /// The session target this process would resolve (spec 062): its own
+    /// record's when it has one, else the shared default's
+    /// (`.ductus/session.toml`, legacy fallbacks); `None` when there is none or
+    /// its own was cleared.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_target: Option<DashboardSessionTarget>,
     /// Display label of the process's session identity (spec 062); absent

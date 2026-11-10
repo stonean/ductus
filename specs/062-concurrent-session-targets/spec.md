@@ -50,8 +50,9 @@ on?
 
 Each agent process resolves and writes its own target. A target write in one
 process, whether explicit or a side effect, leaves every other process's target
-as it was. A command acts on the target of the process that runs it and never
-on another's.
+as it was, unless it is a fold or consolidation removing the spec that target
+names (§Removal strands no process). A command acts on the target of the
+process that runs it and never on another's.
 
 This is how 010's ambiguity is closed: a process still has exactly one target,
 so "which target" has one answer inside it. Within a process the semantics are
@@ -79,15 +80,17 @@ variable. An identity is never used unsanitized to locate session state.
 agent's shell tool, it carries that agent's identity and acts on that agent's
 target; run from a terminal with no identity, it uses the shared default.
 
-Before the server is registered a host runs `ductus resolve-session`
-([§runtime-host-integration](../../framework/constitution.md#host-integration-for-agent-runtimes)),
-and the runtime reads the identity from its own environment, as over MCP.
+`resolve-session` reads the identity from the runtime's own environment; without
+the server a command stops
+([§runtime-host-integration](../../framework/constitution.md#host-integration-for-agent-runtimes)).
 
 ### The shared default
 
 `.ductus/session.toml` remains the shared default. Every target write, in any
 process, also sets it, so it always holds the most recently set target in the
-working tree. A process with no identity reads and writes only the default.
+working tree. A process with no identity holds no target of its own: it reads
+and writes the default, and on the `.ductus/` layout its writes take the
+session lock, which creates `.ductus/sessions/` with its lock and ignore files.
 
 An identified process that has no target of its own **adopts** the default on
 its first resolution and announces the adoption. From then on only its own
@@ -114,15 +117,18 @@ runs.
 A cleared target leaves its process with **no target**, whether the process
 cleared it or a consolidation did. Targeted commands in that process stop and
 ask for `/ductus:target`, as they do today. A cleared process does not adopt
-the default: that would turn a clear into a re-target nobody chose.
+the default: that would turn a clear into a re-target nobody chose. A cleared
+record left unused for seven days is removed like any other (§Idle expiry), and
+the process's next resolution then adopts the default, announced.
 
 ### Two sessions on one feature
 
-Two sessions may target the same feature. The session making the target write
-is told, at write time, which other unexpired sessions also target that feature
-and when each last used its target. Each of those sessions is told once, at its
-next ductus command, and again only when the set of sessions sharing its
-feature changes. Neither is blocked. Notice is delivered at a command and never
+Two sessions may target the same feature. An identified session making the
+target write is told, at write time, which other unexpired sessions also target
+that feature and when each last used its target; a process with no identity
+holds no target of its own, so it is neither told nor named. Each of those
+sessions is told once, at its next ductus command that resolves or writes its
+target, and again only when the set of sessions sharing its feature changes. Neither is blocked. Notice is delivered at a command and never
 pushed, because ductus has no channel into an agent process that is not running
 one.
 
@@ -143,7 +149,8 @@ names it among the sessions it changed.
 ### Concurrent writes lose nothing
 
 Two processes writing their targets at the same moment each end up with the
-target they wrote. The existing atomic-write guarantee protects one file from
+target they wrote. The existing atomic-write guarantee (`write_atomic` in
+`runtime/src/primitives/mod.rs`) protects one file from
 a torn write, but it does not by itself prevent a lost update when two writers
 read, modify and replace shared state. The same holds for idle expiry: a
 removal never takes a target that was used after the removing process
@@ -172,7 +179,7 @@ own session file, so the two compose.
 
 ## Acceptance Criteria
 
-- [x] AC1: With two agent processes in one working tree, a target write in the first, whether by `/ductus:target` or as a side effect of `/ductus:specify`, `/ductus:groom`, `/ductus:amend`, `/ductus:fold` or `/ductus:consolidate`, leaves the target the second process resolves unchanged
+- [x] AC1: With two agent processes in one working tree, a target write in the first, whether by `/ductus:target` or as a side effect of `/ductus:specify`, `/ductus:groom`, `/ductus:amend`, `/ductus:fold` or `/ductus:consolidate`, leaves the target the second process resolves unchanged. **Never held as written:** a fold or consolidation that removes the spec the second process targets re-points or clears that target too, as AC21 requires; a target naming any other spec is left unchanged.
 - [x] AC2: With two processes targeting different features, every targeted command run in either process operates on that process's own feature
 - [x] AC3: An operator running a single agent process with no new configuration reads and writes `.ductus/session.toml` with the keys it holds today, and no migration runs for them
 - [x] AC4: Two processes writing their targets concurrently each retain the target they wrote; neither write is lost to the other
@@ -183,12 +190,12 @@ own session file, so the two compose.
 - [x] AC12: An operator-set `DUCTUS_SESSION` takes precedence over the platform's session identity: two processes with different values hold separate targets, and two with the same value share one
 - [x] AC13: On Claude Code, two agent processes launched with no `DUCTUS_SESSION` hold separate targets, each keyed by the `CLAUDE_CODE_SESSION_ID` its agent passes to its MCP server
 - [x] AC14: An empty `DUCTUS_SESSION` is treated as unset; a value holding characters other than lowercase letters, digits and hyphens is sanitized by the slug rule before use; a value that sanitizes to nothing is refused with a message naming the variable
-- [x] AC15: A process with no identity resolves and writes only the shared default, and two such processes share one target exactly as before this spec
+- [x] AC15: A process with no identity resolves and writes only the shared default, and two such processes share one target exactly as before this spec. **Superseded in part:** since `60a3183e` (2026-09-29) every write on the `.ductus/` layout, unidentified included, takes the session lock, which creates `.ductus/sessions/` with its lock and ignore files; such a process still resolves and writes no per-process target, and two of them share one target.
 - [x] AC16: Every target write in any process also sets the shared default, so an agent restarted with a new identity resolves the target most recently set in the working tree
 - [x] AC17: An identified process with no target of its own adopts the shared default on its first resolution and announces the adoption, and a later target write by another process leaves the adopted target unchanged
 - [x] AC18: A per-process target neither resolved nor written for seven days is removed by the next target write in any process, and a target used within that window is never removed
-- [x] AC19: When a target write names a feature another unexpired session also targets, the writing session is told which sessions and when each last used its target, and each of those sessions is told once at its next ductus command; neither command is blocked
-- [x] AC20: A cleared target, whether cleared by its own process or by a consolidation, leaves the process with no target: its targeted commands stop and ask for `/ductus:target`, and it does not adopt the shared default
+- [x] AC19: When a target write names a feature another unexpired session also targets, the writing session is told which sessions and when each last used its target, and each of those sessions is told once at its next ductus command; neither command is blocked. **Never held as written:** a writer with no identity is neither told of the other sessions nor named to them, and a session is told at its next command that resolves or writes its target: `/ductus:status` shows the notice without delivering it, and a command that does neither does not show it.
+- [x] AC20: A cleared target, whether cleared by its own process or by a consolidation, leaves the process with no target: its targeted commands stop and ask for `/ductus:target`, and it does not adopt the shared default. **Never held as written:** a cleared record left unused for seven days is removed by the expiry sweep, as AC18 removes any idle one, and the process's next resolution then adopts the shared default, announced.
 - [x] AC21: After `/ductus:fold` removes a staging spec, every session that targeted it targets the upstream spec; after `/ductus:consolidate` removes a spec, every session that targeted it is cleared; each affected per-process session is told at its next command what happened to its target and which session's command did it, and the shared default, which has no single reader to tell, is changed without a notice and named in the acting command's report
 - [x] AC22: A file holding session state that cannot be parsed is reported by name, and the process does not treat it as absent or adopt the default in its place
 - [x] AC23: `ductus exec` run from an agent's shell tool resolves that agent's target, and run from a terminal with no identity it resolves the shared default
@@ -283,8 +290,9 @@ own session file, so the two compose.
   by `/ductus`, never by a target write, and the runtime reads it
   (`runtime/src/host.rs:86`) for one purpose: choosing which agent's installed
   command files to read, in `ductus exec` (`runtime/src/main.rs:485`), in the
-  interpreter payload (`runtime/src/interpreter/payload.rs:1155`) and in the
-  corpus link check (`runtime/src/primitives/check_corpus_links.rs:63`). This
+  interpreter payload (`runtime/src/interpreter/payload.rs:1155`), in
+  `render-help` and in `target`'s up-front tool list, each through
+  `Host::command_file_candidates`. This
   spec is about targets, and the case a per-process value would serve, two
   different agent CLIs installed in one project and running at once, is
   narrower than the one that motivated it. The bound is stated: with two

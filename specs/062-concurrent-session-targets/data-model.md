@@ -27,9 +27,10 @@ and each resolves only its own (AC1, AC2):
 ```
 
 The shared default only records the most recent target change. A process
-reads it just once, to adopt it when it has no target of its own; after that,
-only its own writes, or a fold or consolidation that removes the spec it
-targets, change its target. `peers`, `seen-peers` and the co-target
+reads it to adopt it when it has no target of its own: on its first
+resolution, and again once the expiry sweep has removed its record. In
+between, only its own writes, or a fold or consolidation that removes the spec
+it targets, change its target. `peers`, `seen-peers` and the co-target
 notice below exist for the other case, where two sessions land on the same
 feature.
 
@@ -44,7 +45,7 @@ feature = "055-example"           # absent when cleared
 path = "specs/055-example"        # absent when cleared
 scenario = "edge-case"            # optional, with scenario-path
 scenario-path = "specs/055-example/scenarios/edge-case.md"
-set-at = "2026-09-29T14:00:00Z"   # last target write by this process
+set-at = "2026-09-29T14:00:00Z"   # this process's last target write, or the default's stamp when adopted; a retarget keeps it
 used-at = "2026-09-29T15:30:00Z"  # last resolution or write; drives expiry
 cleared = true                    # present only when cleared; no target keys then
 seen-peers = ["review", "claude-code:3f2a9c1d"]  # labels last reported
@@ -62,7 +63,8 @@ Notes:
   sweep removes a file whose `used-at` is more than seven days old, and it
   never removes the caller's own file.
 - `seen-peers` is the peer set this session was last told about. A resolution
-  that computes a different set emits a co-target notice and replaces it.
+  that computes a different set replaces it, with a co-target notice unless
+  the new set is empty, which leaves nobody to name.
 - `[notice]` is delivered and removed by the owner's next resolution. A second
   removal before delivery replaces it: only the latest fate of the target is
   true.
@@ -86,7 +88,7 @@ Result:
     "scenario-path": null
   },
   "notices": [
-    { "kind": "co-target", "message": "Session claude-code:3f2a9c1d also targets 055-example (last used 2026-09-29T15:02:00Z)." }
+    { "kind": "co-target", "message": "Session claude-code:3f2a9c1d (last used 2026-09-29T15:02:00Z) also targets 055-example." }
   ]
 }
 ```
@@ -110,8 +112,11 @@ unchanged. Added:
   write's result keeps its pre-062 shape (AC3).
 - `own-path`: the per-process file written; absent when unidentified.
 - `peers`: `[{ "session", "feature", "scenario", "last-used" }]`, the other
-  unexpired sessions targeting the same feature. Empty on clear and host-config
-  writes.
+  unexpired sessions targeting the same feature. `scenario` is `null` when the
+  peer targets none. `last-used` is the peer record's `used-at`, an RFC 3339
+  date-time in UTC with the `Z` offset, to the second, the form `set-at` has
+  (`2026-11-10T01:32:46Z`), or `null` when that record holds none. Empty on
+  clear and host-config writes, and on an unidentified write.
 - `expired`: labels of the per-process targets the sweep removed.
 - `unreadable`: repo-relative paths the write could not read — a file that
   does not parse, or whose `used-at` the sweep cannot read: other sessions'
