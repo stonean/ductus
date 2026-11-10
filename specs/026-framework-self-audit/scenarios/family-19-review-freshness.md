@@ -67,25 +67,30 @@ it, because a check's value is its precision, not its coverage.
   maintainer's call, not a side effect of landing the check. The debt was cleared
   and the one `run_check` line went in: Family 19 runs in `run-all.sh` today and
   is a hard release gate.
-- **Different scope from the runtime gate, on purpose.** `check-review-gate`
-  reads Affected Files because it judges one spec at the moment someone
-  completes it, where a broad scope costs one re-review. This family judges all
-  of them at release, where a broad scope costs a freeze.
+- **Different scope from the runtime gate, at first.** `check-review-gate`
+  read Affected Files because it judged one spec at the moment someone
+  completed it, where a broad scope costs one re-review, while this family
+  judged all of them at release, where a broad scope costs a freeze. Since
+  `02bda11a` both compare the same durable contracts, `scenarios/*.md` and
+  `data-model.md`, through the one `review_freshness` the Behavior names.
 - **`plan.md` and `tasks.md` are never counted** — the first churns, the second
   is ephemeral by construction.
 - **A spec with no scenarios and no `data-model.md`** has no durable contract to
-  compare and is skipped rather than flagged.
-- **Requires `git` and `python3`**, matching Families 17 and 18; a missing tool
-  is a precondition finding, not a silent pass.
+  compare: its record's digest is empty, and the family counts it examined and
+  current rather than flagging it.
+- **Requires `python3` and the runtime**, since `02bda11a`; each missing one is a
+  precondition finding, not a silent pass.
 - **Requires full git history, which CI does not give by default.** Resolving
   `reviewed-against` needs the commits it names, and `actions/checkout` clones
   shallow. The first release after this family was wired (`gvrn-v0.27.1`)
   failed its gate with "not a commit in this repo" for all 48 specs and
   skipped the publish — while passing locally on every run, because a
   developer checkout has full history. Both workflows that run `run-all.sh`
-  now set `fetch-depth: 0` with a comment saying why. The unresolvable-sha
-  case stays a **finding** rather than a skip: with history present it means
-  a rewritten or bogus sha, which is worth reporting.
+  now set `fetch-depth: 0` with a comment saying why. Since `02bda11a` the
+  digest needs no commit: only the mechanical-sweep exemption reads
+  `reviewed-against`, and without its commits it keeps every candidate, so a
+  contract a sweep rewrote reads stale rather than exempt, which is why both
+  workflows keep the full-depth checkout.
 
 ## Open Questions
 

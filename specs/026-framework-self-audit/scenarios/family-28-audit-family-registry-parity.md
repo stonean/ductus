@@ -47,13 +47,13 @@ separately because the repairs differ.
 
 Both sets are derived, never hardcoded: the registered set from `run-all.sh`'s
 `run_check "Family N — …"` lines, the documented set from `audit.md`'s
-`(Family N — …)` entries. A hardcoded expectation would be another copy of
+`(Family N …)` entries, with or without a description. A hardcoded expectation would be another copy of
 exactly the fact under test.
 
 Retired family numbers are handled by the same derivation rather than a
 special case. Family 3 (registry equivalence) was retired with the workflows
 feature (spec 043) and its number is permanently spent; because it appears in
-neither list, the sets agree and nothing fires. Family numbers are stable
+none of the lists, the sets agree and nothing fires. Family numbers are stable
 identifiers, so a gap is the correct state and needs no allowance.
 
 The family also asserts a third binding, since the same drift reaches it: every
@@ -75,7 +75,7 @@ name anywhere in the README, one way only).
 - **`audit.md`'s prose mentions a family number outside its list.** Several
   entries reference other families by number in running prose (Family 23's
   entry names 042 and 049; Family 28's own entry names Families 24, 25 and 26
-  and the spent Family 3). Only the enumerated `(Family N — …)` entries count,
+  and the spent Family 3). Only the enumerated `(Family N …)` entries count,
   so the extraction is anchored to that form rather than to any mention of the
   digits. The header, whose prose names Families 3 and 28 too, stayed in
   `framework/commands/audit.md` with the boundary section when 071 moved the

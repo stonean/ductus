@@ -8,7 +8,7 @@ section: "Follow-on scenarios"
 
 Required by [049 — Rename govern to ductus](../../049-rename-govern-to-ductus/spec.md), which surfaced the gap the moment its sweep landed.
 
-Family 19 ([family-19-review-freshness](family-19-review-freshness.md)) compares each `done` spec's `review.reviewed-against` against history and emits a finding when a durable contract changed since. It compares *shas*, so it cannot see what kind of change it is looking at.
+Family 19 ([family-19-review-freshness](family-19-review-freshness.md)) compares each `done` spec's `review.md` `reviewed-digest` with its durable contracts, through `check-review-freshness`, and emits a finding when one no longer matches. It compares digests, so it cannot see what kind of change a mismatch is; `reviewed-against` is read only to run this exemption. When this scenario was written it compared shas, `review.reviewed-against` against history, before a digest arm (`ef028851`) and then the runtime's comparison (`02bda11a`, 066) replaced that.
 
 [§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle) case (a) already rules on that: a uniform token substitution across live artifacts is a **mechanical** edit, which is precisely why a rename sweep does not reopen a `done` spec. A review reads contracts; a contract that changed only in spelling states exactly what it stated before. The two rules have to agree — if the sweep does not reopen the spec, it does not stale the review either.
 
