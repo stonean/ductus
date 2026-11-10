@@ -650,3 +650,12 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 - [ ] Implement the behavior described in `scenarios/lint-markdown-lints-only-what-it-is-given.md`
 
 - **Done when**: lint-markdown given paths reports violations only in them, check-review-gate's lint ignores violations outside the feature directory, and a two-file fixture test proves both and fails with the config globs re-appended.
+
+## 29. Disposition: two claims task 12 left stale outside its sweep
+
+Found by 055's criteria verification and prose-claim sweep at `ec6c2088`, and deferred here by the owner's delegation (2026-11-08): task 12 made an unparseable config halt every reader, and these two still describe the fallback.
+
+- [ ] `scenarios/the-constitutions-registry-validates-its-values.md` says of `write-review` and `write-analysis` that "each one's contract is that it records a run rather than fails it, and a config typo must not cost the operator their findings". Since task 12 a config that does not parse halts both; scope the sentence to a config that parses, as 055's data model does
+- [ ] `scripts/audit/host-namespace-parity.sh` treats a malformed config as absent "matching `Host::load`'s own tolerance", which `Host::load` no longer has: decide whether the family halts as `Host::load` does or keeps its tolerance with a comment that is true
+
+- **Done when**: neither artifact describes a fallback task 12 removed
