@@ -18,7 +18,7 @@ TOML array-of-tables, one entry per active migration:
 [[migrations]]
 id = "spec-and-plan-sunset"
 introduced_in = "0.4.0"
-sunset_after  = "0.X.0"  # registry_introduction_version + 2 minor versions; see §Back-fill values
+sunset_after  = "0.X.0"  # registry_introduction_version + 2 minor versions; see §Back-fill sunset values are uniform, not per-entry-tuned
 summary       = "Rename specs/*/spec-and-plan.md → specs/*/spec.md (lightweight-track sunset)"
 target_paths  = ["specs/*/spec-and-plan.md"]
 procedure_file = "framework/migrations/spec-and-plan-sunset.md"

@@ -68,7 +68,7 @@ AC1's test and homes go in §drift-prevention *Shared knowledge stays in git*, a
 | `framework/commands/prune.md` | Modify | `--project` walk; step 8 routing (041's task) |
 | `framework/reference/prune.md` | Modify | Markdown-only project-file walk (041's task) |
 | `framework/commands/analyze.md` | Modify | Step 17 passes `project-files` (063's task) |
-| `framework/reference/analyze.md` | Modify | §Artifact size covers the project files (063's task) |
+| `framework/reference/analyze.md` | Modify | §Artifact size (advisory) covers the project files (063's task) |
 | `framework/commands/target.md` | Modify | Step 4 reports each constitution's size (055's task) |
 | `framework/runtime-tools.txt` | Modify | Register `prune-project` |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | Project subject set and staged mode |

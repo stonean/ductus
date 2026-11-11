@@ -17,7 +17,7 @@ Implements [024 — Stack-aware rule-file loader for `/ductus:review`](spec.md).
 
 ### Discovery algorithm (shared between `/ductus:review` and `/ductus:analyze`)
 
-Both commands describe the same prose procedure in their own §Behavior sections — no shared command file or library. Rationale: per §text-first-artifacts, commands are markdown procedures; prose duplication of a five-line algorithm is cheaper than introducing a third shared command file and changing the parser's understanding of command composition. The two commands are already independently parseable today; this preserves that.
+Both commands describe the same prose procedure in their own Behavior sections — no shared command file or library. Rationale: per §text-first-artifacts, commands are markdown procedures; prose duplication of a five-line algorithm is cheaper than introducing a third shared command file and changing the parser's understanding of command composition. The two commands are already independently parseable today; this preserves that.
 
 The procedure:
 
@@ -53,7 +53,7 @@ The procedure:
 - Bootstrap map (`framework/bootstrap/ductus.md`) updates both the source path (`framework/rules/configuration-cross.md`) and the destination path. Without renaming the destination, adopter-side `/ductus:review` would emit the unrecognized-suffix warning against its own bundled file on every run. (The destination path was subsequently moved to `specs/rules/configuration-cross.md` by the rule-file relocation sweep; see the current bootstrap manifest.)
 - A one-pass migration sits in `framework/bootstrap/ductus.md` alongside the existing `spec-and-plan.md` cleanup (precedent: spec 023). On each `/ductus` invocation: if `specs/configuration.md` exists in the adopting project, offer to rename it and emit a one-line notice. Adopters who skip running `/ductus` after upgrade hit the runtime warning at `/ductus:review` time until they rename manually — the warning is the discoverability surface for that case. (The migration has since been folded into the broader rule-file relocation migration that moves all closed-suffix rule files to `specs/rules/`.)
 - Live references in `framework/` are swept (see Affected Files). Done-spec bodies under `specs/NNN-*/` were left unswept, because §drift-prevention carved them out as *frozen archaeology* when this plan was written. 023's `living-specs` scenario removed that carve-out — done spec bodies are live artifacts and are swept with everything else, in the same uniform substitution, which does not reopen them.
-- Cross-reference recorded in `specs/README.md` §Past Renames so historical references in done-spec bodies remain discoverable without rewriting them.
+- Cross-reference recorded in the "Past Renames" section of `specs/README.md` so historical references in done-spec bodies remain discoverable without rewriting them.
 
 ### CI lint (`scripts/lint-rule-filenames.sh`)
 
@@ -67,7 +67,7 @@ Wiring: a new step in `.github/workflows/framework-checks.yml`, alongside the ex
 
 ### `AGENTS.md` fallback narrowed (not removed)
 
-§Notes for adopters in `framework/commands/review.md` rewrites:
+§Notes for adopters in `framework/reference/review.md` rewrites:
 
 - Files inside `framework/rules/` are auto-discovered by directory walk — no `AGENTS.md` reference required.
 - The `AGENTS.md` fallback survives strictly for adopter-local rule files placed outside `framework/rules/` (e.g., `docs/rules/internal-api.md`). The framework cannot directory-walk arbitrary adopter paths; an explicit reference is the discovery signal.
@@ -80,12 +80,12 @@ This drops the "depend on author diligence" failure mode for files inside `frame
 | --- | --- | --- |
 | `framework/rules/configuration.md` → `framework/rules/configuration-cross.md` | Rename | Conform to closed-suffix policy; rule IDs unchanged |
 | `framework/constitution.md` | Edit | Add §rules `#### Filename suffix` subsection; update two `configuration.md` refs |
-| `framework/commands/review.md` | Edit | Rewrite §Behavior step 5 + §Load rules for suffix discovery; add `loading rule files:` notice; rewrite §Notes for adopters |
+| `framework/commands/review.md` | Edit | Rewrite the Behavior section's step 5 + Load rules for suffix discovery; add `loading rule files:` notice; rewrite Notes for adopters |
 | `framework/commands/analyze.md` | Edit | Apply shared suffix discovery; remove the closed list at lines 137–141; clarify "no stack filtering" |
 | `framework/commands/implement.md` | Edit | Update §Scope Boundaries reference at line 49 |
 | `framework/commands/groom.md` | Edit | Update `specs/configuration.md` reference at line 43 |
 | `framework/bootstrap/ductus.md` | Edit | Update bootstrap map source/destination; add one-pass migration for `specs/configuration.md` → `specs/rules/configuration-cross.md` |
-| `specs/README.md` | Edit | Record rename under §Past Renames |
+| `specs/README.md` | Edit | Record rename under the "Past Renames" section |
 | `scripts/lint-rule-filenames.sh` | Create | Closed-suffix lint, exits non-zero on any `framework/rules/*.md` without a valid suffix |
 | `.github/workflows/framework-checks.yml` | Edit | Wire `scripts/lint-rule-filenames.sh` into the lint phase as a new step |
 | `.claude/commands/ductus/review.md`, `.claude/commands/ductus/analyze.md`, `.claude/commands/ductus/implement.md`, `.claude/commands/ductus/groom.md` | Derived | Regenerated by `scripts/gen-claude-commands.sh` |

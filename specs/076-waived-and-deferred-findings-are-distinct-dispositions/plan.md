@@ -61,7 +61,7 @@ For a violation, a `--defer` that replaces a stored waiver anchor passes it in `
 
 ### The waiver example loses its work reference
 
-`framework/reference/review.md:726` drops `ticket` from its example open-schema waiver fields (AC6). §Waivers gains a pointer to deferral as the fix-later path.
+`framework/reference/review.md:726` drops `ticket` from its example open-schema waiver fields (AC6). `framework/reference/review.md` §Waivers gains a pointer to deferral as the fix-later path.
 
 ### The sweep is by meaning, over the declared live-artifact set
 

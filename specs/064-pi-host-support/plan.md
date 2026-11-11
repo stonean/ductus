@@ -41,7 +41,7 @@ Rejected alternative — skills: verified in
 `skill:<name>` behind `enableSkillCommands`; arguments arrive appended as
 `User: <args>` with no `$ARGUMENTS` substitution; and skills are described into the
 system prompt and prompt-matched. Each is a deviation from the command-file contract
-(spec §Design Decisions D1 carries the full rejection).
+(`spec.md` §Design Decisions D1 carries the full rejection).
 
 ### D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server
 
@@ -72,7 +72,7 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
   session-start notice naming the pointer and pointing at `/ductus`
   (re-acquisition); when it fails mid-session, returns an error envelope saying the
   same ([the-bridge-fails-loudly-and-recovers](scenarios/the-bridge-fails-loudly-and-recovers.md)). No
-  markdown fallback (spec §Compatibility Contract, deviation list;
+  markdown fallback (`spec.md` §Compatibility Contract, deviation list;
   §runtime-boundary principle 3).
 
 The `ductus__` prefix is the Pi spelling of the host-namespace wrap
@@ -160,7 +160,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 - Agent Registry: the `pi` row — `Pi` / `.pi` / layout `pi` / empty
   `settings_template` (no permission-gating surface) / "Pi reads `AGENTS.md`
   natively — no second rules file is needed."
-- §Derived values: new `pi` column — command/skill path
+- `framework/bootstrap/ductus.md` §Derived values: new `pi` column — command/skill path
   `.pi/prompts/{project}-<name>.md`; invocation `/{project}-<name>`; `ductus` install
   path `.pi/prompts/ductus.md`; settings file `.pi/settings.json` (Permission Setup:
   documented no-op — no permission-gating entries exist to seed); native rules file
@@ -177,9 +177,9 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   with **no** substitution; the `.pi/` line joins the framework-managed `.gitignore`
   block; the completion message carries the Pi trust reminder (project-local `.pi/`
   resources load only after trust — accept the prompt or pass `--approve` once).
-- State B / §MCP wiring: the `write-file` branch names the pi target (bridge file,
-  not an MCP config). §Permission
-  Setup's per-layout resolution gains the pi no-op branch. §Self-update check and
+- State B / `framework/bootstrap/ductus.md` §MCP wiring: the `write-file` branch names the pi target (bridge file,
+  not an MCP config). `framework/bootstrap/ductus.md` §Permission Setup's
+  per-layout resolution gains the pi no-op branch. `framework/bootstrap/ductus.md` §Self-update check and
   the `ductus` self-install / Placeholder Substitution / Post-Write Integrity
   enumerations name the pi paths (all verbatim byte-compares). `ductus-procedure.md`
   (the archive half): next-steps invocation list, pinned-divergent install-path row,
@@ -202,7 +202,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   it).
 - `docs/slash-commands.md`: audited at implementation for agent-shape claims;
   anything enumerating agents or invocation forms gains Pi.
-- Anti-claim discipline (spec §D7): no artifact may say Pi "registers MCP" or that
+- Anti-claim discipline (`spec.md` D7, under its §Design Decisions): no artifact may say Pi "registers MCP" or that
   its commands live in a namespace directory.
 
 ### D8 — 022 back-edge and release sequencing
@@ -316,5 +316,5 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 - **Known limitation — the smoke test is a manual verification step, not a CI check.**
   Project trust + a live host make an interactive pi run non-reproducible in CI; a
   skipped conformance test is the check-that-cannot-run failure, so the step records
-  its result in this plan (§D8 smoke-test record, under AC14) instead of pretending CI
+  its result in this plan (§D8 — 022 back-edge and release sequencing, the smoke-test record, under AC14) instead of pretending CI
   covers it.

@@ -1447,7 +1447,8 @@ fn strip_label_ci<'a>(s: &'a str, label: &str) -> Option<&'a str> {
 /// wraps this in [`resolve_root`] to bound the roots by the working directory
 /// (spec 022 task 17) — and the sibling
 /// checkouts committed config names (`resolve-constitutions`,
-/// `resolve-references`; see **The config-sourced path boundary** on
+/// `resolve-references`, and `resolve-anchor`, which reads each registered
+/// constitution's markers; see **The config-sourced path boundary** on
 /// [`validate_no_traversal`]). `run-generator` passes its script through
 /// [`validate_contained`] first, so it never sees an absolute one. A path a
 /// primitive opens goes through [`contained_path`] (or
@@ -1580,7 +1581,8 @@ pub(crate) fn output_within(
 ///
 /// This is the canonical statement of the converse, cited rather than
 /// restated by the primitives that rely on it (`resolve-constitutions`
-/// for `[constitutions.*]`, `resolve-references` for `[services]`).
+/// for `[constitutions.*]`, `resolve-anchor` for the documents those entries
+/// name, `resolve-references` for `[services]`).
 ///
 /// A primitive that reads a path out of the project's **committed config**
 /// may skip this check, and `..` is the normal case there: a sibling

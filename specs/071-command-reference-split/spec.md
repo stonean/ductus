@@ -113,7 +113,7 @@ too when a section it needs is named there; groom's and review's paragraphs
 say so.
 
 The reverse direction does need a pointer. Other documents cite a command's
-sections by file, as `analyze.md` §Rules or `review.md` §Notes for adopters.
+sections by file, as `analyze.md`'s Rules section or `review.md`'s Notes for adopters section.
 After the move those headings are no longer in the command file, so each
 command file states, once, near the top of its Instructions, that its
 markdown-only reference is in `.ductus/reference/<command>.md` and that a

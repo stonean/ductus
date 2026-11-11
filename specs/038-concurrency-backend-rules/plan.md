@@ -41,7 +41,7 @@ Cross-references, not restatements: `BE-COORD-002` cites `api-backend.md` `BE-ID
 
 ### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add a `concurrency-backend.md` → `specs/rules/concurrency-backend.md` row to the `### ductus-owned shared files` table, slotted between `api-backend.md` and `configuration-cross.md` (alphabetical: `concurrency` sorts before `configuration` — `conc` < `conf`). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The §Shared Files note is count-free, so no count edit.
+Add a `concurrency-backend.md` → `specs/rules/concurrency-backend.md` row to the `### ductus-owned shared files` table, slotted between `api-backend.md` and `configuration-cross.md` (alphabetical: `concurrency` sorts before `configuration` — `conc` < `conf`). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The `framework/bootstrap/ductus.md` §Shared Files note is count-free, so no count edit.
 
 ### What this feature does NOT touch
 

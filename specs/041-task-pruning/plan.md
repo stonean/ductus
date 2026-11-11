@@ -108,7 +108,7 @@ optional. The set is a constant compiled into the primitive, pinned to
 the same bounded divergence: an adopter's customized template does not apply. The template carries Trade-offs and
 the three optional sections, each optional one marked to be omitted when it
 does not apply, so it names every section `/{project}:plan` fills, Data Model
-and Trade-offs among them (`framework/commands/plan.md` §Create the plan
+and Trade-offs among them (`framework/reference/plan.md` §Create the plan
 step 2).
 
 ### `prune-plan` — fence-aware sections, digest-guarded removal

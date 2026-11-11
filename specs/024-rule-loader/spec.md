@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review, 023-govern-refinement]
 next-criterion: 10
 ---
@@ -12,23 +12,23 @@ Generalize `/ductus:review`'s rule-file selection so the set of `framework/rules
 
 Today, [`/ductus:review`](../../framework/commands/review.md) selects rule files in two ways:
 
-1. **Hardcoded** — `security-backend.md` is loaded for backend stacks; `security-frontend.md` is loaded for frontend stacks; full-stack loads both. The filenames are baked into `framework/commands/review.md` step 5 of §Behavior.
-2. **Opt-in** — any other `framework/rules/*.md` file is loaded only when referenced from `AGENTS.md` (`framework/commands/review.md` §Notes for adopters).
+1. **Hardcoded** — `security-backend.md` is loaded for backend stacks; `security-frontend.md` is loaded for frontend stacks; full-stack loads both. The filenames are baked into `framework/commands/review.md` step 5 of its Behavior section.
+2. **Opt-in** — any other `framework/rules/*.md` file is loaded only when referenced from `AGENTS.md` (`framework/reference/review.md` §Notes for adopters).
 
 Three new rule files have just landed — [`api-backend.md`](../../framework/rules/api-backend.md), [`accessibility-frontend.md`](../../framework/rules/accessibility-frontend.md), [`performance-frontend.md`](../../framework/rules/performance-frontend.md) — and neither path is right for them. Hardcoding three more filenames invites the same problem the fourth, fifth, and sixth rule file will reintroduce. The "reference it from `AGENTS.md`" path means an adopter ships an HTTP API that exposes no OpenAPI schema because the author didn't think to add `api-backend.md` to `AGENTS.md` — exactly the silent author-discipline failure mode AGENTS.md:58 ("Never design framework features that depend on human diligence") exists to prevent.
 
-The fix: derive rule-file selection from observable signals. Each rule file declares which surface it applies to via its filename suffix (the convention `security-backend.md`, `security-frontend.md` already established). `/ductus:review` matches the file's surface against the stack the tech-stack-alignment check already produces (see [`framework/commands/review.md`](../../framework/commands/review.md) §Behavior step 4). No author discipline; no command-source edits when a new shipped rule file is added; the `AGENTS.md` fallback survives only for adopter-local rule files that live outside `framework/rules/`.
+The fix: derive rule-file selection from observable signals. Each rule file declares which surface it applies to via its filename suffix (the convention `security-backend.md`, `security-frontend.md` already established). `/ductus:review` matches the file's surface against the stack the tech-stack-alignment check already produces (see [`framework/commands/review.md`](../../framework/commands/review.md) Behavior step 4). No author discipline; no command-source edits when a new shipped rule file is added; the `AGENTS.md` fallback survives only for adopter-local rule files that live outside `framework/rules/`.
 
 ## Acceptance Criteria
 
 - [x] AC1: Filename suffix is the surface signal: every `framework/rules/*.md` file MUST end in `-backend.md` (backend stacks), `-frontend.md` (frontend stacks), or `-cross.md` (all stacks; cross-cutting). The convention is documented in `framework/constitution.md` alongside the §rules anchor. `scripts/lint-rule-filenames.sh` enforces it in ductus's CI.
 - [x] AC2: `/ductus:review` rule-file selection is rewritten to iterate `framework/rules/*.md`, read each file's suffix, and load it when the suffix matches the project's detected stack (or the file is cross-cutting). The hardcoded names `security-backend.md` and `security-frontend.md` no longer appear in `framework/commands/review.md` as selection criteria — they are loaded by the same derivation as every other file.
 - [x] AC3: The three new rule files (`api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md`) load automatically under the new derivation when their respective stacks are present — no `AGENTS.md` edit required.
-- [x] AC4: `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md` to match the closed-suffix policy. Rule IDs (`CFG-CONST-*`, `CFG-ENV-*`) are content-anchored and do not change; only the file path moves. Live references swept per AGENTS.md ("no dead references in live artifacts"). Delivered as written: at the time, done-spec bodies were exempt and the rename was recorded under `specs/README.md` §Past Renames. Both halves were superseded by 023's `living-specs` scenario — the exemption is gone, and §Past Renames was deleted with it; `specs/README.md` now names this rename among those recorded in git history.
+- [x] AC4: `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md` to match the closed-suffix policy. Rule IDs (`CFG-CONST-*`, `CFG-ENV-*`) are content-anchored and do not change; only the file path moves. Live references swept per AGENTS.md ("no dead references in live artifacts"). Delivered as written: at the time, done-spec bodies were exempt and the rename was recorded under the "Past Renames" section of `specs/README.md`. Both halves were superseded by 023's `living-specs` scenario — the exemption is gone, and that section was deleted with it; `specs/README.md` now names this rename among those recorded in git history.
 - [x] AC5: The "load anything in `framework/rules/` referenced from `AGENTS.md`" fallback survives but narrows to its real purpose: project-local rule files placed outside `framework/rules/` (e.g., `docs/rules/internal-api.md`) that the framework cannot discover by directory walk. Files inside `framework/rules/` no longer need an `AGENTS.md` reference to be loaded.
 - [x] AC6: At runtime, a rule file whose name does not match the closed suffix set loads for every stack and emits a one-line stdout warning (`rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md`). The over-apply-and-warn behavior is the safety net for adopter-local rule files outside ductus's CI — the lint runs only in ductus's repository. The default is "load + warn," never "silent skip."
 - [x] AC7: `/ductus:review` emits a one-line `loading rule files: <list>` notice on stdout at the start of each run so adopters can see what was selected. The notice is the discoverability surface.
-- [x] AC8: `framework/commands/review.md` §Notes for adopters is updated to reflect the new selection algorithm; specifically, the line "`/ductus:review` automatically loads anything in `framework/rules/` that's referenced from `AGENTS.md`" is rewritten to describe the new derivation and clarify the residual role of the `AGENTS.md` fallback.
+- [x] AC8: `framework/reference/review.md` §Notes for adopters is updated to reflect the new selection algorithm; specifically, the line "`/ductus:review` automatically loads anything in `framework/rules/` that's referenced from `AGENTS.md`" is rewritten to describe the new derivation and clarify the residual role of the `AGENTS.md` fallback.
 - [x] AC9: `framework/commands/analyze.md` uses the same suffix-based rule-file discovery as `/ductus:review`. `/ductus:analyze` consumes the full discovered set (no stack filtering) because rule-ID citation verification spans surfaces; `/ductus:review` filters by detected stack on top of the shared discovery.
 
 ## Non-goals
@@ -42,7 +42,7 @@ The fix: derive rule-file selection from observable signals. Each rule file decl
 
 | File | Change | Strategy |
 | --- | --- | --- |
-| `framework/commands/review.md` | edit — §Behavior step 5 and §Load rules rewritten to derive selection from filename suffix; §Notes for adopters rewritten to describe the new contract | update |
+| `framework/commands/review.md` | edit — Behavior step 5 and Load rules rewritten to derive selection from filename suffix; Notes for adopters rewritten to describe the new contract | update |
 | `framework/commands/analyze.md` | edit — apply the shared suffix-based discovery; no stack filtering (citation verification spans surfaces) | update |
 | `framework/constitution.md` | edit — under §rules, document the filename-suffix convention as the framework-level naming rule | update |
 | `framework/rules/security-backend.md` | none — file is already correctly suffixed | n/a |
@@ -52,7 +52,7 @@ The fix: derive rule-file selection from observable signals. Each rule file decl
 | `framework/rules/accessibility-frontend.md` | none — file is correctly suffixed | n/a |
 | `framework/rules/performance-frontend.md` | none — file is correctly suffixed | n/a |
 | `scripts/lint-rule-filenames.sh` | required — fails CI if any `framework/rules/*.md` file does not end in `-backend.md`, `-frontend.md`, or `-cross.md` | new |
-| `specs/README.md` | edit — record the `configuration.md` → `configuration-cross.md` rename under §Past Renames | update |
+| `specs/README.md` | edit — record the `configuration.md` → `configuration-cross.md` rename under the "Past Renames" section | update |
 | `.github/workflows/*.yml` | edit — wire `scripts/lint-rule-filenames.sh` into the existing lint job | update |
 
 ## Open Questions

@@ -272,7 +272,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | A scenario's link to a sibling spec needs `../../` | Adopters have scenarios and sibling specs, and the corpus link check ships in the pre-commit hook |
 | "Record" spans several destinations in this framework — name the artifact and section, never the verb alone | **R** — the destinations are all adopter-facing commands with different gate semantics |
 | Piping a gate command's output replaces its exit status — `cmd \| tail` reports `tail`'s success, not `cmd`'s | **R** — never pipe a command whose exit code you intend to read; the shown output is genuine and the status is manufactured |
-| A `§` reference resolves by *line*, and intra-document by longest-first heading match — a line wrap alone breaks it | Adopters cite constitution anchors and run the anchor resolver |
+| A `§` reference resolves by *line*, against a heading its text begins with — a line wrap alone breaks it | Adopters cite constitution anchors and run the anchor resolver |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | **R** — stated by capability rather than by version; adopters upgrade through the same boundary and hold the same records |
 | An acceptance criterion's parenthetical enumeration is a claim of its own, and it drifts from what the artifact does | Adopters write criteria carrying enumerations, and the enumeration goes stale while the requirement holds |
 | A spec with no recorded `in-progress` transition derives an *empty* diff base, and `write-review` then resolves `scope: 0` | Both primitives ship; the incoherent `examined`-over-zero record is reachable in any corpus |
@@ -314,7 +314,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | `cargo` exits 101 from the repo root, and 101 is also what a failing test suite returns — so a mis-rooted probe reads exactly like the failure it was meant to prove | This repo's toolchain and the harness's working-directory behaviour |
 | `grep` here is ugrep, and a bounded-context pattern exceeds its complexity limit — erroring once per file, which reads exactly like a scan that found nothing | This machine's tooling, not the framework's |
 
-Rows for 4 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
+Rows for 4 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
 
 `R` marks a verdict reached through the reword test rather than directly.
 
@@ -369,7 +369,7 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
 
-Rows for 1 entry since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports it, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
+Rows for 1 entry since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports it, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
 
 ### Fifth round — classified 2026-10-17
 
@@ -458,7 +458,7 @@ clause rather than as a principle in its own right.
 | `path` is a reserved array in zsh and clobbering it destroys `PATH` (survey G16) | A shell trap with no pipeline connection |
 | No host-level enforcement of the deterministic (`ductus`) path — it is a deliberate non-goal (survey B1) | A framework design non-goal |
 
-Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
+Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
 
 ### Relocated to a command reference — 2026-10-26
 
@@ -487,7 +487,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/reference/review.md` | Modify | §Window and coverage receives the review-window and coverage rules |
 | `framework/reference/analyze.md` | Modify | The in-progress measurement rule, and §Record fields for the analyze record's field meanings |
 | `framework/reference/groom.md` | Modify | §Inbox upkeep receives the remove-by-text rule |
-| `framework/commands/groom.md` | Modify | Step 8 points at §Inbox upkeep instead of quoting a constitution sentence that no longer exists |
+| `framework/commands/groom.md` | Modify | Step 8 points at `framework/reference/groom.md` §Inbox upkeep instead of quoting a constitution sentence that no longer exists |
 | `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the 50,000-byte read size |
 | `scripts/tests/test-lint-governing-size.sh` | Modify | Check H holds both ceilings to `DEFAULT_READ_SIZE_BYTES` |
 | `CLAUDE.md` | Modify | Imports `@framework/constitution.md` above `@AGENTS.md` |
@@ -499,11 +499,11 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |
 | `framework/templates/project/agents.md` | Modify | Ships the empty `ductus:memory-routing` markers beneath its header, and names what `CLAUDE.md` holds |
-| `framework/templates/project/claude-md.md` | Modify | Drops §Auto-Memory Routing: imports and the `ductus:constitutions` block only |
+| `framework/templates/project/claude-md.md` | Modify | Drops the Auto-Memory Routing section: imports and the `ductus:constitutions` block only |
 | `framework/bootstrap/ductus.md` | Modify | Writes the `ductus:memory-routing` block into `AGENTS.md` on every run |
 | `framework/bootstrap/govern.md` | Modify | Kept byte-identical to `ductus.md` |
-| `framework/migrations/memory-routing-leaves-claude-md.md` | Create | Removes an unchanged shipped §Auto-Memory Routing from an existing `CLAUDE.md` |
-| `CLAUDE.md` | Modify | Drops §Auto-Memory Routing; `AGENTS.md`'s memory entry governs |
+| `framework/migrations/memory-routing-leaves-claude-md.md` | Create | Removes an unchanged shipped Auto-Memory Routing section from an existing `CLAUDE.md` |
+| `CLAUDE.md` | Modify | Drops the Auto-Memory Routing section; `AGENTS.md`'s memory entry governs |
 | `README.md` | Modify | Names the marked regions `/ductus` keeps in `AGENTS.md` and `CLAUDE.md` |
 
 ## Trade-offs

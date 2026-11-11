@@ -22,7 +22,7 @@ The surviving obligation stays where it is, stated once: §grounding's Rules lis
 
 Two other sentences assumed the commit-first order, and they are corrected with it. §grounding's rule on verifying what a commit contains named a review and an analysis among the records written against a commit; it now names claims that a commit holds a change, such as a completion report or a release, and says a review or analysis record may precede its commit. The review-window bullet, then in §implement-phase, said to measure it only after the reopen's first commit, because before it there was no transition to derive a base from. That stopped being true in 0.59.4, which puts the base at `HEAD` while the move into `in-progress` is uncommitted, and the bullet now says so. Since `the-constitution-fits-one-read` that bullet lives in `framework/reference/review.md` §Window and coverage, which §implement-phase points at.
 
-This repository's `AGENTS.md` mirror of the retired bullet is rewritten. It drops the commit-first instruction and keeps its own corollary, running the framework self-audit after committing and before tagging, as a pointer to that §grounding rule. `plan.md`'s §Classification row for W7 stays as the record of the 2026-08-17 pass, with a note that this scenario retired the rule.
+This repository's `AGENTS.md` mirror of the retired bullet is rewritten. It drops the commit-first instruction and keeps its own corollary, running the framework self-audit after committing and before tagging, as a pointer to that §grounding rule. `specs/050-constitution/plan.md`'s §Classification row for W7 stays as the record of the 2026-08-17 pass, with a note that this scenario retired the rule.
 
 ## Edge Cases
 

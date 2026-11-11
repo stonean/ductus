@@ -10,8 +10,8 @@ section: "Artifact checks"
 
 ## Behavior
 
-- Every `/{project}:analyze` run applies §Spec integrity and §Plan consistency on every path: a numbered step runs each check, a deterministic one through a primitive and a semantic one as a host step, and each failure is a Blocking finding.
-- A check the path cannot run is recorded unexamined under a reason in **§Unexamined targets (informational)**, never folded into a clean result.
+- Every `/{project}:analyze` run applies §Spec integrity (blocking) and §Plan consistency (blocking if plan exists) of `framework/reference/analyze.md` on every path: a numbered step runs each check, a deterministic one through a primitive and a semantic one as a host step, and each failure is a Blocking finding.
+- A check the path cannot run is recorded unexamined under a reason in **§Unexamined targets (informational)** of `framework/reference/analyze.md`, never folded into a clean result.
 
 ## Edge Cases
 

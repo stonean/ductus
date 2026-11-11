@@ -13,7 +13,7 @@ section: "Generators and Hooks"
 - What the hook adds to a commit from the generators is derived from that commit's staged sources: a source edit that is not staged never reaches the commit through a generated file.
 - A working-tree file the commit does not stage, a source or a generated output, is neither staged nor overwritten by the hook.
 - A commit whose staged sources change a generated output carries that output regenerated, so the committed tree's outputs agree with its sources, which `.github/workflows/generators.yml` still checks after a push.
-- §ductus repo's pre-commit hook states the hook's staging rule as it runs.
+- `specs/017-derive-dont-ask/spec.md` §ductus repo's pre-commit hook states the hook's staging rule as it runs.
 
 ## Edge Cases
 

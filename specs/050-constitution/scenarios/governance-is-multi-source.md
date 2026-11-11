@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-§Classification sorts every `AGENTS.md` entry into two destinations. **universal** — true for any project running the ductus pipeline, promoted to `framework/constitution.md`. **project-only** — true because of something particular to this repository, left in `AGENTS.md` unchanged. **borderline** is not a third destination; it is a holding state the reword test resolves into one of those two.
+`specs/050-constitution/spec.md` §Classification sorts every `AGENTS.md` entry into two destinations. **universal** — true for any project running the ductus pipeline, promoted to `framework/constitution.md`. **project-only** — true because of something particular to this repository, left in `AGENTS.md` unchanged. **borderline** is not a third destination; it is a holding state the reword test resolves into one of those two.
 
 That partition was exhaustive while a project could receive exactly one governing document. [055](../../055-shared-constitution/spec.md) ended that condition: a project registers shared constitutions under `.ductus/config.toml` `[constitutions.*]`, and the native rules file imports or `/{project}:target` loads each resolved document alongside the shipped `.ductus/constitution.md`, so their rules bind every command in the session with no per-command step.
 
@@ -16,7 +16,7 @@ A rule true across one organization's repositories now fits neither tier. It is 
 
 ## Behavior
 
-§Classification names a third destination: **shared** — true across one organization's projects and no one else's. Its canonical text lives in a constitution document that organization owns and registers under `[constitutions.*]`. It is not promoted to `framework/constitution.md`, and it is not left as a per-repository `AGENTS.md` entry.
+`specs/050-constitution/spec.md` §Classification names a third destination: **shared** — true across one organization's projects and no one else's. Its canonical text lives in a constitution document that organization owns and registers under `[constitutions.*]`. It is not promoted to `framework/constitution.md`, and it is not left as a per-repository `AGENTS.md` entry.
 
 The three tiers are then a question about the rule's population, which is what the original two were testing without having to say so:
 
@@ -24,7 +24,7 @@ The three tiers are then a question about the rule's population, which is what t
 - true for **more than one** project but not all → shared → that organization's registered constitution
 - true for **exactly this** repository → project-only → `AGENTS.md`
 
-§Promotion mechanism carries over unchanged and is what makes the tier worth having: one normative statement, in the shared constitution, with `AGENTS.md` keeping a line that points at it and states nothing of its own. Without that, a shared rule is a copy per repository, which is the state the tier exists to end.
+`specs/050-constitution/spec.md` §Promotion mechanism carries over unchanged and is what makes the tier worth having: one normative statement, in the shared constitution, with `AGENTS.md` keeping a line that points at it and states nothing of its own. Without that, a shared rule is a copy per repository, which is the state the tier exists to end.
 
 The reword test carries over too, with its scope narrowed to match the tier. A universal rule must be statable without naming machinery only this repository has; a shared rule must be statable without naming machinery only *one project in the organization* has, or it is project-only wearing a shared label.
 

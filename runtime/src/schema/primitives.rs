@@ -2470,13 +2470,14 @@ pub struct AnchorReference {
     pub line: u32,
     /// Whether the anchor resolves: to a marker for a `markers` reference, to
     /// a heading (or, under the line rule, a marker) for a `cross-document`
-    /// one.
+    /// one, and for a `qualified` one to a heading or marker of a document
+    /// its line names, a heading of the citing file, or a marker of the
+    /// markers file.
     ///
-    /// A `qualified` or `intra-document` reference is never `false`: the
-    /// first is not a claim this primitive can judge, and the second
-    /// resolved against the citing file. Only a `markers` or
-    /// `cross-document` reference can be unresolved, which is what makes an
-    /// unresolved one worth reading.
+    /// An `intra-document` reference is never `false`, having resolved
+    /// against the citing file, and neither is one this primitive could not
+    /// judge, which carries `unjudged` instead: an unjudged reference is
+    /// recorded unexamined, never reported broken.
     pub resolved: bool,
     /// How the reference was classified, and therefore what `resolved` means
     /// for it: `cross-document` (it points into a shipped document whose
@@ -2484,11 +2485,24 @@ pub struct AnchorReference {
     /// against that document's headings alone, or a `§` on a line naming
     /// exactly one such document, judged against that source's headings, the
     /// citing file's, and the markers), `qualified` (its line names another
-    /// document this primitive does not judge), `intra-document` (the anchor
+    /// document, or it is a code span holding a path and the reference:
+    /// judged against the documents named unless `unjudged` says why not),
+    /// `intra-document` (the anchor
     /// names a heading in the citing file), or `markers` (a claim about the
     /// markers file).
     #[serde(default = "default_anchor_kind")]
     pub kind: String,
+    /// Present when the reference was **not judged**, naming the unexamined
+    /// reason it is counted under: `anchor-target-unjudgeable` (excluded by
+    /// construction — every document its line names is absent from the
+    /// tree, or one is a file that is not markdown, which holds no section)
+    /// or `anchor-target-unreadable` (could not be read — a document it
+    /// names exists and could not be read, or is a registered
+    /// `[constitutions.*]` entry that did not resolve). Absent on every
+    /// judged reference (spec 067 scenario
+    /// `shared-constitution-references-are-judged`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unjudged: Option<String>,
 }
 
 /// Backfill for [`AnchorReference::kind`] when deserializing a result written
@@ -2504,22 +2518,18 @@ fn default_anchor_kind() -> String {
 pub struct ResolveAnchorResult {
     /// All anchor references found in the file.
     pub references: Vec<AnchorReference>,
-    /// Anchor names of the references that did not resolve.
+    /// Anchor names of the references that were judged and did not resolve.
     ///
-    /// Only `markers` and `cross-document` references contribute. An empty
-    /// list therefore means "every reference that was a claim about the
-    /// markers file or about a shipped document's sections resolved" — never
-    /// "every `§` in this file is fine", which is a claim this primitive
-    /// cannot make and the counts below keep it from implying.
+    /// A `markers`, `cross-document` or judged `qualified` reference
+    /// contributes. An empty list therefore means "every reference this
+    /// primitive judged resolved" — never "every `§` in this file is fine":
+    /// the two unjudged counts below say what it could not judge.
     pub unresolved: Vec<String>,
-    /// References excluded because their line names another document that the
-    /// `cross-document` rule does not judge.
-    ///
-    /// Reported rather than silently dropped. Excluding them is what makes an
-    /// unresolved reference readable — 75 of this corpus's 112 were this kind,
-    /// and a real dangling anchor sat unnoticed among them for four specs'
-    /// worth of history. But an exclusion nobody counts is indistinguishable
-    /// from a scan that found nothing, so the number ships with the verdict.
+    /// References on a line naming another document that 071's
+    /// `cross-document` rule does not judge, judged against the readable
+    /// documents the line names, the citing file's headings and the markers
+    /// (spec 067 scenario `shared-constitution-references-are-judged`). Those
+    /// it could not judge are counted again in the two counts below.
     pub qualified: u32,
     /// References resolved against a heading in the citing file rather than
     /// the markers file.
@@ -2535,6 +2545,19 @@ pub struct ResolveAnchorResult {
     /// adopter.
     #[serde(default)]
     pub cross_document: u32,
+    /// References not judged because nothing they name holds a section this
+    /// primitive can read — every document on the line absent from the tree,
+    /// or one a file that is not markdown. `/{project}:analyze` records them
+    /// unexamined under `anchor-target-unjudgeable`, excluded by
+    /// construction.
+    #[serde(default)]
+    pub anchor_target_unjudgeable: u32,
+    /// References not judged because a document they name exists and could
+    /// not be read, or is a registered `[constitutions.*]` entry that did not
+    /// resolve. `/{project}:analyze` records them unexamined under
+    /// `anchor-target-unreadable`, could not be read.
+    #[serde(default)]
+    pub anchor_target_unreadable: u32,
 }
 
 // -- traverse-deps -----------------------------------------------------------
@@ -8004,24 +8027,34 @@ mod tests {
                     line: 459,
                     resolved: true,
                     kind: "markers".into(),
+                    unjudged: None,
                 },
                 AnchorReference {
                     anchor: "Workflow".into(),
                     line: 12,
                     resolved: true,
                     kind: "qualified".into(),
+                    unjudged: Some("anchor-target-unjudgeable".into()),
                 },
             ],
             unresolved: vec![],
             qualified: 1,
             intra_document: 0,
             cross_document: 0,
+            anchor_target_unjudgeable: 1,
+            anchor_target_unreadable: 0,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["qualified"], 1);
         assert_eq!(value["intra-document"], 0);
         assert_eq!(value["cross-document"], 0);
         assert_eq!(value["references"][1]["kind"], "qualified");
+        assert_eq!(
+            value["references"][1]["unjudged"],
+            "anchor-target-unjudgeable"
+        );
+        assert!(value["references"][0].get("unjudged").is_none());
+        assert_eq!(value["anchor-target-unjudgeable"], 1);
         assert_eq!(round_trip(&result), result);
     }
 

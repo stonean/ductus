@@ -54,7 +54,7 @@ use crate::schema::primitives::{
 /// The document filename looked for inside a registered checkout. Fixed rather
 /// than configurable: a per-entry filename would let two projects registering
 /// the same source load different documents from it, which AC7 forbids.
-const DOCUMENT_NAME: &str = "constitution.md";
+pub(crate) const DOCUMENT_NAME: &str = "constitution.md";
 
 /// Resolve the registry without measuring anything: the resolution
 /// `write-review` and `write-analysis` read for what went unexamined. The

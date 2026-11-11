@@ -14,7 +14,7 @@ On 2026-10-26, `072-governing-documents-stay-within-one-read` found that this te
 - For `claude-style` agents, the bootstrap renders each registered shared constitution into the managed block as `@{document-path}`. It then loads at startup with `AGENTS.md`, so a session that starts from a pasted prompt and runs no command still has its rules.
 - `/{project}:target` loads `.ductus/constitution.md` and each shared constitution only when it is not already in context. An imported document counts as loaded, so none is read twice.
 - A migration rewrites an existing adopter's `CLAUDE.md`, which the bootstrap never overwrites because the adopter owns it. Each `@import <path>` line outside code becomes `@<path>`, the line importing `.ductus/constitution.md` included. A second migration, `constitution-import`, adds `@.ductus/constitution.md` where nothing imports the constitution, since a `--ref=main` adopter may already have run the first one's earlier form, which removed that line.
-- This spec's §CLAUDE.md template and AC3 state the form the template now writes, and every framework document that describes the old form is corrected with them.
+- This spec's (`specs/002-project-scaffolding/spec.md`) §CLAUDE.md template and AC3 state the form the template now writes, and every framework document that describes the old form is corrected with them.
 
 ## Edge Cases
 

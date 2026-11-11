@@ -8,7 +8,7 @@ section: "Follow-on scenarios"
 
 `apply-manifest` builds the token it searches for by wrapping each substitution key in braces — `format!("{{{key}}}")`. The key is therefore the *inside* of the placeholder: `project`, not `{project}`.
 
-Nothing said so. The [apply-manifest](./apply-manifest.md) scenario that introduced the primitive describes `substitutions: BTreeMap<String, String>` without stating which form the keys take, the schema's own doc comment called it a "`{key}` → value substitution map" — which reads as *keys are braced* — and the installer's §Placeholder Substitution wrote every placeholder braced while `keep-literals: ["project", "cli-config-dir"]`, two sections earlier, wrote the same names bare. Both spellings are correct for what they are naming: one names tokens *in files*, the other names *map keys*. Read together, with no contract stated, they are a coin flip.
+Nothing said so. The [apply-manifest](./apply-manifest.md) scenario that introduced the primitive describes `substitutions: BTreeMap<String, String>` without stating which form the keys take, the schema's own doc comment called it a "`{key}` → value substitution map" — which reads as *keys are braced* — and the installer's (`framework/bootstrap/ductus.md`) §Placeholder Substitution wrote every placeholder braced while `keep-literals: ["project", "cli-config-dir"]`, two sections earlier, wrote the same names bare. Both spellings are correct for what they are naming: one names tokens *in files*, the other names *map keys*. Read together, with no contract stated, they are a coin flip.
 
 An adopter called it with braced keys. Every key built `{{project}}`, which matches nothing. Every entry still ran its strategy, every file was still written, and the call returned:
 

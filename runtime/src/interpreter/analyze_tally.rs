@@ -103,8 +103,25 @@ impl AnalyzeTally {
                 }
                 self.blocking += count("cycles");
             }
-            // Step 4: an unresolved anchor is advisory.
-            "resolve-anchor" => self.advisory += count("unresolved"),
+            // Step 4: an unresolved anchor is advisory, and a reference the
+            // primitive could not judge is unexamined under its reason: one
+            // naming only absent or non-markdown documents excluded by
+            // construction, one naming an unreadable document or a skipped
+            // registered constitution could not be read (spec 067 scenario
+            // `shared-constitution-references-are-judged`).
+            "resolve-anchor" => {
+                self.advisory += count("unresolved");
+                for reason in [
+                    crate::primitives::resolve_anchor::UNJUDGEABLE,
+                    crate::primitives::resolve_anchor::UNREADABLE,
+                ] {
+                    let unjudged = result
+                        .get(reason)
+                        .and_then(Value::as_u64)
+                        .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
+                    self.record_unexamined(reason, unjudged);
+                }
+            }
             // Step 5: a missing citation is blocking and a deprecated one
             // advisory — but `missing` means something only against rule files
             // actually read. With none examined, nothing was checked: a
@@ -512,6 +529,34 @@ mod tests {
             &Map::new(),
         );
         assert_eq!(bound(&tally)["unexamined-by-reason"], host_detection());
+    }
+
+    /// A reference `resolve-anchor` could not judge is unexamined under the
+    /// reason its count names, beside the unresolved one counted advisory.
+    #[test]
+    fn an_unjudged_anchor_reference_is_recorded_unexamined() {
+        let mut tally = AnalyzeTally::new();
+        tally.record_primitive(
+            "resolve-anchor",
+            &json!({
+                "unresolved": ["gone"],
+                "anchor-target-unjudgeable": 3,
+                "anchor-target-unreadable": 1
+            }),
+            &Map::new(),
+        );
+        let bindings = bound(&tally);
+        assert_eq!(bindings["advisory"], 1);
+        assert_eq!(
+            bindings["unexamined-by-reason"],
+            json!([
+                ["anchor-target-unjudgeable", 3],
+                ["anchor-target-unreadable", 1],
+                ["applicable-rules-not-checked", 1],
+                ["grounding-not-checked", 1],
+                ["references-not-checked", 1]
+            ])
+        );
     }
 
     /// A referrer `check-orphaned-references` could not read is unexamined:

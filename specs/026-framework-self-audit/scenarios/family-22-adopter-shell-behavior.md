@@ -73,7 +73,7 @@ family stays hermetic: no `cargo build`, identical behavior in CI and locally.
   shipped file, an unavailable `mktemp`, or a git repo that fails to initialize
   each emit rather than skip. This family exists because checks that cannot run
   are what let the three defects ship, so it must not join them
-  ([§quality-cross `QUAL-CLAIM-001`](../../036-quality-cross-rules/spec.md)).
+  ([quality-cross `QUAL-CLAIM-001`](../../036-quality-cross-rules/spec.md)).
 - **The spec root is never interpolated.** The hook matches a staged spec by
   shape — any single leading segment, then `NNN-slug/spec.md` — so it has no
   configured value to get wrong, and the runtime stays the only thing that

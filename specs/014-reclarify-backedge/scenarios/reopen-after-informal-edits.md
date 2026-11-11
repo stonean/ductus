@@ -18,7 +18,7 @@ Surfaced during the gvrn 0.10.0 session-consolidation cycle, where scenario edit
 
 Two fixes are viable; this scenario is the place to pick one (or accept both) during implementation. Both keep the spec lifecycle invariant intact — `done` is reverted only when work that should be tracked has been added.
 
-> **Both shipped.** The Resolved Questions below picked A and B, and both have since landed, so the options are a record of the choice rather than work outstanding. **Option B** is `framework/commands/amend.md` §Re-open precondition and reconcile pass, whose delta definition and prompt match what this scenario specified, past `classify-spec-edit`, which since spec 079 spares a correction the prompt. **Option A** is the contributor rule in `AGENTS.md` §Workflow, promoted to `framework/constitution.md` §spec-lifecycle as *"Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk."*
+> **Both shipped.** The Resolved Questions below picked A and B, and both have since landed, so the options are a record of the choice rather than work outstanding. **Option B** is `framework/commands/amend.md` §Re-open precondition and reconcile pass (spec target), whose delta definition and prompt match what this scenario specified, past `classify-spec-edit`, which since spec 079 spares a correction the prompt. **Option A** is the contributor rule in `AGENTS.md` §Workflow, promoted to `framework/constitution.md` §spec-lifecycle as *"Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk."*
 
 ### Option A — agent-side: skip `/ductus:amend` when re-open is the only intent
 

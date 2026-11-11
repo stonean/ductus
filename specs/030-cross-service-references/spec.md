@@ -89,5 +89,5 @@ None.
 
 ## See also
 
-- [specs/README.md](../README.md) — §future-considerations records the cross-version upgrade-impact item. This feature deliberately does **not** realize that item; change-tracking across versions remains deferred. This is the lighter informative-references piece only.
+- [specs/README.md](../README.md) — §Future Considerations records the cross-version upgrade-impact item. This feature deliberately does **not** realize that item; change-tracking across versions remains deferred. This is the lighter informative-references piece only.
 - [015-tarball-fetch](../015-tarball-fetch/spec.md) — the remote-fetch mechanism considered for the earlier heavier framing and excluded (see Non-Goals). Links in this section are navigational and induce no dependency edge.

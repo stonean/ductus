@@ -79,7 +79,7 @@ Each split command gets one line, placed after the *For agent runtimes*
 blockquote at the head of `## Instructions`: its markdown-only reference is
 `.ductus/reference/<command>.md`, and a section it or another document names
 with no heading in the command is there. This resolves the inbound citations
-in other specs (`analyze.md` §Rules, `review.md` §Notes for adopters) in two
+in other specs (`analyze.md`'s Rules section, `review.md`'s Notes for adopters section) in two
 hops, as `ductus.md`'s `## The archive half` does for 056
 (`framework/bootstrap/ductus.md:798-813`). The four commands with no reference
 get no line.
@@ -95,7 +95,7 @@ get no line.
   `specs/064-pi-host-support/spec.md`).
 - **`{cli-config-dir}`.** One occurrence moves, `analyze.md`'s reference
   (its *Project-level consistency (advisory)* section, now in
-  `framework/reference/analyze.md`): "the §Agent Registry row with
+  `framework/reference/analyze.md`; the Agent Registry is in `framework/bootstrap/ductus.md`): "the §Agent Registry row with
   `config_dir` `{cli-config-dir}`" becomes the row whose `config_dir` is the
   `cli-config-dir` recorded in `.ductus/session.toml` for the agent running
   the command.

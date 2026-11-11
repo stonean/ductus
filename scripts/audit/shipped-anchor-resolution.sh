@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 # scripts/audit/shipped-anchor-resolution.sh — Family 39 of /audit.
 #
-# Every `§` reference in a markdown file under framework/ resolves under
-# `resolve-anchor` against framework/constitution.md.
+# Every `§` reference in a markdown file under framework/, and in every spec's
+# spec.md, plan.md and scenarios, resolves under `resolve-anchor` against
+# framework/constitution.md. The spec corpus joined the subject with 067's
+# scenario `shared-constitution-references-are-judged` (owner, 2026-11-11):
+# once the primitive judged references on lines naming other documents, 33 in
+# spec.md files, 12 under framework/ and 128 in plans and scenarios matched no
+# section, unseen by every check, and the owner chose to fix them all and gate
+# the corpus so they cannot accumulate again.
 #
 # An adopter ran that check by hand over its installed
 # `.claude/commands/ductus.md` against `.ductus/constitution.md`, because a
@@ -28,15 +34,21 @@
 # A second anchor resolver here would drift from the one an adopter runs, and
 # the report this family answers is about that one. So its limits are the
 # primitive's, inherited rather than restated as policy: another document is
-# recognised only by a `.md` filename or link on the same line, a line naming
+# recognised only by a filename or link on the same line, a line naming
 # documents the Shared Files manifest does not map qualifies every `§` on it
 # (a line naming exactly one mapped document, or an explicit pair, is judged
 # as cross-document instead), and a reference meant for another file can
-# resolve against a same-named local heading. The scenario states each.
+# resolve against a same-named local heading. The scenarios state each.
 #
-# Only `markers`- and `cross-document`-kind references can come back
-# unresolved; `qualified` and `intra-document` are counted, never judged,
-# exactly as the primitive reports them. `cross-document` (spec 071) is a
+# Every judged reference can come back unresolved, and each is a finding: a
+# `markers` one, a `cross-document` one, and since 067's
+# `shared-constitution-references-are-judged` a `qualified` one, judged against
+# the readable documents its line names, the citing file's headings and the
+# markers. A reference the primitive could not judge carries `unjudged`:
+# `anchor-target-unreadable` (a named document exists but could not be read) is
+# a finding here, since in this repository it is a defect; and
+# `anchor-target-unjudgeable` (only absent documents named, or a non-markdown
+# file) is counted on stderr. `cross-document` (spec 071) is a
 # pointer into a document the Shared Files manifest ships, judged against
 # that document's framework source. Two shapes reach it: an explicit pair, a
 # command step's **§X** in `.ductus/reference/<command>.md`, judged against
@@ -62,8 +74,9 @@ audit_family shipped-anchors
 MARKERS="framework/constitution.md"
 SELF="scripts/audit/shipped-anchor-resolution.sh"
 
-# git's pathspec `*` crosses `/`, so this one pattern reaches every depth.
-files="$(git ls-files 'framework/*.md' 2> /dev/null)"
+# git's pathspec `*` crosses `/`, so `framework/*.md` reaches every depth. The
+# spec corpus is each feature's spec.md, plan.md and scenarios.
+files="$(git ls-files 'framework/*.md' 'specs/[0-9]*/spec.md' 'specs/[0-9]*/plan.md' 'specs/[0-9]*/scenarios/*.md' 2> /dev/null)"
 count="$(printf '%s\n' "$files" | grep -c '[^[:space:]]')"
 examined=0
 refs=0
@@ -71,10 +84,12 @@ qualified=0
 intra=0
 marker_refs=0
 cross=0
+unjudgeable=0
+unreadable=0
 
 if [ "$count" -eq 0 ]; then
   emit "framework/" \
-    "no tracked markdown file under framework/ was enumerated — no § reference was resolved" \
+    "no tracked markdown file under framework/ or the spec corpus was enumerated — no § reference was resolved" \
     "confirm git is available and this is a ductus checkout; an empty subject is not a clean one"
 elif [ ! -f "$MARKERS" ]; then
   emit "$MARKERS" \
@@ -84,7 +99,7 @@ else
   bin="$(ductus_bin)"
   if [ -z "$bin" ]; then
     emit "$SELF" \
-      "no ductus runtime reachable — anchor resolution over framework/ did not run" \
+      "no ductus runtime reachable — anchor resolution over framework/ and the spec corpus did not run" \
       "build the runtime (cargo build --release --manifest-path runtime/Cargo.toml) or run /ductus to acquire the pinned binary"
   else
     records="$(printf '%s\n' "$files" | python3 -c '
@@ -117,7 +132,7 @@ def pair_document(path, number, anchor):
 
 
 binary, markers = sys.argv[1], sys.argv[2]
-examined = refs = qualified = intra = marker_refs = cross = 0
+examined = refs = qualified = intra = marker_refs = cross = unjudgeable = unreadable = 0
 for path in (line.strip() for line in sys.stdin):
     if not path:
         continue
@@ -143,8 +158,16 @@ for path in (line.strip() for line in sys.stdin):
     for ref in references:
         refs += 1
         kind = ref.get("kind")
+        unjudged = ref.get("unjudged")
+        if unjudged == "anchor-target-unjudgeable":
+            unjudgeable += 1
+        elif unjudged == "anchor-target-unreadable":
+            unreadable += 1
+            print("unreadable\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
         if kind == "qualified":
             qualified += 1
+            if not unjudged and not ref.get("resolved"):
+                print("unresolved-qualified\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
         elif kind == "intra-document":
             intra += 1
         elif kind == "cross-document":
@@ -157,14 +180,18 @@ for path in (line.strip() for line in sys.stdin):
             marker_refs += 1
             if not ref.get("resolved"):
                 print("unresolved\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
-print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_refs, cross))
+print("counts\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_refs, cross, unjudgeable, unreadable))
 ' "$bin" "$MARKERS")"
 
-    while IFS=$'\t' read -r kind f1 f2 f3 f4 f5 f6; do
+    while IFS=$'\t' read -r kind f1 f2 f3 f4 f5 f6 f7 f8; do
       case "$kind" in
         unresolved)
+          case "$f1" in
+            framework/*) why="resolve-anchor reports it to anyone who runs the check over what ductus ships, and only a ductus release repairs it" ;;
+            *) why="a reader following it finds no such section" ;;
+          esac
           emit "$f1" \
-            "the § reference beginning \`§$f2\` names no heading in this file and no marker in $MARKERS — resolve-anchor reports it to anyone who runs the check over what ductus ships, and only a ductus release repairs it" \
+            "the § reference beginning \`§$f2\` names no heading in this file and no marker in $MARKERS — $why" \
             "spell a local heading as it reads, name the other markdown document on the same line, or drop the § for a section of a non-markdown document"
           ;;
         unresolved-cross)
@@ -181,6 +208,16 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, mark
             "the § reference beginning \`§$f2\` $what" \
             "spell the target section's heading in full, as it reads in the framework source the Shared Files manifest maps that document to"
           ;;
+        unresolved-qualified)
+          emit "$f1" \
+            "the § reference beginning \`§$f2\` names no heading of a document its line names, no heading in this file and no marker in $MARKERS" \
+            "spell the target section's heading in full, name the document it is in on the same line, write it as a **§Heading** in \`path\` pair, or drop the § where the section no longer exists"
+          ;;
+        unreadable)
+          emit "$f1" \
+            "the § reference beginning \`§$f2\` names a document that exists but could not be read, so it was not judged" \
+            "make the named document readable, or correct the path the line names"
+          ;;
         unexamined)
           emit "$f1" \
             "resolve-anchor produced no usable result for this file ($f2) — its § references were not examined" \
@@ -193,6 +230,8 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, mark
           intra="$f4"
           marker_refs="$f5"
           cross="$f6"
+          unjudgeable="$f7"
+          unreadable="$f8"
           ;;
       esac
     done <<< "$records"
@@ -205,6 +244,6 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, mark
   fi
 fi
 
-echo "shipped-anchors: ${examined} of ${count} framework/ markdown file(s) examined; ${refs} § reference(s) — ${marker_refs} against constitution markers, ${cross} cross-document (judged against a shipped document's source), ${intra} intra-document, ${qualified} qualified (excluded by construction)" >&2
+echo "shipped-anchors: ${examined} of ${count} framework/ and spec-corpus markdown file(s) examined; ${refs} § reference(s) — ${marker_refs} against constitution markers, ${cross} cross-document (judged against a shipped document's source), ${intra} intra-document, ${qualified} qualified (judged against the documents their lines name); ${unjudgeable} not judgeable by construction, ${unreadable} naming an unreadable document" >&2
 
 exit "$drift"

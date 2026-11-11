@@ -454,7 +454,7 @@ When document B describes content authored in document A, B back-links to A — 
 - **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning; one in a `done` spec's scenario or data model is a meaningful edit.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.
-- **An anchor reference resolves by line, and a line wrap alone breaks it.** A `§name` is qualified only when its line names its document, and within a document it matches heading text longest-first; a subsection has no marker, so cite its marked section.
+- **An anchor reference resolves by line, and a line wrap alone breaks it.** A `§name` resolves when its text begins with a heading of a document its line names, a registered shared constitution's marker, a heading of the citing file, or a constitution marker; one into a document the check cannot read is recorded unexamined, and a subsection has no marker, so cite its marked section.
 - **A sweep can make a quoted instruction point at itself — classify by who emits it, never by the string.**
 - **Replacing an embedded copy with a pointer is a corpus sweep, not a deletion** — it changes what a document asserts, so it is not mechanical; find what describes the copy, criteria included.
 - **A document declaring itself the authoritative shape of something the tooling writes drifts silently — check it against a record the tooling actually wrote, not against the code.**

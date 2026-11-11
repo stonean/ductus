@@ -25,44 +25,54 @@
 //! - **`cross-document`** (spec 071, 067 scenario
 //!   `pointers-into-shipped-files-are-judged`) — the reference points into a
 //!   document the `## Shared Files` section of `framework/bootstrap/ductus.md`
-//!   maps to a source this primitive can read, so it *can* be judged, and is.
-//!   Two shapes reach it. An explicit pair — a bold `§X` followed by `in` and
-//!   a shipped document in a code span, as in **§Grounding (advisory)** in
+//!   maps to a source this primitive can read. Two shapes reach it. An
+//!   explicit pair — a bold `§X` followed by `in` and a shipped document in a
+//!   code span, as in **§Grounding (advisory)** in
 //!   `.ductus/reference/analyze.md` — resolves only when `X` *equals* a
 //!   heading of that document: the bold delimits the name, so a pointer that
 //!   outlives a shortened heading is caught rather than prefix-matched.
 //!   Otherwise a line naming **exactly one** document, which the manifest
 //!   maps, judges each `§` on it: resolved when it begins with a heading of
-//!   that source, a heading of the citing file, or names a marker. The marker
-//!   fallback is required — a line naming a shipped document such as
-//!   `specs/inbox.md` usually cites a constitution section beside it; the
-//!   citing-file fallback lets a pointer line also cite a section of its own
-//!   file, and no reference in the corpus needs it today. Pairs exist because
-//!   most command steps name `plan.md` or `spec.md` beside their pointer:
-//!   measured 2026-10-25, 59 of 100 pointers sat on such lines, which the line
-//!   rule leaves unjudged. The manifest bounds all of it — it is the loading
-//!   policy, the source path is the document root, and an unreadable source
-//!   leaves the reference `qualified` — so this is not the general link
-//!   resolver `anchor-reference-kinds` declined to become. Where the
-//!   bootstrap file is absent, as in every adopter, the map is empty and
-//!   nothing is judged this way.
-//! - **`qualified`** — the reference's line names another document (a `.md`
-//!   filename, backticked or bare, or a markdown link to one) that the rule
-//!   above does not judge. It is a claim about *that* document's sections,
-//!   and this primitive holds one file's markers, so it is not evaluated
-//!   here. Excluded by construction and **counted** — the exclusion is what
-//!   makes the rest readable, and an exclusion nobody counts is
-//!   indistinguishable from having found nothing. Line-scoped rather than
-//!   immediately-preceding on purpose: the dominant real shape is a table row
-//!   or a clause naming the file once and then citing several of its sections
-//!   (`review.md | edit — §Behavior step 5 and §Load`), where every reference
-//!   after the first would otherwise slip through.
+//!   that source, a heading of the citing file, or names a marker. Pairs
+//!   exist because most command steps name `plan.md` or `spec.md` beside
+//!   their pointer: measured 2026-10-25, 59 of 100 pointers sat on such
+//!   lines. Where the bootstrap file is absent, as in every adopter, the map
+//!   is empty and nothing is judged this way.
+//! - **`qualified`** — the reference's line names another document, or it is
+//!   a code span holding a path and the reference
+//!   (`` `../shared/constitution.md §rule` ``). Judged against every document
+//!   the line names (067 scenario `shared-constitution-references-are-judged`):
+//!   resolved when its text begins with a heading of a readable markdown
+//!   document named, names a marker of one — a registered shared
+//!   constitution's among them — begins with a heading of the citing file, or
+//!   names a marker of the markers file; otherwise **unresolved**, since a
+//!   check that names the document and then ignores it misses every renamed
+//!   section. What it cannot judge it says so about, never reports broken:
+//!   a line naming only documents absent from the tree, or a file that is
+//!   not markdown and holds no section, leaves the reference
+//!   `anchor-target-unjudgeable` (excluded by construction); a document that
+//!   exists and cannot be read, or a registered `[constitutions.*]` entry that
+//!   did not resolve, leaves it `anchor-target-unreadable` (could not be
+//!   read). Both are counted, and `/{project}:analyze` records them unexamined.
+//!   Line-scoped rather than immediately-preceding on purpose: the dominant
+//!   real shape is a table row or a clause naming the file once and then
+//!   citing several of its sections (`review.md | edit — §Behavior step 5
+//!   and §Load`).
 //! - **`intra-document`** — the anchor names a heading in the citing file
 //!   (`per §Design above`). Resolved against that file's own headings, which
 //!   is the question the author was actually asking.
 //! - **`markers`** — everything else: a genuine claim about the markers file.
 //!
-//! Only `cross-document` and `markers` references can come back unresolved.
+//! A document is named by a backticked or linked path or a bare `name.md`,
+//! resolved from the citing file's directory and then from the project root.
+//! The markers file is recognized by where such a token lands, never by its
+//! basename, so a registered shared constitution or a `team-constitution.md`
+//! is another document; a Shared Files destination whose source is the
+//! markers file (`.ductus/constitution.md` cited from `framework/`) is the
+//! markers file. Registered documents are read through `resolve-constitutions`'
+//! loader, outside the tree where their paths lead — the config-sourced path
+//! boundary on [`super::validate_no_traversal`].
+//!
 //! A heading is an ATX heading line outside a ` ``` ` fenced block and outside
 //! an HTML comment: a `## Summary` inside a fenced example record is content,
 //! not a section a pointer can name. Outside a pair, a reference names a
@@ -78,13 +88,17 @@
 #![allow(clippy::expect_used)]
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::primitives::{Result, SkipScanner, contained_path, inline_code_spans, read_text};
-use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAnchorResult};
+use crate::primitives::{
+    Result, SkipScanner, contained_path, inline_code_spans, read_text, resolve_path,
+};
+use crate::schema::primitives::{
+    AnchorReference, ConstitutionOutcome, ResolveAnchorArgs, ResolveAnchorResult,
+};
 
 /// Execute the `resolve-anchor` primitive.
 ///
@@ -94,7 +108,11 @@ use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAncho
 /// be read, and [`crate::primitives::PrimitiveError::InvalidPath`], before
 /// anything is read, when `path` or `markers-path` is absolute, climbs out
 /// with `..`, or leaves the project through a symlink
-/// ([`crate::primitives::contained_path`]).
+/// ([`crate::primitives::contained_path`]). A `[constitutions.*]` registry
+/// that does not parse, or names an entry the schema forbids, halts the run
+/// with `resolve-constitutions`' own error: the registry is the loading policy
+/// for registered documents, and a malformed one must never read as an empty
+/// one.
 pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult> {
     let path = contained_path(repo, &args.path)?;
     let markers_file = args
@@ -111,25 +129,26 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
         None => collect_markers(&content),
     };
     let own_headings = collect_headings(&content);
-    let markers_names = markers_identifiers(args.markers_path.as_ref());
-    let mut shipped = Shipped::load(repo);
-    let mut references: Vec<AnchorReference> = Vec::new();
-    let mut unresolved: HashSet<String> = HashSet::new();
-    let mut qualified = 0u32;
-    let mut intra_document = 0u32;
-    let mut cross_document = 0u32;
+    let mut documents = Documents::load(repo, &args.path, args.markers_path.as_deref())?;
+    let ctx = Fallbacks {
+        own_headings: &own_headings,
+        markers: &markers,
+    };
+    let mut tally = Tally::default();
     for (line_no, line) in content.lines().enumerate() {
         let line_no = u32::try_from(line_no + 1).unwrap_or(u32::MAX);
-        let line_names_document = names_other_document(line, &markers_names);
-        // The one shipped document this line names, when it names exactly one
-        // and its source can be read: the line's references can be judged.
-        let judged_against = if line_names_document {
-            shipped.line_headings(line, &markers_names)
-        } else {
-            None
-        };
-        let pairs = shipped.pairs(line);
         let code_spans = inline_code_spans(line);
+        // Every document the line names other than the markers file, each
+        // resolved once: what a reference on this line can be judged against.
+        let named = documents.named_on(line, &code_spans);
+        // The one shipped document the line names, when it names exactly one
+        // and its source can be read: 071's line rule, unchanged.
+        let single_shipped = match named.as_slice() {
+            [(_, Named::Sections(sections))] if sections.shipped => Some(&sections.headings),
+            _ => None,
+        };
+        let pairs = documents.shipped.pairs(line);
+        let mut on_line: Vec<(usize, AnchorReference)> = Vec::new();
         for cap in reference_regex().captures_iter(line) {
             let whole = cap.get(0).map_or(0, |m| m.start());
             let anchor = cap[1].to_string();
@@ -140,63 +159,78 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
             // not a citation — the constitution writes ``§anchor`` when
             // defining what an anchor reference looks like. Same class as the
             // marker-comment exclusion above, and the same rule
-            // `check-corpus-links` applies to link targets in code spans.
+            // `check-corpus-links` applies to link targets in code spans. The
+            // one span that *is* a citation, a path followed by a reference,
+            // is read below.
             if code_spans.iter().any(|span| span.contains(&whole)) {
                 continue;
             }
-            // Order matters. A reference that points into a shipped document
-            // is judged as cross-document first. Otherwise a line that names
-            // another document is qualified even when the anchor happens to
-            // match a local heading, because the author named the document
-            // they meant.
             let rest = &line[whole..];
-            // An explicit pair is judged against its document alone, by
-            // equality; a line naming one shipped document also accepts a
-            // local heading or a marker, since a pointer line can cite either
-            // beside it.
+            // Order matters. An explicit pair into a shipped document is
+            // judged against that document alone, by equality; a line naming
+            // exactly one shipped document judges against its source, the
+            // citing file and the markers (both 071's); a line naming any
+            // other document is judged against every readable one it names,
+            // with the same two fallbacks; only then a local heading, and
+            // last the markers file.
             let cross = pairs.get(&whole).copied().or_else(|| {
-                judged_against.as_ref().map(|h| {
-                    names_local_heading(h, rest)
+                single_shipped.map(|headings| {
+                    names_local_heading(headings, rest)
                         || names_local_heading(&own_headings, rest)
                         || markers.contains(&anchor)
                 })
             });
-            let (kind, resolved) = if let Some(resolved) = cross {
-                cross_document = cross_document.saturating_add(1);
-                if !resolved {
-                    unresolved.insert(anchor.clone());
-                }
-                (KIND_CROSS_DOCUMENT, resolved)
-            } else if line_names_document {
-                qualified = qualified.saturating_add(1);
-                (KIND_QUALIFIED, true)
+            let reference = if let Some(resolved) = cross {
+                tally.cross(&anchor, resolved, line_no)
+            } else if !named.is_empty() {
+                let verdict = judge(&named, rest, &anchor, &ctx);
+                tally.qualified(&anchor, verdict, line_no)
             } else if names_local_heading(&own_headings, rest) {
-                intra_document = intra_document.saturating_add(1);
-                (KIND_INTRA_DOCUMENT, true)
+                tally.intra(&anchor, line_no)
             } else {
-                let resolved = markers.contains(&anchor);
-                if !resolved {
-                    unresolved.insert(anchor.clone());
-                }
-                (KIND_MARKERS, resolved)
+                tally.markers(&anchor, markers.contains(&anchor), line_no)
             };
-            references.push(AnchorReference {
-                anchor,
-                line: line_no,
-                resolved,
-                kind: kind.to_string(),
-            });
+            on_line.push((whole, reference));
         }
+        // A code span whose whole content is a path followed by one `§`
+        // reference is a citation of that path's section (scenario
+        // `shared-constitution-references-are-judged`, decision (c)): judged
+        // against that document, with the line rule's two fallbacks.
+        for span in &code_spans {
+            let Some((token, offset)) = span_citation(&line[span.clone()]) else {
+                continue;
+            };
+            let whole = span.start + offset;
+            let rest = &line[whole..span.end];
+            let Some(cap) = reference_regex().captures(rest) else {
+                continue;
+            };
+            let anchor = cap[1].to_string();
+            let reference = match documents.resolve(&token) {
+                Named::Markers => tally.markers(&anchor, markers.contains(&anchor), line_no),
+                target => {
+                    let verdict = judge(&[(token, target)], rest, &anchor, &ctx);
+                    tally.qualified(&anchor, verdict, line_no)
+                }
+            };
+            on_line.push((whole, reference));
+        }
+        on_line.sort_by_key(|(at, _)| *at);
+        tally
+            .references
+            .extend(on_line.into_iter().map(|(_, reference)| reference));
     }
 
-    let mut unresolved: Vec<String> = unresolved.into_iter().collect();
+    let mut unresolved: Vec<String> = tally.unresolved.into_iter().collect();
     unresolved.sort();
     Ok(ResolveAnchorResult {
-        references,
+        references: tally.references,
         unresolved,
-        qualified,
-        intra_document,
-        cross_document,
+        qualified: tally.qualified,
+        intra_document: tally.intra_document,
+        cross_document: tally.cross_document,
+        anchor_target_unjudgeable: tally.unjudgeable,
+        anchor_target_unreadable: tally.unreadable,
     })
 }
 
@@ -204,6 +238,343 @@ const KIND_MARKERS: &str = "markers";
 const KIND_QUALIFIED: &str = "qualified";
 const KIND_INTRA_DOCUMENT: &str = "intra-document";
 const KIND_CROSS_DOCUMENT: &str = "cross-document";
+
+/// The unexamined reason for a reference this primitive could not judge
+/// because nothing it names holds a section it can read: every document its
+/// line names is absent from the tree, or one is a file that is not markdown.
+/// Excluded by construction — it recurs on every run.
+pub(crate) const UNJUDGEABLE: &str = "anchor-target-unjudgeable";
+
+/// The unexamined reason for a reference this primitive could not judge
+/// because a document its line names exists and could not be read — a shipped
+/// source, an in-tree file, a path leaving the project through a symlink — or
+/// is a registered `[constitutions.*]` entry that did not resolve. Could not
+/// be read: something the run meant to see went unseen.
+pub(crate) const UNREADABLE: &str = "anchor-target-unreadable";
+
+/// The citing file's own headings and the markers file's markers: the two
+/// fallbacks every judged reference outside an explicit pair may resolve by.
+struct Fallbacks<'a> {
+    own_headings: &'a [String],
+    markers: &'a HashSet<String>,
+}
+
+/// How a judged reference came out.
+#[derive(Clone, Copy)]
+enum Verdict {
+    Resolved,
+    Unresolved,
+    /// Not judged, with the unexamined reason it is counted under.
+    Unjudged(&'static str),
+}
+
+/// Judge `rest` (the text from the `§`) and its `anchor` against every
+/// document a line names. It resolves when it begins with a heading of a
+/// readable document named, names one of its markers, begins with a heading
+/// of the citing file, or names a marker of the markers file. Otherwise what
+/// cannot be judged is said so rather than reported broken: a document that
+/// exists unreadable, or a skipped registered entry, makes it
+/// [`UNREADABLE`]; a file that is not markdown, which holds no section to
+/// read, or a line naming only documents absent from the tree, makes it
+/// [`UNJUDGEABLE`]. Only a reference that every judgeable document named
+/// failed is unresolved.
+fn judge(named: &[(String, Named)], rest: &str, anchor: &str, ctx: &Fallbacks<'_>) -> Verdict {
+    let mut unreadable = false;
+    let mut non_markdown = false;
+    let mut all_absent = true;
+    for (_, target) in named {
+        match target {
+            Named::Sections(sections) => {
+                if names_local_heading(&sections.headings, rest)
+                    || sections.markers.contains(anchor)
+                {
+                    return Verdict::Resolved;
+                }
+                all_absent = false;
+            }
+            Named::Unreadable => {
+                unreadable = true;
+                all_absent = false;
+            }
+            Named::NonMarkdown => {
+                non_markdown = true;
+                all_absent = false;
+            }
+            Named::Absent => {}
+            // Filtered out of a line's documents; a span citation of the
+            // markers file never reaches here.
+            Named::Markers => all_absent = false,
+        }
+    }
+    if names_local_heading(ctx.own_headings, rest) || ctx.markers.contains(anchor) {
+        return Verdict::Resolved;
+    }
+    if unreadable {
+        Verdict::Unjudged(UNREADABLE)
+    } else if non_markdown || all_absent {
+        Verdict::Unjudged(UNJUDGEABLE)
+    } else {
+        Verdict::Unresolved
+    }
+}
+
+/// The references and counts a scan accumulates.
+#[derive(Default)]
+struct Tally {
+    references: Vec<AnchorReference>,
+    unresolved: HashSet<String>,
+    qualified: u32,
+    intra_document: u32,
+    cross_document: u32,
+    unjudgeable: u32,
+    unreadable: u32,
+}
+
+impl Tally {
+    fn record(
+        &mut self,
+        anchor: &str,
+        line: u32,
+        kind: &str,
+        resolved: bool,
+        unjudged: Option<&str>,
+    ) -> AnchorReference {
+        if !resolved {
+            self.unresolved.insert(anchor.to_string());
+        }
+        AnchorReference {
+            anchor: anchor.to_string(),
+            line,
+            resolved,
+            kind: kind.to_string(),
+            unjudged: unjudged.map(str::to_string),
+        }
+    }
+
+    fn cross(&mut self, anchor: &str, resolved: bool, line: u32) -> AnchorReference {
+        self.cross_document = self.cross_document.saturating_add(1);
+        self.record(anchor, line, KIND_CROSS_DOCUMENT, resolved, None)
+    }
+
+    fn qualified(&mut self, anchor: &str, verdict: Verdict, line: u32) -> AnchorReference {
+        self.qualified = self.qualified.saturating_add(1);
+        match verdict {
+            Verdict::Resolved => self.record(anchor, line, KIND_QUALIFIED, true, None),
+            Verdict::Unresolved => self.record(anchor, line, KIND_QUALIFIED, false, None),
+            Verdict::Unjudged(reason) => {
+                if reason == UNREADABLE {
+                    self.unreadable = self.unreadable.saturating_add(1);
+                } else {
+                    self.unjudgeable = self.unjudgeable.saturating_add(1);
+                }
+                self.record(anchor, line, KIND_QUALIFIED, true, Some(reason))
+            }
+        }
+    }
+
+    fn intra(&mut self, anchor: &str, line: u32) -> AnchorReference {
+        self.intra_document = self.intra_document.saturating_add(1);
+        self.record(anchor, line, KIND_INTRA_DOCUMENT, true, None)
+    }
+
+    fn markers(&mut self, anchor: &str, resolved: bool, line: u32) -> AnchorReference {
+        self.record(anchor, line, KIND_MARKERS, resolved, None)
+    }
+}
+
+/// What a document token on a line names, once resolved.
+#[derive(Clone)]
+enum Named {
+    /// The markers file itself, under any path that resolves to it.
+    Markers,
+    /// A document whose sections this primitive read.
+    Sections(Sections),
+    /// A markdown path no file in the tree holds, or one leaving the project.
+    Absent,
+    /// A file that is not markdown, which holds no section to read.
+    NonMarkdown,
+    /// A document that exists and could not be read, or a registered
+    /// `[constitutions.*]` entry that did not resolve.
+    Unreadable,
+}
+
+/// The sections a named document offers a reference: its ATX headings and its
+/// `<!-- §anchor -->` markers. `shipped` marks a Shared Files destination read
+/// through its framework source, which 071's line rule judges as
+/// `cross-document` when it is the only document a line names.
+#[derive(Clone)]
+struct Sections {
+    headings: Vec<String>,
+    markers: HashSet<String>,
+    shipped: bool,
+}
+
+/// Every document a scan can be asked about, each resolved and read at most
+/// once: the markers file, the registered shared constitutions, the shipped
+/// documents, and the project's own files.
+struct Documents<'a> {
+    repo: &'a Path,
+    /// The project root made absolute, for comparing a resolved token with a
+    /// registered document that sits outside it.
+    repo_abs: PathBuf,
+    /// The citing file's directory, relative to the project root.
+    citing_dir: PathBuf,
+    /// `markers-path`, lexically normalized; `None` without one.
+    markers_rel: Option<PathBuf>,
+    shipped: Shipped<'a>,
+    /// Each registered document's absolute path, with its markers when it
+    /// loaded and could be read.
+    registered: Vec<(PathBuf, Option<HashSet<String>>)>,
+    resolved: HashMap<String, Named>,
+}
+
+impl<'a> Documents<'a> {
+    fn load(repo: &'a Path, citing: &str, markers_path: Option<&str>) -> Result<Self> {
+        let repo_abs = std::path::absolute(repo).unwrap_or_else(|_| repo.to_path_buf());
+        let citing_dir = Path::new(citing)
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_default();
+        let markers_rel = markers_path.and_then(|m| normalize_rel(Path::new(""), m));
+        // The registry is read through `resolve-constitutions` itself, the
+        // loading policy for these documents (scenario
+        // `shared-constitution-references-are-judged`). A registered path
+        // routinely leaves the project (`../shared`); reading it is the
+        // config-sourced path boundary stated on
+        // [`super::validate_no_traversal`].
+        let registry = super::resolve_constitutions::run(repo)?;
+        let mut registered = Vec::new();
+        for record in registry.loaded.iter().chain(&registry.skipped) {
+            let document = normalize_abs(
+                &resolve_path(&repo_abs, &record.path)
+                    .join(super::resolve_constitutions::DOCUMENT_NAME),
+            );
+            let markers = (record.outcome == ConstitutionOutcome::Loaded)
+                .then(|| read_text(&document).ok().map(|text| collect_markers(&text)))
+                .flatten();
+            registered.push((document, markers));
+        }
+        Ok(Self {
+            repo,
+            repo_abs,
+            citing_dir,
+            markers_rel,
+            shipped: Shipped::load(repo),
+            registered,
+            resolved: HashMap::new(),
+        })
+    }
+
+    /// The documents `line` names other than the markers file, each with what
+    /// it resolved to, deduplicated by token and in order of appearance.
+    fn named_on(
+        &mut self,
+        line: &str,
+        code_spans: &[std::ops::Range<usize>],
+    ) -> Vec<(String, Named)> {
+        let mut named: Vec<(String, Named)> = Vec::new();
+        for token in document_tokens(line, code_spans) {
+            if named.iter().any(|(seen, _)| *seen == token) {
+                continue;
+            }
+            match self.resolve(&token) {
+                Named::Markers => {}
+                target => named.push((token, target)),
+            }
+        }
+        named
+    }
+
+    /// Resolve one document token: the markers file first, then a registered
+    /// document, then a shipped destination, then a file of the project
+    /// resolved from the citing file's directory and then from the root.
+    fn resolve(&mut self, token: &str) -> Named {
+        if let Some(found) = self.resolved.get(token) {
+            return found.clone();
+        }
+        let found = self.resolve_uncached(token);
+        self.resolved.insert(token.to_string(), found.clone());
+        found
+    }
+
+    fn resolve_uncached(&mut self, token: &str) -> Named {
+        let markdown = is_markdown(token);
+        // A remote document is never read: absent from the tree.
+        if is_url(token) {
+            return Named::Absent;
+        }
+        let bases = [self.citing_dir.clone(), PathBuf::new()];
+        let relatives: Vec<PathBuf> = bases
+            .iter()
+            .filter_map(|base| normalize_rel(base, token))
+            .collect();
+        if self
+            .markers_rel
+            .as_ref()
+            .is_some_and(|markers| relatives.contains(markers))
+        {
+            return Named::Markers;
+        }
+        // A registered document matches by where the token lands, from the
+        // citing file's directory or the root, however it is spelled.
+        let absolutes: Vec<PathBuf> = bases
+            .iter()
+            .map(|base| normalize_abs(&self.repo_abs.join(base).join(token)))
+            .collect();
+        if let Some((_, markers)) = self
+            .registered
+            .iter()
+            .find(|(document, _)| absolutes.contains(document))
+        {
+            return markers.clone().map_or(Named::Unreadable, |markers| {
+                Named::Sections(Sections {
+                    headings: Vec::new(),
+                    markers,
+                    shipped: false,
+                })
+            });
+        }
+        if let Some(source) = self.shipped.source_of(token) {
+            if self.markers_rel.as_ref() == normalize_rel(Path::new(""), &source).as_ref() {
+                return Named::Markers;
+            }
+            return match self.shipped.headings_of(&source) {
+                Some(headings) => Named::Sections(Sections {
+                    headings,
+                    markers: HashSet::new(),
+                    shipped: true,
+                }),
+                None => Named::Unreadable,
+            };
+        }
+        for relative in &relatives {
+            let relative = relative.to_string_lossy().replace('\\', "/");
+            // `contained_path` refuses a symlink leaving the project, which is
+            // a document this primitive will not read: unreadable, not absent.
+            let Ok(path) = contained_path(self.repo, &relative) else {
+                return Named::Unreadable;
+            };
+            if !path.exists() {
+                continue;
+            }
+            if !markdown {
+                return Named::NonMarkdown;
+            }
+            return read_text(&path).map_or(Named::Unreadable, |text| {
+                Named::Sections(Sections {
+                    headings: collect_headings(&text),
+                    markers: collect_markers(&text),
+                    shipped: false,
+                })
+            });
+        }
+        if markdown {
+            Named::Absent
+        } else {
+            Named::NonMarkdown
+        }
+    }
+}
 
 /// The installer whose **Shared Files** manifest maps each shipped document to
 /// its framework source. Present only in a framework checkout.
@@ -226,8 +597,19 @@ impl<'a> Shipped<'a> {
         }
     }
 
+    /// The framework source of the shipped destination `token` names, as the
+    /// manifest writes it or as it normalizes from the root.
+    fn source_of(&self, token: &str) -> Option<String> {
+        if let Some(source) = self.sources.get(token) {
+            return Some(source.clone());
+        }
+        let normalized = normalize_rel(Path::new(""), token)?;
+        let normalized = normalized.to_string_lossy().replace('\\', "/");
+        self.sources.get(&normalized).cloned()
+    }
+
     /// The headings of `source`, or `None` when it cannot be read — which
-    /// leaves the references that would be judged against it `qualified`.
+    /// leaves a reference judged against it unexamined, as could not be read.
     fn headings_of(&mut self, source: &str) -> Option<Vec<String>> {
         let repo = self.repo;
         self.headings
@@ -239,13 +621,6 @@ impl<'a> Shipped<'a> {
                     .map(|text| collect_headings(&text))
             })
             .clone()
-    }
-
-    /// The headings of the one shipped document `line` names, when it names
-    /// exactly one document other than the markers file.
-    fn line_headings(&mut self, line: &str, markers_names: &[String]) -> Option<Vec<String>> {
-        let source = single_shipped_source(line, markers_names, &self.sources)?;
-        self.headings_of(&source)
     }
 
     /// The explicit pairs on `line`: each pair's `§` offset → whether its
@@ -309,93 +684,143 @@ fn sole_span(cell: &str) -> Option<&str> {
     (!inner.is_empty() && !inner.contains('`')).then_some(inner)
 }
 
-/// The source of the one shipped document `line` names, when the line names
-/// exactly one document other than the markers file and the manifest maps it.
-/// A line naming two documents is left `qualified`: which one a `§` means is
-/// a judgment this primitive does not make.
-fn single_shipped_source(
-    line: &str,
-    markers_names: &[String],
-    shipped: &HashMap<String, String>,
-) -> Option<String> {
-    if shipped.is_empty() {
+/// The document tokens `line` names, in order: each word of a code span that
+/// ends in `.md`, a code span that is one path with an interior `/` and a file
+/// extension (a document that may not be markdown), a markdown link's target
+/// with its fragment stripped, and a bare `name.md` outside the spans. A URL
+/// to a markdown document names one absent from the tree; any other URL, a
+/// link to a fragment of this file, and a link to a directory name nothing.
+fn document_tokens(line: &str, code_spans: &[std::ops::Range<usize>]) -> Vec<String> {
+    let mut found: Vec<(usize, String)> = Vec::new();
+    for span in code_spans {
+        let content = &line[span.clone()];
+        let words: Vec<&str> = content.split_whitespace().collect();
+        for word in &words {
+            let word = strip_fragment(word);
+            if is_markdown(word) {
+                found.push((span.start, word.to_string()));
+            }
+        }
+        if let [word] = words.as_slice() {
+            let word = strip_fragment(word);
+            if !is_markdown(word) && word.contains('/') && has_extension(word) && !is_url(word) {
+                found.push((span.start, word.to_string()));
+            }
+        }
+    }
+    let in_span = |at: usize| code_spans.iter().any(|span| span.contains(&at));
+    for cap in link_regex().captures_iter(line) {
+        let Some(target) = cap.get(1) else { continue };
+        if in_span(target.start()) {
+            continue;
+        }
+        let path = strip_fragment(target.as_str());
+        // A URL to a markdown document names a document, one this tree does
+        // not hold; a URL to anything else names none.
+        let names = if is_url(path) {
+            is_markdown(path)
+        } else {
+            is_markdown(path) || has_extension(path)
+        };
+        if path.is_empty() || !names {
+            continue;
+        }
+        found.push((target.start(), path.to_string()));
+    }
+    for cap in bare_markdown_regex().captures_iter(line) {
+        let Some(token) = cap.get(1) else { continue };
+        if in_span(token.start()) {
+            continue;
+        }
+        found.push((token.start(), token.as_str().to_string()));
+    }
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, token)| token).collect()
+}
+
+/// A code span that is a citation: its whole content a path, a space, then one
+/// `§` reference, as in `` `../shared/constitution.md §rule` ``. Returns the
+/// path and the byte offset of the `§` within the span.
+fn span_citation(content: &str) -> Option<(String, usize)> {
+    if content.matches('§').count() != 1 {
         return None;
     }
-    let mut named: Vec<&str> = document_regex()
-        .find_iter(line)
-        .map(|m| m.as_str())
-        .filter(|token| {
-            !markers_names
-                .iter()
-                .any(|name| token.contains(name.as_str()))
-        })
-        .map(document_path)
-        .collect();
-    named.sort_unstable();
-    named.dedup();
-    match named.as_slice() {
-        [only] => shipped.get(*only).cloned(),
-        _ => None,
+    let at = content.find('§')?;
+    let (head, _) = content.split_at(at);
+    let path = head.trim();
+    if path.is_empty() || path.contains(char::is_whitespace) || !head.ends_with(char::is_whitespace)
+    {
+        return None;
     }
+    let path = strip_fragment(path);
+    (is_markdown(path) || (path.contains('/') && has_extension(path) && !is_url(path)))
+        .then(|| (path.to_string(), at))
 }
 
-/// The path a [`document_regex`] match names: a code span's contents, a link
-/// target without its fragment, or a bare token without its leading delimiter.
-fn document_path(token: &str) -> &str {
-    let token = token.trim_start_matches(|c: char| c.is_whitespace() || c == '(' || c == '[');
-    if let Some(inner) = token.strip_prefix('`').and_then(|t| t.strip_suffix('`')) {
-        return inner;
-    }
-    if let Some(target) = token.strip_prefix("](").and_then(|t| t.strip_suffix(')')) {
-        return target.split('#').next().unwrap_or(target);
-    }
-    token
+fn strip_fragment(token: &str) -> &str {
+    token.split('#').next().unwrap_or(token)
 }
 
-/// Whether `line` names a markdown document **other than the markers file** —
-/// a backticked path, a markdown link target, or a bare `*.md` token.
-///
-/// The "other than" is load-bearing and was not in the first draft: a line
-/// citing the markers file itself (`[§known](constitution.md#known)`, or
-/// `framework/constitution.md §grounding`) names a document, but the
-/// document it names is precisely the one whose markers are in hand. Treating
-/// it as qualified would exclude the single kind of reference this primitive
-/// exists to check. An existing test caught it, which is the argument for
-/// having had one.
-///
-/// Line-scoped by design; see the module docs for why immediately-preceding
-/// is the wrong window.
-fn names_other_document(line: &str, markers_names: &[String]) -> bool {
-    document_regex().find_iter(line).any(|m| {
-        let token = m.as_str();
-        !markers_names
-            .iter()
-            .any(|name| token.contains(name.as_str()))
+fn is_markdown(token: &str) -> bool {
+    Path::new(token)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+}
+
+/// Whether the last segment of `token` carries a file extension.
+fn has_extension(token: &str) -> bool {
+    let name = token.rsplit('/').next().unwrap_or(token);
+    name.rsplit_once('.').is_some_and(|(stem, ext)| {
+        !stem.is_empty() && !ext.is_empty() && ext.chars().all(|c| c.is_ascii_alphanumeric())
     })
 }
 
-/// The path and basename by which a citation might name the markers file.
-/// Both forms occur in the corpus — a spec writes the repo-relative path, a
-/// scenario one directory deeper writes a `../` path whose basename is all
-/// that reliably matches.
-fn markers_identifiers(markers_path: Option<&String>) -> Vec<String> {
-    let Some(path) = markers_path else {
-        return Vec::new();
-    };
-    let mut names = vec![path.clone()];
-    if let Some(base) = Path::new(path).file_name().and_then(|n| n.to_str()) {
-        names.push(base.to_string());
-    }
-    names.sort_by_key(|n| std::cmp::Reverse(n.len()));
-    names.dedup();
-    names
+fn is_url(token: &str) -> bool {
+    token.contains("://") || token.starts_with("mailto:")
 }
 
-fn document_regex() -> &'static Regex {
+/// `token` joined to `base` with `.` and `..` resolved lexically, relative to
+/// the project root; `None` when it is absolute or climbs out of the root.
+fn normalize_rel(base: &Path, token: &str) -> Option<PathBuf> {
+    let mut parts: Vec<std::ffi::OsString> = Vec::new();
+    for component in base.join(token).components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                parts.pop()?;
+            }
+            Component::Normal(part) => parts.push(part.to_os_string()),
+            Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+    Some(parts.iter().collect())
+}
+
+/// An absolute path with `.` and `..` resolved lexically, symlinks left alone:
+/// both sides of a registered-document comparison are built the same way.
+fn normalize_abs(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
+fn link_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\]\(([^)\s]*)\)").expect("hard-coded regex compiles"))
+}
+
+fn bare_markdown_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
-        Regex::new(r"`[^`]*\.md[^`]*`|\]\([^)]*\.md[^)]*\)|(?:^|[\s(\[])[\w.-]+\.md\b")
-            .expect("hard-coded regex compiles")
+        Regex::new(r"(?:^|[\s(\[])([\w.-]+\.md)\b").expect("hard-coded regex compiles")
     })
 }
 
@@ -736,13 +1161,15 @@ mod tests {
     }
 
     /// A genuine constitution citation on a line that happens to name a
-    /// document is excluded — the author named the document they meant, and
-    /// guessing otherwise is how a rule starts inventing findings.
+    /// document is still `qualified`, and resolves by the markers fallback:
+    /// a line naming a document often cites a constitution section beside it.
     #[test]
     fn a_resolvable_anchor_on_a_qualified_line_is_still_qualified() {
         let r = classify("Per §known, see `other.md` for the detail.\n");
         assert_eq!(r.qualified, 1);
         assert_eq!(r.references[0].kind, "qualified");
+        assert!(r.references[0].resolved);
+        assert_eq!(r.references[0].unjudged, None);
     }
 
     #[test]
@@ -961,19 +1388,30 @@ mod tests {
         );
     }
 
+    /// A pair naming a document the manifest does not map is no 071 pair: it
+    /// is a reference on a line naming documents, and here both are absent,
+    /// so it is unexamined, excluded by construction.
     #[test]
     fn a_pair_naming_an_unmapped_document_stays_qualified() {
         let r = judge("Read `plan.md`, then **§Nope** in `.ductus/reference/zzz.md`.\n");
         assert_eq!(kinds(&r), ["qualified"]);
+        assert_eq!(r.references[0].unjudged.as_deref(), Some(UNJUDGEABLE));
+        assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
+    /// Not a pair, and two documents: 071's line rule does not judge it, so
+    /// it is `qualified` — and judged against every readable document the
+    /// line names (decision (j)): a heading of either resolves it, and one
+    /// that matches neither is unresolved, since one of them is readable.
     #[test]
-    fn a_line_naming_two_documents_stays_qualified() {
-        // Not a pair: without the `**§X** in` form nothing says which of
-        // the two documents the section belongs to.
+    fn a_line_naming_two_documents_is_judged_against_both() {
         let r = judge("See §Nope, in `.ductus/reference/x.md` and `other.md`.\n");
         assert_eq!(kinds(&r), ["qualified"]);
         assert_eq!((r.cross_document, r.qualified), (0, 1));
+        assert_eq!(r.unresolved, ["Nope".to_string()]);
+        assert_eq!(r.references[0].unjudged, None);
+        let r = judge("See §Grounding, in `.ductus/reference/x.md` and `other.md`.\n");
+        assert_eq!(kinds(&r), ["qualified"]);
         assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
@@ -989,11 +1427,19 @@ mod tests {
         assert_eq!(kinds(&r), ["qualified"]);
     }
 
+    /// A shipped source that cannot be read is a document the run meant to
+    /// see and could not (decision (y)): the reference is unexamined, could
+    /// not be read, never reported broken and never folded into a pass.
     #[test]
-    fn a_mapped_source_that_cannot_be_read_stays_qualified() {
+    fn a_mapped_source_that_cannot_be_read_is_unexamined_as_unreadable() {
         let r = judge("**§Nope** in `.ductus/reference/missing.md`.\n");
         assert_eq!(kinds(&r), ["qualified"]);
         assert_eq!(r.unresolved, [] as [String; 0]);
+        assert_eq!(r.references[0].unjudged.as_deref(), Some(UNREADABLE));
+        assert_eq!(
+            (r.anchor_target_unreadable, r.anchor_target_unjudgeable),
+            (1, 0)
+        );
     }
 
     /// Every adopter: no installer source, so nothing is judged this way.
@@ -1058,6 +1504,342 @@ mod tests {
             judged >= 50,
             "only {judged} pointers judged — the subject went vacuous"
         );
+    }
+
+    /// A project at `<tmp>/project` whose `.ductus/config.toml` registers the
+    /// sibling checkout `<tmp>/shared` (`config` is the registry text), whose
+    /// `constitution.md` carries the markers `§a-b` and `§a-b-c`; the project's
+    /// own markers file is `.ductus/constitution.md` with `§known`. `body` is
+    /// written to `specs/001-x/spec.md` and scanned.
+    fn scan_registered(config: &str, body: &str) -> ResolveAnchorResult {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        let shared = tmp.path().join("shared");
+        std::fs::create_dir_all(project.join(".ductus")).unwrap();
+        std::fs::create_dir_all(project.join("specs/001-x")).unwrap();
+        std::fs::create_dir_all(&shared).unwrap();
+        std::fs::write(
+            shared.join("constitution.md"),
+            "# Shared\n\n<!-- §a-b -->\n\n## A b\n\n<!-- §a-b-c -->\n\n## A b c\n",
+        )
+        .unwrap();
+        std::fs::write(project.join(".ductus/config.toml"), config).unwrap();
+        std::fs::write(project.join(".ductus/constitution.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(project.join("specs/001-x/spec.md"), body).unwrap();
+        run(
+            &ResolveAnchorArgs {
+                path: "specs/001-x/spec.md".into(),
+                markers_path: Some(".ductus/constitution.md".into()),
+            },
+            &project,
+        )
+        .unwrap()
+    }
+
+    const REGISTERED: &str =
+        "[constitutions.shared]\nrepo = \"https://example.test/shared\"\npath = \"../shared\"\n";
+
+    /// The scenario's minimal fixture: two references in the same qualified
+    /// form, path and anchor on one line, into a registered shared
+    /// constitution carrying both markers. They classify alike, whatever
+    /// their anchors' shapes, and both resolve against that document.
+    #[test]
+    fn same_form_references_into_a_registered_constitution_classify_alike() {
+        let r = scan_registered(
+            REGISTERED,
+            "Per (`../shared/constitution.md` §a-b) and (`../shared/constitution.md` §a-b-c).\n\
+             See `../shared/constitution.md` §a-b-c.\n",
+        );
+        let shapes: Vec<(&str, bool, Option<&str>)> = r
+            .references
+            .iter()
+            .map(|x| (x.kind.as_str(), x.resolved, x.unjudged.as_deref()))
+            .collect();
+        assert_eq!(shapes.len(), 3, "{:?}", r.references);
+        assert!(
+            shapes.windows(2).all(|w| w[0] == w[1]),
+            "same form, different classification: {:?}",
+            r.references
+        );
+        // Resolved by judgment against the registered document, not passed
+        // over as a reference nothing could judge.
+        assert!(
+            shapes
+                .iter()
+                .all(|(_, resolved, unjudged)| *resolved && unjudged.is_none()),
+            "{:?}",
+            r.references
+        );
+        assert_eq!(r.unresolved, [] as [String; 0]);
+    }
+
+    /// A registered document's markers decide its references, whatever path
+    /// reaches it: a present anchor resolves and a missing one is unresolved.
+    #[test]
+    fn a_reference_into_a_registered_constitution_is_judged_against_its_markers() {
+        let r = scan_registered(
+            REGISTERED,
+            "See `../shared/constitution.md` §a-b and §gone.\n\
+             From here: [the rule](../../../shared/constitution.md#a-b-c) §a-b-c.\n",
+        );
+        assert_eq!(r.unresolved, ["gone".to_string()]);
+        assert!(
+            r.references
+                .iter()
+                .all(|x| x.kind == KIND_QUALIFIED && x.unjudged.is_none()),
+            "{:?}",
+            r.references
+        );
+    }
+
+    /// A registered entry that did not resolve is a document the config
+    /// declares and the run could not read: unexamined, could not be read.
+    #[test]
+    fn a_reference_naming_a_skipped_registered_entry_is_unexamined_as_unreadable() {
+        let config =
+            "[constitutions.gone]\nrepo = \"https://example.test/gone\"\npath = \"../absent\"\n";
+        let r = scan_registered(config, "See `../absent/constitution.md` §anything.\n");
+        assert_eq!(r.references[0].unjudged.as_deref(), Some(UNREADABLE));
+        assert_eq!(
+            (r.anchor_target_unreadable, r.anchor_target_unjudgeable),
+            (1, 0)
+        );
+        assert_eq!(r.unresolved, [] as [String; 0]);
+    }
+
+    /// The markers file is recognized by where a token resolves, never by a
+    /// basename substring: a file sharing the basename, or one merely
+    /// containing it, is another document.
+    #[test]
+    fn a_lookalike_of_the_markers_file_is_another_document() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join("framework")).unwrap();
+        std::fs::write(root.join("framework/constitution.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(root.join("team-constitution.md"), "# Team\n\n## Rule\n").unwrap();
+        std::fs::write(
+            root.join("citing.md"),
+            "See `team-constitution.md` §Rule.\n\
+             See `notes/constitution.md.bak` §y.\n\
+             See `../shared/constitution.md` §z.\n\
+             See `framework/constitution.md` §gone.\n",
+        )
+        .unwrap();
+        let r = run(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("framework/constitution.md".into()),
+            },
+            root,
+        )
+        .unwrap();
+        let shapes: Vec<(&str, &str, Option<&str>)> = r
+            .references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.kind.as_str(), x.unjudged.as_deref()))
+            .collect();
+        assert_eq!(
+            shapes,
+            [
+                ("Rule", KIND_QUALIFIED, None),
+                ("y", KIND_QUALIFIED, Some(UNJUDGEABLE)),
+                ("z", KIND_QUALIFIED, Some(UNJUDGEABLE)),
+                ("gone", KIND_MARKERS, None),
+            ]
+        );
+        assert_eq!(r.unresolved, ["gone".to_string()]);
+    }
+
+    /// A tree holding `docs/guide.md` (heading `Install`), `docs/locked.md`,
+    /// `scripts/run.sh` and the markers file `markers.md` (`§known`); `body`
+    /// is written to `citing.md` and scanned.
+    fn scan_tree(body: &str) -> ResolveAnchorResult {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join("docs")).unwrap();
+        std::fs::create_dir_all(root.join("scripts")).unwrap();
+        std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(root.join("docs/guide.md"), "# Guide\n\n## Install\n").unwrap();
+        std::fs::write(root.join("docs/locked.md"), "# Locked\n\n## Install\n").unwrap();
+        std::fs::write(root.join("scripts/run.sh"), "#!/bin/sh\n").unwrap();
+        std::fs::write(root.join("citing.md"), body).unwrap();
+        run(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("markers.md".into()),
+            },
+            root,
+        )
+        .unwrap()
+    }
+
+    fn verdicts(r: &ResolveAnchorResult) -> Vec<(&str, bool, Option<&str>)> {
+        r.references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.resolved, x.unjudged.as_deref()))
+            .collect()
+    }
+
+    /// Decision (j): a reference on a line naming a readable document is
+    /// judged against that document's headings, so a renamed section is
+    /// caught rather than counted and passed over.
+    #[test]
+    fn a_reference_on_a_line_naming_a_readable_document_is_judged_against_it() {
+        let r = scan_tree("See `docs/guide.md` §Install.\nSee `docs/guide.md` §Missing.\n");
+        assert_eq!(
+            verdicts(&r),
+            [("Install", true, None), ("Missing", false, None)]
+        );
+        assert_eq!(r.unresolved, ["Missing".to_string()]);
+        assert_eq!(r.qualified, 2);
+    }
+
+    /// A link to a markdown document by URL names a document this tree does
+    /// not hold: the reference beside it is unexamined, not a claim about the
+    /// markers file reported broken.
+    #[test]
+    fn a_url_to_a_markdown_document_names_an_absent_document() {
+        let r = scan_tree(
+            "See [spec 042](https://example.test/specs/042/spec.md) §Transition.\n\
+             See [the site](https://example.test/page) §Elsewhere.\n",
+        );
+        let shapes: Vec<(&str, &str, Option<&str>)> = r
+            .references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.kind.as_str(), x.unjudged.as_deref()))
+            .collect();
+        assert_eq!(
+            shapes,
+            [
+                ("Transition", KIND_QUALIFIED, Some(UNJUDGEABLE)),
+                ("Elsewhere", KIND_MARKERS, None),
+            ]
+        );
+        assert_eq!(r.unresolved, ["Elsewhere".to_string()]);
+    }
+
+    /// A line naming only documents absent from the tree cannot be judged:
+    /// unexamined, excluded by construction. Beside a readable document, an
+    /// absent one does not excuse a reference neither carries.
+    #[test]
+    fn a_reference_naming_only_absent_documents_is_unexamined() {
+        let r = scan_tree(
+            "See `docs/none.md` §Whatever.\nSee `docs/none.md` and `docs/guide.md` §Gone.\n",
+        );
+        assert_eq!(
+            verdicts(&r),
+            [("Whatever", true, Some(UNJUDGEABLE)), ("Gone", false, None)]
+        );
+        assert_eq!(r.anchor_target_unjudgeable, 1);
+        assert_eq!(r.unresolved, ["Gone".to_string()]);
+    }
+
+    /// A document that exists and cannot be read is unexamined, could not be
+    /// read.
+    #[cfg(unix)]
+    #[test]
+    fn a_reference_naming_an_unreadable_document_is_unexamined_as_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(root.join("locked.md"), "## Install\n").unwrap();
+        std::fs::set_permissions(
+            root.join("locked.md"),
+            std::fs::Permissions::from_mode(0o000),
+        )
+        .unwrap();
+        if std::fs::read_to_string(root.join("locked.md")).is_ok() {
+            // Running as root: permissions do not bind, so nothing to test.
+            return;
+        }
+        std::fs::write(root.join("citing.md"), "See `locked.md` §Install.\n").unwrap();
+        let r = run(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("markers.md".into()),
+            },
+            root,
+        )
+        .unwrap();
+        assert_eq!(r.references[0].unjudged.as_deref(), Some(UNREADABLE));
+        assert_eq!(r.anchor_target_unreadable, 1);
+        assert_eq!(r.unresolved, [] as [String; 0]);
+    }
+
+    /// Decision (10a): a file that is not markdown holds no section, so a
+    /// reference beside one that matches no marker or heading is unexamined,
+    /// excluded by construction, never the false alarm it was.
+    #[test]
+    fn a_reference_beside_a_non_markdown_file_is_unexamined() {
+        let r = scan_tree(
+            "Set it in `.ductus/config.toml` §constitutions.\n\
+             And [the table](config.toml) §artifacts.\n\
+             See `docs/guide.md` and `scripts/run.sh` §Install.\n\
+             See `docs/guide.md` and `scripts/run.sh` §Nope.\n\
+             Per `scripts/run.sh` §known.\n",
+        );
+        assert_eq!(
+            verdicts(&r),
+            [
+                ("constitutions", true, Some(UNJUDGEABLE)),
+                ("artifacts", true, Some(UNJUDGEABLE)),
+                ("Install", true, None),
+                ("Nope", true, Some(UNJUDGEABLE)),
+                ("known", true, None),
+            ]
+        );
+        assert_eq!(r.unresolved, [] as [String; 0]);
+        assert_eq!(r.anchor_target_unjudgeable, 3);
+    }
+
+    /// Decision (c): a code span whose whole content is a path followed by one
+    /// reference is a citation of that path's section, judged; any other span
+    /// still holds no reference.
+    #[test]
+    fn a_span_holding_a_path_and_one_reference_is_judged() {
+        let r = scan_tree(
+            "Per `docs/guide.md §Install` and `docs/guide.md §Missing`.\n\
+             Not one: `docs/guide.md §Install and §Other`, `see docs/guide.md §Install`.\n",
+        );
+        assert_eq!(
+            verdicts(&r),
+            [("Install", true, None), ("Missing", false, None)]
+        );
+        assert_eq!(r.unresolved, ["Missing".to_string()]);
+    }
+
+    /// A shipped destination whose source is the markers file is the markers
+    /// file: framework files cite the constitution by the path it lands at
+    /// in an adopter (`.ductus/constitution.md`), and those references stay
+    /// claims about the markers.
+    #[test]
+    fn a_shipped_destination_of_the_markers_file_is_the_markers_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join("framework/bootstrap")).unwrap();
+        std::fs::write(
+            root.join(BOOTSTRAP),
+            "# ductus\n\n## Shared Files\n\n| Source | Destination |\n| --- | --- |\n\
+             | `framework/constitution.md` | `.ductus/constitution.md` |\n",
+        )
+        .unwrap();
+        std::fs::write(root.join("framework/constitution.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(
+            root.join("citing.md"),
+            "Per `.ductus/constitution.md` §known and §gone.\n",
+        )
+        .unwrap();
+        let r = run(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("framework/constitution.md".into()),
+            },
+            root,
+        )
+        .unwrap();
+        assert_eq!(kinds(&r), [KIND_MARKERS, KIND_MARKERS]);
+        assert_eq!(r.unresolved, ["gone".to_string()]);
     }
 
     #[test]

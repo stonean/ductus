@@ -6,7 +6,7 @@ section: "Classification"
 
 ## Context
 
-AC20 named four agent-facing surfaces that carry the routing question as a pointer, and the `CLAUDE.md` project template's §Auto-Memory Routing was one of them. That section restated both questions and every tier in full. Since this spec's first cut (`05359e82`) the constitution has said a host's rules file carries the routing as a pointer, and the constitution now loads beside it at session start. The section also reached too few agents: of the bootstrap's two registered agents, only Claude Code (`claude-style`) reads `CLAUDE.md`. Pi reads `AGENTS.md`, whose template header asks who a learning is true for but not whether it belongs in per-user memory at all.
+AC20 named four agent-facing surfaces that carry the routing question as a pointer, and the `CLAUDE.md` project template's Auto-Memory Routing section was one of them. That section restated both questions and every tier in full. Since this spec's first cut (`05359e82`) the constitution has said a host's rules file carries the routing as a pointer, and the constitution now loads beside it at session start. The section also reached too few agents: of the bootstrap's two registered agents, only Claude Code (`claude-style`) reads `CLAUDE.md`. Pi reads `AGENTS.md`, whose template header asks who a learning is true for but not whether it belongs in per-user memory at all.
 
 An inbox item logged 2026-10-26 asked for one home, `AGENTS.md`. Both project templates are installed with the `skip` strategy, so a template edit reaches new adoptions only. On 2026-10-27 the owner chose a framework-managed block in `AGENTS.md`, written on every `/{project}` run as the `ductus:constitutions` block is, so every existing adopter receives it. The owner also chose a migration that removes the copied section from an existing `CLAUDE.md` only when it is a copy the framework wrote, unchanged.
 
@@ -17,7 +17,7 @@ An inbox item logged 2026-10-26 asked for one home, `AGENTS.md`. Both project te
 - **The `CLAUDE.md` template holds its imports and the `ductus:constitutions` block, and nothing else.** A `claude-style` session gets the routing through `@AGENTS.md` and `@.ductus/constitution.md`.
 - **The constitution names the block** as the pointer that carries the routing.
 - **The migration `memory-routing-leaves-claude-md` removes `CLAUDE.md`'s `## Auto-Memory Routing` section** when the section matches one of the versions the template shipped, ignoring line endings, trailing whitespace and trailing blank lines, with `{project}` substituted or as written. It leaves an edited section in place and reports one line naming it for the operator to remove. A pinned `CLAUDE.md` gets a warning and no write.
-- **This repository's `CLAUDE.md` drops its §Auto-Memory Routing.** `AGENTS.md`'s workflow entry on per-user agent memory already governs, and `CLAUDE.md` imports it.
+- **This repository's `CLAUDE.md` drops its Auto-Memory Routing section.** `AGENTS.md`'s workflow entry on per-user agent memory already governs, and `CLAUDE.md` imports it.
 
 ## Edge Cases
 

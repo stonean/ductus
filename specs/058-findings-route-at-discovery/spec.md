@@ -536,7 +536,7 @@ spec's links to it. Each also gets the contract change itself:
   declare" (`runtime/src/schema/primitives.rs`, the `advisory` field's doc).
   That concern is about forcing fixes. A block that a one-line discard clears
   asks for a decision instead, and the review waiver
-  (`framework/commands/review.md`, §Waivers) is the persisted-decision shape
+  (`framework/reference/review.md`, §Waivers) is the persisted-decision shape
   it reuses.
 - **How durable is an `/{project}:implement` finding before its
   disposition?** Fully durable: the finding becomes an unchecked disposition

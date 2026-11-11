@@ -7,7 +7,7 @@ Implements [033 — Explicit project rule-surface setting](spec.md).
 A markdown-tier change — no runtime code. The feature threads one new `.ductus/config.toml` setting, `[rules] surfaces`, through the two places that already act on rule-file surface:
 
 1. **`framework/bootstrap/ductus.md`** (the installer) — resolve `[rules] surfaces` as a project input (prompt when unset, persist), then filter the host-built rule-file manifest entries by the configured surface(s) before `apply-manifest` runs.
-2. **`framework/commands/review.md`** (the `/ductus:review` loader, spec 024) — consult `[rules] surfaces` in §Behavior step 5; when set, it replaces the detected-stack filter; when unset, stack derivation remains the fallback.
+2. **`framework/commands/review.md`** (the `/ductus:review` loader, spec 024) — consult `[rules] surfaces` in `framework/reference/review.md` §Resolve target and scope item 5; when set, it replaces the detected-stack filter; when unset, stack derivation remains the fallback.
 
 `/ductus:analyze` is deliberately untouched: it already loads *every* rule file regardless of stack, and that load-all behavior is what makes cross-surface citation resolution work — so surface selection must not reach it.
 
@@ -34,7 +34,7 @@ surfaces = ["backend"]   # list; members ∈ {"backend", "frontend"}; full-stack
 
 ### Review loader (`framework/commands/review.md`)
 
-§Behavior step 5 currently: discover by suffix → filter by detected stack → apply disabled-files filter. Insert a surface source ahead of the stack filter:
+`framework/reference/review.md` §Resolve target and scope item 5 currently: discover by suffix → filter by detected stack → apply disabled-files filter. Insert a surface source ahead of the stack filter:
 
 - Read `.ductus/config.toml` `[rules] surfaces`. **If set**, keep rule files whose surface is in `surfaces`, plus every `*-cross.md` and every unrecognized-suffix file; this *replaces* the detected-stack filter. **If unset**, run the detected-stack filter exactly as today.
 - The `framework/commands/review.md` §Inputs section documents `[rules] surfaces` alongside `[review] tech-stack-verified` and `[[review.disabled-rule-files]]`.
@@ -53,7 +53,7 @@ No behavior change. `/ductus:analyze` continues to load every discovered rule fi
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/bootstrap/ductus.md` | Modify | Resolve/prompt/persist `[rules] surfaces`; filter manifest rule-file entries by surface (+ always `-cross`); contradiction notice |
-| `framework/commands/review.md` | Modify | §Behavior step 5 consults `[rules] surfaces` (replaces stack filter when set, falls back when unset); §Inputs documents the setting |
+| `framework/commands/review.md` | Modify | `framework/reference/review.md` §Resolve target and scope item 5 consults `[rules] surfaces` (replaces stack filter when set, falls back when unset); §Inputs documents the setting |
 | `framework/commands/analyze.md` | Modify | Note that `surfaces` scopes review enforcement only, not analyze citation resolution |
 | `README.md` | Modify | Document the `[rules] surfaces` setting and its precedence |
 | `specs/024-rule-loader/spec.md` | Possibly modify | Cross-spec impact — see below (additive; may not require a change) |

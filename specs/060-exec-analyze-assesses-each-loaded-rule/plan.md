@@ -85,7 +85,7 @@ Two tally methods are added: one records a loaded rule set's gaps, and one recor
 - **`rule-file-unreadable`** (new; could not be read) counts the listed rule files the walk could not read. A file that cannot be read cannot be enumerated, so counting its rules is impossible. Counting the file is the only honest unit. It is kept separate from `artifact-unreadable`, which names the spec's own artifacts and escalates to blocking at `done` (`specs/022-deterministic-runtime/data-model.md:478`). A rule file is not the spec's artifact, and its unreadability must not block the spec.
 - **`rule-assessments-not-checked`** (existing; could not be read) now counts the loaded rules the walk did not ask about, those with no Verification or whose Statement carries no keyword. When no rule is loaded, it counts each of steps 11 and 12 once. Today it counts requests that carried no rule (`specs/022-deterministic-runtime/data-model.md:476`).
 
-The reason set is not enforced in code: `write-analysis` records whatever map it is bound (`runtime/src/primitives/write_analysis.rs:157`). It is documented in three places, all updated together: `framework/commands/analyze.md` §Unexamined targets (`:231`, `:233`), the table and prose at `specs/022-deterministic-runtime/data-model.md:473` and `:476`, and the `unexamined_by_reason` doc comment at `runtime/src/schema/primitives.rs:312`. Each states a count of its reasons ("the last six", "the other six", "all six", "the first two", "the last four"), and each count is rewritten without a number where the sentence allows. §grounding prefers a set stated without a count, since the count is what goes stale.
+The reason set is not enforced in code: `write-analysis` records whatever map it is bound (`runtime/src/primitives/write_analysis.rs:157`). It is documented in three places, all updated together: `framework/reference/analyze.md` §Unexamined targets (informational) (`:231`, `:233`), the table and prose at `specs/022-deterministic-runtime/data-model.md:473` and `:476`, and the `unexamined_by_reason` doc comment at `runtime/src/schema/primitives.rs:312`. Each states a count of its reasons ("the last six", "the other six", "all six", "the first two", "the last four"), and each count is rewritten without a number where the sentence allows. §grounding prefers a set stated without a count, since the count is what goes stale.
 
 On the interactive path the host reads rule files itself. A host that cannot read one records `rule-file-unreadable` too, so the reason is not exec-only.
 
@@ -119,7 +119,7 @@ The edits to 022's data model change a durable contract, and the signpost AC9 re
 
 The signpost goes in 022's body beside the extension-point inventory (`specs/022-deterministic-runtime/spec.md:170`), as a **block-quoted** line linking to this spec. The block quote matters. 060 already depends on 022 through its Motivation's link, and `derive-dependencies` induces no edge from a block-quoted line while `check-review-gate`'s discharge test still reads it (066's AC5). An unquoted link would add a `022 → 060` edge and close a cycle.
 
-022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as the review reference's §Window and coverage requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
+022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as the review reference's (`framework/reference/review.md`) §Window and coverage requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
 
 ## Affected Files
 
@@ -137,7 +137,7 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 | `runtime/tests/fixtures/analyze-basic/stdin.jsonl` | Modify | Drop the `req-2` response |
 | `runtime/tests/golden/analyze-basic.jsonl` | Modify | Re-blessed: one request, no step-12 request |
 | `runtime/tests/parity.rs` | Modify | One request, one blocking, no advisory |
-| `framework/commands/analyze.md` | Modify | Steps 11–12 exec note and load-conditioned yield; §Unexamined targets reasons |
+| `framework/commands/analyze.md` | Modify | Steps 11–12 exec note and load-conditioned yield; `framework/reference/analyze.md` §Unexamined targets (informational) reasons |
 | `.claude/commands/ductus/analyze.md` | Generated | Rewritten by the pre-commit hook |
 | `specs/022-deterministic-runtime/data-model.md` | Modify | Reason table and prose; `assessSpecQuality` exec note and `loaded-rule-files` |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Status flips; block-quoted signpost linking 060 |

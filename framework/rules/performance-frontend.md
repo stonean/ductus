@@ -104,7 +104,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces a new route or that modifies the document `<head>` SHOULD commit to an inline critical-CSS strategy compatible with the project's CSP. `/{project}:analyze` emits a warning when HTML specs propose synchronous external stylesheets without an inline critical-CSS strategy, or an async-CSS mechanism that relies on an inline `onload` handler or an inline `<style>` without a nonce or hash. This rule works within the nonce- or hash-based policy `FE-CSP-002` (`security-frontend.md`) requires: a policy relaxed to admit the inline handler or the inline `<style>` this rule warns on is never a fix here, and `'unsafe-inline'` in its `script-src` or `style-src` is `FE-CSP-002`'s.
 
-**Source:** web.dev "Understand the critical path", web.dev "Extract critical CSS", web.dev "Defer non-critical CSS", Filament Group "The Simplest Way to Load CSS Asynchronously", W3C Content Security Policy Level 3; `security-frontend.md` §FE-CSP
+**Source:** web.dev "Understand the critical path", web.dev "Extract critical CSS", web.dev "Defer non-critical CSS", Filament Group "The Simplest Way to Load CSS Asynchronously", W3C Content Security Policy Level 3; `security-frontend.md` §FE-CSP — Content Security Policy
 
 ### FE-LOAD-005
 

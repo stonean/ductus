@@ -90,7 +90,7 @@ Both name the **repo-relative pointer**. Claude's committed `.mcp.json` is share
 
 Every live artifact that names `ductus` as an **executable** is updated to the ductus-owned path — the pointer. The set of surfaces:
 
-- `framework/bootstrap/ductus.md` — the §MCP wiring JSON shapes, the §Permission Setup probe seed, the §Detection mechanism probe, the §ductus runtime detection state definitions, the §Post-Scaffolding tip, and the matching §Edge Cases rows.
+- `framework/bootstrap/ductus.md` — the §MCP wiring JSON shapes, the §Permission Setup probe seed, the §Detection mechanism probe, the §ductus runtime detection state definitions, the tip in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output, and the matching §Edge Cases rows.
 - `README.md` — the "Install the runtime" and "Registering the runtime" sections, which at the time documented a manual `sudo install -m 0755 ductus /usr/local/bin/ductus`. Both are gone: README now states the runtime is acquired rather than installed, and registration moved to [docs/runtime.md](../../docs/runtime.md#registering-the-runtime).
 - This repository's own `.mcp.json`, subject to the framework-repo question below.
 

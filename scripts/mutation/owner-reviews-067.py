@@ -6,7 +6,9 @@ section scan, `check-corpus-links`' reference sources, `resolve-anchor`'s
 markers basename, `check-promotion-coverage`'s required section set, the
 bound that moves `derive-dependencies`' `unwritable` past the read size, the
 exec analyze tally's step 6, `check-artifacts`' status-gated path families
-and `gitignored` skip, and `validate-frontmatter`'s row chosen by path.
+and `gitignored` skip, and `validate-frontmatter`'s row chosen by path, and `resolve-anchor`'s judgment of
+qualified, registered and span references with the exec tally's unjudged
+counts.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -244,10 +246,10 @@ MUTATIONS = [
     ),
     # -- resolve-anchor: the markers file's basename ----------------------
     (
-        'M31 the markers file is identified by its markers-path alone, not its basename',
+        'M31 a document token resolves from the root alone, so a nested markers file cited by a relative path is another document',
         'src/primitives/resolve_anchor.rs',
-        '    if let Some(base) = Path::new(path).file_name().and_then(|n| n.to_str()) {\n        names.push(base.to_string());\n    }',
-        '    let _ = Path::new(path);',
+        '        let bases = [self.citing_dir.clone(), PathBuf::new()];',
+        '        let bases = [PathBuf::new(), PathBuf::new()];',
         'resolve_anchor::tests::a_line_citing_a_nested_markers_file_by_a_relative_path_is_not_qualified',
     ),
     # -- check-promotion-coverage: the required section set ---------------
@@ -565,5 +567,111 @@ MUTATIONS = [
         '            validate_spec_row(&path, &mut findings)?;\n            if let Some(dir) = path.parent() {',
         '            validate_spec_row(&path, &mut findings)?;\n            if findings.is_empty() && let Some(dir) = path.parent() {',
         'validate_frontmatter::tests::a_spec_that_will_not_parse_still_has_its_scenarios_checked',
+    ),
+    # -- resolve-anchor: qualified, registered and span references judged (task 19)
+    (
+        'M76 the markers file is recognized by a basename substring again',
+        'src/primitives/resolve_anchor.rs',
+        '            .is_some_and(|markers| relatives.contains(markers))',
+        '            .is_some_and(|markers| relatives.contains(markers) || token.contains("constitution"))',
+        'a_lookalike_of_the_markers_file_is_another_document',
+    ),
+    (
+        'M77 no registered constitution is read',
+        'src/primitives/resolve_anchor.rs',
+        '        for record in registry.loaded.iter().chain(&registry.skipped) {',
+        '        for record in registry.loaded.iter().chain(&registry.skipped).take(0) {',
+        'same_form_references_into_a_registered_constitution_classify_alike a_reference_into_a_registered_constitution_is_judged_against_its_markers a_reference_naming_a_skipped_registered_entry_is_unexamined_as_unreadable',
+    ),
+    (
+        'M78 a skipped registered entry reads as absent, not unreadable',
+        'src/primitives/resolve_anchor.rs',
+        '            return markers.clone().map_or(Named::Unreadable, |markers| {',
+        '            return markers.clone().map_or(Named::Absent, |markers| {',
+        'a_reference_naming_a_skipped_registered_entry_is_unexamined_as_unreadable',
+    ),
+    (
+        'M79 a qualified reference no document carries is unjudged, never unresolved',
+        'src/primitives/resolve_anchor.rs',
+        '    } else {\n        Verdict::Unresolved\n    }\n}',
+        '    } else {\n        Verdict::Unjudged(UNJUDGEABLE)\n    }\n}',
+        'a_reference_on_a_line_naming_a_readable_document_is_judged_against_it a_line_naming_two_documents_is_judged_against_both',
+    ),
+    (
+        "M80 a named document's headings are not read",
+        'src/primitives/resolve_anchor.rs',
+        '                if names_local_heading(&sections.headings, rest)\n                    || sections.markers.contains(anchor)\n                {',
+        '                if sections.markers.contains(anchor) {',
+        'a_reference_on_a_line_naming_a_readable_document_is_judged_against_it a_line_naming_two_documents_is_judged_against_both',
+    ),
+    (
+        'M81 a line naming only absent documents reads as unresolved',
+        'src/primitives/resolve_anchor.rs',
+        '    } else if non_markdown || all_absent {',
+        '    } else if non_markdown {',
+        'a_reference_naming_only_absent_documents_is_unexamined',
+    ),
+    (
+        'M82 a readable document beside an absent one no longer counts against the absent excuse',
+        'src/primitives/resolve_anchor.rs',
+        '                    return Verdict::Resolved;\n                }\n                all_absent = false;\n            }',
+        '                    return Verdict::Resolved;\n                }\n            }',
+        'a_reference_naming_only_absent_documents_is_unexamined',
+    ),
+    (
+        'M83 an unreadable document reads as unjudgeable',
+        'src/primitives/resolve_anchor.rs',
+        '    if unreadable {\n        Verdict::Unjudged(UNREADABLE)',
+        '    if unreadable {\n        Verdict::Unjudged(UNJUDGEABLE)',
+        'a_mapped_source_that_cannot_be_read_is_unexamined_as_unreadable a_reference_naming_an_unreadable_document_is_unexamined_as_unreadable',
+    ),
+    (
+        'M84 a backticked path that is not markdown names no document',
+        'src/primitives/resolve_anchor.rs',
+        "            if !is_markdown(word) && word.contains('/') && has_extension(word) && !is_url(word) {",
+        '            if false {',
+        'a_reference_beside_a_non_markdown_file_is_unexamined',
+    ),
+    (
+        'M85 a non-markdown file beside a readable document no longer excuses an unmatched reference',
+        'src/primitives/resolve_anchor.rs',
+        '    } else if non_markdown || all_absent {',
+        '    } else if all_absent {',
+        'a_reference_beside_a_non_markdown_file_is_unexamined',
+    ),
+    (
+        'M86 a code span holding a path and a reference is not read',
+        'src/primitives/resolve_anchor.rs',
+        '            let Some((token, offset)) = span_citation(&line[span.clone()]) else {',
+        '            let Some((token, offset)) = span_citation(&line[span.clone()]).filter(|_| false) else {',
+        'a_span_holding_a_path_and_one_reference_is_judged',
+    ),
+    (
+        'M87 a code span holding two references reads as a citation',
+        'src/primitives/resolve_anchor.rs',
+        "    if content.matches('§').count() != 1 {",
+        "    if content.matches('§').count() == 0 {",
+        'a_span_holding_a_path_and_one_reference_is_judged',
+    ),
+    (
+        'M88 a shipped destination of the markers file is judged as another document',
+        'src/primitives/resolve_anchor.rs',
+        '            if self.markers_rel.as_ref() == normalize_rel(Path::new(""), &source).as_ref() {',
+        '            if false {',
+        'a_shipped_destination_of_the_markers_file_is_the_markers_file',
+    ),
+    (
+        'M89 the exec tally drops the unjudged anchor counts',
+        'src/interpreter/analyze_tally.rs',
+        '                    self.record_unexamined(reason, unjudged);',
+        '                    let _ = (reason, unjudged);',
+        'an_unjudged_anchor_reference_is_recorded_unexamined',
+    ),
+    (
+        'M90 a link to a markdown document by URL names no document',
+        'src/primitives/resolve_anchor.rs',
+        '        let names = if is_url(path) {\n            is_markdown(path)\n        } else {',
+        '        let names = if is_url(path) {\n            false\n        } else {',
+        'a_url_to_a_markdown_document_names_an_absent_document',
     ),
 ]

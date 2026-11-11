@@ -26,7 +26,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 **Verification:** Any spec or plan that reads a collection MUST commit to a row bound — pagination, whose shape is `BE-PAGE`'s, for a client-facing endpoint, or a named maximum or batch size for an internal read; `/{project}:analyze` flags a collection read with no limit, no pagination commitment, and no bounded-batch iteration. Batching by `OFFSET` is not one of the Statement's bounded-batch forms. **Not flagged:** a client-facing list endpoint's missing or malformed pagination, which `api-backend.md`'s `BE-PAGE` owns.
 
-**Source:** OWASP API Security Top 10 2023, API4:2023 Unrestricted Resource Consumption; Nygard, *Release It!* — Unbounded Result Sets; PostgreSQL documentation, LIMIT and OFFSET; `api-backend.md` §BE-PAGE
+**Source:** OWASP API Security Top 10 2023, API4:2023 Unrestricted Resource Consumption; Nygard, *Release It!* — Unbounded Result Sets; PostgreSQL documentation, LIMIT and OFFSET; `api-backend.md` §BE-PAGE — Pagination
 
 ### BE-QUERY-004
 
@@ -78,7 +78,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 **Verification:** Any spec or plan that connects to a database, cache, or external service MUST commit to each obligation in the Statement; `/{project}:analyze` flags one that describes per-request connection creation or a pool with no maximum size. **Not flagged:** a pool size written as a bare literal, which `configuration-cross.md` `CFG-CONST-003` owns.
 
-**Source:** Microsoft, *SQL Server Connection Pooling (ADO.NET)*; gRPC documentation, Performance Best Practices; `configuration-cross.md` §CFG-CONST
+**Source:** Microsoft, *SQL Server Connection Pooling (ADO.NET)*; gRPC documentation, Performance Best Practices; `configuration-cross.md` §CFG-CONST — Constants
 
 ### BE-POOL-002
 
@@ -110,7 +110,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 **Verification:** Any spec or plan in which one request or job both runs database work and calls another service SHOULD state that the call is made outside any open transaction and without a checked-out connection, or name the `BE-COORD-003` outbox that defers it; `/{project}:analyze` flags a design that places a downstream or third-party call between a transaction's begin and commit, or holds a pooled connection across one. This rule governs connection and lock occupancy, not atomicity: publishing an event or writing a second datastore as an independent step after the commit is `concurrency-backend.md`'s `BE-COORD-003`, and the call's own missing timeout is `reliability-backend.md`'s `BE-TIMEOUT-001`.
 
-**Source:** `concurrency-backend.md` §BE-COORD
+**Source:** `concurrency-backend.md` §BE-COORD — Distributed coordination
 
 ## BE-PAYLOAD — Payload Budgets
 
@@ -120,7 +120,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 **Verification:** Any spec or plan that returns a collection or a variable-size body MUST commit to a maximum response size or to pagination, whose shape is `BE-PAGE`'s; `/{project}:analyze` flags a response design that returns an unbounded list or omits a size or pagination bound. **Not flagged:** a client-facing list endpoint's missing or malformed pagination, which `api-backend.md`'s `BE-PAGE` owns.
 
-**Source:** OWASP API Security Top 10 2023, API4:2023 Unrestricted Resource Consumption; `api-backend.md` §BE-PAGE
+**Source:** OWASP API Security Top 10 2023, API4:2023 Unrestricted Resource Consumption; `api-backend.md` §BE-PAGE — Pagination
 
 ### BE-PAYLOAD-002
 
@@ -154,4 +154,4 @@ Performance rules for server-side request handling, data access, caching, and re
 
 **Verification:** Any spec or plan that introduces slow or unbounded processing, such as report generation, media transcoding, or bulk import, or a side-effect-only third-party call, such as sending an email, MUST commit to each obligation in the Statement; `/{project}:analyze` flags a request handler that performs either synchronously without an offload commitment, or that offloads work whose outcome the client needs with no way to observe completion. **Not flagged:** a response that keeps the status `BE-STATUS-001` gives it, such as `201` for a created account, when only a side effect is offloaded. This rule governs where the work runs and that a client needing the outcome can observe it: a status monitor lacking the states, result, failure envelope or `Retry-After` that `api-backend.md`'s `BE-LRO-001` names is that rule's, and a synchronous call to a failure-prone dependency with no circuit breaker is `reliability-backend.md`'s `BE-BREAKER-001`.
 
-**Source:** Azure Architecture Center, Asynchronous Request-Reply pattern; `api-backend.md` §BE-STATUS
+**Source:** Azure Architecture Center, Asynchronous Request-Reply pattern; `api-backend.md` §BE-STATUS — HTTP Status Code Discipline

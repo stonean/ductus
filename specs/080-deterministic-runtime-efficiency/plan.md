@@ -222,13 +222,13 @@ It runs one round after the view, the hook and tool loading land. That round rec
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | `rules`, `verification`, `all` and `extra-files` |
 | `framework/commands/*.md` | Modify | Each "Where a named section lives" paragraph invokes `read-section` |
 | `framework/reference/review.md` | Modify | §Load rules reads the rules from `discover-rule-files` |
-| `framework/reference/analyze.md` | Modify | §Rules reads every file's rules from `discover-rule-files` with `all` |
+| `framework/reference/analyze.md` | Modify | §Rules (blocking and advisory) reads every file's rules from `discover-rule-files` with `all` |
 | `runtime/src/primitives/rule_sections.rs` | Modify | Each rule section keeps its heading line, and its Verification the table directly after it |
 | `scripts/mutation/reference-and-rule-reads.py` | Create | `read-section`'s and the rules listing's mutations |
 | `framework/commands/groom.md` | Modify | Step 2 derives routing candidates per item |
 | `framework/reference/groom.md` | Modify | The decision tree's Step 2 starts from those candidates |
 | `framework/reference/plan.md` | Modify | §Validation gate invokes `derive-boundary` |
-| `framework/reference/implement.md` | Modify | §Walk through tasks invokes `append-task` |
+| `framework/reference/implement.md` | Modify | §Walk through tasks (per task, in order) invokes `append-task` |
 | `runtime/src/hook.rs` | Create | `ductus hook status` and `ductus hook help` surface |
 | `runtime/tests/hook_status.rs` | Create | The hooks' output, root and exits, driven through the binary |
 | `docs/runtime.md` | Modify | `CLAUDE_PROJECT_DIR`, `DUCTUS_BIN` and `DUCTUS_GEN_TIMEOUT_SECONDS` in the environment-variable inventory (`CFG-ENV-002`) |

@@ -16,7 +16,7 @@ Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite o
 
 The new `framework/bootstrap/hooks/pre-commit` is written from scratch as the adopter-owned outer stub. Content per `spec.md` §Design > Outer file. This file replaces the renamed one at the same source path; from git's perspective, it's a delete+add (because content differs significantly from the renamed file). Acceptable — the file is fundamentally a different artifact under the new model, and adopter projects don't have history on it anyway.
 
-### §Hook Installation rewrite
+### Hook Installation rewrite
 
 Three substantive edits to the section, each motivated by the spec:
 

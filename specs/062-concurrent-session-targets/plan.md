@@ -193,7 +193,7 @@ where it came from, and any notices. Under the lock:
   - When the default holds a target, the core writes the own file from it,
     returns `source: "adopted"`, and emits an adoption notice (AC17).
   - When the default is empty, it returns `source: "none"` and writes nothing,
-    since nothing is pinned (spec, §The shared default).
+    since nothing is pinned (`specs/062-concurrent-session-targets/spec.md` §The shared default).
 - **Own file malformed:** an operational error naming the file. Never
   adoption (AC22).
 
@@ -335,7 +335,7 @@ cover:
   share one `cli-config-dir` (AC25).
 
 The removal paragraphs extend "the session" to "every session in the working
-tree", and the teammate bound stays. 010's §Parallel milestones verdict and
+tree", and the teammate bound stays. 010's `specs/010-agent-autonomy/spec.md` §Parallel milestones verdict and
 Resolved Question 5 get a post-completion note linking here (AC11). That note
 discharges the declared impact.
 

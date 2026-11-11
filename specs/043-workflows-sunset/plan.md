@@ -32,7 +32,7 @@ Grounded inventory of every feature reference (line numbers pre-edit):
 - `:798-879` — the entire **### Workflow recommendation** section (including the Tech Stack table parsing at `:806-830`, which has no consumer outside the trigger matching — clarify Q5).
 - `:647` — the `framework/workflows/registry.json` → `workflows/registry.json` Shared Files manifest row.
 - `:442-475` — the `[workflows]` block in the config schema and the `workflows.declined_categories` documentation paragraph.
-- `:24` — "per-category workflow prompts (§Workflow recommendation, step 8)" in the procedural-fidelity preamble.
+- `:24` — "per-category workflow prompts (Workflow recommendation, step 8)" in the procedural-fidelity preamble.
 - `:36` — `[workflows]` in the managed-block preserve list.
 - `:40` — the enforce-manifest note's "legacy `skills/` directory, post-005 workflow filename rename" example (reword to a generic pointer at Pre-run Migrations).
 - `:385` — `[workflows].declined_categories` in the write-policy enumeration.

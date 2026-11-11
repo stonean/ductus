@@ -69,7 +69,7 @@ on remembering to fill it in, and the cases where it is forgotten are the cases
 where it mattered.
 
 **Its durable home is `/{project}:analyze`, under
-`framework/commands/analyze.md` §Project-level consistency.**
+`framework/reference/analyze.md` §Project-level consistency (advisory).**
 A check that runs only during `/{project}` runs only while an adopter is
 already mid-bootstrap; an orphaned reference discovered a week later has no
 surface to report it. That section already exists for exactly this subject —
@@ -139,7 +139,7 @@ report-not-repair rule above applies: name them, let the operator decide.
 
 - **Where should the check live — the bootstrap procedure or an
   `/{project}:audit` family?** **Neither, as posed: `/{project}:analyze` under
-  `framework/commands/analyze.md` §Project-level consistency, with the bootstrap
+  `framework/reference/analyze.md` §Project-level consistency (advisory), with the bootstrap
   as a second call site.**
   Resolved 2026-08-17 by the operator.
 
@@ -153,7 +153,7 @@ report-not-repair rule above applies: name them, let the operator decide.
   looking.
 
   `/{project}:analyze` is neither of those. It ships to adopters, it already
-  carries a `framework/commands/analyze.md` §Project-level consistency section
+  carries a `framework/reference/analyze.md` §Project-level consistency (advisory) section
   scoped to exactly this subject —
   framework-owned paths referenced from files outside the target feature — and
   that section is already read-only and advisory with an established

@@ -13,7 +13,7 @@ section: "Generators and Hooks"
 
 ## Context
 
-§Generators and Hooks / AC12 specify the ductus-repo and adopter pre-commit hooks as: *"Runs all generators unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong."* The implementation enumerated specs with a **worktree glob** (`specs/[0-9][0-9][0-9]-*/spec.md`) inside both `gen-spec-deps.sh` and `gen-readme-table.sh`, and the hooks then force-`git add`ed every matched `spec.md` plus `README.md`.
+`specs/017-derive-dont-ask/spec.md` §Generators and Hooks / AC12 specify the ductus-repo and adopter pre-commit hooks as: *"Runs all generators unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong."* The implementation enumerated specs with a **worktree glob** (`specs/[0-9][0-9][0-9]-*/spec.md`) inside both `gen-spec-deps.sh` and `gen-readme-table.sh`, and the hooks then force-`git add`ed every matched `spec.md` plus `README.md`.
 
 That conflates *what is in the worktree* with *what is being committed*. An untracked, in-progress draft — e.g. a `/specify` spec the author created but has not yet `git add`ed — sits in the worktree. So any commit, on any unrelated change, would: rewrite the draft's frontmatter, regenerate the README to list it, force-`git add` the draft (`A`) and the README, and commit both. A half-written draft with a malformed or circular link would additionally fail `gen-spec-deps.sh`'s cycle check under `set -e` and **block the unrelated commit entirely**.
 

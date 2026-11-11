@@ -72,11 +72,11 @@ any framework-only change it reaches a default-source adopter at the next
 
 - **Env var over config key** — the variable must guide the *first* fetch,
   before `.ductus/config.toml` exists; a config key is a documented non-goal
-  (spec §Design Decisions).
+  (`spec.md` §Design Decisions).
 - **One `owner/repo` over per-host base URLs** — less flexible, but a single
   value is the only shape that cannot half-fork an adoption across hosts (D1).
 - **Prose URLs stay canonical** — documentation citations keep pointing at
-  `stonean/ductus`; only fetches parameterize (spec §Design Decisions).
+  `stonean/ductus`; only fetches parameterize (`spec.md` §Design Decisions).
 - **Known limitation** — `$DUCTUS_REPO` is fork-wide, not per-fetch: an adopter
   cannot fetch the archive from their fork but the runtime from the canonical
   release. That asymmetry is a feature (a half-fork is a silent-mix risk, spec

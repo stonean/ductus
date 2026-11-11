@@ -26,9 +26,9 @@ Each entry under `AGENTS.md`'s `##` sections gets exactly one disposition:
 Four constraints bind every disposition, because existing checks read this file:
 
 - **Bold leads stay verbatim** on every surviving entry. `/ductus:audit` Family 38 (`scripts/audit/promotion-coverage.sh`) matches each row of `050-constitution`'s plan §Classification to an entry by its lead phrase, and reports an unmatched key as a finding. Trimming applies to the body; a lead that is itself a story is re-keyed in 050's table in the same change.
-- **A removed entry's 050 row goes with it.** When a **moved** or **deleted** entry has a row in 050's §Classification table, that row is removed or re-keyed to the entry it merged into, in the same change. 050 is `in-progress` and the table is its record of the guide, so the edit opens nothing.
+- **A removed entry's 050 row goes with it.** When a **moved** or **deleted** entry has a row in `specs/050-constitution/plan.md`'s §Classification table, that row is removed or re-keyed to the entry it merged into, in the same change. 050 is `in-progress` and the table is its record of the guide, so the edit opens nothing.
 - **Content a family reads survives.** The `<!-- audit:sweep-targets:begin -->` … `end` list is Family 23's subject; it moves out of the dead-references pointer into its own *live-artifact set* entry, and Family 23's fix messages name that entry and is kept whole. `unbalanced-inline-markup` scans the file, so markup stays balanced.
-- **The prose outside entries is held to the same rules.** That is about 9.4 KB of plain bullets, mostly §Gotchas and §Project Structure, and about 2.5 KB of section prose. It counts toward the ceiling, and its stories go too.
+- **The prose outside entries is held to the same rules.** That is about 9.4 KB of plain bullets, mostly §Gotchas and §Project Structure of `AGENTS.md`, and about 2.5 KB of section prose. It counts toward the ceiling, and its stories go too.
 
 The table below is filled while the cut is made. The lead column is abridged to about 40 characters, so the table stays near 25 KB. It has one row per entry, in file order, cited by section and position as the file stood at `5cb01fdb`. Entries added after that commit get rows too, under the spec's *Entries added meanwhile* edge case.
 
@@ -166,7 +166,7 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Gotchas | 153 | check-orphaned-references used to report… | deleted | obsolete: fixed in ductus-v0.49.4 (check_artifacts.rs:1560); findings: 0 |
 | Gotchas | 154 | compute-review-scope and diff-cross-spec… | pointer | §grounding (review.md step 1 states the failed-call branch) |
 | Gotchas | 155 | In a set -e script, [ test ] && cmd as t… | trimmed | project-only; hook and gen-configure-mcp incident history cut |
-| Gotchas | 156 | A feature directory is not necessarily N… | trimmed | project-only (Rust half of §numbering-convention); 051 incident cut |
+| Gotchas | 156 | A feature directory is not necessarily N… | trimmed | project-only (Rust half of §numbering); 051 incident cut |
 | Gotchas | 157 | clap expands {n} in a doc comment as a n… | trimmed | project-only; create-feature incident cut |
 | Gotchas | 158 | Verify that a recorded decision still ho… | trimmed | project-only; 003/000/017 accounts cut (universal: promotion candidate) |
 | Gotchas | 159 | "Record" spans five destinations in this… | pointer | §pipeline-boundaries; the count is dropped from the lead, since the section states none, and 050's row is re-keyed |
@@ -334,5 +334,5 @@ The probe question is picked after the cut, from an entry that survives it.
 ## Cross-spec impact
 
 - **`050-constitution`** owed the constitution's cut to one read (`scenarios/the-constitution-fits-one-read.md`, task 35). That scenario's link back to this spec discharges the `cross-spec-impact` declaration. The cut brought the constitution to 49,980 bytes and lowered this spec's constitution ceiling in `scripts/lint-governing-size.sh` to the 50,000-byte read size.
-- **`050-constitution` plan §Classification** loses the rows of entries this spec removes, or re-keys them to the entry they merged into, so Family 38 keeps matching. That is a sync of 050's own record while it is `in-progress`.
+- **`specs/050-constitution/plan.md` §Classification** loses the rows of entries this spec removes, or re-keys them to the entry they merged into, so Family 38 keeps matching. That is a sync of 050's own record while it is `in-progress`.
 - **`050-constitution` AC3** (each promoted entry's `AGENTS.md` line points without restating) is false against the tree at `5cb01fdb`, and the **pointer** disposition makes it true again. No edit to 050 is owed for that, because the criterion already states the shape this spec restores.

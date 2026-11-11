@@ -45,7 +45,7 @@ For each inline `[text](target)` in a scanned artifact, resolve `target` relativ
 
 Resolution is **lexical**, not `std::fs::canonicalize`: the target may legitimately not exist (a broken link is a different check's business), and `canonicalize` errors on a missing path. Lexical resolution is also symlink-independent, which AC8's repeat-run determinism wants.
 
-Excluded before resolution: any target carrying a URL scheme (`http:`, `https:`, `mailto:`), and any target that is a bare fragment (`#anchor`). A fragment on a sibling target (`plan.md#tasks`) is stripped and the file part is used — the fragment itself is the semantic case §Scope puts out of scope.
+Excluded before resolution: any target carrying a URL scheme (`http:`, `https:`, `mailto:`), and any target that is a bare fragment (`#anchor`). A fragment on a sibling target (`plan.md#tasks`) is stripped and the file part is used — the fragment itself is the semantic case `specs/045-decision-state-drift-detection/spec.md` §Scope puts out of scope.
 
 ### A new block splitter, and `SkipScanner` is left alone
 

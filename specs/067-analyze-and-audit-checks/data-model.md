@@ -140,18 +140,20 @@ Result:
   "unresolved": [],
   "qualified": 136,
   "intra-document": 6,
-  "cross-document": 29
+  "cross-document": 29,
+  "anchor-target-unjudgeable": 4,
+  "anchor-target-unreadable": 0
 }
 ```
 
 Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers — `path`'s own when `markers-path` is omitted (the constitution's self-consistency check), or another file's: `/ductus:analyze` passes the constitution as `markers-path`, since a spec carries no markers of its own. `kind` records which of four a reference is, decided in the order listed (scenarios [`anchor-reference-kinds`](scenarios/anchor-reference-kinds.md) and [`pointers-into-shipped-files-are-judged`](scenarios/pointers-into-shipped-files-are-judged.md)):
 
 - **`cross-document`** — the reference's line names exactly one document other than the markers file, and the `## Shared Files` section of `framework/bootstrap/ductus.md` maps that document to a readable source. Judged: resolved when the text after `§` begins with a heading of that source or of the citing file, or names a marker; unresolved otherwise. Also, and first, any `§` written as an explicit pair, `**§X** in` a shipped document in backticks, on any line, judged against that document's headings alone: resolved only when `X` equals one of them. Never assigned where `framework/bootstrap/ductus.md` is absent.
-- **`qualified`** — any other line naming a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). Excluded by construction and **counted**; the match is line-scoped.
+- **`qualified`** — any other line naming a document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token; a backticked or linked path of another extension names a file with no sections). Judged: resolved when the text after `§` begins with a heading of a readable markdown document the line names, a heading of the citing file, a marker of the markers file, or a marker of a registered shared constitution the line names (read from `.ductus/config.toml` `[constitutions.*]` through `resolve-constitutions`' loader). A reference that cannot be judged carries `unjudged`: `anchor-target-unjudgeable` when the line names only documents absent from the tree, or a non-markdown file, and nothing matched; `anchor-target-unreadable` when a named document exists but cannot be read or is a skipped registered entry. Each is counted in the field of that name and is never in `unresolved` (scenario [`shared-constitution-references-are-judged`](scenarios/shared-constitution-references-are-judged.md)).
 - **`intra-document`** — the anchor names a heading in the citing file: the text after `§` begins with one of them.
 - **`markers`** — a claim about the markers file.
 
-A heading is an ATX heading line outside a ` ``` ` fenced block and outside an HTML comment, in the citing file and in a mapped source alike. Outside a pair a reference names a heading its text begins with, the heading ending where a word ends (`§Groundingx` names no `Grounding`). Only `markers` and `cross-document` references can come back unresolved. An empty `unresolved` therefore means every claim about the markers file and about a shipped document's sections resolved, never that every `§` in the file is fine. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
+A heading is an ATX heading line outside a ` ``` ` fenced block and outside an HTML comment, in the citing file and in a mapped source alike. Outside a pair a reference names a heading its text begins with, the heading ending where a word ends (`§Groundingx` names no `Grounding`). Any judged reference can come back unresolved, so an empty `unresolved` with both `anchor-target-` counts at zero means every `§` in the file resolved. A document token names the markers file only when it resolves, from the citing file's directory or the project root, to `markers-path`; a basename alone does not. A code span whose whole content is a path and one `§` reference is a reference on that path. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
 
 ## `check-rule-ids` — verify cited rule IDs exist and aren't deprecated
 

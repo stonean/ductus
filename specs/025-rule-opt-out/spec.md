@@ -62,7 +62,7 @@ The fix: a deliberate, recorded, file-level opt-out. `.ductus/config.toml` alrea
 
 | File | Change | Strategy |
 | --- | --- | --- |
-| `framework/commands/review.md` | edit — §Inputs (add the new config key), §Behavior step 5 (consult the disabled list during selection), §Output (the new stdout notice) | update |
+| `framework/commands/review.md` | edit — §Inputs (add the new config key), Behavior step 5 (consult the disabled list during selection), Output (the new stdout notice) | update |
 | `framework/commands/status.md` | edit — surface the disabled list in the pipeline dashboard | update |
 | `framework/commands/analyze.md` | edit — extend `.ductus/config.toml` validation tolerance to accept the new key | update |
 | `framework/constitution.md` | edit — §rules anchor (or wherever rule-file loading is described) gets a brief mention of the override mechanism | update |

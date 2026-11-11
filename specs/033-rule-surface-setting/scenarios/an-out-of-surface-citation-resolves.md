@@ -6,7 +6,7 @@ section: "Enforcement behavior"
 
 ## Context
 
-`/{project}:analyze` loads every rule file present in the rule-file directory so that a citation to a rule on any surface resolves (`framework/commands/analyze.md` §Rules; AC7). But `/ductus` installs only the rule files whose surface `[rules] surfaces` lists (`framework/bootstrap/ductus.md` §Rule-file surface filter). A project that sets `surfaces = ["backend"]` on its first scaffold never receives `security-frontend.md`, so a backend spec that cites `FE-XSS-001` — the example `analyze.md` gives for why analyze loads every file — gets a blocking "unknown rule" finding from `check-rule-ids`. AC7's guarantee holds only when the out-of-surface file happens to be on disk already. Surfaced 2026-10-19 by the rule-file review.
+`/{project}:analyze` loads every rule file present in the rule-file directory so that a citation to a rule on any surface resolves (`framework/reference/analyze.md` §Rules (blocking and advisory); AC7). But `/ductus` installs only the rule files whose surface `[rules] surfaces` lists (the **Rule-file surface filter** in `framework/bootstrap/ductus.md` §Shared Files). A project that sets `surfaces = ["backend"]` on its first scaffold never receives `security-frontend.md`, so a backend spec that cites `FE-XSS-001` — the example `analyze.md` gives for why analyze loads every file — gets a blocking "unknown rule" finding from `check-rule-ids`. AC7's guarantee holds only when the out-of-surface file happens to be on disk already. Surfaced 2026-10-19 by the rule-file review.
 
 ## Behavior
 

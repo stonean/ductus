@@ -154,7 +154,7 @@ enforces it.
 | `framework/commands/target.md` | Modify | Step 4 loads registered constitutions |
 | `runtime/src/primitives/write_review.rs` | Modify | Render `## Unexamined governance` (AC8) |
 | `runtime/src/primitives/write_analysis.rs` | Modify | Record `constitution-unresolved` (AC8) |
-| `framework/commands/review.md` | Modify | Document the new report section (AC8); since 071's split (`b772a6ac`) the text is `framework/reference/review.md` §Unexamined governance |
+| `framework/commands/review.md` | Modify | Document the new report section (AC8); since 071's split (`b772a6ac`) the text is the `## Unexamined governance` template section in `framework/reference/review.md` |
 | `framework/commands/analyze.md` | Modify | Document the informational tier entry (AC8); since 071's split (`b772a6ac`) the text is `framework/reference/analyze.md` §Unresolved shared constitutions (informational) |
 | `framework/bootstrap/ductus.md` | Modify | Config schema, validation, managed-block step |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of the above (Family 21) |

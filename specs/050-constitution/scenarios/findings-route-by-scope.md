@@ -10,7 +10,7 @@ While implementing a spec, an agent finds a bug or an omission in the spec it is
 
 Nothing covered the tier between those two, and that tier holds the most common case there is. An agent working a spec is looking hardest at exactly the surface that spec owns, so most of what it notices belongs to that spec. Capturing those findings is a loop with no destination: the item is appended, re-read on every intervening `/{project}:groom` pass, walked through the bug decision tree, and routed back to the spec that was open the whole time. The user named the cost directly — *"adding it to the inbox.md creates additional work."*
 
-The rule was first written as an `AGENTS.md` entry, which is the failure this spec exists to correct. Contributor-side practice does not propagate to adopting projects, and this rule governs implementation behavior in every project running the pipeline, so its canonical text belongs in the constitution with `AGENTS.md` keeping only a pointer (§Promotion mechanism).
+The rule was first written as an `AGENTS.md` entry, which is the failure this spec exists to correct. Contributor-side practice does not propagate to adopting projects, and this rule governs implementation behavior in every project running the pipeline, so its canonical text belongs in the constitution with `AGENTS.md` keeping only a pointer (`specs/050-constitution/spec.md` §Promotion mechanism).
 
 ## Behavior
 

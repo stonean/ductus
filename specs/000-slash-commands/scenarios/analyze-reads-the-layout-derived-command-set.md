@@ -10,7 +10,7 @@ section: "Parameterization"
 command's path is layout-derived and is not spelled out in the command:
 `framework/bootstrap/ductus.md` §Derived values carries it per layout.
 `framework/commands/analyze.md` did not follow that. Its Scope Boundaries read
-list (line 34) and its §Project-level consistency read inputs and **Command
+list (line 34) and its `framework/reference/analyze.md` §Project-level consistency (advisory) read inputs and **Command
 frontmatter completeness** check (lines 428–436) named
 `{cli-config-dir}/commands/{project}/help.md`, every `.md` in
 `{cli-config-dir}/commands/{project}/`, and `{cli-config-dir}/commands/ductus.md`.
@@ -55,7 +55,7 @@ looked for, rather than reporting the frontmatter check as passed.
   ductus's frontmatter rules; the `{project}-` prefix is what scopes the check.
 - **A `claude-style` adopter sees no change.** The derived row for its layout
   is the path the step spells today, so the fix is invisible where the bug was.
-- **Adding a layout costs no edit here.** A further layout adds a §Derived values
+- **Adding a layout costs no edit here.** A further layout adds a `framework/bootstrap/ductus.md` §Derived values
   column, and `analyze.md` picks it up because it points at the row. Spelling
   each layout in `analyze.md` would be the second copy §drift-prevention rules
   out, and it would go stale at the next agent.

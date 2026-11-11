@@ -103,7 +103,7 @@ not wait for it: `/{project}:review` calls `process-waivers` at step 8, before
 - **Malformed entries** are reported and never expired. Duplicates warn, and
   the first one wins. The data model names the two cases a re-render drops.
 
-Both rules match `review.md` §Malformed and duplicate waivers
+Both rules match `framework/reference/review.md` §Malformed and duplicate waivers
 (`framework/commands/review.md:703-722`).
 
 The writers then take:
@@ -162,7 +162,7 @@ to reproduce.
   - `decision-key`: optional, naming a matched stored decision.
 
   `WriteReviewArgs` gains `expired-decisions` and `decided-by`, per
-  §process-decisions above.
+  the `process-decisions` decision above.
 
   `render_observations` (`:681-695`) renders the outcome and its target or
   reason beside each observation. The `dispositions:` map is computed from the
@@ -189,7 +189,7 @@ With capture gone, the writer has to be given the findings.
   re-check. An optional `decision-key` names a matched stored decision, as on
   `ReviewObservation`; absent, the key is `{family} — {message}`
   (scenario `analyze-findings-match-decisions-by-host-judgment`). `expired-decisions` and `decided-by` join
-  the args, per §process-decisions above.
+  the args, per the `process-decisions` decision above.
 - **Tier counts stay host-supplied scalars from the re-check.** On the exec
   path no host supplies them, so the walker tallies them from its own
   detection steps as it dispatches each, by the tier the step assigns
@@ -362,7 +362,7 @@ removed.
   - The `write-analysis` step, now step 19, passes `findings`,
     `expired-decisions`, and `decided-by` instead of `captured-issues`.
   - The Purpose, Scope Boundaries, frontmatter description, and
-    §Finding capture (durability) (`:365-403`) are rewritten to match.
+    the Finding capture (durability) section (`:365-403`) are rewritten to match.
   - The renumbering moves the `write-analysis` dispatch, so
     `analyze-basic.jsonl` is re-blessed.
 - **`review.md`:**
@@ -370,8 +370,8 @@ removed.
     `write-review`, which moves to step 11 and passes dispositioned
     observations, `expired-decisions`, and `decided-by`. The step move is
     pinned by `runtime/tests/review_command.rs`, which is updated with it.
-  - §Captured issues, §Observations' write-through (`:412-473`), and
-    §The inbox row (`:763-806`) are replaced.
+  - The Captured issues and Observations' write-through sections (`:412-473`), and
+    The inbox row section (`:763-806`) are replaced.
 - **`implement.md`:**
   - Walk step 5 (`:132`) appends a disposition task through `append-task`
     with `dedup-title`.
@@ -451,8 +451,8 @@ received.
 
 In `framework/bootstrap/ductus-procedure.md`:
 
-- §Writing findings to the inbox and §Deduplication (`:209-223`) are removed.
-- §Audit summary (`:225-227`) and §Security audit summary (`:369-381`) print
+- The Writing findings to the inbox and Deduplication sections (`:209-223`) are removed.
+- `framework/bootstrap/ductus-procedure.md` §Audit summary (`:225-227`) and §Security audit summary (`:369-381`) print
   each finding with its spec and a pointer to `/{project}:analyze`.
 - The trigger (`:179-182`) and rule loading are unchanged.
 - `ductus.md` carries no capture prose, so its Family 21 byte-identity with

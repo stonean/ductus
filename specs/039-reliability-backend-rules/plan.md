@@ -41,7 +41,7 @@ Cross-references, not restatements: `BE-RETRY-001` cites `api-backend.md` `BE-ID
 
 ### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add a `reliability-backend.md` → `specs/rules/reliability-backend.md` row to the `### ductus-owned shared files` table, slotted between `quality-cross.md` and `security-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The §Shared Files note is count-free, so no count edit.
+Add a `reliability-backend.md` → `specs/rules/reliability-backend.md` row to the `### ductus-owned shared files` table, slotted between `quality-cross.md` and `security-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The `framework/bootstrap/ductus.md` §Shared Files note is count-free, so no count edit.
 
 ### What this feature does NOT touch
 
