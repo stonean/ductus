@@ -73,8 +73,10 @@ machinery Claude uses, with the one new mechanism it did not need.
    the extension bridge of §Design Decisions D3 — the runtime's own MCP server remains
    the single source of truth for tool names and schemas.
 3. `ductus exec` works unchanged from Pi's shell tool: it dispatches primitives
-   in-process and never touches the host's tool registry, so the exec path is free
-   parity once command-file resolution knows Pi's shape (D4).
+   in-process and never touches the host's tool registry (spec 022's walker), so the
+   exec path is free parity once command-file resolution knows Pi's shape (D4; the
+   plan's D9 smoke test records `ductus exec status` dispatching `dashboard` from a
+   Pi-shaped session).
 4. Gates, session state, constitution, rules, and migrations behave identically — they
    are runtime plus file work, host-agnostic.
 
@@ -213,7 +215,7 @@ mechanism; nothing in the pipeline depends on either.
 - **The release follows `done`; it is not part of this spec's completion gate** — resolved 2026-10-07 by operator decision. AC16 required the `ductus-v<minor>` tag to exist before this spec could reach `done`, which inverts `AGENTS.md`'s release entry: a release is cut from completed work, every affected spec `done` first and the tag pushed in the same sitting — the order whose reverse that entry records as circular. AC16 is retired and its label is not reissued; D8's same-sitting release is the commitment that remains, so `ductus-v0.59.0` is cut in the session that marks this spec `done`.
 - **Prompt templates over skills** — settled D1. Skills' `/skill:<name>` invocation, `enableSkillCommands` dependency, `User: <args>` argument delivery (against the `$ARGUMENTS` the command bodies name), and system-prompt description loading are each a verified deviation from the command-file contract; prompt templates are a superset-compatible argument engine with the same frontmatter keys the command files already carry.
 - **Flat project-hyphenated names over a `{project}/` subdirectory** — settled D1. A subdirectory would require a `prompts` settings array entry (non-recursive discovery) and would strip the namespace from the invocation (`/specify` un-namespaced); the flat `{project}-<name>` spelling keeps the project namespace in the invocation, needs no settings, and stays collision-free.
-- **`ductus__` prefix over bare tool names** — settled D3. Every other host wraps bare names in a server namespace; the prefix makes State-A detection an inventory glob, matches the constitution's match-the-prefix rule, and rules out built-in/foreign-extension collisions.
+- **`ductus__` prefix over bare tool names** — settled D3. Claude Code wraps bare names in a server namespace, `mcp__ductus__` (§runtime-host-integration); the prefix makes State-A detection an inventory glob, matches the constitution's match-the-prefix rule, and rules out built-in/foreign-extension collisions.
 - **Bridge over CLI bridge** — settled D3. A CLI bridge would make the CLI surface the second contract, re-encode every primitive's typed arguments by hand, and silently diverge the moment CLI and MCP stop agreeing — a second registry copy, the exact drift §runtime-boundary prevents.
 - **Pi's `configure` is verify/repair, not a no-op** — settled D5. The bridge file gets a repair path between full `/ductus` runs, and the trust/permission facts have a home in the per-agent command set instead of living only in README prose.
 - **Dogfooded pi surface committed in the framework repo** — settled D6. Uncommitted would make the framework repo's own pi adoption invisible to the audits that exist to protect it; the `.claude/commands/` convention already commits the dogfooded copy.
