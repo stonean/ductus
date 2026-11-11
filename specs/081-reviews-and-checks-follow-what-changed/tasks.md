@@ -7,8 +7,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] Add `is_project_artifact` to `runtime/src/primitives/mod.rs`, with unit tests for each member of the set, a configured spec root, and a path outside it.
 - [ ] Add `CommitClaims::named` in `runtime/src/primitives/commit_attribution.rs`; derive `first_named` from it.
 - [ ] Rewrite `paths_owing_a_review` and `record_is_held` in `runtime/src/primitives/compute_review_scope.rs` per the plan's owed rule, keeping `contracts_against_digest` for scope.
-- [ ] Rewrite `attribute_window` per the plan's attribution table, recording a path no spec owes under `no spec` in `excluded`.
-- [ ] Fixture tests proving both directions of AC1, AC8, AC9 and AC10: a contract-only window, a configured `specs-root`, a project in a repository subdirectory, a named commit with a second claimant, an unnamed commit with a listed and an unlisted path, and a merge commit. Each test is shown to fail with its behavior removed (`QUAL-TEST-001`).
+- [ ] Rewrite `attribute_window`'s named-commit branch per the plan's attribution table, leaving a commit naming no spec as it is.
+- [ ] Fixture tests proving both directions of AC1, AC8, AC9 and AC10: a contract-only window, a configured `specs-root`, a project in a repository subdirectory, a named commit with a second claimant, and a code-only commit naming no spec. Each test is shown to fail with its behavior removed (`QUAL-TEST-001`).
 - [ ] Build the release binary and re-run `compute-review-scope` over the 12 specs the spec's Motivation measured. Where the counts differ from the Resolved Questions' figures, correct the spec.
 
 - **Done when**: the new tests pass and are proven to fail without their behavior, and the built binary's `review-owed` over those 12 specs matches what the spec records.

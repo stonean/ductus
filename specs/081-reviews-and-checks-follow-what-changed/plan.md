@@ -4,7 +4,7 @@ Implements [081 — Reviews and checks follow what changed](spec.md).
 
 ## Overview
 
-A review is owed for code alone, where code is every path outside the project's artifacts, and a spec reviews only its own commits' code. The runtime change is in `compute-review-scope`'s owed rule and window attribution, and in `check-review-gate`, which stops blocking on a stale review digest. `check-review-freshness` and the self-audit's Family 19 asked only that staleness question, so both retire. In this repository the two workflows that run on a spec-only push reuse a cached runtime binary instead of compiling one. The constitution, the review and implement references, the descriptions and `AGENTS.md` say the new rule, and 079, 066, 026, 047 and 050 are corrected to match.
+A review is owed for code alone, where code is every path outside the project's artifacts. A commit naming a spec has its code reviewed by the specs it names. The runtime change is in `compute-review-scope`'s owed rule and window attribution, and in `check-review-gate`, which stops blocking on a stale review digest. `check-review-freshness` and the self-audit's Family 19 asked only that staleness question, so both retire. In this repository the two workflows that run on a spec-only push reuse a cached runtime binary instead of compiling one. The constitution, the review and implement references, the descriptions and `AGENTS.md` say the new rule, and 079, 066, 026, 047 and 050 are corrected to match.
 
 ## Technical Decisions
 
@@ -20,17 +20,15 @@ A single function in `runtime/src/primitives/mod.rs`, `is_project_artifact(path,
 
 ### Attribution
 
-`CommitClaims` (`runtime/src/primitives/commit_attribution.rs`) gains `named`: every spec the subject's scope names, in subject order. `first_named` becomes `named.first()`. `attribute_window` then applies one rule per commit, for the spec under review:
+`CommitClaims` (`runtime/src/primitives/commit_attribution.rs`) gains `named`: every spec the subject's scope names, in subject order. `first_named` becomes `named.first()`. `attribute_window` changes only for a commit whose subject names a spec, for the spec under review:
 
 | The commit | This spec's scope gets |
 | --- | --- |
-| claimed by this spec alone | every path, as before |
-| names this spec, with other claimants | every path outside the other claimants' directories |
+| names this spec | every path outside the other claimants' directories |
 | names other specs, and touched this spec's directory | the paths in this spec's directory |
-| names no spec, several claimants | its directory's paths, and each other path its plan lists |
-| no claimant: names no spec, touches no spec directory, or a merge's own changes | each path its plan lists |
+| names no spec | what 079's rule gives it, unchanged: every path when no spec claims the commit or this spec claims it alone, and otherwise its directory, its plan's paths and the paths no claimant's plan lists |
 
-Anything else is excluded. A path a claimant's directory or plan holds goes under that claimant's name, as now. A path no spec owes goes under `no spec`, so `excluded` still names every path a review did not read. Uncommitted work stays in scope, as nothing can attribute it. Fix rounds and `diff-cross-spec` read `CommitClaims` but not `attribute_window`, so they are unchanged.
+Anything else goes to `excluded` under the claimants' names, as now. A commit naming no spec stays 079's because the pipeline prescribes no subject convention. An adopter's code commit usually names none, and plans are not exhaustive, so narrowing it would leave unplanned code unreviewed (spec, Resolved Questions). Uncommitted work stays in scope. Fix rounds and `diff-cross-spec` read `CommitClaims` but not `attribute_window`, so they are unchanged.
 
 ### The gate
 
