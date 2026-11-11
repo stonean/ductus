@@ -38,3 +38,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Re-run `/ductus` against the same repo. Confirm idempotency: `update`-strategy files report `unchanged`; `create`-strategy files are skipped; settings entries are not duplicated. **Also confirm a fresh `mktemp` and `curl` against the archive are issued — a prior run's extract must not be reused as the source.**
 - [x] Force an archive failure (e.g., point the URL at a non-existent ref by temporarily editing ductus.md, then run). Confirm clean abort with the spec's error message and no partial scaffolding.
 - [x] Done when: all three runs produce the expected behavior and ductus.md is restored to the correct ref.
+
+## 6. The abort message and the run summary carry the temp directory path
+
+- [x] `framework/bootstrap/ductus.md`'s abort message under Archive fetch and extract names `{tempdir}`, and its byte copy `framework/bootstrap/govern.md` matches: AC6 says the path is logged on abort, and §Cleanup said so, but the template carried only `({reason})`. Found by the criteria verification before 015's review; the owner chose to have the templates carry the path (2026-11-11)
+- [x] `framework/bootstrap/ductus-procedure.md`'s Post-Scaffolding Output lists the temp directory `{tempdir}`, left for the OS to sweep, so the run summary AC6 names carries it
+- [x] 012's task 12, the pending real adopter run, checks that its summary names the temp directory
+
+- **Done when**: both templates the host renders carry the temp path, govern.md is byte-identical to ductus.md, and 012's task 12 checks the summary line

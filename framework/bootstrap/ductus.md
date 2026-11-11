@@ -775,7 +775,7 @@ After fetching:
 
 If the fetch or extraction fails — non-zero exit from `curl` or `tar`, or an extraction that produced zero or several top-level directories, so that no single `{framework-root}` exists — abort the run with this error and do not continue scaffolding:
 
-> Failed to fetch or extract the `ductus` archive ({reason}). Re-run after checking network connectivity, or report this if it persists.
+> Failed to fetch or extract the `ductus` archive ({reason}). Anything it fetched is left in `{tempdir}` for inspection. Re-run after checking network connectivity, or report this if it persists.
 
 A missing archive means **every** manifest entry would be missing, so partial scaffolding is impossible — the abort is the correct behavior. The pre-flight phase has already completed by this point, so a stale `ductus.md` would have already triggered the pre-flight abort earlier; a freshly-wired ductus does not abort and reaches this section through the CLI.
 

@@ -52,7 +52,7 @@ After fetching the archive:
 
 If the fetch or extraction fails — non-zero exit, an extraction that produced zero or several top-level directories, or any required manifest entry absent from the extract — abort the run with a clear error:
 
-> Failed to fetch or extract the `ductus` archive ({reason}). Re-run after checking network connectivity, or report this if it persists.
+> Failed to fetch or extract the `ductus` archive ({reason}). Anything it fetched is left in `{tempdir}` for inspection. Re-run after checking network connectivity, or report this if it persists.
 
 Aborting on archive failure is intentional and a behavior change from the current per-file warning model: a missing archive means **every** file is missing, so there is nothing to scaffold partially. Per-file granularity within the extract is preserved (see **Per-file resolution** below).
 
