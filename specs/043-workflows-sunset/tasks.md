@@ -19,7 +19,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 3. Delete `framework/workflows/` and excise the bootstrap flow
 
 - [x] `git rm` the 14 files under `framework/workflows/`
-- [x] Remove from `framework/bootstrap/ductus.md`: §Workflow recommendation (incl. Tech Stack parsing + Auggie note), the manifest row, the `[workflows]` config schema block and `declined_categories` paragraph, and the mentions at the procedural-fidelity preamble, managed-block preserve list, enforce-manifest note, write-policy paragraph, manifest-scope sentence, and both per-layout skip instructions
+- [x] Remove from `framework/bootstrap/ductus.md`: §Workflow recommendation (incl. Tech Stack parsing), the manifest row, the `[workflows]` config schema block and `declined_categories` paragraph, and the mentions at the procedural-fidelity preamble, managed-block preserve list, enforce-manifest note, write-policy paragraph, manifest-scope sentence, and both per-layout skip instructions
 
 - **Done when**: `grep -i workflow framework/bootstrap/ductus.md` returns only generic uses (tar-xzf sentence, PKM tip) and `framework/workflows/` does not exist.
 

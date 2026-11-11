@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [010-agent-autonomy, 018-adopter-owned-pre-commit, 019-config-decisions, 027-bootstrap-migration-registry]
 next-criterion: 12
 ---
@@ -12,7 +12,7 @@ Remove the workflows feature (`005-workflows`) from the framework: the `framewor
 
 The workflows feature scaffolds tech-stack-specific lint/test/format/migrate slash commands (`/ductus:workflows:eslint`, `/ductus:workflows:pytest`, …) into adopter projects. In practice these are never run as slash commands: lint, format, and test invocation is the territory of pre-commit hooks, editor configs, and CI — automation surfaces the adopter already owns ([018-adopter-owned-pre-commit](../018-adopter-owned-pre-commit/spec.md) established that ductus does not own the adopter's pre-commit rules; the same reasoning applies to the rest of this tooling class). Wrapping `eslint` or `pytest` in a slash command adds an LLM round-trip to commands that are cheaper, faster, and more reliable invoked directly by deterministic tooling.
 
-Carrying the feature has real cost: a 13-template directory plus registry to maintain, an ~80-line recommendation flow in the bootstrap procedure with per-category prompts and decline persistence, a `[workflows]` config section with its own validation and write-policy rules, per-agent layout branches (the flow is already skipped entirely for `antigravity` and `opencode` layouts), and two historical migrations dedicated to renaming its files. Removing it narrows ductus to its actual responsibility — the spec pipeline — and shortens every `/ductus` run.
+Carrying the feature has real cost: a 13-template directory plus registry to maintain, an ~80-line recommendation flow in the bootstrap procedure with per-category prompts and decline persistence, a `[workflows]` config section with its own validation and write-policy rules, per-agent layout branches, and two historical migrations dedicated to renaming its files. Removing it narrows ductus to its actual responsibility — the spec pipeline — and shortens every `/ductus` run.
 
 ## Removal surface (framework side)
 
@@ -46,7 +46,6 @@ A new registry entry (id `workflows-sunset`) drives cleanup on the next `/ductus
 - **The subsumed entries are already dormant**: at 0.22.0 the `sunset_after` filter (bootstrap Pre-run Migrations step 3) has excluded both from the adopter loop since 0.10.0 — archiving them changes no runtime behavior, and `workflows-sunset` *restores* legacy-debris coverage that has been inactive since then.
 - **Directory holds only custom files**: zero deletions, directory retained, no summary noise for untouched files.
 - **Ordering with `govern-dir-consolidate`**: an adopter behind on both runs 0.22.0's consolidate first (SemVer order), so the `[workflows]` removal lands in `.ductus/config.toml`; an unconsolidated adopter is handled by active-file resolution either way.
-- **Layouts that never scaffolded** (`antigravity`, `opencode`): every target is absent — silent no-op.
 - **`{config_dir}` resolution** follows the same placeholder convention the subsumed entries used; multi-agent behavior is the registry mechanism's, unchanged by this spec.
 
 ## Out of scope
@@ -62,7 +61,7 @@ A new registry entry (id `workflows-sunset`) drives cleanup on the next `/ductus
 - [x] AC3: `framework/migrations.toml` carries a `workflows-sunset` entry (id, `introduced_in`, `sunset_after`, summary, procedure file under `framework/migrations/`) whose target paths cover the scaffolded command directory's 22 known filenames (13 current + 9 legacy), the legacy `skills/` directory, the synced `workflows/registry.json`, and `framework/workflows/` (audit Family 10 coverage).
 - [x] AC4: `/ductus` against an adopter with scaffolded workflow files removes every known-set file and the synced registry copy, removes the `[workflows]` section from the active config file while preserving all other tables byte-for-byte, reports each removal in the post-scaffolding summary, and advances `[migrations] last_applied`.
 - [x] AC5: A file listed in `[pinned] files` survives with a `pinned (kept):` summary line; an adopter-authored file not in the known set survives silently and keeps its directory alive.
-- [x] AC6: The migration is a no-op against an adopter with no workflow artifacts (fresh project, or `antigravity`/`opencode` layouts that never scaffolded).
+- [x] AC6: The migration is a no-op against an adopter with no workflow artifacts (fresh project).
 - [x] AC7: `skills-to-workflows` and `workflow-filename-rename` no longer appear in `framework/migrations.toml`; their procedure text appears under root `CHANGELOG.md` § Archived migrations and their `framework/migrations/*.md` files are gone.
 - [x] AC8: `specs/005-workflows/spec.md` carries a post-completion sunset note pointing at this spec, with `status: done` unchanged. — **Delivered as specified, and then superseded by the rule below.** The sunset note was written and stood until 2026-09-13, when `005-workflows` was consolidated into this spec and its directory removed, so the file this criterion names no longer exists. Checked because 043 delivered it; the removal is the constitution's, not a gap in this spec's work.
 - [x] AC9: The constitution's canonical-source map has no Workflow registry row.

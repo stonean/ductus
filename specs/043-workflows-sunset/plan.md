@@ -27,7 +27,7 @@ Delete the workflows feature in one coordinated pass: remove `framework/workflow
 
 Grounded inventory of every feature reference (line numbers pre-edit):
 
-- `:798-879` — the entire **### Workflow recommendation** section (including the Tech Stack table parsing at `:806-830`, which has no consumer outside the trigger matching — clarify Q5 — and the Auggie discovery note at `:879`).
+- `:798-879` — the entire **### Workflow recommendation** section (including the Tech Stack table parsing at `:806-830`, which has no consumer outside the trigger matching — clarify Q5).
 - `:647` — the `framework/workflows/registry.json` → `workflows/registry.json` Shared Files manifest row.
 - `:442-475` — the `[workflows]` block in the config schema and the `workflows.declined_categories` documentation paragraph.
 - `:24` — "per-category workflow prompts (§Workflow recommendation, step 8)" in the procedural-fidelity preamble.
