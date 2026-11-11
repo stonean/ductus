@@ -118,7 +118,7 @@ Update the manifest, recommendation step, and all prose in `framework/bootstrap/
 - [x] Update the manifest row: `framework/skills/registry.json` → `framework/workflows/registry.json` and `skills/registry.json` → `workflows/registry.json` (project-side)
 - [x] Update the recommendation-step path references to read from `workflows/registry.json` and fetch from `framework/workflows/{entry.template}` (note: flattened — no inner `templates/`)
 - [x] Update scaffold destination from `{config_dir}/commands/{project}/skills/{entry.template}` to `{config_dir}/commands/{project}/workflows/{entry.template}`
-- [x] Update the section heading from "Skill recommendation" to "Workflow recommendation" and update prose throughout (warning messages, summary lines, discovery note for Auggie)
+- [x] Update the section heading from "Skill recommendation" to "Workflow recommendation" and update prose throughout (warning messages, summary lines)
 - [x] Update the slash-command-cleanup edge-case note to reference the new directory name (no explicit edge-case note found in ductus.md; cleanup walks top-level files only, so subdirectory immunity is implicit and documented in the recommendation step itself)
 - [x] Update the schema reference from `specs/005-skills-and-plugins/data-model.md` to `specs/005-workflows/data-model.md`
 - [x] Add a one-line migration note: adopters who already ran `/ductus` should manually delete the old `skills/` directory after re-running ductus
