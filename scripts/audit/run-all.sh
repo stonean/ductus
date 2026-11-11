@@ -33,9 +33,8 @@ run_check() {
   # success as they were until 0.49.8.
   #
   # That capture made every coverage line invisible on exactly the runs they
-  # exist for. Family 19 has closed each run with a line naming what it
-  # examined since it shipped, Families 30 and 35 report their counts the same
-  # way, and none of it ever reached an aggregated run — so a clean `run-all.sh`
+  # exist for. Families 30 and 35 close each run with a line naming what they
+  # examined, and none of it ever reached an aggregated run — so a clean `run-all.sh`
   # printed nothing at all, which is indistinguishable from a run that never
   # executed. That is `QUAL-CLAIM-001` turned on this aggregator: the exit code
   # said "no findings" and nothing said what had been looked at. Surfaced by
@@ -77,7 +76,6 @@ run_check "Family 15 — runtime probe parity" "scripts/audit/runtime-probe-pari
 run_check "Family 16 — installer/command parity" "scripts/audit/installer-command-parity.sh"
 run_check "Family 17 — host namespace parity" "scripts/audit/host-namespace-parity.sh"
 run_check "Family 18 — marker-list parity" "scripts/audit/marker-list-parity.sh"
-run_check "Family 19 — review freshness" "scripts/audit/review-freshness.sh"
 run_check "Family 20 — version agreement" "scripts/audit/version-agreement.sh"
 run_check "Family 21 — transitional bootstrap parity" "scripts/audit/transitional-bootstrap-parity.sh"
 run_check "Family 22 — adopter shell behavior" "scripts/audit/adopter-shell-behavior.sh"

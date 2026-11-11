@@ -1,35 +1,23 @@
-//! Conformance: `/ductus:audit` Family 19 reports what the runtime answers,
-//! and the rename-sweep exemption both gates share holds in both directions.
+//! Conformance: the rename-sweep exemption holds in both directions.
 //!
-//! "Is this review stale?" is enforced at two moments — `check-review-gate` on
-//! the `in-progress → done` transition, and Family 19
-//! (`scripts/audit/review-freshness.sh`) as a release gate. Since 2026-11-04
-//! they are one implementation: Family 19 asks `check-review-freshness`, which
-//! makes the gate's own comparison (066 plan, *Family 19 calls the runtime*).
-//! Until then Family 19 carried a Python copy of the rule, kept because the
-//! self-audit job had no Rust toolchain, and this file held the two together:
-//! they disagreed once, silently, for **19 of this repo's 46 `done` specs**
-//! (066 scenario `review-staleness-on-done-specs`).
+//! The exemption (`runtime/src/primitives/mechanical_sweep.rs`) decides two
+//! things: whether a uniform rename sweep leaves a record's digest current, as
+//! the analysis record's freshness reads it at the gate, and whether an edit
+//! under a `done` spec is mechanical, as `classify-spec-edit` reads it. The
+//! review record's freshness check, and Family 19 with `check-review-freshness`
+//! that asked it at release, were retired by spec 081, since a review is owed
+//! for code alone.
 //!
-//! What is left to hold is the exemption itself, on repositories each test
-//! builds with a known sweep and a known structural edit, asserted in both
-//! directions, and that Family 19, run as the release gate runs it, turns each
-//! answer into the right finding or none.
+//! What this holds is the exemption itself, on repositories each test builds
+//! with a known sweep and a known structural edit, asserted in both directions.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 mod common;
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-
-fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
 
 /// The exemption's verdict over `candidates`: the paths that changed beyond a
 /// uniform rename sweep between `base` and `HEAD`.
@@ -334,145 +322,14 @@ fn an_over_limit_window_grants_no_exemption() {
     );
 }
 
-/// A `done` spec under `root` with one scenario, whose review record
-/// carries that scenario's digest when `digest` holds.
-#[cfg(unix)]
-fn seed_reviewed_done_spec(root: &Path, slug: &str, digest: bool) {
-    use sha2::{Digest, Sha256};
-    use std::fmt::Write as _;
-    let feature = root.join("specs").join(slug);
-    std::fs::create_dir_all(feature.join("scenarios")).unwrap();
-    std::fs::write(
-        feature.join("spec.md"),
-        "---\nstatus: done\ndependencies: []\n---\n\n# Fixture\n",
-    )
-    .unwrap();
-    let scenario = "# Edge\n\nAs reviewed.\n";
-    std::fs::write(feature.join("scenarios/edge.md"), scenario).unwrap();
-    let mut record = format!(
-        "---\nspec: {slug}\nlast-run: 2026-11-04T00:00:00Z\nreviewed-against: HEAD\n\
-         must-violations: 0\nshould-violations: 0\nlow-confidence: 0\nblocking: false\n"
-    );
-    if digest {
-        let mut hex = String::new();
-        for byte in Sha256::digest(scenario.as_bytes()) {
-            let _ = write!(hex, "{byte:02x}");
-        }
-        let _ = writeln!(record, "reviewed-digest:\n  scenarios/edge.md: {hex}");
-    }
-    record.push_str("---\n\n# Review\n");
-    std::fs::write(feature.join("review.md"), record).unwrap();
-}
-
-/// Family 19, run as the release gate runs it — the whole script, the
-/// runtime reached through `.ductus/bin/ductus` — over a corpus holding each
-/// answer: a current review, a stale one, one with no digest, and a `done`
-/// spec with no `review.md`. Returns whether it passed, its stdout (the
-/// findings) and its stderr (the coverage line).
-#[cfg(unix)]
-fn run_family_19_over_each_answer() -> (bool, String, String) {
-    let tmp = tempfile::tempdir().expect("tempdir");
-    let root = tmp.path();
-    let audit = root.join("scripts/audit");
-    std::fs::create_dir_all(&audit).unwrap();
-    for script in ["review-freshness.sh", "lib.sh"] {
-        std::fs::copy(
-            repo_root().join("scripts/audit").join(script),
-            audit.join(script),
-        )
-        .expect("copy Family 19");
-    }
-    std::fs::create_dir_all(root.join(".ductus/bin")).unwrap();
-    std::os::unix::fs::symlink(
-        env!("CARGO_BIN_EXE_ductus"),
-        root.join(".ductus/bin/ductus"),
-    )
-    .unwrap();
-    seed_reviewed_done_spec(root, "901-current", true);
-    seed_reviewed_done_spec(root, "902-stale", true);
-    seed_reviewed_done_spec(root, "903-no-digest", false);
-    let grandfathered = root.join("specs/904-unreviewed");
-    std::fs::create_dir_all(&grandfathered).unwrap();
-    std::fs::write(
-        grandfathered.join("spec.md"),
-        "---\nstatus: done\ndependencies: []\n---\n\n# Fixture\n",
-    )
-    .unwrap();
-    git2::Repository::init(root).expect("git init");
-    commit_all(
-        &git2::Repository::open(root).unwrap(),
-        "fixture: reviewed",
-        1_704_067_200,
-    );
-    std::fs::write(
-        root.join("specs/902-stale/scenarios/edge.md"),
-        "# Edge\n\nChanged after the review.\n",
-    )
-    .unwrap();
-
-    let out = common::without_git_hook_variables(Command::new("bash"))
-        .arg(audit.join("review-freshness.sh"))
-        .current_dir(root)
-        .output()
-        .expect("run Family 19");
-    (
-        out.status.success(),
-        String::from_utf8_lossy(&out.stdout).into_owned(),
-        String::from_utf8_lossy(&out.stderr).into_owned(),
-    )
-}
-
-/// Family 19 reports a stale review and one it cannot judge as findings,
-/// passes a current one, grandfathers a spec with no `review.md`, and says
-/// how many of each it saw.
-///
-/// Unix-only: it runs the script under `bash` and reaches the runtime through
-/// a symlink, as the framework-checks job on Ubuntu does.
-#[cfg(unix)]
-#[test]
-fn family_19_reports_each_answer_the_runtime_gives() {
-    let (passed, stdout, stderr) = run_family_19_over_each_answer();
-    assert!(
-        !passed,
-        "a stale review must fail the family:\n{stdout}{stderr}"
-    );
-    assert!(
-        stdout.contains("specs/902-stale | done spec's review is stale")
-            && stdout.contains("specs/902-stale/scenarios/edge.md"),
-        "the stale review is not reported:\n{stdout}"
-    );
-    assert!(
-        stdout.contains("specs/903-no-digest | done spec's review freshness cannot be determined"),
-        "the record with no digest is not reported:\n{stdout}"
-    );
-    assert!(
-        !stdout.contains("901-current") && !stdout.contains("904-unreviewed"),
-        "a current or grandfathered spec is reported:\n{stdout}"
-    );
-    assert!(
-        stderr.contains(
-            "examined 2 spec(s) at status: done by reviewed-digest; 1 grandfathered \
-             (no review.md); 1 undeterminable; 0 never run; 0 not answered"
-        ),
-        "the coverage line does not account for every spec:\n{stderr}"
-    );
-}
-
-/// The tests that build their own repository, each running git in it,
-/// directly or through `review-freshness.sh`. The Family 19 test is compiled on
-/// Unix alone, so it is re-run there alone: asking for it elsewhere runs
-/// nothing.
+/// The tests that build their own repository, each running git in it.
 fn fixture_tests() -> Vec<&'static str> {
-    let mut tests = vec![
+    vec![
         "the_sweep_exemption_holds_on_a_built_sweep",
         "the_sweep_exemption_holds_on_a_renumbered_directory",
         "a_pure_rename_is_a_change",
         "an_over_limit_window_grants_no_exemption",
-    ];
-    if cfg!(unix) {
-        tests.push("family_19_reports_each_answer_the_runtime_gives");
-    }
-    tests
+    ]
 }
 
 /// A commit from a linked worktree hands its pre-commit hook an absolute

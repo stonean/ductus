@@ -91,9 +91,9 @@ A recommendation is a claim: the agent MUST work it out to its result **before**
 - **Before reporting that a declarative entry misbehaved, read the entry** — its own gating fields may say it was never supposed to fire.
 - **Substitute a recorded timestamp or commit into the command that writes it — never transcribe either.**
 - **An enumeration is a claim of its own, and it goes stale while the requirement around it stays true.** Verify the list too, and prefer a set stated without a count.
-- **Pick the checks a change must pass from its blast radius, not from its file extension.** When unsure, run everything; run history-reading checks after committing.
+- **Pick the checks a change must pass from its blast radius, not from its file extension.** `/{project}:review` reads code, `/{project}:analyze` the artifacts (spec root, `.ductus/`, `AGENTS.md`, `CLAUDE.md`): a change confined to artifacts owes their checks, and no review, build, test, code lint or code CI. When unsure, run everything; run history-reading checks after committing.
 - **After publishing a change, read every check that ran against it — not the one whose name matches what you changed.** No verdict yet is unknown, never a pass.
-- **Verify what a commit contains before reporting it landed, and pair that with a check for what it left out** — its file list and the tree's remaining changes. A review or analysis record is judged by a digest of what it read, so it may precede its commit.
+- **Verify what a commit contains before reporting it landed, and pair that with a check for what it left out** — its file list and the tree's remaining changes. An analysis record is judged by a digest of what it read, so it may precede its commit.
 - **Never pipe a command whose exit status you intend to read.** A pipeline reports its last element's status.
 
 <!-- §pipeline -->
@@ -404,17 +404,17 @@ A capability is runtime-eligible only when **all three** hold:
 
 #### Acquisition invariant
 
-The repository's CI MUST exercise acquisition end-to-end on every supported platform — fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary — and a release whose assets an adopter cannot actually acquire is a constitution violation, not a feature.
+The repository's CI MUST exercise acquisition end-to-end on every supported platform — fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary — and a release whose assets an adopter cannot acquire violates the constitution.
 
 #### Versioning
 
-The runtime ships in lockstep with the framework: a release includes the binary built against its schemas, and an adopter's `ductus` version pins their compatible runtime version, eliminating schema/runtime drift as a failure mode.
+The runtime ships in lockstep with the framework: a release includes the binary built against its schemas, and an adopter's `ductus` version pins its compatible runtime version, so schema and runtime cannot drift.
 
 #### What the runtime is not
 
-To prevent scope creep, the runtime MUST NOT be a spec authoring tool, MUST NOT be a workflow orchestrator, MUST NOT be a long-running service, and MUST NOT be a storage layer. Lifting any of these exclusions requires a constitutional amendment.
+To prevent scope creep, the runtime MUST NOT be a spec authoring tool, a workflow orchestrator, a long-running service, or a storage layer. Lifting any of these exclusions requires a constitutional amendment.
 
-Specific capabilities are introduced through their own feature specs, beginning with spec 022 (deterministic runtime).
+Each capability arrives in its own feature spec, from spec 022 on.
 
 <!-- §drift-prevention -->
 

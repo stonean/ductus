@@ -4,9 +4,10 @@
 //! A commit belongs to each spec whose directory it touches and each spec its
 //! subject's scope names. Both tests are needed: 35 commits since 2026-10-01
 //! name a spec without touching a spec directory, and 30 touch one without
-//! naming any. A project whose subjects name no spec loses only
-//! [`CommitClaims::first_named`], and AC6 then gives an unplanned path outside
-//! the other claimants' directories to every claimant.
+//! naming any. A project whose subjects name no spec has no
+//! [`CommitClaims::named`], and AC6 then gives an unplanned path outside the
+//! other claimants' directories to every claimant. A named commit's code is the
+//! named specs' to review (spec 081).
 //!
 //! A merge commit claims nothing, since its branch's commits are in the walk,
 //! and its [`CommitClaims::paths`] are only what it changed itself: the paths
@@ -37,9 +38,9 @@ pub(crate) struct CommitClaims {
     /// Each spec the commit belongs to, subject-named first and in subject
     /// order. Empty for a merge and for a commit no spec claims.
     pub(crate) claimants: Vec<FeatureForm>,
-    /// The first spec the subject's scope names, which takes a path in none of
-    /// the claimants' plans. `None` when the subject names no spec.
-    pub(crate) first_named: Option<FeatureForm>,
+    /// Each spec the subject's scope names, in subject order, which review the
+    /// commit's code (spec 081). Empty when the subject names no spec.
+    pub(crate) named: Vec<FeatureForm>,
     /// The paths the commit changed, from the project root and sorted: against
     /// its parent, against nothing for a root commit, and for a merge only
     /// those differing from every parent. A path outside the project is left
@@ -125,16 +126,15 @@ impl<'a> Attributor<'a> {
             .into_iter()
             .filter(|form| self.directory_of(form).is_some() || touched.contains(form))
             .collect();
-        let first_named = named.first().cloned();
         let mut claimants: Vec<FeatureForm> = Vec::new();
-        for form in named.into_iter().chain(touched) {
+        for form in named.iter().cloned().chain(touched) {
             if !claimants.contains(&form) {
                 claimants.push(form);
             }
         }
         Ok(CommitClaims {
             claimants,
-            first_named,
+            named,
             paths,
         })
     }
@@ -276,7 +276,7 @@ mod tests {
             "chore: tidy",
         );
         assert_eq!(claims.claimants, vec![seq(12)]);
-        assert_eq!(claims.first_named, None);
+        assert_eq!(claims.named.first(), None);
         assert_eq!(claims.paths, vec!["specs/012-a/plan.md".to_string()]);
     }
 
@@ -286,7 +286,7 @@ mod tests {
         let repository = project_with_two_specs(tmp.path());
         let claims = claims_for(tmp.path(), &repository, "src/lib.rs", "fix(012): a bug");
         assert_eq!(claims.claimants, vec![seq(12)]);
-        assert_eq!(claims.first_named, Some(seq(12)));
+        assert_eq!(claims.named.first(), Some(&seq(12)));
         assert_eq!(claims.paths, vec!["src/lib.rs".to_string()]);
     }
 
@@ -301,7 +301,9 @@ mod tests {
             "fix(012): a bug",
         );
         assert_eq!(claims.claimants, vec![seq(12), seq(34)]);
-        assert_eq!(claims.first_named, Some(seq(12)));
+        assert_eq!(claims.named.first(), Some(&seq(12)));
+        // Only the subject names a spec; touching a directory claims without naming.
+        assert_eq!(claims.named, vec![seq(12)]);
         assert!(claims.is_claimed_by(&seq(34)));
         assert!(!claims.is_claimed_by(&seq(56)));
     }
@@ -325,7 +327,8 @@ mod tests {
         let repository = project_with_two_specs(tmp.path());
         let claims = claims_for(tmp.path(), &repository, "src/lib.rs", "fix(034, 012): both");
         assert_eq!(claims.claimants, vec![seq(34), seq(12)]);
-        assert_eq!(claims.first_named, Some(seq(34)));
+        assert_eq!(claims.named.first(), Some(&seq(34)));
+        assert_eq!(claims.named, vec![seq(34), seq(12)]);
     }
 
     #[test]
@@ -334,7 +337,7 @@ mod tests {
         let repository = project_with_two_specs(tmp.path());
         let claims = claims_for(tmp.path(), &repository, "src/lib.rs", "fix(999): a bug");
         assert_eq!(claims.claimants, Vec::<FeatureForm>::new());
-        assert_eq!(claims.first_named, None);
+        assert_eq!(claims.named.first(), None);
         assert_eq!(claims.paths, vec!["src/lib.rs".to_string()]);
     }
 
@@ -381,7 +384,7 @@ mod tests {
 
         let claims = attribute(tmp.path(), oid);
         assert_eq!(claims.claimants, vec![seq(56)]);
-        assert_eq!(claims.first_named, Some(seq(56)));
+        assert_eq!(claims.named.first(), Some(&seq(56)));
     }
 
     #[test]
@@ -523,11 +526,11 @@ mod tests {
             "chore: tidy",
         );
         assert_eq!(by_directory.claimants, vec![form.clone()]);
-        assert_eq!(by_directory.first_named, None);
+        assert_eq!(by_directory.named.first(), None);
 
         let by_scope = claims_for(tmp.path(), &repository, "src/lib.rs", "feat(1234.1): work");
         assert_eq!(by_scope.claimants, vec![form.clone()]);
-        assert_eq!(by_scope.first_named, Some(form));
+        assert_eq!(by_scope.named.first(), Some(&form));
     }
 
     #[test]

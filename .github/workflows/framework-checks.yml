@@ -37,12 +37,11 @@ jobs:
     # gives the sizing.
     timeout-minutes: 15
     steps:
-      # fetch-depth: 0 — the self-audit's Family 19 (review-freshness) exempts a
-      # uniform rename sweep by reading each spec's `reviewed-against` commit,
-      # from its review.md, against HEAD. A shallow clone has none of those
-      # commits, so the exemption cannot run and a contract a sweep rewrote reads
-      # stale (a shallow clone once failed every spec here, on gvrn-v0.27.1,
-      # and blocked its own publish).
+      # fetch-depth: 0 — full history. The self-audit's Family 19 read each
+      # spec's `reviewed-against` commit, which a shallow clone lacks (it once
+      # failed every spec here, on gvrn-v0.27.1, and blocked its own publish).
+      # Spec 081 retired that family; whether a remaining step reads history is
+      # not yet measured, so the checkout stays full until it is.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -84,17 +83,36 @@ jobs:
         with:
           toolchain: 1.99.1
           components: clippy, rustfmt
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Keyed on what the binary is compiled from, so an unchanged runtime
+      # restores a build of exactly these sources (spec 081). runtime/src holds
+      # no include_str! or include_bytes!, and the crate has no build.rs.
+      - id: runtime-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             runtime/target
-          key: ${{ runner.os }}-runtime-parseability-${{ hashFiles('runtime/Cargo.lock') }}
+          key: ${{ runner.os }}-runtime-parseability-${{ hashFiles('runtime/Cargo.lock', 'runtime/Cargo.toml', 'runtime/rust-toolchain.toml', 'runtime/src/**') }}
           restore-keys: |
             ${{ runner.os }}-runtime-parseability-
+      # The checkout gives every source a newer mtime than the restored build,
+      # which cargo reads as a change. On an exact hit that build is of these
+      # very sources, so dating them back lets every `cargo build` in this job
+      # find it fresh, and a spec-only push compiles nothing. Never on a
+      # fallback restore: that build is of other sources, and dating those back
+      # would hand the steps a stale binary.
+      - name: Reuse the cached build of these runtime sources
+        if: steps.runtime-cache.outputs.cache-hit == 'true'
+        run: git ls-files -z runtime | xargs -0 touch -t 200001010000
       - name: Build the runtime
-        run: cd runtime && cargo build --release --locked --quiet
+        env:
+          CACHE_HIT: ${{ steps.runtime-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" != "true" ]; then
+            echo "No build of these runtime sources is cached, so this run compiles one."
+          fi
+          cd runtime && cargo build --release --locked --quiet
 
       - name: (b) Generators and derived indexes are in sync
         run: |

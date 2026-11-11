@@ -407,8 +407,8 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
             (FixKind::Split, SPLIT),
             (
                 FixKind::Trim,
-                "trim data-model.md, never into sub-files: review staleness tracks \
-                 data-model.md by its exact name",
+                "trim data-model.md, never into sub-files: the review's contract digest \
+                 tracks data-model.md by its exact name",
             ),
         ],
         ArtifactKind::Scenario => vec![(

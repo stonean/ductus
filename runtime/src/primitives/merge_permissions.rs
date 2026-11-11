@@ -259,6 +259,7 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "mcp__ductus__check-review-agreement",
     "mcp__ductus__read-supersession-pair",
     "mcp__ductus__write-supersession-annotation",
+    "mcp__ductus__check-review-freshness",
 ];
 
 /// [`canonical_allow`] in the order the canonical call appends missing

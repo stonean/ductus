@@ -33,13 +33,6 @@ MUTATIONS = [
         'commit_attribution::tests::a_subject_scope_claims_with_no_directory_touch',
     ),
     (
-        'M3 the last-named spec takes the unplanned path',
-        'src/primitives/commit_attribution.rs',
-        'let first_named = named.first().cloned();',
-        'let first_named = named.last().cloned();',
-        'commit_attribution::tests::a_subject_naming_several_specs_keeps_the_first_named',
-    ),
-    (
         'M4 a merge is attributed like any commit',
         'src/primitives/commit_attribution.rs',
         'if commit.parent_count() > 1 {',
@@ -84,8 +77,8 @@ MUTATIONS = [
     (
         'M10 a touched directory precedes the named spec',
         'src/primitives/commit_attribution.rs',
-        'for form in named.into_iter().chain(touched) {',
-        'for form in touched.into_iter().chain(named) {',
+        'for form in named.iter().cloned().chain(touched) {',
+        'for form in touched.into_iter().chain(named.iter().cloned()) {',
         'commit_attribution::tests::a_scope_and_a_directory_touch_each_claim_and_the_named_spec_stays_first',
     ),
     (
@@ -216,39 +209,32 @@ MUTATIONS = [
         'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant',
     ),
     (
-        'M30 the unplanned path goes to every claimant whatever the subject names first',
-        'src/primitives/compute_review_scope.rs',
-        '.is_none_or(|first| *first == form)',
-        '.is_none_or(|_| true)',
-        'compute_review_scope::tests::an_unplanned_path_of_a_multi_spec_commit_goes_to_the_spec_named_first',
-    ),
-    (
         'M31 a subject naming none leaves the unplanned path to no one',
         'src/primitives/compute_review_scope.rs',
-        '.is_none_or(|first| *first == form)',
-        '.is_some_and(|first| *first == form)',
+        'own_plan.names(&path) || (unplanned && !anothers)',
+        'own_plan.names(&path)',
         'compute_review_scope::tests::an_unplanned_path_of_a_multi_spec_commit_naming_none_goes_to_every_claimant',
     ),
     (
         'M32 a multi-spec commit gives a spec no claim on its own directory',
         'src/primitives/compute_review_scope.rs',
-        'if path.starts_with(&own_prefix)\n                || own_plan.names(&path)',
-        'if own_plan.names(&path)',
-        'compute_review_scope::tests::a_multi_spec_commit_gives_each_spec_its_own_directory',
+        'if path.starts_with(&own_prefix) || by_subject {',
+        'if by_subject {',
+        'compute_review_scope::tests::a_multi_spec_commit_gives_each_spec_its_own_directory compute_review_scope::tests::a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory',
     ),
     (
         'M33 a multi-spec commit gives a spec no claim on its own plan',
         'src/primitives/compute_review_scope.rs',
-        '                || own_plan.names(&path)\n',
-        '',
-        'compute_review_scope::tests::a_planned_path_of_a_multi_spec_commit_goes_to_the_plan_naming_it',
+        'own_plan.names(&path) || (unplanned && !anothers)',
+        '(unplanned && !anothers)',
+        'compute_review_scope::tests::a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it',
     ),
     (
         "M34 another claimant's plan does not take its path",
         'src/primitives/compute_review_scope.rs',
         '            let unplanned = !claims\n',
         '            let unplanned = true || !claims\n',
-        'compute_review_scope::tests::a_planned_path_of_a_multi_spec_commit_goes_to_the_plan_naming_it',
+        'compute_review_scope::tests::a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it',
     ),
     (
         'M35 uncommitted work can leave the scope',
@@ -295,29 +281,22 @@ MUTATIONS = [
     (
         'M41 a review is owed on any change',
         'src/primitives/compute_review_scope.rs',
-        '            Some(own) => is_review_contract(own) && !contracts_current,\n',
-        '            Some(_) => true,\n',
+        '.filter(|path| !is_project_artifact(path, specs_root))',
+        '.filter(|_| true)',
         'compute_review_scope::tests::a_reopening_that_changed_only_text_owes_no_review',
-    ),
-    (
-        'M42 a scenario or data-model edit owes no review',
-        'src/primitives/compute_review_scope.rs',
-        '            Some(own) => is_review_contract(own) && !contracts_current,\n',
-        '            Some(_) => false,\n',
-        'compute_review_scope::tests::a_reopening_that_changed_code_a_scenario_or_the_data_model_owes_a_review',
     ),
     (
         'M43 a code change owes no review',
         'src/primitives/compute_review_scope.rs',
-        '            None => !in_another_spec(path.as_str()),\n',
-        '            None => false,\n',
-        'compute_review_scope::tests::a_reopening_that_changed_code_a_scenario_or_the_data_model_owes_a_review',
+        '.filter(|path| !is_project_artifact(path, specs_root))',
+        '.filter(|_| false)',
+        'compute_review_scope::tests::a_reopening_that_changed_code_owes_a_review_and_a_contract_edit_does_not',
     ),
     (
         'M44 a spec with no record owes no review',
         'src/primitives/compute_review_scope.rs',
-        'let review_owed = run.is_none_or(record_is_held)',
-        'let review_owed = run.is_some_and(record_is_held)',
+        'let review_owed = run.is_none_or(holds_done_until_reviewed)',
+        'let review_owed = run.is_some_and(holds_done_until_reviewed)',
         'compute_review_scope::tests::a_review_is_owed_with_no_record_whatever_the_window_holds',
     ),
     (
@@ -736,8 +715,8 @@ MUTATIONS = [
     (
         'M104 a record the gate holds owes no review',
         'src/primitives/compute_review_scope.rs',
-        '        holds_done_until_reviewed(record)\n            || matches!(',
-        '        false\n            || matches!(',
+        'run.is_none_or(holds_done_until_reviewed)',
+        'run.is_none_or(|_| false)',
         'compute_review_scope::tests::a_record_the_gate_holds_owes_a_review_whatever_the_window_holds',
     ),
     (
@@ -808,7 +787,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         '        .chain(its_own_deletions)\n',
         '        .chain(its_own_deletions.filter(|_| false))\n',
-        'compute_review_scope::tests::a_reopening_deleting_code_or_a_contract_owes_a_review',
+        'compute_review_scope::tests::a_reopening_deleting_code_owes_a_review_and_deleting_a_contract_does_not',
     ),
     (
         'M115 another spec\'s deletion makes a review owed',
@@ -816,13 +795,6 @@ MUTATIONS = [
         '            || !window.others.contains_key(*path)\n    });',
         '            || true\n    });',
         'compute_review_scope::tests::another_specs_deletion_owes_this_spec_no_review',
-    ),
-    (
-        'M116 a stale digest makes no review owed',
-        'src/primitives/compute_review_scope.rs',
-        '                RecordFreshness::Stale { .. }\n',
-        '                RecordFreshness::NeverRun\n',
-        'compute_review_scope::tests::a_stale_digest_owes_a_review_though_its_contract_is_gone',
     ),
     (
         'M117 a round compares text, so a binary edit reads as none',
@@ -872,20 +844,6 @@ MUTATIONS = [
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)',
         'let holds_it = recorded_run(repository, &tree, &git_path)?\n                .is_some_and(|prior| prior.last_run == run.last_run && !prior.stopped_early)',
         'compute_review_scope::tests::a_merge_clearing_a_held_record_from_before_the_reopening_finishes_nothing',
-    ),
-    (
-        'M124 another spec\'s directory makes a review owed',
-        'src/primitives/compute_review_scope.rs',
-        '            None => !in_another_spec(path.as_str()),\n',
-        '            None => true,\n',
-        'compute_review_scope::tests::a_path_in_another_specs_directory_owes_no_review',
-    ),
-    (
-        'M125 anything under the spec root counts as another spec',
-        'src/primitives/compute_review_scope.rs',
-        '            .is_some_and(|(dir, _)| parse_feature_dir(dir).is_some())\n',
-        '            .is_some()\n',
-        'compute_review_scope::tests::a_path_under_the_spec_root_that_is_in_no_spec_still_owes_a_review',
     ),
     (
         'M126 the gate does not read review-owed',
@@ -1555,8 +1513,8 @@ MUTATIONS = [
     (
         "M221 the digest is read from the run's own uncommitted record",
         'src/primitives/compute_review_scope.rs',
-        '    let (changed_contracts, contracts_current) =\n        contracts_against_digest(at_head.as_ref(), repo, &rel_dir);',
-        '    let working = load_review_record(&feature_dir);\n    let (changed_contracts, contracts_current) =\n        contracts_against_digest(working.as_present(), repo, &rel_dir);',
+        '    let changed_contracts = contracts_against_digest(at_head.as_ref(), repo, &rel_dir);',
+        '    let working = load_review_record(&feature_dir);\n    let changed_contracts = contracts_against_digest(working.as_present(), repo, &rel_dir);',
         'compute_review_scope::tests::a_contract_changed_before_the_window_joins_the_scope',
     ),
     (
@@ -1728,20 +1686,6 @@ MUTATIONS = [
         'compute_review_scope::tests::a_path_left_open_survives_an_uncommitted_rename',
     ),
     (
-        'M248 a rename alone owes a review',
-        'src/primitives/compute_review_scope.rs',
-        'Some(RecordFreshness::Current { .. }) => (Vec::new(), true),',
-        'Some(RecordFreshness::Current { .. }) => (Vec::new(), false),',
-        'compute_review_scope::tests::a_rename_alone_owes_no_review',
-    ),
-    (
-        'M249 a contract with no digest owes no review',
-        'src/primitives/compute_review_scope.rs',
-        '        _ => (Vec::new(), false),\n',
-        '        _ => (Vec::new(), true),\n',
-        'compute_review_scope::tests::a_reopening_that_changed_code_a_scenario_or_the_data_model_owes_a_review',
-    ),
-    (
         'M250 an empty run says nothing of a break it holds',
         'src/primitives/write_review.rs',
         'let held = if contract_breaks(&args.observations) > 0 {',
@@ -1857,8 +1801,8 @@ MUTATIONS = [
     (
         "M267 a subject naming no spec gives a claimant another claimant's directory",
         'src/primitives/compute_review_scope.rs',
-        '|| (unplanned && takes_unplanned && !anothers)',
-        '|| (unplanned && takes_unplanned)',
+        'own_plan.names(&path) || (unplanned && !anothers)',
+        'own_plan.names(&path) || unplanned',
         'compute_review_scope::tests::a_subject_naming_none_leaves_each_claimants_directory_to_it',
     ),
     # -- 079's review at 1879d9f7: the deferred section, write-analysis's exception, the flag

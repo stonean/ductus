@@ -68,6 +68,16 @@ its version and date.
 
 ### Changed
 
+- **A review is owed for code, and an analysis for the project's artifacts.**
+  `compute-review-scope` owes a review only for a path outside the spec root,
+  `.ductus/`, `AGENTS.md` and `CLAUDE.md`, so an edit to a spec's scenarios
+  or data model, a rule file or the inbox owes an analysis and no review, and
+  `check-review-gate` no longer blocks with `review is stale`. A changed
+  contract still joins the scope of a review that runs. A commit whose
+  subject names a spec has its code reviewed by the specs it names; a spec
+  that claims it only by touching that spec's directory reviews that
+  directory's files. A commit naming no spec is attributed as before (spec
+  081).
 - **A review or an analysis runs once implementation is complete.** `write-review` and
   `write-analysis` refuse while the spec's `tasks.md` holds an unchecked box under any
   heading, and `/review` and `/analyze` stop at their first step naming the boxes, since
@@ -511,6 +521,11 @@ its version and date.
 
 ### Removed
 
+- **`check-review-freshness` is retired, with the self-audit's Family 19.**
+  Both asked only whether a `done` spec's scenarios and data model still
+  matched its review's digest, which no longer owes a review. The runtime no
+  longer serves the tool, and `/ductus:configure` revokes its
+  `mcp__ductus__check-review-freshness` allow entry (spec 081).
 - **Auggie, Antigravity and OpenCode are no longer supported agents.**
   `install.sh` and `/ductus` accept `claude` and `pi` only:
   `install.sh auggie`, `antigravity`, `agy` or `opencode`, and `/ductus

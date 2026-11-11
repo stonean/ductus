@@ -2,10 +2,10 @@
 //!
 //! §spec-lifecycle case (a) calls a uniform token substitution across live
 //! artifacts a **mechanical** edit: it is why a rename sweep does not reopen a
-//! `done` spec. A review reads contracts, and a contract that changed only in
-//! spelling states what it stated before — so the same rule has to hold for
-//! review staleness. Without it the two rules disagree, and one repo-wide
-//! rename turns every done spec's review stale at once.
+//! `done` spec. A contract that changed only in spelling states what it
+//! stated before, so the same rule has to hold wherever a record's digest is
+//! compared with the tree. Without it the rules disagree, and one repo-wide
+//! rename turns every done spec's record stale at once.
 //!
 //! That is not hypothetical. `/{project}:audit` Family 19 carried this
 //! exemption from the start; `check-review-gate`'s staleness block did
@@ -36,11 +36,12 @@
 //! flag would make correctness depend on an author remembering to set it,
 //! which `framework/constitution.md` §design-principles rules out.
 //!
-//! The rule has two enforcement moments and one implementation:
-//! `check-review-gate` at the transition, and `/{project}:audit` Family 19 at
-//! release, which asks `check-review-freshness` for each `done` spec (066
-//! plan, *Family 19 calls the runtime*). Until 2026-11-04 Family 19 carried a
-//! Python copy of this rule, which `mechanical_sweep_parity` held to it.
+//! The rule has one implementation, read by `classify-spec-edit`, by the
+//! analysis record's freshness at `check-review-gate`, and by the review
+//! record's digest, whose changed contracts join the scope of a review that
+//! runs. Until spec 081 it also decided the review's own staleness, at the
+//! gate and at release through Family 19 and `check-review-freshness`; until
+//! 2026-11-04 Family 19 carried a Python copy of this rule.
 //!
 //! Renames are detected with [`RENAME_THRESHOLD`] and [`RENAME_LIMIT`] stated
 //! here rather than inherited from libgit2's defaults.

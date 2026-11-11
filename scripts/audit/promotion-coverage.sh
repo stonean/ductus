@@ -21,7 +21,7 @@
 # A NOTICE, NEVER A GATE, and the split is deliberate:
 #
 #   * the coverage line goes to stderr and never touches the exit code, which
-#     is Family 19's existing shape. Promotion has to stay free for the reason
+#     is the shape Families 30 and 35 use. Promotion has to stay free for the reason
 #     §brownfield-inbox gives for capture — gating the release audit on how
 #     much is unrouted would make the honest choice between a growing backlog
 #     and a silent one push toward silence.

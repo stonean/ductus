@@ -20,14 +20,6 @@ on:
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
       - '.github/workflows/runtime-release.yml'
-      # tests/mechanical_sweep_parity.rs runs Family 19 through the built
-      # runtime and checks the finding it reports for each answer, so an edit
-      # to the family is an edit to this suite's subject. Without this path a
-      # change there breaks the test and nothing notices until an unrelated
-      # runtime commit happens to trigger the workflow.
-      - 'scripts/audit/review-freshness.sh'
-      # ...and copies the library it sources, so an edit to that is one too.
-      - 'scripts/audit/lib.sh'
       # src/primitives/resolve_anchor.rs's corpus test takes the constitution as
       # its markers file, so removing or renaming a cited marker is an edit to
       # its subject.
@@ -81,8 +73,6 @@ on:
       - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
       - '.github/workflows/runtime-release.yml'
-      - 'scripts/audit/review-freshness.sh'
-      - 'scripts/audit/lib.sh'
       - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'
       - 'framework/templates/spec/*.md'
@@ -120,8 +110,8 @@ jobs:
     steps:
       # The default single-commit checkout: no test here reads this
       # repository's history, and the whole suite passes in a depth-1 clone.
-      # Family 19's jobs read it, so framework-checks.yml and
-      # runtime-release.yml keep their full-depth checkouts.
+      # framework-checks.yml and runtime-release.yml keep their full-depth
+      # checkouts, as their own comments say.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.

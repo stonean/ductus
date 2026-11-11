@@ -27,7 +27,6 @@ pub mod check_corpus_links;
 pub mod check_orphaned_references;
 pub mod check_prescriptions;
 pub mod check_promotion_coverage;
-pub mod check_review_freshness;
 pub mod check_review_gate;
 pub mod check_rule_ids;
 pub mod check_step_references;
@@ -3439,6 +3438,69 @@ pub(crate) fn spec_feature_slug(path: &str, specs_root: &str) -> Option<String> 
         .split('/')
         .next()
         .map(str::to_string)
+}
+
+/// Whether a path named from the project root is one of the project's artifacts
+/// (spec 081): anything under the spec root `specs_root` names or under `.ductus/`,
+/// or `AGENTS.md` or `CLAUDE.md` at the project root. Every other path is code, which
+/// `/{project}:review` reads; an artifact is `/{project}:analyze`'s, and a change
+/// confined to artifacts owes no review. `specs_root` is one directory name, as
+/// `validate_specs_root` holds it.
+pub(crate) fn is_project_artifact(path: &str, specs_root: &str) -> bool {
+    let under = |root: &str| {
+        path.strip_prefix(root)
+            .is_some_and(|rest| rest.starts_with('/'))
+    };
+    under(specs_root) || under(".ductus") || matches!(path, "AGENTS.md" | "CLAUDE.md")
+}
+
+#[cfg(test)]
+mod project_artifact_tests {
+    use super::is_project_artifact;
+
+    #[test]
+    fn the_spec_root_ductus_and_the_agent_files_are_artifacts() {
+        for path in [
+            "specs/081-x/spec.md",
+            "specs/081-x/scenarios/a.md",
+            "specs/081-x/data-model.md",
+            "specs/rules/security-backend.md",
+            "specs/inbox.md",
+            ".ductus/config.toml",
+            ".ductus/reference/review.md",
+            "AGENTS.md",
+            "CLAUDE.md",
+        ] {
+            assert!(is_project_artifact(path, "specs"), "{path}");
+        }
+    }
+
+    #[test]
+    fn every_other_path_is_code() {
+        for path in [
+            "src/main.rs",
+            "framework/constitution.md",
+            "docs/analyze.md",
+            "README.md",
+            "specsheet.md",
+            "specs-old/a.md",
+            ".ductusrc",
+            "sub/AGENTS.md",
+            "AGENTS.md.bak",
+            ".github/workflows/ci.yml",
+        ] {
+            assert!(!is_project_artifact(path, "specs"), "{path}");
+        }
+    }
+
+    #[test]
+    fn a_configured_spec_root_replaces_specs() {
+        assert!(is_project_artifact(
+            "requirements/001-x/spec.md",
+            "requirements"
+        ));
+        assert!(!is_project_artifact("specs/001-x/spec.md", "requirements"));
+    }
 }
 
 /// Every path the git index tracks inside the project, named from the project

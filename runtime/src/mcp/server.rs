@@ -46,13 +46,12 @@ use crate::schema::primitives::{
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPrescriptionsArgs,
     CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
-    CheckReviewFreshnessArgs, CheckReviewFreshnessResult, CheckReviewGateArgs,
-    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
-    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
-    CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs, ClassifySpecEditResult,
-    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
-    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
+    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs,
+    ClassifySpecEditResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
+    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
+    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
     DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
@@ -994,23 +993,6 @@ impl GovRuntimeServer {
         primitives::append_question::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
-    }
-
-    #[tool(
-        name = "check-review-freshness",
-        description = descriptions::CHECK_REVIEW_FRESHNESS
-    )]
-    async fn check_review_freshness(
-        &self,
-        params: Parameters<CheckReviewFreshnessArgs>,
-    ) -> Result<Json<CheckReviewFreshnessResult>, String> {
-        // Hashes the contracts and may build a sweep index from two trees —
-        // blocking pool, like check-review-gate.
-        let repo = Arc::clone(&self.repo);
-        dispatch_blocking(move || {
-            primitives::check_review_freshness::run(&params.0, repo.as_path())
-        })
-        .await
     }
 
     #[tool(

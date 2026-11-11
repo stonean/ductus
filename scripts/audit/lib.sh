@@ -7,10 +7,9 @@
 # finding line specified in ./README.md §Contract. The finding shape is
 # defined here once for every family that renders through `emit`, so a
 # change to the contract is an edit here rather than a sweep across them.
-# Two families are the exception: marker-list-parity.sh and
-# review-freshness.sh build the pipe-separated line in their embedded
-# python (each in its own `emit` there), so a format change is this file
-# plus those two.
+# One family is the exception: marker-list-parity.sh builds the
+# pipe-separated line in its embedded python (in its own `emit` there), so
+# a format change is this file plus that one.
 #
 # Usage — the first three lines of a family script:
 #

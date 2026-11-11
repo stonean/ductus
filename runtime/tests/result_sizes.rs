@@ -136,7 +136,6 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "resolve-session" => call(json!({})),
         "check-artifact-size"
         | "check-artifacts"
-        | "check-review-freshness"
         | "check-review-gate"
         | "classify-spec-edit"
         | "compute-review-scope"

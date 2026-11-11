@@ -5321,38 +5321,6 @@ pub struct CreatePlanArtifactsResult {
     pub artifacts: Vec<PlanArtifact>,
 }
 
-// -- check-review-freshness (spec 066) ---------------------------------------
-
-/// Args for `check-review-freshness`: whether one feature's review record
-/// still describes its durable contracts.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
-#[serde(rename_all = "kebab-case")]
-pub struct CheckReviewFreshnessArgs {
-    /// Feature directory name under the configured spec root.
-    #[arg(long)]
-    pub feature: String,
-}
-
-/// Result for `check-review-freshness`: the comparison `check-review-gate`
-/// makes before `done`, asked of a spec at any status, so `/{project}:audit`
-/// Family 19 asks it of every `done` spec at release (066 plan, *Family 19
-/// calls the runtime*). Read-only; `paths` in a stale answer holds at most the
-/// spec's durable contracts, `scenarios/*.md` and `data-model.md`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct CheckReviewFreshnessResult {
-    /// The feature examined.
-    pub feature: String,
-    /// Whether `review.md` exists. Absent is the never-reviewed state, so a
-    /// caller can set apart a spec that predates `/{project}:review` from one
-    /// whose record carries a null `last-run`, which both answer `never-run`.
-    pub record_present: bool,
-    /// The answer: `current`, `stale` with the changed contracts,
-    /// `undeterminable` for a record with no `reviewed-digest` or a
-    /// `review.md` whose frontmatter does not parse, or `never-run`.
-    pub freshness: RecordFreshness,
-}
-
 // -- classify-spec-edit (spec 079) -------------------------------------------
 
 /// Args for `classify-spec-edit`: whether the edit under one feature's directory
@@ -5662,17 +5630,6 @@ pub enum ReviewGateBlock {
     /// The last review left blocking MUST violations
     /// (`review.blocking: true`).
     MustViolations,
-    /// The review is **stale**: one of the spec's durable contracts changed
-    /// since the record's `reviewed-digest` was taken, so the recorded verdict
-    /// describes a diff that no longer exists.
-    ///
-    /// Ordered last because it is the weakest claim — the other four say a
-    /// review is missing or failing, this one says a passing review is out
-    /// of date. Without it a review that predates the code it nominally
-    /// covers satisfies every other check, which is how `gvrn-v0.26.2`
-    /// shipped three commits of unreviewed runtime change (spec 022 review,
-    /// 2026-08-03).
-    ReviewStale,
     /// The spec has no completed analysis: `analysis.md` is absent, or its
     /// `last-run` is missing or null — the absent file being the never-run
     /// state since spec 057, as it is for [`Self::NotReviewed`].
@@ -5708,10 +5665,9 @@ pub enum ReviewGateBlock {
     /// `HEAD` over content the analysis already read does not stale it.
     ///
     /// Ordered last, after [`Self::NotAnalyzed`] and [`Self::AnalyzeFindings`],
-    /// for the reason [`Self::ReviewStale`] is ordered after
-    /// [`Self::MustViolations`]: it is the weakest of the three claims — the
-    /// others say the analysis is missing or failing, this one says a passing
-    /// analysis is out of date.
+    /// because it is the weakest of the three claims — the others say the
+    /// analysis is missing or failing, this one says a passing analysis is out of
+    /// date.
     ///
     /// It closes the hole that `review → fix → done` left open. The presence
     /// check asks only whether `last-run` is *set*, so an operator who ran

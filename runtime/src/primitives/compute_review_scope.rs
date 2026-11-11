@@ -28,7 +28,7 @@ use std::path::{Component, Path};
 use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
 
-use crate::primitives::analyze_subjects::{is_review_contract, review_freshness};
+use crate::primitives::analyze_subjects::review_freshness;
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::{
     feature_file_in_tree, find_in_progress_commit, reopening_is_open,
@@ -36,8 +36,8 @@ use crate::primitives::check_stuck::{
 use crate::primitives::commit_attribution::Attributor;
 use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
-    frontmatter_status, load_review_record, parse_affected_files, parse_feature_dir,
-    split_frontmatter,
+    frontmatter_status, is_project_artifact, load_review_record, parse_affected_files,
+    parse_feature_dir, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -224,31 +224,25 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // gone, or that leaves the project, has nothing to read.
     let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
     let at_head = record_at(repository, &head_tree, &project.to_git(&record_rel))?;
-    let (changed_contracts, contracts_current) =
-        contracts_against_digest(at_head.as_ref(), repo, &rel_dir);
+    let changed_contracts = contracts_against_digest(at_head.as_ref(), repo, &rel_dir);
     let left_open = at_head.map_or_else(Vec::new, |record| record.open_findings);
     let held = left_open.iter().chain(&changed_contracts);
     hold_in_scope(held, repo, &mut scope, &mut excluded);
 
     let owed_by = paths_owing_a_review(
-        (&layout.specs_root, &args.feature),
+        &layout.specs_root,
         (&scope, &deleted),
         &window,
         &uncommitted,
-        (left_open, contracts_current),
+        left_open,
     );
     let record = load_review_record(&feature_dir);
     let run = record
         .as_present()
         .filter(|record| record.last_run.is_some());
-    let record_is_held = |record: &ReviewBlock| {
-        holds_done_until_reviewed(record)
-            || matches!(
-                review_freshness(repo, &rel_dir, Some(record)),
-                RecordFreshness::Stale { .. }
-            )
-    };
-    let review_owed = run.is_none_or(record_is_held) || !owed_by.is_empty();
+    // A stale digest no longer holds the record: a changed contract owes an
+    // analysis, and a review only for code (spec 081).
+    let review_owed = run.is_none_or(holds_done_until_reviewed) || !owed_by.is_empty();
 
     Ok(ReviewScope {
         diff_base,
@@ -264,16 +258,17 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
 }
 
 /// The paths that make a review owed, whatever else the record holds: each in scope, or
-/// deleted and this spec's by the scope's own rule, that lies outside a spec's directory
-/// or is this spec's contract, and each the record at `HEAD` leaves open.
+/// deleted and this spec's by the scope's own rule, that is code rather than one of the
+/// project's artifacts, and each the record at `HEAD` leaves open. A review reads code
+/// and an analysis the artifacts (spec 081), so an edit to this spec's own scenarios or
+/// data model, or to another spec's directory, owes this spec no review.
 fn paths_owing_a_review(
-    (specs_root, feature): (&str, &str),
+    specs_root: &str,
     (scope, deleted): (&BTreeSet<String>, &BTreeSet<String>),
     window: &WindowClaims,
     uncommitted: &BTreeSet<String>,
-    (left_open, contracts_current): (Vec<String>, bool),
+    left_open: Vec<String>,
 ) -> Vec<String> {
-    let own_prefix = format!("{specs_root}/{feature}/");
     // A deletion left the scope because it cannot be read, and is still a change:
     // this spec's unless only another spec's commit made it, as the scope's own rule.
     let its_own_deletions = deleted.iter().filter(|path| {
@@ -281,23 +276,10 @@ fn paths_owing_a_review(
             || uncommitted.contains(*path)
             || !window.others.contains_key(*path)
     });
-    // A path in another spec's directory is that spec's change, and its own review
-    // reads it: a multi-spec commit carrying that spec's text owes this one nothing.
-    let specs_prefix = format!("{specs_root}/");
-    let in_another_spec = |path: &str| {
-        path.strip_prefix(&specs_prefix)
-            .and_then(|rest| rest.split_once('/'))
-            .is_some_and(|(dir, _)| parse_feature_dir(dir).is_some())
-    };
     let mut owed_by: Vec<String> = scope
         .iter()
         .chain(its_own_deletions)
-        .filter(|path| match path.strip_prefix(&own_prefix) {
-            // A contract its record's digest still describes changed nothing a review
-            // reads, as when only the spec's slug moved it.
-            Some(own) => is_review_contract(own) && !contracts_current,
-            None => !in_another_spec(path.as_str()),
-        })
+        .filter(|path| !is_project_artifact(path, specs_root))
         .cloned()
         .collect();
     for path in left_open {
@@ -445,18 +427,17 @@ fn hold_in_scope<'a>(
     }
 }
 
-/// Each contract the record's digest says changed, read wherever the window starts or a
-/// review owed for one edited before the window would refresh the digest with it unread;
-/// and whether the digest still describes them all.
+/// Each contract the record's digest says changed, read wherever the window starts, so a
+/// review owed for code reads the contracts that changed beside it. A changed contract
+/// owes no review of its own (spec 081); it only joins the scope of one that runs.
 fn contracts_against_digest(
     record: Option<&ReviewBlock>,
     repo: &Path,
     rel_dir: &str,
-) -> (Vec<String>, bool) {
+) -> Vec<String> {
     match record.map(|record| review_freshness(repo, rel_dir, Some(record))) {
-        Some(RecordFreshness::Stale { paths, .. }) => (paths, false),
-        Some(RecordFreshness::Current { .. }) => (Vec::new(), true),
-        _ => (Vec::new(), false),
+        Some(RecordFreshness::Stale { paths, .. }) => paths,
+        _ => Vec::new(),
     }
 }
 
@@ -720,49 +701,51 @@ fn attribute_window(
             continue;
         }
 
-        // This spec claims the commit, alone or with others. Alone, every path
-        // is its own or unplanned, and the unplanned rule gives it those too.
-        for claimant in &claims.claimants {
-            if let Some(directory) = attributor.directory_of(claimant)
-                && !plans.contains_key(directory)
-            {
-                let entries = read_plan_affected(&repo.join(specs_root).join(directory))?;
-                plans.insert(directory.to_string(), PlanEntries::new(&entries));
+        // This spec claims the commit, alone or with others. A path in another
+        // claimant's directory is that claimant's, whose own review reads it: a
+        // groom commit routing scenarios to many specs would otherwise put every
+        // one of them in each claimant's scope (owner, 2026-11-08).
+        let others_directories: Vec<String> = claims
+            .claimants
+            .iter()
+            .filter(|claimant| **claimant != form)
+            .filter_map(|claimant| attributor.directory_of(claimant))
+            .map(|directory| format!("{specs_root}/{directory}/"))
+            .collect();
+        // A subject naming specs gives its code to the specs it names, and a spec
+        // that claims the commit only by touching its directory takes that
+        // directory's files and nothing else (spec 081). A subject naming none
+        // keeps 079's rule, since an adopter's subjects usually name no spec and
+        // a plan need not list every file: alone, every path is this spec's, and
+        // with other claimants each takes its own plan's paths and the unplanned
+        // ones.
+        let named_here = claims.named.contains(&form);
+        if claims.named.is_empty() {
+            for claimant in &claims.claimants {
+                if let Some(directory) = attributor.directory_of(claimant)
+                    && !plans.contains_key(directory)
+                {
+                    let entries = read_plan_affected(&repo.join(specs_root).join(directory))?;
+                    plans.insert(directory.to_string(), PlanEntries::new(&entries));
+                }
             }
         }
-        let takes_unplanned = claims
-            .first_named
-            .as_ref()
-            .is_none_or(|first| *first == form);
-        // A subject naming no spec leaves a path in another claimant's directory
-        // to that claimant, whose own review reads it: a groom commit routing
-        // scenarios to many specs would otherwise put every one of them in each
-        // claimant's scope (owner, 2026-11-08).
-        let others_directories: Vec<String> = if claims.first_named.is_none() {
-            claims
-                .claimants
-                .iter()
-                .filter(|claimant| **claimant != form)
-                .filter_map(|claimant| attributor.directory_of(claimant))
-                .map(|directory| format!("{specs_root}/{directory}/"))
-                .collect()
-        } else {
-            Vec::new()
-        };
         for path in claims.paths {
-            let unplanned = !claims
-                .claimants
-                .iter()
-                .filter_map(|claimant| attributor.directory_of(claimant))
-                .filter_map(|directory| plans.get(directory))
-                .any(|plan| plan.names(&path));
             let anothers = others_directories
                 .iter()
                 .any(|prefix| path.starts_with(prefix.as_str()));
-            if path.starts_with(&own_prefix)
-                || own_plan.names(&path)
-                || (unplanned && takes_unplanned && !anothers)
-            {
+            let by_subject = if claims.named.is_empty() {
+                let unplanned = !claims
+                    .claimants
+                    .iter()
+                    .filter_map(|claimant| attributor.directory_of(claimant))
+                    .filter_map(|directory| plans.get(directory))
+                    .any(|plan| plan.names(&path));
+                own_plan.names(&path) || (unplanned && !anothers)
+            } else {
+                named_here && !anothers
+            };
+            if path.starts_with(&own_prefix) || by_subject {
                 window.own.insert(path);
             } else {
                 window
@@ -2957,17 +2940,52 @@ mod tests {
         }
     }
 
+    /// A subject naming no spec keeps 079's plan rule: a path one claimant's plan lists
+    /// is that claimant's, and the other claimant's scope leaves it out.
     #[test]
-    fn an_unplanned_path_of_a_multi_spec_commit_goes_to_the_spec_named_first() {
+    fn a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it() {
+        let (tmp, repo, _) = two_specs(&["src/x.rs"], &[]);
+        write(&tmp.path().join("specs/001-x/notes.md"), "x\n");
+        write(&tmp.path().join("specs/002-y/notes.md"), "y\n");
+        write(&tmp.path().join("src/x.rs"), "fn x() {}\n");
+        commit_all(&repo, "chore: touches both specs and names neither");
+
+        let (scope_x, scope_y) = (x(&tmp), y(&tmp));
+        assert!(has(&scope_x, "src/x.rs"), "{:?}", scope_x.scope);
+        assert!(!has(&scope_y, "src/x.rs"), "{:?}", scope_y.scope);
+        assert_eq!(scope_y.excluded["src/x.rs"], ["001-x"]);
+    }
+
+    /// A named commit's code is each named spec's to review, in whatever order the
+    /// subject names them (spec 081).
+    #[test]
+    fn a_named_commits_code_goes_to_every_spec_it_names() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/first.rs", "feat(001, 002): both");
         change(&tmp, &repo, "src/second.rs", "feat(002, 001): both");
 
+        for scope in [x(&tmp), y(&tmp)] {
+            for path in ["src/first.rs", "src/second.rs"] {
+                assert!(has(&scope, path), "{path}: {:?}", scope.scope);
+                assert!(!scope.excluded.contains_key(path), "{path}");
+            }
+        }
+    }
+
+    /// A spec that claims a named commit only by touching its directory reviews that
+    /// directory's files, even a code path its own plan lists (spec 081).
+    #[test]
+    fn a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory() {
+        let (tmp, repo, _) = two_specs(&["src/code.rs"], &[]);
+        write(&tmp.path().join("specs/001-x/notes.md"), "x\n");
+        write(&tmp.path().join("src/code.rs"), "fn c() {}\n");
+        commit_all(&repo, "fix(002): touches 001's notes");
+
         let (scope_x, scope_y) = (x(&tmp), y(&tmp));
-        assert!(has(&scope_x, "src/first.rs"), "{:?}", scope_x.scope);
-        assert_eq!(scope_y.excluded["src/first.rs"], ["001-x"]);
-        assert!(has(&scope_y, "src/second.rs"), "{:?}", scope_y.scope);
-        assert_eq!(scope_x.excluded["src/second.rs"], ["002-y"]);
+        assert!(has(&scope_x, "specs/001-x/notes.md"), "{:?}", scope_x.scope);
+        assert!(!has(&scope_x, "src/code.rs"), "{:?}", scope_x.scope);
+        assert_eq!(scope_x.excluded["src/code.rs"], ["002-y"]);
+        assert!(has(&scope_y, "src/code.rs"), "{:?}", scope_y.scope);
     }
 
     #[test]
@@ -2984,9 +3002,9 @@ mod tests {
         }
     }
 
-    /// A subject naming no spec leaves a path in another claimant's directory to
-    /// that claimant alone, as a groom commit routing scenarios to several specs
-    /// does, while a subject naming one keeps the unplanned rule.
+    /// A path in another claimant's directory is that claimant's alone, as a groom
+    /// commit routing scenarios to several specs has it, whatever the subject names
+    /// (spec 081).
     #[test]
     fn a_subject_naming_none_leaves_each_claimants_directory_to_it() {
         let (tmp, repo, _) = two_specs(&[], &[]);
@@ -3018,23 +3036,29 @@ mod tests {
         }
 
         write(&tmp.path().join("specs/002-y/scenarios/c.md"), "y\n");
-        commit_all(&repo, "feat(001, 002): named first");
-        assert!(has(&x(&tmp), "specs/002-y/scenarios/c.md"));
+        commit_all(&repo, "feat(001, 002): both named");
+        let scope_x = x(&tmp);
+        assert!(
+            !has(&scope_x, "specs/002-y/scenarios/c.md"),
+            "{:?}",
+            scope_x.scope
+        );
+        assert_eq!(scope_x.excluded["specs/002-y/scenarios/c.md"], ["002-y"]);
     }
 
+    /// A spec the subject names reviews the commit's code whichever plan lists it
+    /// (spec 081).
     #[test]
-    fn a_planned_path_of_a_multi_spec_commit_goes_to_the_plan_naming_it() {
+    fn a_named_commits_code_goes_to_every_named_spec_whatever_the_plans_list() {
         let (tmp, repo, _) = two_specs(&["src/x.rs"], &["src/y.rs"]);
         write(&tmp.path().join("src/x.rs"), "fn x() {}\n");
         write(&tmp.path().join("src/y.rs"), "fn y() {}\n");
         commit_all(&repo, "feat(001, 002): both");
 
-        let (scope_x, scope_y) = (x(&tmp), y(&tmp));
-        assert!(has(&scope_x, "src/x.rs"));
-        // Named first, and still not this spec's: its sibling's plan names it.
-        assert_eq!(scope_x.excluded["src/y.rs"], ["002-y"]);
-        assert!(has(&scope_y, "src/y.rs"));
-        assert_eq!(scope_y.excluded["src/x.rs"], ["001-x"]);
+        for scope in [x(&tmp), y(&tmp)] {
+            assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
+            assert!(has(&scope, "src/y.rs"), "{:?}", scope.scope);
+        }
     }
 
     /// The spec's own directory is its own whatever the subject names first.
@@ -3242,7 +3266,8 @@ mod tests {
         let scope = x(&tmp);
         assert_eq!(scope.base_source, BaseSource::Reopen);
         assert!(has(&scope, contract), "{:?}", scope.scope);
-        assert!(scope.review_owed);
+        // It joins the scope of a review that runs, and owes none (spec 081).
+        assert!(!scope.review_owed);
         assert!(!scope.modified_since.iter().any(|path| path == contract));
 
         write(
@@ -3258,8 +3283,8 @@ mod tests {
         assert!(!has(&x(&tmp), contract));
     }
 
-    /// A contract its digest still describes changed nothing a review reads, so a slug
-    /// moving it owes none. With no digest to say so, it still does.
+    /// A contract owes no review (spec 081), so a slug moving it owes none, and the
+    /// moved contract stays in the scope of a review that runs.
     #[test]
     fn a_rename_alone_owes_no_review() {
         let tmp = tempfile::tempdir().unwrap();
@@ -3304,7 +3329,13 @@ mod tests {
     /// committed keeps what a finding names in scope.
     #[test]
     fn a_path_left_open_survives_an_uncommitted_rename() {
-        let (tmp, _repo, _) = left_open("");
+        // A plan naming no file, so only the record at `HEAD` can put the finding's
+        // file in scope: with the plan listing it, a record missed under the new slug
+        // read as a first review and took the file from the plan instead.
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n");
+        commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
         fs::rename(
             tmp.path().join("specs/001-x"),
             tmp.path().join("specs/001-renamed"),
@@ -3507,12 +3538,13 @@ mod tests {
     }
 
     #[test]
-    fn a_reopening_deleting_code_or_a_contract_owes_a_review() {
-        for gone in ["src/old.rs", "specs/001-x/scenarios/a.md"] {
-            let scope = reopened_deleting(gone);
-            assert_eq!(scope.deleted, [gone]);
-            assert!(scope.review_owed, "{gone}");
-        }
+    fn a_reopening_deleting_code_owes_a_review_and_deleting_a_contract_does_not() {
+        let code = reopened_deleting("src/old.rs");
+        assert_eq!(code.deleted, ["src/old.rs"]);
+        assert!(code.review_owed);
+        let contract = reopened_deleting("specs/001-x/scenarios/a.md");
+        assert_eq!(contract.deleted, ["specs/001-x/scenarios/a.md"]);
+        assert!(!contract.review_owed, "{:?}", contract.owed_by);
     }
 
     #[test]
@@ -3534,10 +3566,10 @@ mod tests {
         assert!(!scope.review_owed, "{:?}", scope.scope);
     }
 
-    /// A contract changed before the flip lies outside the window, and the gate still
-    /// reads the digest as stale, so a review is owed, and it reads that contract.
+    /// A contract changed before the flip lies outside the window, and the digest reads
+    /// as stale, so the contract joins the scope; it owes no review (spec 081).
     #[test]
-    fn a_stale_digest_owes_a_review_though_the_window_holds_no_contract() {
+    fn a_stale_digest_puts_its_contract_in_scope_and_owes_no_review() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
@@ -3560,14 +3592,13 @@ mod tests {
             scope.scope,
             ["specs/001-x/scenarios/a.md", "specs/001-x/spec.md"]
         );
-        assert!(scope.review_owed);
+        assert!(!scope.review_owed);
     }
 
     /// A contract gone before the flip is in neither the window nor the scope, and the
-    /// gate still reads the digest as stale, so only the digest makes the review owed:
-    /// otherwise `/review` stops on what the gate asks for.
+    /// digest reads as stale; a stale digest owes no review (spec 081).
     #[test]
-    fn a_stale_digest_owes_a_review_though_its_contract_is_gone() {
+    fn a_stale_digest_whose_contract_is_gone_owes_no_review() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
@@ -3587,27 +3618,116 @@ mod tests {
         let scope = x(&tmp);
         assert_eq!(scope.scope, ["specs/001-x/spec.md"]);
         assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
-        assert!(scope.review_owed);
+        assert!(!scope.review_owed);
     }
 
+    /// A review reads code and an analysis the artifacts (spec 081): a reopening that
+    /// changed code owes a review, and one that changed only a scenario or the data
+    /// model owes none.
     #[test]
-    fn a_reopening_that_changed_code_a_scenario_or_the_data_model_owes_a_review() {
-        for edit in [
-            "src/code.rs",
-            "specs/001-x/scenarios/a.md",
-            "specs/001-x/data-model.md",
-        ] {
+    fn a_reopening_that_changed_code_owes_a_review_and_a_contract_edit_does_not() {
+        assert!(reopened_with_a_record("src/code.rs").review_owed);
+        for edit in ["specs/001-x/scenarios/a.md", "specs/001-x/data-model.md"] {
+            let scope = reopened_with_a_record(edit);
+            assert!(!scope.review_owed, "{edit}: {:?}", scope.owed_by);
+        }
+    }
+
+    /// `.ductus/`, `AGENTS.md` and `CLAUDE.md` are artifacts beside the spec root; a
+    /// path that only resembles one is code (spec 081).
+    #[test]
+    fn an_artifact_outside_the_spec_root_owes_no_review_and_code_does() {
+        for edit in [".ductus/reference/review.md", "AGENTS.md", "CLAUDE.md"] {
+            assert!(!reopened_with_a_record(edit).review_owed, "{edit}");
+        }
+        for edit in ["docs/guide.md", "sub/AGENTS.md", "README.md"] {
             assert!(reopened_with_a_record(edit).review_owed, "{edit}");
         }
     }
 
+    /// A configured spec root is the artifact set's root: its contents owe no review,
+    /// and a `specs/` directory beside it is code (spec 081).
+    #[test]
+    fn a_configured_spec_root_is_the_artifact_root() {
+        let reopened = |edit: &str| {
+            let tmp = tempfile::tempdir().unwrap();
+            let repo = Repository::init(tmp.path()).unwrap();
+            write(
+                &tmp.path().join(".ductus/config.toml"),
+                "[paths]\nspecs-root = \"reqs\"\n",
+            );
+            write(&tmp.path().join("reqs/001-x/spec.md"), &spec("done"));
+            write(
+                &tmp.path().join("reqs/001-x/review.md"),
+                &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+            );
+            commit_all(&repo, "chore: seed");
+            write(&tmp.path().join("reqs/001-x/spec.md"), &spec("in-progress"));
+            write(&tmp.path().join(edit), "edited\n");
+            commit_all(&repo, "docs(001): the reopening's edit");
+            compute(&args("001-x", None), tmp.path()).unwrap()
+        };
+        assert!(!reopened("reqs/001-x/scenarios/a.md").review_owed);
+        assert!(!reopened("reqs/rules/x.md").review_owed);
+        assert!(reopened("specs/x.md").review_owed);
+    }
+
+    /// In a project inside a repository subdirectory the artifact set is read from the
+    /// project root (spec 081).
+    #[test]
+    fn a_subdirectory_project_reads_its_artifacts_from_the_project_root() {
+        let reopened = |edit: &str| {
+            let tmp = tempfile::tempdir().unwrap();
+            let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+            write(&project.join("specs/001-x/spec.md"), &spec("done"));
+            write(
+                &project.join("specs/001-x/review.md"),
+                &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+            );
+            commit_all(&repo, "chore: seed");
+            write(&project.join("specs/001-x/spec.md"), &spec("in-progress"));
+            write(&project.join(edit), "edited\n");
+            commit_all(&repo, "docs(001): the reopening's edit");
+            compute(&args("001-x", None), &project).unwrap()
+        };
+        assert!(!reopened("specs/001-x/scenarios/a.md").review_owed);
+        assert!(!reopened("AGENTS.md").review_owed);
+        assert!(reopened("src/code.rs").review_owed);
+    }
+
+    /// A code commit naming no spec and touching no spec directory stays in the window
+    /// of every spec holding it, as under 079, and owes its review (spec 081).
+    #[test]
+    fn a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): reopen");
+        assert!(!x(&tmp).review_owed);
+        write(&tmp.path().join("src/unnamed.rs"), "fn u() {}\n");
+        commit_all(&repo, "feat: implement");
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/unnamed.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
     /// Another spec's directory is that spec's change, whether a multi-spec commit
-    /// or uncommitted work put it in the window, though the scope keeps the path.
+    /// or uncommitted work put it in the window: a named commit leaves the path to that
+    /// spec (spec 081), and uncommitted work keeps it in scope.
     #[test]
     fn a_path_in_another_specs_directory_owes_no_review() {
         for edit in ["specs/002-y/analysis.md", "specs/002-y/scenarios/z.md"] {
             let scope = reopened_with_a_record(edit);
-            assert!(has(&scope, edit), "{edit}: {:?}", scope.scope);
+            assert_eq!(scope.excluded[edit], ["002-y"], "{:?}", scope.scope);
             assert!(!scope.review_owed, "{edit}");
         }
 
@@ -3628,16 +3748,16 @@ mod tests {
         assert!(!x(&tmp).review_owed);
     }
 
-    /// Under the spec root is not in a spec: a rule file changes what every review
-    /// reads, and only a feature directory has a review of its own to read it.
+    /// Everything under the spec root is an artifact, a rule file and the inbox
+    /// included: it is what an analysis reads, and owes no review (spec 081).
     #[test]
-    fn a_path_under_the_spec_root_that_is_in_no_spec_still_owes_a_review() {
+    fn a_path_under_the_spec_root_that_is_in_no_spec_owes_no_review() {
         for edit in [
             "specs/rules/x.md",
             "specs/inbox.md",
             "specs/not-a-spec/x.md",
         ] {
-            assert!(reopened_with_a_record(edit).review_owed, "{edit}");
+            assert!(!reopened_with_a_record(edit).review_owed, "{edit}");
         }
     }
 
