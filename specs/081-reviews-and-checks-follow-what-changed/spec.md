@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [079-review-and-analysis-work-converges]
 cross-spec-impact: [026-framework-self-audit, 047-analyze-findings-durability, 050-constitution, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges]
 next-criterion: 12
