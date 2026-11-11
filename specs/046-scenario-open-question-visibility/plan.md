@@ -69,7 +69,6 @@ Authored as 022 scenarios (each back-linking here):
 | `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md` | Create | The sibling field, the gate check, the finding family, the rendering |
 | `specs/022-deterministic-runtime/data-model.md` | Modify | New field on `read-spec`; new `blocked-by` variant; fifth `check-artifacts` family |
 | `runtime/src/primitives/read_spec.rs` | Modify | Comment-aware parser, placeholder set, scenario-question field |
-| `runtime/src/primitives/create_scenario.rs` | Modify | Placeholder string alignment (if the skip set is not preferred) |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Third ordered check |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | `scenario-open-questions` family |
 | `runtime/src/primitives/dashboard.rs` | Modify | Column suffix, Next Action override, callout |
