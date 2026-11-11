@@ -85,3 +85,9 @@ Done when: the spec status is `done` and the change is committed.
 - [ ] framework/bootstrap/configure/*.md — each configure command's Instructions invoke primitives (`configure/claude.md` step 1: "Invoke `merge-permissions`") without the constitution's §runtime-host-integration pointer, which the constitution has open every command's Instructions; `scripts/lint-tool-coverage.sh`, the only check of that rule, covers `framework/commands/*.md` alone and now says so (048's review, 2026-10-29). Decide whether the configure commands carry the pointer, and if so add it to each and bring them into the lint's scope with a test case
 
 - **Done when**: each configure command either carries the pointer and is in the lint's scope, or 012's plan records why it is exempt
+
+## 12. Real adopter bootstrap after the agent removal
+
+- [ ] framework/bootstrap/ductus.md, install.sh and the migrations — the agent removal (chore: drop Auggie, Antigravity and OpenCode support) rewrote the registry, Permission Setup, MCP wiring, the Pi layout and three migrations, and no real run has exercised them; AGENTS.md asks a real adopter bootstrap of any framework/bootstrap/ or framework/migrations/ change, on a subject far enough behind to cross the whole chain. Bootstrap a scratch adopter from an older release on claude, then upgrade it with /ductus --ref=main, per docs/developing-ductus.md (Exercising an installer change without a push); and run a real pi against a pi-selected scratch adopter, since pi's loader has no other test. Run from a session on the pulled, rebuilt tree, never this repository's stale MCP server; budget a fix-and-rerun. Holds 012's done, and so the ductus-v0.60.0 tag (owner, 2026-11-11)
+
+- **Done when**: both runs completed on main's bootstrap, each run's outcome is stated in the commit that closes this task, and every defect found is fixed or dispositioned
