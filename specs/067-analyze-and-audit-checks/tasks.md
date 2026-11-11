@@ -147,9 +147,11 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
 ## 17. Implement scenario: status-gated-families-are-not-silent
 
-- [ ] Implement the behavior described in `scenarios/status-gated-families-are-not-silent.md`
+- [ ] Implement the behavior described in `scenarios/status-gated-families-are-not-silent.md` (owner, 2026-11-11, option (d))
+- [ ] Decide with the owner how `criterion-path-existence` classifies gitignored adopter state under a tracked root, the scenario's last edge case, before the family's `in-progress` run lands
+- [ ] Sweep the new scope and the new reason into what states the old ones, re-grepped by meaning when this task starts. A by-meaning grep on 2026-11-11 found: `runtime/src/primitives/check_artifacts.rs`, `runtime/src/schema/primitives.rs` (both reason-set doc comments) and `runtime/src/schema/descriptions.rs` (`CHECK_ARTIFACTS`); `framework/constitution.md` §implement-phase; `framework/reference/analyze.md` (the path-existence scope and flip-to-`done` bullets, and the class list in §Unexamined targets (informational)); `AGENTS.md` (the `skipped` gotcha and the "`unexamined` cannot be measured while in-progress" gotcha); this spec's data model and its `check-artifacts-skipped-targets`, `criterion-path-existence-family` and `body-path-existence-family` scenarios; 066's data model and its `write-analysis-and-the-second-gate` and `a-done-spec-has-no-transition-to-gate` scenarios; 058's `only-unreadable-targets-retain-decisions` scenario; 045's spec (AC16 and its scope paragraph) and data model; 050's spec and plan
 
-- **Done when**: The scenario's open question is resolved, an in-progress check-artifacts run is distinguishable from a done run whose path families found nothing, and a fixture test asserts both directions.
+- **Done when**: The scenario's open question is resolved; at `in-progress` both path families examine the spec, and at any other status each records one `status-gated` skip, excluded by construction; fixture tests assert each direction and fail with it removed; and every swept artifact states the new scope.
 
 ## 18. Implement scenario: a-scenario-file-is-checked-against-the-scenario-schema
 
