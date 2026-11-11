@@ -88,6 +88,8 @@ Result:
 }
 ```
 
+The path chooses the row: a file named `spec.md` takes the spec row, a `.md` file under `scenarios/` the scenario row (`section`, or legacy `spec-ref`, present and non-empty), `review.md` and `analysis.md` their record checks, and any other path is refused. A `spec.md` run checks the audit records and every scenario beside it, keying each such finding's `field` by the file (`review.md`, `scenarios/{slug}.md`); a scenario it cannot read is a hard fail there, not an error (scenario [`a-scenario-file-is-checked-against-the-scenario-schema`](scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md)).
+
 `severity` is the tier the constitution assigns to that finding's **condition**, not a fixed value for the family, and consumers render the tier the finding names; `framework/commands/analyze.md` step 2 states the host side (scenario [`frontmatter-severity-tiers-on-both-sides`](scenarios/frontmatter-severity-tiers-on-both-sides.md)).
 
 ## `traverse-deps` — verify spec dependencies and status compatibility

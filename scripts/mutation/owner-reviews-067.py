@@ -5,8 +5,8 @@ write, `check-command-flags`' whole pass, `check-rule-ids`' line-scoped
 section scan, `check-corpus-links`' reference sources, `resolve-anchor`'s
 markers basename, `check-promotion-coverage`'s required section set, the
 bound that moves `derive-dependencies`' `unwritable` past the read size, the
-exec analyze tally's step 6, and `check-artifacts`' status-gated path families
-and `gitignored` skip.
+exec analyze tally's step 6, `check-artifacts`' status-gated path families
+and `gitignored` skip, and `validate-frontmatter`'s row chosen by path.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -487,5 +487,83 @@ MUTATIONS = [
         '        project.as_ref().is_some_and(|project| {',
         '        project.as_ref().is_none_or(|project| {',
         'check_artifacts::tests::the_originating_case_is_reproduced',
+    ),
+    # -- validate-frontmatter: the path chooses the row (task 18) --------
+    (
+        'M65 a file under scenarios/ takes the spec row',
+        'src/primitives/validate_frontmatter.rs',
+        '        return Some(Artifact::Scenario);',
+        '        return Some(Artifact::Spec);',
+        'validate_frontmatter::tests::a_section_only_scenario_is_clean',
+    ),
+    (
+        'M66 a scenario with no section passes',
+        'src/primitives/validate_frontmatter.rs',
+        '    if names_a_section("section") || names_a_section("spec-ref") {',
+        '    if true {',
+        'validate_frontmatter::tests::a_scenario_missing_section_is_a_hard_fail',
+    ),
+    (
+        'M67 the legacy spec-ref no longer names a section',
+        'src/primitives/validate_frontmatter.rs',
+        'names_a_section("section") || names_a_section("spec-ref")',
+        'names_a_section("section")',
+        'validate_frontmatter::tests::a_legacy_spec_ref_scenario_is_clean',
+    ),
+    (
+        'M68 a spec.md run skips the scenarios beside it',
+        'src/primitives/validate_frontmatter.rs',
+        '                validate_scenarios_beside(dir, &mut findings);\n',
+        '',
+        'validate_frontmatter::tests::a_spec_run_reports_a_malformed_scenario_by_its_path',
+    ),
+    (
+        'M69 a fenceless scenario beside a spec passes silently',
+        'src/primitives/validate_frontmatter.rs',
+        '                report(format!(\n                    "{field} has no frontmatter (no leading `---` block)"\n                ));\n',
+        '',
+        'validate_frontmatter::tests::an_unparseable_scenario_in_a_spec_run_is_a_hard_fail_not_an_error',
+    ),
+    (
+        'M70 a scenario beside a spec that cannot be read passes silently',
+        'src/primitives/validate_frontmatter.rs',
+        '                report(format!("{field} could not be read: {source}"));\n',
+        '',
+        'validate_frontmatter::tests::a_scenario_a_spec_run_cannot_read_is_a_hard_fail',
+    ),
+    (
+        'M71 a path of no row takes the spec row',
+        'src/primitives/validate_frontmatter.rs',
+        '        ANALYSIS_RECORD_FILE => Some(Artifact::Record(ANALYSIS_RECORD_FILE)),\n        _ => None,',
+        '        ANALYSIS_RECORD_FILE => Some(Artifact::Record(ANALYSIS_RECORD_FILE)),\n        _ => Some(Artifact::Spec),',
+        'validate_frontmatter::tests::a_path_of_no_schema_row_is_refused',
+    ),
+    (
+        'M72 a direct record path is not checked',
+        'src/primitives/validate_frontmatter.rs',
+        '                validate_record(dir, file, &mut findings);\n',
+        '',
+        'validate_frontmatter::tests::a_direct_record_path_takes_its_record_checks',
+    ),
+    (
+        'M73 an absent direct record passes as never-run',
+        'src/primitives/validate_frontmatter.rs',
+        '            read_text(&path)?;\n',
+        '',
+        'validate_frontmatter::tests::an_absent_direct_record_path_is_an_error',
+    ),
+    (
+        'M74 a spec or record name under scenarios/ is not a scenario',
+        'src/primitives/validate_frontmatter.rs',
+        '    if under_scenarios && markdown {',
+        '    if under_scenarios && markdown && name != "spec.md" && name != REVIEW_RECORD_FILE {',
+        'validate_frontmatter::tests::a_file_under_scenarios_takes_the_scenario_row_whatever_its_name',
+    ),
+    (
+        'M75 a spec-row finding stops the rest of a spec.md run',
+        'src/primitives/validate_frontmatter.rs',
+        '            validate_spec_row(&path, &mut findings)?;\n            if let Some(dir) = path.parent() {',
+        '            validate_spec_row(&path, &mut findings)?;\n            if findings.is_empty() && let Some(dir) = path.parent() {',
+        'validate_frontmatter::tests::a_spec_that_will_not_parse_still_has_its_scenarios_checked',
     ),
 ]

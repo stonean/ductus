@@ -2421,7 +2421,11 @@ pub struct FrontmatterFinding {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ValidateFrontmatterArgs {
-    /// Repo-relative path to the spec file.
+    /// Repo-relative path to the artifact, whose name chooses the schema row:
+    /// a `.md` file under a `scenarios/` directory takes the scenario row, a
+    /// `spec.md` the spec row (and its run also checks the `review.md`,
+    /// `analysis.md` and every scenario beside it), a `review.md` or
+    /// `analysis.md` that record's checks; any other path is refused.
     #[arg(long)]
     pub path: String,
 }

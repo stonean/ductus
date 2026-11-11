@@ -6,9 +6,9 @@ The checks, then the finding dispositions that follow them. The numbered steps o
 
 ## Frontmatter schema (hard fail)
 
-The schema and its hard fails are `.ductus/constitution.md` §text-first-artifacts. `validate-frontmatter` (step 2) judges the spec file and each audit record beside it: an unparseable record is undeterminable, never the never-run state, and an unparseable `decisions:` list is a hard fail, never an empty list (**Finding dispositions** below).
+The schema and its hard fails are `.ductus/constitution.md` §text-first-artifacts. `validate-frontmatter` (step 2) judges the spec file and each audit record and scenario beside it: an unparseable record is undeterminable, never the never-run state, and an unparseable `decisions:` list is a hard fail, never an empty list (**Finding dispositions** below).
 
-That primitive reads no scenario, so the host judges each `scenarios/{slug}.md`: a YAML block exists at the top of the file and parses, and `section`, or the legacy `spec-ref` of a pre-017 scenario, is present and non-empty.
+The path chooses the row: a `spec.md` takes the spec row, a file under `scenarios/` the scenario row, `review.md` and `analysis.md` their record checks, and any other path is refused. A `spec.md` run also checks each `scenarios/{slug}.md` beside it, each finding keyed by that path: a YAML block exists at the top of the file and parses, and `section`, or the legacy `spec-ref` of a pre-017 scenario, is present and non-empty; a missing `status` or `dependencies` is no finding there. A scenario the run cannot read is a hard fail, as an unreadable record is.
 
 ## Spec integrity (blocking)
 
