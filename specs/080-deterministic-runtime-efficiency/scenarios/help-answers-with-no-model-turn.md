@@ -13,7 +13,6 @@ section: "Behavior"
 - In Claude Code, `/{project}:help` typed by the user is answered with no model turn, as `/{project}:status` is: the guide is shown and the typed command is not echoed back. `/ductus` and `/{project}:configure` install what answers it beside the status hook, under the same version gate.
 - In Pi, the bridge registers `/{project}-help`, whose handler shows the guide as a displayed message with no turn, as `/{project}-status` does.
 - The guide shown is the one the model path prints, with the project's name in each command.
-- Auggie, OpenCode and Antigravity keep the model path for help, as they do for status.
 
 ## Edge Cases
 

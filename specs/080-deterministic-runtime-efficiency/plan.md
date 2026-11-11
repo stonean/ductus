@@ -15,7 +15,7 @@ Implements [080 — Deterministic runtime efficiency](spec.md).
 
 ## Overview
 
-Measurement comes first. A generated fixture corpus and a model-free size script settle which primitives grow with the corpus, and so which ones AC7 bounds, before anything is bounded. The pipeline view then gets one model and two renderings, and a new argument-free primitive, `render-status`, serves it to the model path. A non-primitive `ductus hook status` surface serves it to Claude Code's `UserPromptExpansion` hook, and a new primitive, `merge-status-hook`, installs that hook from `/{project}:configure` and `/ductus`. Tool loading is derived from the commands' parsed steps in one runtime function. The MCP server uses that function to flag `/{project}:target`'s tools always-loaded, and `apply-manifest` uses it to write a batched `ToolSearch` line into Claude Code's command copies. Pi gets a registered command in the bridge. OpenCode and Antigravity each get a scenario. A `claude -p` harness then records every command's cost, and that record is the input to each command's review.
+Measurement comes first. A generated fixture corpus and a model-free size script settle which primitives grow with the corpus, and so which ones AC7 bounds, before anything is bounded. The pipeline view then gets one model and two renderings, and a new argument-free primitive, `render-status`, serves it to the model path. A non-primitive `ductus hook status` surface serves it to Claude Code's `UserPromptExpansion` hook, and a new primitive, `merge-status-hook`, installs that hook from `/{project}:configure` and `/ductus`. Tool loading is derived from the commands' parsed steps in one runtime function. The MCP server uses that function to flag `/{project}:target`'s tools always-loaded, and `apply-manifest` uses it to write a batched `ToolSearch` line into Claude Code's command copies. Pi gets a registered command in the bridge. A `claude -p` harness then records every command's cost, and that record is the input to each command's review.
 
 ## Technical Decisions
 
@@ -109,7 +109,7 @@ A command's steps **name** a tool when a served registry name occurs as a whole 
 - *The search goes out with the first call:* the line asks for the command's first `ductus` call to go in the search's own message, and says a tool can be called beside the search that loads it (scenario `the-search-goes-out-with-the-first-call`; owner, 2026-11-09, over deriving that call and naming it). It names no exception for a call that needs an earlier result, since the search's own schema reads as one. The sentence is the same in every copy.
 - *Why the walker ignores it:* the parser dispatches only a registry name inside a step, and treats a preamble code span as a reference (`runtime/src/parser/mod.rs:351-370`). The span's text is no registry name in any case.
 - *When there is no line:* when the remainder is empty. Once status's steps name `render-status`, that is help and link, which name no tool, and target, whose tools are the always-loaded set. Audit's `run-generator` is CLI-only, but its *Where a named section lives* paragraph invokes `read-section`, so its copy carries a line.
-- *Which copies:* `framework/bootstrap/ductus.md` sets the field on Claude's command rows only. Auggie shares the `claude-style` layout, so the field is keyed by agent, not by layout (AC10).
+- *Which copies:* `framework/bootstrap/ductus.md` sets the field on Claude's command rows only. The field is keyed by agent, not by layout.
 - *This repo's copies:* `scripts/gen-claude-commands.sh` builds them by driving `apply-manifest` through `DUCTUS_BIN`, else the release binary, with its JSON in a `mktemp -d` directory. Both of its variables are optional, read once when the script starts, empty counting as unset, and listed in `docs/runtime.md`'s inventory:
   - `DUCTUS_BIN`, a path to the runtime, defaults to `DEFAULT_DUCTUS_BIN`, the checkout's `runtime/target/release/ductus`. A path that does not run, or a runtime whose `apply-manifest` lacks `tool-search-line`, stops the script, naming the path and the rebuild command.
   - `DUCTUS_GEN_TIMEOUT_SECONDS`, a whole number of seconds, defaults to `DEFAULT_GEN_TIMEOUT_SECONDS`, 120, and bounds each runtime call (`BE-TIMEOUT-001`). A value that is not a positive whole number stops the script, naming the variable.
@@ -201,12 +201,6 @@ Each primitive in `research.md`'s grows-set returns through `bounded_lists::plac
 
 It runs one round after the view, the hook and tool loading land. That round records the cost of each command `/ductus` installs in `research.md` with its method, units, population and date (AC8). Each command runs once on a fixture of its own, seeded with the least state its main path needs, under an adopter's permissions: the bootstrap seed, then `/{project}:configure`'s canonical sets (owner, 2026-11-09). There is no separate baseline round: the spec's transcript figures are status's before-figure. Each command's review then reads that record. `research.md` names, per command, the reduction that applies or why none does, and each reduction becomes a scenario through `/{project}:amend` (spec Behavior, *One case per command*).
 
-### Auggie, OpenCode and Antigravity
-
-None of the three gets the hook, the batching line or a bridge change (AC10). OpenCode's scenario and Antigravity's are recorded through `/{project}:amend` after a run on a version that has the mechanism: an OpenCode TUI plugin's slash command, and `agy` 1.4.11 or later with a `PreInvocation` hook (AC11). Each scenario records its outcome, and the deferral it settles, under Resolved Questions with its trigger. An open question there would hold 080 short of `done`.
-
-On OpenCode and Antigravity the view's `/{project}:<name>` hints name no command, since those hosts run one as `/{project}/<name>` and `/{project}-<name>`. That gap is waived for this spec (owner, 2026-11-10): it predates 080, since `/ductus` substitutes `{project}` and leaves the colon after it (`framework/bootstrap/ductus.md`, step 4's substitutions map), so every installed command's prose on those hosts already spells the colon form, as status's model-composed prompt did before; it is not the view's alone; and AC10 holds.
-
 ## Affected Files
 
 | File | Action | Purpose |
@@ -258,7 +252,6 @@ On OpenCode and Antigravity the view's `/{project}:<name>` hints name no command
 | `framework/commands/target.md` | Modify | Its not-found enumeration's lists-file branch swept, as above |
 | `framework/bootstrap/configure/claude.md` | Modify | Calls `merge-status-hook`; step 1 passes `canonical`, step 5's host write goes |
 | `runtime/src/primitives/merge_permissions.rs` | Modify | `canonical`: the deny and retired sets, `additionalDirectories` |
-| `framework/bootstrap/configure/auggie.md` | Modify | Regenerated allow block |
 | `framework/bootstrap/ductus.md` | Modify | Claude rows' field; hook install; seed rule |
 | `framework/bootstrap/pi/ductus-bridge.ts` | Modify | Registered status and help commands |
 | `scripts/gen-claude-commands.sh` | Modify | Claude pass drives `apply-manifest` |

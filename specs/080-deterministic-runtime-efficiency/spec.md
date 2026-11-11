@@ -33,8 +33,6 @@ In Claude Code, `/{project}:status` typed by the user is answered by the runtime
 
 In Pi, the `ductus` bridge extension registers the command itself (`registerCommand`), and its handler runs the `ductus` binary and shows the view as a displayed message that triggers no turn (`sendMessage` with `display: true`, `triggerTurn: false`). The run that verifies this records whether that message reached the agent's context. If it did not, and Pi can add text to context without a turn, the bridge also adds the compact form: the target line and the non-done specs grouped by status.
 
-Auggie keeps the model path: its prompt hook cannot block. OpenCode and Antigravity keep it too, as each one's scenario under this spec settles: `opencode-keeps-the-model-path` and `antigravity-keeps-the-model-path`.
-
 ### A view for each path
 
 The runtime renders the view two ways from the same data. The hook path shows it in a terminal that renders no markdown, so it gets fixed-width plain text: table columns aligned with two-space gaps, with no pipes, separator row or emphasis. The model path's hosts render markdown in chat, so it keeps a markdown table, which is also the smaller one for the model to re-type. Both put the summary one item per line:
@@ -82,8 +80,6 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - [x] AC9: Typing `/{project}:status` in Pi, in a project bootstrapped at this spec's release, shows the pipeline view with no model turn, through a command the `ductus` bridge registers that runs the `ductus` binary.
 - [x] AC27: The run that verifies the Pi path records in `specs/080-deterministic-runtime-efficiency/research.md` whether the displayed view reaches the agent's context, observed in a model turn or, when none can be run, taken from pi's own documentation, saying which, and, when it does not, whether Pi can add text to context without a turn.
 - [x] AC28: When `research.md` records that Pi's displayed view did not reach the agent's context and that Pi can add context without a turn, the bridge adds the compact form (the target line and the non-done specs grouped by status), and a bridge harness test shows it.
-- [x] AC10: Auggie, OpenCode and Antigravity run `/{project}:status` as they did before this spec, except where a scenario under this spec has since given one of them a model-free path.
-- [x] AC11: OpenCode and Antigravity each have a scenario under `specs/080-deterministic-runtime-efficiency/scenarios/` that settles its model-free path for `/{project}:status`: OpenCode's by a run on a host version that has the mechanism, Antigravity's recorded without a run, since the installed `agy` lacks it (owner, 2026-11-09).
 - [x] AC17: The view the hook path shows is fixed-width plain text: table columns aligned with two-space gaps, and no markdown table syntax or emphasis.
 - [x] AC18: On both paths the view's summary puts one item per line — counts, tags, reopenings and inbox each on a labelled line, each unresolved scenario question on its own line beside its spec — with the `/{project}:target` hint once at its end.
 - [x] AC19: The model path's view keeps a markdown table, and a test shows both renderings carry the same facts from the same data.
@@ -111,11 +107,6 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 - **Which agents besides Claude Code can answer a typed command without a model turn, and how?** Claude Code and Pi, both in this spec (owner, 2026-11-08).
   - **Claude Code:** a `UserPromptExpansion` hook whose block reason is shown and added to no context; run twice on 2.1.319.
   - **Pi:** an extension's `registerCommand` handler, showing output through `sendMessage` with `display: true` and `triggerTurn: false`, per pi 1.0.4's extension types. That message reaches the agent's context, by pi's documentation, since no model turn could be run (AC27; owner, 2026-11-10).
-  - **OpenCode 1.17.8:** through a TUI plugin's slash command whose handler runs local code, verified by a run (`research.md`). Its server-side `command.execute.before` hook cannot skip the model. OpenCode keeps the model path all the same, as its scenario `opencode-keeps-the-model-path` records (owner, 2026-11-09).
-  - **Antigravity:** from `agy` 1.4.11, through a `PreInvocation` hook returning `errorMessage` with `terminationBehavior: "terminate"`. The installed 1.0.9 lacks it, and whether the hook sees the raw command name rather than the expanded skill is unknown. Antigravity keeps the model path, as its scenario `antigravity-keeps-the-model-path` records without a run (owner, 2026-11-09).
-  - **Deferral:** OpenCode and Antigravity were each deferred to a scenario under this spec. Both scenarios settle it, and each defers a model-free path to its own trigger.
-  - **Auggie:** its `PromptSubmit` hook cannot block and its commands are prompt templates, so it keeps the model path.
-  - **Sources:** the OpenCode and `agy` binaries' strings; `agy changelog`; opencode.ai's plugin docs and its issue #28292; antigravity.google's hooks docs; docs.augmentcode.com's hooks, custom-commands and plugins pages.
 - **Does a session started below the project root get the view?** No: sessions are expected to start at the project root (owner, 2026-11-09).
   - **Observed:** on Claude Code 2.1.319, a session started in `runtime/` had `CLAUDE_PROJECT_DIR` set to `runtime/`, so the hook exited 127 without blocking. The model path then had no `ductus` server, since `.mcp.json` names the pointer by a relative path (`research.md`, Verifying runs).
   - **Set aside:** making every command work from any start directory. It would change spec 031's MCP registration for each agent and migrate adopters' committed configs, while no other command supports a start below the root today.

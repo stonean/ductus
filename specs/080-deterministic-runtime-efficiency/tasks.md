@@ -110,11 +110,11 @@ Blocked on task 9: the line drops the always-loaded set.
 
 Tasks 8 and 10 have landed and reached `main` (a62d2328, restored in 9bf198f5), so the second subtask's staging-copy check runs against the pushed tree. A version-bumped pin with no tag halts `--ref=main`, so the real `/ductus` run names this checkout's release build in `[runtime] path`, which `/ductus`'s acquisition Branch 1 uses with a warning.
 
-- [x] Bootstrap a scratch adopter, with Claude and Auggie selected, from a release before this spec
-- [x] Before pushing: drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`, per `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that Claude's copies carry the line and Auggie's are byte-identical to before
-- [x] After pushing: have a subagent run `install.sh` on the scratch adopter, per the same section, with `[runtime] path` naming this checkout's release build. Confirm the hook lands in `.claude/settings.local.json` with no manual step and Auggie's settings are unchanged
+- [x] Bootstrap a scratch adopter, with Claude selected, from a release before this spec
+- [x] Before pushing: drive `apply-manifest` and `enforce-manifest` from a staging copy of `framework/`, per `docs/developing-ductus.md` *Exercising an installer change without a push*. Confirm that Claude's copies carry the line
+- [x] After pushing: have a subagent run `install.sh` on the scratch adopter, per the same section, with `[runtime] path` naming this checkout's release build. Confirm the hook lands in `.claude/settings.local.json` with no manual step
 
-- **Done when**: `research.md` records both runs and each check (AC10; AC26, Claude Code's half).
+- **Done when**: `research.md` records both runs and each check (AC26, Claude Code's half).
 
 ## 12. Pi's registered command
 
@@ -134,20 +134,6 @@ Blocked on task 12.
 - [x] When `research.md` records that the view did not reach the context and Pi can add context without a turn, add the target line and the non-done specs grouped by status to the agent's context, and a harness test for it
 
 - **Done when**: either `research.md` records that the condition does not hold, or the bridge adds the compact form and its harness test passes (AC28).
-
-## 14. OpenCode's scenario
-
-- [x] Run OpenCode on a version whose TUI plugin's slash command runs local code, and try `/{project}:status` through it
-- [x] Record the scenario through `/ductus:amend`, with the outcome and the deferral it settles under Resolved Questions, with its trigger
-
-- **Done when**: the scenario exists under `scenarios/`, is settled by the run, and has no open question (AC11's half; AC10 for OpenCode).
-
-## 15. Antigravity's scenario
-
-- [x] Run `agy` 1.4.11 or later with a `PreInvocation` hook, and record whether it sees the raw command name — waived: the installed `agy` is 1.0.9, and the scenario is recorded without a run (owner, 2026-11-09)
-- [x] Record the scenario through `/ductus:amend`, as in task 14
-
-- **Done when**: the scenario exists under `scenarios/`, is settled by the run, and has no open question (AC11's half; AC10 for Antigravity).
 
 ## 16. The `claude -p` harness
 
@@ -243,13 +229,11 @@ The 022 edit also corrects task 4's sweep residue in 022's `config-readers-name-
 
 - [x] The view `render-status` returns spells its hints `/{project}:<name>` (each row's next action, the `Next actions:` block, the closing `/{project}:target` prompt). On Pi a command is `/{project}-<name>` (064's D1), and task 12's run showed `/scratch:status` reaching the model as plain text, so on Pi every hint names no command. Decide where the Pi spelling comes from before writing it (owner): the bridge rewriting the view's `/{project}:` to `/{project}-` before it shows it, or `render-status` taking the hint form
 
-OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the same gap on their model paths, which their scenarios' Edge Cases record; decide with Pi's whether the fix covers them.
-
 - **Done when**: the view Pi's registered command shows spells each hint as a command Pi runs, with a bridge harness case for it.
 
 ## 29. Disposition out-of-spec finding: a stale ductus.md of an agent that is not running aborts the run, and the notice says the running session is stale
 
-- [x] `framework/bootstrap/ductus.md` — §Self-update check marks a selected agent `stale` when its installed copy differs from upstream, "The running session is using instructions other than the resolved source's", and §Pre-flight abort stops the run on any stale agent. An upgrade started with `install.sh claude --ref=main` refreshes Claude's copy only, so with Auggie also selected the run found Claude `current` and Auggie `stale`, overwrote Auggie's, and aborted with "the running session is using the older instructions", though the running copy matched upstream; every multi-agent upgrade that way costs a second session (task 11's update run, 2026-11-09) — deferred: 007's task 8, since 007's `ductus-self-update-precheck` scenario specifies the abort and its reason argues for the narrower one, and its verifying adopter run is 007's work (owner, 2026-11-09)
+- [x] `framework/bootstrap/ductus.md` — §Self-update check marks a selected agent `stale` when its installed copy differs from upstream, "The running session is using instructions other than the resolved source's", and §Pre-flight abort stops the run on any stale agent. An upgrade started with `install.sh claude --ref=main` refreshes Claude's copy only, so with a second agent also selected the run found Claude `current` and the other `stale`, overwrote its copy, and aborted with "the running session is using the older instructions", though the running copy matched upstream; every multi-agent upgrade that way costs a second session (task 11's update run, 2026-11-09) — deferred: 007's task 8, since 007's `ductus-self-update-precheck` scenario specifies the abort and its reason argues for the narrower one, and its verifying adopter run is 007's work (owner, 2026-11-09)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
 
@@ -260,24 +244,6 @@ OpenCode (`/{project}/<name>`) and Antigravity (`/{project}-<name>`) have the sa
 - [x] Test `apply-manifest` in the bootstrap's layout, then re-run `/ductus --ref=main` on task 11's scratch adopter with the fixed build and confirm Claude's 14 copies carry the line
 
 - **Done when**: a test drives `apply-manifest` with the bootstrap's source root and sources, and a real adopter `/ductus` run writes the line into Claude's copies (AC29).
-
-## 31. Disposition out-of-spec finding: Auggie's surfaced MCP command names the store when `[runtime] path` names another binary
-
-- [x] `framework/bootstrap/ductus.md` — §MCP registration's Auggie row surfaces `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"`, the store path, while Runtime acquisition Branch 1 points a project with `[runtime] path` at that binary instead ("The pointer resolves to this path rather than to the store"), so an Auggie session would serve the store's runtime, not the one the project chose (task 11's second update run, 2026-11-09) — fixed: `ductus.md`'s Branch 1 and its `surface-instruction` paragraph, with `govern.md` copied, now say `[runtime] path` reaches only the agents whose registration names the pointer, while Auggie and Antigravity serve the store's runtime, since 048's Resolved Questions make the store the one correct entry in a per-machine config (owner, 2026-11-09)
-
-- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
-
-## 32. Scenario: OpenCode keeps the model path
-
-- [x] Implement the behavior described in `scenarios/opencode-keeps-the-model-path.md`
-
-- **Done when**: the scenario's described behavior is correctly implemented and tested.
-
-## 33. Scenario: Antigravity keeps the model path
-
-- [x] Implement the behavior described in `scenarios/antigravity-keeps-the-model-path.md`
-
-- **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 34. Scenario: help answers with no model turn
 
@@ -514,7 +480,6 @@ The first item's done-when, that analyze reports a malformed rule heading, was o
 - [x] The scenario Contexts that describe the pre-change state in the present tense: `configure-types-no-permission-entries.md:9` and `groom-derives-routing-candidates.md:9`
 - [x] Owner decides:
   - AC27, which cannot be ticked as written, since `research.md` records the context check as waived — decided: reworded so that, with no model turn to run, the answer comes from pi's documentation and the record says so; `research.md`'s task 12 record now states it (owner, 2026-11-10);
-  - the OpenCode and Antigravity `/{project}:` hint gap, which tasks 28, 32 and 33 and those scenarios' Edge Cases leave without a disposition — waived: it predates 080, since `/ductus` substitutes only `{project}` and every installed command's prose on those hosts already spells the colon form, so it is not the view's alone, and AC10 holds; recorded in the plan's *Auggie, OpenCode and Antigravity* and both scenarios' Edge Cases (owner, 2026-11-10).
 
 - **Done when**: each item is fixed, or decided with its reason written on this task.
 

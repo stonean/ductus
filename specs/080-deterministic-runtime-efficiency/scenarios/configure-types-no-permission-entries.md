@@ -18,7 +18,6 @@ On Claude Code, `/{project}:configure`'s step 1 had the model pass `merge-permis
 
 - A caller that passes its own entries is still refused beyond the ceiling.
 - An entry the adopter added stays where it is.
-- Auggie, Antigravity and OpenCode merge their own permission shapes host-side, which `merge-permissions` does not serve. Their cost is not measured here, and their commands are unchanged.
 
 ## Open Questions
 
