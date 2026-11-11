@@ -317,9 +317,8 @@ The `target --clear` step keeps `write-session` clear mode (AC20). `fold` and
 glossary entry.
 
 Every file is mirrored to `.claude/commands/ductus/`, and the two new tools
-are added to `framework/runtime-tools.txt` and to the permission lists in
-`framework/bootstrap/configure/claude.md` and
-`framework/bootstrap/configure/auggie.md`. That is the file set the last
+are added to `framework/runtime-tools.txt` and to the permission list in
+`framework/bootstrap/configure/claude.md`. That is the file set the last
 primitive addition touched (commit `a0185c22`).
 
 ### Constitution and the 010 signpost
@@ -363,7 +362,6 @@ discharges the declared impact.
 | `runtime/tests/golden/*.jsonl` | Modify | Only if the exec seed change alters a golden stream |
 | `framework/runtime-tools.txt` | Modify | Add `resolve-session`, `retarget-sessions` |
 | `framework/bootstrap/configure/claude.md` | Modify | Permission entries for the new tools |
-| `framework/bootstrap/configure/auggie.md` | Modify | Permission entries for the new tools |
 | `framework/templates/project/gitignore` | Modify | `/.ductus/sessions/` |
 | `.gitignore` | Modify | `/.ductus/sessions/` |
 | `framework/commands/{amend,analyze,clarify,consolidate,fold,groom,help,implement,plan,prune,review,specify,status,target}.md` | Modify | Resolve through `resolve-session`; removal through `retarget-sessions` |
@@ -401,7 +399,7 @@ discharges the declared impact.
 - **Leaving the default set on clear: rejected.** A restarted agent would adopt
   the target its operator had just cleared.
 - **Known limitation: the platform table has one row.** Only
-  `CLAUDE_CODE_SESSION_ID` is verified. Auggie, OpenCode, Antigravity and Pi
+  `CLAUDE_CODE_SESSION_ID` is verified. Pi
   sessions get isolation only through `DUCTUS_SESSION` until their variables
   are verified and added.
 - **Known limitation: legacy layouts get no per-process targets.** A
