@@ -104,3 +104,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] The analysis's detection at `1097c24a` found four § references in `runtime-probe-parity-audit` that name no document, two unresolved by `resolve-anchor`, introduced by this task's rewrite. Fixed by naming `framework/bootstrap/ductus.md` on each line, the owner choosing the fix and a third review over a waiver (2026-11-10); the analysis was not recorded, and runs after that review
 
 - **Done when**: every criterion holds or is annotated true, Family 15 fails on a one-sided probe and passes at HEAD, and 029 holds its second review and analysis
+
+## 16. Disposition: a refused archive entry halts the run instead of falling back to tar
+
+- [ ] `scenarios/state-a-deterministic-path-forcing.md`'s per-step degradation rule falls back to a step's shell spec when its primitive errors, and `framework/bootstrap/ductus.md` Instructions step 3 applies it to `extract-archive`: on any error the step falls back to the `tar -xzf` in Archive fetch and extract. `extract-archive` refuses an entry with an absolute path or a `..` component (`runtime/src/primitives/extract_archive.rs`), so on that refusal the fallback extracts what the screen refused, with no containment check the framework commits to. Found by 015's analysis as `BE-INPUT-004`, 2026-11-11; the owner deferred it here, since this spec owns the degradation rule
+- [ ] Record the requirement first: a primitive's refusal of its input is not an error to degrade around, so a refused archive entry halts the run naming the entry, and only a call that cannot run falls back to its shell spec. The scenario is this spec's durable contract, so edit it before this spec's review reads it
+- [ ] `framework/bootstrap/ductus.md` Instructions step 3, and its byte copy `framework/bootstrap/govern.md`, halt on a refused entry and fall back to `tar -xzf` only when the call itself fails; check whether the other primitive-backed steps carry the same refusal-versus-failure split
+- [ ] The real adopter run in 012's task 12 covers the changed step, or the closing commit names it unexercised
+
+- **Done when**: the scenario and the bootstrap's step 3 halt on a refused entry, only a call that cannot run falls back to `tar -xzf`, and govern.md is byte-identical to ductus.md
