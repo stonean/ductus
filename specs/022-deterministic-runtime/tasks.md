@@ -659,8 +659,15 @@ Found by 055's criteria verification and prose-claim sweep at `ec6c2088`, and de
 
 ## 30. Disposition: `ductus exec` screens its command name before building a path
 
-- [ ] `ductus exec <name>` joins its command name into every candidate path with no screen: `run_exec` in `runtime/src/main.rs` and `locate_command_file` in `runtime/src/interpreter/payload.rs` build `framework/commands/{name}.md`, `Host::command_file_candidates`' three shapes and `framework/bootstrap/{name}.md` from it. The name can come from an agent's shell, the LLM-supplied input 022's, 023's and 052's analyses held `BE-INPUT-004` to. Deferred here from 064's analysis by the owner (2026-11-11), since exec is 022's surface and 064 appended only the `prompts/{project}-{name}.md` candidate
+- [ ] `ductus exec <name>` joins its command name into every candidate path with no screen: `run_exec` in `runtime/src/main.rs` and `locate_command_file` in `runtime/src/interpreter/payload.rs` build `framework/commands/{name}.md`, `Host::command_file_candidates`' two shapes (three before the agent-host removal; 064's stored deferral reason still counts four) and `framework/bootstrap/{name}.md` from it. The name can come from an agent's shell, the LLM-supplied input 022's, 023's and 052's analyses held `BE-INPUT-004` to. Deferred here from 064's analysis by the owner (2026-11-11), since exec is 022's surface and 064 appended only the `prompts/{project}-{name}.md` candidate
 - [ ] Screen the command name once, by the slug grammar, before any candidate is built, in both functions, refusing a name outside it with an error naming it
 - [ ] Test that a name holding `/` or `..` is refused and reads no file, and that the test fails with the screen removed
 
 - **Done when**: both exec entry points refuse a command name outside the slug grammar before building any path, and the test fails with the screen removed
+
+## 31. Disposition: the Pi candidate scenario names two resolution callsites where the data model names four
+
+- [ ] `scenarios/the-pi-command-candidate.md` says "The runtime's two resolution callsites (`main::run_exec` and `interpreter::payload::locate_command_file`) MUST build their candidate list through this method", while `data-model.md`'s Command-file candidates section lists four consumers of `Host::command_file_candidates`: `main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve` and `render_help::guide`. Found by 064's review, 2026-11-11, which left it to 022: the scenario is 022's durable contract, so correcting it stales 022's review
+- [ ] Fix the scenario to name every callsite the data model names, or say why two of them are outside its MUST, and re-check the data model against `runtime/src/host.rs`' callers
+
+- **Done when**: the scenario and the data model name the same set of callsites, and that set matches the callers of `Host::command_file_candidates` in the tree
