@@ -166,8 +166,6 @@ The corrections, from the 2026-09-28 sweep:
 
 The hits in these specs' `plan.md` and `tasks.md` are design records of how the work was done at the time. They stay, unless a line states current behavior as a present-tense fact, in which case it is corrected in the same reopen.
 
-028 and 032 carry *live-on-main* only as a parenthetical descriptor. It is replaced by one uniform substitution, in its own commit, which is §spec-lifecycle case (a) and reopens neither.
-
 ## Affected Files
 
 | File | Action | Purpose |
@@ -187,7 +185,6 @@ The hits in these specs' `plan.md` and `tasks.md` are design records of how the 
 | `README.md`, `CLAUDE.md`, `AGENTS.md` | Modify | The prose-claim sweep. The AC15 release-procedure statement. |
 | `specs/061-updates-track-the-latest-release-tag/spec.md` | Modify | The plan-pass corrections: floors on any resolved tag, AC17, the installer's reduced checks. |
 | `specs/{003,007,015,023,026,029,048,050,056}-*/…` | Modify | Signposts and corrected claims, each in its own reopen. |
-| `specs/028-antigravity-agent/spec.md`, `specs/032-opencode-agent/spec.md` | Modify | The uniform descriptor substitution. |
 
 ## Trade-offs
 

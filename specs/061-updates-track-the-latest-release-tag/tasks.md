@@ -78,7 +78,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `runtime/src/primitives/fetch_archive.rs`: correct the live-on-main doc comment
 - [x] Re-run the plan's sweep: `git grep` for the claims by meaning, excluding review and analysis records and published history
 
-- **Done when**: the sweep returns only the nine declared specs' hits (tasks 11–19), 028 and 032 (task 10), and past-tense records (049, `runtime/CHANGELOG.md`, other specs' `plan.md` and `tasks.md` design records). AC7 and AC15 hold against the tree.
+- **Done when**: the sweep returns only the nine declared specs' hits (tasks 11–19), and past-tense records (049, `runtime/CHANGELOG.md`, other specs' `plan.md` and `tasks.md` design records). AC7 and AC15 hold against the tree.
 
 ## 9. Pre-release exercise
 
@@ -89,12 +89,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Run `--ref=latest` with a recorded `main`, confirming the block is rewritten without `ref`
 
 - **Done when**: each outcome above is observed, and the observations are recorded for the review. The latest-release and named-tag success paths, which need a release carrying this spec, are named as unobservable before release (plan, Trade-offs).
-
-## 10. 028 and 032: the descriptor substitution
-
-- [x] Replace the parenthetical *(live-on-main)* in `specs/028-antigravity-agent/spec.md` and `specs/032-opencode-agent/spec.md` with one uniform replacement, in its own commit
-
-- **Done when**: the commit's diff is that one substitution and nothing else, and neither spec's status moved.
 
 ## 11. Discharge 003
 
