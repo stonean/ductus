@@ -62,7 +62,7 @@ A minimal file whose imports use Claude Code's `@path` form, the only one it res
 
 - **README and setup command** — the README template must include a "Getting Started" section referencing `/{project}:configure` and `/{project}:status` as the onramp for new contributors.
 - **Gitignore and language patterns** — the template stays minimal (secrets, claude settings, IDE, OS). Language-specific patterns are fetched from github.com/github/gitignore during bootstrap (spec 003) based on the project's tech stack.
-- **Settings.local.json template** — no static template. The `setup` slash command handles creation and configuration of `.claude/settings.local.json` as the single source of truth for permissions.
+- **Settings.local.json template** — no static template. The `/{project}:configure` command, named `setup` when this was decided, handles creation and configuration of `.claude/settings.local.json` as the single source of truth for permissions.
 
 ## References
 
