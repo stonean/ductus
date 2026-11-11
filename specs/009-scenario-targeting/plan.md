@@ -24,7 +24,7 @@ Validation order for `{feature}/{scenario-slug}`: check feature exists → check
 
 ### Scenario template extended with Open Questions section
 
-The `framework/templates/spec/scenario.md` file gets `## Open Questions` and `## Resolved Questions` sections appended — the same pattern specs use. Existing scenario files are not retroactively modified — they gain the sections when questions are added via the question command.
+The `framework/templates/spec/scenario.md` file gets `## Open Questions` and `## Resolved Questions` sections appended — the same pattern specs use. Existing scenario files are not retroactively modified — they gain the sections when questions are added through `amend`'s question route.
 
 ### Scenario-aware commands check session for scenario field
 
@@ -32,7 +32,7 @@ Each scenario-aware command (`amend`'s question route, `clarify`, `status`, `imp
 
 ### Clarify operates on scenario Open Questions when scenario-targeted
 
-When a scenario is targeted, clarify resolves questions in the scenario file and enumerates scenario-specific edge cases. It does not touch the spec. When no scenario is targeted, existing behavior is unchanged and scenario-level questions are not surfaced.
+When a scenario is targeted, clarify resolves questions in the scenario file and enumerates scenario-specific edge cases. It does not touch the spec. When no scenario is targeted, clarify resolves spec-level questions only; since spec 046 it also reports which scenarios carry questions, and resolves none of them.
 
 ### `amend` sets the target after creating a scenario, without confirmation
 
@@ -84,7 +84,7 @@ Rejected per user decision during clarification. Over-prompting for confirmation
 
 ### Considered: surfacing scenario questions during feature-level clarify
 
-Rejected per user decision during clarification. Spec-level and scenario-level questions are independent concerns. Mixing them would blur scope boundaries and add noise.
+Rejected per user decision during clarification. Spec-level and scenario-level questions are independent concerns. Mixing them would blur scope boundaries and add noise. Spec 046 later adopted it for discovery only: a feature-targeted run names the scenarios carrying questions and resolves none, so resolution stays independent.
 
 ## Open Questions Resolved
 

@@ -8,7 +8,7 @@ next-criterion: 19
 
 # 009 — Scenario Targeting
 
-Promote scenarios to first-class targets in the pipeline. Currently, the session target is always a feature — commands operate on the feature's spec, plan, and tasks. This spec extends targeting so that individual scenarios within a feature can be targeted, allowing commands like `amend`, `clarify`, `status`, and `implement` to operate at scenario granularity.
+Promote scenarios to first-class targets in the pipeline. Before this spec, the session target was always a feature, so commands operated on the feature's spec, plan, and tasks. This spec extends targeting so that individual scenarios within a feature can be targeted, allowing commands like `amend`, `clarify`, `status`, and `implement` to operate at scenario granularity.
 
 The motivation is context management: as specs grow, loading the entire spec to work on a single scenario wastes agent context. Scenario-level targeting keeps the agent focused on a bounded artifact.
 
@@ -109,7 +109,7 @@ When `clarify` is run with a scenario targeted:
 When `clarify` is run with only a feature targeted (no scenario):
 
 - Existing behavior is unchanged — resolves spec-level open questions
-- Scenario-level open questions are not surfaced — spec-level and scenario-level questions are independent concerns; the user must target the scenario to resolve those
+- Scenario-level open questions are reported but never resolved: the run names each scenario carrying questions and the scenario-targeted command that resolves them (`framework/commands/clarify.md`, Scope Boundaries). Spec-level and scenario-level questions stay independent concerns for resolution, so the user targets the scenario to resolve those. Spec 046 added the report; the run was silent before it
 
 ## Acceptance Criteria
 
@@ -138,7 +138,7 @@ When `clarify` is run with only a feature targeted (no scenario):
 
 ## Resolved Questions
 
-- **Feature-level clarify and scenario questions:** Stay silent. Spec-level and scenario-level open questions are independent concerns; the user must target the scenario to resolve those.
+- **Feature-level clarify and scenario questions:** Stay silent. Spec-level and scenario-level open questions are independent concerns; the user must target the scenario to resolve those. Spec 046 later reversed the silence for discovery only: a feature-targeted run reports which scenarios carry questions and resolves none, so resolution stays independent.
 - **Target with no arguments:** Display the current target (including scenario) and inform the user how to change focus.
 - **Scenario command target switch confirmation:** Just do it — no confirmation prompt. The user explicitly asked to create the scenario, so switching is the obvious next step.
 
