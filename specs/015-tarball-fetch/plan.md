@@ -20,6 +20,8 @@ The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md`
 
 **Bounds and transport** (`BE-TIMEOUT-001`, `BE-DATA-001`, `BE-DATA-011`). In a State-A or State-B run the `fetch-archive` primitive makes this request, and the `curl` in `framework/bootstrap/ductus.md`'s Archive fetch and extract section specifies what it does. 022's plan, under its `fetch-archive` transport heading, holds the commitments: `FETCH_TIMEOUT` bounds any one stall and `FETCH_DEADLINE` the whole download, both named constants in `runtime/src/primitives/fetch_archive.rs`; only `https` is fetched, through reqwest's rustls backend, which implements TLS 1.2 and 1.3 alone; and the certificate chain and hostname are verified against the system trust store.
 
+**Inputs** (`BE-INPUT-003`, `BE-INPUT-004`). The ref that reaches the archive URL is screened before any command carries it: Source resolution accepts only `latest`, `main` or `ductus-v<MAJOR>.<MINOR>.<PATCH>` (`framework/bootstrap/ductus.md`, Source resolution step 2), and the `curl` line passes the URL quoted, as one argument. On the runtime path the `extract-archive` primitive extracts the archive. It refuses an entry with an absolute path or a `..` component, checks each joined path's containment under the destination, and skips symlinks (`runtime/src/primitives/extract_archive.rs`). The `tar -xzf` fallback carries no such check of its own; that a refused entry halts the run rather than falling back is 029's task 16.
+
 The download-then-extract sequence is deliberate over piping (`curl ... | tar -xzf -`):
 
 - Pipes obscure which command failed — needed for the abort message's `{reason}` field.
