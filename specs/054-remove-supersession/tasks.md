@@ -52,7 +52,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 6. Bootstrap manifest and tool manifest
 
 - [x] Drop the `framework/commands/supersede.md` row from the slash-command manifest in `framework/bootstrap/ductus.md` and `framework/bootstrap/govern.md`
-- [x] Correct the hardcoded "seventeen `framework/commands/*.md` rows" to sixteen in both files, in both the skills and OpenCode sections
+- [x] Correct the hardcoded "seventeen `framework/commands/*.md` rows" to sixteen in both files
 - [x] Remove `read-supersession-pair` and `write-supersession-annotation` from `framework/runtime-tools.txt`
 - [x] Add no `framework/migrations.toml` entry and no procedure file
 
@@ -108,7 +108,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Run `scripts/gen-configure-mcp.sh` **then** `scripts/gen-claude-commands.sh`, in that order
 - [x] Run `scripts/gen-help-tables.sh` and confirm the command tables regenerate to sixteen rows
-- [x] Confirm `framework/bootstrap/configure/claude.md` and `configure/auggie.md` carry no supersession tool permissions and reproduce byte-for-byte
+- [x] Confirm `framework/bootstrap/configure/claude.md` carries no supersession tool permissions and reproduces byte-for-byte
 - [x] Run `check-corpus-links` and `check-orphaned-references` across the corpus
 - [x] Run `/{project}:audit` and confirm zero findings, including Family 16 and Family 33
 - [x] Grep the whole tree for `/{project}:supersede`, `--supersedes`, `supersedes:`, `§supersession-annotations`, `write-supersession-annotation`, and `read-supersession-pair`, and confirm every remaining hit is ordinary English

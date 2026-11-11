@@ -71,7 +71,6 @@ Three excisions, one of which is not a deletion. `§supersession-annotations` go
 | `framework/bootstrap/ductus.md` | Modify | Manifest row; "seventeen" → "sixteen" |
 | `framework/bootstrap/govern.md` | Modify | Same two edits |
 | `framework/bootstrap/configure/claude.md` | Modify | Drop two tool permissions (generated) |
-| `framework/bootstrap/configure/auggie.md` | Modify | Drop two tool permissions (generated) |
 | `framework/runtime-tools.txt` | Modify | Drop two tool names |
 | `runtime/src/primitives/write_supersession_annotation.rs` | Remove | Primitive |
 | `runtime/src/primitives/read_supersession_pair.rs` | Remove | Primitive |
@@ -102,7 +101,7 @@ Three excisions, one of which is not a deletion. `§supersession-annotations` go
 
 **Rejected: keeping `supersedes:` as a documented-but-inert key.** It would leave the schema advertising a relation nothing records, reads, or checks — the exact false-document failure this spec exists to remove, relocated into the frontmatter table.
 
-**Rejected: adding a migration.** Slash-command cleanup already removes the installed command in all three layouts it was ever installed in (pi's came later), honors `[pinned] files`, and is silent when nothing is stale. An entry would duplicate that and hand `/{project}:audit` Family 10 a `target_paths` list to police. The two existing migrations are not a precedent: both clean artifacts outside the enforced set.
+**Rejected: adding a migration.** Slash-command cleanup already removes the installed command in every layout it was ever installed in (pi's came later), honors `[pinned] files`, and is silent when nothing is stale. An entry would duplicate that and hand `/{project}:audit` Family 10 a `target_paths` list to police. The two existing migrations are not a precedent: both clean artifacts outside the enforced set.
 
 **Rejected: consolidating 053 into 054.** It would put the whole removal story in one spec, but `rewrite-spec-links` would turn this spec's own body link to 053 into a self-link, which `derive-dependencies` records rather than strips.
 
