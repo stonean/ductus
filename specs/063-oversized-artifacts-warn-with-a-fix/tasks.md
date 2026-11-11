@@ -26,7 +26,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 4. Register the primitive
 
 - [x] Add `check-artifact-size` to `PRIMITIVE_REGISTRY`, the clap subcommand in `runtime/src/main.rs`, the MCP tool in `runtime/src/mcp/server.rs`, and the exec dispatch arm in `runtime/src/interpreter/mod.rs`.
-- [x] Add it to `framework/runtime-tools.txt` and to the permission entries in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`.
+- [x] Add it to `framework/runtime-tools.txt` and to the permission entries in `framework/bootstrap/configure/claude.md`.
 - **Done when**: the registry set-equality test, `scripts/lint-tool-coverage.sh`, and the manifest-parity audit family pass.
 
 ## 5. `/analyze`: the `artifact-size` family

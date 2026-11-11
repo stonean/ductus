@@ -102,7 +102,7 @@ The setting is documented in the two places the spec names (AC17): a bullet in `
 
 ### Registration
 
-The primitive is registered everywhere a primitive is, following the `prune-plan` registration as the checklist: `PRIMITIVE_REGISTRY`, the clap subcommand in `runtime/src/main.rs`, the MCP tool in `runtime/src/mcp/server.rs`, the exec dispatch arm in `runtime/src/interpreter/mod.rs`, `framework/runtime-tools.txt`, and the permission entries in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`. The exec tally in `runtime/src/interpreter/analyze_tally.rs` counts each undecided oversized subject as advisory and each skipped subject as unexamined under `artifact-unreadable`. Exec matches no stored decision, so, as with `prune-plan`, a decided subject is counted live there. The `plan-basic` and `analyze-basic` goldens are re-blessed for the new steps.
+The primitive is registered everywhere a primitive is, following the `prune-plan` registration as the checklist: `PRIMITIVE_REGISTRY`, the clap subcommand in `runtime/src/main.rs`, the MCP tool in `runtime/src/mcp/server.rs`, the exec dispatch arm in `runtime/src/interpreter/mod.rs`, `framework/runtime-tools.txt`, and the permission entries in `framework/bootstrap/configure/claude.md`. The exec tally in `runtime/src/interpreter/analyze_tally.rs` counts each undecided oversized subject as advisory and each skipped subject as unexamined under `artifact-unreadable`. Exec matches no stored decision, so, as with `prune-plan`, a decided subject is counted live there. The `plan-basic` and `analyze-basic` goldens are re-blessed for the new steps.
 
 ## Affected Files
 
@@ -122,7 +122,7 @@ The primitive is registered everywhere a primitive is, following the `prune-plan
 | `framework/commands/plan.md` | Modify | New step 8, renumber, Validation gate bullet, code-in-plans guidance |
 | `framework/commands/analyze.md` | Modify | New step 17, renumber, Artifact size reference section |
 | `framework/runtime-tools.txt` | Modify | Tool coverage |
-| `framework/bootstrap/configure/claude.md`, `framework/bootstrap/configure/auggie.md` | Modify | Permission entries |
+| `framework/bootstrap/configure/claude.md` | Modify | Permission entries |
 | `framework/bootstrap/ductus.md`, `framework/bootstrap/govern.md` | Modify | `[artifacts]` in §Project Configuration |
 | `README.md` | Modify | Configuration bullet |
 | `docs/analyze.md` | Modify | The family |
