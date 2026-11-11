@@ -14,11 +14,11 @@
 //!
 //! A contract edit is `mechanical` when it only adds, removes or rewrites a cross-service
 //! reference, or is a sweep's: one file's diff cannot show a sweep, so a snapshot of the
-//! working tree goes through `mechanical_sweep`'s repo-wide index, the rule the review
-//! gate's staleness uses, so the two agree on a sweep once it is committed. Its blind spot
-//! comes with it: a real change made with the same token in two files reads as a sweep. A
-//! reference-only edit they read apart, by a decision: this says `mechanical`, while the
-//! digest reads stale.
+//! working tree goes through `mechanical_sweep`'s repo-wide index, the rule the analysis
+//! record's freshness at the gate uses, so the two agree on a sweep once it is committed.
+//! Its blind spot comes with it: a real change made with the same token in two files reads
+//! as a sweep. A reference-only edit they read apart, by a decision: this says
+//! `mechanical`, while the analysis digest reads stale.
 //! Any other file under the spec takes the same test (§spec-lifecycle's "an edit elsewhere").
 
 use std::collections::{BTreeMap, BTreeSet};

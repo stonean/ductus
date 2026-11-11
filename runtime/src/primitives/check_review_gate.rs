@@ -758,10 +758,10 @@ fn analyze_gate_block(
 /// Render a path list for an operator-facing message: the first three, comma
 /// separated, plus `(+N more)` when the set is larger.
 ///
-/// One implementation for the two messages that name paths — the
-/// review-staleness block and the analyze-staleness block. They had drifted
-/// into copies of the same six lines, which is how the cap silently becomes
-/// three in one message and five in another.
+/// One implementation for the two messages that name paths — the review-owed
+/// block and the analyze-staleness block. The two staleness blocks it first
+/// served had drifted into copies of the same six lines, which is how the cap
+/// silently becomes three in one message and five in another.
 fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
     const SHOWN: usize = 3;
     let paths: Vec<&str> = paths.into_iter().map(String::as_str).collect();
@@ -2172,7 +2172,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         // Never reviewed AND carrying a scenario question: the scenario
         // check is ordered first, so the contributor resolves the design
-        // question before being sent to run a review that would go stale.
+        // question before being sent to review code its answer may change.
         seed(tmp.path(), NEVER_REVIEWED);
         seed_scenario(tmp.path(), "wire-contract.md", SCENARIO_WITH_QUESTIONS);
 

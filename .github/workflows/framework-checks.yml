@@ -40,8 +40,9 @@ jobs:
       # The default depth-1 checkout. Family 19 needed full history until spec
       # 081 retired it; measured at debcc8cf, every step this job runs passes
       # in a depth-1 clone and the self-audit's output matches a full clone's
-      # byte for byte. Families 7 and 8 call `dashboard`, whose reopenings and
-      # inbox-age fields read history, but they read only its spec inventory.
+      # byte for byte. The families that call `dashboard` read only its spec
+      # inventory, through lib.sh's spec_corpus, and never its reopenings and
+      # inbox-age fields, which read history.
       # A step whose result comes to depend on history needs `fetch-depth: 0`
       # and a comment naming it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

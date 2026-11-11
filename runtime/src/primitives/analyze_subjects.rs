@@ -38,9 +38,9 @@ use crate::schema::primitives::{AnalyzeBlock, RecordFreshness};
 /// Any `.md` artifact under the feature except the analyze record itself —
 /// the analyze record's subject set.
 ///
-/// Deliberately wider than `check_review_gate`'s durable contracts, and the
-/// two must not be merged: a review reads *code*, so `review.md` is its output
-/// rather than its input, while an analysis reads *artifacts*, and `review.md`
+/// Deliberately wider than the review record's durable contracts
+/// ([`is_review_contract`]), and the two must not be merged: a review reads
+/// *code*, so `review.md` is its output rather than its input, while an analysis reads *artifacts*, and `review.md`
 /// is among the ones its families assert on. Excluding `review.md` would
 /// exempt the single edit that most often invalidates an analyze record.
 ///
@@ -78,14 +78,18 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
-/// A scenario or the data model — the artifacts a **review** reads, and the
-/// subject set of the review record.
+/// A scenario or the data model — the artifacts a **review** reads code against,
+/// and the subject set of the review record's digest.
 ///
 /// Deliberately narrower than [`is_analyze_subject`], and the two must not be
 /// merged. A review reads *code*, so `review.md` is its output rather than its
-/// input — counting it would stale every review the instant it was recorded.
-/// An analysis reads *artifacts*, so that same file is among its subjects. Same
-/// mechanism, different claims.
+/// input — counting it would put each review's own record in the next review's
+/// scope as a changed contract. An analysis reads *artifacts*, so that same file
+/// is among its subjects. Same mechanism, different claims.
+///
+/// The review digest stales nothing: a review is owed for code alone (spec 081),
+/// and a contract changed since the review only joins the scope of the next
+/// review that runs, through `compute-review-scope`.
 ///
 /// ## `spec.md`'s exclusion now rests on nothing, and is kept anyway
 ///
@@ -96,14 +100,13 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
 /// reason has lapsed, and the exclusion is now a bare fact rather than a
 /// consequence.
 ///
-/// It is left in place deliberately. Adding `spec.md` to this set would make
-/// every recorded review stale on any spec-body edit, which is a change to what
-/// the gate *means* — defensible on its own merits, and not something to slip
-/// into a relocation whose whole claim (AC4) is that the gate's verdicts are
-/// unchanged. Whoever revisits it should argue it as its own change, and should
-/// know that this comment, not a stale rationale, is what they are overturning.
-///
-/// Mirrors `scripts/audit/review-freshness.sh`'s rule exactly.
+/// It is left in place deliberately. Adding `spec.md` to this set would put
+/// every spec-body edit in the scope of the next review that runs, a change to
+/// what that review reads — defensible on its own merits, and not something
+/// 057's relocation, whose whole claim (AC4) was that the gate's verdicts were
+/// unchanged, could slip in. Whoever revisits it should argue it as its own
+/// change, and should know that this comment, not a stale rationale, is what
+/// they are overturning.
 pub(crate) fn is_review_contract(rel_within_feature: &str) -> bool {
     let is_md = Path::new(rel_within_feature)
         .extension()
@@ -312,8 +315,8 @@ pub(crate) fn freshness_of(
 ///
 /// The one place `analyzed-against` is still read. A contract that changed only
 /// in spelling states what it stated before, so a rename sweep must not stale
-/// the record — the §spec-lifecycle case (a) rule, and the same exemption
-/// `stale_review_block` applies. Measured on the review half before it had the
+/// the record — the §spec-lifecycle case (a) rule, which `classify-spec-edit`
+/// applies through the same exemption. Measured on the review half before it had the
 /// exemption, the un-exempted rule called 19 of 46 `done` specs stale, every
 /// one a consequence of 049's `govern → ductus` sweep and none a real change.
 ///
@@ -1058,8 +1061,8 @@ mod tests {
     fn the_review_contract_set_is_scenarios_and_the_data_model() {
         assert!(is_review_contract("scenarios/a.md"));
         assert!(is_review_contract("data-model.md"));
-        // A review's own outputs are not its inputs: counting them would stale
-        // every review the instant it was recorded.
+        // A review's own outputs are not its inputs: counting them would put
+        // each review's own record in the next review's scope.
         assert!(!is_review_contract("review.md"));
         assert!(!is_review_contract("spec.md"));
         // Ephemeral by construction, and churning — the scoping that keeps

@@ -93,7 +93,7 @@ introduce review criteria from outside the project.
 
 ## Run review passes
 
-Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines: a stale claim the window left alone otherwise surfaces at the completion gate's criterion check, and its correction stales this review. When a flag restricts dimensions (`--security`,
+Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines: a stale claim the window left alone otherwise surfaces at the completion gate's criterion check, and its correction then stales the analysis. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
 produced.

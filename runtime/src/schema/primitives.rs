@@ -55,8 +55,8 @@ pub struct ReviewBlock {
     /// commit had moved.
     ///
     /// `review.md` is deliberately outside the set — it is where this record
-    /// lives, so counting it would stale every review the instant it was
-    /// recorded. That is the opposite of the analyze record's set, and
+    /// lives, so counting it would put each review's own record in the next
+    /// review's scope. That is the opposite of the analyze record's set, and
     /// correctly so: it is this command's *output*.
     ///
     /// `spec.md` is outside the set too, but no longer for that reason:

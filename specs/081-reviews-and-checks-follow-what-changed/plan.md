@@ -44,6 +44,16 @@ Family 19 (`scripts/audit/review-freshness.sh`) asked `check-review-freshness` w
 
 Its allow entry joins the retired list in `framework/bootstrap/configure/claude.md`, so `merge-permissions` revokes it from adopters' settings, and the generated allow block is regenerated. Family 19 leaves `run-all.sh`, `framework/reference/audit.md` and `scripts/audit/README.md`, its number spent as Family 3's is. `scripts/mutation/family-19-calls-the-runtime.py` goes with it.
 
+### The change is breaking
+
+`BE-COMPAT-001` asks a plan to classify a change to a primitive's interface or result, and this one is **breaking**:
+
+- `check-review-freshness` is no longer served, as a tool or a subcommand, so a call to it fails.
+- `check-review-gate`'s `blocked-by` loses `review-stale`, and the gate no longer holds `done` on a review for a changed scenario or data model.
+- `compute-review-scope` answers `review-owed: false` for a window confined to the project's artifacts, where it answered `true` for an edit to the spec's scenarios or data model, or to a path outside every spec's directory such as a rule file, `.ductus/` or `AGENTS.md`; and a commit naming several specs puts its code in each named spec's scope, where each took its own plan's paths and only the first named took the unplanned ones.
+
+The runtime is pre-1.0, so the release that carries the change is a minor bump, 0.60.0 and never a patch, which that release already owes (071's plan). Its consumers ship in the same release (§runtime-boundary): the framework's commands and references, and this repository's audit, which no longer runs Family 19. `runtime/CHANGELOG.md` marks both entries breaking.
+
 ### Check selection in this repository's CI
 
 `.github/workflows/framework-checks.yml` and `.github/workflows/generators.yml` each key their existing cache of `runtime/target` and the cargo registry on `hashFiles('runtime/Cargo.lock', 'runtime/Cargo.toml', 'runtime/rust-toolchain.toml', 'runtime/src/**')`, the inputs the binary is compiled from: `runtime/src` holds no `include_str!` or `include_bytes!`, and the crate has no `build.rs` (checked at `8dd03c22`). On an exact hit, a step dates every tracked file under `runtime/` back before the restored build, since the checkout's fresh mtimes otherwise read to cargo as a change, so every `cargo build` in the job finds the build fresh. That includes the ones `scripts/lint-procedure-parseability.sh` and `scripts/audit/check-zero.sh` run themselves. A fallback restore is never dated back, as it is a build of other sources. The build step prints, on anything but an exact hit, that no build of these sources is cached. `runtime.yml`'s path filter already excludes `specs/` and stays as it is. Both checkouts are depth 1: measured at `debcc8cf`, no step's result depends on history once Family 19 is gone.
@@ -88,7 +98,7 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 | `specs/079-review-and-analysis-work-converges/spec.md` | Modify | AC4, AC6 and two Resolved Questions point here |
 | `specs/066-audit-records-and-the-completion-gate/` | Modify | Gate checks and `blocked-by` values |
 | `specs/026-framework-self-audit/` | Modify | Family 19 retired |
-| `specs/047-analyze-findings-durability/scenarios/analyze-run-durability.md` | Modify | Family 19 row |
+| `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md`, `specs/047-analyze-findings-durability/spec.md` | Modify | The review staleness check stated as retired, and the back-link |
 | `specs/050-constitution/` | Modify | Back-link for the constitution change |
 
 ## Trade-offs
@@ -105,7 +115,7 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 - **079.** AC4's annotation, AC6 and the Resolved Questions on scenario edits and attribution change. That reopens 079, which then owes an analysis and, under this rule, no review.
 - **066.** Its data model and scenarios list the gate's checks and `blocked-by` values; it is `in-progress`.
 - **026.** Its criteria and scenarios describe Family 19; it is `in-progress`.
-- **047.** Scenario `analyze-run-durability` names Family 19 as a reader of review records. It is `done`, so the edit reopens it, and it owes an analysis.
+- **047.** Scenario `analyze-record-freshness` stated the review staleness check in the present tense; scenario `analyze-run-durability`'s Family 19 row is a past-tense record and stays. It is `done`, so the edit reopens it, and it owes an analysis.
 - **050.** It owns the constitution's content and gains the back-link.
 
 Each affected spec links back here, which discharges 081's `cross-spec-impact:`, and 047 joins that list.

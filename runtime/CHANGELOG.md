@@ -68,7 +68,7 @@ its version and date.
 
 ### Changed
 
-- **A review is owed for code, and an analysis for the project's artifacts.**
+- **BREAKING: a review is owed for code, and an analysis for the project's artifacts.**
   `compute-review-scope` owes a review only for a path outside the spec root,
   `.ductus/`, `AGENTS.md` and `CLAUDE.md`, so an edit to a spec's scenarios
   or data model, a rule file or the inbox owes an analysis and no review, and
@@ -521,7 +521,7 @@ its version and date.
 
 ### Removed
 
-- **`check-review-freshness` is retired, with the self-audit's Family 19.**
+- **BREAKING: `check-review-freshness` is retired, with the self-audit's Family 19.**
   Both asked only whether a `done` spec's scenarios and data model still
   matched its review's digest, which no longer owes a review. The runtime no
   longer serves the tool, and `/ductus:configure` revokes its

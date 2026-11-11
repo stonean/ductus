@@ -1,19 +1,17 @@
 //! `invalidate-review` — mark a spec's recorded review as no longer
 //! describing the spec.
 //!
-//! The pre-`done` gate asks two questions of the `review:` block: has a
-//! review run at all, and does the recorded one still describe the current
-//! code. The second is answered by diffing the spec's **durable contracts**
-//! — `scenarios/*.md` and `data-model.md` — between `reviewed-against` and
-//! `HEAD`. `spec.md` is deliberately outside that set, because a spec body
-//! is not what a review reads.
+//! The pre-`done` gate asks two questions of the review record: has a review
+//! run at all, and is one owed. `compute-review-scope` owes a review for code
+//! alone (spec 081), so a change to the spec's artifacts, its body or its
+//! scenarios, owes none.
 //!
-//! That leaves one case the staleness check cannot see: a fold-back
-//! (spec 051) that routes a branch-scoped spec's content into the upstream
-//! spec's **body**. Only `spec.md` changes, no durable contract moves, and
-//! the upstream spec can return to `done` carrying a review that never saw
-//! the code the fold brought with it. The fold knows what the diff cannot,
-//! so it says so here rather than leaving the gate to infer it. The next
+//! That leaves one case the window cannot see: a fold-back (spec 051) that
+//! routes a branch-scoped spec's content into the upstream spec. Only the
+//! upstream spec's artifacts change, and the upstream spec can return to
+//! `done` carrying a review that never saw the code the fold brought with it.
+//! The fold knows what the diff cannot, so it says so here rather than leaving
+//! the gate to infer it. The next
 //! review's scope is `compute-review-scope`'s, which holds that code when the
 //! spec was folded below `done`, since then no review has read it (spec 079).
 //!

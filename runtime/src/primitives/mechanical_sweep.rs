@@ -570,7 +570,7 @@ mod tests {
         // testable, and what actually matters, is that the shape those
         // branches produce cannot hand out an exemption: an empty index has
         // no entry for any path, so every path is a real change and the
-        // review stays stale. The alternative — folding a half-delivered
+        // record stays stale. The alternative — folding a half-delivered
         // diff — would let a file whose structural hunks were dropped read
         // as a pure rename, which is `QUAL-CLAIM-001` in the machinery that
         // enforces it.
