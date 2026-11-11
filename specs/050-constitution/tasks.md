@@ -373,3 +373,9 @@ The routing text, the tree definitions, and the corrections to §Classification 
 - [ ] The constitution's §drift-prevention canonical-sources table names no source for the `[constitutions.*]` schema, which `specs/055-shared-constitution/data-model.md` declares canonical, as it does for `[services]` (055's criteria verification and analysis, 2026-11-09; deferred here, since 050 owns constitution content)
 
 - **Done when**: no 050 artifact restates the precedence order without its exception, and the table names the schema's canonical source, or a recorded reason says why not
+
+## 46. The canonical-record sync rule says what classify-spec-edit decides
+
+- [x] `framework/constitution.md` §spec-lifecycle's operational rule said syncing a canonical record on another spec is a mechanical edit that leaves it `done`, which has not held for a table in a data model or scenario since 079's `classify-spec-edit` (97d6562c): such an edit reopens the spec and stales its review, as 067 task 25's row in 080's data model did (7904cb19). The owner chose to correct the rule to the tooling (2026-11-11): it now says a table in `spec.md` outside the criteria, `plan.md` or `tasks.md` syncs with no back-edge and one in a data model or scenario reopens, and AGENTS.md's line and this plan's survey W24 row say the same
+
+- **Done when**: the constitution, AGENTS.md and this plan state the rule `classify-spec-edit` applies

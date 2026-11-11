@@ -406,7 +406,7 @@ clause rather than as a principle in its own right.
 | Use the `Write` tool, not Bash redirects, for `.ductus/session.toml` (survey W18) | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants |
 | Re-open a `done` spec via `set-status` when the only intent is to reflect on-disk edits, not via `/{project}:amend` (survey W21) | The back-edge and the refinement loop are both adopter-facing |
 | Add a rule to its surface's home spec via the back-edge — do not spawn a new spec for it (survey W22) | Adopters own rule files and hit the same spec-proliferation pressure |
-| A canonical table living on a `done` spec is synced as a mechanical edit — no back-edge (survey W24) | Follows from the canonical-sources map, which adopters receive |
+| A canonical table living on a `done` spec syncs with no back-edge only from its `spec.md`, `plan.md` or `tasks.md` — one in its data model or a scenario reopens it (survey W24) | Follows from the canonical-sources map, which adopters receive |
 | A CI check that reads git history needs `fetch-depth: 0` (survey W27) | **R** — the shipped adopter CI template runs exactly such a check, so this is adopter-facing already |
 | A new test that reads git history or shells out to a repo script is a change to the workflow that runs it, not just to the suite (survey W28) | **R** — same family as W27; stated as history/inputs rather than this repo's workflow filenames |
 | When an item routes to a chore, fix it — do not park it (survey W29) | The groom command and its five routes ship unchanged |

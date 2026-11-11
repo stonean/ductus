@@ -167,7 +167,7 @@ Operational rules:
 
 - **A retired feature's spec is deleted, not left at `done`**, which means *delivered, and still true*. When its content survives elsewhere, `/{project}:consolidate` re-points every inbound pointer it reads **before** removing the directory, lest it dangle; when nothing survives, the spec goes; retiring *part* of a feature is an ordinary body edit.
 - **Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk.**
-- **Syncing a canonical record that lives on another spec is a mechanical edit** — that spec stays `done`, and a table synced twice moves to the spec owning the behavior.
+- **Syncing a canonical record on another spec leaves it `done` only as a correction** (`classify-spec-edit`): one in its `spec.md` outside the criteria, `plan.md` or `tasks.md`; one in its data model or a scenario reopens it, and a table synced twice moves to the spec owning the behavior.
 - **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole; to separate one from edits on disk, set them aside, commit it, then restore them, or transition first.
 
 <!-- §plan-phase -->
