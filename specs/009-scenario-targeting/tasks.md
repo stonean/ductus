@@ -79,3 +79,10 @@ Done when: feature-only commands operate at the feature level regardless of scen
 - [x] Verify all acceptance criteria from the spec are addressed by the tasks above
 
 Done when: all files pass lint and every acceptance criterion maps to a completed task.
+
+## 10. Restore target's change-focus hint
+
+- [x] `framework/commands/target.md` step 1's no-argument branch tells the user they can run `/{project}:target {feature}` or `/{project}:target {feature}/{scenario-slug}` to change focus, whether or not a target is set (AC14). 022's task 13 (`886b34b0`) dropped the hint when it flattened the command's steps; the owner chose to restore it (2026-11-11)
+- [x] Regenerate the dogfooded copies with `scripts/gen-claude-commands.sh` and confirm `--check` reports no drift
+
+- **Done when**: a no-argument `/ductus:target` names both forms of the command after its display, and `scripts/gen-claude-commands.sh --check` reports no drift
