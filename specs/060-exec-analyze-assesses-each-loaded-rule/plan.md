@@ -24,7 +24,8 @@ pub(crate) struct RuleSection {
     pub(crate) id: String,
     /// The section's first block quote, `>` markers stripped, lines joined with spaces.
     pub(crate) statement: String,
-    /// The first `**Verification:**` paragraph, wrapped lines joined; `None` when absent or empty.
+    /// The first `**Verification:**` paragraph, wrapped lines joined, then a pipe table directly
+    /// after it, one row per line (spec 080); `None` when absent or empty.
     pub(crate) verification: Option<String>,
 }
 
