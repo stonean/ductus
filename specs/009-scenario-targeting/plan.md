@@ -22,6 +22,8 @@ The session file, `.ductus/session.toml`, is extended with two optional fields. 
 
 Validation order for `{feature}/{scenario-slug}`: check feature exists → check `scenarios/` directory exists → check slug matches a file. Each failure has a distinct error message per the spec.
 
+The slug becomes a path, `specs/{feature}/scenarios/{scenario-slug}.md`, so both parts are screened before any file is opened (`BE-INPUT-004`). `resolve-feature` refuses a slug outside `^[a-z0-9]+(?:-[a-z0-9]+)*$` (`validate_slug`, `runtime/src/primitives/mod.rs`), which leaves it no separator or `..`. It also refuses a feature argument that traverses, or whose directory or anything under it links outside the project's canonical root (`validate_feature_argument`). So the joined path cannot name another directory. `write-session` screens the slug the same way and refuses a `scenario-path` that traverses (`validate_no_traversal`), so the session file records only a screened pair.
+
 ### Scenario template extended with Open Questions section
 
 The `framework/templates/spec/scenario.md` file gets `## Open Questions` and `## Resolved Questions` sections appended — the same pattern specs use. Existing scenario files are not retroactively modified — they gain the sections when questions are added through `amend`'s question route.
