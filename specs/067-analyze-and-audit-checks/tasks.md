@@ -174,7 +174,7 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
 ## 20. The plan's Overview describes the runtime work 067 did
 
-- [ ] specs/067-analyze-and-audit-checks/plan.md — the Overview says "No runtime behavior changes", while 18 commits to `runtime/src` carry 067's number, tasks 5–11 and its review rounds among them (048's review, 2026-10-29). Restate the Overview, and classify each primitive interface those commits changed as additive or breaking under BE-COMPAT-001, as the Technical Decisions section now does for `check-promotion-coverage`'s empty-`sections` refusal
+- [x] specs/067-analyze-and-audit-checks/plan.md — the Overview says "No runtime behavior changes", while 18 commits to `runtime/src` carry 067's number, tasks 5–11 and its review rounds among them (048's review, 2026-10-29). Restate the Overview, and classify each primitive interface those commits changed as additive or breaking under BE-COMPAT-001, as the Technical Decisions section now does for `check-promotion-coverage`'s empty-`sections` refusal. Done: the Overview names the runtime work tasks 5–11, 14, 17–19 and 25 and the review rounds did, and **Primitive interface changes, classified under `BE-COMPAT-001`** classifies each commit's change, `abec64ab`'s breaking one shipped in 0.59.10 among them
 
 - **Done when**: the Overview states the runtime work 067 did, and every primitive interface change in it is classified additive or breaking
 

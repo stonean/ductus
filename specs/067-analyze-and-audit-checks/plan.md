@@ -4,7 +4,7 @@ Implements [067 — Analyze and Audit Checks](spec.md).
 
 ## Overview
 
-No runtime behavior changes. The primitives this spec specifies already ship under 022; the work moves their contract here — twenty-five scenarios, the data-model sections for the checks, and four acceptance criteria — and gives `check-corpus-links` the documented shape it never had.
+The primitives this spec specifies shipped under 022, and the first work moved their contract here — twenty-five scenarios, the data-model sections for the checks, and four acceptance criteria — and gave `check-corpus-links` the documented shape it never had. Since then this spec's own scenarios have changed the runtime: `check-artifacts`' scenario-consistency history, skipped targets and body-path family and the logical-line reading they share (tasks 5–11); the review rounds' fixes to the derive splices, the reference prefixes and `check-promotion-coverage`'s refusal; `derive-dependencies`' and `derive-references`' `unwritable` list (tasks 14 and 25); the status-gated path families (task 17); `validate-frontmatter`'s row by path (task 18); and `resolve-anchor`'s judgment of references into other documents, with Family 39 gating the whole spec corpus (task 19). Each interface change is classified under `BE-COMPAT-001` below.
 
 ## Technical Decisions
 
@@ -27,6 +27,23 @@ The sections moved from 022 keep every argument and result shape and every field
 ### `check-promotion-coverage` refuses an empty `sections`, a breaking change
 
 Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on both surfaces rather than reporting zero counts, and the CLI's repeatable `--section` parses as empty when omitted, so an optional argument became required. `BE-COMPAT-001` classes that as breaking; it ships with the pending 0.60.0 minor bump, the pre-1.0 boundary for a breaking change (071's plan). The one in-repo caller, `scripts/audit/promotion-coverage.sh`, passes four `--section` flags.
+
+### Primitive interface changes, classified under `BE-COMPAT-001`
+
+The rule counts a new value in a response set the schema documents as closed as breaking, as it does a narrowed request or a changed exit status, which is the CLI's machine-readable contract. The runtime is pre-1.0, so a breaking change ships with a minor bump; the unreleased ones ship with 0.60.0. Commits carrying 067's number that change no interface — the logical-line reading and its markers (`0e484e52`, `0a157563`, `cba81b63`, `3b6e6946`, `3b2f0856`, `830e90cb`), the reference-prefix rules of `check-orphaned-references` and `rewrite-spec-links` (`d1853444`, `3fc5755a`, `54715126`, `38fc39f6`), the derive splices (`2be18da6`) and the reference sweeps (`13acc295`, `bd4da459`) — change which findings fire, not the shape or the contract.
+
+| Commit | Primitive | Interface change | Class |
+| --- | --- | --- | --- |
+| `107e22fb` (task 5, in 0.59.9) | `check-artifacts` | scenario-consistency's message below `done` names the remedy | additive: no field or value changes |
+| `49a5b5e1` (task 6, in 0.59.9) | `check-artifacts` | `skipped` carries the existing `no-readable-state` from one more family | additive |
+| `abec64ab` (task 7, in 0.59.10) | `check-artifacts` | `family` gains `body-path-existence`, and the closed `reason` set gains `never-existed` | breaking: new values of response sets documented closed, shipped in a patch release without the bump |
+| `2be18da6` | `check-promotion-coverage` | an empty `sections` is refused | breaking: an optional request field became required |
+| `e38f5c1f` | `check-artifacts` | `disposition-drift` findings move from blocking to advisory | breaking: a response value's meaning changed, so a caller gating on it now passes |
+| `77fff147` | `apply-manifest` | the result gains `modes-kept` | additive |
+| `d90d2133`, `6b0f96fd` (tasks 14, 25) | `derive-dependencies`, `derive-references` | the result gains `unwritable` and `unwritable-count`, moved into the file form past the read size; both exit non-zero on an unwritable spec | breaking: a run that exited 0 now exits non-zero; the fields are additive |
+| `63527403` (task 17) | `check-artifacts` | the closed `reason` set gains `status-gated` and `gitignored`; the path families report at `in-progress` | breaking: new values of a closed response set |
+| `286c2c09` (task 18) | `validate-frontmatter` | a path of no schema row is refused; a scenario path takes the scenario row; a `spec.md` run reports its scenarios' findings | breaking: a request accepted before is refused |
+| `8651d466` (task 19) | `resolve-anchor` | references gain `unjudged` and the result two counts; a `qualified` reference can be unresolved; a basename no longer names the markers file; a malformed registry is an error; a span citation is a reference | breaking: the fields are additive, the meaning of `qualified` and of the markers match is not |
 
 ## Affected Files
 
