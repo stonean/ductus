@@ -74,7 +74,7 @@ Published under `https://github.com/stonean/ductus/releases/download/ductus-v{ve
 
 The complete set the release workflow asserts before publishing carries more than these five: the SBOM (`ductus.cdx.json` plus its `.sha256` sidecar) and, since [061](../061-updates-track-the-latest-release-tag/spec.md), the installer `install.sh`, staged from a checkout at the tag. The installer has no sidecar: it is fetched over HTTPS and piped to `sh`, and a post-release job compares the published copy byte for byte with the tag's.
 
-Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and `tar` is already granted in all four permission grammars, so `unzip` never enters the permission surface.
+Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and `tar` is already granted in Claude's seed, so `unzip` never enters the permission surface.
 
 ## Detection states
 

@@ -10,7 +10,7 @@ Three deliverables that must land as one release, because each is incoherent wit
 2. **The requirement** — the constitutional amendment that makes the runtime mandatory, plus the reference sweep and the two cross-spec reopens it forces.
 3. **The release surface** — a repo-root `version` file as the lockstep pin, a publish gate so a tag cannot ship a partial asset set, and a Windows asset published as `.tar.gz`.
 
-The ordering constraint that shapes everything else: **acquisition cannot use the runtime.** `fetch-archive` and `extract-archive` are `ductus` primitives, and `ductus` is what is being acquired. Every acquisition step is host shell work expressed in `framework/bootstrap/ductus.md`'s procedure and pre-authorized in four permission grammars. No new primitive is written for this feature.
+The ordering constraint that shapes everything else: **acquisition cannot use the runtime.** `fetch-archive` and `extract-archive` are `ductus` primitives, and `ductus` is what is being acquired. Every acquisition step is host shell work expressed in `framework/bootstrap/ductus.md`'s procedure and pre-authorized in Claude's permission seed. No new primitive is written for this feature.
 
 ## Technical Decisions
 
@@ -100,7 +100,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 
 ## Trade-offs
 
-**One version per machine.** The store holds a single binary, so two projects pinned to different versions cannot both be correct simultaneously; whichever ran `/ductus` last wins until the other runs it. Rejected alternatives: a versioned store (`ductus-{version}`), which fixes coexistence but not the home-config agents whose single MCP entry still names one version; and per-project binaries, which fix both but leave two of four agents unable to express a project-local path at all. Accepted because it is strictly better than the `PATH` behavior it replaces — ductus owns the path and every run corrects it — and because it is the only shape uniform across all four agents.
+**One version per machine.** The store holds a single binary, so two projects pinned to different versions cannot both be correct simultaneously; whichever ran `/ductus` last wins until the other runs it. Rejected alternatives: a versioned store (`ductus-{version}`), which fixes coexistence at the cost of a store-layout change, an adopter migration and a pruning policy; and per-project binaries. Accepted because it is strictly better than the `PATH` behavior it replaces — ductus owns the path and every run corrects it — and because it is the only shape uniform across every agent.
 
 **A gitignored artifact the repo cannot verify.** The pointer is per-contributor and outside version control, so nothing in CI proves an adopter's pointer is correct. Mitigated by making it cheap to repair: a missing or dangling pointer is the expected state of any un-bootstrapped checkout, and `/ductus` recreates it without ceremony.
 

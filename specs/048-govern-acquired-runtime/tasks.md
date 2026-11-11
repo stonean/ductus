@@ -59,22 +59,22 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 - **Done when**: the pointer resolves to the store on Unix and on Windows without developer mode, a fresh clone's missing pointer is recreated by `/ductus`, and `git status` reports nothing untracked after a bootstrap.
 
-### 6. Seed the acquisition permissions in all four grammars
+### 6. Seed the acquisition permissions
 
-- [x] Add `mkdir`, the platform checksum tool, the pointer command, and execution of the store path to each agent's seed in `framework/bootstrap/ductus.md`'s registry table — Claude `Bash(…)`, Auggie `launch-process` regexes, Antigravity `command(…)`, OpenCode `permission.bash` globs
+- [x] Add `mkdir`, the platform checksum tool, the pointer command, and execution of the store path to the seed in `framework/bootstrap/ductus.md`'s registry table — Claude `Bash(…)`
 - [x] Walk the §Derived values **Layout-derived** table row by row per `AGENTS.md`'s agent-registry rule, and record the per-agent impact in the commit message
 - [x] Confirm no acquisition step prompts on a bootstrap — including checksum verification
 
-- **Done when**: a bootstrap on each agent completes acquisition with no permission prompt, and each grammar's entry is verified against that agent's matcher rather than assumed from another's.
+- **Done when**: a bootstrap completes acquisition with no permission prompt, and the entry is verified against Claude's matcher rather than assumed.
 
 ### 7. Rewrite MCP registration and the detection states
 
-- [x] Update the MCP shapes in `ductus.md`: `project-committed` targets name the repo-relative pointer, `user-global` / `home-level` targets name the absolute store path
+- [x] Update the MCP shapes in `ductus.md`: each target names the repo-relative pointer
 - [x] Collapse the three detection states to two per the data model, deleting former State C and its tip in `framework/bootstrap/ductus.md` §Post-Scaffolding Output
 - [x] Update the pre-flight binary probe from a `PATH` lookup to a store check, and its `framework/bootstrap/ductus.md` §Permission Setup seed entry with it
 - [x] Verify the additive-merge rules are unchanged — other servers, other top-level keys, and a malformed config are all handled as before
 
-- **Done when**: each agent registers the correct path for its config scope, no committed config contains a machine-specific absolute path, and an adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart.
+- **Done when**: each agent registers the pointer, no committed config contains a machine-specific absolute path, and an adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart.
 
 ### 8. Register the adopter migration
 
@@ -183,12 +183,6 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 - **Done when**: a tag naming another version than `version` fails the release before `publish`, the check's test and the ordering lint's test each fail when what they assert is removed, and no artifact says a self-audit family compares the tag
 
-### 23. AC9 says it has never been true for Antigravity
-
-- [x] specs/048-govern-acquired-runtime/spec.md — AC9 said the §Permission Setup seed grants exactly what the store probe needs, but Antigravity's seed has never carried `~/.ductus/bin/ductus --version` and keeps the pre-048 `command(which)`, which `ductus.md:291` already discloses (048's review, 2026-10-29; owner chose the annotation). AC9 now carries a never-true annotation like AC22's; the seed itself stays 022's
-
-- **Done when**: AC9 states what holds for each of the four seeds, matching `ductus.md` §Permission Setup and the store-probe paragraph
-
 ### 24. The runtime tip that could never render is gone
 
 - [x] framework/bootstrap/ductus-procedure.md — §ductus runtime tip, and its Post-Scaffolding Output bullet, rendered only on a failed acquisition, which halts in pre-flight before this file is read, so it could never appear; 048's spec said the tip is reserved for that case (048's review, 2026-10-29; owner chose deletion). Both are removed, and spec.md's Detection states bullet says the tip is gone and that the halt names the recovery; the Reference migration list, the record of 048's sweep, is unchanged
@@ -197,7 +191,7 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 25. The seed paragraph states 022's narrowing rule, not a broader one
 
-- [x] framework/bootstrap/ductus.md — §Permission Setup's bold lead said each seed entry grants only what a step runs, while every seed but Pi's keeps `ls` and `command -v` (`which` on Antigravity), which no step runs; 022's task 18 answer (a) narrowed only the entries that can run another command or write outside the project (048's review, 2026-10-29; owner chose the narrower lead). The lead now states that rule and names the two it keeps, in `ductus.md` and the byte-identical `govern.md`
+- [x] framework/bootstrap/ductus.md — §Permission Setup's bold lead said each seed entry grants only what a step runs, while Claude's seed keeps `ls` and `command -v`, which no step runs; 022's task 18 answer (a) narrowed only the entries that can run another command or write outside the project (048's review, 2026-10-29; owner chose the narrower lead). The lead now states that rule and names the two it keeps, in `ductus.md` and the byte-identical `govern.md`
 
 - **Done when**: the paragraph's lead describes every seed entry truthfully and `govern.md` is byte-identical to `ductus.md`
 
@@ -206,12 +200,6 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] framework/bootstrap/ductus.md — State A's version check said its probe is Runtime acquisition step 2's and that the Permission Setup seed pre-authorizes it; for a `[runtime] path` the probe is Branch 1 step 3 and prompts, as §Permission Setup itself says (048's review, 2026-10-29; owner chose the correction). The sentence now names both branches' probes and that only the store form is seeded, in `ductus.md` and the byte-identical `govern.md`
 
 - **Done when**: the sentence agrees with §Permission Setup and with both acquisition branches, and `govern.md` is byte-identical to `ductus.md`
-
-### 27. The pointer's prompt on OpenCode is stated with the condition that makes it true
-
-- [x] framework/bootstrap/ductus.md — §Pointer materialization and AC22's annotation said the pointer's link prompts on Claude, OpenCode and Antigravity, while OpenCode, by its documentation as 022 task 18 reads it, allows an unmatched command until `/configure` adds its catch-all `ask`, so a first bootstrap does not prompt there (048's review, 2026-10-29, low confidence, no live probe; owner chose the qualification). Both now state the condition, in `ductus.md`, the byte-identical `govern.md` and spec.md
-
-- **Done when**: no artifact claims a prompt on OpenCode before `/configure` has added its catch-all `ask`
 
 ### 28. Record the 2026-10-29 review, analyze, and pass the completion gate
 
@@ -237,7 +225,6 @@ Handoff state, 2026-10-30. The review record is written (`0af1f01a`: three re-re
 - [ ] SHOULD: the new test doc comments name the wrong mutations: `captured_cert_paths_are_read_instead_of_the_platform_store` says M3 (M4 kills it), `the_cert_capture_splits_the_directory_list` says M4 (M5), `a_cli_json_file_is_read_only_from_a_staging_directory` says M5 (M6); `a_proxy_value_that_does_not_parse_refuses_every_fetch` omits M3; none names `scripts/mutation/fetch-archive-startup-env.py`. Recommended: correct and name the list
 - [ ] SHOULD: `a_cli_json_file_is_read_only_from_a_staging_directory` (`runtime/src/primitives/mod.rs`) fails whenever the crate lies inside a staging root, as a `/tmp` export or a Linux checkout with `TMPDIR` unset does, because it uses the process's staging roots. Recommended: test through `validate_in_staging`'s roots seam with an outside file made outside them
 - [ ] SHOULD: the proxy-once scenario's rewritten edge case says a malformed value and a `socks5` value were both skipped and went direct; a `socks5` value was applied and failed at connect, naming the scheme. Recommended: split the history
-- [ ] SHOULD: AC22's new parenthetical says opencode.ai/docs/permissions "does not state the no-match fallback itself", but the page, fetched 2026-10-30T01:30Z ("Last updated: Oct 29, 2026"), carries a Tip that commands with arguments "require explicit permission", against AC22's reading that an unmatched command is allowed. Recommended: quote the Tip and correct the OpenCode clause, or measure with a real OpenCode run and record the method
 - [ ] NOTE: untested behaviors (the re-reader's own mutants survived): the `CERT_ENV` capture in `init_proxy_env`; a scheme-less proxy (`proxy.corp:3128`) being accepted (`parse`'s `has_host` filter); `flatten_line` in `redact_proxy`; the `NO_PROXY` exemptions applied in `parse`; the hook's 80-column cut. Recommended: add tests for the four that a test can reach
 - [ ] NOTE (contrived): under `set -euo pipefail` the hook's sanitizing pipeline exits 141 before the halt message when `--version` output exceeds a pipe buffer. Recommended: cut the first line before piping (`${installed%%$'\n'*}`)
 - [ ] NOTE (contrived): `redact_proxy` takes the first `://` as the scheme, so a scheme-less value with `://` in its userinfo shows part of it. Recommended: take the scheme only before the last `@`

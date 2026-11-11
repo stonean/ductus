@@ -99,9 +99,6 @@ unaffected — it never entered State B.
 - **The wiring was skipped** because the MCP file is not valid JSON: acquisition
   still happened and the pointer exists, so the run still continues by CLI; only
   the closing restart notice changes to say the registration was skipped.
-- **A `surface-instruction` agent** (Auggie, Antigravity) never gets an MCP file
-  written by `/ductus` at all, so the closing abort keeps surfacing the one-line
-  registration command — the run still completes its work first.
 
 ## Open Questions
 

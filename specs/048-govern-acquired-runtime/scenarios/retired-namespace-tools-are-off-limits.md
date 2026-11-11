@@ -21,13 +21,8 @@ retired tools are off-limits, and it did not mention the retired namespace at
 all. A host that reaches for a live tool is following the general preference for
 the deterministic path, not disregarding an instruction.
 
-**Two adopter shapes reach this, and only one of them is a migrating run.** The
-first is State B: a pre-rename adopter whose retired key this very run is about
-to remove. The second is State A and is the more durable of the two — for a
-`surface-instruction` agent the retired key lives in the user's *home* config,
-which `ductus-rename` warns about rather than rewriting, so it survives until the
-user acts on that warning. Once such a user also registers `ductus`, every
-subsequent session has both namespaces live, indefinitely.
+**A migrating run reaches this:** State B, a pre-rename adopter whose retired
+key this very run is about to remove.
 
 ## Behavior
 
