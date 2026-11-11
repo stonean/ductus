@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-The [commands-dir-parameterization](commands-dir-parameterization.md) work put both `cli-config-dir` and `project` in a committed `.ductus/config.toml` `[host]` block. That is wrong for `cli-config-dir`: it names the agent's config directory (`.claude` / `.augment` / `.opencode` / `.agents`), which is a **per-contributor** choice. Teammates on one project may each use a different agent, so committing one contributor's value bakes their agent choice into shared config — every other contributor then resolves command files against the wrong directory (or `ductus exec` fails outright). `project` has no such problem: it's the slash-command namespace, identical for every contributor, and stays committed.
+The [commands-dir-parameterization](commands-dir-parameterization.md) work put both `cli-config-dir` and `project` in a committed `.ductus/config.toml` `[host]` block. That is wrong for `cli-config-dir`: it names the agent's config directory (`.claude` / `.pi`), which is a **per-contributor** choice. Teammates on one project may each use a different agent, so committing one contributor's value bakes their agent choice into shared config — every other contributor then resolves command files against the wrong directory (or `ductus exec` fails outright). `project` has no such problem: it's the slash-command namespace, identical for every contributor, and stays committed.
 
 The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/session.toml` (the same file that already holds the per-user session target). `project` stays in committed `.ductus/config.toml`. Because the session file is wholesale-rewritten on every `/{project}:target`, and `cli-config-dir` is set once at `/ductus` time (before any target exists), the writer must merge rather than overwrite, and every reader must tolerate a session file that has `cli-config-dir` but no target (and vice-versa).
 
@@ -24,7 +24,7 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
 
 ## Edge Cases
 
-- **Mixed-agent team.** Contributor A (Claude) and contributor B (OpenCode) share one repo. Each runs `/ductus`; each writes their own `.ductus/session.toml` `cli-config-dir` (`.claude` vs `.opencode`). The committed `.ductus/config.toml` `[host]` carries only `project`, identical for both. Neither clobbers the other.
+- **Mixed-agent team.** Contributor A (Claude) and contributor B (Pi) share one repo. Each runs `/ductus`; each writes their own `.ductus/session.toml` `cli-config-dir` (`.claude` vs `.pi`). The committed `.ductus/config.toml` `[host]` carries only `project`, identical for both. Neither clobbers the other.
 - **Legacy adopter, not yet re-run.** `.govern.toml` `[host]` still has `cli-config-dir`; no session value yet. The legacy fallback resolves it, unchanged, until the next `/ductus` relocates it.
 - **Target switch.** A `/{project}:target` rewrite changes feature/path/scenario/set-at and preserves `cli-config-dir`.
 - **`--clear` with an agent identity recorded.** The session file is rewritten to contain only `cli-config-dir` (target cleared, agent identity kept) so `ductus exec` keeps resolving command files; `--clear` with no recorded `cli-config-dir` leaves the file empty.

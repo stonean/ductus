@@ -44,7 +44,7 @@ ductus append-task --feature specs/042-foo \
   --done-when "the scenario's described behavior is correctly implemented and tested."
 ```
 
-Both register under their bare names (`create-scenario`, `append-task`) on the `ductus` MCP server — each host adds its own prefix (§runtime-host-integration) — and join the existing tool list in `framework/runtime-tools.txt`. The pre-commit hook's MCP allow-list generator (added in spec 023 task 1) flows the new tool names through to both `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` automatically on the same commit that updates `runtime-tools.txt`.
+Both register under their bare names (`create-scenario`, `append-task`) on the `ductus` MCP server — each host adds its own prefix (§runtime-host-integration) — and join the existing tool list in `framework/runtime-tools.txt`. The pre-commit hook's MCP allow-list generator (added in spec 023 task 1) flows the new tool names through to `framework/bootstrap/configure/claude.md` automatically on the same commit that updates `runtime-tools.txt`.
 
 ## Edge Cases
 

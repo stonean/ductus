@@ -10,7 +10,7 @@ Two smaller findings from the 2026-07-11 coverage review, distinct from the new-
 
 - **Two primitives are dead weight**: `substitute-templates` and `merge-claude-md` are exposed as MCP tools, listed in the configure permission blocks, and tracked by `runtime-tools.txt` / `lint-tool-coverage`, but no command prose invokes either as a step — both were folded into `apply-manifest` (which takes a substitutions map and handles `CLAUDE.md` with `strategy: skip`). They are carried, tested, and permission-listed for nothing.
 - **The exec path silently narrows semantic work**: `clarify.md` steps 7–8 (edge-case enumeration, acceptance-criterion verification) are work the markdown-only path performs, but they carry no `<!-- llm:… -->` marker, so `ductus exec clarify` no-ops them. The "two paths, one contract" guarantee is quietly narrower under exec, with nothing signalling the reduction.
-- **Noted, not urgent**: `merge-permissions` serves only the Claude permission shape; the Auggie / Antigravity / OpenCode formats each carry an explicit "walk the prose" banner and do the merge by hand.
+- **Noted, not urgent**: `merge-permissions` serves only the Claude permission shape; a host with another permission shape does the merge by hand.
 
 ## Behavior
 

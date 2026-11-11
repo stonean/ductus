@@ -20,7 +20,7 @@ This mirrors the `ask-consolidation` scenario's precedent of landing more than o
 
 ### Part A — `merge-permissions` (new primitive, JSON surface)
 
-- **Name and surfaces.** Named `merge-permissions`. Ships as the CLI subcommand `ductus merge-permissions` and the MCP tool exposed under the bare name `merge-permissions` (Claude: `mcp__ductus__merge-permissions`; Auggie: `mcp:ductus:merge-permissions`).
+- **Name and surfaces.** Named `merge-permissions`. Ships as the CLI subcommand `ductus merge-permissions` and the MCP tool exposed under the bare name `merge-permissions` (Claude: `mcp__ductus__merge-permissions`).
 - **Inputs.** A target JSON file path, required, with no default, so a missing path fails loudly rather than writing a Claude-shaped file on another host, and any path inside the project accepted so other host bootstraps can reuse it (`.claude/settings.local.json` on Claude Code); a canonical `allow` set (array of strings); a canonical `deny` set (array of strings); a `revoke` set (array of strings), formerly canonical `allow` entries to remove. With `canonical` set, the runtime supplies Claude's canonical allow, deny and retired sets beside any passed, and ensures `additionalDirectories` holds the spec root and the project's command directory as absolute paths, so `/{project}:configure` passes no entry ([080](../../080-deterministic-runtime-efficiency/spec.md)).
 - **Output envelope.** Standard primitive envelope: action (`created` / `updated` / `unchanged`), path written, per-array counts of entries added vs. duplicates removed, the retired entries removed, and the directories appended.
 - **File does not exist.** Create it with `{ "permissions": { "allow": [...canonical-allow], "deny": [...canonical-deny] } }`, plus `additionalDirectories` on a canonical call, and emit `created`.
@@ -48,7 +48,6 @@ This mirrors the `ask-consolidation` scenario's precedent of landing more than o
 - **`merge-permissions` — missing `allow` or `deny` array.** `permissions` exists but one array absent: seed with the canonical set for that array; the other array's existing contents are untouched apart from dedup.
 - **`merge-permissions` — non-array `allow` / `deny`.** Field exists but is not an array (null, object, string): refuse with a `schema-error` envelope; do not silently coerce.
 - **`merge-permissions` — duplicate across canonical/non-canonical.** A user-added entry that string-equals a canonical entry is a duplicate. First occurrence wins regardless of which set the survivor came from; the canonical-presence pass does not re-append a canonical entry when an equal user-added entry is already present.
-- **Auggie permission format.** Auggie's permission entries use a different shape (objects with `toolName` / `permission` fields, per spec 023 §6's host-specific note). Whether `merge-permissions` serves both host shapes via a format argument or whether a separate Auggie-format primitive is introduced is deferred with a trigger, recorded under this scenario's **Resolved Questions**.
 - **`merge-managed-block` — duplicate appears multiple times outside the marker.** All adopter-area duplicates of a canonical line are removed, not just the first. The canonical block remains the single source of that entry.
 - **`merge-managed-block` — duplicate line appears in two separate managed blocks.** Out of scope. The primitive supports one managed block per file per marker; the cross-boundary scan only considers the single block's contents against everything outside it.
 - **`merge-managed-block` — adopter line with trailing whitespace differing from canonical.** Treated as distinct (exact string-equality on trimmed line content; trailing whitespace inside the trim doesn't apply, but a difference in pattern body — even one space — is preserved).
@@ -62,14 +61,12 @@ This mirrors the `ask-consolidation` scenario's precedent of landing more than o
 
 - **Does `merge-permissions` grow a format argument, or does each host shape get its own primitive?**
   Deferred, with a condition — not left open. `merge-permissions` serves the Claude shape
-  (`permissions.allow` / `permissions.deny` as string arrays) and only that shape. Auggie's
-  `toolPermissions[]` of `{toolName, shellInputRegex, permission}` objects and Antigravity's
-  `{allow, deny, ask}` triple are both structurally distinct and both currently walk the prose
-  path in `framework/bootstrap/configure/{auggie,antigravity}.md`, which is complete and
-  correct — so nothing is blocked today and there is no evidence yet for which shape the
-  primitive should take. **The trigger to revisit:** a third host arriving with a fourth
-  permission shape, or a defect traced to a host walking the prose path, whichever comes first.
-  Two shapes served by prose is a convention; three would be a parser nobody owns.
+  (`permissions.allow` / `permissions.deny` as string arrays) and only that shape. A host
+  with a structurally distinct permission shape would walk the prose path in its
+  `framework/bootstrap/configure/{key}.md`, so nothing is blocked today and there is no
+  evidence yet for which shape the primitive should take. **The trigger to revisit:** a host
+  arriving with a different permission shape, or a defect traced to a host walking the prose
+  path, whichever comes first.
 
   Recorded here rather than under Open Questions because
   [§spec-requirements](../../../framework/constitution.md#spec-requirements) is explicit that an

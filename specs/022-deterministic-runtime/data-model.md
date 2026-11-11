@@ -139,13 +139,12 @@ Older tiers are never removed by a primitive — the bootstrap migration is the 
 
 ### Command-file candidates — `Host::command_file_candidates`
 
-`Host::command_file_candidates` (runtime/src/host.rs) is the single place the runtime derives the repo-relative paths where an installed slash-command file may live, in resolution order: at `ductus exec` time, in the `writeCode` payload, when the MCP server flags the tools of the installed `target.md` to load with the session, and when `render-help` and `ductus hook help` read the installed help copy (spec 080). It covers the three flat-namespaced layouts:
+`Host::command_file_candidates` (runtime/src/host.rs) is the single place the runtime derives the repo-relative paths where an installed slash-command file may live, in resolution order: at `ductus exec` time, in the `writeCode` payload, when the MCP server flags the tools of the installed `target.md` to load with the session, and when `render-help` and `ductus hook help` read the installed help copy (spec 080). It covers the two layouts:
 
-1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code, Auggie), tried first;
-2. `{cli-config-dir}/command/{project}/{command_name}.md` — `opencode` (singular `command/`);
-3. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
+1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code), tried first;
+2. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
 
-Each adopter installs into one layout; walking all three resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
+Each adopter installs into one layout; walking both resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
 
 ## Primitive request/response schemas
 

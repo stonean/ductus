@@ -18,7 +18,7 @@ The per-task loop of `/ductus:implement` compounds the cost: across N tasks in o
 
 3. **Reorder `WriteCodeRequest` for cache anchoring.** The struct field order in `runtime/src/schema/extensions.rs` becomes: `constitution-excerpts`, `plan-relevant-files`, `write-boundary`, `task`. The stable prefix (the first three fields) is contiguous and front; the per-task variable suffix (`task`) is last. Serialized JSON respects this order via `serde`'s declaration-order serialization.
 
-4. **Cache-breakpoint contract.** Spec 022's LLM extension points section gains a one-paragraph contract: hosts SHOULD place a prompt-cache anchor immediately after `write-boundary` and before `task` in serialized `writeCode` request payloads. The contract is advisory — hosts that do not implement prompt caching produce correct results, just at higher token cost per task. Independent host integrations (Claude Code, Auggie) converge on the same anchor position by following the contract.
+4. **Cache-breakpoint contract.** Spec 022's LLM extension points section gains a one-paragraph contract: hosts SHOULD place a prompt-cache anchor immediately after `write-boundary` and before `task` in serialized `writeCode` request payloads. The contract is advisory — hosts that do not implement prompt caching produce correct results, just at higher token cost per task. Independent host integrations (Claude Code, Pi) converge on the same anchor position by following the contract.
 
 5. **Populate `writeSpecBody.existing-content`.** When `/ductus:specify` or `/ductus:plan` re-runs on a partially-filled spec or plan section, the interpreter reads the current section body from disk and emits it in the `existing-content` field. Empty sections emit `None` (matching the current schema default).
 
