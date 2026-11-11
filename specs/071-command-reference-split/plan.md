@@ -333,7 +333,7 @@ leaves to a follow-up.
   the heading" is one grep.
 - **Converting commands to skills**, which load supporting files on demand
   natively, was out of scope: it changes command names, install paths and
-  layouts on five agents.
+  layouts on both agents.
 - **Installing the reference under each agent's commands directory** was
   rejected: every `.md` file there registers as a command (the Command/skill
   path and Slash-command cleanup glob rows of Derived values in

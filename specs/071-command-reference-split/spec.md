@@ -85,7 +85,7 @@ split, since rewriting a pointer changes the kept side by a few bytes.
   `framework/commands/`, so nothing that globs that directory sees it: not the
   generator, not the parser, not any audit family keyed on command sources.
 - **Adopter:** `.ductus/reference/<command>.md`, committed beside
-  `.ductus/constitution.md`. One copy serves all five agents.
+  `.ductus/constitution.md`. One copy serves both agents.
 - **Never under an agent's commands directory.** Every `.md` file there
   registers as a command (the Command/skill path and Slash-command cleanup
   glob rows of Derived values in `framework/bootstrap/ductus.md`). A reference
@@ -298,8 +298,7 @@ its schema.
 
 - Command and skill paths, invocation, the `ductus` install path, and the
   command cleanup glob are unchanged for every layout.
-- Antigravity's SKILL.md wrapper and Pi's prompt copies carry the same pointers
-  to the same shared path.
+- Pi's prompt copies carry the same pointers to the same shared path.
 - Settings and permissions are unchanged: every agent already reads
   `.ductus/constitution.md` from the same directory.
 - Native rules are unaffected.
@@ -339,7 +338,7 @@ its schema.
 - [ ] AC5: `framework/bootstrap/ductus.md`'s Shared Files manifest carries one `update` row per shipped reference file, mapping `framework/reference/<command>.md` to `.ductus/reference/<command>.md`, with `audit` withheld, and Family 16 fails when a reference file lacks a row or a row lacks a source.
 - [ ] AC6: `.ductus/reference/` is in the installer's enforce-directories list and in its markdown-only cleanup, so a reference file no manifest row produces is removed unless pinned.
 - [ ] AC7: `framework/bootstrap/govern.md` is byte-identical to `framework/bootstrap/ductus.md`.
-- [ ] AC8: No reference file is written under any agent's commands, command, skills or prompts directory, for any of the five layouts.
+- [ ] AC8: No reference file is written under any agent's commands or prompts directory, for either layout.
 - [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
 - [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
@@ -419,7 +418,7 @@ its schema.
   2026-10-25: the pin is 0.59.11 and 238 commits sit unreleased since
   `ductus-v0.59.11`.
 - **Is the commands' colon-form invocation in prose fixed here?** Resolved: no.
-  It is wrong for non-claude layouts today (the Invocation row of Derived
+  It is wrong for Pi's layout today (the Invocation row of Derived
   values in `framework/bootstrap/ductus.md`) and is unchanged by this move, so
   it is its own change. Trimming `analyze`'s Instructions below the compaction
   window, and splitting `/ductus` further, are out of scope for the same
