@@ -6,6 +6,12 @@ next-criterion: 17
 
 # 042 — Consolidate ductus per-project files under a `.ductus/` directory
 
+<!-- audit:ignore-introducing-drift:file -->
+<!-- This spec introduced the per-project directory that 049 renamed from
+     `.govern/` to `.ductus/`, and its migration still lands under `.govern/`
+     before 049's ductus-rename moves it, so the retired name is a subject of
+     its prose, not residual drift (owner, 2026-11-11). -->
+
 ductus scattered its per-project files across the adopter's repo root: `.govern.toml` (committed config), `.govern.session.toml` (gitignored session state), and the adopter-facing generator scripts that land in the project's root `scripts/`. This feature consolidates the config and session files under a single `.ductus/` directory — `.ductus/config.toml` and `.ductus/session.toml` — so ductus owns one predictable namespace instead of polluting the repo root. It moved the generator scripts out of the project's `scripts/` too; that leg is retired (see [Scripts](#scripts-retired)). `/ductus` detects a project still on the old layout and reorganizes it through a new adopter migration; the runtime reads the new locations with a fallback to the legacy root paths so an adopter who upgrades ductus before re-running `/ductus` is never broken.
 
 ## Motivation
