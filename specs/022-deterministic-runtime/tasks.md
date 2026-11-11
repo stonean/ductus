@@ -659,3 +659,11 @@ Found by 055's criteria verification and prose-claim sweep at `ec6c2088`, and de
 - [ ] `scripts/audit/host-namespace-parity.sh` treats a malformed config as absent "matching `Host::load`'s own tolerance", which `Host::load` no longer has: decide whether the family halts as `Host::load` does or keeps its tolerance with a comment that is true
 
 - **Done when**: neither artifact describes a fallback task 12 removed
+
+## 30. Disposition: `ductus exec` screens its command name before building a path
+
+- [ ] `ductus exec <name>` joins its command name into every candidate path with no screen: `run_exec` in `runtime/src/main.rs` and `locate_command_file` in `runtime/src/interpreter/payload.rs` build `framework/commands/{name}.md`, `Host::command_file_candidates`' three shapes and `framework/bootstrap/{name}.md` from it. The name can come from an agent's shell, the LLM-supplied input 022's, 023's and 052's analyses held `BE-INPUT-004` to. Deferred here from 064's analysis by the owner (2026-11-11), since exec is 022's surface and 064 appended only the `prompts/{project}-{name}.md` candidate
+- [ ] Screen the command name once, by the slug grammar, before any candidate is built, in both functions, refusing a name outside it with an error naming it
+- [ ] Test that a name holding `/` or `..` is refused and reads no file, and that the test fails with the screen removed
+
+- **Done when**: both exec entry points refuse a command name outside the slug grammar before building any path, and the test fails with the screen removed
