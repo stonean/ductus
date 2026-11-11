@@ -44,11 +44,10 @@ External fetches that are **not** part of the `ductus` repo are unchanged: per-l
 
 ### Extract
 
-After fetching the archive:
+The archive lands in a **new** temp directory created on every run: `mktemp -d -t ductus-XXXXXX`, which the Pre-flight Phase runs before anything is fetched into it (`framework/bootstrap/ductus.md`, Pre-flight Phase). On macOS/Linux this lands under `$TMPDIR` or `/tmp`. Never reuse a directory from a prior run, even if one is still on disk — a fresh fetch is the only way `/ductus` picks up upstream changes, so the archive must be re-downloaded each invocation. After fetching the archive:
 
-1. Create a **new** temp directory on every run: `mktemp -d -t ductus-XXXXXX`. On macOS/Linux this lands under `$TMPDIR` or `/tmp`. Never reuse a directory from a prior run, even if one is still on disk — a fresh fetch is the only way `/ductus` picks up upstream changes, so the archive must be re-downloaded each invocation.
-2. Extract the archive into the temp directory: `tar -xzf {archive} -C {tempdir}`.
-3. Derive the framework root, `{framework-root}`: the single top-level directory the extraction produced. Treat it as the local mirror of the `ductus` repo for the rest of the run.
+1. Extract the archive into the temp directory: `tar -xzf {archive} -C {tempdir}`.
+2. Derive the framework root, `{framework-root}`: the single top-level directory the extraction produced. Treat it as the local mirror of the `ductus` repo for the rest of the run.
 
 If the fetch or extraction fails — non-zero exit, an extraction that produced zero or several top-level directories, or any required manifest entry absent from the extract — abort the run with a clear error:
 
@@ -77,7 +76,7 @@ The agent registry's `settings_template` currently allows `Bash(curl *)` and `Ba
 
 Update each registry row's `settings_template`:
 
-- **Claude:** add `Bash(tar *)`, `Bash(mktemp *)`, and six `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, with both single-leading-slash and double-leading-slash forms (see "Why both leading-slash forms" below):
+- **Claude:** add `Bash(tar *)`, `Bash(mktemp *)` (since narrowed by 022's task 18 to the exact command a step runs, `Bash(mktemp -d -t ductus-XXXXXX)`, with `framework/bootstrap/ductus.md` §Permission Setup retiring the broad form), and six `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, with both single-leading-slash and double-leading-slash forms (see "Why both leading-slash forms" below):
   - `Read(/private/var/folders/**/T/ductus-*/**)` and `Read(//private/var/folders/**/T/ductus-*/**)` (macOS canonical path)
   - `Read(/var/folders/**/T/ductus-*/**)` and `Read(//var/folders/**/T/ductus-*/**)` (macOS non-canonical, defensive)
   - `Read(/tmp/ductus-*/**)` and `Read(//tmp/ductus-*/**)` (Linux)

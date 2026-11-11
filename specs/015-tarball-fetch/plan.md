@@ -10,13 +10,13 @@ Implements [015 — Tarball Fetch](spec.md).
 
 The change is localized to a single source file: `framework/bootstrap/ductus.md`. Three sections need edits — the **Agent Registry** table (the Claude `settings_template` value), the **File Fetching** section (replaced wholesale), and the **Post-Write Integrity Check** plus one **Edge Cases** bullet (wording reconciled with the new transport). No new files; no template changes; no scaffolding-manifest changes; no `configure.md` changes.
 
-The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md` — `ductus.md` is hand-maintained per the project's CLAUDE.md ("`framework/bootstrap/ductus.md` … the framework is the everything-that-ships portion"). Edits land directly in the source.
+The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md`, a hand-maintained `framework/` source (`AGENTS.md`, Project Structure: "everything that ships to adopted projects via `/ductus`"). Edits land directly in the source.
 
 ## Technical Decisions
 
 ### Fetch and extract sequencing
 
-`mktemp -d -t ductus-XXXXXX` lands under `$TMPDIR` on macOS and `/tmp` on Linux without hardcoding either. The archive is fetched with `curl -fsSL -o {tempdir}/ductus.tar.gz {archive-url}` and extracted with `tar -xzf {tempdir}/ductus.tar.gz -C {tempdir}`. Failure is detected by checking `$?` after each command, then verifying `{tempdir}/ductus-main/` exists. Any failure of the three (curl, tar, missing dir) triggers the same abort message the spec mandates.
+`mktemp -d -t ductus-XXXXXX` lands under `$TMPDIR` on macOS and `/tmp` on Linux without hardcoding either. The archive is fetched into `{tempdir}/framework.tar.gz` and extracted with `tar -xzf` into `{tempdir}` (`framework/bootstrap/ductus.md`, Archive fetch and extract). Failure is detected by each command's exit status, then by the extraction producing exactly one top-level directory, the framework root, whose name GitHub derives from the ref. Any failure of the three (curl, tar, no single root) triggers the same abort message the spec mandates.
 
 **Bounds and transport** (`BE-TIMEOUT-001`, `BE-DATA-001`, `BE-DATA-011`). In a State-A or State-B run the `fetch-archive` primitive makes this request, and the `curl` in `framework/bootstrap/ductus.md`'s Archive fetch and extract section specifies what it does. 022's plan, under its `fetch-archive` transport heading, holds the commitments: `FETCH_TIMEOUT` bounds any one stall and `FETCH_DEADLINE` the whole download, both named constants in `runtime/src/primitives/fetch_archive.rs`; only `https` is fetched, through reqwest's rustls backend, which implements TLS 1.2 and 1.3 alone; and the certificate chain and hostname are verified against the system trust store.
 
@@ -28,9 +28,9 @@ The download-then-extract sequence is deliberate over piping (`curl ... | tar -x
 
 ### Manifest source resolution
 
-Existing manifest tables in ductus.md use source paths like `framework/constitution.md`. The replacement **File Fetching** section says: "for each manifest entry, the local source path is `{tempdir}/ductus-main/{source-path}`." This requires zero changes to the manifest tables themselves — they continue to list source paths exactly as today, and only the resolution rule changes.
+Existing manifest tables in ductus.md use source paths like `framework/constitution.md`. The replacement **File Fetching** section says: "for each manifest entry, the local source path is `{framework-root}/{source-path}`", where `{framework-root}` is the extraction's one top-level directory. This requires zero changes to the manifest tables themselves — they continue to list source paths exactly as today, and only the resolution rule changes.
 
-The `framework/bootstrap/ductus.md` self-install row resolves the same way: source path is `framework/bootstrap/ductus.md`, local path is `{tempdir}/ductus-main/framework/bootstrap/ductus.md`. The placeholder-substitution exception (keep `{project}` and `{cli-config-dir}` literal in this file) is unchanged.
+The `framework/bootstrap/ductus.md` self-install row resolves the same way: source path is `framework/bootstrap/ductus.md`, local path is `{framework-root}/framework/bootstrap/ductus.md`. The placeholder-substitution exception (keep `{project}` and `{cli-config-dir}` literal in this file) is unchanged.
 
 ### Per-language gitignore fetches stay separate
 
@@ -40,7 +40,7 @@ The **.gitignore** subsection of **Shared Files with conflict handling** fetches
 
 The `settings_template` value in the registry table is inline JSON. Edit:
 
-- **Claude:** `{ "permissions": { "allow": ["Bash(curl *)", "Bash(ls *)", "Bash(tar *)", "Bash(mktemp *)"], "deny": [] } }` — append two array entries after `Bash(ls *)`.
+- **Claude:** `{ "permissions": { "allow": ["Bash(curl *)", "Bash(ls *)", "Bash(tar *)", "Bash(mktemp *)"], "deny": [] } }` — append two array entries after `Bash(ls *)`. 022's task 18 has since narrowed `Bash(mktemp *)` to the exact command, `Bash(mktemp -d -t ductus-XXXXXX)`.
 
 Order matters for readability but not behavior — the bootstrap merge (ductus.md **Permission Setup** step 2) preserves order.
 
@@ -65,13 +65,15 @@ Current text: "If it does not, the write was corrupted — report the error and 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/ductus.md` | Modify | Update **Agent Registry** `settings_template` values (Claude); replace **File Fetching** section with archive-fetch + extract + per-file resolution; update **Post-Write Integrity Check** wording; rewrite the **Edge Cases** bullet for fetch failures. |
+| `framework/bootstrap/ductus.md` | Modify | Update **Agent Registry** `settings_template` values (Claude); replace **File Fetching** section with archive-fetch + extract + per-file resolution; update **Post-Write Integrity Check** wording; rewrite the **Edge Cases** bullet for fetch failures; name `{tempdir}` in the archive abort message (task 6). |
+| `framework/bootstrap/govern.md` | Modify | Byte-identical copy of `ductus.md` |
+| `framework/bootstrap/ductus-procedure.md` | Modify | Post-Scaffolding Output names the temp directory (task 6) |
 
-No other files change. The generator (`scripts/gen-claude-commands.sh`) does not need to run because ductus.md is not in its input set.
+The generator (`scripts/gen-claude-commands.sh`) does not need to run because ductus.md is not in its input set.
 
 ## Open Questions Resolved
 
-All four open questions resolved during `/ductus:clarify`. See the spec's **Resolved Questions** section for the full record. Summary:
+The open questions were resolved during `/ductus:clarify`. See the spec's **Resolved Questions** section for the full record. Summary:
 
 - **Ref pinning** — defer to a later spec. Adopted since by 061.
 - **Per-file fallback** — none; archive failure aborts cleanly.
