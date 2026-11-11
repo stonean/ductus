@@ -32,7 +32,7 @@ Anything else goes to `excluded` under the claimants' names, as now. A commit na
 
 ### The gate
 
-`check-review-gate` loses check 6, `review is stale` (`stale_review_block`), and `ReviewGateBlock::ReviewStale`. It also loses the review half of `passing_notices`, the notice that a record with no `reviewed-digest` could not be compared. The analyze half's freshness check (`AnalyzeStale`) and every other check are unchanged. Losing a variant narrows the `blocked-by` value set, which 066's data model documents.
+`check-review-gate` loses check 6, `review is stale` (`stale_review_block`), and `ReviewGateBlock::ReviewStale`. It also loses the review half of `passing_notices`, the notice that a record with no `reviewed-digest` could not be compared. The analyze half's freshness check (`AnalyzeStale`) and every other check are unchanged. Losing a variant narrows the `blocked-by` value set, which 066's data model documents. Both primitives' lists keep the bound every result has: past `[artifacts] read-size-bytes` (spec 063's key) each moves to the file `lists-file` names (spec 080), as their descriptions state (`BE-PAYLOAD-001`).
 
 ### Retiring `check-review-freshness` and Family 19
 
