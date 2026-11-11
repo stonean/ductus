@@ -19,7 +19,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
 | `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no path outside a spec's directory and no edit to this spec's scenarios or data model, one its record's digest still describes being no edit; true with no such record |
+| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no code, as `compute-review-scope`'s description states (narrowed by spec 081, so a scenario or data-model edit owes an analysis alone); true with no such record |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review, a path the last record lists as open, a contract its digest says changed and what a fold brings, which need not have changed in the window.
 
@@ -49,13 +49,13 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 ## `measure-reopenings` (new primitive)
 
-Arguments: `since` (a ref or date; default the last `REOPENING_WINDOW_DAYS` days), and `at` (a ref; default `HEAD`).
+Arguments: `since` (an RFC 3339 UTC timestamp, `2026-10-01T00:00:00Z`, or a date, `2026-10-01`, read as that day's UTC midnight and compared with the closing commit's author date; otherwise a ref; default the last `REOPENING_WINDOW_DAYS` days from UTC midnight), and `at` (a ref; default `HEAD`).
 
 | Result field | Type | Meaning |
 | --- | --- | --- |
 | `state` | `measured`, `shallow-history` or `nothing-to-compare` | A distinct value for each case the count cannot speak to |
-| `since` | string | The window's start as applied: a date, or a ref's full sha |
-| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`, the decisions and waivers a person recorded at a run, and `run-decisions`, that count per run as `record`, `last-run` and `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
+| `since` | string | The window's start as applied: the timestamp or date as given, a `YYYY-MM-DD` UTC date by default, or a ref's full sha |
+| `reopenings` | list | Each closed reopening: `feature`, `start`, `end`, `reviews`, `analyses`, `over-bound`, `decisions-by-person`, the decisions and waivers a person recorded at a run, and `run-decisions`, that count per run as `record`, `last-run` (the record's RFC 3339 UTC timestamp) and `decisions-by-person`. A second run is judged by the previous record of the same kind in that reopening |
 | `not-counted` | list | Each closed reopening that cannot be counted: `feature`, `start` when a pass shows, `end`, `reason` (`no-recorded-run`, `record-unparseable`, or `no-in-progress-commit` for a status reaching `done` from another, as a squashed reopening does) |
 | `waiting` | list of features | `in-progress` specs with no unchecked task at the commit measured |
 | `over-bound-count`, `not-counted-count`, `waiting-count`, `closed-count`, `runs` | integers | The counts `/{project}:status` renders; `closed-count` holds both lists and `runs` only `reopenings` |

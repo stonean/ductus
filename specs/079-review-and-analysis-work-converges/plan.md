@@ -74,7 +74,7 @@ A run whose last write still carries `fix-rounds-open` counts as leaving a gatin
 
 ### One description per primitive
 
-`runtime/src/schema/descriptions.rs` holds one `pub const` per primitive. `#[tool(description = …)]` takes an expression (`rmcp-macros` 3.8.0's `tool.rs`), and clap takes `long_about` and `about` in `runtime/src/main.rs`, so a subcommand's `--help` prints the whole text and the `ductus --help` list its first sentence, or what precedes its first colon when that comes sooner, since some first sentences run to a thousand bytes listing what follows one. The move is byte-identical for MCP but for what one text requires: `gate-confirm`, which behaves differently on each surface, says so, and `AC{n}`, which clap's help renderer turns into a newline (`AGENTS.md`'s clap gotcha), becomes `AC<n>`. The CLI-only primitive gets a constant too, and `--help` adopts them, replacing the separate doc comments. A test holds each served tool's description equal to its subcommand's `long_about`. Module docs lose only what restates the description; a sweep of them is not owed.
+`runtime/src/schema/descriptions.rs` holds one `pub const` per primitive. `#[tool(description = …)]` takes an expression (`rmcp-macros` 3.8.0's `tool.rs`), and clap takes `long_about` and `about` in `runtime/src/main.rs`, so a subcommand's `--help` prints the whole text and the `ductus --help` list its first sentence, or what precedes its first colon when that comes sooner, since some first sentences run to a thousand bytes listing what follows one (`check-artifacts`' runs to 1,498 bytes and `check-review-gate`'s to 1,271, split at the first full stop before a space, in `runtime/src/schema/descriptions.rs` at `4f50cd32`). The move is byte-identical for MCP but for what one text requires: `gate-confirm`, which behaves differently on each surface, says so, and `AC{n}`, which clap's help renderer turns into a newline (`AGENTS.md`'s clap gotcha), becomes `AC<n>`. The CLI-only primitive gets a constant too, and `--help` adopts them, replacing the separate doc comments. A test holds each served tool's description equal to its subcommand's `long_about`. Module docs lose only what restates the description; a sweep of them is not owed.
 
 ### The constitution
 
@@ -96,6 +96,15 @@ The bytes come from the sentences these replace, the two-paths text, and sentenc
 ### `AGENTS.md`
 
 AC10, AC11 and AC16 landed with their decisions. The window and `--since` entries that AC5 and AC6 retire are removed in the task that lands them, and the fix-round entries are re-read then.
+
+### The change is breaking
+
+`BE-COMPAT-001` asks a plan to classify a change to a primitive's interface or result. This spec's narrowings and removals are **breaking**, and what it only adds is additive:
+
+- Breaking: `diff-cross-spec`'s `window-base` replaces `first-commit`, and its `cross-spec-paths` narrows to the spec's own commits; `compute-review-scope`'s `scope` narrows, another spec's paths moving to `excluded`; `brief-re-read`'s `paths` narrows to a round's non-exempt paths; `check-review-gate`'s `blocked-by` gains `fix-round-loop-open`, `review-owed` and `unchecked-task`, in a set no schema documents as open; and `write-review` and `write-analysis` refuse while `tasks.md` holds an unchecked box.
+- Additive: the result fields and arguments `data-model.md` adds, and the two new primitives, `measure-reopenings` and `classify-spec-edit`.
+
+The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that release already owes (071's plan), with their consumers in the same release (§runtime-boundary).
 
 ## Affected Files
 
