@@ -53,7 +53,7 @@ Land tasks 1 to 3 together, by `docs/developing-ductus.md` §Landing a runtime c
 - [x] Run `actionlint` over both.
 - [x] Measure whether `framework-checks.yml`'s and `runtime-release.yml`'s steps still read git history now that Family 19 is retired, by running them in a depth-1 clone. Drop `fetch-depth: 0` where none does, or state the step that does in its comment.
 
-- [ ] Read `framework-checks` and `generators` on the first spec-only push after `2496b7c4`: each shows `Reuse the cached build of these runtime sources` run and `Build the runtime` compiling nothing.
+- [x] Read `framework-checks` and `generators` on the first spec-only push after `2496b7c4`: each shows `Reuse the cached build of these runtime sources` run and `Build the runtime` compiling nothing.
 
 The miss path ran on `debcc8cf` (`generators` run 43108731491: the reuse step skipped, a 116 s compile, the message printed, the cache saved). The hit path ran on `2496b7c4`, a workflow change rather than a spec-only one (`framework-checks` 43109548582 and `generators` 43109548369: the reuse step ran, `Build the runtime` 2 s each, the jobs 115 s and 58 s). The commit adding this item touches only this file, so its own runs settle the item. Until it is ticked, `write-review` refuses.
 
