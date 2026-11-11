@@ -136,7 +136,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - [x] AC25: The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
 - [x] AC26: A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
 - [x] AC27: No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
-- [x] AC28: The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field and finding family
+- [x] AC28: The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field; the finding family and the gate's block are recorded in the data-models of `067-analyze-and-audit-checks` and `066-audit-records-and-the-completion-gate`, where `d852b627` moved them from 022's
 - [x] AC29: The constitution amendments to §spec-lifecycle and §readiness-check land with this spec, not with 022
 - [x] AC30: `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec
 
