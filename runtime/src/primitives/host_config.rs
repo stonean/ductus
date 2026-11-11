@@ -17,7 +17,9 @@
 //! unless it is one of the paths a `/ductus` step writes there: a command
 //! file, the `ductus` install file, or Pi's bridge (the §Derived values
 //! rows). The project name a row carries is not
-//! known here, so a row is matched by its shape.
+//! known here, so a row is matched by its shape. Other tools' configuration
+//! directories and root files ([`OTHER_TOOL_DIRS`], [`OTHER_TOOL_FILES`]),
+//! which no agent in the registry uses, are refused outright the same way.
 //!
 //! Spec 022 task 20 (the owner's answer (a)) extends the same check to the
 //! rest of Claude Code's protected set — the directories and files it never
@@ -148,7 +150,7 @@ const PROTECTED_FILES: &[&str] = &[
 /// Which of the permitted rows a destination is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum HostRow {
-    /// A command, skill or prompt file, or the `ductus` install file. Its
+    /// A command or prompt file, or the `ductus` install file. Its
     /// frontmatter is what a host reads to grant tools, so `apply-manifest`
     /// checks it ([`check_frontmatter`]).
     CommandOrSkill,
@@ -156,7 +158,7 @@ pub(crate) enum HostRow {
     PiBridge,
 }
 
-/// The frontmatter keys the shipped command, skill and installer files carry:
+/// The frontmatter keys the shipped command and installer files carry:
 /// `description`, `argument-hint` and `parity` in `framework/commands/`,
 /// `framework/bootstrap/configure/` and `ductus.md`. A key such as `allowed-tools` or
 /// `hooks` would make the file grant tools or run commands
@@ -330,7 +332,7 @@ pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Res
         None => Ok(()),
         Some(_) => Err(PrimitiveError::InvalidPath {
             path: shown.into(),
-            reason: "is a command, skill or bridge file in an agent host's \
+            reason: "is a command or bridge file in an agent host's \
                      configuration, which only `apply-manifest` writes (spec 022 task 11)"
                 .into(),
         }),
@@ -654,7 +656,7 @@ fn refuse(shown: &str, dir: &str) -> PrimitiveError {
         path: shown.into(),
         reason: format!(
             "resolves into the agent host configuration directory `{dir}`, where only the \
-             command, skill and bridge files `/ductus` writes are permitted \
+             command and bridge files `/ductus` writes are permitted \
              (spec 022 task 11)"
         ),
     }
@@ -701,8 +703,8 @@ fn refuse_protected_file(shown: &str, file: &str) -> PrimitiveError {
     }
 }
 
-/// Refuse `bytes`, the content about to be written to a command, skill or
-/// prompt file, when its frontmatter carries a key the shipped files do not
+/// Refuse `bytes`, the content about to be written to a command or prompt
+/// file, when its frontmatter carries a key the shipped files do not
 /// ([`SHIPPED_FRONTMATTER_KEYS`]).
 ///
 /// Frontmatter is a block whose first line, after an optional byte-order
@@ -724,7 +726,7 @@ pub(crate) fn check_frontmatter(primitive: &str, shown: &str, bytes: &[u8]) -> R
     };
     let Ok(text) = std::str::from_utf8(bytes) else {
         return Err(refuse(
-            "a command or skill file must be UTF-8 so its frontmatter can be checked".into(),
+            "a command or prompt file must be UTF-8 so its frontmatter can be checked".into(),
         ));
     };
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
@@ -756,7 +758,7 @@ pub(crate) fn check_frontmatter(primitive: &str, shown: &str, bytes: &[u8]) -> R
         let name = key.as_str().unwrap_or_default();
         if !SHIPPED_FRONTMATTER_KEYS.contains(&name) {
             return Err(refuse(format!(
-                "its frontmatter carries `{}`, and a command or skill file ductus writes \
+                "its frontmatter carries `{}`, and a command or prompt file ductus writes \
                  carries only {}",
                 key.as_str()
                     .map_or_else(|| format!("{key:?}"), str::to_string),
@@ -915,9 +917,9 @@ mod tests {
 
     /// Settings, MCP registrations, and any other file under a config
     /// directory are refused, and so is every path under another tool's
-    /// configuration directory, the former rows included: at the top level, nested (a host started in a
-    /// subdirectory reads that one), in any letter case, and at a row's
-    /// depth plus one.
+    /// configuration directory, the former rows included: at the top level,
+    /// nested (a host started in a subdirectory reads that one), in any
+    /// letter case, and at a row's depth plus one.
     #[test]
     fn host_configuration_outside_the_rows_is_refused() {
         let tmp = tempfile::tempdir().unwrap();

@@ -27,16 +27,17 @@
 # entries into holes, which is why the extraction is allow-scoped rather than
 # filtered after the fact.
 #
-# METHOD. One host: configure/claude.md, the only per-agent configure file.
+# METHOD. One host: configure/claude.md, the only configure file that
+# carries a permission set.
 #
-#   29a configure/claude.md — bullet entries of the form `- `Bash(...)`` inside
-#       the `permissions.allow` section, whose bounds are derived from the
-#       numbered headings rather than hardcoded line numbers. Anchoring to the
-#       bullet form is load-bearing: the section's prose explains the unsafe
-#       shape as a counter-example, and a looser grep would report that
-#       explanation as a violation of itself. The prose now spells the shape
-#       with <wildcard> placeholders rather than a copyable literal, so this is
-#       defence in depth rather than the only guard.
+#   configure/claude.md — bullet entries of the form `- `Bash(...)`` inside
+#     the `permissions.allow` section, whose bounds are derived from the
+#     numbered headings rather than hardcoded line numbers. Anchoring to the
+#     bullet form is load-bearing: the section's prose explains the unsafe
+#     shape as a counter-example, and a looser grep would report that
+#     explanation as a violation of itself. The prose now spells the shape
+#     with <wildcard> placeholders rather than a copyable literal, so this is
+#     defence in depth rather than the only guard.
 #
 # Pi has no permission file to examine. A host whose format gains a glob later
 # is a new subject here, not a silent pass; the extraction is explicit so
@@ -74,7 +75,7 @@ mid_wildcard() {
   esac
 }
 
-# 29a — claude.md, bullet-form Bash() entries inside the allow section.
+# claude.md, bullet-form Bash() entries inside the allow section.
 # Initialized before the branch below: when the headings do not parse, that
 # branch is skipped, and a summary line referencing an unset counter would die
 # on `set -u` — turning a legible finding into a shell error. Found by this

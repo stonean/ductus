@@ -65,7 +65,7 @@
 # holds each seed disjoint from /configure's own retired list (Claude carries
 # one), so /ductus never adds what /configure removes.
 #
-# METHOD. One host, the only per-agent configure file:
+# METHOD. One host, the only configure file that carries a permission set:
 #
 #   32  configure/claude.md — bullet entries of the form `- `Write(...)``
 #       inside BOTH the `permissions.allow` and `permissions.deny`
@@ -248,9 +248,6 @@ def grants(key, value):
     return set()
 
 
-def retired_item(key, item):
-    return item
-
 
 def bullets(path, start_re, stop_re):
     body = open(path).read().split("\n")
@@ -317,13 +314,11 @@ else:
                 canon = set()
             for item in items:
                 checked += 1
-                norm = retired_item(key, item)
-                shown = json.dumps(item) if isinstance(item, dict) else item
-                if norm in seeded:
-                    find(loc, f"`{shown}` is retired AND still in the `{key}` settings_template — §Permission Setup would remove it and re-add it on every /ductus run",
+                if item in seeded:
+                    find(loc, f"`{item}` is retired AND still in the `{key}` settings_template — §Permission Setup would remove it and re-add it on every /ductus run",
                          "drop it from the settings_template in the same edit that retires it; an entry belongs to exactly one of the two")
-                if norm in canon:
-                    find(loc, f"`{shown}` is retired from the `{key}` seed AND granted by configure/{key}.md — /ductus would remove what /configure adds, on every pair of runs",
+                if item in canon:
+                    find(loc, f"`{item}` is retired from the `{key}` seed AND granted by configure/{key}.md — /ductus would remove what /configure adds, on every pair of runs",
                          "leave it off the retired-seed list until the canonical set drops it")
         i += 1
     # Every agent whose seed grants anything has a bullet, `[]` when nothing
@@ -343,7 +338,7 @@ else:
             find(CONFIGURE.format(key), f"no retired entries extracted from configure/{key}.md — the parse is broken, not the list",
                  "check the retired section's heading and entry format this family reads")
             continue
-        retired_there = {retired_item(key, g) for g in got}
+        retired_there = set(got)
         for entry in sorted(grants(key, seeds[key][1]) & retired_there, key=str) if key in seeds else []:
             find(f"{DUCTUS}:{seeds[key][0]}", f"`{entry}` is in the `{key}` settings_template AND retired by configure/{key}.md — /ductus adds what /configure removes, on every pair of runs",
                  "drop it from the settings_template, or from the configure retired list")

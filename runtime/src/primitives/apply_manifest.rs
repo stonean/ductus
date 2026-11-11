@@ -108,9 +108,9 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   directory, a `..` root, and one through an outward link are all refused,
 ///   before any entry is examined.
 /// - [`PrimitiveError::InvalidPath`] when an entry's `dest`, resolved, lies
-///   in an agent host's configuration other than a command, skill
+///   in an agent host's configuration other than a command, prompt
 ///   or bridge path `/ductus` writes, and
-///   [`PrimitiveError::InvalidArgument`] when a command or skill file it
+///   [`PrimitiveError::InvalidArgument`] when a command or prompt file it
 ///   would write carries a frontmatter key the shipped files do not (spec
 ///   022 task 11; [`host_config`]). Checked for every entry before any write,
 ///   and such a file is written with the bytes judged, never re-read; only
@@ -132,7 +132,7 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   missing or does not parse, checked before any write; and when such an entry is
 ///   not UTF-8 text, holds a malformed procedure, or names a reference that
 ///   is not in the source root or is not UTF-8 text, checked before any write
-///   for a command or skill destination and when the walk reaches it
+///   for a command or prompt destination and when the walk reaches it
 ///   otherwise.
 /// - [`PrimitiveError::InvalidSubstitutionKey`] when a substitution key is
 ///   placeholder-shaped (`{project}`) or empty. Checked first, before the
@@ -245,7 +245,7 @@ enum Judged {
 }
 
 /// Refuse an entry whose destination is an agent host's configuration, and
-/// one that would write a command or skill file whose frontmatter carries a
+/// one that would write a command or prompt file whose frontmatter carries a
 /// key the shipped files do not (spec 022 task 11, the owner's answer (a);
 /// [`host_config`]). Run for every entry before any write, so a refused
 /// entry halts the walk with zero writes, as the traversal checks do. The

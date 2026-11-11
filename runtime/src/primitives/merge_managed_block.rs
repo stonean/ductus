@@ -66,7 +66,7 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   applies to a path the host supplies, before any filesystem operation. `path` is repo-relative (`.gitignore`,
 ///   `CLAUDE.md`); no caller needs an out-of-repo destination.
 /// - [`PrimitiveError::InvalidPath`] when `path`, resolved, lies in an
-///   agent host's configuration, the command, skill and
+///   agent host's configuration, the command, prompt and
 ///   bridge paths included: a block's marker lines would leave a settings
 ///   file that is not JSON, which Claude Code skips with its deny rules, and
 ///   a block placed inside a command file's frontmatter would grant tools

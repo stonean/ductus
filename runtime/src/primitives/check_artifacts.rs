@@ -4259,8 +4259,9 @@ mod tests {
     }
 
     /// The three registry tables `agent_scaffold_destinations` reads, in the
-    /// real file's shapes: both agents (`claude`, `pi`), cells carrying a trailing note, and a formula still holding
-    /// a placeholder after substitution.
+    /// real file's shapes: both agents (`claude`, `pi`), cells carrying a
+    /// trailing note, and a formula still holding a placeholder after
+    /// substitution.
     const REGISTRY: &str = "## Agent Registry\n\n\
         | `key` | `name` | `config_dir` | `layout` |\n\
         | --- | --- | --- | --- |\n\
@@ -4287,7 +4288,7 @@ mod tests {
     fn the_registry_arm_derives_each_agents_scaffold_paths() {
         // Scenario per-agent-scaffold-paths-ship-to-adopter. Exactly these:
         // the install path and settings file per registered agent, plus the
-        // project-scoped MCP targets. Not the command path (`{project}` and
+        // MCP targets. Not the command path (`{project}` and
         // `<name>` survive substitution), not the rules file (a row this
         // arm does not read).
         let got = agent_scaffold_destinations(REGISTRY);
@@ -4341,7 +4342,7 @@ mod tests {
         // Derived values and MCP tables alone name no concrete path.
         let without_registry = REGISTRY.replace("## Agent Registry", "## Something Else");
         assert!(agent_scaffold_destinations(&without_registry).is_empty());
-        // Without Derived values only the project-scoped MCP targets remain.
+        // Without Derived values only the MCP targets remain.
         let without_derived = REGISTRY.replace("### Derived values", "### Not The Table");
         assert_eq!(
             agent_scaffold_destinations(&without_derived),
@@ -4373,9 +4374,8 @@ mod tests {
             assert!(got.contains(path), "missing {path}: {got:?}");
         }
         assert!(
-            got.iter()
-                .all(|p| !p.contains(['{', '<']) && !p.starts_with('~')),
-            "a placeholder or home-relative path leaked: {got:?}"
+            got.iter().all(|p| !p.contains(['{', '<'])),
+            "a placeholder leaked: {got:?}"
         );
     }
 

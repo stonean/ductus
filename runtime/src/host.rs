@@ -95,9 +95,10 @@ impl Host {
             .and_then(|b| b.project.clone())
             .unwrap_or(defaults.project);
         // `cli-config-dir` is per-contributor: teammates on one project may
-        // each use a different agent (`.claude` / `.pi`), so it must NOT live in committed config. Prefer the
-        // gitignored session file; fall back to the config file's `[host]`
-        // value for adopters predating the relocation; then the default.
+        // each use a different agent (`.claude` / `.pi`), so it must NOT live
+        // in committed config. Prefer the gitignored session file; fall back
+        // to the config file's `[host]` value for adopters predating the
+        // relocation; then the default.
         let cli_config_dir = Self::load_session_cli_config_dir(repo)?
             .or_else(|| host_block.and_then(|b| b.cli_config_dir))
             .unwrap_or(defaults.cli_config_dir);

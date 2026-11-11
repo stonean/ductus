@@ -4576,10 +4576,11 @@ pub struct WriteSessionArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub scenario_path: Option<String>,
-    /// Optional per-contributor agent config-dir name (`.claude`, `.pi`). Written to the gitignored session file by
-    /// `/ductus` so a teammate's agent choice never lands in committed
-    /// config. Read back by `crate::host::Host`. On a target write it is
-    /// preserved from the existing file unless supplied here.
+    /// Optional per-contributor agent config-dir name (`.claude`, `.pi`).
+    /// Written to the gitignored session file by `/ductus` so a teammate's
+    /// agent choice never lands in committed config. Read back by
+    /// `crate::host::Host`. On a target write it is preserved from the
+    /// existing file unless supplied here.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

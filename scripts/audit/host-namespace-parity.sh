@@ -116,9 +116,9 @@ fi
 # --- 17a2: bind the borrowed contracts to their canonical sources ------------
 
 # This family reproduces `Host::load`'s namespace resolution in shell, so it
-# depends on four contracts it does not own. Encoding them as bare literals
+# depends on contracts it does not own. Encoding them as bare literals
 # made it a drift-detector that could itself drift: rename the key or add a
-# fifth agent and the family keeps exiting 0 while checking the wrong thing,
+# third agent and the family keeps exiting 0 while checking the wrong thing,
 # which reads as assurance rather than absence (QUAL-GROUND-001, surfaced by
 # 026's review 2026-08-02). Each is now either derived from its canonical
 # source or asserted against it, and a failed derivation is a finding rather
@@ -140,7 +140,7 @@ if [ "${#CLI_DIRS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-# The remaining three contracts are single-site in the runtime, so they are
+# The remaining contracts are single-site in the runtime, so they are
 # asserted rather than derived: if the assertion fails the literals above are
 # stale and every comparison below is meaningless.
 assert_contract() {

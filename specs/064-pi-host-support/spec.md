@@ -6,7 +6,7 @@ next-criterion: 17
 
 # 064 — Pi Host Support
 
-Add **Pi** (`pi`, the `@earendil-works/pi-coding-agent` terminal coding agent) as the
+Add **Pi** (`pi`, the `@earendil-works/pi-coding-agent` terminal coding agent) as an
 agent `ductus` scaffolds into, alongside Claude Code. The work expresses Pi's command surface (prompt templates), its tool surface
 (a zero-dependency extension bridge — Pi shipped **no built-in MCP** when this spec verified it), its native
 rules file, and its (absent) permission format as registry-derived values so `/ductus`
@@ -91,7 +91,7 @@ mechanism; nothing in the pipeline depends on either.
 ## Design Decisions
 
 - **D1 — Command surface: prompt templates, flat, project-hyphenated.** Each command
-  installs verbatim to `.pi/prompts/{project}-<name>.md`, invoked `/{project}-<name>`
+  installs verbatim to `.pi/prompts/{project}-<name>.md`, invoked `/{project}-<name>`.
   The flat project-hyphenated name keeps the shared
   directory collision-free across projects without a per-project subdirectory (which
   would require a `prompts` settings array entry and would strip the namespace from the

@@ -10,7 +10,7 @@
 //! per-entry procedure files at `framework/migrations/{id}.md` (spec
 //! 027). The primitive itself is generic — it removes whatever files
 //! the caller's `expected` list omits, except a file in an agent host's
-//! configuration other than the command, skill and bridge
+//! configuration other than the command, prompt and bridge
 //! files `/ductus` writes ([`super::host_config`], spec 022 task 11) — but
 //! the legacy adopter-cleanup responsibility has moved out of its contract.
 //!
@@ -64,7 +64,7 @@ const DEFAULT_GLOB: &str = "*.md";
 ///   inside the repo keep working.
 /// - [`PrimitiveError::InvalidPath`] when a file the cleanup would remove
 ///   lies, resolved, in an agent host's configuration other than a command,
-///   skill or bridge path `/ductus` writes (spec 022 task 11;
+///   prompt or bridge path `/ductus` writes (spec 022 task 11;
 ///   [`host_config`]). Every removal is judged before the first, so a
 ///   refusal removes nothing.
 /// - [`PrimitiveError::Io`] on local filesystem failures while walking

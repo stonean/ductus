@@ -374,6 +374,37 @@ else
   fail "V: unbounded or unpinned request (rc=$rc): $(cat "$argv")"
 fi
 
+# W. an agent key outside the registry halts naming the supported agents and
+# writes nothing: the hosts ductus no longer supports land here, so this is
+# the arm that tells an adopter which keys remain.
+for key in opencode auggie antigravity agy bogus; do
+  run "w-$key" --ref=main "$key"
+  if [ "$rc" -ne 0 ] && wrote_nothing "w-$key" \
+    && out "w-$key" | grep -qF "unknown agent '$key' (expected: claude or pi)"; then
+    pass "W: agent key '$key' halts naming claude and pi, writing nothing"
+  else
+    fail "W: agent key '$key' (rc=$rc): $(out "w-$key")"
+  fi
+done
+
+# X. claude seeds .claude/settings.local.json when it is absent, and leaves an
+# existing one byte for byte: /ductus owns the merge after the first run.
+run x-seed --ref=main claude
+if [ "$rc" -eq 0 ] && grep -qF '"permissions"' "$WORK/x-seed/.claude/settings.local.json"; then
+  pass "X: claude seeds .claude/settings.local.json when it is absent"
+else
+  fail "X: claude seed (rc=$rc): $(out x-seed)"
+fi
+mkdir -p "$WORK/x-keep/.claude"
+printf '{"permissions":{"allow":["Edit"]}}\n' > "$WORK/x-keep/.claude/settings.local.json"
+run x-keep --ref=main claude
+if [ "$rc" -eq 0 ] \
+  && [ "$(cat "$WORK/x-keep/.claude/settings.local.json")" = '{"permissions":{"allow":["Edit"]}}' ]; then
+  pass "X: claude leaves an existing .claude/settings.local.json untouched"
+else
+  fail "X: claude kept settings (rc=$rc): $(cat "$WORK/x-keep/.claude/settings.local.json")"
+fi
+
 echo
 if [ "$failures" -gt 0 ]; then
   echo "$failures test(s) failed" >&2

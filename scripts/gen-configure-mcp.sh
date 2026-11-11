@@ -179,6 +179,6 @@ elif [ "$rc" -ne 0 ]; then
 fi
 
 if [ "$dry_run" -eq 1 ]; then
-  echo "No changes (mcp-allow blocks in sync)"
+  echo "No changes (mcp-allow block in sync)"
 fi
 exit 0

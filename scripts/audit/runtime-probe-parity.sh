@@ -96,20 +96,12 @@ check_agent() {
   done
 }
 
-# skip_agent <key> <reason> [<cli-marker>...] — name the skip on stderr, and emit
-# when the row carries a CLI entry, the skip's stated premise (none for pi).
+# skip_agent <key> <reason> — name the skip on stderr. Pi's premise, a seed that
+# grants nothing, is Family 14's `{}` assertion on its settings_template.
 skip_agent() {
   key="$1"
   reason="$2"
-  shift 2
   registry_row "$key" || return
-  for marker in "$@"; do
-    if printf '%s\n' "$ROW" | grep -qF -- "$marker"; then
-      emit "$DUCTUS (agent $key)" \
-        "the settings_template seed now carries a CLI entry ('$marker'), so the store-probe rule applies" \
-        "seed the store probe for '$key' and replace its skip_agent line with a check_agent line"
-    fi
-  done
   echo "runtime-probe-parity: skipped $key ($reason)" >&2
 }
 

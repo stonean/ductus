@@ -756,9 +756,9 @@ mod tests {
 
     #[test]
     fn writes_to_host_supplied_path_for_non_claude_adopter() {
-        // A non-Claude host keeps its settings at `.pi/settings.json`; the
-        // primitive writes wherever the caller says without baking in a
-        // Claude-shaped default.
+        // A host-supplied path under another config directory (Pi's settings
+        // file, which carries no permissions): the primitive writes wherever
+        // the caller says without baking in a Claude-shaped default.
         let tmp = tempfile::tempdir().unwrap();
         let result = run(&args(".pi/settings.json", &["Edit"], &[]), tmp.path()).unwrap();
         assert!(result.path.ends_with(".pi/settings.json"));

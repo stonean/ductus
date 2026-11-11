@@ -232,7 +232,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
    ```text
    curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {connect-timeout} --max-time {request-timeout} \
-     https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{raw-ref}/version -o {tempdir}/version
+     "https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{raw-ref}/version" -o {tempdir}/version
    ```
 
    This fetch is also the existence check for a named or recorded tag, so a tag costs no extra request: every release at or above the floor carries a `version` file, so an HTTP 404 on a tag means the tag does not exist.
@@ -249,7 +249,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
    ```text
    curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {connect-timeout} --max-time {request-timeout} \
-     https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{raw-ref}/framework/migrations.toml -o {tempdir}/migrations.toml.ref
+     "https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{raw-ref}/framework/migrations.toml" -o {tempdir}/migrations.toml.ref
    ```
 
    - **The id is an entry there**: the tag knows the migration, so it is not older than it. Pass.
