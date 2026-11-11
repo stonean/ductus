@@ -6,7 +6,7 @@ title: "002-project-scaffolding — plan"
 
 ## Overview
 
-Create three new template files in the existing `framework/templates/project/` directory: `project-readme.md`, `gitignore`, and `claude-md.md`. These are project-level files that the init command (spec 003) copies into new projects. They use `{project}` placeholders that get replaced during bootstrap.
+Create three new template files in the existing `framework/templates/project/` directory: `project-readme.md`, `gitignore`, and `claude-md.md`. They are project-level files for adopting projects. `/ductus` installs two of them (`framework/bootstrap/ductus.md`, Shared files with conflict handling): it merges the `.gitignore` template as a managed `# ductus` block and copies `CLAUDE.md` when one is absent. Nothing installs the README template since 003 retired `/ductus:init`, which copied it, on 2026-09-15; whether `/ductus` creates `README.md` from it or the template is retired is 003's task 6. The README template uses `{project}` placeholders.
 
 ## Technical Decisions
 
@@ -21,7 +21,7 @@ The project README template is based on an adopter project's `README.md` structu
 
 ### Gitignore stays minimal
 
-The `.gitignore` template contains only `ductus`-universal entries. No language-specific patterns. The file is named `gitignore` (no dot) in `framework/templates/project/` to avoid it being treated as an active gitignore by git. The init command renames it to `.gitignore` during copy.
+The `.gitignore` template contains only `ductus`-universal entries. No language-specific patterns. The file is named `gitignore` (no dot) in `framework/templates/project/` to avoid it being treated as an active gitignore by git. `/ductus` writes it into the project's `.gitignore` as the managed `# ductus` block, creating the file when absent.
 
 ### CLAUDE.md imports the constitution and AGENTS.md in the form Claude Code resolves
 
@@ -55,7 +55,7 @@ Rejected. Using `project-readme.md` avoids confusion — `readme.md` could be mi
 
 ### Considered: including `{description}` placeholder in templates
 
-Rejected. Only `{project}` is used as a placeholder. The project description appears in specific locations (README header, AGENTS.md intro) and the init command fills those in directly from user input rather than using a second placeholder.
+Rejected for these templates, which use only `{project}`; the README template's description line is a hint the adopter fills in. The bootstrap later took the other path for the `AGENTS.md` template, substituting `{One-line project description.}` from the project inputs (`framework/bootstrap/ductus.md`, Shared files with conflict handling).
 
 ## Open Questions Resolved
 
