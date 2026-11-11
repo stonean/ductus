@@ -128,7 +128,7 @@ The phrases are matched as phrases, not words, and that is load-bearing: bare `a
 
 The whole criterion is exempted rather than the matched path, because a criterion about a transition names its endpoints together.
 
-An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.ductus/…`, `.agents/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
+An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.ductus/…`, `.pi/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
 
 Worked example — 026's AC5 (AC18), after `531e3ea` and `3ff65445` deleted both subjects:
 
