@@ -35,10 +35,10 @@ Done when: all eleven commands pass lint, placeholders are correct, and spec sta
 
 ## 4. Installer script (`install.sh`)
 
-- [x] `install.sh` resolves the agent (positional arg, default `claude`) and places the bootstrap at the 012-registry path for claude, auggie, and antigravity
-- [x] Antigravity placement wraps the body as a `name: ductus` skill; the fetch is tempfile-guarded (`mktemp` + `EXIT` trap) and idempotent
+- [x] `install.sh` resolves the agent (positional arg, default `claude`) and places the bootstrap at the 012-registry path for claude
+- [x] The fetch is tempfile-guarded (`mktemp` + `EXIT` trap) and idempotent
 - [x] README Quick start and per-agent installs reduced to a single `curl … | sh` line each
-- [x] Verified end to end against the live `ductus.md` for all three agents
+- [x] Verified end to end against the live `ductus.md` for each agent
 - [x] Resolve the installer↔registry parity open question — enforced by `scripts/audit/installer-registry-parity.sh` (audit Family 14)
 
 Done when: the one-line `curl … | sh` installer places the bootstrap for every supported agent per `scenarios/curl-sh-installer.md`, and the README installs are reduced to one line per agent.
