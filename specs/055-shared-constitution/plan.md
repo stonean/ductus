@@ -70,7 +70,7 @@ every other command's Scope Boundaries then says "constitution loaded by
 is agent- and layout-independent — which matters, because the import line is not.
 
 An import is a `claude-style` feature. The Agent Registry's derived-values table
-gives `antigravity`, `opencode` and `pi` a native rules file of `AGENTS.md`, and
+gives `pi` a native rules file of `AGENTS.md`, and
 `framework/templates/project/agents.md` links the constitution in prose rather than
 importing it. So AC9's managed block is **layout-derived**: an `@{document-path}`
 line under `claude-style`, which Claude Code expands at session start, and a

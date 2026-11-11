@@ -34,7 +34,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 4. Maintain the layout-derived managed block
 
 - [x] Add a `merge-managed-block` step to `framework/bootstrap/ductus.md` §Per-Agent Scaffolding writing the block into each agent's derived native rules file
-- [x] Emit `@import {path}` for `claude-style`; emit a `See [alias]({path})` link for the `antigravity` and `opencode` layouts, which read `AGENTS.md` and have no import directive
+- [x] Emit `@import {path}` for `claude-style`; emit a `See [alias]({path})` link for the `pi` layout, which reads `AGENTS.md` and has no import directive
 - [x] Add the marker to `framework/templates/project/claude-md.md` and `framework/templates/project/agents.md`
 - [x] `cp framework/bootstrap/ductus.md framework/bootstrap/govern.md`
 
