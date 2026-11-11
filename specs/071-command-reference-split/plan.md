@@ -35,7 +35,7 @@ headings alone would have ended in the wrong place.
 
 - No frontmatter. It is not a command, and the command-frontmatter checks
   must not see it as one.
-- An H1, `# <command> — markdown-only reference`.
+- An H1, `# <command> — reference`.
 - The moved section's own lead paragraph, which says what the reference is
   for.
 - A **Where a named section lives** paragraph: a section this file names with
@@ -253,35 +253,34 @@ envelopes only, so the fixture change does not move it.
 
 ### Bytes loaded per invocation, measured after the split
 
-Measured 2026-10-25 over the tree that lands the split, against the spec's
-figures at `bb372676`. *Before* is the whole command file, which every
-invocation loaded; *After* is the command file alone, which is now all an
-invocation loads; *Reference* is read only when a step names a section in it.
+Measured at `eaaf4898` (2026-11-11) with `git show eaaf4898:<path> | wc -c`, in
+bytes, against the spec's figures at `bb372676`. *Before* is the whole command
+file, which every invocation loaded; *After* is the command file alone, which is
+now all an invocation loads; *Reference* is read only when a step names a
+section in it. Specs after the split have edited both files, so the figures
+are the tree's at that sha, not the split's alone.
 
 | Command | Before | After | Change | Reference |
 | --- | --- | --- | --- | --- |
-| analyze | 111,742 | 38,862 | −65.2% | 75,492 |
-| review | 64,647 | 19,839 | −69.3% | 46,458 |
-| implement | 44,828 | 19,034 | −57.5% | 27,104 |
-| audit | 37,267 | 5,207 | −86.0% | 33,026 |
-| clarify | 30,694 | 19,520 | −36.4% | 12,638 |
-| fold | 22,711 | 16,796 | −26.0% | 6,735 |
-| specify | 21,884 | 13,146 | −39.9% | 9,660 |
-| groom | 20,206 | 11,119 | −45.0% | 10,072 |
-| prune | 19,879 | 15,434 | −22.4% | 5,240 |
-| status | 19,529 | 7,019 | −64.1% | 13,465 |
-| plan | 16,954 | 8,145 | −52.0% | 9,711 |
-| consolidate | 16,141 | 13,264 | −17.8% | 3,693 |
-| log | 4,414 | 4,104 | −7.0% | 1,097 |
-| **Total** | **430,896** | **191,489** | **−55.6%** | **254,391** |
+| analyze | 111,742 | 26,456 | −76.3% | 50,406 |
+| review | 64,647 | 24,006 | −62.9% | 46,288 |
+| implement | 44,828 | 13,238 | −70.5% | 12,730 |
+| audit | 37,267 | 4,889 | −86.9% | 35,642 |
+| clarify | 30,694 | 18,832 | −38.6% | 12,127 |
+| fold | 22,711 | 12,406 | −45.4% | 5,109 |
+| specify | 21,884 | 12,611 | −42.4% | 8,385 |
+| groom | 20,206 | 11,512 | −43.0% | 11,178 |
+| prune | 19,879 | 17,874 | −10.1% | 2,102 |
+| status | 19,529 | 6,061 | −69.0% | 1,575 |
+| plan | 16,954 | 7,617 | −55.1% | 10,078 |
+| consolidate | 16,141 | 16,094 | −0.3% | 3,996 |
+| log | 4,414 | 3,761 | −14.8% | 485 |
+| **Total** | **430,896** | **175,357** | **−59.3%** | **200,101** |
 
-Per invocation the commands load 239,407 fewer bytes in total, 55.6%. The
-spec's estimate kept 183,276; the 8,213-byte difference is what the repair
-added back: the location line in each of the thirteen command files and the
-pointers, each of which names a full heading and a file where it used to say
-"below". `analyze`, the case that motivated the change, drops from 111,742 to
-38,862 bytes. That is still above the ~20KB compaction window, which the spec
-leaves to a follow-up.
+Per invocation the commands load 255,539 fewer bytes in total, 59.3%.
+`analyze`, the case that motivated the change, drops from 111,742 to 26,456
+bytes. That is still above the ~20KB compaction window, which the spec leaves
+to a follow-up.
 
 ## Affected Files
 

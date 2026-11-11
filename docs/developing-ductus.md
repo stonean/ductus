@@ -20,6 +20,8 @@ Registering one is seven sites, and three of them are found only by tests; remov
 
 A new command wires into five places outside `framework/commands/`, and two of them are load-bearing for adopters. The hook, Families 16 and 21 and `scripts/gen-help-tables.sh` cover four. Nothing flags the fifth: the list in `runtime/src/parser/mod.rs`'s `rewritten_command_files_parse_with_document_step_numbers`.
 
+A command with a reference takes two more ([071](../specs/071-command-reference-split/spec.md)): the reference itself at `framework/reference/<name>.md`, never under `framework/commands/`, where every file is a command, and its row in `framework/bootstrap/ductus.md` §Shared Files, `framework/reference/<name>.md` → `.ductus/reference/<name>.md`, which Family 16 fails a reference without. The command's steps then name its sections in the pair form **§Heading** in `.ductus/reference/<name>.md`.
+
 ## Adding a member to a closed set
 
 A family, a skip reason or a marker that `check-artifacts`' families use is a corpus sweep, and Family 18 binds only the marker lists. Before the release commit, grep an existing sibling (`root-absent`) across `framework/`, `docs/`, `runtime/src/` and `specs/`, then update every list and count naming it, or drop a needless count.
