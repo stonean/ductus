@@ -17,7 +17,6 @@ Rename files and update all references from `triage` to `inbox` across the frame
 - [x] Update content in `.claude/commands/ductus/inbox.md` (heading, references, prose)
 - [x] Update content in `templates/inbox.md` (heading, content)
 - [x] Update `ductus/ductus.md` file manifest, command manifest, and post-scaffolding output
-- [x] Update `ductus/ductus-auggie.md` file manifest, command manifest, and post-scaffolding output
 - [x] Update `constitution.md` section heading, marker, and content
 - [x] Update `sdd-context.md` references
 - [x] Update `README.md` references
@@ -45,9 +44,7 @@ Create the `/capture` command in both platform-agnostic and Claude Code forms.
 Add the capture command to the ductus file manifests and add a triage → inbox migration step.
 
 - [x] Add `commands/capture.md` to `ductus/ductus.md` slash command manifest with `update` strategy
-- [x] Add `commands/capture.md` to `ductus/ductus-auggie.md` slash command manifest with `update` strategy
 - [x] Add triage → inbox migration to `ductus/ductus.md`: rename `specs/triage.md` to `specs/inbox.md` if needed, merge if both exist, delete old triage command
-- [x] Add triage → inbox migration to `ductus/ductus-auggie.md`: same migration with Auggie paths
 - [x] Migration is reported in post-scaffolding summary
 - [x] Add signpost to `specs/007-govern-workflow/spec.md` noting the ductus command changes by this spec
 - [x] Run `npx markdownlint-cli2` on both ductus files and 007 spec
