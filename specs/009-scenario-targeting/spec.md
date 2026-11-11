@@ -1,6 +1,6 @@
 ---
 title: "009-scenario-targeting — spec"
-status: in-progress
+status: done
 dependencies: [006-bug-workflow]
 tags: [scenarios, pipeline]
 next-criterion: 19
