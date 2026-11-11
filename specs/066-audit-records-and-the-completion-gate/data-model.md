@@ -153,7 +153,7 @@ Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and
 - `blocking` — from `hard-fail` and `blocking-findings`.
 - `unexamined` — summed from `unexamined-by-reason` when a breakdown is supplied, so the total and its parts cannot disagree; a caller-supplied total is used only when there is no breakdown.
 - Two reasons the writer adds to `unexamined-by-reason` itself: `constitution-unresolved`, one per registered shared constitution that did not resolve (spec 055), and `constitution-registry-unreadable` when the `[constitutions]` registry will not parse. Each is an unexamined input rather than a skipped target, so neither is in the table below, and each counts toward `unexamined`.
-- `analyzed-digest` / `analyzed-unreadable` — taken by the primitive from the feature directory through the same function `check-review-gate` recomputes them with; a subject that exists but could not be read is recorded in `analyzed-unreadable` rather than digested as empty. `write-review` derives `reviewed-digest` / `reviewed-unreadable` the same way over the narrower contract set.
+- `analyzed-digest` / `analyzed-unreadable` — taken by the primitive from the feature directory through the same function `check-review-gate` recomputes them with; a subject that exists but could not be read is recorded in `analyzed-unreadable` rather than digested as empty. `write-review` derives `reviewed-digest` / `reviewed-unreadable` the same way over the narrower contract set; only `compute-review-scope` reads them (spec 081).
 
 **`unexamined-by-reason` is what makes `unexamined` actionable**, because the reasons split into classes calling for opposite responses:
 
@@ -168,31 +168,6 @@ The first three `could not be read` reasons are `check-artifacts` skips. The res
 `artifact-unreadable` is the one reason that escalates: below `done` it is a skipped target, and at `done` it is a blocking finding counted in `blocking-findings`, so the gate holds the spec. The reason set is closed and the map is omitted when empty.
 
 **The subject depends on the spec's status when the record is written.** `criterion-path-existence` and `body-path-existence`, the sources of most skipped targets, examine `in-progress` and `done` specs and record a `status-gated` skip at any other status ([067's `status-gated-families-are-not-silent`](../067-analyze-and-audit-checks/scenarios/status-gated-families-are-not-silent.md)), and other families still condition on status, so a record written at one status describes a different subject than the same spec at another. Write the record last, after the status is settled.
-
-## `check-review-freshness` — whether one spec's review is still current
-
-Args:
-
-```json
-{ "feature": "042-widget" }
-```
-
-Result:
-
-```json
-{
-  "feature": "042-widget",
-  "record-present": true,
-  "freshness": {
-    "state": "stale",
-    "last-run": "2026-11-04T00:00:00Z",
-    "analyzed-against": "<sha>",
-    "paths": ["specs/042-widget/scenarios/edge.md"]
-  }
-}
-```
-
-`freshness` is the gate's own `RecordFreshness` from `analyze_subjects::review_freshness`, asked of a spec at any status: `current`, `stale` with the changed durable contracts, `undeterminable` with a `reason` for a record with no `reviewed-digest` or a `review.md` whose frontmatter does not parse, or `never-run`. `record-present` is false only when `review.md` is absent, which `/{project}:audit` Family 19 grandfathers, so it sets that apart from a record whose `last-run` is null; both answer `never-run`. `paths` holds at most the spec's durable contracts. Family 19 asks it of every `done` spec at release (plan, *Family 19 calls the runtime*). Read-only.
 
 ## `check-review-gate` — evaluate implement's pre-done review gate
 
@@ -221,16 +196,16 @@ The deterministic surface behind `/ductus:implement`'s completion gate. Evaluate
 2. **`scenario-open-questions`** — one or more scenarios carry unresolved open questions; the message names the count and the scenarios, and `guidance` points at scenario-targeted `/{project}:clarify`. The list comes from `read-spec`'s collector ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)). Then **`unchecked-task`** — `tasks.md` holds an unchecked box under any heading, outside a fence or comment (spec 079): the message names the count and the first few.
 3. **`undischarged-cross-spec-impact`** — see **Cross-spec impact** below.
 4. **`not-reviewed`** (`review.md` absent, or its `last-run` missing or null) and 5. **`must-violations`** (`blocking: true`) — the review record, read from `review.md`. A `review.md` that exists but carries no parseable record is **undeterminable**, reported as such rather than as never-reviewed.
-6. **`review-stale`** — see **Record freshness** below.
+6. Retired by spec 081, which kept the numbers: the gate never blocks on `reviewed-digest`, so `review-stale` is no `blocked-by` value. A review is owed for code alone (check 10), and a changed scenario or data model owes an analysis (check 13).
 7. **`record-predates-dispositions`** — `review.md` has no `dispositions:` map; absence is not zero. The message names the record and the command to re-run.
 8. **`undispositioned-findings`** — an outstanding gating finding: the review record's `must-violations` plus `should-violations`, which leave out a waived violation and one its deferral releases, above zero; the message names the count. It never reads `dispositions.undispositioned`, which does not split by tier, so an undecided advisory finding or observation does not hold it here. For a record the runtime writes, only a SHOULD neither waived nor released by its deferral reaches it, each other count blocking earlier, and the message names each deferral that holds `done` with its work (spec 076); the sum keeps them as a guard against a hand-edited record. The wire name predates the narrowing (scenario `only-gating-findings-hold-done`).
 9. **`fix-round-loop-open`** — `review.md` still carries `fix-rounds-open`, so its run stopped between its two writes (spec 079) — then **`fix-round-not-re-read`** — `review.md`'s `not-re-read` exceeds its `round-waivers` that carry a non-blank reason, counted as the record states them, so a hand-edited record with fewer waivers blocks whatever its other counts say. A record with neither field passes, and the passing `guidance` says it does not record whether its fixes were re-read (scenario `the-fix-round-loop-is-recorded-and-gated`; the message and the fields in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md)).
-10. **`review-owed`** — the record lists `open-findings`, a broken contract left open being what reaches this, or `compute-review-scope` reads `review-owed` (spec 079): the message names what changed or was left open, and a review clears it once its record is committed. A window that cannot be read passes, and the passing `guidance` says so.
+10. **`review-owed`** — the record lists `open-findings`, a broken contract left open being what reaches this, or `compute-review-scope` reads `review-owed` (spec 079): the message names what changed or was left open, and a review clears it once its record is committed. A change confined to the project's artifacts, a spec's own scenarios and data model included, owes none (spec 081). A window that cannot be read passes, and the passing `guidance` says so.
 11. **`not-analyzed`** (`analysis.md` absent, or its `last-run` missing or null) and 12. **`analyze-findings`** (`blocking: true`) — the analyze record, read from `analysis.md`, with the same undeterminable third state, ordered after every review check because the pipeline is `review → analyze → done`. An advisory analyze finding never blocks (scenario `write-analysis-and-the-second-gate`).
 13. **`analyze-stale`** — see **Record freshness** below.
 14. **`record-predates-dispositions`** and 15. **`undispositioned-findings`** again, for `analysis.md`: no map, then its `hard-fail` plus `blocking-findings` above zero.
 
-Within each record's half the staleness check follows its presence and failure checks: those say a record is missing or failing, it says a passing record is out of date. Every review check comes before every analyze check, since `review.md` is one of an analysis's subjects, so an analysis run ahead of a review the spec owes is stale when that review writes (spec 079). **No check reads `folds-into`**: a pending fold never holds `done` ([051](../051-branch-scoped-spec-numbering/spec.md), scenario `a-pending-fold-never-holds-done`).
+The analyze half's staleness check follows its presence and failure checks: those say a record is missing or failing, it says a passing record is out of date. Every review check comes before every analyze check, since `review.md` is one of an analysis's subjects, so an analysis run ahead of a review the spec owes is stale when that review writes (spec 079). **No check reads `folds-into`**: a pending fold never holds `done` ([051](../051-branch-scoped-spec-numbering/spec.md), scenario `a-pending-fold-never-holds-done`).
 
 `message` is the canonical blocked text with the adopter's `[host] project` command namespace substituted; `guidance` carries the resolve, waive or defer follow-up on `must-violations` and the scenario-targeted-clarify pointer on `scenario-open-questions`. Every verdict is a domain outcome — the host halts on a blocked gate, and the primitive never errors for one. An unreadable scenario contributes no questions and never blocks; `read-spec` and `check-artifacts` report it, so not blocking and not reporting stay separate obligations.
 
@@ -249,7 +224,7 @@ Within each record's half the staleness check follows its presence and failure c
 
 ### Record freshness
 
-Both staleness checks are one computation — `analyze_subjects::freshness_of`, returning `RecordFreshness` (`never-run` / `current` / `stale` / `undeterminable`) — over different subjects:
+The gate's one staleness check, the analyze record's, is `analyze_subjects::freshness_of`, returning `RecordFreshness` (`never-run` / `current` / `stale` / `undeterminable`). The review's digest is the same computation over a narrower subject set, and no gate check compares it (spec 081); `compute-review-scope` does, to put each contract it says changed in the scope of a review that runs.
 
 | record | subject set | digest field |
 | --- | --- | --- |
@@ -258,7 +233,7 @@ Both staleness checks are one computation — `analyze_subjects::freshness_of`, 
 
 `review.md` and `spec.md` are the review's output and a body it does not judge, so counting them would stale every review; both are analyze's inputs, so excluding them there would exempt the edits that most often invalidate an analysis. `analysis.md` is excluded from its own set because the record is written after its subjects are read.
 
-**The comparison is of content, not commits**: each record carries a per-path sha256 of what its run read from the working tree. `reviewed-against` and `analyzed-against` are provenance, read only for the mechanical-sweep rename exemption, whose candidates are reported rather than dropped when a tree is unavailable (scenarios `the-committed-tree-horizon`, `review-staleness-on-done-specs`). **A record with no digest is `undeterminable`** — not current, not stale, not a sha-diff fallback — and does not block, so a passing gate still carries `guidance` naming it. `reviewed-digest` is an `Option` because a spec with no scenarios and no data model records an **empty** digest, which is current; `spec.md` is always an analyze subject, so an empty analyze digest cannot occur.
+**The comparison is of content, not commits**: each record carries a per-path sha256 of what its run read from the working tree. `reviewed-against` and `analyzed-against` are provenance, read only for the mechanical-sweep rename exemption, whose candidates are reported rather than dropped when a tree is unavailable (scenarios `the-committed-tree-horizon`, `review-staleness-on-done-specs`). **A record with no digest is `undeterminable`** — not current, not stale, not a sha-diff fallback — and does not block, so a passing gate still carries `guidance` naming an analyze record it could not judge; a review record with no digest names no changed contract to `compute-review-scope`. `reviewed-digest` is an `Option` because a spec with no scenarios and no data model records an **empty** digest, which is current; `spec.md` is always an analyze subject, so an empty analyze digest cannot occur.
 
 ## `diff-cross-spec` — implement's cross-spec impact surface
 

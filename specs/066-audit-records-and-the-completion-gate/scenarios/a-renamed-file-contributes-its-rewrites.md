@@ -37,8 +37,8 @@ renumber its own links are where the sweep's rewrite lands.
 **It inherits no setting.** The similarity threshold (50%) and the rename
 limit (10,000) are `RENAME_THRESHOLD` and `RENAME_LIMIT` in
 `mechanical_sweep.rs`, not libgit2's defaults or a contributor's git config,
-so the verdict does not depend on who asks. Family 19 asks this same code
-(066 plan, *Family 19 calls the runtime*); while it carried its own copy,
+so the verdict does not depend on who asks. Family 19 asked this same code
+until spec 081 retired it; while it carried its own copy,
 `diff.renames=false` turned that copy's detection off, and a parity test held
 its values to the constants.
 
@@ -67,9 +67,7 @@ that inherited any of it fails too.
   of a move, went with its copy of the rule.
 - **The rule is 066's.** It is stated here, as
   [a-multi-number-renumber-is-one-rewrite](a-multi-number-renumber-is-one-rewrite.md)
-  states its own, and Family 19 reaches it through `check-review-freshness`.
-  [family-19-mechanical-sweep-exemption](../../026-framework-self-audit/scenarios/family-19-mechanical-sweep-exemption.md)
-  states the exemption's conditions, not a second implementation of them.
+  states its own, and Family 19 reached it through `check-review-freshness` until spec 081 retired both.
 
 ## Open Questions
 

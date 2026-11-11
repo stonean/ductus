@@ -278,7 +278,6 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | A spec with no recorded `in-progress` transition derives an *empty* diff base, and `write-review` then resolves `scope: 0` | Both primitives ship; the incoherent `examined`-over-zero record is reachable in any corpus |
 | A sweep can make a quoted instruction point at itself, and the identical sentence may be correct one file over — classify by *who emits it*, never by the string | **R** — classify a swept user-facing string by *who emits it*; adopters rename things too |
 | A spec body must not carry a point-in-time status section | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
-| Only a spec's durable contracts stale its review — `scenarios/*.md` and `data-model.md`, nothing else — and that is what prices a corpus sweep | The digest covers `scenarios/*.md` and `data-model.md` for every adopter; this is what prices any corpus sweep |
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
 | A spec's own completion commit can destroy content, and a `## Heading` absorbed into an unterminated code span is invisible to every check this project has — including the gate that reads it | **R** — drops the Family-25 scoping note; the blindness is in the shared markdown reader every adopter uses |
 | `write-review` derives `scope` itself, so a count you measured earlier and typed into the Summary can contradict the record it is written into — and nothing compares the two | One call writes both, so nothing can compare them; true wherever the primitive runs |
@@ -469,7 +468,6 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `examined` counts the in-scope files the passes *read* | `framework/reference/review.md` §Window and coverage |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | `framework/reference/review.md` §Window and coverage |
 | A spec with no recorded `in-progress` transition derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
-| Only a spec's durable contracts stale its review | `framework/reference/review.md` §Window and coverage |
 | `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |
 | `remove-inbox-item` takes the bullet text | `framework/reference/groom.md` §Inbox upkeep |
 | When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |

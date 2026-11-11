@@ -172,7 +172,7 @@ Found by 078's review round 3 (2026-11-04); the round's result file is gitignore
 
 ## 21. Family 19 reports a freshness state it does not recognise
 
-- [ ] Found by 078's second review (2026-11-04), `QUAL-CLAIM-001`: `scripts/audit/review-freshness.sh` counts a `check-review-freshness` state other than `never-run`, `undeterminable` and `stale` as examined and current, so an answer from a runtime of another version, or a future `RecordFreshness` state, reads as a clean review. Count it as not answered, with a finding naming the state
-- [ ] A parity-test case in `runtime/tests/mechanical_sweep_parity.rs` feeds the script an unrecognised state and fails when that branch is removed
+- [x] Found by 078's second review (2026-11-04), `QUAL-CLAIM-001`: `scripts/audit/review-freshness.sh` counts a `check-review-freshness` state other than `never-run`, `undeterminable` and `stale` as examined and current, so an answer from a runtime of another version, or a future `RecordFreshness` state, reads as a clean review. Count it as not answered, with a finding naming the state — waived: spec 081 retired `review-freshness.sh` and `check-review-freshness`, so no state reaches it
+- [x] A parity-test case in `runtime/tests/mechanical_sweep_parity.rs` feeds the script an unrecognised state and fails when that branch is removed — waived: spec 081 removed the script and the parity suite's Family 19 half
 
 - **Done when**: an unrecognised state is counted as not answered with a finding, and a test fails without it

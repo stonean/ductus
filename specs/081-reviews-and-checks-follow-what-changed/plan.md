@@ -57,7 +57,7 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 - **`AGENTS.md`.**
   - The local-checks rule gives an artifacts-only change the hook and the self-audit, with no build and no code workflow.
   - The gotcha "Only a spec's durable contracts stale its review" goes.
-- **`framework/reference/review.md`.** §Record the run and §Window and coverage say what owes a review, the attribution table, and what the digest is still for.
+- **`framework/reference/review.md`.** §Record the run in `review.md` and §Window and coverage say what owes a review, the attribution table, and what the digest is still for.
 - **`framework/reference/implement.md`.** Step 5's freshness paragraph is corrected.
 - **`framework/reference/fold.md`.** The folded-in-scenario bullet is corrected.
 - **`docs/analyze.md`.** Its review-freshness paragraph is corrected.

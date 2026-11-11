@@ -45,7 +45,7 @@ Each warning names the file, its size, the threshold, and its read-page count, t
 | --- | --- |
 | `tasks.md` | `/prune` the spent task sections. A `tasks.md` still over the threshold after pruning means the spec itself is too big, so the fixes for `spec.md` apply. |
 | `spec.md`, `plan.md` | Split the spec, when a slice can reach `done` on its own. Or trim it: in a plan, the code sketches and the Affected Files rows for finished work. |
-| `data-model.md` | Split the spec, or trim the file. Never into sub-files: review staleness tracks `data-model.md` by its exact name (`is_review_contract` in `runtime/src/primitives/analyze_subjects.rs`), so content moved to a sibling file would drop out of the review's subjects. |
+| `data-model.md` | Split the spec, or trim the file. Never into sub-files: the review's contract digest tracks `data-model.md` by its exact name (`is_review_contract` in `runtime/src/primitives/analyze_subjects.rs`), so content moved to a sibling file would drop out of the review's subjects. |
 | a scenario | Promote it to its own spec (§scenario-promotion). |
 | any subject, in `/analyze` | Waive the finding with a reason. |
 

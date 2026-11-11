@@ -18,8 +18,9 @@ That scenario settles *what* the rule is and *where* it is surfaced — the
 durable home is **§Project-level consistency (advisory)** in `.ductus/reference/analyze.md`, with the
 bootstrap's migration batch as a second call site. This scenario is the runtime
 half: the primitive both call sites invoke, so one rule has one implementation
-rather than two that can disagree (the Family 19 / `mechanical_sweep` pairing is
-what that costs when it is unavoidable; here it is avoidable).
+rather than two that can disagree (the former Family 19 / `mechanical_sweep`
+pairing, retired by spec 081, is what that cost when it was unavoidable; here it
+is avoidable).
 
 ## Behavior
 

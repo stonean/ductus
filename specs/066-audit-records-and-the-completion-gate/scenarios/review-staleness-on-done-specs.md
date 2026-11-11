@@ -6,7 +6,7 @@ section: "Record freshness"
 
 ## Context
 
-[review-staleness-gate](review-staleness-gate.md) added `check-review-gate`'s `ReviewStale` block: a spec cannot reach `done` while durable contracts in its plan's Affected Files have changed since its recorded `reviewed-against`. That closes the transition. It does not close the state.
+066's scenario `review-staleness-gate`, deleted by spec 081 with the check it specified, added `check-review-gate`'s `ReviewStale` block: a spec cannot reach `done` while durable contracts in its plan's Affected Files have changed since its recorded `reviewed-against`. That closes the transition. It does not close the state.
 
 The gate fires **only** on `in-progress → done`. Once a spec is `done`, nothing re-evaluates its verdict, so contracts can move underneath it indefinitely and the recorded review goes on describing code that no longer exists. `check-artifacts`' `review-state-drift` family looks adjacent but is not: its data-model entry defined it as *"a `done` spec with `review.last-run` unset or `review.blocking: true`"* — a missing or blocking review, never a stale one. So a `done` spec whose review is merely out of date is reported clean by both mechanisms.
 
@@ -16,7 +16,9 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 
 ## Behavior
 
-The `check-artifacts` staleness arm this scenario first specified was not built; the fourth Resolved Question records why. What it delivered is in `check-review-gate`'s review-record freshness.
+**Retired by spec 081.** `check-review-gate` no longer compares a review's digest, and Family 19 and `check-review-freshness` are gone. The comparison remains inside `compute-review-scope`, where a changed contract only joins the scope of a review that runs, and the rename exemption below still applies to it. The rest records the rule as it stood.
+
+The `check-artifacts` staleness arm this scenario first specified was not built; the fourth Resolved Question records why. What it delivered was `check-review-gate`'s review-record freshness.
 
 **A rename sweep does not stale a review.** The freshness computation — `analyze_subjects::freshness_of` over `is_review_contract` (a `scenarios/*.md` file or `data-model.md`), from whose result `stale_review_block` builds the block — drops a changed contract whose change since `reviewed-against` was a uniform repo-wide rename, through the `primitives::mechanical_sweep` exemption `review-freshness.sh` has always carried. When the two trees it needs are unavailable, the exemption does not run and every candidate is reported.
 
@@ -84,6 +86,7 @@ The `check-artifacts` staleness arm this scenario first specified was not built;
   gained the toolchain and a release build, and since 2026-11-04 Family 19
   calls the runtime's `check-review-freshness` instead (066 plan, *Family 19
   calls the runtime*), so the two gates are one implementation and the
-  corpus comparison went with the copy.
+  corpus comparison went with the copy. Spec 081 (owner, 2026-11-11) retired
+  both.
 
-- **Does the `check-artifacts` staleness arm still need building?** No — resolved 2026-08-16: `framework-checks.yml` runs Family 19 over every `done` spec on every push to `main`, so contracts never move unwatched, and the two-week silence the Context describes was the rename exemption correctly holding; what remains is a visibility gap, better closed by surfacing Family 19's verdict in `/{project}:analyze` than by a third implementation of the rule.
+- **Does the `check-artifacts` staleness arm still need building?** No — resolved 2026-08-16: `framework-checks.yml` runs Family 19 over every `done` spec on every push to `main`, so contracts never move unwatched, and the two-week silence the Context describes was the rename exemption correctly holding; what remains is a visibility gap, better closed by surfacing Family 19's verdict in `/{project}:analyze` than by a third implementation of the rule. Spec 081 (owner, 2026-11-11) reversed the premise: it retired Family 19 and the gate's review-staleness check, and a review's digest gates nothing.

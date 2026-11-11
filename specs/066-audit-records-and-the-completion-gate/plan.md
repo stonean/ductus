@@ -10,7 +10,7 @@ No runtime behavior changes. The primitives this spec specifies already ship und
 
 ### Family 19 calls the runtime
 
-`/{project}:audit` Family 19 (`scripts/audit/review-freshness.sh`) reports each `done` spec's review freshness from a runtime primitive built on `analyze_subjects::review_freshness`, rather than reimplementing that rule in shell and Python beside it (owner, 2026-11-04). The rule meets all three §runtime-boundary eligibility criteria, and the constraint that kept a second implementation, a self-audit job with no Rust toolchain, no longer holds: `framework-checks.yml` builds the runtime before the audit, `runtime-release.yml`'s `audit` job installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, and 15 of the 41 audit scripts already call the binary. A record with no `reviewed-digest`, which the script's commit-diff proxy judged, reports as undeterminable, a distinct state that does not pass; no `done` spec was on that arm on 2026-11-04 (0 of 35).
+`/{project}:audit` Family 19 (`scripts/audit/review-freshness.sh`) reports each `done` spec's review freshness from a runtime primitive built on `analyze_subjects::review_freshness`, rather than reimplementing that rule in shell and Python beside it (owner, 2026-11-04). The rule meets all three §runtime-boundary eligibility criteria, and the constraint that kept a second implementation, a self-audit job with no Rust toolchain, no longer holds: `framework-checks.yml` builds the runtime before the audit, `runtime-release.yml`'s `audit` job installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, and 15 of the 41 audit scripts already call the binary. A record with no `reviewed-digest`, which the script's commit-diff proxy judged, reports as undeterminable, a distinct state that does not pass; no `done` spec was on that arm on 2026-11-04 (0 of 35). Spec 081 (owner, 2026-11-11) reversed this: it retired `check-review-freshness` and Family 19 with the review-staleness gate check, so no audit family asks a review's freshness.
 
 ### One subject per spec, and the dependency runs one way
 
@@ -46,9 +46,7 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/mechanical_sweep.rs` | Specify | The rename exemption freshness applies |
 | `runtime/src/primitives/diff_cross_spec.rs` | Specify | `diff-cross-spec` |
 | `runtime/src/primitives/bounded_lists.rs` | Specify | The read-size bound `compute-review-scope` and `diff-cross-spec` share (scenario `scope-results-have-a-bounded-size`) |
-| `runtime/src/primitives/check_review_freshness.rs` | Specify | `check-review-freshness`, the staleness rule asked of any spec |
-| `scripts/audit/review-freshness.sh` | Specify | `/{project}:audit` Family 19, which asks `check-review-freshness` of every `done` spec |
-| `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures, and Family 19 to the runtime's answers (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
+| `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 
 ## Data Model
 
