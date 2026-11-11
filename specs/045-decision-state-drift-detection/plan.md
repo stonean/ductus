@@ -20,13 +20,13 @@ Everything lands inside the existing `check-artifacts` primitive. No new primiti
 
 Consequence worth stating because it inverts the usual expectation: the six-site primitive-wiring checklist in AGENTS.md §Gotchas does **not** apply. `check-artifacts` is already in `TOOL_NAMES`, `PRIMITIVE_NAMES`, `framework/runtime-tools.txt`, the interpreter dispatch, and `main.rs`. Nothing new is registered anywhere.
 
-### Implementation ownership: the runtime work lands as scenarios under 022
+### Implementation ownership: the runtime work lives as scenarios under 067
 
 This spec owns the **requirement** — what drift means, that the constitution obliges the sweep, and the eighteen acceptance criteria. It does not own the primitive that carries it.
 
 The precedent is exact and recent. 046 added the fifth `check-artifacts` family and routed every primitive-level change into **scenarios under 022-deterministic-runtime**, keeping only its constitution amendments and its acceptance criteria (`specs/046-scenario-open-question-visibility/spec.md:87-101`; the scenario is `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`). It is not merely a convention either: `check-artifacts`' compiled description names its families and 067's data model records them with their tiers, so a new family has to be recorded in both whatever else happens. Leaving either at five while the primitive ships seven would be the same defect class this spec exists to detect.
 
-Four scenarios land under 022, each back-linking here per §cross-spec-impact:
+Four scenarios under 067-analyze-and-audit-checks, which owns the analyze checks' contracts, carry it, each back-linking here per §cross-spec-impact:
 
 | Scenario | Covers |
 | --- | --- |
@@ -35,9 +35,9 @@ Four scenarios land under 022, each back-linking here per §cross-spec-impact:
 | `link-adjacent-drift-family` | tells, sibling resolution, target-state mapping, per-link evaluation |
 | `criterion-path-existence-family` | `done`-spec scope, the code-span path grammar |
 
-Recording them on a `done` 022 takes it through the scenario back-edge to `in-progress`, exactly as 046's did. What stays with 045: the constitution amendment, `analyze.md`'s documentation of the two checks, this plan, and the acceptance criteria — which are verified against shipped behavior regardless of which spec's tasks produced it, so 045 cannot reach `done` before the 022 scenarios do.
+Recording a scenario on a `done` spec takes it through the scenario back-edge to `in-progress`, exactly as 046's did. What stays with 045: the constitution amendment, `analyze.md`'s documentation of the two checks, this plan, and the acceptance criteria — which are verified against shipped behavior regardless of which spec's tasks produced it.
 
-This routing was not settled during clarification; it is a planning decision taken on the 046 precedent and on 022's ownership of the family registry.
+This routing was not settled during clarification; it is a planning decision taken on the 046 precedent and on the ownership of the family registry, then 022's and now 067's.
 
 ### A sibling link is one that lexically resolves inside the same feature directory
 
