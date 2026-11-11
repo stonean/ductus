@@ -219,3 +219,9 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 - [x] `framework/bootstrap/hooks/ductus-pre-commit`'s header says step 1, derive-dependencies, exits non-zero on a cycle, and says nothing of step 2's exit; since d90d2133 both also exit non-zero on an `unwritable` spec, which stops the commit whether or not that spec is staged (task 14's fourth item, owner, 2026-11-11). State both exits, and that `unwritable` spans the corpus as the cycle check does
 
 - **Done when**: the header names the cycle and `unwritable` exits of step 1 and the `unwritable` exit of step 2, each as spanning every tracked spec
+
+## 27. The path families record a candidate that leaves the project, never probe it
+
+- [ ] `check_criterion_path_existence` probes `repo.join(candidate).exists()` with no `..` screen, and `resolve_body_path` passes a candidate whose `..` is interior (`specs/../../x`) through as project-relative, so a criterion or body line naming such a path makes the runtime stat a file outside the project (`BE-INPUT-004`, `runtime/src/primitives/check_artifacts.rs`). Found by 045's analysis; the owner deferred it here, since this spec owns the analyze checks (2026-11-11). Resolve every candidate lexically, as `resolve_sibling` does, and record one whose resolution leaves the project as a skip instead of probing it, with a test per family that fails with the screen removed. Recording it as `root-absent`, since `..` is no top-level segment this repository contains, keeps the closed reason set unchanged; a new reason would also change 045's `data-model.md`, which lists that set, and reopen 045
+
+- **Done when**: neither path family probes a path outside the project, each records such a candidate as a skip, and a test per family fails with the screen removed
