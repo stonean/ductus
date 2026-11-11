@@ -23,7 +23,7 @@ What made this more than a find-and-replace is that parts of the name were **alr
 
 - The `gvrn` crate was published to crates.io. A published crate name cannot be reused or transferred to a differently-named crate.
 - 47 `gvrn-v*` release tags exist, each with attached binaries adopters may still be downloading.
-- Every adopter's checkout carried the name in files the project does not own — their MCP server registration, their agent permission entries (`mcp__gvrn__*` and the per-agent equivalents), their committed `.govern/config.toml`, and their installed command files.
+- Every adopter's checkout carried the name in files the project does not own — their MCP server registration, their agent permission entries (`mcp__gvrn__*`), their committed `.govern/config.toml`, and their installed command files.
 
 So the rename divided into three populations with different rules: **live artifacts**, which are swept; **published history**, which stays as written because rewriting it would invalidate what adopters already hold; and **adopter state**, which converges through the migration registry ([027](../027-bootstrap-migration-registry/spec.md)) on the next bootstrap run.
 
@@ -185,9 +185,9 @@ This follows from the binary name and the continuity decision above, and needs n
 
 **Do the MCP server key and tool prefixes change?**
 
-Yes — `ductus` is the server key, producing `mcp__ductus__<verb>-<noun>` on Claude Code and `mcp:ductus:<verb>-<noun>` on Auggie and Antigravity.
+Yes — `ductus` is the server key, producing `mcp__ductus__<verb>-<noun>` on Claude Code and `ductus__<verb>-<noun>` on Pi.
 
-No separate decision was needed: the server key is the binary name, resolved above. What the rename requires is that the migration rewrite each agent's **permission entries**, which name the prefix directly and are the reason an adopter's tool calls stop prompting. Those entries live in per-agent settings files in four different grammars, and `scripts/audit/host-namespace-parity.sh` audits the result, so the sweep is checkable rather than trusted.
+No separate decision was needed: the server key is the binary name, resolved above. What the rename requires is that the migration rewrite the **permission entries**, which name the prefix directly and are the reason an adopter's tool calls stop prompting. Those entries live in Claude's settings file, and `scripts/audit/host-namespace-parity.sh` audits the result, so the sweep is checkable rather than trusted.
 
 The bare primitive names in `framework/runtime-tools.txt` do not change. They never carried the project name — namespacing is supplied by each host's MCP registration, which is exactly why the tool-coverage lint is unaffected by any of this.
 

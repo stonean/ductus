@@ -31,7 +31,7 @@ longer one. Apply longest-first:
 | # | Old | New | Reaches |
 | --- | --- | --- | --- |
 | 1 | `.govern/` | `.ductus/` | per-project directory (`config.toml`, `session.toml`, `scripts/`, `constitution.md`) |
-| 2 | `mcp__gvrn__` / `mcp:gvrn:` / `mcp(gvrn/` / `gvrn*` | `mcp__ductus__` / `mcp:ductus:` / `mcp(ductus/` / `ductus*` | per-agent permission grammars (four of them) |
+| 2 | `mcp__gvrn__` / `gvrn*` | `mcp__ductus__` / `ductus*` | permission entries |
 | 3 | `gvrn` | `ductus` | binary, crate, lib, MCP server key, tag prefix, store filename |
 | 4 | `/gov:` and `commands/gov/` | `/ductus:` and `commands/ductus/` | command namespace and installed command dir |
 | 5 | `govern` (bare) | `ductus` | project name, `/govern` bootstrap command, repo URL, `bootstrap/govern.md` |

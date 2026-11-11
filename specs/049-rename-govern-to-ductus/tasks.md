@@ -56,14 +56,13 @@ release, not here.
 - [x] `git mv framework/bootstrap/govern.md framework/bootstrap/ductus.md`
 - [x] Update the three adopter-facing URLs — the archive fetch, the self-update fetch (which
       must name the *new* bootstrap path), and the post-scaffolding documentation links
-- [x] Sweep the bootstrap body: MCP registration shapes, the per-agent permission seeds in all
-      four grammars, the pre-flight probe, the Agent Registry's derived-values table, and the
+- [x] Sweep the bootstrap body: MCP registration shapes, the permission seed, the pre-flight probe, the Agent Registry's derived-values table, and the
       Shared Files manifest rows
 - [x] Walk the §Derived values **Layout-derived** table row by row per `AGENTS.md`'s
       agent-registry rule and record the per-agent impact in the commit message
 
 - **Done when**: the bootstrap names only the new project, the self-update fetch points at the
-  new path, and each of the four agent grammars has been checked against its own matcher
+  new path, and the permission grammar has been checked against its own matcher
   rather than inferred from another's.
 
 ### 5. Register the adopter migration
@@ -72,7 +71,7 @@ release, not here.
       this work, and `target_paths` covering the per-project directory, the installed command
       files, and the MCP config
 - [x] Write `framework/migrations/ductus-rename.md`: rewrite the MCP server key and command,
-      rewrite the permission entries in all four grammars, move the per-project directory under
+      rewrite the permission entries, move the per-project directory under
       042's convergence rule (`git mv` when tracked, converge when the destination exists),
       rewrite `[pinned] files` entries, warn on a pinned invoker still naming the old path, and
       reinstall the command files under the new namespace
@@ -96,8 +95,8 @@ release, not here.
 
 ### 7. Sweep the scripts and add the retired-name guard entries
 
-- [x] `scripts/gen-claude-commands.sh` (`PROJECT`), `scripts/gen-configure-mcp.sh` (the four
-      permission-string emitters), `scripts/gen-help-tables.sh`
+- [x] `scripts/gen-claude-commands.sh` (`PROJECT`), `scripts/gen-configure-mcp.sh` (the
+      permission-string emitter), `scripts/gen-help-tables.sh`
 - [x] `scripts/audit/*.sh` hardcoded names, including `host-namespace-parity.sh`'s contract
       assertion against `paths.rs`, `manifest-parity.sh`'s permission-prefix greps,
       `runtime-hardcoded-paths.sh`'s command-dir grep, and `check-zero.sh`'s generator path
