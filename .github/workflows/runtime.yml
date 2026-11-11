@@ -110,8 +110,6 @@ jobs:
     steps:
       # The default single-commit checkout: no test here reads this
       # repository's history, and the whole suite passes in a depth-1 clone.
-      # framework-checks.yml and runtime-release.yml keep their full-depth
-      # checkouts, as their own comments say.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.

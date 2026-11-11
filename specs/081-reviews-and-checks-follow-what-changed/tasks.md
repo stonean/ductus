@@ -51,7 +51,7 @@ Land tasks 1 to 3 together, by `docs/developing-ductus.md` §Landing a runtime c
 
 - [x] Cache `runtime/target/release/ductus` in `.github/workflows/framework-checks.yml` and `.github/workflows/generators.yml` under the plan's source-hash key, building only on a miss and printing why.
 - [x] Run `actionlint` over both.
-- [ ] Measure whether `framework-checks.yml`'s and `runtime-release.yml`'s steps still read git history now that Family 19 is retired, by running them in a depth-1 clone. Drop `fetch-depth: 0` where none does, or state the step that does in its comment.
+- [x] Measure whether `framework-checks.yml`'s and `runtime-release.yml`'s steps still read git history now that Family 19 is retired, by running them in a depth-1 clone. Drop `fetch-depth: 0` where none does, or state the step that does in its comment.
 
 - **Done when**: on a pushed spec-only commit following a cached build, both workflows' runs show no `Build the runtime` compile, read from `gh run view --json jobs`; and a run on a key miss shows the compile and its message.
 
