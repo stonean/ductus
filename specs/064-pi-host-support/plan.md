@@ -12,7 +12,7 @@ MCP-registration row (mechanism `write-file`, target the bridge file), and a
 the pi layout and lands at `.pi/extensions/ductus.ts`; `install.sh` gains the `pi`
 arm; the three agent-aware audit families (14/15/17) learn the pi shape; the command
 generator gains a pi output pass (dogfooded and committed in this repo); and
-`Host::command_file_candidates` gains the third candidate shape — the one runtime
+`Host::command_file_candidates` gains Pi's candidate shape — the one runtime
 change, recorded under [022-deterministic-runtime](../022-deterministic-runtime/spec.md)
 as its scenario with the `data-model.md` sync, on 022's `done → in-progress` back-edge.
 A minor release (`0.59.0`, tag `ductus-v0.59.0`) ships in the same sitting, after
@@ -34,7 +34,7 @@ directory collision-free without a `{project}/` subdirectory, which would need a
 namespace from the invocation. `enforce-manifest` runs over `.pi/prompts` with the
 glob `{project}-*.md`, never the default `*.md`, so foreign prompt templates are
 structurally untouched by slash-command cleanup. The stale/self-install paths are
-verbatim byte-compares, identical to the claude-style and opencode cases.
+verbatim byte-compares, identical to the claude-style case.
 
 Rejected alternative — skills: verified in
 `dist/modes/interactive/interactive-mode.js` that skill commands register as literal
@@ -95,17 +95,15 @@ typebox wrap is required. Either path keeps the schema data server-sourced.
 > accepted directly — no typebox wrap needed**; the bridge passes the server's
 > `inputSchema` through as-is (server-sourced schema data, the D2 property).
 
-### D3 — One runtime change: the third command-file candidate
+### D3 — One runtime change: Pi's command-file candidate
 
 `Host::command_file_candidates` (runtime/src/host.rs) appends
 `{cli-config-dir}/prompts/{project}-{name}.md` **after** the existing
-`commands/{project}/` (plural, claude-style/auggie) and `command/{project}/`
-(singular, opencode) candidates — order preserved, `cli-config-dir` from the session
-file remains the real selector. A unit test records `cli-config-dir = .pi` in a
+`commands/{project}/` (claude-style) candidate — order preserved, `cli-config-dir`
+from the session file remains the real selector. A unit test records `cli-config-dir = .pi` in a
 session fixture and asserts the candidate list ends with the pi shape; the one
-pre-existing candidate test, `command_file_candidates_cover_both_layouts_plural_first`,
-gains the third candidate at the end of its expected list, its first two entries and
-their order unchanged (`fcaa7d2a`, as AC8 records). Nothing else in `runtime/` moves:
+pre-existing candidate test, now `command_file_candidates_cover_claude_style_then_pi`,
+gained Pi's candidate at the end of its expected list (`fcaa7d2a`, as AC8 records). Nothing else in `runtime/` moves:
 no new primitive, no schema change, the MCP server is byte-identical. The
 `write-session` doc comment's config-dir enumeration gains `.pi` in the same commit
 (doc sync, no behavior).
@@ -131,7 +129,7 @@ verification kept, and bounded by `--connect-timeout {connect-timeout}` and
 BE-DATA-011). Its command line interpolates only that ref, which Source resolution
 holds to `latest`, `main` or `ductus-v<MAJOR>.<MINOR>.<PATCH>`, `$DUCTUS_REPO`, and
 the directory `mktemp -d` generates. `$DUCTUS_REPO` is inside double quotes in the
-raw-file fetch but unquoted in the latest-release lookup (BE-INPUT-003); (2) report that Pi has no permission-gating settings
+raw-file fetch and in the latest-release lookup (BE-INPUT-003); (2) report that Pi has no permission-gating settings
 (every tool call runs without a host prompt; project trust is the only gate) and
 state the trust requirement for a freshly cloned pi-adopted repo.
 `gen-configure-mcp.sh`'s header names the pi exclusion (it generates MCP-permission
@@ -145,7 +143,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   in the pi arm, the parity shape for the no-permission agent.
 - **Family 15** (`runtime-probe-parity.sh`): skips pi by name on stderr; the header
   states the bound (pi has no settings template and no permission shape to probe).
-- **Family 17** (`host-namespace-parity.sh`): third installed-namespace shape —
+- **Family 17** (`host-namespace-parity.sh`): Pi's installed-namespace shape —
   `.pi/prompts/{ns}-*.md` flat files; a `{ns}-`-prefixed file counts the namespace as
   installed.
 - **`gen-claude-commands.sh`**: second output pass to `.pi/prompts/` — flat
@@ -171,8 +169,8 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   from the staging archive), scope `project-local` (gitignored; re-scaffolded by
   every `/ductus` and repairable by `/{project}:configure`), mechanism `write-file`
   (the additive write operation is unchanged; only the target's commit status differs
-  from the other two `write-file` rows).
-- `### Pi layout` scaffolding section beside the Antigravity/OpenCode sections: the
+  from Claude's `write-file` row).
+- `### Pi layout` scaffolding section: the
   sixteen `framework/commands/*.md` rows plus the `configure` row copy verbatim to
   `.pi/prompts/{project}-<name>.md` with the standard substitutions; the bridge row
   copies `framework/bootstrap/pi/ductus-bridge.ts` to `.pi/extensions/ductus.ts`
@@ -180,7 +178,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   block; the completion message carries the Pi trust reminder (project-local `.pi/`
   resources load only after trust — accept the prompt or pass `--approve` once).
 - State B / §MCP wiring: the `write-file` branch names the pi target (bridge file,
-  not an MCP config); the `surface-instruction` prose is unchanged. §Permission
+  not an MCP config). §Permission
   Setup's per-layout resolution gains the pi no-op branch. §Self-update check and
   the `ductus` self-install / Placeholder Substitution / Post-Write Integrity
   enumerations name the pi paths (all verbatim byte-compares). `ductus-procedure.md`
@@ -197,8 +195,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   runtime's own MCP server over stdio.
 - `README.md`: agent list gains Pi; §Installing (per agent) accepts `pi`
   (`sh -s -- pi`); the invocation paragraph names `/{project}-<name>` for Pi.
-- `AGENTS.md` (this repo's contributor home): the live registry enumeration updates to
-  five agents across four layouts; one new entry records the bridge architecture
+- `AGENTS.md` (this repo's contributor home): the live registry enumeration updates; one new entry records the bridge architecture
   (never also register the runtime in pi's own MCP client; keep the bridge
   dependency-free — the README promise and the live-schema property both depend on
   it).
@@ -211,7 +208,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 
 022 reopens (`done → in-progress`) before any 064 runtime work; the scenario
 (`the-pi-command-candidate` slug, or as plan lands it) back-links 064; 022's
-`data-model.md` records the third candidate shape; a matching task lands in 022's
+`data-model.md` records Pi's candidate shape; a matching task lands in 022's
 `tasks.md`. 022's review/analyze refresh follows its standing disposition
 (`compute-review-scope` decides the window; a truthful small-`examined` record with
 every unread path named when the window is too large). Release, once 064 is `done`
@@ -257,7 +254,7 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/host.rs` | Modify | Third candidate shape + `.pi` session fixture test; `write-session` doc enumeration sync |
+| `runtime/src/host.rs` | Modify | Pi's candidate shape + `.pi` session fixture test; `write-session` doc enumeration sync |
 | `framework/bootstrap/pi/ductus-bridge.ts` | Create | The zero-dependency MCP-over-stdio bridge extension |
 | `framework/bootstrap/configure/pi.md` | Create | Pi's `/{project}:configure` — bridge verify/repair + trust/permissions report |
 | `framework/bootstrap/ductus.md` | Modify | Registry row, derived-values pi column, MCP-registration row, `### Pi layout`, State B / Permission / self-install / staleness prose, gitignore block |
@@ -288,8 +285,8 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
   Prompt templates are the native superset-compatible match (D1).
 - **Flat hyphenated names over a `{project}/` subdirectory** — the subdirectory would
   need a `prompts` settings-array entry (discovery is non-recursive) and would strip
-  the namespace from the invocation; the flat spelling keeps the antigravity
-  invocation form with zero settings (D1).
+  the namespace from the invocation; the flat spelling keeps the project
+  namespace in the invocation with zero settings (D1).
 - **MCP bridge over a CLI bridge** — a CLI bridge makes the CLI the second contract,
   re-encodes every primitive's typed arguments by hand, and silently diverges when
   CLI and MCP stop agreeing; the bridge keeps the runtime's MCP server the single
@@ -308,11 +305,9 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
   the bridge never was: the tool list comes from the runtime, so registration has to
   start it, and a lazily started bridge would register nothing. A respawn on the
   first call after an exit is what self-heals (D2; corrected 2026-10-05).
-- **No `cross-spec-impact:` on 012/028/029/031/032** — the registry *consumes* the
+- **No `cross-spec-impact:` on 012/029** — the registry *consumes* the
   new row; layout branches are additive; State-B wiring branches on the existing
-  `mechanism` vocabulary. 032's provenance citation stays blockquoted so no
-  dependency edge is induced (it is a citation, not a dependency — 064 does not build
-  on opencode's behavior). The one modified spec is 022 (D3), which is the
+  `mechanism` vocabulary. The one modified spec is 022 (D3), which is the
   back-link partner.
 - **Known limitation — no permission gating in Pi.** Irreducible host property, not a
   gap this spec can close: the bootstrap's Permission-Setup no-op, `configure/pi.md`'

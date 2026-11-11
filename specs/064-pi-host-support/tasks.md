@@ -4,9 +4,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## Phase A — Runtime and the 022 back-edge
 
-## 1. Add the third command-file candidate
+## 1. Add Pi's command-file candidate
 
-- [x] `runtime/src/host.rs`: append `{cli-config-dir}/prompts/{project}-{name}.md` as the **last** entry of `Host::command_file_candidates`, after the plural and singular shapes (plan §D3)
+- [x] `runtime/src/host.rs`: append `{cli-config-dir}/prompts/{project}-{name}.md` as the **last** entry of `Host::command_file_candidates`, after the claude-style shape (plan §D3)
 - [x] Unit test: a session fixture recording `cli-config-dir = .pi` yields the candidate list ending in the pi shape; the two pre-existing candidate tests pass unmodified
 - [x] `write-session` doc comment: the `cli-config-dir` enumeration gains `.pi` (doc sync, no behavior)
 
@@ -15,9 +15,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 2. Open the 022 back-edge and record the candidate
 
 - [x] `set-status` 022 `done → in-progress`
-- [x] Create `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` (via `create-scenario`), back-linking 064 per §cross-spec-impact, stating the third candidate shape and the append-last order rule
+- [x] Create `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` (via `create-scenario`), back-linking 064 per §cross-spec-impact, stating Pi's candidate shape and the append-last order rule
 - [x] Append the matching task to 022's `tasks.md` (scenario→task mapping family stays clean)
-- [x] 022's `data-model.md`: record the third candidate shape in the command-resolution contract
+- [x] 022's `data-model.md`: record Pi's candidate shape in the command-resolution contract
 
 - **Done when**: 022 is `in-progress`, the scenario and task exist and cross-reference each other, and the data-model carries the candidate.
 
@@ -88,11 +88,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] `framework/constitution.md` §runtime-host-integration: the pi spelling in full (plan §D7) — `ductus__<verb>-<noun>` via the project's `.pi/extensions/ductus.ts` bridge; no built-in MCP; the server stays the single source for names and schemas
 - [x] `README.md`: agent list gains Pi; §Installing (per agent) accepts `pi`; the invocation paragraph names `/{project}-<name>` for Pi
-- [x] `AGENTS.md`: the live registry enumeration updates to five agents across four layouts; one new entry records the bridge architecture (never "fix" pi by registering an MCP server; keep the bridge dependency-free)
+- [x] `AGENTS.md`: the live registry enumeration updates; one new entry records the bridge architecture (never "fix" pi by registering an MCP server; keep the bridge dependency-free)
 - [x] `docs/slash-commands.md` (and any `framework/commands/help.md` agent-shape claim): audited; pi added where agents or invocation forms are enumerated
 - [x] Anti-claim sweep: grep the changed set for "registers MCP"-shaped and namespace-directory claims about pi (the spec §D7 anti-claim)
 
-- **Done when**: a grep for the pi shapes over `README.md`, `docs/`, `AGENTS.md`, `framework/constitution.md` shows the new spellings present and no stale four-agent enumeration survives in a live-claim position.
+- **Done when**: a grep for the pi shapes over `README.md`, `docs/`, `AGENTS.md`, `framework/constitution.md` shows the new spellings present and no stale agent enumeration survives in a live-claim position.
 
 ## Phase E — Verification and release
 

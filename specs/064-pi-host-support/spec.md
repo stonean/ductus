@@ -1,20 +1,18 @@
 ---
 status: in-progress
-dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split]
+dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 056-bootstrap-archive-boundary-split]
 next-criterion: 17
 ---
 
 # 064 — Pi Host Support
 
 Add **Pi** (`pi`, the `@earendil-works/pi-coding-agent` terminal coding agent) as the
-fifth agent `ductus` scaffolds into, alongside Claude Code, Auggie, Antigravity, and
-OpenCode. The work expresses Pi's command surface (prompt templates), its tool surface
+agent `ductus` scaffolds into, alongside Claude Code. The work expresses Pi's command surface (prompt templates), its tool surface
 (a zero-dependency extension bridge — Pi shipped **no built-in MCP** when this spec verified it), its native
 rules file, and its (absent) permission format as registry-derived values so `/ductus`
 produces a working Pi adoption — on **verified** conventions, not assumed ones.
 
-> **Source provenance.** Following the [032-opencode-agent](../032-opencode-agent/spec.md)
-> discipline — observed behavior governs — Pi's model here is **verified against the
+> **Source provenance.** Observed behavior governs: Pi's model here is **verified against the
 > live install** (`@earendil-works/pi-coding-agent` as shipped on the maintainer's
 > machine, Node 24): `dist/core/prompt-templates.js` (the prompt-template loader — flat,
 > non-recursive `.pi/prompts/*.md` discovery; `description` and `argument-hint`
@@ -35,11 +33,10 @@ produces a working Pi adoption — on **verified** conventions, not assumed ones
 ## Motivation
 
 The Agent Registry from [012-multi-agent-govern](../012-multi-agent-govern/spec.md),
-generalized by [028-antigravity-agent](../028-antigravity-agent/spec.md), made adding
-an agent a registry row plus satellite files. [031-agent-mcp-wiring](../031-agent-mcp-wiring/spec.md)
-then split MCP discovery into a per-agent descriptor that
+with its per-agent `layout`, made adding an agent a registry row plus satellite files.
+MCP discovery is a per-agent descriptor that
 [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md)'s State-B
-auto-wire consumes. Every registry row so far assumed two things Pi breaks at the root:
+auto-wire consumes. Claude's registry row assumed two things Pi breaks at the root:
 that the host can be given a slash-command directory shape under a per-agent config dir,
 and that the host can **run an MCP server** — the pi this spec verified had no MCP
 client, so its tool surface was an extension, and
@@ -49,7 +46,7 @@ per-agent namespace directory.
 Pi adopters driving their work through Pi got none of the `ductus` pipeline: the slash
 commands were never scaffolded where Pi scans, and the runtime had no registration path
 at all — no MCP, no second route. This spec slots Pi into the same registry-driven
-machinery the other four agents use, with the one new mechanism none of them needed.
+machinery Claude uses, with the one new mechanism it did not need.
 
 ## Verified Pi Layout
 
@@ -95,7 +92,7 @@ mechanism; nothing in the pipeline depends on either.
 
 - **D1 — Command surface: prompt templates, flat, project-hyphenated.** Each command
   installs verbatim to `.pi/prompts/{project}-<name>.md`, invoked `/{project}-<name>`
-  (the antigravity spelling). The flat project-hyphenated name keeps the shared
+  The flat project-hyphenated name keeps the shared
   directory collision-free across projects without a per-project subdirectory (which
   would require a `prompts` settings array entry and would strip the namespace from the
   invocation). Enforcement of `.pi/prompts` uses the glob `{project}-*.md` — never the
@@ -107,8 +104,8 @@ mechanism; nothing in the pipeline depends on either.
   description-loaded into the system prompt, so the model might load a pipeline command
   it should have waited to be invoked for.
 - **D2 — Self-install and staleness are verbatim.** The `ductus` bootstrap installs to
-  `.pi/prompts/ductus.md` (→ `/ductus`), a verbatim copy of upstream like claude-style
-  and opencode: the staleness check is a direct byte-compare, and the stale-write path
+  `.pi/prompts/ductus.md` (→ `/ductus`), a verbatim copy of upstream like claude-style:
+  the staleness check is a direct byte-compare, and the stale-write path
   overwrites the installed file in place. No skill-frontmatter wrapping, no body-only
   comparison.
 - **D3 — Tool surface: a shipped, zero-dependency extension bridge.**
@@ -138,11 +135,10 @@ mechanism; nothing in the pipeline depends on either.
   two-tool probe against the live install before the bridge is written, and the
   recorded outcome (plain-object accepted, or typebox-wrapped) lands in this spec's
   plan. Either way the schema data is server-sourced.
-- **D4 — One runtime change: the third command-file candidate.**
+- **D4 — One runtime change: Pi's command-file candidate.**
   `Host::command_file_candidates` gains `{cli-config-dir}/prompts/{project}-{name}.md`,
-  appended **after** the existing plural `commands/{project}/` and singular
-  `command/{project}/` shapes, so every existing layout's resolution order is
-  untouched and `cli-config-dir` in the session file remains the real selector. This is
+  appended **after** the existing `commands/{project}/` shape, so the
+  claude-style resolution order is untouched and `cli-config-dir` in the session file remains the real selector. This is
   what makes `ductus exec` and the `writeCode` payload find Pi's installed command
   files. No other runtime surface moves: no new primitive, no schema change, the MCP
   server is byte-identical. Per the standing routing rule the primitive-level change
@@ -169,7 +165,7 @@ mechanism; nothing in the pipeline depends on either.
   layout branch, and its settings-seed parity check treats Pi as "the arm writes no
   settings file" (asserts absence — the parity shape for the no-permission agent).
   (3) Family 15 (`runtime-probe-parity`) skips Pi by name on stderr, bound stated in
-  the header. (4) Family 17 (`host-namespace-parity`) recognizes a third
+  the header. (4) Family 17 (`host-namespace-parity`) recognizes Pi's
   installed-namespace shape: `.pi/prompts/{ns}-*.md` flat files. (5)
   `gen-claude-commands.sh` gains a second output pass to `.pi/prompts/ductus-*.md`
   (flat, `{project}` → `ductus`, `{cli-config-dir}` → `.pi`), included in `--check`
@@ -180,12 +176,12 @@ mechanism; nothing in the pipeline depends on either.
   invocation paragraph; constitution §runtime-host-integration gains Pi's spelling (the canonical source
   other copies point at; `050-constitution`'s cut later shortened every host's entry
   to its prefix, Pi's `ductus__`); `AGENTS.md`'s live registry
-  enumeration updates (five agents, four layouts) plus one entry recording the
+  enumeration updates plus one entry recording the
   bridge architecture (never also register the runtime in pi's own MCP client; keep the
   bridge dependency-free — the README promise and the live-schema property both
   depend on it). No artifact may say Pi "registers MCP" or that its commands live in
   a namespace directory — Pi's shape is the exact outlier (bridge-not-MCP,
-  flat-not-directory) a careless parallel with antigravity would misstate.
+  flat-not-directory) a careless parallel with Claude's layout would misstate.
 - **D8 — Release and process.** A new-feature runtime change ships as a minor bump:
   all three version sites to the next minor, CHANGELOG entry, commit,
   `ductus-v<minor>` tag pushed the same sitting as the `done` transition. The
@@ -203,8 +199,8 @@ mechanism; nothing in the pipeline depends on either.
 - [x] AC5: The bootstrap's Pi-layout scaffolding section installs the sixteen command rows plus the configure row verbatim to `.pi/prompts/{project}-<name>.md` (with `{project}` / `{cli-config-dir}` substitution), installs `framework/bootstrap/pi/ductus-bridge.ts` to `.pi/extensions/ductus.ts` with no substitution, adds `.pi/` to the framework-managed `.gitignore` block, and the completion message carries the Pi trust reminder
 - [x] AC6: `framework/bootstrap/pi/ductus-bridge.ts` exists with zero npm dependencies: spawn of `.ductus/bin/ductus mcp` at load, hand-rolled MCP-over-stdio JSON-RPC (`initialize` / `notifications/initialized` / `tools/list` / `tools/call`), `pi.registerTool` for every server-listed tool under `ductus__<name>` with the server's `inputSchema` passed through, and the failure paths of [the-bridge-fails-loudly-and-recovers](scenarios/the-bridge-fails-loudly-and-recovers.md): no tools and a session-start notice naming the pointer and `/ductus` when the runtime cannot start at load, an error envelope naming both when it fails mid-session, a timeout that retires a runtime that stops answering, and a respawn on the next call (no markdown fallback); the runtime's stdout is decoded as a UTF-8 stream
 - [x] AC7: `framework/bootstrap/configure/pi.md` verifies `.pi/extensions/ductus.ts` against the bridge at the project's own source — the ref `/ductus` resolves — (overwrite on divergence) and reports the no-permission-settings and trust facts; `gen-configure-mcp.sh`'s header names the Pi exclusion
-- [x] AC8: `Host::command_file_candidates` yields `{cli-config-dir}/prompts/{project}-{name}.md` as the **last** candidate, with a runtime test whose session file records `cli-config-dir = .pi`, and the two pre-existing candidate shapes keep their order (pre-existing host tests pass unmodified). **The parenthetical was never true as written:** commit `fcaa7d2a` added the third candidate to the expected list of the one pre-existing candidate test, `command_file_candidates_cover_both_layouts_plural_first` (`runtime/src/host.rs`), leaving its first two entries and their order unchanged
-- [x] AC9: [022-deterministic-runtime](../022-deterministic-runtime/spec.md) carries the scenario for the third candidate shape back-linking this spec, and its `data-model.md` records the candidate in the result-shape registry
+- [x] AC8: `Host::command_file_candidates` yields `{cli-config-dir}/prompts/{project}-{name}.md` as the **last** candidate, after `{cli-config-dir}/commands/{project}/{name}.md`, with a runtime test whose session file records `cli-config-dir = .pi` (`command_file_candidates_cover_claude_style_then_pi` and `command_file_candidates_pi_shape_from_session_cli_config_dir` in `runtime/src/host.rs`), and the claude-style shape keeps its position (pre-existing host tests pass unmodified). **The parenthetical was never true as written:** commit `fcaa7d2a` added Pi's candidate to the expected list of the one pre-existing candidate test (`command_file_candidates_cover_claude_style_then_pi` today), rather than leaving it unmodified
+- [x] AC9: [022-deterministic-runtime](../022-deterministic-runtime/spec.md) carries the scenario for Pi's candidate shape back-linking this spec, and its `data-model.md` records the candidate in the result-shape registry
 - [x] AC10: Family 14 passes with the Pi row: the `pi → {config_dir}/prompts/ductus.md` branch resolves, and the settings-seed parity check asserts the Pi arm writes no settings file; Family 15 skips Pi by name on stderr; Family 17 recognizes `.pi/prompts/{ns}-*.md` as an installed namespace
 - [x] AC11: `gen-claude-commands.sh` emits `.pi/prompts/ductus-*.md` and `--check` covers it; the framework repo's `.pi/prompts/` dogfooded copy is committed with the matching `.gitignore` line
 - [x] AC12: Constitution §runtime-host-integration names Pi's tool spelling in full — `ductus__<verb>-<noun>` via the project's `.pi/extensions/ductus.ts` bridge, with the no-built-in-MCP note keeping the runtime's MCP server the single source for names and schemas **Superseded in part by `050-constitution`** (scenario `the-constitution-fits-one-read`, 2026-10-27): to fit the constitution to one read, its cut shortened every host's entry to its prefix, Pi's `ductus__`, ahead of the bare `<verb>-<noun>` name, and kept the bridge. Since 080 it names the bridge Pi's tool surface "rather than pi's own MCP client", which pi ships from 0.99.0. That the bridge wraps the runtime's own MCP server over stdio is stated in `framework/bootstrap/ductus.md`'s Pi layout.
@@ -216,11 +212,11 @@ mechanism; nothing in the pipeline depends on either.
 
 - **The release follows `done`; it is not part of this spec's completion gate** — resolved 2026-10-07 by operator decision. AC16 required the `ductus-v<minor>` tag to exist before this spec could reach `done`, which inverts `AGENTS.md`'s release entry: a release is cut from completed work, every affected spec `done` first and the tag pushed in the same sitting — the order whose reverse that entry records as circular. AC16 is retired and its label is not reissued; D8's same-sitting release is the commitment that remains, so `ductus-v0.59.0` is cut in the session that marks this spec `done`.
 - **Prompt templates over skills** — settled D1. Skills' `/skill:<name>` invocation, `enableSkillCommands` dependency, `User: <args>` argument delivery (against the `$ARGUMENTS` the command bodies name), and system-prompt description loading are each a verified deviation from the command-file contract; prompt templates are a superset-compatible argument engine with the same frontmatter keys the command files already carry.
-- **Flat project-hyphenated names over a `{project}/` subdirectory** — settled D1. A subdirectory would require a `prompts` settings array entry (non-recursive discovery) and would strip the namespace from the invocation (`/specify` un-namespaced); the flat `{project}-<name>` spelling keeps the antigravity invocation form, needs no settings, and stays collision-free.
+- **Flat project-hyphenated names over a `{project}/` subdirectory** — settled D1. A subdirectory would require a `prompts` settings array entry (non-recursive discovery) and would strip the namespace from the invocation (`/specify` un-namespaced); the flat `{project}-<name>` spelling keeps the project namespace in the invocation, needs no settings, and stays collision-free.
 - **`ductus__` prefix over bare tool names** — settled D3. Every other host wraps bare names in a server namespace; the prefix makes State-A detection an inventory glob, matches the constitution's match-the-prefix rule, and rules out built-in/foreign-extension collisions.
 - **Bridge over CLI bridge** — settled D3. A CLI bridge would make the CLI surface the second contract, re-encode every primitive's typed arguments by hand, and silently diverge the moment CLI and MCP stop agreeing — a second registry copy, the exact drift §runtime-boundary prevents.
 - **Pi's `configure` is verify/repair, not a no-op** — settled D5. The bridge file gets a repair path between full `/ductus` runs, and the trust/permission facts have a home in the per-agent command set instead of living only in README prose.
 - **Dogfooded pi surface committed in the framework repo** — settled D6. Uncommitted would make the framework repo's own pi adoption invisible to the audits that exist to protect it; the `.claude/commands/` convention already commits the dogfooded copy.
-- **No `cross-spec-impact:` on 012 / 028 / 029 / 031 / 032** — those specs' documented behavior is untouched: the registry *consumes* the new row, the layout branches are additive, and the State-B wiring branches on the existing `mechanism` vocabulary. The one spec this change modifies is 022 (the runtime), which is the back-link partner. 056 is a body-linked dependency (the archive/installer boundary the bootstrap edits land on both sides of), not an impact: neither side's contract moves.
+- **No `cross-spec-impact:` on 012 / 029** — those specs' documented behavior is untouched: the registry *consumes* the new row, the layout branches are additive, and the State-B wiring branches on the existing `mechanism` vocabulary. The one spec this change modifies is 022 (the runtime), which is the back-link partner. 056 is a body-linked dependency (the archive/installer boundary the bootstrap edits land on both sides of), not an impact: neither side's contract moves.
 - **Typebox/JSON-Schema acceptance** — not a design open question but an implementation-time verification: the two-tool probe outcome (plain JSON-Schema object accepted by `registerTool`, or typebox wrap required) is recorded in the plan at implementation time; either path keeps the schema data server-sourced.
 - **Does `ductus` use the MCP client pi 0.99.0 and later ship?** No: the bridge stays Pi's tool surface (owner, 2026-11-09). It also registers `/{project}-status` (spec 080), which no MCP registration can add, and registering the runtime in pi's MCP client beside it would serve every tool twice. pi 1.5.0's own `pi mcp --help` and `--no-mcp` show the client, and the CHANGELOG pi 1.0.4 and 1.5.0 install (`@earendil-works/pi-coding-agent`) dates it to 0.99.0, 2026-09-29; moving to it was not weighed with a model turn, since no pi account is at hand and Pi support was contributed.
