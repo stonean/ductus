@@ -1436,7 +1436,7 @@ fn check_criterion_path_existence(
             // When the candidate's own top-level segment is absent, this repo
             // has nothing to say about the path — a framework repo's criteria
             // legitimately name paths that live in an *adopter's* checkout
-            // (`.ductus/…`, `.agents/…`, `.githooks/…`), and calling those
+            // (`.ductus/…`, `.githooks/…`), and calling those
             // drifted would be asserting a defect from an absence of evidence.
             // Recorded rather than exempted, so the report says what went
             // unexamined instead of quietly reading as clean. In an adopter
@@ -1613,11 +1613,6 @@ fn manifest_destinations(text: &str) -> BTreeSet<String> {
 /// backticks dropped and case folded.
 const SCAFFOLD_ROWS: [&str; 2] = ["ductus install path", "settings file"];
 
-/// §MCP registration scopes whose target lands inside the adopter's checkout.
-/// A `user-global` or `home-level` target lives outside any checkout, so no
-/// criterion naming one is a repo-relative path claim.
-const PROJECT_SCOPES: [&str; 2] = ["project-committed", "project-local"];
-
 /// The **registry** arm of [`adopter_destinations`] (spec 067 scenario
 /// `per-agent-scaffold-paths-ship-to-adopter`). A per-agent scaffold path is
 /// not a Shared Files row: it is the agent's `config_dir` substituted into a
@@ -1625,13 +1620,13 @@ const PROJECT_SCOPES: [&str; 2] = ["project-committed", "project-local"];
 /// placeholder. So for every `## Agent Registry` row this substitutes the
 /// row's `config_dir` into the §Derived values `ductus` install path and
 /// Settings file formulas for its `layout`, and takes its §MCP registration
-/// target when that target is project-scoped.
+/// target.
 ///
 /// Every registered agent contributes, not only the ones dogfooded here — the
 /// set describes what this repo ships, not what it happens to materialize. A
 /// cell is read for its first backticked span, so a trailing note beside the
-/// path (`opencode.json` (repo root; …)) does not drop the row. A result still
-/// carrying a placeholder, or a home-relative one, is left out. Each table is
+/// path (`{config_dir}/settings.json` (no permission-gating surface)) does not
+/// drop the row. A result still carrying a placeholder is left out. Each table is
 /// read on its own: one that is missing contributes nothing, which fails
 /// toward reporting and never empties the Shared Files arm.
 fn agent_scaffold_destinations(text: &str) -> BTreeSet<String> {
@@ -1658,18 +1653,12 @@ fn agent_scaffold_destinations(text: &str) -> BTreeSet<String> {
         let Some((header, rows)) = table.split_first() else {
             continue;
         };
-        let (Some(k), Some(t), Some(s)) = (
-            column(header, "key"),
-            column(header, "mcp target"),
-            column(header, "scope"),
-        ) else {
+        let (Some(k), Some(t)) = (column(header, "key"), column(header, "mcp target")) else {
             continue;
         };
         for row in rows {
             let span = |i: usize| row.get(i).and_then(|cell| first_span(cell));
-            if let (Some(key), Some(target), Some(scope)) = (span(k), span(t), span(s))
-                && PROJECT_SCOPES.contains(&scope)
-            {
+            if let (Some(key), Some(target)) = (span(k), span(t)) {
                 mcp_targets.insert(key, target);
             }
         }
@@ -1695,7 +1684,7 @@ fn agent_scaffold_destinations(text: &str) -> BTreeSet<String> {
             let derived = formulas.get(layout).into_iter().flatten().copied();
             for formula in derived.chain(mcp_targets.get(key).copied()) {
                 let path = formula.replace("{config_dir}", config_dir);
-                if !path.contains(['{', '}', '<', '>']) && !path.starts_with('~') {
+                if !path.contains(['{', '}', '<', '>']) {
                     out.insert(path);
                 }
             }
@@ -3275,12 +3264,12 @@ mod tests {
     /// checkout, as in the criterion family.
     #[test]
     fn an_absent_root_is_recorded_root_absent() {
-        let tmp = body_fixture("done", "# Plan\n\nAgents read `.agents/rules.md`.\n", &[]);
+        let tmp = body_fixture("done", "# Plan\n\nAgents read `.ductus/rules.md`.\n", &[]);
         assert_eq!(
             body_outcome(tmp.path()),
             (
                 Vec::new(),
-                vec![("root-absent".to_string(), ".agents/rules.md".to_string())]
+                vec![("root-absent".to_string(), ".ductus/rules.md".to_string())]
             )
         );
     }
@@ -4270,30 +4259,27 @@ mod tests {
     }
 
     /// The three registry tables `agent_scaffold_destinations` reads, in the
-    /// real file's shapes: a dogfooded agent (`pi`), one that is not
-    /// (`opencode`), cells carrying a trailing note, a formula still holding
-    /// a placeholder after substitution, and a user-global MCP target.
+    /// real file's shapes: both agents (`claude`, `pi`), cells carrying a trailing note, and a formula still holding
+    /// a placeholder after substitution.
     const REGISTRY: &str = "## Agent Registry\n\n\
         | `key` | `name` | `config_dir` | `layout` |\n\
         | --- | --- | --- | --- |\n\
-        | `opencode` | OpenCode | `.opencode` | `opencode` |\n\
-        | `auggie` | Auggie | `.augment` | `claude-style` |\n\
+        | `claude` | Claude Code | `.claude` | `claude-style` |\n\
         | `pi` | Pi | `.pi` | `pi` |\n\n\
         ### Derived values\n\n\
         | Derived value | Formula |\n\
         | --- | --- |\n\
         | Configure source path | `framework/bootstrap/configure/{key}.md` |\n\n\
-        | Derived value | `claude-style` | `opencode` | `pi` |\n\
-        | --- | --- | --- | --- |\n\
-        | Command/skill path | `{config_dir}/commands/{project}/<name>.md` | `{config_dir}/command/{project}/<name>.md` | `{config_dir}/prompts/{project}-<name>.md` |\n\
-        | `ductus` install path | `{config_dir}/commands/ductus.md` | `{config_dir}/command/ductus.md` | `{config_dir}/prompts/ductus.md` |\n\
-        | Settings file | `{config_dir}/settings.local.json` | `opencode.json` (repo root; same file as MCP wiring) | `{config_dir}/settings.json` (no permission-gating surface) |\n\
-        | Native rules file | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |\n\n\
+        | Derived value | `claude-style` | `pi` |\n\
+        | --- | --- | --- |\n\
+        | Command/skill path | `{config_dir}/commands/{project}/<name>.md` | `{config_dir}/prompts/{project}-<name>.md` |\n\
+        | `ductus` install path | `{config_dir}/commands/ductus.md` | `{config_dir}/prompts/ductus.md` |\n\
+        | Settings file | `{config_dir}/settings.local.json` | `{config_dir}/settings.json` (no permission-gating surface) |\n\
+        | Native rules file | `CLAUDE.md` | `AGENTS.md` |\n\n\
         ### MCP registration (per-agent)\n\n\
         | `key` | MCP target | scope | mechanism |\n\
         | --- | --- | --- | --- |\n\
-        | `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` |\n\
-        | `opencode` | `opencode.json` (repo root) `mcp` block | `project-committed` | `write-file` |\n\
+        | `claude` | `.mcp.json` | `project-committed` | `write-file` |\n\
         | `pi` | `.pi/extensions/ductus.ts` (the bridge) | `project-local` (gitignored) | `write-file` |\n\n\
         ## Shared Files\n";
 
@@ -4303,16 +4289,15 @@ mod tests {
         // the install path and settings file per registered agent, plus the
         // project-scoped MCP targets. Not the command path (`{project}` and
         // `<name>` survive substitution), not the rules file (a row this
-        // arm does not read), not Auggie's home-relative MCP target.
+        // arm does not read).
         let got = agent_scaffold_destinations(REGISTRY);
         let want: BTreeSet<String> = [
-            ".augment/commands/ductus.md",
-            ".augment/settings.local.json",
-            ".opencode/command/ductus.md",
+            ".claude/commands/ductus.md",
+            ".claude/settings.local.json",
+            ".mcp.json",
             ".pi/extensions/ductus.ts",
             ".pi/prompts/ductus.md",
             ".pi/settings.json",
-            "opencode.json",
         ]
         .into_iter()
         .map(str::to_string)
@@ -4360,7 +4345,7 @@ mod tests {
         let without_derived = REGISTRY.replace("### Derived values", "### Not The Table");
         assert_eq!(
             agent_scaffold_destinations(&without_derived),
-            ["opencode.json", ".pi/extensions/ductus.ts"]
+            [".mcp.json", ".pi/extensions/ductus.ts"]
                 .into_iter()
                 .map(str::to_string)
                 .collect::<BTreeSet<_>>()
@@ -4380,9 +4365,7 @@ mod tests {
             ".pi/prompts/ductus.md",
             ".pi/settings.json",
             ".pi/extensions/ductus.ts",
-            // Agents not dogfooded here contribute all the same.
-            ".opencode/command/ductus.md",
-            ".agents/skills/ductus/SKILL.md",
+            // Claude's paths contribute alongside Pi's.
             ".claude/commands/ductus.md",
             ".claude/settings.local.json",
             ".mcp.json",
@@ -4399,8 +4382,7 @@ mod tests {
     #[test]
     fn a_registered_agents_scaffold_path_is_skipped_not_flagged() {
         // The dogfooded agent's paths (`.pi` exists here, so root-absent does
-        // not fire) and an agent this tree does not dogfood but whose segment
-        // exists all the same.
+        // not fire) and Claude's, whose segment exists all the same.
         for (criterion, subject) in [
             (
                 "- [x] The self-install lands at `.pi/prompts/ductus.md`.\n",
@@ -4411,15 +4393,15 @@ mod tests {
                 ".pi/settings.json",
             ),
             (
-                "- [x] The installer lands at `.opencode/command/ductus.md`.\n",
-                ".opencode/command/ductus.md",
+                "- [x] The installer lands at `.claude/commands/ductus.md`.\n",
+                ".claude/commands/ductus.md",
             ),
         ] {
             let tmp = tempdir().unwrap();
             seed_with_criteria(tmp.path(), "done", criterion);
             write(tmp.path(), "framework/bootstrap/ductus.md", REGISTRY);
             fs::create_dir_all(tmp.path().join(".pi/prompts")).unwrap();
-            fs::create_dir_all(tmp.path().join(".opencode")).unwrap();
+            fs::create_dir_all(tmp.path().join(".claude")).unwrap();
             let result = run(&args(), tmp.path()).unwrap();
             assert!(
                 path_findings(&result).is_empty(),

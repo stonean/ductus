@@ -9,8 +9,8 @@
 # `Host::load` config loader.
 #
 # Any new occurrence of `.claude/commands/ductus/` in `runtime/src/` means
-# someone added a fresh hardcode — quietly breaking every Auggie /
-# an adopter or future host that doesn't match the defaults. This
+# someone added a fresh hardcode — quietly breaking every
+# adopter or future host that doesn't match the defaults. This
 # audit is the safety net.
 #
 # Scoped to `runtime/src/**` only. Specs, scenarios, and migration

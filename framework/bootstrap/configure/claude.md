@@ -47,7 +47,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(git status *)`
    - `Bash(git show *)`
 
-   **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: a `Bash(git -C <wildcard> status <wildcard>)` shape lets that leading wildcard span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly the over-broadening reason `framework/bootstrap/configure/antigravity.md` gives for omitting them there. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
+   **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: a `Bash(git -C <wildcard> status <wildcard>)` shape lets that leading wildcard span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly this over-broadening reason. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
 
    **Utility:**
    - `Bash(curl *)`

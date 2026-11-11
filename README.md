@@ -4,7 +4,7 @@
 
 Your AI coding agent works from the feature in front of it — its spec, plan, and tasks — instead of piecing together context from the whole codebase. The constitution and the commands keep it grounded: it reads the source rather than recalling it, and asks when something isn't settled. Your business rules live in specs that stay accurate after the code ships, and every feature is reviewed against built-in rules, plus any you write, before it's done.
 
-`ductus` works with Claude Code, Auggie, Antigravity, OpenCode, and Pi. It is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile.
+`ductus` works with Claude Code and Pi. It is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile.
 
 ## What you get
 
@@ -24,7 +24,7 @@ You install a single command, and `/ductus` acquires everything else — includi
 curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases/latest/download/install.sh | sh
 ```
 
-This installs the `/ductus` bootstrap command for Claude Code — see [Installing](#installing-per-agent) to target Auggie, Antigravity, or OpenCode instead. Then, in your agent, run:
+This installs the `/ductus` bootstrap command for Claude Code — see [Installing](#installing-per-agent) to target Pi instead. Then, in your agent, run:
 
 ```text
 /ductus my-project
@@ -86,7 +86,7 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code and Auggie; `/my-project-specify` on Antigravity, which discovers flat-named skills rather than a namespaced command directory; `/my-project-specify` on Pi, which discovers flat-named prompt templates the same way; `/my-project/specify` on OpenCode, which namespaces by subdirectory.
+Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code; `/my-project-specify` on Pi, which discovers flat-named prompt templates rather than a namespaced command directory.
 
 Each entry below says what the command **does**; the section it links to says when you would reach for it and why it exists.
 
@@ -128,16 +128,13 @@ curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases
 | Agent | Argument | Where the bootstrap lands | Note |
 | --- | --- | --- | --- |
 | Claude Code | *(omit)* or `claude` | `.claude/commands/ductus.md` | Reads `CLAUDE.md` natively. MCP wiring is fully automatic. |
-| Auggie | `auggie` | `.augment/commands/ductus.md` | Reads `CLAUDE.md` natively. Needs a one-time manual MCP registration — see [Registering the runtime](docs/runtime.md#registering-the-runtime). |
-| Antigravity | `antigravity` (or `agy`) | `.agents/skills/ductus/SKILL.md` | Wrapped as a skill, since Antigravity discovers dir-form skills rather than verbatim command files. Reads `AGENTS.md`. Needs a one-time manual MCP registration. |
-| OpenCode | `opencode` | `.opencode/command/ductus.md` | Reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` writes the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring. |
 | Pi | `pi` | `.pi/prompts/ductus.md` | Installed as a prompt template, which Pi expands natively (arguments, `description`/`argument-hint` frontmatter). Reads `AGENTS.md`. `/ductus` writes the `.pi/extensions/ductus.ts` bridge that exposes the runtime tools (rather than the MCP client pi 0.99.0 added); accept the project-trust prompt once, then restart pi after wiring. |
 
 Then run `/ductus {project-name}` in your agent. The installer creates the right directory for your agent and drops the bootstrap command in place; it's safe to re-run.
 
 To start from another source, add `--ref` beside the agent argument — `sh -s -- claude --ref=main` for the tip of `main`, or `--ref=ductus-v0.55.0` for a named release — then run `/ductus --ref=<the same value> {project-name}`. The installer writes no project configuration, so that first `/ductus` run is what records the choice; a plain `/ductus` would use the latest release (see [Updating an adopted project](#updating-an-adopted-project)).
 
-The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude, OpenCode, and Pi (the first two keep MCP config in a committed repo file, and Pi's bridge is a project-local extension file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](docs/runtime.md#registering-the-runtime)).
+The same bootstrap supports both agents, so re-run `/ductus --add-agent` from either later to add the other. `/ductus` acquires the runtime and wires it in the same run, automatically for both: Claude's MCP config is a committed repo file, and Pi's bridge is a project-local extension file (see [Registering the runtime](docs/runtime.md#registering-the-runtime)).
 
 ## Brownfield adoption
 
@@ -226,7 +223,7 @@ repo = "https://github.com/acme/governance"
 path = "../governance"
 ```
 
-`ductus` reads one file from it, `constitution.md`. Under Claude-style agents the `CLAUDE.md` import block loads it at session start once the host resolves and approves the import, and `/target` loads it whenever it is not already in context, alongside the shipped constitution once per session — so every command inherits it with no per-command step. More than one may be registered. The shipped `.ductus/constitution.md` keeps receiving framework updates; you never pin it to add a house rule. The framework constitution stays a floor: [§governance-precedence](framework/constitution.md#governance-sources-and-which-governs) states the order, its one exception, and the fact that nothing enforces it.
+`ductus` reads one file from it, `constitution.md`. Under Claude Code the `CLAUDE.md` import block loads it at session start once the host resolves and approves the import, and `/target` loads it whenever it is not already in context, alongside the shipped constitution once per session — so every command inherits it with no per-command step. More than one may be registered. The shipped `.ductus/constitution.md` keeps receiving framework updates; you never pin it to add a house rule. The framework constitution stays a floor: [§governance-precedence](framework/constitution.md#governance-sources-and-which-governs) states the order, its one exception, and the fact that nothing enforces it.
 
 If a registered checkout is missing, `ductus` warns and continues rather than blocking a teammate who has not cloned it — and `/review` and `/analyze` then report that source as **unexamined** rather than letting the run read as clean. A malformed *entry*, though, is a different severity and fails fast: an alias that is not a bare TOML key, a `repo` that is not URL-shaped, or an empty `path` halts the run naming the alias and the field, because that is a mistake in your own committed config rather than machine-local state. Projects that register nothing see none of this.
 
@@ -285,7 +282,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
 
-`ductus` currently distributes to these AI coding agents: **Claude Code** (`.claude/` paths), **Auggie** (`.augment/` paths), **Antigravity** (`.agents/` paths, installed as a skill), **OpenCode** (`.opencode/` command tree plus a committed root `opencode.json`), and **Pi** (`.pi/` prompt templates plus a project-local tool-bridge extension). Adding another is a registry row, an MCP registration row, a permission file, an `install.sh` `case` arm, and a row in the install table above (or, for a new layout, a derived-values branch too) — `/ductus:audit` Family 14 fails when the registry and the installer disagree, so a missed arm is loud rather than silent. See [framework/bootstrap/ductus.md](framework/bootstrap/ductus.md#agent-registry).
+`ductus` currently distributes to two AI coding agents: **Claude Code** (`.claude/` paths) and **Pi** (`.pi/` prompt templates plus a project-local tool-bridge extension). Adding another is a registry row, an MCP registration row, a permission file, an `install.sh` `case` arm, and a row in the install table above (or, for a new layout, a derived-values branch too) — `/ductus:audit` Family 14 fails when the registry and the installer disagree, so a missed arm is loud rather than silent. See [framework/bootstrap/ductus.md](framework/bootstrap/ductus.md#agent-registry).
 
 ## Contributing
 

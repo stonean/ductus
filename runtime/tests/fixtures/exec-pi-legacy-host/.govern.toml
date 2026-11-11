@@ -1,12 +1,11 @@
-# Auggie-shaped adopter project — exercises the LEGACY `cli-config-dir`
+# Pi-shaped adopter project — exercises the LEGACY `cli-config-dir`
 # fallback: a pre-relocation adopter still carrying `cli-config-dir` in the
 # committed `.govern.toml` `[host]` block (current adopters write it to the
-# gitignored `.govern.session.toml` instead; see the exec-opencode fixture).
+# gitignored `.govern.session.toml` instead; see the exec-pi-session fixture).
 # The runtime would otherwise default to `.claude` / repo directory basename,
-# neither of which resolve under this fixture's `.augment/commands/acme/`
-# layout.
+# neither of which resolve under this fixture's `.pi/prompts/` layout.
 
 # ductus (host)
 [host]
-cli-config-dir = ".augment"
+cli-config-dir = ".pi"
 project = "acme"

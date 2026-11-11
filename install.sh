@@ -6,14 +6,11 @@
 #
 # Pick an agent explicitly (default: claude):
 #   ... | sh -s -- claude
-#   ... | sh -s -- auggie
-#   ... | sh -s -- antigravity   # 'agy' (the Antigravity CLI name) also works
-#   ... | sh -s -- opencode
 #   ... | sh -s -- pi
 #
 # Pick the source (default: the latest release), in any position beside the agent:
 #   ... | sh -s -- claude --ref=main             # main, ahead of any release
-#   ... | sh -s -- --ref=ductus-v0.55.0 auggie   # a named release
+#   ... | sh -s -- --ref=ductus-v0.55.0 claude  # a named release
 #   ... | sh -s -- --ref=latest                  # the default, spelled out
 #
 # The installer is attached to every release, and the one-liner above fetches
@@ -189,10 +186,9 @@ fi
 # Confirm the payload is actually the bootstrap before installing it. `curl -f`
 # rejects an HTTP error status, but a 200 carrying a captive-portal page, a
 # proxy interstitial, or an empty body passes -f and would otherwise be written
-# out and reported as a successful install. The antigravity arm below splits
-# ductus.md on its frontmatter, so such a payload yields a skill with an empty
-# body — a no-op install that says it worked. Checked once here, for every arm,
-# so no arm reports an install it did not verify.
+# out and reported as a successful install, a no-op install that says it worked.
+# Checked once here, for every arm, so no arm reports an install it did not
+# verify.
 delims="$(grep -c '^---[[:space:]]*$' "$tmp" || true)"
 if [ ! -s "$tmp" ] || [ "${delims:-0}" -lt 2 ]; then
   echo "ductus: the downloaded file is not the ductus bootstrap — got $(wc -c < "$tmp" | tr -d ' ') bytes with ${delims:-0} frontmatter delimiter(s), expected at least 2" >&2
@@ -206,7 +202,7 @@ case "$agent" in
     mkdir -p .claude/commands
     cp "$tmp" "$dest"
     # Pre-seed permissions so the first /ductus run prompts for few of its
-    # bootstrap shell commands (ductus.md §Permission Setup names the ones that do) (see the antigravity arm for the rationale).
+    # bootstrap shell commands (ductus.md §Permission Setup names the ones that do).
     # Written only when absent — /ductus owns the merge (and retires the entries an
     # earlier seed carried; §Permission Setup). Keep in sync with
     # the claude settings_template in framework/bootstrap/ductus.md (§Agent Registry).
@@ -273,380 +269,6 @@ case "$agent" in
 JSON
     fi
     ;;
-  auggie)
-    dest=".augment/commands/ductus.md"
-    mkdir -p .augment/commands
-    cp "$tmp" "$dest"
-    # Pre-seed permissions so the first /ductus run prompts for few of its
-    # bootstrap shell commands (ductus.md §Permission Setup names the ones that do) (see the antigravity arm for the rationale).
-    # Written only when absent — /ductus owns the merge (and retires the entries an
-    # earlier seed carried; §Permission Setup). Keep in sync with
-    # the auggie settings_template in framework/bootstrap/ductus.md (§Agent Registry).
-    if [ ! -f .augment/settings.local.json ]; then
-      cat > .augment/settings.local.json <<'JSON'
-{
-  "toolPermissions": [
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^curl ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^ls ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^tar ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^mktemp -d -t ductus-XXXXXX$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git status ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git config --get core\\.hooksPath$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git config core\\.hooksPath \\.githooks$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git config user\\.email$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git rev-parse ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^git ls-files ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^chmod \\+x ~/\\.ductus/bin/ductus(\\.exe)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^chmod \\+x \\.githooks/pre-commit \\.githooks/ductus-pre-commit$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^awk 'BEGIN \\{ print ENVIRON\\[\"DUCTUS_REPO\"\\] \\}'$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^command -v ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^mkdir -p ~/\\.ductus/bin/$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^mkdir -p \\.ductus/bin$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^shasum ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^sha256sum ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^certutil -hashfile [-A-Za-z0-9_./:~\\\\\" ]+ SHA256$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^ln -sf ~/\\.ductus/bin/ductus(\\.exe)? \\.ductus/bin/ductus(\\.exe)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^cp ~/\\.ductus/bin/ductus(\\.exe)? \\.ductus/bin/ductus(\\.exe)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^~/\\.ductus/bin/ductus(\\.exe)? --version$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? fetch-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? extract-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? apply-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? merge-managed-block( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? write-session( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? enforce-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? resolve-constitutions( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? migrate-session-file( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? label-criteria( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? relocate-audit-records( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? check-orphaned-references( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? compute-review-scope( [-A-Za-z0-9_./:,=@+~{}\\[\\]*?%\"'\\\\ ]*)?$",
-      "permission": {
-        "type": "allow"
-      }
-    }
-  ]
-}
-JSON
-    fi
-    ;;
-  antigravity | agy)
-    agent="antigravity"  # 'agy' is the Antigravity CLI command name
-    dest=".agents/skills/ductus/SKILL.md"
-    mkdir -p .agents/skills/ductus
-    # Antigravity discovers dir-form skills: wrap ductus.md's body in skill
-    # frontmatter, dropping ductus.md's own frontmatter (everything up to and
-    # including the second `---`).
-    {
-      printf -- '---\nname: ductus\n---\n'
-      awk 'p{print} /^---[[:space:]]*$/{c++; if(c==2)p=1}' "$tmp"
-    } > "$dest"
-    # Pre-seed the permission file so the first /ductus run prompts for few of
-    # its bootstrap shell commands (ductus.md §Permission Setup names them). Antigravity loads permissions at session
-    # start, so ductus.md's in-run Permission Setup seed lands too late for the
-    # first run. Written only when absent — /ductus owns the merge into an
-    # existing settings.json, retiring earlier seeds' entries. Keep this allow-list in sync with the antigravity
-    # settings_template in framework/bootstrap/ductus.md (§Agent Registry).
-    if [ ! -f .agents/settings.json ]; then
-      cat > .agents/settings.json <<'JSON'
-{
-  "permissions": {
-    "allow": [
-      "command(curl)",
-      "command(ls)",
-      "command(tar)",
-      "command(mktemp -d -t ductus-XXXXXX)",
-      "command(git status)",
-      "command(git config --get core.hooksPath)",
-      "command(git config core.hooksPath .githooks)",
-      "command(git config user.email)",
-      "command(git rev-parse)",
-      "command(git ls-files)",
-      "command(chmod +x ~/.ductus/bin/ductus)",
-      "command(chmod +x ~/.ductus/bin/ductus.exe)",
-      "command(chmod +x .githooks/pre-commit .githooks/ductus-pre-commit)",
-      "command(awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }')",
-      "command(which)",
-      "command(mkdir -p ~/.ductus/bin/)",
-      "command(mkdir -p .ductus/bin)",
-      "command(shasum)",
-      "command(sha256sum)",
-      "command(certutil -hashfile)"
-    ],
-    "deny": [],
-    "ask": []
-  }
-}
-JSON
-    fi
-    ;;
-  opencode)
-    dest=".opencode/command/ductus.md"
-    mkdir -p .opencode/command
-    cp "$tmp" "$dest"
-    # Pre-seed permissions so the first /ductus run prompts for few of its
-    # bootstrap shell commands (ductus.md §Permission Setup names the ones that do). OpenCode keeps both MCP wiring and permissions in
-    # one committed opencode.json; this seeds only the permission block, and only
-    # when neither opencode.json nor opencode.jsonc exists — /ductus owns the merge
-    # and retires earlier seeds' entries. Keep in sync with the opencode settings_template in
-    # framework/bootstrap/ductus.md (§Agent Registry).
-    if [ ! -f opencode.json ] && [ ! -f opencode.jsonc ]; then
-      cat > opencode.json <<'JSON'
-{
-  "$schema": "https://opencode.ai/config.json",
-  "permission": {
-    "bash": {
-      "curl *": "allow",
-      "ls *": "allow",
-      "tar *": "allow",
-      "mktemp -d -t ductus-XXXXXX": "allow",
-      "git status *": "allow",
-      "git config --get core.hooksPath": "allow",
-      "git config core.hooksPath .githooks": "allow",
-      "git config user.email": "allow",
-      "git rev-parse *": "allow",
-      "git ls-files *": "allow",
-      "chmod +x ~/.ductus/bin/ductus": "allow",
-      "chmod +x ~/.ductus/bin/ductus.exe": "allow",
-      "chmod +x .githooks/pre-commit .githooks/ductus-pre-commit": "allow",
-      "awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }'": "allow",
-      "command -v *": "allow",
-      "mkdir -p ~/.ductus/bin/": "allow",
-      "mkdir -p .ductus/bin": "allow",
-      "shasum *": "allow",
-      "sha256sum *": "allow",
-      "certutil -hashfile * SHA256": "allow",
-      "~/.ductus/bin/ductus --version": "allow",
-      "~/.ductus/bin/ductus.exe --version": "allow",
-      ".ductus/bin/ductus fetch-archive *": "allow",
-      ".ductus/bin/ductus.exe fetch-archive *": "allow",
-      ".ductus/bin/ductus extract-archive *": "allow",
-      ".ductus/bin/ductus.exe extract-archive *": "allow",
-      ".ductus/bin/ductus apply-manifest *": "allow",
-      ".ductus/bin/ductus.exe apply-manifest *": "allow",
-      ".ductus/bin/ductus merge-managed-block *": "allow",
-      ".ductus/bin/ductus.exe merge-managed-block *": "allow",
-      ".ductus/bin/ductus write-session *": "allow",
-      ".ductus/bin/ductus.exe write-session *": "allow",
-      ".ductus/bin/ductus enforce-manifest *": "allow",
-      ".ductus/bin/ductus.exe enforce-manifest *": "allow",
-      ".ductus/bin/ductus resolve-constitutions *": "allow",
-      ".ductus/bin/ductus.exe resolve-constitutions *": "allow",
-      ".ductus/bin/ductus migrate-session-file *": "allow",
-      ".ductus/bin/ductus.exe migrate-session-file *": "allow",
-      ".ductus/bin/ductus label-criteria *": "allow",
-      ".ductus/bin/ductus.exe label-criteria *": "allow",
-      ".ductus/bin/ductus relocate-audit-records *": "allow",
-      ".ductus/bin/ductus.exe relocate-audit-records *": "allow",
-      ".ductus/bin/ductus check-orphaned-references *": "allow",
-      ".ductus/bin/ductus.exe check-orphaned-references *": "allow",
-      ".ductus/bin/ductus compute-review-scope *": "allow",
-      ".ductus/bin/ductus.exe compute-review-scope *": "allow"
-    }
-  }
-}
-JSON
-    fi
-    ;;
   pi)
     dest=".pi/prompts/ductus.md"
     mkdir -p .pi/prompts
@@ -659,7 +281,7 @@ JSON
     # first interactive start (or --approve on a non-interactive run).
     ;;
   *)
-    echo "ductus: unknown agent '$agent' (expected: claude, auggie, antigravity, agy, opencode, or pi)" >&2
+    echo "ductus: unknown agent '$agent' (expected: claude or pi)" >&2
     exit 1
     ;;
 esac

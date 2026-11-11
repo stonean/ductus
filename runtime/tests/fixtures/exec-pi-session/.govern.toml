@@ -1,0 +1,9 @@
+# Pi-shaped adopter project — exercises command resolution for the `pi`
+# layout, whose command files live in a flat project-hyphenated `prompts/`
+# directory. `project` is the team-shared namespace and stays in committed
+# `.govern.toml`; the per-contributor `cli-config-dir` lives in the
+# gitignored `.govern.session.toml` (see the sibling file).
+
+# ductus (host)
+[host]
+project = "acme"

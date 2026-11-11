@@ -1501,14 +1501,14 @@ reason = "Deferred until v2 perf budget lands."
         // Headline of the consolidation: the dashboard reads
         // `.govern.session.toml` at the repo root. The path doesn't depend
         // on project name (`gov` vs `acme`) or AI CLI (`.claude/` vs
-        // `.augment/`). The legacy `.claude/{project}-session.json` files
+        // `.pi/`). The legacy `.claude/{project}-session.json` files
         // are not consulted — adopters migrate via /ductus.
         let tmp = TempDir::new().unwrap();
         write_session_toml(
             tmp.path(),
             "feature = \"002-observability\"\npath = \"specs/002-observability\"\nset-at = \"2026-05-23T12:34:56Z\"\n",
         );
-        // No `.claude/` or `.augment/` directory needs to exist.
+        // No `.claude/` or `.pi/` directory needs to exist.
         assert!(!tmp.path().join(".claude").exists());
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         let target = result.result.session_target.unwrap();

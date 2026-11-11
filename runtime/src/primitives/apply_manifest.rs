@@ -108,8 +108,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   directory, a `..` root, and one through an outward link are all refused,
 ///   before any entry is examined.
 /// - [`PrimitiveError::InvalidPath`] when an entry's `dest`, resolved, lies
-///   in an agent host's configuration other than a command, skill,
-///   rules-mirror or bridge path `/ductus` writes, and
+///   in an agent host's configuration other than a command, skill
+///   or bridge path `/ductus` writes, and
 ///   [`PrimitiveError::InvalidArgument`] when a command or skill file it
 ///   would write carries a frontmatter key the shipped files do not (spec
 ///   022 task 11; [`host_config`]). Checked for every entry before any write,

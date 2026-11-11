@@ -321,7 +321,7 @@ The Hook Installation section above still runs and may set `core.hooksPath` rega
 
 - **Unknown agent key in `--agents=`** — stop before scaffolding; report the unknown key with the list of valid keys.
 - **All supported agents already adopted with `--add-agent`** — show the prompt with all agents pre-selected; if the user confirms with no additions, treat it as a routine update and continue silently.
-- **The agent's settings file already has entries beyond the bootstrap** (**Permission Setup** resolves it per layout — `settings.local.json`, `settings.json`, or the repo-root `opencode.json`) — only add the seed's missing entries and remove its retired ones (**Permission Setup** in `ductus.md` lists them). Do not overwrite, deduplicate, or reorder entries added by `/{project}:configure` or by the user.
+- **The agent's settings file already has entries beyond the bootstrap** (**Permission Setup** resolves it per layout — `settings.local.json` for `claude-style`) — only add the seed's missing entries and remove its retired ones (**Permission Setup** in `ductus.md` lists them). Do not overwrite, deduplicate, or reorder entries added by `/{project}:configure` or by the user.
 - **`ductus.md` content already matches the version on disk** — when the manifest's `update` strategy compares fetched content to the installed file, identical content reports as "unchanged" and avoids a redundant write. Same rule applies to per-project `configure.md` and other update-strategy files.
 - **Pinned `ductus.md` in `.ductus/config.toml`** — the manifest's `update` strategy still skips the file (no overwrite), and the **Pre-flight Phase**'s self-update check never writes pinned files even on the stale-detect path. The check byte-compares anyway: matching upstream → recorded as `current`, no output; divergent from upstream → recorded as `pinned-divergent`, the run continues, and a single advisory line is printed in the post-scaffolding output. A pinned `ductus.md` will not pick up upstream changes until the pin is removed, but the user is told once when the pin is currently suppressing real divergence.
 - **Self-update check sees a stale `ductus` in an unselected adopted agent** — the check is scoped to selected agents only. The unselected agent's stale copy is not diffed, not written, and does not trigger the abort; it will be detected the next time the user runs `/ductus` against it.
@@ -330,7 +330,7 @@ The Hook Installation section above still runs and may set `core.hooksPath` rega
 - **A required source file is absent from the extracted archive** — warn `Source not found in archive: {source-path}; skipping.` and continue with the remaining manifest entries. Preserves the per-entry "do not abort on a single fetch error" guarantee at the entry level even though the archive itself is fetched once.
 - **First-run prompt with no detected dirs and only one supported agent** — the prompt still appears (the agent must be explicitly chosen), but the single agent is pre-selected. Confirming is one keystroke.
 - **Running `ductus.md` cannot infer its own install path** — fall back to no pre-selection in the first-run prompt. The user picks explicitly.
-- **ductus runtime not live (State B)** — the **Pre-flight Phase** acquires the pinned release into the store, materializes the pointer, and registers the runtime per the agent's `mechanism` (writes the MCP config for a `write-file` agent — Pi's bridge waits for the **Bridge** step of **Pi layout**, after the archive is extracted — or surfaces the registration command for a `surface-instruction` agent), adds each of those writes that happened to the **deferred-restart set**, and continues the run through the CLI at `{pointer-path}`, surfacing in the **Closing restart** at the end whether or not it wrote anything.
+- **ductus runtime not live (State B)** — the **Pre-flight Phase** acquires the pinned release into the store, materializes the pointer, and registers the runtime per the agent's `mechanism` (writes the MCP config for a `write-file` agent — Pi's bridge waits for the **Bridge** step of **Pi layout**, after the archive is extracted), adds each of those writes that happened to the **deferred-restart set**, and continues the run through the CLI at `{pointer-path}`, surfacing in the **Closing restart** at the end whether or not it wrote anything.
 - **ductus wiring file is malformed JSON** — the wiring write does not touch the file. `/ductus` skips wiring and warns the user to repair it; the runtime is still acquired and the pointer still materialized, so the next run wires it once the file parses. A hand-maintained config is never clobbered.
 - **ductus store probe cannot run or is denied** — the run is classified as State B and acquisition proceeds. Acquisition is idempotent, so a false negative costs a version comparison rather than a redundant download. Detection never hard-fails on a host without shell.
 - **Stale `ductus.md` on an adopter who has never wired ductus** — both pre-flight checks contribute writes (a fresh `ductus.md` and the ductus wiring), but the **Pre-flight abort** emits one combined message and the user restarts once, not twice — except on Pi, whose bridge is written only after the archive is extracted, so it costs a second restart.
@@ -361,18 +361,17 @@ When State B ran, or the **deferred-restart set** is non-empty, append a closing
 
 The restart is for the **tool surface**, not for unfinished work — that distinction is the whole point of moving this here, and the message says which so the operator does not re-run `/ductus` expecting it to do more. One restart, not two: migrations, the archive fetch, Shared Files, and every scaffolding step already happened. An adopter carrying a `ductus.md` that predates the Pre-flight Phase still pays the separate self-update hop, because a copy that cannot execute this phase cannot be talked into it.
 
-Four variants:
+Three variants:
 
 - **The registration was already in place**, so State B wrote no wiring: never say it was wired in this run. Say the work above is complete and every primitive ran through the CLI at `{pointer-path}`, that `ductus` is registered for this project but its server is not live in this session, and that the operator should approve the project's MCP server if their agent asks (on Pi, trust the project) and check that it starts, then start a new session.
 - **The wiring was skipped** because the agent's MCP file is not valid JSON: acquisition still happened and the pointer exists, so the work above still completed by CLI. Say the registration was skipped and name the file, rather than promising a tool surface that will not appear.
-- **A `surface-instruction` agent** (Auggie, Antigravity) never gets an MCP file written by `/ductus` at all: keep surfacing the one-line registration command here, after the work rather than instead of it.
 - **State A, live but stale**: the set holds the acquisition alone. Say the work above is complete, that the runtime was updated to `{version}`, and that a new session restarts the server on it.
 
 Nothing is emitted when a State A run leaves the set empty — a current, live runtime has no restart to announce, and a line saying so would be noise on every run.
 
 ### Pinned `ductus.md` advisory
 
-If the **Pre-flight Phase** recorded any selected agent as `pinned-divergent` (the installed `ductus` file — the §Derived values **`ductus` install path** row: `{config_dir}/commands/ductus.md` for `claude-style`, `{config_dir}/command/ductus.md` for `opencode`, `{config_dir}/skills/ductus/SKILL.md` for `antigravity`, `{config_dir}/prompts/ductus.md` for `pi` — is listed in `.ductus/config.toml` `pinned.files` and differs from upstream), append one advisory line per divergent agent after the file summary and before next steps:
+If the **Pre-flight Phase** recorded any selected agent as `pinned-divergent` (the installed `ductus` file — the §Derived values **`ductus` install path** row: `{config_dir}/commands/ductus.md` for `claude-style`, `{config_dir}/prompts/ductus.md` for `pi` — is listed in `.ductus/config.toml` `pinned.files` and differs from upstream), append one advisory line per divergent agent after the file summary and before next steps:
 
 > {agent}: ductus.md pinned, upstream has changed.
 
@@ -380,7 +379,7 @@ The advisory is omitted when no agent is `pinned-divergent` — adopters whose p
 
 ### Security audit summary
 
-If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the **Invocation** row of **Derived values**, exactly as the next-steps list below does. The colon form here is the `claude-style` default; printing it to an Antigravity or OpenCode adopter names a command that does not exist on their agent:
+If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the **Invocation** row of **Derived values**, exactly as the next-steps list below does. The colon form here is the `claude-style` default; printing it to a Pi adopter names a command that does not exist on their agent:
 
 ```text
 Security audit: {N} gap(s) in {M} existing spec(s) — nothing was written.
@@ -404,7 +403,7 @@ This summary hands off to `/{project}:analyze`, which dispositions each gap in t
 
 Adopted agents: {comma-separated `name` of selected agents}.
 
-Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `antigravity`, `/{project}/<name>` for `opencode`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to an Antigravity, Pi, or OpenCode adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
+Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to a Pi adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
 
 1. Run `/{project}:configure` in each adopted agent to apply the full permission set.
 2. Fill in `AGENTS.md` — tech stack, project structure, code style, testing conventions, gotchas.
@@ -446,6 +445,6 @@ Re-runs are additive across agents — adopting a new agent leaves existing agen
 
 ## Directory Creation
 
-Create intermediate directories as needed (e.g., `specs/`, `specs/templates/`, and — by layout — `{config_dir}/commands/{project}/` for `claude-style`, `{config_dir}/command/{project}/` for `opencode`, `{config_dir}/skills/` and `{config_dir}/rules/` for `antigravity`, or `{config_dir}/prompts/` and `{config_dir}/extensions/` for `pi`).
+Create intermediate directories as needed (e.g., `specs/`, `specs/templates/`, and — by layout — `{config_dir}/commands/{project}/` for `claude-style`, or `{config_dir}/prompts/` and `{config_dir}/extensions/` for `pi`).
 
 Throughout this command, every `specs/…` destination — the §Shared Files manifest rows (`specs/system.md`, `specs/inbox.md`, `specs/rules/…`, …), the directories created here, and the spec-root named in the §Post-Scaffolding Output — is written under the configured `[paths] specs-root` (default `specs`, resolved in §Collect Project Inputs). The literal `specs/` paths in the manifest tables and prose are the documented default; substitute the configured name when the operator has set one. This keeps the manifest readable while honoring the override (spec 040).

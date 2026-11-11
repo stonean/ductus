@@ -2,8 +2,7 @@
 //! permission allow/deny set into a JSON file, removing exact-match
 //! duplicates from each array. The destination path is host-supplied
 //! (typically the bootstrap-substituted `{cli-config-dir}/settings.local.json`,
-//! e.g. `.claude/settings.local.json` on Claude Code or
-//! `.augment/settings.json` on Auggie); no default — `path` is required.
+//! e.g. `.claude/settings.local.json` on Claude Code); no default — `path` is required.
 //!
 //! The primitive is the deterministic surface `/configure` calls; see
 //! spec 022's `framework-list-dedup` scenario for the contract.
@@ -757,17 +756,17 @@ mod tests {
 
     #[test]
     fn writes_to_host_supplied_path_for_non_claude_adopter() {
-        // Auggie keeps its permissions at `.augment/settings.json`; the
+        // A non-Claude host keeps its settings at `.pi/settings.json`; the
         // primitive writes wherever the caller says without baking in a
         // Claude-shaped default.
         let tmp = tempfile::tempdir().unwrap();
-        let result = run(&args(".augment/settings.json", &["Edit"], &[]), tmp.path()).unwrap();
-        assert!(result.path.ends_with(".augment/settings.json"));
+        let result = run(&args(".pi/settings.json", &["Edit"], &[]), tmp.path()).unwrap();
+        assert!(result.path.ends_with(".pi/settings.json"));
         assert_eq!(result.action, "created");
-        assert!(tmp.path().join(".augment/settings.json").is_file());
+        assert!(tmp.path().join(".pi/settings.json").is_file());
         assert!(
             !tmp.path().join(".claude").exists(),
-            "Auggie write must not create a Claude-shaped sibling"
+            "A non-Claude write must not create a Claude-shaped sibling"
         );
     }
 
@@ -1679,14 +1678,26 @@ mod tests {
     /// A path in the host's protected set is refused, before any write (spec
     /// 022 task 20). A config-directory settings file stays allowed — that is
     /// `merge-permissions`' own target, covered by the tests above that write
-    /// `.augment/settings.json`; this is the protected-set complement.
+    /// `.pi/settings.json`; this is the protected-set complement.
     #[test]
     fn a_protected_path_is_refused() {
         let tmp = tempfile::tempdir().unwrap();
         // `.git`/`.cargo`/`.npmrc` are task-20 protected paths; `.mcp.json` is
         // task 11's MCP file, which `merge-permissions` reaches only because it
         // was not routed through the check before (task 20 closes it).
-        for path in [".git/config", ".cargo/config.toml", ".npmrc", ".mcp.json"] {
+        // Another tool's configuration paths, which grant an agent tools, are
+        // refused outright: no agent's settings file lives there.
+        for path in [
+            ".git/config",
+            ".cargo/config.toml",
+            ".npmrc",
+            ".mcp.json",
+            ".augment/settings.json",
+            ".agents/settings.json",
+            ".opencode/settings.json",
+            "opencode.json",
+            "opencode.jsonc",
+        ] {
             let err = run(&args(path, &["Edit"], &[]), tmp.path()).unwrap_err();
             assert!(
                 matches!(&err, PrimitiveError::InvalidPath { reason, .. }

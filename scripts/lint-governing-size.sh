@@ -47,8 +47,8 @@ done
 # fails when either disagrees with it. It is the default, not `[artifacts]
 # read-size-bytes`: this repository sets no such key.
 #
-# framework/constitution.md is held to it because OpenCode and Pi read at most
-# 51,200 bytes in one call, and a constitution past that reaches their sessions
+# framework/constitution.md is held to it because Pi reads at most
+# 51,200 bytes in one call, and a constitution past that reaches its session
 # in two reads (050-constitution, scenario the-constitution-fits-one-read). A rule
 # only one command applies belongs in that command's framework/reference/ file.
 CEILINGS="AGENTS.md|50000|retire, merge, or move an entry to the check that enforces it (spec 072)

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Regenerate the runtime-MCP-tool permission blocks in
-# framework/bootstrap/configure/{claude,auggie,antigravity,opencode}.md from the
-# canonical tool list in framework/runtime-tools.txt.
+# Regenerate the runtime-MCP-tool permission block in
+# framework/bootstrap/configure/claude.md from the canonical tool list in
+# framework/runtime-tools.txt.
 #
 # Establishes the invariant: every tool listed in runtime-tools.txt has
-# a permission entry in all four agents' configure sources. Adding or
-# removing a tool in runtime-tools.txt flows through to every file on
-# the next commit via the pre-commit hook.
+# a permission entry in Claude's configure source. Adding or removing a
+# tool in runtime-tools.txt flows through to it on the next commit via
+# the pre-commit hook.
 #
 # Pi (064) is excluded by name from this generator: Pi has no
 # MCP-permission shape — its tools arrive through the
@@ -14,39 +14,28 @@
 # `ductus__<name>` naming), and Pi has no permission-gating settings at
 # all, so there is no permission block to generate and no canonical entry
 # to keep in parity. The pi exclusion is stated here rather than silently
-# omitted: a future agent with a true MCP-permission shape belongs in the
-# `{claude,auggie,antigravity,opencode}` set above and in this header.
+# omitted: a future agent with a true MCP-permission shape gets its own
+# configure source and generator step.
 #
-# Marker pair (all four files):
+# Marker pair:
 #   <!-- generated:mcp-allow:start -->
 #   <!-- generated:mcp-allow:end -->
 #
-# Per-host mapping (deterministic; no host-presence detection). The
-# `ductus` server-name prefix comes from each agent's own MCP registration
-# target (ductus.md §MCP registration) — `.mcp.json` for Claude and
-# `opencode.json` for OpenCode, both repo-committed; `~/.augment/settings.json`
-# for Auggie and `~/.gemini/config/mcp_config.json` for Antigravity, both
-# registered by the user. Tool names in this list are bare `<verb>-<noun>`.
+# Mapping (deterministic; no host-presence detection). The `ductus`
+# server-name prefix comes from Claude's MCP registration target
+# (ductus.md §MCP registration), the repo-committed `.mcp.json`. Tool names
+# in the list are bare `<verb>-<noun>`.
 #   <verb>-<noun>  →  Claude:  mcp__ductus__<verb>-<noun>
-#                  →  Auggie:  toolName "mcp:ductus:<verb>-<noun>",
-#                              permission { type: "allow" }
-#                  →  Antigravity: a single `mcp(ductus/*)` wildcard (covers
-#                                  every tool; not per-tool enumerated)
-#                  →  OpenCode: a single `"ductus*": "allow"` glob (covers
-#                                  every tool; not per-tool enumerated)
 #
 # Exits non-zero, and writes nothing to that file, if a source file's markers
 # are missing, repeated, sharing a line, or out of order, since the splice
 # below would write a wrong file, or silently skip it, for a file shaped that
-# way. The other files are still processed.
+# way.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TOOLS="$ROOT/framework/runtime-tools.txt"
 CLAUDE_SRC="$ROOT/framework/bootstrap/configure/claude.md"
-AUGGIE_SRC="$ROOT/framework/bootstrap/configure/auggie.md"
-ANTIGRAVITY_SRC="$ROOT/framework/bootstrap/configure/antigravity.md"
-OPENCODE_SRC="$ROOT/framework/bootstrap/configure/opencode.md"
 
 # Track every mktemp we create so early-exit paths (set -e, signals,
 # splice failures) don't leak temp files into $TMPDIR.
@@ -68,7 +57,7 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run) dry_run=1 ;;
     -h|--help)
-      sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0") [--dry-run]"
       echo "  --dry-run  Report what would change; exit 1 if any source needs updating."
@@ -85,19 +74,8 @@ fi
 
 # Build the Claude block content (3-space indent matches sibling sub-sections
 # in claude.md's allow-list). Each tool name from runtime-tools.txt is a
-# bare `<verb>-<noun>`; the `ductus` server-name prefix is added per host.
+# bare `<verb>-<noun>`; the `ductus` server-name prefix is added here.
 claude_block_file="$(mktemp)"; cleanup_files+=("$claude_block_file")
-auggie_block_file="$(mktemp)"; cleanup_files+=("$auggie_block_file")
-# Antigravity uses one `mcp(ductus/*)` wildcard covering every ductus tool, rather
-# than the per-tool enumeration Claude/Auggie need — so its block is a constant
-# single line, built outside the per-tool loop below.
-antigravity_block_file="$(mktemp)"; cleanup_files+=("$antigravity_block_file")
-printf '   - `mcp(ductus/*)`\n' > "$antigravity_block_file"
-# OpenCode likewise uses one `"ductus*": "allow"` glob (no dedicated mcp permission
-# key; MCP tools are matched by tool-name pattern), so its block is also a
-# constant single line built outside the per-tool loop.
-opencode_block_file="$(mktemp)"; cleanup_files+=("$opencode_block_file")
-printf '   - `"ductus*": "allow"`\n' > "$opencode_block_file"
 
 tool_count=0
 while IFS= read -r tool; do
@@ -108,7 +86,6 @@ while IFS= read -r tool; do
   tool="${tool%"${tool##*[![:space:]]}"}"
   [ -z "$tool" ] && continue
   printf '   - `mcp__ductus__%s`\n' "$tool" >> "$claude_block_file"
-  printf '   - `{ "toolName": "mcp:ductus:%s", "permission": { "type": "allow" } }`\n' "$tool" >> "$auggie_block_file"
   tool_count=$((tool_count + 1))
 done < "$TOOLS"
 
@@ -194,9 +171,6 @@ process() {
 
 rc=0
 process "$CLAUDE_SRC" "$claude_block_file" || rc=$?
-process "$AUGGIE_SRC" "$auggie_block_file" || rc=$?
-process "$ANTIGRAVITY_SRC" "$antigravity_block_file" || rc=$?
-process "$OPENCODE_SRC" "$opencode_block_file" || rc=$?
 
 if [ "$rc" -ne 0 ] && [ "$dry_run" -eq 1 ]; then
   exit 1

@@ -23,14 +23,10 @@ If a runtime process crashes mid-procedure, just re-run the command — state li
 
 ## Registering the runtime
 
-`/ductus` wires the MCP server in the same run that acquires the binary. Where it points depends on where your agent reads MCP config:
+`/ductus` wires the runtime in the same run that acquires the binary, automatically for both agents:
 
-- **Claude** — `/ductus` writes `.mcp.json` naming the repo-relative pointer; just start a fresh session. Fully automatic.
-- **OpenCode** — `/ductus` writes the `ductus` `mcp` block into your committed root `opencode.json`, also naming the pointer; because OpenCode loads config once at startup, quit and restart it. No manual `mcp add`.
-- **Auggie** — Auggie reads MCP servers from your user-level `~/.augment/settings.json`, which `/ductus` does not write. It surfaces a one-line command to run once per machine — `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"` — then start a fresh session.
-- **Antigravity** — Antigravity reads MCP servers only from your home-level `~/.gemini/config/mcp_config.json` (project-local config is ignored), which `/ductus` does not write. It surfaces an instruction: add a `ductus` block naming that same store path, then reload with the in-prompt `/mcp` overlay.
-
-The two home-level agents name the **absolute store path** rather than the pointer, for the mirror-image reason: their config is per-machine and serves every project, so no project-relative path could be correct in it.
+- **Claude** — `/ductus` writes `.mcp.json` naming the repo-relative pointer; just start a fresh session.
+- **Pi** — `/ductus` writes the project-local `.pi/extensions/ductus.ts` bridge, which starts the runtime from the same pointer and registers its tools; accept the project-trust prompt once, then restart pi.
 
 From that session on, the pipeline takes the deterministic path. File writes are additive — an existing MCP config keeps its other servers, and a `ductus` entry that's already present is left untouched.
 

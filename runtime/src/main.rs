@@ -663,7 +663,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             .join(format!("{command}.md")),
     ];
     // Installed command file under the adopter's config dir — `commands/`
-    // (claude-style) or singular `command/` (opencode); see
+    // (claude-style) or flat `prompts/` (pi); see
     // `Host::command_file_candidates`.
     candidates.extend(
         host.command_file_candidates(command)

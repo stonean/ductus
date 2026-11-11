@@ -17,7 +17,7 @@
 //!
 //! The previous shape — host-specific JSON at `{cli-config-dir}/{project}-session.json`
 //! (e.g., `.claude/gov-session.json`) — coupled the session location to
-//! both the AI CLI (`.claude/` vs `.augment/`) and the adopting project's
+//! both the AI CLI (`.claude/` vs `.pi/`) and the adopting project's
 //! name (`gov-session.json` vs `acme-session.json`). Consolidating onto
 //! `.ductus/session.toml` at the repo root makes the path host-agnostic,
 //! project-name-agnostic, and uniform across every adopter; the runtime
@@ -387,7 +387,7 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         fs::write(
             tmp.path().join(".ductus/session.toml"),
-            "feature = \"001-old\"\npath = \"specs/001-old\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".opencode\"\n",
+            "feature = \"001-old\"\npath = \"specs/001-old\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".pi\"\n",
         )
         .unwrap();
 
@@ -399,7 +399,7 @@ mod tests {
         let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
         assert!(body.contains("feature = \"002-new\""), "{body}");
         assert!(
-            body.contains("cli-config-dir = \".opencode\""),
+            body.contains("cli-config-dir = \".pi\""),
             "cli-config-dir must survive the target switch: {body}"
         );
         // Serialized after the target block.
@@ -427,13 +427,13 @@ mod tests {
             path: None,
             scenario: None,
             scenario_path: None,
-            cli_config_dir: Some(".opencode".into()),
+            cli_config_dir: Some(".pi".into()),
             clear: false,
         };
         let result = run_with_now(&args, tmp.path(), fixed_now()).unwrap();
         assert!(result.created);
         let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
-        assert_eq!(body, "cli-config-dir = \".opencode\"\n");
+        assert_eq!(body, "cli-config-dir = \".pi\"\n");
     }
 
     #[test]
@@ -452,7 +452,7 @@ mod tests {
             path: None,
             scenario: None,
             scenario_path: None,
-            cli_config_dir: Some(".augment".into()),
+            cli_config_dir: Some(".pi".into()),
             clear: false,
         };
         run_with_now(&args, tmp.path(), fixed_now()).unwrap();
@@ -460,7 +460,7 @@ mod tests {
         assert!(body.contains("feature = \"001-x\""), "{body}");
         assert!(body.contains("path = \"specs/001-x\""), "{body}");
         assert!(body.contains("set-at = \"2026-01-01T00:00:00Z\""), "{body}");
-        assert!(body.contains("cli-config-dir = \".augment\""), "{body}");
+        assert!(body.contains("cli-config-dir = \".pi\""), "{body}");
     }
 
     #[test]
@@ -517,7 +517,7 @@ mod tests {
             path: None,
             scenario: Some("x".into()),
             scenario_path: Some("specs/x/scenarios/y.md".into()),
-            cli_config_dir: Some(".opencode".into()),
+            cli_config_dir: Some(".pi".into()),
             clear: false,
         };
         let err = run_with_now(&args, tmp.path(), fixed_now()).unwrap_err();
@@ -560,7 +560,7 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         fs::write(
             tmp.path().join(".ductus/session.toml"),
-            "feature = \"001-x\"\npath = \"specs/001-x\"\nscenario = \"y\"\nscenario-path = \"specs/001-x/scenarios/y.md\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".opencode\"\n",
+            "feature = \"001-x\"\npath = \"specs/001-x\"\nscenario = \"y\"\nscenario-path = \"specs/001-x/scenarios/y.md\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".pi\"\n",
         )
         .unwrap();
 
@@ -568,7 +568,7 @@ mod tests {
         assert!(!result.created, "existing file is overwritten, not created");
         let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
         assert_eq!(
-            body, "cli-config-dir = \".opencode\"\n",
+            body, "cli-config-dir = \".pi\"\n",
             "only cli-config-dir survives a clear: {body}"
         );
     }
@@ -581,14 +581,14 @@ mod tests {
         fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         fs::write(
             tmp.path().join(".ductus/session.toml"),
-            "feature = \"001-x\"\npath = \"specs/001-x\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".opencode\"\n",
+            "feature = \"001-x\"\npath = \"specs/001-x\"\nset-at = \"2026-01-01T00:00:00Z\"\ncli-config-dir = \".claude\"\n",
         )
         .unwrap();
         let mut args = clear_args();
-        args.cli_config_dir = Some(".augment".into());
+        args.cli_config_dir = Some(".pi".into());
         run_with_now(&args, tmp.path(), fixed_now()).unwrap();
         let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
-        assert_eq!(body, "cli-config-dir = \".augment\"\n");
+        assert_eq!(body, "cli-config-dir = \".pi\"\n");
     }
 
     #[test]

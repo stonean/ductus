@@ -178,16 +178,16 @@ else
 fi
 
 # D. --ref before the agent key.
-run d-before --ref=main auggie
-if [ "$rc" -eq 0 ] && [ -f "$WORK/d-before/.augment/commands/ductus.md" ]; then
+run d-before --ref=main pi
+if [ "$rc" -eq 0 ] && [ -f "$WORK/d-before/.pi/prompts/ductus.md" ]; then
   pass "D: --ref before the agent key is accepted"
 else
   fail "D: --ref before the agent (rc=$rc): $(out d-before)"
 fi
 
 # E. --ref after the agent key.
-run e-after opencode --ref=main
-if [ "$rc" -eq 0 ] && [ -f "$WORK/e-after/.opencode/command/ductus.md" ]; then
+run e-after pi --ref=main
+if [ "$rc" -eq 0 ] && [ -f "$WORK/e-after/.pi/prompts/ductus.md" ]; then
   pass "E: --ref after the agent key is accepted"
 else
   fail "E: --ref after the agent (rc=$rc): $(out e-after)"

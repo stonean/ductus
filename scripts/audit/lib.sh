@@ -97,13 +97,13 @@ maintainer_only_commands() {
 }
 
 # agent_config_dirs — echo each registered agent's config dir (`.claude`,
-# `.augment`, ...), one per line, sorted.
+# `.pi`), one per line, sorted.
 #
 # DERIVED from the Agent Registry table in framework/bootstrap/ductus.md — the
 # canonical source per the constitution's canonical-sources map — rather than
 # listed by each family that needs it. `config_dir` is the table's third
 # column, so with a leading `|` it is awk's field 4. A family holding its own
-# copy keeps exiting 0 when a sixth agent is registered, checking a set that
+# copy keeps exiting 0 when a third agent is registered, checking a set that
 # no longer matches the registry (QUAL-GROUND-001).
 #
 # An unreadable or reshaped table echoes nothing, which every caller must

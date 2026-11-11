@@ -166,10 +166,9 @@ introduced_in = "0.28.0"
 # entry is what repoints them (spec 048). Ordered after ductus-rename by the
 # lexicographic tie-break on equal introduced_in, which is the order they must
 # run in: that one renames the key and command, this one rewrites the path.
-summary = "Repoint the ductus MCP registration from the bare command to the ductus-owned path — the repo-relative pointer for a project-committed config, the absolute store path for a home-level one"
+summary = "Repoint the ductus MCP registration from the bare command to the ductus-owned path — the repo-relative pointer"
 target_paths = [
   ".mcp.json",
-  "opencode.json",
 ]
 procedure_file = "framework/migrations/runtime-store-path.md"
 

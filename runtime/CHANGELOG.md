@@ -509,7 +509,30 @@ its version and date.
   rewrite that does not. Its Source quotes MySQL's current wording. Spec 038,
   its scenario `lock-the-parent-before-rewriting-its-children`.
 
+### Removed
+
+- **Auggie, Antigravity and OpenCode are no longer supported agents.**
+  `install.sh` and `/ductus` accept `claude` and `pi` only:
+  `install.sh auggie`, `antigravity`, `agy` or `opencode`, and `/ductus
+  --agents=` naming one of them, halt as an unknown agent and list the valid
+  keys. A routine `/ductus` run skips a project's `.augment/`, `.agents/` or
+  `.opencode/` tree and its root `opencode.json`, leaving them untouched and
+  no longer updated: it seeds no permissions there, writes no MCP
+  registration, and surfaces no registration step. The managed `.gitignore`
+  block no longer lists those directories. `framework/bootstrap/configure/`
+  keeps `claude.md` and `pi.md`, and the runtime no longer resolves a command
+  under `.opencode/command/`. It still refuses a primitive's write into
+  those directories and files, as it refuses one into `.vscode/` or `.idea/`.
+  An adopter on one of those hosts removes its tree, and any `ductus` MCP
+  registration that host holds, by hand.
+
 ### Fixed
+
+- **The latest-release lookup quotes its URL.** `/ductus`'s Source
+  resolution and Pi's `/{project}:configure` put
+  `${DUCTUS_REPO:-stonean/ductus}` inside a quoted URL, so a `DUCTUS_REPO`
+  holding whitespace or a glob character no longer changes the `curl`
+  command's arguments.
 
 - **`/analyze` goes on for a `done` spec holding an open box, so `--fix` can revert it.**
   Its first step stopped on any open box, a `done` spec's too, so the review-state drift

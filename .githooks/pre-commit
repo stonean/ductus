@@ -12,7 +12,7 @@
 #
 # Generators run in a fixed order:
 #   1. gen-configure-mcp.sh    — runtime-MCP-tool allow blocks in
-#                                framework/bootstrap/configure/{claude,auggie}.md
+#                                framework/bootstrap/configure/claude.md
 #                                (runs before gen-claude-commands.sh so the
 #                                 regenerated configure.md picks up changes)
 #   2. gen-claude-commands.sh  — .claude/commands/ductus/*.md from framework/commands/
@@ -101,7 +101,7 @@ scripts/gen-help-tables.sh
 "$ductus_bin" derive-references --write > /dev/null
 
 # Stage any generator-produced changes to their known output paths.
-git add framework/bootstrap/configure/claude.md framework/bootstrap/configure/auggie.md
+git add framework/bootstrap/configure/claude.md
 git add .claude/commands/ductus/ 2>/dev/null || true
 git add .pi/prompts/ .pi/extensions/ 2>/dev/null || true
 git add .ductus/reference/ 2>/dev/null || true

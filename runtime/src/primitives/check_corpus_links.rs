@@ -1098,13 +1098,7 @@ mod tests {
     fn every_agents_generated_copies_are_excluded_whatever_the_sessions_agent() {
         // This repository commits Claude's and Pi's copies; a session of
         // either agent reported the other's links, broken by construction.
-        let copies = [
-            GENERATED_COPY,
-            ".pi/prompts/ductus-x.md",
-            ".opencode/command/ductus/x.md",
-            ".agents/skills/ductus-x/SKILL.md",
-            ".augment/commands/ductus/x.md",
-        ];
+        let copies = [GENERATED_COPY, ".pi/prompts/ductus-x.md"];
         for session_dir in AGENT_CONFIG_DIRS {
             let tmp = tempdir().unwrap();
             let repo = git2::Repository::init(tmp.path()).unwrap();
@@ -1132,7 +1126,11 @@ mod tests {
             .unwrap();
             let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
             assert_eq!(broken, [".github/x.md"], "session {session_dir}");
-            assert_eq!(result.excluded_by_construction, 5, "session {session_dir}");
+            assert_eq!(
+                result.excluded_by_construction,
+                u32::try_from(copies.len()).unwrap(),
+                "session {session_dir}"
+            );
         }
     }
 

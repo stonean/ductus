@@ -21,10 +21,9 @@
 //! behavior (`.claude` and the repo directory basename).
 //!
 //! Each callsite resolves the installed command file via
-//! [`Host::command_file_candidates`], which covers the three flat-namespaced
-//! layouts: `claude-style`'s `commands/` (Claude, Auggie), `opencode`'s
-//! singular `command/`, and `pi`'s flat project-hyphenated `prompts/`
-//! (spec 064 — `.pi/prompts/{project}-{name}.md`).
+//! [`Host::command_file_candidates`], which covers the two layouts:
+//! `claude-style`'s `commands/` (Claude Code) and `pi`'s flat
+//! project-hyphenated `prompts/` (spec 064 — `.pi/prompts/{project}-{name}.md`).
 
 use std::path::Path;
 
@@ -51,16 +50,16 @@ const FALLBACK_PROJECT: &str = "ductus";
 /// and Pi's — so a check that skips generated copies skips every agent's, not
 /// only the session's. `agent_config_dirs_match_the_registry` holds this list
 /// to the registry.
-pub const AGENT_CONFIG_DIRS: &[&str] = &[".claude", ".augment", ".agents", ".opencode", ".pi"];
+pub const AGENT_CONFIG_DIRS: &[&str] = &[".claude", ".pi"];
 
 /// Resolved host config — the values the command-resolution callsites
 /// need at lookup time. `cli_config_dir` is the host's per-user
-/// config-dir name (e.g., `.claude` for Claude Code, `.augment` for
-/// Auggie); `project` is the slash-command namespace under that dir
+/// config-dir name (e.g., `.claude` for Claude Code, `.pi` for
+/// Pi); `project` is the slash-command namespace under that dir
 /// (e.g., `ductus` in this repo, `acme` for an adopter that set its own).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Host {
-    /// Host's per-user config-dir name (e.g., `.claude`, `.augment`).
+    /// Host's per-user config-dir name (e.g., `.claude`, `.pi`).
     pub cli_config_dir: String,
     /// Slash-command namespace under the config dir (e.g., `ductus`).
     pub project: String,
@@ -96,8 +95,7 @@ impl Host {
             .and_then(|b| b.project.clone())
             .unwrap_or(defaults.project);
         // `cli-config-dir` is per-contributor: teammates on one project may
-        // each use a different agent (`.claude` / `.augment` / `.opencode` /
-        // `.agents`), so it must NOT live in committed config. Prefer the
+        // each use a different agent (`.claude` / `.pi`), so it must NOT live in committed config. Prefer the
         // gitignored session file; fall back to the config file's `[host]`
         // value for adopters predating the relocation; then the default.
         let cli_config_dir = Self::load_session_cli_config_dir(repo)?
@@ -147,39 +145,30 @@ impl Host {
     }
 
     /// Repo-relative paths where an installed slash-command file named
-    /// `command_name` may live, in resolution order. Covers the three
-    /// flat-namespaced command layouts the runtime knows about:
+    /// `command_name` may live, in resolution order. Covers the two
+    /// command layouts the runtime knows about:
     ///
-    /// - `claude-style` (Claude Code, Auggie) — `{dir}/commands/{project}/<name>.md`
-    /// - `opencode` — `{dir}/command/{project}/<name>.md` (singular `command/`)
+    /// - `claude-style` (Claude Code) — `{dir}/commands/{project}/<name>.md`
     /// - `pi` — `{dir}/prompts/{project}-<name>.md` (flat project-hyphenated
     ///   prompt templates; spec 064)
     ///
     /// Each adopter installs into exactly one of these (selected by the
     /// agent's registry `layout`), and the directory names are agent-specific
-    /// via `cli_config_dir` (`.claude` / `.augment` / `.opencode` / `.pi`), so
-    /// the candidates never more than one exist per layout — trying all three
-    /// lets the runtime resolve any supported layout without knowing which
-    /// agent wrote the file. The plural form is tried first, then the
-    /// singular, so existing claude-style and opencode adopters resolve
-    /// exactly as before; the pi shape is appended last, keeping both
-    /// pre-existing candidates' relative order untouched (spec 064).
+    /// via `cli_config_dir` (`.claude` / `.pi`), so at most one candidate
+    /// exists — trying both lets the runtime resolve any supported layout
+    /// without knowing which agent wrote the file.
     #[must_use]
     pub fn command_file_candidates(&self, command_name: &str) -> Vec<String> {
-        let mut candidates = ["commands", "command"]
-            .iter()
-            .map(|subdir| {
-                format!(
-                    "{}/{subdir}/{}/{command_name}.md",
-                    self.cli_config_dir, self.project
-                )
-            })
-            .collect::<Vec<_>>();
-        candidates.push(format!(
-            "{}/prompts/{}-{command_name}.md",
-            self.cli_config_dir, self.project
-        ));
-        candidates
+        vec![
+            format!(
+                "{}/commands/{}/{command_name}.md",
+                self.cli_config_dir, self.project
+            ),
+            format!(
+                "{}/prompts/{}-{command_name}.md",
+                self.cli_config_dir, self.project
+            ),
+        ]
     }
 
     fn defaults(repo: &Path) -> Self {
@@ -303,11 +292,11 @@ mod tests {
         let repo = tmp_repo("ductus-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
-            "[host]\ncli-config-dir = \".augment\"\nproject = \"acme\"\n",
+            "[host]\ncli-config-dir = \".pi\"\nproject = \"acme\"\n",
         )
         .unwrap();
         let host = Host::load(repo.path()).unwrap();
-        assert_eq!(host.cli_config_dir, ".augment");
+        assert_eq!(host.cli_config_dir, ".pi");
         assert_eq!(host.project, "acme");
     }
 
@@ -329,7 +318,7 @@ mod tests {
         // Per-contributor session file wins for `cli-config-dir`; `project`
         // still comes from the committed `.govern.toml`. This is the team
         // case: the committed config may say `.claude` (or nothing), but a
-        // contributor using OpenCode resolves their own `.opencode`.
+        // contributor using Pi resolves their own `.pi`.
         let repo = tmp_repo("acme-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
@@ -338,11 +327,11 @@ mod tests {
         .unwrap();
         std::fs::write(
             repo.path().join(".govern.session.toml"),
-            "feature = \"001-x\"\npath = \"specs/001-x\"\nset-at = \"2026-06-20T00:00:00Z\"\ncli-config-dir = \".opencode\"\n",
+            "feature = \"001-x\"\npath = \"specs/001-x\"\nset-at = \"2026-06-20T00:00:00Z\"\ncli-config-dir = \".pi\"\n",
         )
         .unwrap();
         let host = Host::load(repo.path()).unwrap();
-        assert_eq!(host.cli_config_dir, ".opencode");
+        assert_eq!(host.cli_config_dir, ".pi");
         assert_eq!(host.project, "acme");
     }
 
@@ -351,11 +340,11 @@ mod tests {
         let repo = tmp_repo("acme-fixture");
         std::fs::write(
             repo.path().join(".govern.session.toml"),
-            "cli-config-dir = \".opencode\"\n",
+            "cli-config-dir = \".pi\"\n",
         )
         .unwrap();
         let host = Host::load(repo.path()).unwrap();
-        assert_eq!(host.cli_config_dir, ".opencode");
+        assert_eq!(host.cli_config_dir, ".pi");
     }
 
     #[test]
@@ -363,7 +352,7 @@ mod tests {
         let repo = tmp_repo("acme-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
-            "[host]\ncli-config-dir = \".augment\"\n",
+            "[host]\ncli-config-dir = \".pi\"\n",
         )
         .unwrap();
         std::fs::write(
@@ -377,19 +366,18 @@ mod tests {
     }
 
     #[test]
-    fn command_file_candidates_cover_both_layouts_plural_first() {
+    fn command_file_candidates_cover_claude_style_then_pi() {
         let host = Host {
-            cli_config_dir: ".opencode".to_owned(),
+            cli_config_dir: ".pi".to_owned(),
             project: "acme".to_owned(),
         };
         assert_eq!(
             host.command_file_candidates("specify"),
             vec![
-                ".opencode/commands/acme/specify.md".to_owned(),
-                ".opencode/command/acme/specify.md".to_owned(),
-                ".opencode/prompts/acme-specify.md".to_owned(),
+                ".pi/commands/acme/specify.md".to_owned(),
+                ".pi/prompts/acme-specify.md".to_owned(),
             ],
-            "plural (claude-style) tried first, then singular (opencode), then the pi flat shape appended last"
+            "claude-style `commands/` tried first, then the pi flat shape"
         );
     }
 
@@ -416,7 +404,6 @@ mod tests {
             host.command_file_candidates("specify"),
             vec![
                 format!(".pi/commands/{project}/specify.md"),
-                format!(".pi/command/{project}/specify.md"),
                 format!(".pi/prompts/{project}-specify.md"),
             ],
             "pi session identity resolves the flat prompts/ candidate last"

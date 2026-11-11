@@ -36,7 +36,7 @@
 #      right tool when /ductus: references span a table or are pervasive.
 #
 # False-positive shape: prose that mentions `.claude/` for documentary
-# purposes (e.g., "Auggie reads `CLAUDE.md` natively — no `.claude/` dir
+# purposes (e.g., "Pi reads `AGENTS.md` natively — no `.claude/` dir
 # is created"). When this surfaces, the right fix is the ignore-comment;
 # do NOT widen the regex to match audience-specific prose.
 #

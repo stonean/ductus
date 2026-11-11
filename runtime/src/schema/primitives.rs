@@ -3427,8 +3427,8 @@ pub struct MergeManagedBlockResult {
 #[serde(rename_all = "kebab-case")]
 pub struct MergePermissionsArgs {
     /// Repo-relative path of the JSON file to merge into (e.g.,
-    /// `.claude/settings.local.json` on Claude Code,
-    /// `.augment/settings.json` on Auggie). Host-supplied from the
+    /// `.claude/settings.local.json` on Claude Code).
+    /// Host-supplied from the
     /// bootstrap-substituted `{cli-config-dir}/settings.local.json`
     /// template — no default, so a missing path fails loudly instead of
     /// silently writing to a Claude-shaped location on a non-Claude host.
@@ -4495,7 +4495,7 @@ pub struct MigrateSessionFileArgs {
     /// Repo-relative path of the legacy session JSON, host-supplied
     /// from the bootstrap-substituted `{cli-config-dir}/{project}-session.json`
     /// template (e.g., `.claude/gov-session.json`,
-    /// `.claude/acme-session.json`, `.augment/acme-session.json`).
+    /// `.claude/acme-session.json`).
     /// Validated as relative-and-no-`..`, and refused unless it is
     /// `<config-dir>/<name>-session.json`, since the primitive deletes it
     /// (spec 022 task 11).
@@ -4576,8 +4576,7 @@ pub struct WriteSessionArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub scenario_path: Option<String>,
-    /// Optional per-contributor agent config-dir name (`.claude`, `.augment`,
-    /// `.opencode`, `.agents`, `.pi`). Written to the gitignored session file by
+    /// Optional per-contributor agent config-dir name (`.claude`, `.pi`). Written to the gitignored session file by
     /// `/ductus` so a teammate's agent choice never lands in committed
     /// config. Read back by `crate::host::Host`. On a target write it is
     /// preserved from the existing file unless supplied here.
@@ -8232,15 +8231,15 @@ mod tests {
 
         // A non-Claude host supplies its own settings path; the runtime
         // does not hardcode `.claude/`.
-        let auggie_args = MergePermissionsArgs {
-            path: ".augment/settings.json".into(),
+        let pi_args = MergePermissionsArgs {
+            path: ".pi/settings.json".into(),
             allow: vec![],
             deny: vec![],
             revoke: vec![],
             canonical: false,
         };
-        let v: serde_json::Value = serde_json::to_value(&auggie_args).unwrap();
-        assert_eq!(v["path"], ".augment/settings.json");
+        let v: serde_json::Value = serde_json::to_value(&pi_args).unwrap();
+        assert_eq!(v["path"], ".pi/settings.json");
 
         let result = MergePermissionsResult {
             path: ".claude/settings.local.json".into(),
@@ -8443,11 +8442,11 @@ mod tests {
         assert_eq!(round_trip(&args), args);
 
         // Adopter on a non-Claude host or non-`gov` project name:
-        let auggie_args = MigrateSessionFileArgs {
-            legacy_path: ".augment/acme-session.json".into(),
+        let pi_args = MigrateSessionFileArgs {
+            legacy_path: ".pi/acme-session.json".into(),
         };
-        let v: serde_json::Value = serde_json::to_value(&auggie_args).unwrap();
-        assert_eq!(v["legacy-path"], ".augment/acme-session.json");
+        let v: serde_json::Value = serde_json::to_value(&pi_args).unwrap();
+        assert_eq!(v["legacy-path"], ".pi/acme-session.json");
 
         let result = MigrateSessionFileResult {
             source: ".claude/gov-session.json".into(),
@@ -8493,13 +8492,13 @@ mod tests {
             path: None,
             scenario: None,
             scenario_path: None,
-            cli_config_dir: Some(".opencode".into()),
+            cli_config_dir: Some(".pi".into()),
             clear: false,
         };
         let vh: serde_json::Value = serde_json::to_value(&args_host).unwrap();
         let objh = vh.as_object().unwrap();
         assert!(!objh.contains_key("feature"));
-        assert_eq!(vh["cli-config-dir"], ".opencode");
+        assert_eq!(vh["cli-config-dir"], ".pi");
         assert_eq!(round_trip(&args_host), args_host);
 
         // Absent scenario + scenario-path omit both fields.

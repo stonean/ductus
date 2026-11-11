@@ -27,14 +27,8 @@
 # Each probe is a fixed string in its agent's native grammar, delimiters
 # included, so the Windows twin never satisfies the Unix form:
 #   claude    "Bash(~/.ductus/bin/ductus --version)", and the .exe twin
-#   auggie    "^~/\\.ductus/bin/ductus(\\.exe)? --version$" (one regex, both)
-#   opencode  "~/.ductus/bin/ductus --version": "allow", and the .exe twin
 #
-# Two agents are skipped by name on stderr, never silently:
-#   antigravity  its seed carries no CLI entry, so every CLI call prompts there,
-#                the probe among them. The skip states that premise, so a CLI
-#                entry in its row (`command(.ductus/bin/ductus` or
-#                `command(~/.ductus/bin/ductus`) is a finding: the rule applies.
+# One agent is skipped by name on stderr, never silently:
 #   pi           no permission-gating settings (spec 064), so no seed. Family 14
 #                holds its settings_template at `{}`.
 #
@@ -102,8 +96,8 @@ check_agent() {
   done
 }
 
-# skip_agent <key> <reason> <cli-marker>... — name the skip on stderr, and emit
-# when the row carries a CLI entry, the skip's stated premise.
+# skip_agent <key> <reason> [<cli-marker>...] — name the skip on stderr, and emit
+# when the row carries a CLI entry, the skip's stated premise (none for pi).
 skip_agent() {
   key="$1"
   reason="$2"
@@ -122,13 +116,6 @@ skip_agent() {
 check_agent "claude" \
   '"Bash(~/.ductus/bin/ductus --version)"' \
   '"Bash(~/.ductus/bin/ductus.exe --version)"'
-check_agent "auggie" \
-  '"shellInputRegex": "^~/\\.ductus/bin/ductus(\\.exe)? --version$", "permission": { "type": "allow" }'
-check_agent "opencode" \
-  '"~/.ductus/bin/ductus --version": "allow"' \
-  '"~/.ductus/bin/ductus.exe --version": "allow"'
-skip_agent "antigravity" "its seed carries no CLI entry, so the store probe prompts there" \
-  'command(.ductus/bin/ductus' 'command(~/.ductus/bin/ductus'
 skip_agent "pi" "no permission-gating settings — no seed to carry the probe"
 
 # Every agent the registry lists, its header row aside: the first cell of each

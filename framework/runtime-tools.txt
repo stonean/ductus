@@ -14,8 +14,7 @@
 # `<verb>-<noun>` strings — server-level namespacing (`ductus`) is
 # supplied by each host's MCP server registration, producing the
 # host-specific wire identifier (Claude Code: `mcp__ductus__<verb>-<noun>`;
-# Auggie / Antigravity: `mcp:ductus:<verb>-<noun>`; OpenCode: a
-# `<server>_<tool>` name under the `ductus` prefix). Match the prefix
+# Pi: `ductus__<verb>-<noun>`, through its extension bridge). Match the prefix
 # rather than a spelling — the separator is a host detail, and a new host
 # is one more spelling of the same namespace. The bare names are also the
 # `ductus <name>` subcommand identifiers.

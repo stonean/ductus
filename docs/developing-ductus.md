@@ -82,10 +82,9 @@ A destination check judges where a write lands, not only where its path leads, a
 An exact allow rule bounds the command text, not every way to run it, so probe a narrowed rule against the commands the steps spell and against hostile forms before claiming it bounds anything.
 
 - Claude Code strips a bare `xargs` before matching, so `echo x | xargs cp a b` runs `Bash(cp a b)` with operands appended.
-- Antigravity's `command(...)` rules are token prefixes.
-- zsh glob qualifiers (`*(e:'cmd':)`) run code, so a regex argument class (Auggie's `shellInputRegex`) excludes parentheses.
+- zsh glob qualifiers (`*(e:'cmd':)`) run code.
 
-Test what each rule admits and refuses (separators, substitution, redirects, `xargs`, zsh qualifiers, `run-generator`, `exec`; `re.search` for regexes), and disclose what it still admits.
+Test what each rule admits and refuses (separators, substitution, redirects, `xargs`, zsh qualifiers, `run-generator`, `exec`), and disclose what it still admits.
 
 ## Exercising an installer change without a push
 

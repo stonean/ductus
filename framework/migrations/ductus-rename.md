@@ -22,7 +22,7 @@ Registry ordering by `introduced_in` places it after `govern-dir-consolidate` (0
 1. **Idempotency check.** Look for any of these:
    - a `.govern/` directory
    - an MCP registration naming the `gvrn` server key or the bare `gvrn` command
-   - a permission entry naming `mcp__gvrn__`, `mcp:gvrn:`, `mcp(gvrn/`, or `"gvrn*"`
+   - a permission entry naming `mcp__gvrn__`
    - an installed bootstrap entry point named `govern` (per layout, see step 6)
    - a `.githooks/govern-pre-commit` file, or a `.githooks/pre-commit` that invokes it
    - a `# govern` line in `.gitignore`, a `# govern (host)` line in the active config, or a `.govern/constitution.md` reference in `CLAUDE.md` / `AGENTS.md` / `README.md`
@@ -44,8 +44,6 @@ Registry ordering by `introduced_in` places it after `govern-dir-consolidate` (0
 
 6. **Rename the installed bootstrap entry point.** Per the adopter's layout, under the convergence rule:
    - `claude-style` — `{config_dir}/commands/govern.md` → `{config_dir}/commands/ductus.md`
-   - `opencode` — `{config_dir}/command/govern.md` → `{config_dir}/command/ductus.md`
-   - `antigravity` — `{config_dir}/skills/govern/SKILL.md` → `{config_dir}/skills/ductus/SKILL.md`, renaming the containing directory and rewriting the frontmatter `name:` to `ductus`
 
    Apply this independently for every agent the project has configured — an adopter may carry more than one.
 
@@ -57,19 +55,11 @@ Registry ordering by `introduced_in` places it after `govern-dir-consolidate` (0
 
    Skipping this is **not** cosmetic and does not fail loudly. The old hook body invokes the generators by their pre-042 root paths (`scripts/gen-spec-deps.sh`), which `govern-dir-consolidate` moved to `.govern/scripts/` and step 2 above moved again to `.ductus/scripts/` — so an adopter who runs the full chain is left with a `pre-commit` calling a script whose own targets no longer exist. Observed on a real adopter bootstrap under spec 048 AC10: the hook was broken by the migration chain that was supposed to converge it.
 
-9. **Rewrite the MCP registration.** In each agent's MCP target, rename the server key `gvrn` to `ductus` and rewrite its `command` from `gvrn` to `ductus`, preserving `args` and every other server entry byte-for-byte:
-   - `claude` — `.mcp.json` (repo root), `mcpServers` object
-   - `opencode` — `opencode.json` (repo root), `mcp` block
+9. **Rewrite the MCP registration.** In `.mcp.json` (repo root, `mcpServers` object), rename the server key `gvrn` to `ductus` and rewrite its `command` from `gvrn` to `ductus`, preserving `args` and every other server entry byte-for-byte.
 
    **When a `ductus` server already exists, converge rather than rename.** This is the ordinary case, not an edge one: the **Pre-flight Phase** registers `ductus` additively — correctly, since it must preserve every server it does not own — and it runs *before* any migration, so an adopter arriving with the retired key holds **both** entries by the time this step executes. Keep the existing `ductus` entry, whose `command` pre-flight already pointed at the ductus-owned path, **delete the retired key**, and report `removed (superseded MCP server): gvrn`. Do **not** overwrite the `ductus` entry with the retired one — that replaces a resolved path with a bare command and leaves `runtime-store-path` to repair it. Where the two disagree on `args`, keep the surviving entry's and name the discrepancy in one line. The reasoning is the convergence rule above, one artifact over: the new registration wins on read, so a lingering retired key is dead weight that fails to launch a server every session.
 
-   For `auggie` and `antigravity` the MCP config lives outside the repo (`~/.augment/settings.json`, `~/.gemini/config/mcp_config.json`), which this migration must not silently mutate. Emit one line instead, naming the file and the command to run: `warning: {file} still registers the gvrn MCP server; re-register it as ductus (auggie: auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp") and restart the agent.`
-
-10. **Rewrite the permission entries.** In each agent's settings file, rewrite the runtime tool-permission entries in that agent's own grammar, leaving every other entry untouched:
-    - `claude` — `mcp__gvrn__<tool>` → `mcp__ductus__<tool>` in `permissions.allow`
-    - `auggie` — `"toolName": "mcp:gvrn:<tool>"` → `"mcp:ductus:<tool>"` in `toolPermissions`
-    - `antigravity` — `mcp(gvrn/*)` → `mcp(ductus/*)` in `permissions.allow`
-    - `opencode` — the `"gvrn*"` key → `"ductus*"` in the `permission` map, preserving its position so no later broad rule shadows it
+10. **Rewrite the permission entries.** In Claude's settings file, rewrite `mcp__gvrn__<tool>` → `mcp__ductus__<tool>` in `permissions.allow`, leaving every other entry untouched.
 
 11. **Rewrite the managed-block markers.** Both markers delimit regions `/ductus` rewrites on every run, and `merge-managed-block` keyed to a new marker would **append a second block** rather than update the old one, leaving the adopter with two:
     - `.gitignore` — replace the `# govern` line with `# ductus`

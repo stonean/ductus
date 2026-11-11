@@ -27,8 +27,7 @@
 # entries into holes, which is why the extraction is allow-scoped rather than
 # filtered after the fact.
 #
-# METHOD. Per-host, because the four configure files use four permission
-# grammars and only two can express the shape at all:
+# METHOD. One host: configure/claude.md, the only per-agent configure file.
 #
 #   29a configure/claude.md — bullet entries of the form `- `Bash(...)`` inside
 #       the `permissions.allow` section, whose bounds are derived from the
@@ -38,18 +37,10 @@
 #       explanation as a violation of itself. The prose now spells the shape
 #       with <wildcard> placeholders rather than a copyable literal, so this is
 #       defence in depth rather than the only guard.
-#   29b configure/opencode.md — `"pattern": "allow"` keys in the `bash` action
-#       map. Value-scoped, so the `"deny"` keys in the same object are excluded
-#       without needing section bounds.
 #
-# SKIPPED, and why the skip is not a coverage gap:
-#   - configure/auggie.md uses anchored regexes (`^git add `). `*` there is a
-#     quantifier, not a glob; the shape is unrepresentable.
-#   - configure/antigravity.md uses token-prefix `command(git add)` with no
-#     wildcard grammar at all — which is also why its line ~89 note already
-#     omits the `-C` variants rather than narrowing them.
-# A host whose format gains a glob later is a new subject here, not a silent
-# pass; the per-host extraction is explicit so adding one is a visible edit.
+# Pi has no permission file to examine. A host whose format gains a glob later
+# is a new subject here, not a silent pass; the extraction is explicit so
+# adding one is a visible edit.
 #
 # NOT a subject: `.claude/commands/ductus/configure.md`. It is generator output,
 # so a finding there would report the generator rather than a defect, and its
@@ -66,15 +57,12 @@ set -uo pipefail
 audit_family permission-wildcard-position
 
 CLAUDE="framework/bootstrap/configure/claude.md"
-OPENCODE="framework/bootstrap/configure/opencode.md"
 
-for f in "$CLAUDE" "$OPENCODE"; do
-  if [ ! -f "$f" ]; then
-    emit "$f" "not found — this family cannot examine its subject, which is not the same as clean" \
-      "restore the file or update this family's paths"
-    exit 1
-  fi
-done
+if [ ! -f "$CLAUDE" ]; then
+  emit "$CLAUDE" "not found — this family cannot examine its subject, which is not the same as clean" \
+    "restore the file or update this family's paths"
+  exit 1
+fi
 
 # A pattern violates the invariant when it contains a standalone `*` token with
 # further content after it: ` * ` followed by a non-space. A trailing `* )` is
@@ -127,24 +115,6 @@ EOF
   fi
 fi
 
-# 29b — opencode.md, allow-valued keys in the bash action map.
-opencode_count=0
-while IFS=: read -r lineno entry; do
-  [ -n "${entry:-}" ] || continue
-  opencode_count=$((opencode_count + 1))
-  if mid_wildcard "$entry"; then
-    emit "$OPENCODE:$lineno" "allow entry \"$entry\" places a wildcard before the subcommand — it also matches inserted options that run arbitrary commands" \
-      "pin the value that wildcard stands for, or move the wildcard after the subcommand"
-  fi
-done <<EOF
-$(grep -n '"[^"]*": *"allow"' "$OPENCODE" | sed 's/^\([0-9][0-9]*\):[[:space:]]*"\([^"]*\)": *"allow".*/\1:\2/')
-EOF
-
-if [ "$opencode_count" -eq 0 ]; then
-  emit "$OPENCODE" "no allow entries extracted from the canonical permission map — the parse is broken, not the set" \
-    "check the '\"pattern\": \"allow\"' entry format"
-fi
-
-echo "permission-wildcard-position: checked $claude_count claude + $opencode_count opencode allow entries (auggie/antigravity skipped — their formats cannot express a leading glob)" >&2
+echo "permission-wildcard-position: checked $claude_count claude allow entries" >&2
 
 exit "$drift"

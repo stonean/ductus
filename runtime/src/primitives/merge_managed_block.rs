@@ -66,7 +66,7 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   applies to a path the host supplies, before any filesystem operation. `path` is repo-relative (`.gitignore`,
 ///   `CLAUDE.md`); no caller needs an out-of-repo destination.
 /// - [`PrimitiveError::InvalidPath`] when `path`, resolved, lies in an
-///   agent host's configuration, the command, skill, rules-mirror and
+///   agent host's configuration, the command, skill and
 ///   bridge paths included: a block's marker lines would leave a settings
 ///   file that is not JSON, which Claude Code skips with its deny rules, and
 ///   a block placed inside a command file's frontmatter would grant tools
@@ -1312,8 +1312,8 @@ Thumbs.db";
     fn line_prefix_multi_subsection_inserts_new_subsection_without_orphan_tail() {
         // Regression: a structure-CHANGING canonical edit — a new subsection
         // inserted in the middle (the realistic case: adding an agent's
-        // gitignore block, e.g. Auggie's `.augment/*` between Claude and
-        // Antigravity). The new canonical is longer than the on-disk block, so
+        // gitignore block, e.g. Pi's `.pi/*` between Claude and the editor
+        // scratch block). The new canonical is longer than the on-disk block, so
         // the blank-line structural walk drifts and mis-bounds the old block,
         // leaving its tail subsections duplicated below the new block as orphan
         // comment headers after dedup strips their bodies. The merge must
@@ -1329,9 +1329,8 @@ Thumbs.db";
 .claude/*
 !.claude/commands/
 
-# Antigravity local settings (keep skills tracked for project-wide access)
-.agents/*
-!.agents/skills/
+# Editor scratch
+.scratch/
 
 # IDE
 .vscode/
@@ -1347,13 +1346,12 @@ Thumbs.db";
 .claude/*
 !.claude/commands/
 
-# Auggie local settings (keep commands tracked for project-wide access)
-.augment/*
-!.augment/commands/
+# Pi local settings (keep prompts tracked for project-wide access)
+.pi/*
+!.pi/prompts/
 
-# Antigravity local settings (keep skills tracked for project-wide access)
-.agents/*
-!.agents/skills/
+# Editor scratch
+.scratch/
 
 # IDE
 .vscode/
@@ -1373,10 +1371,10 @@ Thumbs.db";
             body, expected,
             "inserted subsection must replace cleanly with no orphan tail"
         );
-        // The Auggie subsection is present exactly once, and no subsection
+        // The Pi subsection is present exactly once, and no subsection
         // header is duplicated (the orphan-tail symptom).
-        assert_eq!(body.matches(".augment/*").count(), 1);
-        for header in ["# IDE\n", "# OS\n", "# Antigravity"] {
+        assert_eq!(body.matches(".pi/*").count(), 1);
+        for header in ["# Editor scratch\n", "# IDE\n", "# OS\n"] {
             assert_eq!(
                 body.matches(header).count(),
                 1,

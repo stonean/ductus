@@ -58,16 +58,14 @@
 # `configure/{key}.md` canonical set is removed by /ductus and re-added by
 # /configure, on every pair of runs. The python below reads the registry's
 # settings_template cells, the retired-seed list and each canonical set in
-# its own grammar (Claude's and Antigravity's bullets, Auggie's toolPermissions
-# objects matched on toolName + shellInputRegex, OpenCode's bash map), and
-# compares allow grants only. A canonical set that parses to nothing, a
+# its own grammar (Claude's bullets), and compares allow grants only. A canonical set that parses to nothing, a
 # retired bullet naming no registry key, and a check that exits non-zero are
 # findings, and so is a seeded agent with no bullet (`[]` says it retires
 # nothing); an absent list is reported on stderr as not examined. It also
-# holds each seed disjoint from /configure's own retired list (Claude and
-# Auggie carry one), the cycle Auggie's seeded `^awk ` once ran.
+# holds each seed disjoint from /configure's own retired list (Claude carries
+# one), so /ductus never adds what /configure removes.
 #
-# METHOD. One host, because only one can express the shape:
+# METHOD. One host, the only per-agent configure file:
 #
 #   32  configure/claude.md — bullet entries of the form `- `Write(...)``
 #       inside BOTH the `permissions.allow` and `permissions.deny`
@@ -77,15 +75,9 @@
 #       counter-example, and a looser grep would report that explanation as
 #       a violation of itself — the same trap Family 29 documents.
 #
-# SKIPPED, and why the skip is not a coverage gap:
-#   - configure/opencode.md scopes by TOOL, not path (`"edit": "allow"`);
-#     there is no path-scoped form to get wrong.
-#   - configure/auggie.md carries no file-permission entries at all.
-#   - configure/antigravity.md omits `read_file`/`write_file` entries
-#     deliberately — it auto-allows in-workspace file access, so a
-#     path-scoped file grant has nothing to express.
-# A host whose format gains path-scoped file permissions later is a new
-# subject here, not a silent pass.
+# Pi has no permission file, so no path-scoped file permission to examine. A
+# host whose format gains path-scoped file permissions later is a new subject
+# here, not a silent pass.
 #
 # NOT a subject: `.claude/commands/ductus/configure.md`. It is generator
 # output, so a finding there would report the generator rather than a
@@ -251,19 +243,12 @@ for i in range(start or 0, end or 0):
 
 def grants(key, value):
     """The allow grants a seed or a canonical set holds, normalized per grammar."""
-    if key in ("claude", "antigravity"):
+    if key == "claude":
         return set(value.get("permissions", {}).get("allow", []))
-    if key == "auggie":
-        return {(e.get("toolName"), e.get("shellInputRegex")) for e in value.get("toolPermissions", [])
-                if e.get("permission", {}).get("type") == "allow"}
-    if key == "opencode":
-        return {k for k, v in value.get("permission", {}).get("bash", {}).items() if v == "allow"}
     return set()
 
 
 def retired_item(key, item):
-    if key == "auggie":
-        return (item.get("toolName"), item.get("shellInputRegex"))
     return item
 
 
@@ -278,18 +263,9 @@ def bullets(path, start_re, stop_re):
 
 def canonical(key):
     path = CONFIGURE.format(key)
-    if key in ("claude", "antigravity"):
+    if key == "claude":
         got = bullets(path, r"^\d+\. Canonical `permissions\.allow` entries", r"^\d+\. Canonical `permissions\.deny` entries")
         return None if got is None else {g for g in got}
-    if key == "auggie":
-        got = bullets(path, r"^\d+\. Ensure the `toolPermissions` array", r"^\d+\. ")
-        if got is None:
-            return None
-        return grants("auggie", {"toolPermissions": [json.loads(g) for g in got if g.startswith("{")]})
-    if key == "opencode":
-        body = open(path).read()
-        m = re.search(r"\*\*`bash` pattern map[^\n]*\n\s*\n\s*```json\n(.*?)\n\s*```", body, re.S)
-        return None if m is None else grants("opencode", {"permission": {"bash": json.loads(m.group(1))}})
     return None
 
 
@@ -357,24 +333,22 @@ else:
         if key not in seen:
             find(f"{DUCTUS}:{header + 1}", f"the retired-seed list has no bullet for `{key}`, whose seed grants entries — the parse is broken, or the list stops short",
                  "give every seeded agent a bullet, `[]` when it retires nothing")
-    # /configure's own retired lists (Claude's step 4, Auggie's step 4): a seed
-    # entry there is added by /ductus and removed by /configure on every pair
-    # of runs, the cycle Auggie's seeded `^awk ` once ran.
+    # /configure's own retired list (Claude's step 4): a seed entry there is
+    # added by /ductus and removed by /configure on every pair of runs.
     configure_retired = {
         "claude": bullets(CONFIGURE.format("claude"), r"^\d+\. Retired `permissions\.allow` entries", r"^\d+\. "),
-        "auggie": bullets(CONFIGURE.format("auggie"), r"^\d+\. \*\*Retired `toolPermissions` entries\*\*", r"^\d+\. "),
     }
     for key, got in configure_retired.items():
         if not got:
             find(CONFIGURE.format(key), f"no retired entries extracted from configure/{key}.md — the parse is broken, not the list",
                  "check the retired section's heading and entry format this family reads")
             continue
-        retired_there = {retired_item(key, json.loads(g)) if key == "auggie" else g for g in got}
+        retired_there = {retired_item(key, g) for g in got}
         for entry in sorted(grants(key, seeds[key][1]) & retired_there, key=str) if key in seeds else []:
             find(f"{DUCTUS}:{seeds[key][0]}", f"`{entry}` is in the `{key}` settings_template AND retired by configure/{key}.md — /ductus adds what /configure removes, on every pair of runs",
                  "drop it from the settings_template, or from the configure retired list")
         checked += len(retired_there)
-    out.append(f"SUMMARY\t{checked} retired entries checked: {agents} agents' seed lists against their seeds and canonical sets, and Claude's and Auggie's /configure lists against their seeds")
+    out.append(f"SUMMARY\t{checked} retired entries checked: {agents} agents' seed lists against their seeds and canonical sets, and Claude's /configure list against its seed")
 
 print("\n".join(out))
 PY
@@ -396,6 +370,6 @@ done <<EOF
 $seed_findings
 EOF
 
-echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape; $retired_summary (opencode/auggie/antigravity skipped — none has a path-scoped file-permission form); 32c: $seed_summary" >&2
+echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape; $retired_summary; 32c: $seed_summary" >&2
 
 exit "$drift"

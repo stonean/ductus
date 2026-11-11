@@ -9,8 +9,8 @@
 # directory basename when the key is absent. Every runtime-rendered
 # next-action string ("Run /{project}:target …") is built from that value.
 # The slash commands themselves live in `{cli-config-dir}/commands/<ns>/`
-# (or `command/<ns>/` for opencode's singular layout, or the flat
-# `{config_dir}/prompts/{project}-*.md` prompt templates for pi, spec 064).
+# (or the flat `{config_dir}/prompts/{project}-*.md` prompt templates for pi,
+# spec 064).
 #
 # Nothing compared the two. A repo whose `[host]` block is missing — or
 # whose `project` disagrees with the installed directory — renders
@@ -27,8 +27,7 @@
 #       `.govern/config.toml`, then the legacy root `.govern.toml`; else
 #       the repo directory basename.
 #   17b Collect the installed namespace directories under every agent
-#       config dir present in the repo, trying both the plural
-#       `commands/` and singular `command/` layouts, plus the pi
+#       config dir present in the repo: the `commands/` layout, plus the pi
 #       `{project}-*.md` flat prompt-template prefix shape.
 #   17c Emit a finding for each agent config dir that has installed
 #       namespaces but none matching the effective one.
@@ -144,8 +143,10 @@ assert_contract() {
 }
 
 contracts_ok=1
-assert_contract "$HOST_RS" '["commands", "command"]' \
-  "the commands/command subdirectory pair (Host::command_file_candidates)" || contracts_ok=0
+assert_contract "$HOST_RS" '/commands/{}/{command_name}.md' \
+  "the commands/ candidate (Host::command_file_candidates)" || contracts_ok=0
+assert_contract "$HOST_RS" '/prompts/{}-{command_name}.md' \
+  "the prompts/ candidate (Host::command_file_candidates)" || contracts_ok=0
 assert_contract "$HOST_RS" 'project' \
   "the [host] project key (HostBlock)" || contracts_ok=0
 assert_contract "$ROOT/runtime/src/schema/paths.rs" '.ductus/config.toml' \
@@ -165,21 +166,18 @@ done
 for cli_dir in "${CLI_DIRS[@]}"; do
   [ -d "$cli_dir" ] || continue
 
-  # Both layouts: plural `commands/` (claude, auggie, antigravity) and
-  # singular `command/` (opencode). An adopter installs into exactly one,
-  # so collecting from both is safe.
+  # The `commands/<ns>/` layout (claude).
   # An array, not a space-joined string: a namespace directory containing a
   # space would otherwise be re-split into bogus entries by word splitting,
   # and the count below would be wrong. Bash 3.2 compatible (indexed array).
   installed=()
-  for subdir in commands command; do
-    [ -d "$cli_dir/$subdir" ] || continue
-    for ns_path in "$cli_dir/$subdir"/*/; do
+  if [ -d "$cli_dir/commands" ]; then
+    for ns_path in "$cli_dir/commands"/*/; do
       [ -d "$ns_path" ] || continue
       installed+=("$(basename "$ns_path")")
     done
-  done
-  # Third layout: pi's flat prompt templates, `{config_dir}/prompts/{ns}-{name}.md`
+  fi
+  # Second layout: pi's flat prompt templates, `{config_dir}/prompts/{ns}-{name}.md`
   # (spec 064). There is no namespace directory, and a namespace may itself
   # contain hyphens, so the namespace is whatever precedes `-{name}` for a
   # known command name — whether or not it matches, since a mismatch is what

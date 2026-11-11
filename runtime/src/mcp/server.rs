@@ -126,8 +126,8 @@ impl GovRuntimeServer {
 ///
 /// `schemars` stamps OpenAPI-style `format` values (`uint32`, `uint64`,
 /// `uint8`, …) onto every Rust integer/float field. JSON Schema defines
-/// no `format` values for numeric types, so strict MCP clients (opencode
-/// and other Ajv-based validators) log `unknown format "uint32" ignored`
+/// no `format` values for numeric types, so strict MCP clients (Ajv-based
+/// validators) log `unknown format "uint32" ignored`
 /// for each occurrence in a tool's input/output schema. The hints carry no
 /// validation meaning for our consumers, so we drop them at construction —
 /// leaving string formats (`date-time`, `uri`, `uuid`, …) untouched.

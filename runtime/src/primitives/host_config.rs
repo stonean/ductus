@@ -14,9 +14,9 @@
 //! config directory (the `config_dir` column of the Agent Registry in
 //! `framework/bootstrap/ductus.md`) or is an MCP or settings file, at any
 //! depth, judged as given, where the write lands and where its links lead,
-//! unless it is one of the paths a `/ductus` step writes there: a command or
-//! skill file, the `ductus` install file, Antigravity's rules mirror, or Pi's
-//! bridge (the §Derived values rows). The project name a row carries is not
+//! unless it is one of the paths a `/ductus` step writes there: a command
+//! file, the `ductus` install file, or Pi's bridge (the §Derived values
+//! rows). The project name a row carries is not
 //! known here, so a row is matched by its shape.
 //!
 //! Spec 022 task 20 (the owner's answer (a)) extends the same check to the
@@ -52,29 +52,29 @@ use super::{PrimitiveError, Result, resolve_symlinks};
 enum Layout {
     /// `commands/<project>/<name>.md` and `commands/ductus.md`.
     ClaudeStyle,
-    /// `skills/<project>-<name>/SKILL.md`, `skills/ductus/SKILL.md`, and the
-    /// rules mirror `rules/<name>.md`.
-    Antigravity,
-    /// `command/<project>/<name>.md` and `command/ductus.md`.
-    OpenCode,
     /// `prompts/<project>-<name>.md`, `prompts/ductus.md`, and the bridge
     /// `extensions/ductus.ts`.
     Pi,
 }
 
 /// Every agent's `config_dir` and its layout.
-const CONFIG_DIRS: &[(&str, Layout)] = &[
-    (".claude", Layout::ClaudeStyle),
-    (".augment", Layout::ClaudeStyle),
-    (".agents", Layout::Antigravity),
-    (".opencode", Layout::OpenCode),
-    (".pi", Layout::Pi),
-];
+const CONFIG_DIRS: &[(&str, Layout)] = &[(".claude", Layout::ClaudeStyle), (".pi", Layout::Pi)];
+
+/// Other tools' configuration directories, which grant an agent tools. No
+/// agent in the registry uses one and no `/ductus` row is written under one,
+/// so a destination under one is refused outright. Matched like
+/// `CONFIG_DIRS`, as the first such name on a path at any depth, and a root
+/// link to one is followed back ([`judge`]).
+const OTHER_TOOL_DIRS: &[&str] = &[".augment", ".agents", ".opencode"];
 
 /// Files that register an MCP server or carry a host's permissions outside a
-/// config directory: Claude Code's `.mcp.json`, and the root config `OpenCode` reads,
-/// which holds both its `mcp` block and its `permission` map.
-const CONFIG_FILES: &[&str] = &[".mcp.json", "opencode.json", "opencode.jsonc"];
+/// config directory: Claude Code's `.mcp.json`.
+const CONFIG_FILES: &[&str] = &[".mcp.json"];
+
+/// Other tools' root configuration files, which register an MCP server and
+/// carry a permission map. Judged like `CONFIG_FILES`, as the last name on a
+/// path and by following a root link back.
+const OTHER_TOOL_FILES: &[&str] = &["opencode.json", "opencode.jsonc"];
 
 /// Directories Claude Code never auto-approves a write under, beyond the agent
 /// config directories above — its protected set less `.claude` (already a
@@ -152,19 +152,16 @@ pub(crate) enum HostRow {
     /// frontmatter is what a host reads to grant tools, so `apply-manifest`
     /// checks it ([`check_frontmatter`]).
     CommandOrSkill,
-    /// Antigravity's mirror of a rule file.
-    RulesMirror,
     /// Pi's extension bridge.
     PiBridge,
 }
 
 /// The frontmatter keys the shipped command, skill and installer files carry:
 /// `description`, `argument-hint` and `parity` in `framework/commands/`,
-/// `framework/bootstrap/configure/` and `ductus.md`, and `name` in the skill
-/// wrapper Antigravity's layout writes. A key such as `allowed-tools` or
+/// `framework/bootstrap/configure/` and `ductus.md`. A key such as `allowed-tools` or
 /// `hooks` would make the file grant tools or run commands
 /// (code.claude.com/docs/en/skills), so no other key is written.
-const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "parity", "name"];
+const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "parity"];
 
 /// Judge `dest`, an absolute path a primitive is about to write or delete.
 ///
@@ -190,9 +187,9 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// which a caller of the CLI chooses, so a run from inside `.claude/` would
 /// otherwise see no config directory above it.
 /// Returns `Ok(None)` when none lies in a host's configuration, and
-/// `Ok(Some(row))` when one is a row a `/ductus` step writes:
-/// [`HostRow::CommandOrSkill`] when any judgment finds one, so its
-/// frontmatter is judged however the others read.
+/// `Ok(Some(row))` when one is a row a `/ductus` step writes. Every judgment
+/// of a destination reads the same final name, which only one kind of row
+/// carries, so the judgments that find a row agree on its kind.
 ///
 /// # Errors
 ///
@@ -205,8 +202,8 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///   under a Claude Code worktree the first one below `.claude/worktrees/`
 ///   ([`judge_under`]);
 /// - an MCP or settings file at any depth, or the file the project root's
-///   `.mcp.json` or `opencode.json(c)` finally resolves to (a link between
-///   them in a chain is not followed back, and a file the config-directory
+///   `.mcp.json` or another tool's root config file finally resolves to (a
+///   link between them in a chain is not followed back, and a file the config-directory
 ///   step names a row comes back as that row first:
 ///   `.mcp.json -> .claude/commands/acme/g.md` leaves `g.md` writable as a
 ///   command);
@@ -278,11 +275,7 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
             rows.extend(judge_names(&[above.as_slice(), &names].concat(), shown)?);
         }
     }
-    Ok(rows
-        .iter()
-        .copied()
-        .find(|row| *row == HostRow::CommandOrSkill)
-        .or_else(|| rows.first().copied()))
+    Ok(rows.first().copied())
 }
 
 /// What lies above the project root for [`check_destination`] to judge.
@@ -337,7 +330,7 @@ pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Res
         None => Ok(()),
         Some(_) => Err(PrimitiveError::InvalidPath {
             path: shown.into(),
-            reason: "is a command, skill, rules-mirror or bridge file in an agent host's \
+            reason: "is a command, skill or bridge file in an agent host's \
                      configuration, which only `apply-manifest` writes (spec 022 task 11)"
                 .into(),
         }),
@@ -452,6 +445,17 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
     };
     // A config directory a link redirects: `.claude -> cfg` makes
     // `cfg/settings.local.json` the file the host reads.
+    for &dir in OTHER_TOOL_DIRS {
+        let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
+            continue;
+        };
+        if canonical_repo.starts_with(&linked) {
+            continue;
+        }
+        if strip_folded(path, &linked).is_some() {
+            return Err(refuse_other_tool_dir(shown, dir));
+        }
+    }
     for &(dir, layout) in CONFIG_DIRS {
         let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
             continue;
@@ -463,7 +467,7 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
             return judge_under(dir, layout, &rest, shown);
         }
     }
-    for &file in CONFIG_FILES {
+    for &file in CONFIG_FILES.iter().chain(OTHER_TOOL_FILES) {
         if let Ok(linked) = resolve_symlinks(&repo.join(file))
             && strip_folded(path, &linked).is_some_and(|rest| rest.is_empty())
         {
@@ -484,7 +488,10 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
 /// file, or a config directory with the row under it.
 fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
     if let Some(last) = names.last()
-        && let Some(&file) = CONFIG_FILES.iter().find(|f| fold(last) == **f)
+        && let Some(&file) = CONFIG_FILES
+            .iter()
+            .chain(OTHER_TOOL_FILES)
+            .find(|f| fold(last) == **f)
     {
         return Err(refuse_file(shown, file));
     }
@@ -501,7 +508,11 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
         return Err(refuse_protected_dir(shown, seq));
     }
     for (depth, name) in names.iter().enumerate() {
-        if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| fold(name) == *dir) {
+        let folded = fold(name);
+        if let Some(&dir) = OTHER_TOOL_DIRS.iter().find(|dir| folded == **dir) {
+            return Err(refuse_other_tool_dir(shown, dir));
+        }
+        if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| folded == *dir) {
             return judge_under(dir, layout, &names[depth + 1..], shown);
         }
     }
@@ -595,17 +606,12 @@ fn row(layout: Layout, rest: &[String]) -> Option<HostRow> {
     let parts: Vec<&str> = folded.iter().map(String::as_str).collect();
     let md = |name: &str| Path::new(name).extension().is_some_and(|ext| ext == "md");
     match (layout, parts.as_slice()) {
-        (Layout::ClaudeStyle, ["commands", "ductus.md"])
-        | (Layout::OpenCode, ["command", "ductus.md"])
-        | (Layout::Antigravity, ["skills", _, "skill.md"]) => Some(HostRow::CommandOrSkill),
-        (Layout::ClaudeStyle, ["commands", _, name])
-        | (Layout::OpenCode, ["command", _, name])
-        | (Layout::Pi, ["prompts", name])
+        (Layout::ClaudeStyle, ["commands", "ductus.md"]) => Some(HostRow::CommandOrSkill),
+        (Layout::ClaudeStyle, ["commands", _, name]) | (Layout::Pi, ["prompts", name])
             if md(name) =>
         {
             Some(HostRow::CommandOrSkill)
         }
-        (Layout::Antigravity, ["rules", name]) if md(name) => Some(HostRow::RulesMirror),
         (Layout::Pi, ["extensions", "ductus.ts"]) => Some(HostRow::PiBridge),
         _ => None,
     }
@@ -648,8 +654,18 @@ fn refuse(shown: &str, dir: &str) -> PrimitiveError {
         path: shown.into(),
         reason: format!(
             "resolves into the agent host configuration directory `{dir}`, where only the \
-             command, skill, rules-mirror and bridge files `/ductus` writes are permitted \
+             command, skill and bridge files `/ductus` writes are permitted \
              (spec 022 task 11)"
+        ),
+    }
+}
+
+fn refuse_other_tool_dir(shown: &str, dir: &str) -> PrimitiveError {
+    PrimitiveError::InvalidPath {
+        path: shown.into(),
+        reason: format!(
+            "resolves into `{dir}`, another tool's configuration directory that grants an agent \
+             tools, which a ductus primitive does not write (spec 022 task 11)"
         ),
     }
 }
@@ -773,15 +789,16 @@ mod tests {
     //   root files' links (F), then by its names (N), each returning before
     //   the next, and where its links lead (L), judged the same way;
     // - output: a refusal (R); a command row (C), whose frontmatter the
-    //   caller judges; a row naming no command (X), the rules mirror or Pi's
-    //   bridge, which `merge-managed-block` refuses ([`check_no_destination`]);
-    // - name: the five config directories and the three root files.
+    //   caller judges; a row naming no command (X), Pi's bridge, which
+    //   `merge-managed-block` refuses ([`check_no_destination`]);
+    // - name: the two config directories, the three other tools' directories
+    //   and the three root files.
     //
     // It collapses, each for a reason the code gives: A runs no link step,
     // judging the ancestors' names alone, so A has G and the landing by its
     // names only. F and the root files have no row: a root file is never one.
-    // C lies only under a config directory, and X only under `.agents` (the
-    // rules mirror) and `.pi` (the bridge). G, N and A's landing are one
+    // C lies only under a config directory, and X only under `.pi` (the
+    // bridge). G, N and A's landing are one
     // function, `judge_names`, which reads names and no base, so each name is
     // held once, at P, while each base's G and N are held per output. L has
     // no test of its own: it differs from the landing only through a Windows
@@ -852,16 +869,6 @@ mod tests {
         for (rel, kind) in [
             (".claude/commands/acme/status.md", HostRow::CommandOrSkill),
             (".claude/commands/ductus.md", HostRow::CommandOrSkill),
-            (".augment/commands/acme/status.md", HostRow::CommandOrSkill),
-            (".augment/commands/ductus.md", HostRow::CommandOrSkill),
-            (
-                ".agents/skills/acme-status/SKILL.md",
-                HostRow::CommandOrSkill,
-            ),
-            (".agents/skills/ductus/SKILL.md", HostRow::CommandOrSkill),
-            (".agents/rules/security-backend.md", HostRow::RulesMirror),
-            (".opencode/command/acme/status.md", HostRow::CommandOrSkill),
-            (".opencode/command/ductus.md", HostRow::CommandOrSkill),
             (".pi/prompts/acme-status.md", HostRow::CommandOrSkill),
             (".pi/prompts/ductus.md", HostRow::CommandOrSkill),
             (".pi/extensions/ductus.ts", HostRow::PiBridge),
@@ -907,7 +914,8 @@ mod tests {
     }
 
     /// Settings, MCP registrations, and any other file under a config
-    /// directory are refused: at the top level, nested (a host started in a
+    /// directory are refused, and so is every path under another tool's
+    /// configuration directory, the former rows included: at the top level, nested (a host started in a
     /// subdirectory reads that one), in any letter case, and at a row's
     /// depth plus one.
     #[test]
@@ -923,7 +931,14 @@ mod tests {
             ".claude/commands/acme/status.txt",
             ".claude/commands/acme/.md",
             ".augment/settings.json",
+            ".augment/commands/acme/status.md",
+            ".augment/commands/ductus.md",
             ".agents/settings.json",
+            ".agents/skills/acme-status/SKILL.md",
+            ".agents/skills/ductus/SKILL.md",
+            ".agents/rules/security-backend.md",
+            ".opencode/command/acme/status.md",
+            ".opencode/command/ductus.md",
             ".agents/skills/acme-status/helper.sh",
             ".opencode/opencode.json",
             ".opencode/commands/acme/status.md",
@@ -943,6 +958,8 @@ mod tests {
             ".claude/commands/evil.md",
             ".claude/command/ductus.md",
             ".claude/command/acme/status.md",
+            ".pi/commands/ductus.md",
+            ".pi/commands/acme/status.md",
             ".opencode/command/evil.md",
             ".opencode/commands/ductus.md",
             ".opencode/command/acme/sub/status.md",
@@ -1001,7 +1018,6 @@ mod tests {
     fn shipped_frontmatter_passes() {
         for text in [
             "---\ndescription: Status.\nargument-hint: \"[--all]\"\n---\n\nBody\n",
-            "---\nname: acme-status\ndescription: Status.\n---\nBody\n",
             "---\ndescription: Analyze.\nparity:\n  semantic-fields:\n    - \"findings[].message\"\n---\n",
             "---\n---\nEmpty block\n",
             "No frontmatter at all\n",
@@ -1025,6 +1041,7 @@ mod tests {
             "--- \nallowed-tools: Bash\n---\n",
             "---\n<<: {allowed-tools: Bash}\n---\n",
             "---\ndisable-model-invocation: false\n---\n",
+            "---\nname: acme-status\ndescription: Status.\n---\n",
         ] {
             let err = check_frontmatter("apply-manifest", "x.md", text.as_bytes()).unwrap_err();
             assert!(
@@ -1054,13 +1071,14 @@ mod tests {
     fn only_a_legacy_session_file_may_be_migrated() {
         for ok in [
             ".claude/gov-session.json",
-            ".augment/acme-session.json",
+            ".pi/acme-session.json",
             ".claude\\gov-session.json",
         ] {
             check_legacy_session_path(ok).unwrap();
         }
         for bad in [
             ".claude/settings.local.json",
+            ".augment/acme-session.json",
             ".claude/-session.json",
             ".claude/sub/gov-session.json",
             "gov-session.json",
@@ -1245,6 +1263,13 @@ mod tests {
         let project = outer.path().join("project");
         std::fs::create_dir_all(&project).unwrap();
         std::os::unix::fs::symlink(outer.path(), project.join(".claude")).unwrap();
+        assert_eq!(judge(&project, "specs/001-x/spec.md").unwrap(), None);
+        let other = tempfile::tempdir().unwrap();
+        let project = other.path().join("project");
+        std::fs::create_dir_all(&project).unwrap();
+        for dir in OTHER_TOOL_DIRS {
+            std::os::unix::fs::symlink(other.path(), project.join(dir)).unwrap();
+        }
         assert_eq!(judge(&project, "specs/001-x/spec.md").unwrap(), None);
     }
 
@@ -1642,7 +1667,11 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn every_root_config_link_is_followed_back() {
-        for &(dir, _) in CONFIG_DIRS {
+        for dir in CONFIG_DIRS
+            .iter()
+            .map(|(dir, _)| *dir)
+            .chain(OTHER_TOOL_DIRS.iter().copied())
+        {
             let tmp = tempfile::tempdir().unwrap();
             let tree = tmp.path();
             git2::Repository::init(tree).unwrap();
@@ -1657,7 +1686,7 @@ mod tests {
             let dest = below.join("../cfg/settings.json");
             assert!(refused(&check_destination(&below, &dest, "x")), "{dir}");
         }
-        for &file in CONFIG_FILES {
+        for &file in CONFIG_FILES.iter().chain(OTHER_TOOL_FILES) {
             let tmp = tempfile::tempdir().unwrap();
             let tree = tmp.path();
             git2::Repository::init(tree).unwrap();
@@ -1676,15 +1705,13 @@ mod tests {
     /// directory, and the directory that file sits in.
     const LAYOUT_ROWS: &[(&str, &str, &str)] = &[
         (".claude", "commands/acme/g.md", "commands/acme"),
-        (".augment", "commands/acme/g.md", "commands/acme"),
-        (".agents", "skills/acme-g/SKILL.md", "skills/acme-g"),
-        (".opencode", "command/acme/g.md", "command/acme"),
         (".pi", "prompts/acme-g.md", "prompts"),
     ];
 
     /// Every config directory and root file is judged by its names, each on
-    /// its own, refused and, for a directory, naming its layout's command
-    /// row: under a nested `sub/`, which the root's own link steps never
+    /// its own, refused and, for an agent's directory, naming its layout's
+    /// command row, while another tool's directory names none and refuses
+    /// even the row shapes: under a nested `sub/`, which the root's own link steps never
     /// see. The names step is one function at every base, so one base holds
     /// each name.
     #[test]
@@ -1703,7 +1730,20 @@ mod tests {
                 "{dir}"
             );
         }
-        for &file in CONFIG_FILES {
+        for &dir in OTHER_TOOL_DIRS {
+            for rel in [
+                "settings.json",
+                "commands/acme/g.md",
+                "commands/ductus.md",
+                "prompts/acme-g.md",
+            ] {
+                assert!(
+                    refused(&judge(repo, &format!("sub/{dir}/{rel}"))),
+                    "{dir}/{rel}"
+                );
+            }
+        }
+        for &file in CONFIG_FILES.iter().chain(OTHER_TOOL_FILES) {
             assert!(refused(&judge(repo, &format!("sub/{file}"))), "{file}");
         }
     }
@@ -1740,8 +1780,8 @@ mod tests {
         }
     }
 
-    /// `merge-managed-block` refuses the rows that name no command too, the
-    /// rules mirror and Pi's bridge, and each step names them on its own from
+    /// `merge-managed-block` refuses the row that names no command too, Pi's
+    /// bridge, and each step names them on its own from
     /// each base it runs at: the path as given through a linked nested config
     /// directory, the landing through the root's config directory and through
     /// a nested one (each destination itself a link), from the project root
@@ -1751,10 +1791,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_block_refuses_the_rows_that_name_no_command() {
-        for (dir, sub, file) in [
-            (".agents", "rules", "x.md"),
-            (".pi", "extensions", "ductus.ts"),
-        ] {
+        let (dir, sub, file) = (".pi", "extensions", "ductus.ts");
+        {
             let tmp = tempfile::tempdir().unwrap();
             let tree = tmp.path();
             git2::Repository::init(tree).unwrap();
@@ -1906,12 +1944,15 @@ mod tests {
         let tree = tmp.path();
         git2::Repository::init(tree).unwrap();
         std::fs::create_dir_all(tree.join("cfg")).unwrap();
-        std::os::unix::fs::symlink("cfg", tree.join(".agents")).unwrap();
+        std::os::unix::fs::symlink("cfg", tree.join(".pi")).unwrap();
         assert!(refused(&judge(tree, "cfg/worktrees/wt/settings.json")));
         std::fs::create_dir_all(tree.join("specs")).unwrap();
         let below = tree.join("specs");
         let dest = below.join("../cfg/worktrees/wt/settings.json");
         assert!(refused(&check_destination(&below, &dest, "x")));
+        std::fs::remove_file(tree.join(".pi")).unwrap();
+        std::os::unix::fs::symlink("cfg", tree.join(".agents")).unwrap();
+        assert!(refused(&judge(tree, "cfg/worktrees/wt/settings.json")));
     }
 
     /// A worktree's own name is judged as a name under the worktree's root,
@@ -1953,6 +1994,7 @@ mod tests {
         let main = tmp.path();
         git2::Repository::init(main).unwrap();
         assert!(refused(&judge(main, ".agents/worktrees/wt/notes.md")));
+        assert!(refused(&judge(main, ".pi/worktrees/wt/notes.md")));
         assert!(refused(&judge(main, ".claude/worktrees/notes.md")));
     }
 
@@ -2001,22 +2043,6 @@ mod tests {
         assert!(refused(&check_destination(&below, &dest, "x")));
     }
 
-    /// When the judgments disagree on a row, a command row wins, so a file
-    /// the host reads as a command has its frontmatter judged.
-    #[cfg(unix)]
-    #[test]
-    fn a_command_verdict_is_preferred() {
-        let tmp = tempfile::tempdir().unwrap();
-        let repo = tmp.path();
-        std::fs::create_dir_all(repo.join(".agents")).unwrap();
-        std::fs::create_dir_all(repo.join(".claude/commands/acme")).unwrap();
-        std::os::unix::fs::symlink("../.claude/commands/acme", repo.join(".agents/rules")).unwrap();
-        assert_eq!(
-            judge(repo, ".agents/rules/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
-        );
-    }
-
     /// A row is matched whatever the case of its names, since a file system
     /// that is not case-sensitive resolves a path through an existing file
     /// or directory to that one's case.
@@ -2033,16 +2059,6 @@ mod tests {
                 Layout::ClaudeStyle,
                 names(&["Commands", "acme", "Status.MD"]),
                 HostRow::CommandOrSkill,
-            ),
-            (
-                Layout::Antigravity,
-                names(&["skills", "acme-status", "skill.md"]),
-                HostRow::CommandOrSkill,
-            ),
-            (
-                Layout::Antigravity,
-                names(&["Rules", "r.MD"]),
-                HostRow::RulesMirror,
             ),
             (
                 Layout::Pi,

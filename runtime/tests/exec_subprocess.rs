@@ -446,17 +446,17 @@ fn exec_resolves_bootstrap_procedure_under_framework_bootstrap() {
 #[test]
 fn exec_resolves_command_via_parameterized_host_block() {
     ensure_binary_built();
-    // Auggie-shaped adopter project — no `framework/commands/` tree,
-    // command file at `.augment/commands/acme/smoke.md`, `.govern.toml`
-    // declares `[host] cli-config-dir = ".augment"` and `project =
-    // "acme"`. With the parameterized lookup wired up, the runtime
-    // reads the [host] block and resolves the second candidate path
-    // accordingly; without it, the second candidate would be the
-    // hardcoded `.claude/commands/ductus/smoke.md` (which doesn't exist
-    // in this fixture) and the run would fail with "command file not
-    // found".
+    // Pi-shaped adopter project — no `framework/commands/` tree,
+    // command file at `.pi/prompts/acme-smoke.md`, `.govern.toml`
+    // declares `[host] cli-config-dir = ".pi"` and `project = "acme"`.
+    // With the parameterized lookup wired up, the runtime reads the
+    // [host] block and resolves the installed candidate path accordingly;
+    // without it, the candidate would be the hardcoded
+    // `.claude/commands/ductus/smoke.md` (which doesn't exist in this
+    // fixture) and the run would fail with "command file not found".
     let tmp = tempfile::tempdir().unwrap();
-    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-auggie");
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-pi-legacy-host");
     copy_dir_recursive(&fixture, tmp.path());
 
     let mut child = ductus_command(runtime_binary())
@@ -500,18 +500,19 @@ fn exec_resolves_command_via_parameterized_host_block() {
 }
 
 #[test]
-fn exec_resolves_command_via_opencode_singular_command_dir() {
+fn exec_resolves_command_via_session_file_cli_config_dir() {
     ensure_binary_built();
-    // OpenCode-shaped adopter project — no `framework/commands/` tree,
-    // command file at `.opencode/command/acme/smoke.md` (the `opencode`
-    // layout uses a *singular* `command/` directory, unlike claude-style's
-    // `commands/`). `.govern.toml` declares `[host] cli-config-dir =
-    // ".opencode"` and `project = "acme"`. The runtime tries the plural
-    // `commands/` candidate first (absent here), then the singular
-    // `command/` candidate, which resolves. Without the singular candidate
-    // the run would fail with "command file not found".
+    // Pi-shaped adopter project — no `framework/commands/` tree, command
+    // file at `.pi/prompts/acme-smoke.md` (the `pi` layout is a flat
+    // project-hyphenated `prompts/` directory, unlike claude-style's
+    // `commands/{project}/`). The legacy `.govern.session.toml` carries
+    // `cli-config-dir = ".pi"` and `.govern.toml` declares `project =
+    // "acme"`. The runtime tries the claude-style `commands/` candidate
+    // first (absent here), then the flat `prompts/` candidate, which
+    // resolves. Without the session file's `cli-config-dir` the lookup would
+    // fall back to `.claude` and fail with "command file not found".
     let tmp = tempfile::tempdir().unwrap();
-    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-opencode");
+    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-pi-session");
     copy_dir_recursive(&fixture, tmp.path());
 
     let mut child = ductus_command(runtime_binary())

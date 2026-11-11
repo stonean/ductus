@@ -10,8 +10,7 @@
 # path from its row by layout:
 #
 #   claude-style → {config_dir}/commands/ductus.md
-#   antigravity  → {config_dir}/skills/ductus/SKILL.md
-#   opencode     → {config_dir}/command/ductus.md
+#   pi           → {config_dir}/prompts/ductus.md
 #
 # The check enforces per-key parity in three directions, then one shared
 # constant:
@@ -31,9 +30,8 @@
 #
 # Directions 1-2 are pure text extraction — no jq, no associative arrays
 # (macOS bash 3.2). Direction 3 uses python3 (already a ductus bootstrap
-# dependency, and used by sibling audit scripts) because the three permission
-# formats (one per layout, plus opencode's action map) make an
-# order-insensitive JSON compare the only reliable check.
+# dependency, and used by sibling audit scripts) because an order-insensitive
+# JSON compare is the only reliable check of a permission list.
 # This is the audit check spec 003's curl-sh-installer scenario calls for,
 # resolving its installer<->registry parity open question per the
 # "never depend on human diligence" design principle.
@@ -60,8 +58,6 @@ fi
 derive_path() {
   case "$2" in
     claude-style) printf '%s/commands/ductus.md\n' "$1" ;;
-    antigravity)  printf '%s/skills/ductus/SKILL.md\n' "$1" ;;
-    opencode)     printf '%s/command/ductus.md\n' "$1" ;;
     pi)           printf '%s/prompts/ductus.md\n' "$1" ;;
     *)            printf '\n' ;;  # unknown layout — signalled by empty result
   esac
@@ -152,11 +148,10 @@ EOF
 # Direction 3: settings-template parity. install.sh pre-seeds each agent's
 # permission file (so the first /ductus run does not prompt for its bootstrap
 # shell commands) by hard-coding a copy of that agent's registry settings_template.
-# That duplicate must not silently drift. The three permission formats (claude
-# Bash()/Read(), auggie toolPermissions/regex, antigravity command()) make a text
-# diff unreliable — and opencode adds a fourth, its `permission` action map — so
-# this pass uses python3 for an order-insensitive JSON compare
-# of each install.sh seed against its §Agent Registry settings_template.
+# That duplicate must not silently drift. A permission list's order is not
+# significant, which makes a text diff unreliable, so this pass uses python3
+# for an order-insensitive JSON compare of each install.sh seed against its
+# §Agent Registry settings_template.
 seed_drift="$(
 python3 - "$DUCTUS" "$INSTALLER" <<'PY'
 import json, re, sys
@@ -185,9 +180,6 @@ for line in open(ductus):
 text = open(installer).read()
 PATH2KEY = {
     ".claude/settings.local.json": "claude",
-    ".augment/settings.local.json": "auggie",
-    ".agents/settings.json": "antigravity",
-    "opencode.json": "opencode",
 }
 seeds = {}
 for m in re.finditer(r"cat > (\S+) <<'JSON'\n(.*?)\nJSON", text, re.S):

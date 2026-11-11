@@ -371,8 +371,8 @@ async fn handshake_names_the_runtime_and_its_version() {
 
 /// `schemars` stamps OpenAPI-style numeric `format` hints (`uint32`,
 /// `uint64`, `uint8`, …) onto Rust integer/float fields. JSON Schema
-/// defines no `format` for numeric types, so strict MCP clients (opencode)
-/// log `unknown format "uint32" ignored` for each one. The server strips
+/// defines no `format` for numeric types, so strict MCP clients (Ajv-based
+/// validators) log `unknown format "uint32" ignored` for each one. The server strips
 /// them at construction; assert none survive on any served tool schema.
 #[tokio::test]
 async fn no_tool_schema_carries_a_nonstandard_numeric_format() {
