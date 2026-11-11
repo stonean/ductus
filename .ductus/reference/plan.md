@@ -6,7 +6,7 @@ The numbered steps in `plan.md`'s Instructions invoke the primitives that automa
 
 ## Recompute dependencies (safety net)
 
-Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually, then evaluate cross-spec context against the current frontmatter. Do not pass `--write` from this command.
+Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually, then evaluate cross-spec context against the current frontmatter. A non-empty `unwritable` names a spec whose derived `dependencies:` cannot be written without breaking its frontmatter: name each and say to edit that key by hand, since the pre-commit hook stops every commit until then. A non-empty `unparseable` names a spec whose frontmatter never closes: name each as not derived, never as in sync. Neither stops this command. Do not pass `--write` from this command.
 
 ## Detect existing artifacts
 
