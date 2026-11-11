@@ -13,7 +13,7 @@ Split `framework/bootstrap/ductus.md` so the file an adopter curls, installs int
 `framework/bootstrap/ductus.md` was a single file carrying the whole adoption procedure. Four costs compounded, and all four were paid per invocation rather than once:
 
 - The file was **curled** by `install.sh` on every install and refresh.
-- It was **installed into every selected agent** — verbatim for `claude-style` and `opencode`, body-wrapped as a skill for `antigravity` — so an adopter on three agents held three copies.
+- It was **installed into every selected agent** — so an adopter on several agents held several copies.
 - It was **loaded into the agent's context at every `/ductus` invocation**, whole, before the run knew which of its sections it would need.
 - It was **byte-compared against upstream on every run** by the self-update check, and rewritten whenever it differed.
 
