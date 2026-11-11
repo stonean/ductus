@@ -1435,8 +1435,8 @@ fn check_criterion_path_existence(
             }
             // When the candidate's own top-level segment is absent, this repo
             // has nothing to say about the path — a framework repo's criteria
-            // legitimately name paths that live in an *adopter's* checkout
-            // (`.ductus/…`, `.githooks/…`), and calling those
+            // legitimately name paths that live in an *adopter's* checkout,
+            // under a top-level directory this repo lacks, and calling those
             // drifted would be asserting a defect from an absence of evidence.
             // Recorded rather than exempted, so the report says what went
             // unexamined instead of quietly reading as clean. In an adopter

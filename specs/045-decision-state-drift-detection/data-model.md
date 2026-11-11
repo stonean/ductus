@@ -53,9 +53,9 @@ Reuses the existing `ArtifactFinding` (`runtime/src/schema/primitives.rs:3430`) 
 | `family` | `link-adjacent-drift` | `criterion-path-existence` |
 | `severity` | `advisory` | `advisory` |
 | `path` | repo-relative path of the **citing** artifact | repo-relative path of the citing `spec.md` |
-| `message` | citing line number, the link target, every tell that fired in list order, and the target's contradicting state | the criterion text, the named path, and that it does not resolve |
+| `message` | citing line number, the link target, every fired tell the target's state contradicts in list order, and the target's contradicting state | the criterion text, the named path, and that it does not resolve |
 
-One finding per (block, link) pair; the message carries the line number, so AC4's "citing file and line" is satisfied without adding a field the other families do not carry.
+One finding per (block, link target) pair, a target linked twice in one block counting once; the message carries the line number, so AC4's "citing file and line" is satisfied without adding a field the other families do not carry.
 
 ## `SkippedTarget`
 
@@ -83,11 +83,11 @@ pub struct SkippedTarget {
 | `reason` | Raised when |
 | --- | --- |
 | `target-missing` | the link resolves to a path with no file on disk |
-| `target-unparseable` | the target exists but its frontmatter will not parse |
+| `target-unparseable` | the target exists but could not be read, or is reached through a symbolic link inside the feature directory |
 | `no-readable-state` | the target carries no state the tell's class can be evaluated against |
 | `root-absent` | a checked path names a top-level segment this repo does not contain |
-| `ships-to-adopter` | a checked path is a **Shared Files** manifest destination — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
-| `artifact-unreadable` | a scanned *citing* artifact could not be read at all |
+| `ships-to-adopter` | a checked path is a **Shared Files** manifest destination or a registered agent's scaffold path, or a directory containing one — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
+| `artifact-unreadable` | a scanned *citing* artifact could not be read at all, below `done`; on a `done` spec it is a blocking finding instead (`8c4ca744`) |
 | `not-a-live-claim` | a checked path sits in a criterion, or a body line, that claims absence or describes a transition rather than claiming presence, so a finding would be backwards |
 | `never-existed` | a body path no revision of the repository ever held — an example or a never-built alternative, a name rather than a file ([067's body-path-existence-family](../067-analyze-and-audit-checks/scenarios/body-path-existence-family.md)) |
 
@@ -128,7 +128,7 @@ The phrases are matched as phrases, not words, and that is load-bearing: bare `a
 
 The whole criterion is exempted rather than the matched path, because a criterion about a transition names its endpoints together.
 
-An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.ductus/…`, `.pi/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
+An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout, under a top-level directory this repo does not contain — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
 
 Worked example — 026's AC5 (AC18), after `531e3ea` and `3ff65445` deleted both subjects:
 
