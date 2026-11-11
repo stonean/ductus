@@ -161,7 +161,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 | `framework/migrations/{audit-record-relocate,criterion-label-backfill}.md` | Modify | A label's assignment is a correction |
 | `framework/migrations/session-file-consolidate.md` | Modify | Runs through the CLI, with no hand-walk |
 | `framework/bootstrap/{ductus,govern}.md` | Modify | The shell text is the bootstrap's own contract |
-| `framework/bootstrap/configure/{claude,auggie}.md` | Modify | No hand-walk |
+| `framework/bootstrap/configure/claude.md` | Modify | No hand-walk |
 | `framework/reference/review.md` | Modify | The rules, then the cuts |
 | `framework/reference/analyze.md` | Modify | The rules, then the cuts |
 | `framework/reference/implement.md` | Modify | `diff-cross-spec`, the gate's fix-round and review-owed checks |
@@ -220,4 +220,4 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | Dispositions; its data model held a false canonicality claim |
 | `078-review-fix-rounds-are-re-read-within-a-bound` | The loop; its task 15 waits for this |
 
-Correcting false claims also reopened `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032-opencode-agent` and `035-groom-session-target` (a scenario or data model), and `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion), each with a task naming what its reopening owed. These owe no back-link; the correction names this spec in its commit. Task 19 rewrote the boxes that scheduled a run, or held a note as a box, in the task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076 and 078 as prose, and task 26 those of 022 and 047, which task 19 missed, a correction to each that reopens nothing.
+Correcting false claims also reopened `010-agent-autonomy`, `014-reclarify-backedge`, `019-config-decisions`, `023-govern-refinement`, `030-cross-service-references`, `032` and `035-groom-session-target` (a scenario or data model), and `059-project-in-a-repository-subdirectory` and `062-concurrent-session-targets` (a criterion), each with a task naming what its reopening owed. These owe no back-link; the correction names this spec in its commit. Task 19 rewrote the boxes that scheduled a run, or held a note as a box, in the task lists of 008, 010, 014, 019, 023, 026, 030, 032, 035, 048, 054, 058, 059, 062, 076 and 078 as prose, and task 26 those of 022 and 047, which task 19 missed, a correction to each that reopens nothing.
