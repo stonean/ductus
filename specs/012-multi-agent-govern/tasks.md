@@ -10,10 +10,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Create `commands/setup/` directory.
 - [x] Move `commands/setup.md` → `commands/setup/claude.md` (no content change).
-- [x] Move `commands/setup-auggie.md` → `commands/setup/auggie.md` (no content change).
-- [x] Verify `commands/setup.md` and `commands/setup-auggie.md` no longer exist.
+- [x] Verify `commands/setup.md` no longer exists.
 
-Done when: `commands/setup/claude.md` and `commands/setup/auggie.md` exist with the previous file contents intact, and the old flat-named files are deleted.
+Done when: `commands/setup/claude.md` exists with the previous file contents intact, and the old flat-named file is deleted.
 
 ## 2. Refresh `ductus`'s own setup command
 
@@ -24,7 +23,7 @@ Done when: `.claude/commands/ductus/setup.md` matches `commands/setup/claude.md`
 ## 3. Write the unified `ductus/ductus.md`
 
 - [x] Replace `ductus/ductus.md` with the unified content:
-  - Agent registry table near the top with the five fields per agent (`key`, `name`, `config_dir`, `settings_template`, `rules_file_note`) and rows for `claude` and `auggie`.
+  - Agent registry table near the top with the the per-agent fields (`key`, `name`, `config_dir`, `settings_template`, `rules_file_note`) and a row per supported agent.
   - Pre-flight checks (git repo, existing `specs/` warning) preserved from the existing file.
   - Agent selection logic with the precedence: `--agents=` → auto-detect → `--add-agent` / first-run prompt. Reject unknown agent keys before any scaffolding. Reject zero-agent selection in prompt paths.
   - Per-agent scaffolding loop that runs the manifest, writes the setup source from `commands/setup/{key}.md`, creates the empty session JSON, merges the agent's `settings_template` into `settings.local.json`, and installs a copy of `ductus.md` into `{config_dir}/commands/ductus.md`.
@@ -32,14 +31,14 @@ Done when: `.claude/commands/ductus/setup.md` matches `commands/setup/claude.md`
   - Post-write integrity check that the installed `ductus.md` starts with `# Ductus`, with re-fetch on failure.
   - Post-scaffolding output covering created/updated/unchanged/skipped/pinned/merged files, the `rules_file_note` for each scaffolded agent, the self-update notice when the installed `ductus.md` was updated, first-run vs update-mode next steps, and migration guidance for users coming from 007's per-CLI files.
 
-Done when: `ductus/ductus.md` exists in unified form, passes `npx markdownlint-cli2`, and never references `ductus-auggie.md`.
+Done when: `ductus/ductus.md` exists in unified form, passes `npx markdownlint-cli2`, and never references the second per-CLI bootstrap file.
 
-## 4. Delete `ductus/ductus-auggie.md`
+## 4. Delete the second per-CLI bootstrap file
 
-- [x] Remove `ductus/ductus-auggie.md`.
-- [x] Confirm no other file in the repo references `ductus-auggie.md` (README, specs, commands).
+- [x] Remove the per-CLI bootstrap file the unified `ductus/ductus.md` supersedes.
+- [x] Confirm no other file in the repo references it (README, specs, commands).
 
-Done when: `ductus/ductus-auggie.md` is gone and the repo has no remaining references to it.
+Done when: the file is gone and the repo has no remaining references to it.
 
 ## 5. Update `README.md`
 
@@ -64,7 +63,7 @@ Done when: 007's spec links to 012 as the successor, status remains `done`, and 
 
 ## 8. Lint and verify
 
-- [x] Run `npx markdownlint-cli2` over every modified or created file: `ductus/ductus.md`, `commands/setup/claude.md`, `commands/setup/auggie.md`, `.claude/commands/ductus/setup.md`, `README.md`, `CLAUDE.md`, `specs/007-govern-workflow/spec.md`, `specs/012-multi-agent-govern/spec.md`, `specs/012-multi-agent-govern/plan.md`, `specs/012-multi-agent-govern/data-model.md`, `specs/012-multi-agent-govern/tasks.md`.
+- [x] Run `npx markdownlint-cli2` over every modified or created file: `ductus/ductus.md`, `commands/setup/claude.md`, `.claude/commands/ductus/setup.md`, `README.md`, `CLAUDE.md`, `specs/007-govern-workflow/spec.md`, `specs/012-multi-agent-govern/spec.md`, `specs/012-multi-agent-govern/plan.md`, `specs/012-multi-agent-govern/data-model.md`, `specs/012-multi-agent-govern/tasks.md`.
 - [x] Walk the spec's Acceptance Criteria list and confirm each is satisfied by the changes.
 
 Done when: markdownlint reports zero errors and every acceptance criterion is verified against the implementation.
@@ -79,7 +78,7 @@ Done when: the spec status is `done` and the change is committed.
 
 - [x] Implement the behavior described in [`scenarios/settings-template-bash-allowlist.md`](scenarios/settings-template-bash-allowlist.md).
 
-- **Done when**: Both agent rows' `settings_template` in `framework/bootstrap/ductus.md` include every Bash pattern a routine `/ductus` run invokes (audit pass complete); the additions are mirrored in Auggie's native format; an end-to-end `/ductus` smoke test produces no Bash-permission prompts during routine bootstrap.
+- **Done when**: The Claude row's `settings_template` in `framework/bootstrap/ductus.md` includes every Bash pattern a routine `/ductus` run invokes (audit pass complete); an end-to-end `/ductus` smoke test produces no Bash-permission prompts during routine bootstrap.
 
 ## 11. Decide whether the per-agent configure commands carry the host-integration pointer
 

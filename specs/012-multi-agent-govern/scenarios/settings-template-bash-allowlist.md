@@ -14,12 +14,11 @@ This is pre-existing — not caused by 015 — but 015's smoke test was the firs
 
 ## Behavior
 
-Audit the bootstrap allowlist against actual `/ductus` runtime behavior and extend the canonical `settings_template` in both agent registry rows to cover every Bash command pattern a routine bootstrap exercises.
+Audit the bootstrap allowlist against actual `/ductus` runtime behavior and extend the canonical `settings_template` in the Claude registry row to cover every Bash command pattern a routine bootstrap exercises.
 
 - **Audit pass.** Trace through a full `/ductus` run (greenfield bootstrap of a fresh adopter project) and enumerate every distinct Bash command pattern the procedure invokes. Sources: `framework/bootstrap/ductus.md` body (the Instructions section), plus any sub-procedures it composes (e.g., Frontmatter Migration, post-scaffolding summary, workflow scaffolding).
 - **Confirmed gaps to add.** At minimum: `Bash(git status *)`, `Bash(awk *)`. These are confirmed missing per 015's smoke test. **`Bash(awk *)` was narrowed by 022's task 18 to the one `awk` command the bootstrap runs.**
 - **Suspected gaps to verify.** `Bash(grep *)`, `Bash(head *)`, `Bash(cat *)` — common patterns that may also prompt. Add the ones that prompt during the audit pass; leave the others out.
-- **Both rows in sync.** Every pattern added to the Claude row's `settings_template` JSON must have a semantically equivalent entry in the Auggie row's `settings_template` in Auggie's native format. The "parity across configure formats" contract from spec 012's body governs this — the audit covers both rows in one pass.
 - **No regressions.** Existing entries stay. The merge behavior (§Permission Setup in `framework/bootstrap/ductus.md`) ADDs missing entries without deduplicating or reordering, so the canonical list grows monotonically. **No longer only grows: since 022's task 18 §Permission Setup first removes the entries an earlier seed carried and the current one replaces, listed there by exact text.**
 
 > **Signpost ([022-deterministic-runtime](../../022-deterministic-runtime/spec.md)):** the seed this scenario audited was narrowed by 022's task 18,
@@ -29,7 +28,6 @@ Audit the bootstrap allowlist against actual `/ductus` runtime behavior and exte
 ## Edge Cases
 
 - **Adopter has accumulated entries from prompts.** The merge logic adds missing entries without touching what's already there, so adopters who previously accepted the prompts and now have `Bash(git status *)` in their local file are no-ops — their entry stays, the framework's entry is recognized as already present. **Since 022's task 18 an accepted entry whose text matches one an earlier seed carried and the current one replaces (`Bash(awk *)`, `Bash(mktemp *)`, …) is removed with the seed's own; `Bash(git status *)` is not among them.**
-- **Auggie's allow shape differs structurally.** Auggie's `settings.local.json` uses `toolPermissions` with `shellInputRegex` per spec 012 (see the relevant Behavior section). The equivalent of `Bash(git status *)` is a `launch-process` permission with the matching regex. The audit must produce both forms; a single Bash pattern in the Claude row that has no Auggie equivalent is a finding to resolve before landing.
 - **Pattern over-broadness.** `Bash(git *)` would cover `git status`, `git diff`, `git push`, `git reset`, etc. `git push` and `git reset --hard` are operations spec 012 (and AGENTS.md) treats as risky/externally-visible. Prefer narrower patterns (`Bash(git status *)`, `Bash(git log *)`, `Bash(git diff *)`) over `Bash(git *)`. The audit captures only what `/ductus` actually invokes; risky git operations are not in `/ductus`'s path, so they shouldn't end up in the list.
 
 ## Open Questions

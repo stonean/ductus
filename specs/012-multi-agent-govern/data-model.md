@@ -8,13 +8,13 @@ The agent registry is a structured, in-file data model carried by `framework/boo
 
 ## Agent Registry
 
-Each row describes one supported agent. 012 shipped five fields per row; `028-antigravity-agent` added the sixth, `layout`, which is what lets an agent whose tree differs structurally join the registry.
+Each row describes one supported agent. Each row carries six fields; the sixth, `layout`, is what lets an agent whose tree differs structurally from Claude's (Pi's flat `prompts/` directory, say) join the registry.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `key` | string | yes | Lowercase identifier. Stable across releases. Used in `--agents={key}` flags, the `framework/bootstrap/configure/{key}.md` permission source path, and in user-facing prompt text. Must be unique within the registry. |
-| `name` | string | yes | Human-readable label shown in `AskUserQuestion` prompts and the post-scaffolding summary. Example: "Claude Code", "Auggie". |
-| `config_dir` | string | yes | Project-relative directory where the agent stores its config and commands. Example: `.claude`, `.augment`. Used to detect existing adoptions and to compute every per-agent destination path. |
+| `name` | string | yes | Human-readable label shown in `AskUserQuestion` prompts and the post-scaffolding summary. Example: "Claude Code", "Pi". |
+| `config_dir` | string | yes | Project-relative directory where the agent stores its config and commands. Example: `.claude`, `.pi`. Used to detect existing adoptions and to compute every per-agent destination path. |
 | `layout` | string | yes | The agent's directory and command shape. Selects which column of the layout-derived values applies to the agent; the layouts are the columns of **Derived values** in `framework/bootstrap/ductus.md`. |
 | `settings_template` | object (JSON) | yes | Bootstrap entries merged into the agent's settings file if missing, in the agent's native settings format. Contains only the entries `/ductus` itself needs — not the full permission set — and is empty for an agent whose settings carry no permission gate. |
 | `rules_file_note` | string | yes | Short note about the agent's relationship to its native rules file (`CLAUDE.md` or `AGENTS.md`). Surfaced in the post-scaffolding summary. Example: "Claude Code reads `CLAUDE.md` natively." |
@@ -30,7 +30,7 @@ Session state is not derived per agent: every adopter keeps it at `.ductus/sessi
 
 ### Initial population
 
-012 shipped two rows: `claude` (Claude Code, config directory `.claude`) and `auggie` (Auggie, `.augment`), both reading `CLAUDE.md` natively. The registry in `framework/bootstrap/ductus.md` holds the current rows.
+The registry in `framework/bootstrap/ductus.md` holds the current rows: `claude` (Claude Code, config directory `.claude`, reading `CLAUDE.md` natively) and `pi` (Pi, `.pi`, reading `AGENTS.md` natively).
 
 ## Adding a new agent
 
