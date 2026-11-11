@@ -46,7 +46,7 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 
 ### Check selection in this repository's CI
 
-`.github/workflows/framework-checks.yml` and `.github/workflows/generators.yml` each cache `runtime/target/release/ductus` under a key built from `hashFiles('runtime/Cargo.lock', 'runtime/Cargo.toml', 'runtime/rust-toolchain.toml', 'runtime/src/**')`. Their build step runs only on a cache miss, and prints that no runtime built from those sources was cached. The key covers what the binary is compiled from: `runtime/src` holds no `include_str!` or `include_bytes!`, and the crate has no `build.rs` (checked at `8dd03c22`). The existing registry cache stays for a miss. `runtime.yml`'s path filter already excludes `specs/` and stays as it is. A push whose changes are confined to artifacts then compiles nothing whenever the sources match a cached build.
+`.github/workflows/framework-checks.yml` and `.github/workflows/generators.yml` each key their existing cache of `runtime/target` and the cargo registry on `hashFiles('runtime/Cargo.lock', 'runtime/Cargo.toml', 'runtime/rust-toolchain.toml', 'runtime/src/**')`, the inputs the binary is compiled from: `runtime/src` holds no `include_str!` or `include_bytes!`, and the crate has no `build.rs` (checked at `8dd03c22`). On an exact hit, a step dates every tracked file under `runtime/` back before the restored build, since the checkout's fresh mtimes otherwise read to cargo as a change, so every `cargo build` in the job finds the build fresh. That includes the ones `scripts/lint-procedure-parseability.sh` and `scripts/audit/check-zero.sh` run themselves. A fallback restore is never dated back, as it is a build of other sources. The build step prints, on anything but an exact hit, that no build of these sources is cached. `runtime.yml`'s path filter already excludes `specs/` and stays as it is. Both checkouts are depth 1: measured at `debcc8cf`, no step's result depends on history once Family 19 is gone.
 
 ### The governing text
 
@@ -82,7 +82,8 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 | `framework/reference/review.md`, `framework/reference/implement.md`, `framework/reference/fold.md`, `framework/reference/audit.md` | Modify | Prose |
 | `scripts/audit/review-freshness.sh`, `scripts/mutation/family-19-calls-the-runtime.py` | Delete | Retired family |
 | `scripts/audit/run-all.sh`, `scripts/audit/README.md` | Modify | Unregister Family 19 |
-| `.github/workflows/framework-checks.yml`, `.github/workflows/generators.yml` | Modify | Binary cache keyed on runtime sources |
+| `.github/workflows/framework-checks.yml`, `.github/workflows/generators.yml` | Modify | Runtime cache keyed on runtime sources, depth-1 checkout |
+| `.github/workflows/runtime-release.yml`, `.github/workflows/runtime.yml` | Modify | Depth-1 audit checkout, filters naming the deleted script |
 | `AGENTS.md`, `docs/analyze.md` | Modify | Local checks, prose |
 | `specs/079-review-and-analysis-work-converges/spec.md` | Modify | AC4, AC6 and two Resolved Questions point here |
 | `specs/066-audit-records-and-the-completion-gate/` | Modify | Gate checks and `blocked-by` values |
@@ -96,7 +97,7 @@ Its allow entry joins the retired list in `framework/bootstrap/configure/claude.
 - **Repointing Family 19 at code changed since a `done` spec's review.** Rejected here. Family 19's header records that scoping by a plan's Affected Files flagged 42 of 48 specs, so a code-based family is new work needing its own measurement. What retiring gives up: Family 19 was built after `gvrn-v0.26.1` and `gvrn-v0.26.2` shipped with 022 scenarios added after its review. Under the reversal, a scenario added through `/{project}:amend` carries a task whose code owes the review at the gate. A hand-added one is checked against the code by nothing, as the spec's Resolved Questions accept.
 - **Keeping Family 19 for unparseable records.** Rejected. `/{project}:analyze` already hard-fails a record that does not parse.
 - **A released binary in CI instead of a cached build.** Rejected. A release lags `main`'s schemas, 1,083 commits at `6158d7df`.
-- **Caching `runtime/target` under a source-hash key.** Rejected for the single binary. The binary is what the steps run, and caching it makes a hit skip the compile outright.
+- **Caching only the release binary.** Rejected. Two scripts the workflows run call `cargo build` themselves, so with no `runtime/target` restored they would compile from scratch; caching the target directory under the source hash, with the mtimes dated back on an exact hit, makes every build a no-op.
 - **Known limitation: a cache miss still compiles.** On eviction or a first push after a runtime change, a spec-only push compiles once, and the run says so.
 
 ## Cross-spec impact
