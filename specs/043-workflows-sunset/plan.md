@@ -17,6 +17,8 @@ Delete the workflows feature in one coordinated pass: remove `framework/workflow
 3. Deletion of the synced `workflows/registry.json` (pinned-checked); remove `workflows/` when empty.
 4. Removal of the `[workflows]` section (header, keys, attached comment lines) from the **active config file** (write policy per spec 042), all other tables preserved byte-for-byte.
 
+Every path the procedure deletes is built from values screened before it runs (`BE-INPUT-004`). `{config_dir}` is the agent registry's own `config_dir`. `{project}` passed the project-name check, lowercase letters, digits and hyphens only (`framework/bootstrap/ductus.md`, Collect Project Inputs), so it holds no separator or `..`. The leaf names in `workflows/` are the exact set above. So no target names a directory outside the agent's command directory.
+
 `target_paths` lists the adopter-relative paths (driving the bootstrap loop) plus `framework/workflows/` (driving `/audit` Family 10's no-stale-target-paths check). The explanatory comment about that dual role sits on the `workflows-sunset` entry, moved there from the archived `skills-to-workflows` entry.
 
 ### Archive per 027's sunset flow
