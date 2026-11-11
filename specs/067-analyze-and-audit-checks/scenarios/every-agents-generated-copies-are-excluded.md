@@ -10,7 +10,7 @@ section: "Link and reference integrity"
 
 ## Behavior
 
-Under `--scope repository`, a file under the config dir of any agent in the bootstrap's Agent Registry (`.claude`, `.augment`, `.agents`, `.opencode`, `.pi`) is excluded by construction and counted, whichever agent the session identifies. `host::AGENT_CONFIG_DIRS` carries the set, and a test holds it to the registry table's `config_dir` column.
+Under `--scope repository`, a file under the config dir of any agent in the bootstrap's Agent Registry (`.claude`, `.pi`) is excluded by construction and counted, whichever agent the session identifies. `host::AGENT_CONFIG_DIRS` carries the set, and a test holds it to the registry table's `config_dir` column.
 
 ## Edge Cases
 

@@ -72,7 +72,7 @@ Measured against this repo: **21 findings → 2**, with 9 distinct
   still reported. Pinned by
   `a_genuinely_stale_path_still_flags_alongside_the_manifest`.
 - **Placeholder destinations are inert.** The manifest also carries rows like
-  `{config_dir}/commands/{project}/plan.md` and `~/.augment/settings.json`.
+  `{config_dir}/commands/{project}/plan.md`.
   These enter the set but can never match a candidate: the criterion path
   grammar already rejects `{`, `}`, and `:`, and a destination with no `/`
   cannot match a candidate that requires one.

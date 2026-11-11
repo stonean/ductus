@@ -23,9 +23,9 @@ cases call inert — they entered the set and could never match.
 
 `.pi/` is dogfooded here, so the `.pi` segment exists and `root-absent` did
 not fire, while no generator materializes the self-install or the settings
-file. 032's OpenCode criteria escaped the same finding only because `.opencode/`
-is absent here and `root-absent` caught them; dogfooding OpenCode would have
-surfaced them the same way. The gap was per-agent, not Pi-specific.
+file. The gap was per-agent, not Pi-specific: an agent whose config directory
+is absent here would have been caught by `root-absent`, one that is dogfooded
+would not.
 
 ## Behavior
 
@@ -33,8 +33,8 @@ surfaced them the same way. The gap was per-agent, not Pi-specific.
 destinations from the bootstrap's **Agent Registry**. For every registry row
 it substitutes the row's `config_dir` into the layout-derived **`ductus`
 install path** and **Settings file** formulas for the row's `layout`, and
-takes the agent's **MCP target** when its scope is project-scoped
-(`project-committed` or `project-local`). Every registered agent contributes,
+takes the agent's **MCP target**, which is always inside the project.
+Every registered agent contributes,
 not only the ones dogfooded here: the set describes what this repo ships, not
 what it happens to materialize.
 
@@ -47,16 +47,15 @@ skip reason.
 
 - **Derived from the registry, never listed.** Adding an agent, as 064 added
   Pi, extends the set with no change to the check. A hand-enumerated list of
-  `.pi/…` and `.opencode/…` paths would be the second copy §drift-prevention
+  `.pi/…` paths would be the second copy §drift-prevention
   rules out, stale at the next agent.
 - **A formula still carrying a placeholder after `config_dir` is substituted
   stays inert.** The Command/skill path keeps `{project}` and `<name>`, so it
   cannot match a candidate, exactly as today.
-- **A cell with a trailing note contributes its backticked path.** The Pi
-  Settings file cell and the OpenCode `opencode.json` cell carry prose beside
-  the path; the note is not part of the destination, and a cell-is-exactly-one-
-  span rule would silently drop both.
-- **A repo-root destination** (`opencode.json`, `.mcp.json`) enters as-is and
+- **A cell with a trailing note contributes its backticked path.** A
+  Settings file cell can carry prose beside the path; the note is not part of
+  the destination, and a cell-is-exactly-one-span rule would silently drop it.
+- **A repo-root destination** (`.mcp.json`) enters as-is and
   is inert, for the reason
   [criterion-adopter-scope-destinations](criterion-adopter-scope-destinations.md)
   gives for any destination with no `/`: the criterion path grammar requires
@@ -65,9 +64,6 @@ skip reason.
   a working checkout after `/ductus` but not in CI's clean clone. Including it
   makes the verdict the same in both: it resolves locally and is suppressed in
   CI, rather than flagging in one and passing in the other.
-- **User-global and home-level MCP targets are excluded** (`~/.augment/…`,
-  `~/.gemini/…`). They live outside any checkout, so no criterion about them is
-  a repo-relative path claim.
 - **Derivation failure still fails toward reporting, per table.** An
   unreadable registry yields no agent destinations, so findings are emitted
   rather than swallowed; the Shared Files contribution is independent and
