@@ -49,7 +49,9 @@ system prompt and prompt-matched. Each is a deviation from the command-file cont
 byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
 
 - spawns `.ductus/bin/ductus mcp` (resolved relative to the working tree; the
-  pointer `/ductus` already materializes) when it loads, keeps it alive, and
+  pointer `/ductus` already materializes) when it loads, with the argument vector
+  `["mcp"]` and no shell (`spawn` in `framework/bootstrap/pi/ductus-bridge.ts`;
+  BE-INPUT-003), keeps it alive, and
   respawns it on the first call after it exits — or after a request times out,
   which retires a runtime that stopped answering. Every request to the runtime is
   bounded by the named constant `REQUEST_TIMEOUT_MS` (120 s), well above what the
@@ -100,9 +102,10 @@ typebox wrap is required. Either path keeps the schema data server-sourced.
 `commands/{project}/` (plural, claude-style/auggie) and `command/{project}/`
 (singular, opencode) candidates — order preserved, `cli-config-dir` from the session
 file remains the real selector. A unit test records `cli-config-dir = .pi` in a
-session fixture and asserts the candidate list ends with the pi shape; the two
-pre-existing tests (`command_file_candidates_cover_both_layouts_plural_first` and the
-`.augment`/`.opencode` fixtures) pass unmodified. Nothing else in `runtime/` moves:
+session fixture and asserts the candidate list ends with the pi shape; the one
+pre-existing candidate test, `command_file_candidates_cover_both_layouts_plural_first`,
+gains the third candidate at the end of its expected list, its first two entries and
+their order unchanged (`fcaa7d2a`, as AC8 records). Nothing else in `runtime/` moves:
 no new primitive, no schema change, the MCP server is byte-identical. The
 `write-session` doc comment's config-dir enumeration gains `.pi` in the same commit
 (doc sync, no behavior).
@@ -118,7 +121,17 @@ takes the `done → in-progress` back-edge and 064 cannot reach `done` before th
 `framework/bootstrap/configure/pi.md` (new command source, no substitutions beyond
 the standard `{project}` / `{cli-config-dir}`): (1) byte-compare
 `.pi/extensions/ductus.ts` against the upstream `framework/bootstrap/pi/ductus-bridge.ts`
-and overwrite on divergence; (2) report that Pi has no permission-gating settings
+and overwrite on divergence. The upstream bridge is fetched at the ref `/ductus`
+resolves, as `configure/pi.md` step 1 states, under the fetch policy
+`framework/bootstrap/ductus.md`'s Source resolution sets for its own fetches, which
+step 1 carries: HTTPS only
+at TLS 1.2 or later (`--proto '=https' --tlsv1.2`), curl's certificate and host-name
+verification kept, and bounded by `--connect-timeout {connect-timeout}` and
+`--max-time {request-timeout}` from its Derived paths (BE-TIMEOUT-001, BE-DATA-001,
+BE-DATA-011). Its command line interpolates only that ref, which Source resolution
+holds to `latest`, `main` or `ductus-v<MAJOR>.<MINOR>.<PATCH>`, `$DUCTUS_REPO`, and
+the directory `mktemp -d` generates. `$DUCTUS_REPO` is inside double quotes in the
+raw-file fetch but unquoted in the latest-release lookup (BE-INPUT-003); (2) report that Pi has no permission-gating settings
 (every tool call runs without a host prompt; project trust is the only gate) and
 state the trust requirement for a freshly cloned pi-adopted repo.
 `gen-configure-mcp.sh`'s header names the pi exclusion (it generates MCP-permission
