@@ -90,7 +90,6 @@ The loop step says what to do when the host can start an independent agent and w
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
 | `framework/runtime-tools.txt` | Modify | Four tool lines |
 | `framework/bootstrap/configure/claude.md` | Modify | Generated allow block |
-| `framework/bootstrap/configure/auggie.md` | Modify | Generated allow block |
 | `framework/bootstrap/ductus.md` | Modify | §Project Configuration documents `re-reads-off` |
 | `framework/commands/review.md` | Modify | The loop step and the Writes line |
 | `framework/reference/review.md` | Modify | The loop's walk, the host fallback and the record fields' meaning |
