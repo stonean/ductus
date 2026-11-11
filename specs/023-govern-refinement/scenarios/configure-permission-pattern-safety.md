@@ -18,7 +18,7 @@ Bash(git -C * show *)
 
 Claude Code's permission matcher lets that leading `*` span inserted options, not just the path. `git -C . -c core.pager='!sh -c "…"' status` matches `Bash(git -C * status *)` and is approved with **no prompt**. Both `-c` and `--exec-path` run arbitrary commands, so the canonical allow-set ships an arbitrary-execution hole into every adopter that runs `/ductus:configure`. Claude Code now warns about each of the seven at session start, which is how this surfaced.
 
-`claude.md` is the only per-agent configure file, and so the sole file affected: Pi has no permission file.
+`claude.md` is the only configure file that carries a permission set, and so the sole file affected: Pi has no permission file.
 
 The deny-side `git -C *` entries (`claude.md:147-152`) are **not** affected: an over-broad *denial* only refuses more, so the same wildcard is safe there and must stay as-is.
 
