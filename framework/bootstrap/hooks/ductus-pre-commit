@@ -11,10 +11,15 @@
 #   1. ductus derive-dependencies --write --staged — frontmatter `dependencies:` from
 #      body inline links to sibling specs. Also runs the dependency-cycle
 #      check, which spans the full spec graph (a staged edge can close a cycle
-#      through a spec that is not staged) and exits non-zero on a cycle.
+#      through a spec that is not staged) and exits non-zero on a cycle. It
+#      also exits non-zero on an `unwritable` spec, one whose derived
+#      `dependencies:` cannot be written without breaking its frontmatter,
+#      which it reports across every tracked spec, staged or not, since only
+#      an edit by hand fixes it.
 #   2. ductus derive-references --write --staged — frontmatter `references:` from body
 #      inline links to other services' specs. Strictly distinct from
-#      dependencies (spec 030).
+#      dependencies (spec 030). It exits non-zero on an `unwritable` spec the
+#      same way, across every tracked spec.
 #
 # Finally — after every write above has landed and been staged — it checks the
 # corpus for dangling pointers:

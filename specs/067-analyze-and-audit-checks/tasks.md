@@ -210,6 +210,6 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 26. The shipped hook's header names every exit its derivations gate on
 
-- [ ] `framework/bootstrap/hooks/ductus-pre-commit`'s header says step 1, derive-dependencies, exits non-zero on a cycle, and says nothing of step 2's exit; since d90d2133 both also exit non-zero on an `unwritable` spec, which stops the commit whether or not that spec is staged (task 14's fourth item, owner, 2026-11-11). State both exits, and that `unwritable` spans the corpus as the cycle check does
+- [x] `framework/bootstrap/hooks/ductus-pre-commit`'s header says step 1, derive-dependencies, exits non-zero on a cycle, and says nothing of step 2's exit; since d90d2133 both also exit non-zero on an `unwritable` spec, which stops the commit whether or not that spec is staged (task 14's fourth item, owner, 2026-11-11). State both exits, and that `unwritable` spans the corpus as the cycle check does
 
 - **Done when**: the header names the cycle and `unwritable` exits of step 1 and the `unwritable` exit of step 2, each as spanning every tracked spec
