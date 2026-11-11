@@ -527,8 +527,8 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 
 - **Done when**: an analyze run of the `analyze-malformed-rule-heading` check reads neither the list file nor a rule file through the shell, or the owner waives it with its reason written on this task.
 
-## 58. Close 080 again after the host-support removal
+## 58. The data model's `unwritable` row and the host-support removal reopen 080
 
-- [ ] Reopened at 7904cb19, when 067 task 25 added `unwritable` to the derive-dependencies row of the data model's Bounded-results table (6b0f96fd): `classify-spec-edit` classifies that edit as reopening (data-model) and it stales the review record. Held `in-progress` by the owner (2026-11-11) until the agent-host removal landed; it has, and its `sweep(080)` commit deleted AC10, AC11 and two scenarios, so this close covers that edit too. Then close it once, by 055's close method: `/ductus:review` from step 1, with start-fix-rounds before any fix and the fix-round loop; `/ductus:analyze`; check-review-gate and a simulated closing measure-reopenings; gate-confirm, then set-status committed alone, then the record in 079 task 12
+- [x] Reopened at 7904cb19, when 067 task 25 added `unwritable` to the derive-dependencies row of the data model's Bounded-results table (6b0f96fd): `classify-spec-edit` classifies that edit as reopening (data-model) and it stales the review record. Held `in-progress` by the owner (2026-11-11) until the agent-host removal landed; it has (04e0e8bf), and its `sweep(080)` commit (636a0df6) deleted AC10, AC11 and two scenarios, so the reopening covers that edit too. The reopening owes a review and an analysis, then its close, by 055's close method: `/ductus:review` from step 1, with start-fix-rounds before any fix and the fix-round loop; `/ductus:analyze`; check-review-gate and a simulated closing measure-reopenings; gate-confirm, then set-status committed alone, then the record in 079 task 12
 
-- **Done when**: 080 is `done` again, its review and analysis records current and the gate clean
+- **Done when**: the reopening's edits are on disk, the data model's `unwritable` row (6b0f96fd) and 636a0df6's and f78e3004's sweep, and the hold has ended

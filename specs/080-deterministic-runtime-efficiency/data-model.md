@@ -187,8 +187,8 @@ Each tool the installed `target.md`'s steps name carries `"_meta": { "anthropic/
 A primitive bounded through `bounded_lists::place`, the grows-set and `discover-rule-files`, takes the shape `process-decisions` and `compute-review-scope` already return:
 
 - `form` is `inline` while the serialized result fits `read-size-bytes`, and `file` past it;
-- a `{list}-count` per moved list is present in both forms, except `dashboard`'s session lists, below;
-- each moved list is present only in the inline form, where `scenario-files-unreadable`, `cross-spec-impact` and `dashboard`'s session lists are also absent when empty, as before;
+- a `{list}-count` per moved list is present in both forms, except `dashboard`'s session lists and `derive-dependencies`' `unwritable`, below;
+- each moved list is present only in the inline form, where `scenario-files-unreadable`, `cross-spec-impact` and `dashboard`'s session lists are also absent when empty, as before, and `derive-dependencies`' `unwritable` is too;
 - in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, pretty-printed, so a list of strings holds one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
 A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependencies` with `write`, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
