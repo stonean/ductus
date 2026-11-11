@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [010-agent-autonomy, 018-adopter-owned-pre-commit, 019-config-decisions, 027-bootstrap-migration-registry]
 next-criterion: 12
 ---
