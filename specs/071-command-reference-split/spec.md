@@ -331,30 +331,30 @@ its schema.
 
 ## Acceptance Criteria
 
-- [ ] AC1: No file under `framework/commands/` contains a `## Markdown-only reference` heading.
-- [ ] AC2: Each of the thirteen commands measured above has a `framework/reference/<command>.md` holding its moved sections, `review.md`'s trailing sections included, and opening with a **Where a named section lives** paragraph.
-- [ ] AC3: Every pointer that read "the markdown-only reference below", in any wording, names a `.ductus/reference/<command>.md` file, together with the full `§` heading when it points at one section; each named heading exists in that file.
-- [ ] AC4: No `framework/reference/*.md` file contains `{cli-config-dir}`, a hardcoded agent config directory, or `$ARGUMENTS` used as the argument token, and `placeholder-roundtrip.sh` fails when one is introduced.
-- [ ] AC5: `framework/bootstrap/ductus.md`'s Shared Files manifest carries one `update` row per shipped reference file, mapping `framework/reference/<command>.md` to `.ductus/reference/<command>.md`, with `audit` withheld, and Family 16 fails when a reference file lacks a row or a row lacks a source.
-- [ ] AC6: `.ductus/reference/` is in the installer's enforce-directories list and in its markdown-only cleanup, so a reference file no manifest row produces is removed unless pinned.
-- [ ] AC7: `framework/bootstrap/govern.md` is byte-identical to `framework/bootstrap/ductus.md`.
-- [ ] AC8: No reference file is written under any agent's commands or prompts directory, for either layout.
-- [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
-- [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
-- [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
-- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly; outside a pair a heading must end where a word ends; and a line inside a ` ``` ` fenced block or an HTML comment is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
-- [ ] AC13: The installer's pointers at `.ductus/reference/review.md` §Resolve target and scope, item 5, name a section that exists there.
-- [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
-- [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
-- [ ] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/*.md`, and §runtime-host-integration says what a command's reference keeps.
-- [ ] AC17: `docs/developing-ductus.md`'s procedure for adding a slash command names the reference file and its manifest row.
-- [ ] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
-- [ ] AC19: The whole local gate passes: `npx markdownlint-cli2`, the `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings` and `cargo test --release --locked`.
-- [ ] AC20: The bytes each command loads per invocation, before and after the split, are recorded in the plan from a measurement taken after the split.
-- [ ] AC21: Family 28 reads its documented family list from `framework/reference/audit.md` and still reports a finding when the list is absent.
-- [ ] AC22: Each split command file states once, in its Instructions preamble, that its markdown-only reference is in `.ductus/reference/<command>.md`, and the four commands with no reference carry no such line.
-- [ ] AC23: No live comment, description or `docs/` page outside `specs/` still says a command's markdown-only reference is in its command file.
-- [ ] AC24: 026 carries the changed subjects of Families 4, 16, 18, 28 and 39, and 067 carries the `resolve-anchor` and `check-corpus-links` changes, each as a scenario back-linking to this spec, so the `cross-spec-impact:` declaration is discharged.
+- [x] AC1: No file under `framework/commands/` contains a `## Markdown-only reference` heading.
+- [x] AC2: Each of the thirteen commands measured above has a `framework/reference/<command>.md` holding its moved sections, `review.md`'s trailing sections included, and opening with a **Where a named section lives** paragraph.
+- [x] AC3: Every pointer that read "the markdown-only reference below", in any wording, names a `.ductus/reference/<command>.md` file, together with the full `§` heading when it points at one section; each named heading exists in that file.
+- [x] AC4: No `framework/reference/*.md` file contains `{cli-config-dir}`, a hardcoded agent config directory, or `$ARGUMENTS` used as the argument token, and `placeholder-roundtrip.sh` fails when one is introduced.
+- [x] AC5: `framework/bootstrap/ductus.md`'s Shared Files manifest carries one `update` row per shipped reference file, mapping `framework/reference/<command>.md` to `.ductus/reference/<command>.md`, with `audit` withheld, and Family 16 fails when a reference file lacks a row or a row lacks a source.
+- [x] AC6: `.ductus/reference/` is in the installer's enforce-directories list and in its markdown-only cleanup, so a reference file no manifest row produces is removed unless pinned.
+- [x] AC7: `framework/bootstrap/govern.md` is byte-identical to `framework/bootstrap/ductus.md`.
+- [x] AC8: No reference file is written under any agent's commands or prompts directory, for either layout.
+- [x] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
+- [x] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
+- [x] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
+- [x] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly; outside a pair a heading must end where a word ends; and a line inside a ` ``` ` fenced block or an HTML comment is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
+- [x] AC13: The installer's pointers at `.ductus/reference/review.md` §Resolve target and scope, item 5, name a section that exists there.
+- [x] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
+- [x] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
+- [x] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/*.md`, and §runtime-host-integration says what a command's reference keeps.
+- [x] AC17: `docs/developing-ductus.md`'s procedure for adding a slash command names the reference file and its manifest row.
+- [x] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
+- [x] AC19: The whole local gate passes: `npx markdownlint-cli2`, the `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings` and `cargo test --release --locked`.
+- [x] AC20: The bytes each command loads per invocation, before and after the split, are recorded in the plan from a measurement taken after the split.
+- [x] AC21: Family 28 reads its documented family list from `framework/reference/audit.md` and still reports a finding when the list is absent.
+- [x] AC22: Each split command file states once, in its Instructions preamble, that its markdown-only reference is in `.ductus/reference/<command>.md`, and the four commands with no reference carry no such line.
+- [x] AC23: No live comment, description or `docs/` page outside `specs/` still says a command's markdown-only reference is in its command file.
+- [x] AC24: 026 carries the changed subjects of Families 4, 16, 18, 28 and 39, and 067 carries the `resolve-anchor` and `check-corpus-links` changes, each as a scenario back-linking to this spec, so the `cross-spec-impact:` declaration is discharged.
 
 ## Open Questions
 
