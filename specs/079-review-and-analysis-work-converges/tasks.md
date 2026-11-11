@@ -352,3 +352,9 @@ At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25
 - [x] `specs/080-deterministic-runtime-efficiency` — closed at `baac81e1` over AC1's bound with two reviews (`ba5166e3`, `e52a7a35`) and one analysis (`bbe87604`), by `measure-reopenings --since e7fcde37` at `979a4961`; no record here named it when it closed. The closing review ran with every box in `tasks.md` ticked; the analysis then found ten rule findings whose fixes were runtime code (`75dc3d96`, `36a4ce86`), so a second review over those fixes was owed. Decide whether the cause wants a pipeline change or a waiver with its reason — waived: an analysis catching what the review's passes missed is what the analysis is for, as tasks 28 and 29 waived for 078 and 029; no pipeline change (owner, 2026-11-11, recorded as a ticked task so the spec stays `done`)
 
 - **Done when**: the miss's cause is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 34. A miss: 081's reopening closed with one review and two analyses
+
+- [x] `specs/081-reviews-and-checks-follow-what-changed` — closed at `6d583778` over AC1's bound with one review (`58878cfb`) and two analyses (`45ef17b9`, `9e33f4b7`), by `measure-reopenings --since 2026-11-11` at `932d10e0`. The first analysis judged a keyword-filtered subset of the 310 loaded rules' Verification triggers, against analyze step 11's every loaded rule, and missed `BE-PAYLOAD-001`; the second read every trigger and fixed it. Decide whether the cause wants a pipeline change or a waiver with its reason — deferred to `082-rule-assessments-converge-across-runs`, whose AC2 has a run that judges fewer rules than it loaded record each one left unjudged on the interactive path, which would have shown the first run incomplete (owner, 2026-11-11)
+
+- **Done when**: the miss's cause is fixed, deferred, or waived, with a waiver's reason written on the task.
