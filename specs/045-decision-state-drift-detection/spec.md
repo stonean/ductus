@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [013-text-first-artifacts, 022-deterministic-runtime, 046-scenario-open-question-visibility]
 next-criterion: 20
 ---
@@ -111,7 +111,7 @@ Both ship as `check-artifacts` families. This extends the deterministic check fa
 - [x] AC13: A tell inside a fenced code block, an HTML comment, a blockquote, or an inline code span produces no finding
 - [x] AC14: A link targeting a scenario is evaluated on the scenario's open-question count and file existence; a tell requiring a lifecycle status produces no finding
 - [x] AC15: Both checks ship as `check-artifacts` families. As delivered the markdown-only path performed the same procedure as prose; spec 079 retired that path
-- [x] AC16: `/{project}:analyze` emits an advisory finding for each filesystem path named in a `done` spec's acceptance criterion that no longer resolves, reading inside inline code spans, except the targets `framework/reference/analyze.md` §Acceptance-criterion path existence excludes by construction (`not-a-live-claim`, `root-absent`, `ships-to-adopter`), which it records rather than flags
+- [x] AC16: `/{project}:analyze` emits an advisory finding for each filesystem path named in an `in-progress` or `done` spec's acceptance criterion that no longer resolves, reading inside inline code spans, except the targets `framework/reference/analyze.md` §Acceptance-criterion path existence excludes by construction (`not-a-live-claim`, `root-absent`, `ships-to-adopter`, `gitignored`), which it records rather than flags. **Widened since 067's `status-gated-families-are-not-silent` (2026-11-11):** the family runs at `in-progress` too, and a path git ignores is recorded `gitignored`
 - [x] AC17: The path-existence check is scoped to `## Acceptance Criteria` and does not scan body prose, so a correct historical mention of a deleted path produces no finding
 - [x] AC18: The path-existence check reproduces the originating case: 026's AC5 naming `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh` after `531e3ea` and `3ff65445` deleted them
 - [x] AC19: A criterion asserting a path was never created is exempted whole and its paths recorded as `not-a-live-claim`, matched clause-scoped so that a negator in a different clause leaves a live delivery claim flagged
@@ -147,7 +147,7 @@ Both ship as `check-artifacts` families. This extends the deterministic check fa
 
   On (b), a **path-existence** check would have — both dead paths (`framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh`, deleted by `531e3ea` and `3ff65445`) are mechanically testable against the filesystem, with none of the tell-list machinery. It ships as its **own family**, not as an extension of the link-adjacent one, because the two have **inverted parsing rules**: the tell-scan ignores inline code spans (per the exempt-contexts resolution above), whereas path-existence must read inside them, since paths are backticked by convention. One family cannot hold both rules coherently.
 
-  Its scope is **`## Acceptance Criteria` of `done` specs only**. A path-existence check over whole spec bodies would flag correct historical prose — 026's own Behavior §3 now reads "Retired by spec `043-workflows-sunset`, which … deleted `framework/workflows/`", a true statement naming a dead path. Acceptance criteria avoid that class entirely because they are contracts rather than narrative: an AC naming a path asserts that path is part of the delivered system.
+  Its scope is **`## Acceptance Criteria`** — of `done` specs only when this was decided, and of `in-progress` specs too since 067's `status-gated-families-are-not-silent`. A path-existence check over whole spec bodies would flag correct historical prose — 026's own Behavior §3 now reads "Retired by spec `043-workflows-sunset`, which … deleted `framework/workflows/`", a true statement naming a dead path. Acceptance criteria avoid that class entirely because they are contracts rather than narrative: an AC naming a path asserts that path is part of the delivered system.
 
   Kept in 045 rather than split into its own spec because two specs each adding a `check-artifacts` family and each editing `analyze.md` is precisely the bundling pair Family 7 (sibling-spec coupling) exists to surface. Accepted cost: this widens 045 beyond the "narrow by construction" framing in §Scope and requires its own acceptance criteria, added below.
 

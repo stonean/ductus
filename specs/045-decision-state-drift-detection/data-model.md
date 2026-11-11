@@ -90,12 +90,14 @@ pub struct SkippedTarget {
 | `artifact-unreadable` | a scanned *citing* artifact could not be read at all, below `done`; on a `done` spec it is a blocking finding instead (`8c4ca744`) |
 | `not-a-live-claim` | a checked path sits in a criterion, or a body line, that claims absence or describes a transition rather than claiming presence, so a finding would be backwards |
 | `never-existed` | a body path no revision of the repository ever held — an example or a never-built alternative, a name rather than a file ([067's body-path-existence-family](../067-analyze-and-audit-checks/scenarios/body-path-existence-family.md)) |
+| `gitignored` | a checked criterion path is one the repository's own ignore rules ignore, local state a fresh clone lacks ([067's status-gated-families-are-not-silent](../067-analyze-and-audit-checks/scenarios/status-gated-families-are-not-silent.md)) |
+| `status-gated` | a path family did not examine the spec, whose status is neither `in-progress` nor `done`; the path is its `spec.md` (the same scenario) |
 
 `clean` keeps its existing definition — `findings.is_empty()` — so no existing consumer changes. A non-empty `skipped` alongside `clean: true` is the state the host renders in the Informational tier.
 
 ## Acceptance-criterion path grammar
 
-Applies to `criterion-path-existence` only, over the contents of inline code spans inside a `done` spec's `## Acceptance Criteria` entries.
+Applies to `criterion-path-existence` only, over the contents of inline code spans inside an `in-progress` or `done` spec's `## Acceptance Criteria` entries.
 
 A span's whole trimmed content, with surrounding quotes and a leading `./` stripped, is a candidate path when **all** hold:
 
