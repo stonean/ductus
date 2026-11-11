@@ -182,7 +182,6 @@ Both workflows reference their actions by full commit SHA with the release tag i
 | --- | --- | --- |
 | `framework/bootstrap/ductus.md` | Modify | Add Hook Installation section; add `framework/rules/configuration-cross.md` to Shared Files (update strategy); add `framework/bootstrap/hooks/pre-commit` to Shared Files (create strategy) |
 | `framework/bootstrap/configure/claude.md` | Modify | Add Bash permissions for hook install/run paths (`Bash(git config *)`, `Bash(.githooks/*)`, `Bash(scripts/gen-*)`) |
-| `framework/bootstrap/configure/auggie.md` | Modify | Same permission additions in Auggie's format |
 
 ### CI
 

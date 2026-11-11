@@ -299,7 +299,6 @@ Done when: `/ductus` ships the new files and manages the adopter hook with the d
 ### 28. Update permission files
 
 - [x] `framework/bootstrap/configure/claude.md` — added `chmod +x`, `git config core.hooksPath` (set/get/unset), `./.githooks/pre-commit`, `scripts/gen-*.sh`, `scripts/install-hooks.sh` permissions
-- [x] `framework/bootstrap/configure/auggie.md` — same permissions in Auggie's regex format
 - [x] Lint passes
 
 Done when: adopters scaffolding via `/ductus` get the necessary Bash permissions for hook operations without prompts. ✓
