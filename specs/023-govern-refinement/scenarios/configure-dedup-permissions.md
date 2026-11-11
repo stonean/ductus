@@ -17,8 +17,8 @@ The intent of that line is sound — protect user-added entries from being clobb
 - `/configure` invokes a new deterministic `ductus` primitive (introduced separately on spec 022) that performs an idempotent merge of the canonical allow/deny set into `.claude/settings.local.json`. The merge ensures every canonical entry is present, removes exact-match duplicates from `permissions.allow` and `permissions.deny` (including non-canonical entries the user or other commands added), preserves first-occurrence order, and leaves untouched fields (`additionalDirectories`, `defaultMode`, top-level keys other than `permissions`) byte-for-byte unchanged.
 - Exact-match equality is string-equal on the rendered permission pattern. No semantic normalization: `Bash(git status)` and `Bash(git status *)` are distinct, and both are preserved if both are present.
 - The dedup pass is mandatory on every `/configure` invocation, not a separate flag — the file's invariant is "no duplicate entries in `permissions.allow` / `permissions.deny`."
-- `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` update their inline instruction: the "do NOT … deduplicate, reorder, or rewrite" prohibition becomes "do NOT reorder or rewrite non-duplicate entries; the primitive deduplicates exact-match entries automatically." The generated `.claude/commands/ductus/configure.md` follows from the source rewrite via the normal command generator; no separate edit required.
-- Without the MCP server the host runs `ductus merge-permissions`. Auggie's `toolPermissions` shape has no primitive, so there the host splices: read the JSON, ensure canonical entries are present, then perform the dedup pass as a final step before writing.
+- `framework/bootstrap/configure/claude.md` updates its inline instruction: the "do NOT … deduplicate, reorder, or rewrite" prohibition becomes "do NOT reorder or rewrite non-duplicate entries; the primitive deduplicates exact-match entries automatically." The generated `.claude/commands/ductus/configure.md` follows from the source rewrite via the normal command generator; no separate edit required.
+- Without the MCP server the host runs `ductus merge-permissions`.
 - `.gitignore` is out of scope for this scenario. Its framework-managed region is already handled deterministically by `merge-managed-block`. If the broader dedup contract should extend to `.gitignore`'s managed block (or across the marker boundary), that is a separate scenario on spec 022 against the `merge-managed-block` primitive — not a `/configure` behavior.
 
 ## Edge Cases
@@ -26,7 +26,6 @@ The intent of that line is sound — protect user-added entries from being clobb
 - Empty file or missing `permissions.allow` / `permissions.deny` array: the primitive seeds the array with the canonical entries; no dedup is required.
 - Malformed JSON: the primitive surfaces a parse error and refuses to write; the existing JSON-corruption path applies.
 - Duplicates introduced by another command between `/configure` runs (e.g., `/ductus` or a future command appending to `permissions.allow`): cleaned up on the next `/configure` invocation. `/configure` is the single owner of the dedup invariant on this file.
-- The Auggie permission format uses a different rendering (per spec 023 §6's host-specific note); dedup applies independently per host's array shape.
 
 ## Open Questions
 

@@ -25,7 +25,7 @@ This is the same defect class the sibling scenario `configure-permission-pattern
 
 The bare `Edit` and `Write` tool-level entries at the top of §5 are unaffected: they name tools, not paths, and the warning is specific to the path-scoped form.
 
-`claude.md` is the only host affected — `auggie.md`, `antigravity.md`, and `opencode.md` express file permissions in their own grammars and carry no `Write(path)` entries.
+`claude.md` is the only host affected: Pi has no permission file, so no per-agent configure file carries a `Write(path)` entry but Claude's.
 
 ## Behavior
 

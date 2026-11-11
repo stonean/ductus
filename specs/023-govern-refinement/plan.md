@@ -14,14 +14,14 @@ Within phase B, the four scope-of-change items from the spec land in this order:
 
 Phase A has six tasks in this order:
 
-1. **Add the MCP allow-list generator** (`scripts/gen-configure-mcp.sh`) and wire it into pre-commit. This establishes the invariant: every tool listed in `framework/runtime-tools.txt` is allowed by both `claude.md` and `auggie.md`. The generator is empty-load at this point — no new tools have been added yet — so it simply emits the current canonical set into the managed blocks.
+1. **Add the MCP allow-list generator** (`scripts/gen-configure-mcp.sh`) and wire it into pre-commit. This establishes the invariant: every tool listed in `framework/runtime-tools.txt` is allowed by `claude.md`. The generator is empty-load at this point — no new tools have been added yet — so it simply emits the current canonical set into the managed blocks.
 2. Open the spec 022 follow-on scenario via `/elaborate` (today's verb, before consolidation lands). Spec 022 reopens `done → in-progress`.
 3. Implement `create-scenario` primitive in `ductus`.
 4. Implement `append-task` primitive in `ductus`.
-5. Append `gov-rt:create-scenario` and `gov-rt:append-task` to `framework/runtime-tools.txt`. The pre-commit hook runs `gen-configure-mcp.sh` in the same commit, propagating the entries into `claude.md` and `auggie.md` automatically. Tag the `ductus` release with the new binary; the framework files (including the updated configure sources) ship through the same ductus commit.
+5. Append `gov-rt:create-scenario` and `gov-rt:append-task` to `framework/runtime-tools.txt`. The pre-commit hook runs `gen-configure-mcp.sh` in the same commit, propagating the entries into `claude.md` automatically. Tag the `ductus` release with the new binary; the framework files (including the updated configure sources) ship through the same ductus commit.
 6. Close the spec 022 scenario; spec 022 returns to `done`.
 
-Only after Phase A completes does Phase B begin — the `framework/commands/amend.md` rewrite calls primitives that exist in `ductus` and are already allowed by the configure files.
+Only after Phase A completes does Phase B begin — the `framework/commands/amend.md` rewrite calls primitives that exist in `ductus` and are already allowed by the configure file.
 
 Rationale: deferring the primitive landing to mid-023 would force the `amend.md` rewrite to ship in lockstep with `ductus` primitives in the same PR, blurring the per-spec scope and making rollback noisy. Two clean releases (the runtime binary first, the framework second) keep each landing independently revertible. The generator-before-primitive ordering inside Phase A means the `runtime-tools.txt` → configure invariant holds at every commit on `main` — no transient window where the canonical allow set lags the published tool list.
 
@@ -29,16 +29,15 @@ Both primitives write only inside the feature directory their caller names (`BE-
 
 ### MCP allow-list generator — `scripts/gen-configure-mcp.sh`
 
-New generator following the same pattern as `gen-help-tables.sh`. Reads `framework/runtime-tools.txt`, emits per-agent permission entries into managed blocks in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`. Marker shape: `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`.
+New generator following the same pattern as `gen-help-tables.sh`. Reads `framework/runtime-tools.txt`, emits permission entries into a managed block in `framework/bootstrap/configure/claude.md`. Marker shape: `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`.
 
-Per-host format mapping baked into the generator:
+Format mapping baked into the generator:
 
 - **Claude**: each `gov-rt:<verb>-<noun>` tool becomes the permission entry `mcp__gov-rt__<verb>-<noun>`.
-- **Auggie**: each tool becomes the entry shape Auggie's `toolPermissions` schema expects (verified against the current `auggie.md` source at implementation time; placeholder pattern documented as `mcp:gov-rt:<verb>-<noun>` until the schema is confirmed by reading the file).
 
-Wired into `.githooks/pre-commit` alongside the existing generators so any change to `runtime-tools.txt` flows through to both agent permission files on the next commit. `runtime/tests/mcp.rs` holds `runtime-tools.txt` set-equal to the tools the server serves; the new generator adds the leg from `runtime-tools.txt` to the configure sources.
+Wired into `.githooks/pre-commit` alongside the existing generators so any change to `runtime-tools.txt` flows through to the permission file on the next commit. `runtime/tests/mcp.rs` holds `runtime-tools.txt` set-equal to the tools the server serves; the new generator adds the leg from `runtime-tools.txt` to the configure source.
 
-Critically, the generator lands **before** the two new primitives are appended to `runtime-tools.txt` (Phase A task 1 vs. task 5 ordering). This guarantees the configure files are updated in the same commit that adds the tool names — the invariant "every tool in `runtime-tools.txt` is allowed by the canonical configure set" holds at every commit on `main`.
+Critically, the generator lands **before** the two new primitives are appended to `runtime-tools.txt` (Phase A task 1 vs. task 5 ordering). This guarantees the configure file is updated in the same commit that adds the tool names — the invariant "every tool in `runtime-tools.txt` is allowed by the canonical configure set" holds at every commit on `main`.
 
 ### Lightweight track sweep strategy
 
@@ -150,9 +149,8 @@ The changelog entry accompanying the paired runtime and framework release docume
 | `framework/commands/help.md` | Modify | Rename "Elaborate" heading to "Refine"; update marker names. |
 | `framework/commands/groom.md` | Modify | Update references that point at `/elaborate` to point at `/amend`. |
 | `framework/bootstrap/configure/claude.md` | Modify | Add managed block holding the MCP allow-list entries. |
-| `framework/bootstrap/configure/auggie.md` | Modify | Add managed block holding the MCP allow-list entries (Auggie format). |
 | `scripts/gen-help-tables.sh` | Modify | Rename `commands-elaborate` marker → `commands-refine`; drop `/elaborate` and `/capture` rows. |
-| `scripts/gen-configure-mcp.sh` | Create | New generator: emits MCP allow-list into both configure sources from `runtime-tools.txt`. |
+| `scripts/gen-configure-mcp.sh` | Create | New generator: emits MCP allow-list into the configure source from `runtime-tools.txt`. |
 | `.githooks/pre-commit` | Modify | Wire `gen-configure-mcp.sh` into the hook. |
 | `README.md` | Modify | Remove `/capture`, `/elaborate`, and lightweight-track references; update Slash Commands tables; drop `spec-and-plan.md` from templates table. |
 | `AGENTS.md` | Modify | Drop `spec-and-plan` from the framework templates list (line 17). |
@@ -168,7 +166,7 @@ The changelog entry accompanying the paired runtime and framework release docume
 
 - **Ship the runtime and framework changes in one combined release.** Rejected — couples two scopes that benefit from independent revert. The dependency points one way (the framework needs the new runtime primitives) so the staged release model adds no extra risk and isolates rollback.
 - **Extend `lint-tool-coverage.sh` to grep for `spec-and-plan.md` as a sanity check.** Rejected for this spec — out of scope, and the validation pass's one-shot grep covers the same need without expanding the lint surface. If the literal string sneaks back in a future change, that's a job for an `/audit` command (deferred per the inbox). **Settled 2026-09-14, and not the way this expected.** `/{project}:audit` shipped with spec 026, and `scripts/audit/introducing-drift.sh` is exactly the sanity check described — its `RENAMED_TOKENS` catalog carries `/capture`, `/elaborate`, `/validate` and `/ductus:validate` from this spec. `spec-and-plan.md` is deliberately **not** in it, and the reason is stronger than the out-of-scope one above: it is a retired *filename* the project still reads under the old name, so a token catalog would fire on every load-bearing occurrence — the pre-commit hooks' `(spec|spec-and-plan)\.md` alternation, `scripts/lint-frontmatter.sh`, `is_spec_path`, and the `spec-and-plan-sunset` migration entry that records the rename. Sweeping it by token is the wrong instrument; the read-side fallback this spec ripped is what AC10 verifies instead.
-- **Embed the MCP allow-list inline in `configure/claude.md` and `configure/auggie.md` (no generator).** Rejected — two-file copy with manual sync is exactly the drift pattern `gen-*.sh` scripts exist to prevent. The generator is ~50 lines and pays itself back the first time the runtime tool list changes.
+- **Embed the MCP allow-list inline in `configure/claude.md` (no generator).** Rejected — a hand-synced copy is exactly the drift pattern `gen-*.sh` scripts exist to prevent. The generator is ~50 lines and pays itself back the first time the runtime tool list changes.
 - **Detect runtime presence in `/configure` and gate the MCP entries on it.** Rejected (also recorded as a Resolved Question on the spec) — adds complexity for no benefit; allow entries for unregistered tools are no-ops.
 - **Migrate adopter `spec-and-plan.md` files automatically during `/ductus` bootstrap without prompting.** Rejected — silent file renames on adopter projects violate the user-confirms-irreversible-actions principle. The prompt is one line; the user keeps the override.
 - **Rename §brownfield-process anchor to something verb-neutral.** Rejected (Resolved Question) — anchor renames cascade through every command's Scope Boundaries citation; the term "brownfield" still describes the situation.
@@ -176,5 +174,4 @@ The changelog entry accompanying the paired runtime and framework release docume
 ### Known limitations
 
 - The migration check in `/ductus` bootstrap relies on shell `find` and host-level file operations, not a new primitive. This is acceptable because the migration is a one-time event per adopter; adding a `migrate-spec-and-plan` primitive would carry maintenance cost long after the migration is done across the adopter base.
-- Auggie's MCP permission format may differ from the placeholder shape (`mcp:gov-rt:<verb>-<noun>`) assumed here. The generator implementation reads `framework/bootstrap/configure/auggie.md` at implementation time to confirm the schema; if the placeholder is wrong, the generator updates to match. This is a small implementation-time correction, not a spec-time risk.
 - The `flip` keyword in `/amend`'s refinement-approval gate may conflict with a legitimate question or scenario whose text starts with the literal word "flip". Mitigation: the gate matches `flip` only as a standalone command at the prompt — text that includes "flip" mid-sentence as part of a refined question or scenario is recognized as user-provided content via the existing approve/refine selector, not as the override keyword.

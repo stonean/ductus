@@ -6,22 +6,20 @@ Tasks derived from the [plan](plan.md). Complete in order. Phase A (invariant + 
 
 ### 1. Add MCP allow-list generator (invariant foundation)
 
-- [x] Create `scripts/gen-configure-mcp.sh`. Reads `framework/runtime-tools.txt`. Emits Claude-format entries (`mcp__gov-rt__<verb>-<noun>`) into a managed block in `framework/bootstrap/configure/claude.md` (markers `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`). Emits Auggie-format entries into the same-named markers in `framework/bootstrap/configure/auggie.md`.
-- [x] Read `framework/bootstrap/configure/auggie.md` once to confirm the Auggie `toolPermissions` schema; update the generator's per-host mapping if it differs from the placeholder pattern.
-- [x] Add the marker blocks to both configure source files at the appropriate location in the canonical allow-list section.
+- [x] Create `scripts/gen-configure-mcp.sh`. Reads `framework/runtime-tools.txt`. Emits Claude-format entries (`mcp__gov-rt__<verb>-<noun>`) into a managed block in `framework/bootstrap/configure/claude.md` (markers `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`).
+- [x] Add the marker blocks to the configure source file at the appropriate location in the canonical allow-list section.
 - [x] Add `gen-configure-mcp.sh` to `.githooks/pre-commit` after the other generators.
-- [x] Run the generator and verify both configure files contain entries for every `gov-rt:*` tool currently listed in `runtime-tools.txt` (pre-primitive-add: 21 entries).
+- [x] Run the generator and verify the configure file contains entries for every `gov-rt:*` tool currently listed in `runtime-tools.txt` (pre-primitive-add: 21 entries).
 
-Done when: dry-run reports "in sync" after a clean run; both configure files contain the managed-block entries for every existing tool; pre-commit hook executes the generator without error.
+Done when: dry-run reports "in sync" after a clean run; the configure file contains the managed-block entries for every existing tool; pre-commit hook executes the generator without error.
 
 ### 1b. Session-file allow entries
 
 - [x] Edit `framework/bootstrap/configure/claude.md`: add explicit `Edit({cli-config-dir}/{project}-session.json)` and `Write({cli-config-dir}/{project}-session.json)` to the canonical `permissions.allow` array. Place them next to the existing bare `Edit` / `Write` entries (or in a "Ductus state files" sub-section, matching the prose grouping pattern used elsewhere in the file).
-- [x] Confirm `framework/bootstrap/configure/auggie.md`'s existing `save-file` and `str-replace-editor` allows cover session-file writes (read once, document if a path-restriction syntax is needed instead — Auggie's existing bare-allow pattern for these tools should suffice).
 - [x] Run `scripts/gen-claude-commands.sh` and confirm `.claude/commands/ductus/configure.md` regenerates with the new entries.
-- [x] Run `npx markdownlint-cli2` against both configure sources — passes.
+- [x] Run `npx markdownlint-cli2` against the configure source — passes.
 
-Done when: claude.md's permissions.allow contains the two explicit session-file entries; auggie.md is verified to need no addition; downstream `.claude/commands/ductus/configure.md` reflects the change.
+Done when: claude.md's permissions.allow contains the two explicit session-file entries; downstream `.claude/commands/ductus/configure.md` reflects the change.
 
 ### 2. Open the cross-spec scenario on spec 022
 
@@ -54,13 +52,13 @@ Done when: `cargo test` passes; the MCP tool responds correctly under fixture in
 ### 5. Update `runtime-tools.txt` and tag release
 
 - [x] Append `gov-rt:create-scenario` and `gov-rt:append-task` to `framework/runtime-tools.txt`.
-- [x] Stage the change and commit. The pre-commit hook runs `gen-configure-mcp.sh` automatically; verify the commit includes updates to `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` adding the two new entries to the managed block.
+- [x] Stage the change and commit. The pre-commit hook runs `gen-configure-mcp.sh` automatically; verify the commit includes an update to `framework/bootstrap/configure/claude.md` adding the two new entries to the managed block.
 - [x] Run `scripts/lint-tool-coverage.sh` and confirm pass.
 - [x] Bump `runtime/Cargo.toml` version (next minor — primitive additions are non-breaking).
 - [x] Update `runtime/CHANGELOG.md` with the two new primitives and reference to spec 022 scenario.
 - [x] Tag `gvrn-vX.Y.0` and confirm GitHub release artifacts publish.
 
-Done when: release artifacts are downloadable; `ductus --version` reports the new version; `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` both contain allow entries for `gov-rt:create-scenario` and `gov-rt:append-task`.
+Done when: release artifacts are downloadable; `ductus --version` reports the new version; `framework/bootstrap/configure/claude.md` contains allow entries for `gov-rt:create-scenario` and `gov-rt:append-task`.
 
 ### 6. Close the spec 022 scenario
 
@@ -242,10 +240,10 @@ Done when: `/ductus:review` returns clean and the spec frontmatter's `review.blo
 
 ### 21. Remove wildcard-before-subcommand allows from the `/configure` canonical allow-set
 
-- [x] Remove the seven `Bash(git -C * add|commit|push|log|diff|status|show *)` allow entries from `framework/bootstrap/configure/claude.md:51-57`, replacing them with a rationale comment that cites the same over-broadening reasoning as `configure/antigravity.md:89`
+- [x] Remove the seven `Bash(git -C * add|commit|push|log|diff|status|show *)` allow entries from `framework/bootstrap/configure/claude.md:51-57`, replacing them with a rationale comment citing the over-broadening reasoning
 - [x] Confirm the deny-side `git -C *` entries at `claude.md:147-152` are left intact, with a note that over-broad denial is intentional and must not be narrowed
 - [x] Regenerate `.claude/commands/ductus/configure.md` via the command generator and confirm the pre-commit hook (spec 017 row 11) stages it
-- [x] Add a `/ductus:audit` check that fails when any `configure/*.md` canonical allow-set contains a wildcard before the subcommand, skipping hosts whose format cannot express the shape (`auggie.md`'s anchored regexes)
+- [x] Add a `/ductus:audit` check that fails when any `configure/*.md` canonical allow-set contains a wildcard before the subcommand
 - [x] Verify no adopter-facing migration is implied: `/ductus:configure` still does not rewrite non-canonical entries already in an adopter's `settings.local.json`
 
 - **Done when**: The seven `Bash(git -C * <sub> *)` allow entries are gone from `framework/bootstrap/configure/claude.md` §§5–6 with a rationale comment in their place, the deny-side `git -C *` entries at lines 147-152 are retained and documented as intentionally broad, the regenerated `.claude/commands/ductus/configure.md` matches, and `/ductus:audit` fails on any wildcard-before-subcommand pattern in a host's canonical allow-set.
