@@ -2,6 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 next-criterion: 5
+cross-spec-impact: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 ---
 
 # 067 — Analyze and Audit Checks
