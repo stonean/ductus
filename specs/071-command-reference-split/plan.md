@@ -252,7 +252,7 @@ envelopes only, so the fixture change does not move it.
 
 ### Bytes loaded per invocation, measured after the split
 
-Measured at `a1fc6376` (2026-11-11) with `git show a1fc6376:<path> | wc -c`, in
+Measured at `c9b2155c` (2026-11-11) with `git show c9b2155c:<path> | wc -c`, in
 bytes, against the spec's figures at `bb372676`. *Before* is the whole command
 file, which every invocation loaded; *After* is the command file alone, which is
 now all an invocation loads; *Reference* is read only when a step names a
@@ -261,10 +261,10 @@ are the tree's at that sha, not the split's alone.
 
 | Command | Before | After | Change | Reference |
 | --- | --- | --- | --- | --- |
-| analyze | 111,742 | 26,481 | −76.3% | 50,300 |
+| analyze | 111,742 | 26,481 | −76.3% | 50,217 |
 | review | 64,647 | 24,006 | −62.9% | 46,288 |
 | implement | 44,828 | 13,238 | −70.5% | 12,730 |
-| audit | 37,267 | 4,894 | −86.9% | 35,096 |
+| audit | 37,267 | 4,894 | −86.9% | 35,136 |
 | clarify | 30,694 | 18,832 | −38.6% | 12,127 |
 | fold | 22,711 | 12,406 | −45.4% | 5,109 |
 | specify | 21,884 | 12,611 | −42.4% | 8,385 |
@@ -274,7 +274,7 @@ are the tree's at that sha, not the split's alone.
 | plan | 16,954 | 7,617 | −55.1% | 10,078 |
 | consolidate | 16,141 | 16,094 | −0.3% | 3,996 |
 | log | 4,414 | 3,761 | −14.8% | 485 |
-| **Total** | **430,896** | **175,387** | **−59.3%** | **199,449** |
+| **Total** | **430,896** | **175,387** | **−59.3%** | **199,406** |
 
 Per invocation the commands load 255,509 fewer bytes in total, 59.3%.
 `analyze`, the case that motivated the change, drops from 111,742 to 26,481
