@@ -36,9 +36,9 @@ Enforces `.ductus/constitution.md` §plan-phase's *a plan records the design as 
 
 **Not covered:** a journal nested under a design heading — a `### Task 7 notes` inside Technical Decisions — is part of that section, and no heading test reaches it. The rule applies there all the same.
 
-Suggested fix per finding: run `/ductus:prune`, which moves the section's durable pieces into the design record or their own homes and then removes it; or, when the section is deliberately part of this plan's design — a *Known limitations*, a *Classification* — fold it under a design-record heading, which ends the finding. The rule's own waiver of the finding only keeps the next analyze from deciding it again, so a prune still proposes the section; a person's waiver stored earlier still keeps it.
+Suggested fix per finding: run `/ductus:prune`, which moves the section's durable pieces into the design record or their own homes and then removes it; or, when the section is deliberately part of this plan's design — a *Known limitations*, a *Classification* — fold it under a design-record heading, which ends the finding. A waiver only keeps the next analyze from deciding it again, so a prune still proposes the section.
 
-**Severity:** advisory, and it stays advisory. The heading set is a detector, not a verdict: a legitimate design section under another heading fires too, so the answer to a false positive is folding the section under a design-record heading, never a gate.
+**Severity:** advisory, and it stays advisory: the heading set is a detector, not a verdict, so a false positive is answered by folding the section, never a gate.
 
 ## Artifact size (advisory)
 
@@ -46,11 +46,11 @@ Warns when a spec artifact is larger than an agent may read in one call (§groun
 
 Bytes are a proxy: the runtime has no tokenizer and the cap differs per host and per host setting, so the threshold is a heuristic the project sets, and no value switches the check off.
 
-**A waiver holds until the file grows into another read page**, because the reason given for one page does not cover two. The stored-decision step cannot hold that numeric rule by judgment, so the primitive decides it and returns the covering waiver's key.
+**A waiver holds until the file grows into another read page**, because the reason given for one page does not cover two. The primitive decides that numeric rule and returns the covering waiver's key.
 
 The size check never escalates an unreadable subject: on a `done` spec, **Scenario open questions** and **Link-adjacent decision drift** already block on an unreadable `spec.md`, `plan.md`, `tasks.md` or scenario.
 
-**Severity:** advisory, and it stays advisory. A size is a heuristic about a host the check cannot see, so a false positive is answered with one stored waiver, never a gate.
+**Severity:** advisory, and it stays advisory: a false positive is answered with one stored waiver, never a gate.
 
 ## Task consistency (blocking if tasks exist)
 
@@ -60,11 +60,11 @@ The size check never escalates an unreadable subject: on a `done` spec, **Scenar
 
 ## Grounding (advisory)
 
-Enforces `.ductus/constitution.md` §grounding against the spec and plan bodies; step 15 defines the passage to flag and where the check applies, and a passage framed as a proposal is not asserted as fact either. It checks the *form* of grounding, not its truth: confirming a claim would mean reading source, out of this command's scope, so the truth check is the agent's at authoring time and `/ductus:review`'s against code. A `draft` spec is exempt because its claims are still forming.
+Enforces `.ductus/constitution.md` §grounding against the spec and plan bodies; step 15 defines the passage to flag and where the check applies, and a passage framed as a proposal is not asserted as fact either. It checks the *form* of grounding, not its truth: the truth check is the agent's at authoring time and `/ductus:review`'s against code. A `draft` spec is exempt because its claims are still forming.
 
 Suggested fix per finding: ground the claim (read the code, query the dev database, run the command — then cite the source), or, when no reachable source can settle it, restate it as an assumption (in a plan) or an Open Question (in a spec, which reverts the spec to `draft` per §spec-lifecycle).
 
-**Severity:** advisory in v1 — grounding is a semantic judgment with false-positive risk, and a noisy gate erodes trust. **Promotion criterion:** promote to blocking when a single `/ductus:analyze --all` run reports 5 or more ungrounded claims across the repo on two consecutive runs; the second run guards against a claim landing mid-authoring before its source is wired in.
+**Severity:** advisory in v1 — grounding is a semantic judgment with false-positive risk, and a noisy gate erodes trust. **Promotion criterion:** promote to blocking when a single `/ductus:analyze --all` run reports 5 or more ungrounded claims across the repo on two consecutive runs.
 
 ## Scenario consistency (advisory)
 
@@ -74,7 +74,7 @@ Suggested fix per finding: ground the claim (read the code, query the dev databa
 
 ## Scenario open questions (blocking at `done`, advisory otherwise)
 
-A scenario keeps `spec.md` from becoming one huge document, so its unresolved questions are the spec's for the purpose of completeness; on a `done` spec that contradicts the completion rule in §spec-lifecycle.
+A scenario's unresolved questions are the spec's for the purpose of completeness; on a `done` spec that contradicts §spec-lifecycle.
 
 - **No grandfather rule**, unlike Review state drift below: an unresolved scenario question is a present-tense defect whenever it arrived.
 - Only `## Open Questions` counts. A question deferred pending a condition is resolved *with* that condition (§spec-requirements) and belongs in that scenario's `## Resolved Questions`. There is no skip marker on purpose: an exemptible section would let anything blocking be relabelled to ship past the check.
@@ -85,9 +85,9 @@ When `--fix` is set, this check additionally reverts affected specs from `done` 
 
 ## Link-adjacent decision drift (advisory)
 
-Enforces `.ductus/constitution.md` §drift-prevention's *Decision resolution* obligation where it can be checked deterministically: prose in `spec.md`, `plan.md`, `tasks.md` or `scenarios/*.md` asserting an open state that its own sibling link's target contradicts. The grounding check above cannot catch this: it verifies a claim is *cited*, not that it is *true*. The finding's message names the line, every fired tell the target contradicts, the target and its contradicting state, with one finding per block and link. The tell list is closed and framework-fixed, with no per-project configuration, so the promotion criterion below measures drift rather than configuration.
+Enforces `.ductus/constitution.md` §drift-prevention's *Decision resolution* obligation where it can be checked deterministically: prose in `spec.md`, `plan.md`, `tasks.md` or `scenarios/*.md` asserting an open state that its own sibling link's target contradicts. The grounding check cannot catch this: it verifies a claim is *cited*, not *true*. The finding's message names the line, every fired tell the target contradicts, the target and its contradicting state, with one finding per block and link. The tell list is closed and framework-fixed, with no per-project configuration, so the promotion criterion below measures drift rather than configuration.
 
-**Not covered, and recorded so it is not mistaken for a gap:** `review.md`, pinned to its `reviewed-against` sha so its prose is correct as written, and `data-model.md`; a link whose target *exists* but whose cited section no longer says what the citing prose claims; prose that merely reads as historical; and an implementation-state tell against a scenario target, since a scenario has no lifecycle status and a spent task pruned per §tasks-phase looks like an unimplemented one.
+**Not covered:** `review.md`, pinned to its `reviewed-against` sha so its prose is correct as written, and `data-model.md`; a link whose target *exists* but whose cited section no longer says what the citing prose claims; prose that merely reads as historical; and an implementation-state tell against a scenario target, since a scenario has no lifecycle status and a spent task pruned per §tasks-phase looks like an unimplemented one.
 
 Suggested fix per finding: correct the prose to describe the target's current state, or — when the prose is right and the target is wrong — fix the target. Prose that only quotes a stale claim goes in a blockquote or an inline code span, which the scan exempts, as it does fenced code blocks and HTML comments.
 
@@ -97,18 +97,18 @@ For each spec at `in-progress` or `done`, `check-artifacts` reports every filesy
 
 - **Scope is `## Acceptance Criteria` on `in-progress` and `done` specs, and nothing else.** Body prose may name a dead path correctly while describing history, and is **Body path existence**'s, below. The analysis the completion gate reads is taken at `in-progress`, so it runs this family; a criterion naming a file the spec has yet to create is a finding until the file lands. At any other status the family examines nothing and records one `status-gated` skip, its path the spec's `spec.md`, so the record says it did not run.
 - **Paths are read inside inline code spans**, the inverse of the tell scan above: a span is a candidate when its whole content is a repo-relative path with an interior `/`, never a URL, a `path:line` citation, a slash command, a flag, a glob, a placeholder or an elided path. A candidate resolves as a file **or** a directory.
-- **The criterion must be a live claim.** A path is checked only when its criterion actually claims the path is *present*. A criterion carrying any of fifteen closed phrases is exempted whole and its paths recorded as `not-a-live-claim`: deletion and retirement (`deleted`, `does not exist`, `no longer exist`, `is removed`, `are removed`, `since retired`), rename (`is renamed to`, `are renamed to`, `renamed from`, `(was` + space), migration subject (`target paths`, `target_paths`), adopter scope (`in the project`), and hedges (`if it exists`, `e.g.`). The finding would be backwards otherwise: `X is deleted` is satisfied because `X` is gone.
+- **The criterion must be a live claim.** A path is checked only when its criterion actually claims the path is *present*. A criterion carrying any of fifteen closed phrases is exempted whole and its paths recorded as `not-a-live-claim`: deletion and retirement (`deleted`, `does not exist`, `no longer exist`, `is removed`, `are removed`, `since retired`), rename (`is renamed to`, `are renamed to`, `renamed from`, `(was` + space), migration subject (`target paths`, `target_paths`), adopter scope (`in the project`), and hedges (`if it exists`, `e.g.`).
 - **A criterion asserting a path was never created is exempted the same way**, when one of its clauses carries a negator (`no`, `not`, `never`, `without`) **before** a creation verb (`created`, `added`, `introduced`). Both lists are closed and framework-fixed. `X was created and not modified since` is a delivery claim and still flags.
 - **An unresolved candidate is a finding only when its own top-level segment exists.** When that segment is absent nothing is provable — a framework project's criteria legitimately name paths that live in an adopter's checkout — so the candidate is recorded as `root-absent` under Unexamined targets below.
 - **A path this project ships into an adopter's checkout is recorded, not flagged**, as `ships-to-adopter`: a Shared Files manifest destination or a registered agent's scaffold path in `framework/bootstrap/ductus.md`, or a directory containing one. An absent or unparseable manifest yields an empty set, so nothing is suppressed that was not derived; in an adopter project the file is absent, and those paths resolve there anyway.
 - **A path the repository's own ignore rules ignore is recorded, not flagged**, as `gitignored`: local state such as `.ductus/session.toml`, present in a working checkout and absent from a fresh clone, so the result does not depend on which tree it ran in. The rules are the ones `git check-ignore` reads; outside a repository none apply.
-- **An unbackticked path is missed.** Accepted: outside code font a `/`-bearing token is more often a slash command, a placeholder, or an `and/or` than a path.
+- **An unbackticked path is missed.** Accepted: outside code font a `/`-bearing token is more often not a path.
 
 Suggested fix per finding: correct the criterion to name the current path, or — when the deletion means the criterion is no longer satisfied — uncheck it and route the work through `/ductus:amend`.
 
 ## Unexamined targets (informational)
 
-The checks above read *targets* that may be unreadable: a link resolving to a file that no longer exists, a target that cannot be read or is reached through a symbolic link, a target carrying no state the tell's class can be evaluated against. None of these produces a finding — an unknown is never escalated into a defect — **with one exception**: `artifact-unreadable` on a spec at `status: done` is a **blocking** finding rather than a skipped target. That rule is about *other* files, where the defect belongs to someone else; `artifact-unreadable` names the spec's **own** artifact, which its own analysis could not read, as when a scenario carrying unresolved questions will not parse under the gate built to catch them. Below `done` it stays a skipped target: the spec is in flight.
+The checks above read *targets* that may be unreadable: a link resolving to a file that no longer exists, a target that cannot be read or is reached through a symbolic link, a target carrying no state the tell's class can be evaluated against. None of these produces a finding — an unknown is never escalated into a defect — **with one exception**: `artifact-unreadable` on a spec at `status: done` is a **blocking** finding rather than a skipped target. `artifact-unreadable` names the spec's **own** artifact, which its own analysis could not read, as when a scenario carrying unresolved questions will not parse under the gate built to catch them. Below `done` it stays a skipped target: the spec is in flight.
 
 They are not silent either. The `check-artifacts` result carries a `skipped` list of `{family, reason, path}` records. Render them in the **Informational** tier. `clean` means only no findings, so the assurance lives in the pair (`QUAL-CLAIM-001`): clean with nothing skipped is verified-clean, clean with something skipped is partially examined.
 
@@ -132,7 +132,7 @@ A `[constitutions.*]` entry the run could not read is recorded in the record's `
 
 **Severity:** advisory at introduction, matching the grounding and Applicable-Rules checks. **Promotion criterion:** promote to blocking when a single `/ductus:analyze --all` run reports 5 or more findings across the repo on two consecutive runs, **and** every finding in those runs is confirmed a true positive.
 
-The second half is required *here* and not for the LLM-judged checks: these two are mechanical matches — a word list and a path grammar — so a noisy implementation reaches the volume exactly as reliably as an accurate one. It needs maintainer confirmation, and promoting a check to blocking is already a deliberate human decision.
+The second half is required *here* and not for the LLM-judged checks: these two are mechanical matches — a word list and a path grammar — so a noisy implementation reaches the volume as reliably as an accurate one.
 
 ## Body path existence (advisory)
 
@@ -188,8 +188,8 @@ Specs not at `status: done` are silently exempt, since `review.md` is written la
 
 For each spec at `status: done`, judge the `analysis.md` this run just wrote, after step 21 — never the record it is replacing. If that record is `blocking: true`, report `analyze drift: done spec's analysis.md records {hard-fail} hard-fail and {blocking-findings} blocking finding(s) — resolve them and re-run /ductus:analyze` (**blocking**).
 
-- **Why the new record.** A finding read from the record about to be replaced could never clear: it is blocking, so it cannot be waived, no fix removes it before the rewrite, and it would enter the new record's counts. Judged from the new record, a run that fixes every hard-fail and blocking finding leaves no drift.
-- **The report names a state, not a finding.** The findings behind it are already in the record's tiers; it is not counted again, because a record cannot count its own verdict.
+- **Why the new record.** A finding read from the record about to be replaced could never clear: it is blocking, so it cannot be waived, and no fix removes it before the rewrite. Judged from the new record, a run that fixes every hard-fail and blocking finding leaves no drift.
+- **The report names a state, not a finding**, and is not counted in the record, which cannot count its own verdict.
 - **Advisory findings are not checked**, unlike Review state drift's outstanding SHOULD: some of analyze's advisory checks carry published promotion criteria and the rest stay advisory for good, so gating on them here would promote every one at once. An undispositioned advisory finding surfaces as Disposition drift instead.
 - **No record, no drift.** The record this run writes always carries `last-run`. The `done` specs still without an `analysis.md` are bounded by the CI template's record check and counted by `/ductus:audit` Family 37.
 - **`--fix` does not revert on this check.** It is reported on every run until a fix clears it or a deferral onto the spec reopens it (step 19).
@@ -204,8 +204,6 @@ For each spec at `status: done`, judge the `dispositions:` map of each record ag
 A `done` spec whose record still counts an undecided finding is not a contradiction: only a gating finding holds `done` (§brownfield-inbox, Finding dispositions), and a gating one already surfaces as Review state drift or Analyze state drift. For any other undecided observation or advisory finding this is the only report, so a later run can decide it.
 
 - **A record with no `dispositions:` map is not drift.** It predates dispositions, and a backfilled map would assert dispositions nobody made. The pre-done gate blocks the same absence on an `in-progress` spec; on a `done` spec it waits for the command's next run.
-
-A newly introduced advisory check that fires across `done` specs therefore surfaces here on each spec where a run left its findings undecided, and reopens none of them; one stored decision per finding quiets it until the finding's message changes.
 
 **`--fix` does not revert on this check**, and never edits the map: the count is the recording command's to write.
 
@@ -259,7 +257,7 @@ A citation step 5 resolves is reported in the same way, naming the citing artifa
 
 **Under `ductus exec` neither rule-file message is produced.** The walker checks no rule-file integrity: a rule it cannot assess and a file it cannot read are recorded unexamined (**Unexamined targets** above), and a duplicate ID goes unnoticed, each such rule assessed as though whole. The reduction is stated rather than silent.
 
-A rule file is **never** unloadable merely for having no introducing spec, or for declaring no format in its header — those conditions select which source governs. A project-authored rule file has no introducing spec by construction, and is validated on the same terms as a shipped one: treating that absence as a failure would make a supported adopter extension unloadable.
+A rule file is **never** unloadable merely for having no introducing spec, or for declaring no format in its header — those conditions select which source governs. A project-authored rule file has no introducing spec by construction and is validated on the same terms as a shipped one.
 
 ### Applicable Rules citation consistency (advisory)
 
@@ -282,7 +280,7 @@ Read inputs:
 - The installed command set (frontmatter only — do not read bodies for these checks): the files the agent layout's **Command/skill path** names, with membership drawn by that layout's **Slash-command cleanup glob** — the project's commands, never every file in the directory, since a layout's directory can be shared with the adopter's own files. The help command is that set's `help` entry.
 - The bootstrap installer at the layout's **`ductus` install path**, if it exists (frontmatter only — it lives outside the project namespace)
 
-These paths are layout-derived and are not spelled here: the bootstrap's [§Derived values](https://github.com/stonean/ductus/blob/main/framework/bootstrap/ductus.md#derived-values) table carries each of them per layout, and the layout is the one declared by the §Agent Registry row whose `config_dir` is the `cli-config-dir` that `/ductus` records for this contributor in `.ductus/session.toml` — the agent that last ran `/ductus` here, normally the one running this command. When the layout cannot be determined — no `cli-config-dir` is recorded, or no registry row declares the one that is — each check that reads these paths is reported as unexamined, naming why, and is never run against a guessed layout. A derived path that does not exist is reported as unexamined, naming the path looked for — `Unexamined: {path} does not exist` — and never as a check that passed.
+These paths are layout-derived and are not spelled here: the bootstrap's [§Derived values](https://github.com/stonean/ductus/blob/main/framework/bootstrap/ductus.md#derived-values) table carries each of them per layout, and the layout is the one declared by the §Agent Registry row whose `config_dir` is the `cli-config-dir` that `/ductus` records for this contributor in `.ductus/session.toml`. When the layout cannot be determined — no `cli-config-dir` is recorded, or no registry row declares the one that is — each check that reads these paths is reported as unexamined, naming why, and is never run against a guessed layout. A derived path that does not exist is reported as unexamined, naming the path looked for — `Unexamined: {path} does not exist` — and never as a check that passed.
 
 Checks:
 
@@ -290,9 +288,9 @@ Checks:
 - **Anchor resolution** — every `§<name>` reference in any installed command file (typically in `Reference: §<first>, §<second>` Scope-Boundaries lines) resolves, by `resolve-anchor`'s rule, to a corresponding marker in `.ductus/constitution.md` or a section of the document its line names.
 <!-- audit:ignore-placeholders -->
 - **Command frontmatter completeness** — every file in the installed command set has a `description:` frontmatter field; the same check applies to the bootstrap installer when that file exists. Files whose body documents an `$ARGUMENTS` parameter additionally have `argument-hint:`, since every layout's scaffolding copies the source frontmatter verbatim (the bootstrap, `ductus.md`, in §Per-Agent Scaffolding). Report missing fields; do not check value content.
-- **Orphaned references** — every reference an adopter-owned file makes into a ductus-managed path resolves (`check-orphaned-references`; step 9). The managed roots are `.ductus/`, `.githooks/`, the configured spec root, and the historical `.govern/`, `scripts/gen-` and `scripts/lib/`. A dangling import loads nothing, so the file it named is simply not in context, and a hook calling a missing script fails at commit time far from the run that broke it. Report `Orphaned reference: {referrer}:{line} names {target}, which does not exist` — plus `; most likely orphaned by migration {id}` **only** when the result's `attribution` is `registry`. Under `watermark` attribution say so instead, naming `last-applied` as the only migration context available; the two must not render alike. A migration re-points only the references the framework wrote, and a fold or a consolidation re-points those naming the directory it retires (`rewrite-spec-links`); an adopter-authored one is reported and left to the adopter. Not references, so never reported: a candidate containing `*` or `NNN`, a git object name (`git show abc1234:specs/x/spec.md`), and a path the project ships to adopters (`ships-to-adopter` above).
+- **Orphaned references** — every reference an adopter-owned file makes into a ductus-managed path resolves (`check-orphaned-references`; step 9). The managed roots are `.ductus/`, `.githooks/`, the configured spec root, and the historical `.govern/`, `scripts/gen-` and `scripts/lib/`. Report `Orphaned reference: {referrer}:{line} names {target}, which does not exist` — plus `; most likely orphaned by migration {id}` **only** when the result's `attribution` is `registry`. Under `watermark` attribution say so instead, naming `last-applied` as the only migration context available; the two must not render alike. A migration re-points only the references the framework wrote, and a fold or a consolidation re-points those naming the directory it retires (`rewrite-spec-links`); an adopter-authored one is reported and left to the adopter. Not references, so never reported: a candidate containing `*` or `NNN`, a git object name (`git show abc1234:specs/x/spec.md`), and a path the project ships to adopters (`ships-to-adopter` above).
 
-- **Un-folded branch-scoped specs** — every branch-scoped directory (`{identifier}.{n}-{slug}`) surviving under the spec root is reported (`check-unfolded-specs`; step 10). Report `Un-folded branch-scoped spec: {feature} folds into {target}, status {status}`, appending `; {target} does not resolve in this tree` when it names no directory here. That suffix is a **report**, not a defect: before the merge the target normally lives on the upstream branch, and this check cannot tell which tree it is looking at. Surfacing it lets an operator recognize a typo they would otherwise meet as a fold-back refusal weeks later. Advisory in every case, since the check equally cannot tell an open branch from a merged one.
+- **Un-folded branch-scoped specs** — every branch-scoped directory (`{identifier}.{n}-{slug}`) surviving under the spec root is reported (`check-unfolded-specs`; step 10). Report `Un-folded branch-scoped spec: {feature} folds into {target}, status {status}`, appending `; {target} does not resolve in this tree` when it names no directory here. That suffix is a **report**, not a defect: before the merge the target normally lives on the upstream branch, and this check cannot tell which tree it is looking at. Advisory in every case, since the check equally cannot tell an open branch from a merged one.
 
 ## Cross-spec impact drift (advisory)
 
@@ -315,7 +313,7 @@ Every finding still live when detection ends — hard fail, blocking, and adviso
 - **Waived** — an advisory finding, recorded in `analysis.md` with its reason and stored with `decided-by: rule`, or with the person's name when one made the call. **Never a `hard-fail` or `blocking` finding**: those already gate `done`, and a waiver would add a bypass the gate does not have. Such a finding is fixed or deferred, and only a deferral to another spec's work releases it.
 - **Undispositioned** — no decision was made: the operator declined a deferral, the deferral's write failed, its stored deferral lapsed with nobody to ask, or a gating finding had nobody to ask. The record counts it, and a later run can decide it. It holds `done` only when it is hard-fail or blocking, through the record's `blocking: true`. Under `ductus exec` that is every live finding: steps 18–20 are host responsibility, which the subprocess walker no-ops, so an exec run matches nothing against the stored decisions (and prunes none), writes no fix and no deferral, and still records honestly.
 - **Decisions persist.** Detection is stateless, so a decided finding fires again on the next run — a deferred one until its deferred work lands. Each deferred or waived decision is stored in `analysis.md`'s `decisions:` list, keyed `{family} — {message}`. A later run matches each finding to the stored decision describing the same issue — by the host's judgment, because a host-worded message drifts — and passes that decision's key as the finding's `decision-key`; a matched finding counts under the stored outcome without asking. A missed match costs one repeated decision and prunes the old one; it never waives a finding, because an unmatched decision is pruned rather than applied to something else. A stored decision whose finding no longer fires is pruned, unless the run could not read a target or a registered constitution, in which case it is retained; a target excluded by construction does not count (**Unexamined targets** above).
-- **The message is part of the key** because a finding's `path` is the **citing** artifact, not the subject the finding is about, which appears only inside the message; a key without it would merge every finding one artifact produces. The key omits a category, which is a host's judgment and does not reproduce across runs.
+- **The message is part of the key** because a finding's `path` is the **citing** artifact, not its subject, which appears only inside the message; a key without it would merge every finding one artifact produces. The key omits a category, a host's judgment that does not reproduce across runs.
 - **A `decisions:` list that does not parse is reported, never read as empty.** `validate-frontmatter` names it as a hard fail, and `process-decisions` and `write-analysis` refuse it. Until it is repaired no stored decision applies, each finding it held takes a new disposition, and the run cannot record over it. A malformed list can cost a repeated question, never a silently waived finding.
 
 ## Record fields
