@@ -527,8 +527,8 @@ Each edit goes through `classify-spec-edit` first. An edit to 022's scenarios or
 
 - **Done when**: an analyze run of the `analyze-malformed-rule-heading` check reads neither the list file nor a rule file through the shell, or the owner waives it with its reason written on this task.
 
-## 58. Close 080 again once the host-support removal is settled
+## 58. Close 080 again after the host-support removal
 
-- [ ] Reopened at 7904cb19, when 067 task 25 added `unwritable` to the derive-dependencies row of the data model's Bounded-results table (6b0f96fd): `classify-spec-edit` classifies that edit as reopening (data-model) and it stales the review record. Held `in-progress` by the owner (2026-11-11) until another session's removal of Auggie, OpenCode and Antigravity support lands or is decided against, since AC10, AC11 and the `antigravity-keeps-the-model-path` and `opencode-keeps-the-model-path` scenarios name those hosts and the removal would reopen 080 again. Then close it once, by 055's close method: `/ductus:review` from step 1, with start-fix-rounds before any fix and the fix-round loop; `/ductus:analyze`; check-review-gate and a simulated closing measure-reopenings; gate-confirm, then set-status committed alone, then the record in 079 task 12
+- [ ] Reopened at 7904cb19, when 067 task 25 added `unwritable` to the derive-dependencies row of the data model's Bounded-results table (6b0f96fd): `classify-spec-edit` classifies that edit as reopening (data-model) and it stales the review record. Held `in-progress` by the owner (2026-11-11) until the agent-host removal landed; it has, and its `sweep(080)` commit deleted AC10, AC11 and two scenarios, so this close covers that edit too. Then close it once, by 055's close method: `/ductus:review` from step 1, with start-fix-rounds before any fix and the fix-round loop; `/ductus:analyze`; check-review-gate and a simulated closing measure-reopenings; gate-confirm, then set-status committed alone, then the record in 079 task 12
 
 - **Done when**: 080 is `done` again, its review and analysis records current and the gate clean
