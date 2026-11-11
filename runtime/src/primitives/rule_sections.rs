@@ -38,7 +38,9 @@ pub(crate) struct RuleSection {
     /// joined with single spaces. Empty when the section has none.
     pub(crate) statement: String,
     /// The section's first `**Verification:**` paragraph, wrapped lines
-    /// joined with single spaces. `None` when absent or empty.
+    /// joined with single spaces, then, after a blank line, the pipe table
+    /// directly following it, one row per line, as BE-API-001's header values
+    /// follow its paragraph (spec 080). `None` when absent or empty.
     pub(crate) verification: Option<String>,
 }
 
@@ -145,7 +147,8 @@ pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
 /// the boundary `check-rule-ids` uses to scope a deprecation label. A deeper
 /// heading that is not a rule's is a subsection and stays in scope. The
 /// Statement is the section's first block quote. The Verification paragraph
-/// ends at a blank line, the next `**Field:**`, or any heading.
+/// ends at a blank line, the next `**Field:**`, or any heading, and a pipe
+/// table directly after that blank line is the Verification's too.
 pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
     let mut sections = Vec::new();
     let mut open: Option<OpenSection> = None;
@@ -190,6 +193,9 @@ enum Quote {
 enum Paragraph {
     NotStarted,
     Reading,
+    /// A blank line ended the paragraph, and a pipe table may still follow.
+    Blank,
+    Table,
     Done,
 }
 
@@ -201,6 +207,7 @@ struct OpenSection {
     statement: Vec<String>,
     quote: Quote,
     verification: Vec<String>,
+    table: Vec<String>,
     paragraph: Paragraph,
 }
 
@@ -213,6 +220,7 @@ impl OpenSection {
             statement: Vec::new(),
             quote: Quote::NotStarted,
             verification: Vec::new(),
+            table: Vec::new(),
             paragraph: Paragraph::NotStarted,
         }
     }
@@ -239,10 +247,20 @@ impl OpenSection {
                 }
             }
             Paragraph::Reading => {
-                if trimmed.is_empty() || trimmed.starts_with("**") {
+                if trimmed.is_empty() {
+                    self.paragraph = Paragraph::Blank;
+                } else if trimmed.starts_with("**") {
                     self.paragraph = Paragraph::Done;
                 } else {
                     self.push_verification(trimmed);
+                }
+            }
+            Paragraph::Blank | Paragraph::Table => {
+                if trimmed.starts_with('|') {
+                    self.paragraph = Paragraph::Table;
+                    self.table.push(trimmed.to_string());
+                } else if !trimmed.is_empty() || self.paragraph == Paragraph::Table {
+                    self.paragraph = Paragraph::Done;
                 }
             }
             Paragraph::Done => {}
@@ -262,13 +280,22 @@ impl OpenSection {
         if self.quote == Quote::Reading {
             self.quote = Quote::Done;
         }
-        if self.paragraph == Paragraph::Reading {
+        if matches!(
+            self.paragraph,
+            Paragraph::Reading | Paragraph::Blank | Paragraph::Table
+        ) {
             self.paragraph = Paragraph::Done;
         }
     }
 
     fn finish(self) -> RuleSection {
-        let verification = self.verification.join(" ");
+        let mut verification = self.verification.join(" ");
+        if !self.table.is_empty() {
+            if !verification.is_empty() {
+                verification.push_str("\n\n");
+            }
+            verification.push_str(&self.table.join("\n"));
+        }
         RuleSection {
             id: self.id,
             heading: self.heading,
@@ -402,6 +429,35 @@ mod tests {
         assert_eq!(
             section.verification.as_deref(),
             Some("Every literal that varies across environments is named.")
+        );
+    }
+
+    /// A pipe table directly after the Verification paragraph is the
+    /// Verification's, as BE-API-001's header values are, so a reader of the
+    /// rules listing gets it without the rule file (spec 080). A paragraph
+    /// after the blank line is not, nor a table after that paragraph.
+    #[test]
+    fn a_table_after_the_verification_is_part_of_it() {
+        let section = only(
+            "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** The values:\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\n**Source:** s\n",
+        );
+        assert_eq!(
+            section.verification.as_deref(),
+            Some("The values:\n\n| a | b |\n| --- | --- |\n| 1 | 2 |")
+        );
+        let prose =
+            only("### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v\n\nA note.\n\n| x |\n");
+        assert_eq!(prose.verification.as_deref(), Some("v"));
+        let shipped = shipped_rule_files()
+            .iter()
+            .flat_map(|path| parse_rule_sections(&std::fs::read_to_string(path).unwrap()))
+            .find(|section| section.id == "BE-API-001")
+            .expect("BE-API-001 is shipped");
+        let verification = shipped.verification.unwrap();
+        assert!(
+            verification.contains("their values:\n\n| Header | Value | Applies to |")
+                && verification.contains("| `Content-Type` |"),
+            "{verification}"
         );
     }
 

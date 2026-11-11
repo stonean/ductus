@@ -35,7 +35,7 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// escape sequence, or shift a fixed-width column (`BE-INPUT-011`). The tab
 /// is replaced here rather than in [`flatten_line`], since 058's stored
 /// decision keys normalize through that.
-fn view_text(value: &str) -> String {
+pub(crate) fn view_text(value: &str) -> String {
     flatten_line(&value.replace('\t', " "))
 }
 

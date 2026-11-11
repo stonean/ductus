@@ -122,6 +122,33 @@ mod tests {
         );
     }
 
+    /// The namespace the result carries is the one the view's hints spell,
+    /// flattened as they are, so Pi's bridge respells every hint of a
+    /// namespace holding a tab or a line break (`BE-INPUT-011`).
+    #[test]
+    fn the_namespace_is_spelled_as_the_view_spells_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            ".ductus/config.toml",
+            "[host]\nproject = \"my\\tapp\"\n",
+        );
+        write(
+            tmp.path(),
+            "specs/001-alpha/spec.md",
+            "---\nstatus: planned\ndependencies: []\n---\n\n# A\n",
+        );
+        let result = run(&RenderStatusArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.project, "my app");
+        assert!(
+            result
+                .rendered_markdown
+                .ends_with("Run /my app:target <feature> to select one."),
+            "{}",
+            result.rendered_markdown
+        );
+    }
+
     /// A malformed read size halts the view, as it halts every reader of the
     /// setting, rather than rendering at the default.
     #[test]

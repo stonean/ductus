@@ -209,7 +209,9 @@ impl Loaded {
             references: resolve_references_readout(repo, &self.specs, &project)?,
             project: &project,
         });
-        Ok((model, project))
+        // The namespace as the view's hints spell it, so a reader respelling
+        // those hints, as Pi's bridge does, matches every one (`BE-INPUT-011`).
+        Ok((model, pipeline_view::view_text(&project)))
     }
 }
 
