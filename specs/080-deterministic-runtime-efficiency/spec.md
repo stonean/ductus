@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 cross-spec-impact:
   - 022-deterministic-runtime
@@ -73,30 +73,30 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 
 ## Acceptance Criteria
 
-- [ ] AC1: Typing `/{project}:status` in Claude Code, in a project bootstrapped at this spec's release, shows the pipeline view with no model turn, through a hook whose command is the `ductus` binary.
-- [ ] AC2: `/{project}:configure` adds a `UserPromptExpansion` hook matched to `{project}:status` to `settings.local.json`, and running it again leaves exactly one such entry.
-- [ ] AC20: `/{project}:configure` writes the hook only when `claude --version` reports 2.1.101 or later. When the version is older or unreadable it writes no hook entry, leaves the permissions it merged intact, and reports that it skipped the hook and why.
-- [ ] AC16: The hook's block response sets `suppressOriginalPrompt`, so the shown view does not end with an "Original prompt:" line.
-- [ ] AC25: When the hook cannot run the runtime it exits with a failure status, not a block: Claude Code reports the hook failure and runs `/{project}:status` on the model path, which surfaces the runtime's own error rather than showing nothing.
-- [ ] AC26: A project bootstrapped before this spec's release gets the hook, and Pi's registered command, the next time `/ductus` or `/{project}:configure` runs, with no manual step.
-- [ ] AC9: Typing `/{project}:status` in Pi, in a project bootstrapped at this spec's release, shows the pipeline view with no model turn, through a command the `ductus` bridge registers that runs the `ductus` binary.
-- [ ] AC27: The run that verifies the Pi path records in `specs/080-deterministic-runtime-efficiency/research.md` whether the displayed view reaches the agent's context, observed in a model turn or, when none can be run, taken from pi's own documentation, saying which, and, when it does not, whether Pi can add text to context without a turn.
-- [ ] AC28: When `research.md` records that Pi's displayed view did not reach the agent's context and that Pi can add context without a turn, the bridge adds the compact form (the target line and the non-done specs grouped by status), and a bridge harness test shows it.
-- [ ] AC10: Auggie, OpenCode and Antigravity run `/{project}:status` as they did before this spec, except where a scenario under this spec has since given one of them a model-free path.
-- [ ] AC11: OpenCode and Antigravity each have a scenario under `specs/080-deterministic-runtime-efficiency/scenarios/` that settles its model-free path for `/{project}:status`: OpenCode's by a run on a host version that has the mechanism, Antigravity's recorded without a run, since the installed `agy` lacks it (owner, 2026-11-09).
-- [ ] AC17: The view the hook path shows is fixed-width plain text: table columns aligned with two-space gaps, and no markdown table syntax or emphasis.
-- [ ] AC18: On both paths the view's summary puts one item per line — counts, tags, reopenings and inbox each on a labelled line, each unresolved scenario question on its own line beside its spec — with the `/{project}:target` hint once at its end.
-- [ ] AC19: The model path's view keeps a markdown table, and a test shows both renderings carry the same facts from the same data.
-- [ ] AC6: `rendered-markdown` lists the non-done specs grouped by next action, followed by the `/{project}:target` prompt, and `framework/commands/status.md` no longer asks the model to compose either.
-- [ ] AC13: The tool result `/{project}:status` reads on the model path carries the view without `dashboard`'s structured payload, and `/{project}:review --all` still reads `specs[].status`.
-- [ ] AC21: The tools that `framework/commands/target.md`'s steps name set `_meta["anthropic/alwaysLoad"]`, and no other `ductus` tool does. The set is derived from that file, and a test fails when a tool named there lacks the flag or one not named there has it.
-- [ ] AC29: Claude Code's installed copy of every command other than `/{project}:target` loads the `ductus` tools its steps name, and those its file or a section it cites invokes, in one tool-search call, through a line the generator writes from the command's files. The command sources and other agents' copies are unchanged, and `ductus exec` dispatches no primitive because of that line.
-- [ ] AC23: Each `ductus` tool's loaded schema size, its description plus input schema in characters, is recorded in `research.md` with the total across all tools.
-- [ ] AC7: Every primitive whose result grows with the corpus bounds or pages its result, and a test drives each one this spec bounds past its bound on a generated fixture corpus; `read-tasks` is one.
-- [ ] AC24: A view whose result, as its surface serializes it, would exceed the read size collapses its `done (spec is complete)` rows to a count line. It then cuts the rows past the bound and counts the specs not shown, then the next-action names, then collapses each other list to its count. On the model path the result names a list file holding the whole view. A test drives a generated fixture corpus past the bound on both surfaces.
-- [ ] AC8: Each command `/ductus` installs has its cost recorded in `specs/080-deterministic-runtime-efficiency/research.md`, with method, units, population and date.
-- [ ] AC14: The result sizes recorded in `research.md` come from a script that runs each primitive on a generated fixture corpus and calls no model.
-- [ ] AC15: The time and token figures recorded in `research.md` come from an on-demand harness that drives `claude -p` with stream-json output on a fixture project. No CI job runs it, and its first run records whether `claude -p` executes a custom slash command.
+- [x] AC1: Typing `/{project}:status` in Claude Code, in a project bootstrapped at this spec's release, shows the pipeline view with no model turn, through a hook whose command is the `ductus` binary.
+- [x] AC2: `/{project}:configure` adds a `UserPromptExpansion` hook matched to `{project}:status` to `settings.local.json`, and running it again leaves exactly one such entry.
+- [x] AC20: `/{project}:configure` writes the hook only when `claude --version` reports 2.1.101 or later. When the version is older or unreadable it writes no hook entry, leaves the permissions it merged intact, and reports that it skipped the hook and why.
+- [x] AC16: The hook's block response sets `suppressOriginalPrompt`, so the shown view does not end with an "Original prompt:" line.
+- [x] AC25: When the hook cannot run the runtime it exits with a failure status, not a block: Claude Code reports the hook failure and runs `/{project}:status` on the model path, which surfaces the runtime's own error rather than showing nothing.
+- [x] AC26: A project bootstrapped before this spec's release gets the hook, and Pi's registered command, the next time `/ductus` or `/{project}:configure` runs, with no manual step.
+- [x] AC9: Typing `/{project}:status` in Pi, in a project bootstrapped at this spec's release, shows the pipeline view with no model turn, through a command the `ductus` bridge registers that runs the `ductus` binary.
+- [x] AC27: The run that verifies the Pi path records in `specs/080-deterministic-runtime-efficiency/research.md` whether the displayed view reaches the agent's context, observed in a model turn or, when none can be run, taken from pi's own documentation, saying which, and, when it does not, whether Pi can add text to context without a turn.
+- [x] AC28: When `research.md` records that Pi's displayed view did not reach the agent's context and that Pi can add context without a turn, the bridge adds the compact form (the target line and the non-done specs grouped by status), and a bridge harness test shows it.
+- [x] AC10: Auggie, OpenCode and Antigravity run `/{project}:status` as they did before this spec, except where a scenario under this spec has since given one of them a model-free path.
+- [x] AC11: OpenCode and Antigravity each have a scenario under `specs/080-deterministic-runtime-efficiency/scenarios/` that settles its model-free path for `/{project}:status`: OpenCode's by a run on a host version that has the mechanism, Antigravity's recorded without a run, since the installed `agy` lacks it (owner, 2026-11-09).
+- [x] AC17: The view the hook path shows is fixed-width plain text: table columns aligned with two-space gaps, and no markdown table syntax or emphasis.
+- [x] AC18: On both paths the view's summary puts one item per line — counts, tags, reopenings and inbox each on a labelled line, each unresolved scenario question on its own line beside its spec — with the `/{project}:target` hint once at its end.
+- [x] AC19: The model path's view keeps a markdown table, and a test shows both renderings carry the same facts from the same data.
+- [x] AC6: `rendered-markdown` lists the non-done specs grouped by next action, followed by the `/{project}:target` prompt, and `framework/commands/status.md` no longer asks the model to compose either.
+- [x] AC13: The tool result `/{project}:status` reads on the model path carries the view without `dashboard`'s structured payload, and `/{project}:review --all` still reads `specs[].status`.
+- [x] AC21: The tools that `framework/commands/target.md`'s steps name set `_meta["anthropic/alwaysLoad"]`, and no other `ductus` tool does. The set is derived from that file, and a test fails when a tool named there lacks the flag or one not named there has it.
+- [x] AC29: Claude Code's installed copy of every command other than `/{project}:target` loads the `ductus` tools its steps name, and those its file or a section it cites invokes, in one tool-search call, through a line the generator writes from the command's files. The command sources and other agents' copies are unchanged, and `ductus exec` dispatches no primitive because of that line.
+- [x] AC23: Each `ductus` tool's loaded schema size, its description plus input schema in characters, is recorded in `research.md` with the total across all tools.
+- [x] AC7: Every primitive whose result grows with the corpus bounds or pages its result, and a test drives each one this spec bounds past its bound on a generated fixture corpus; `read-tasks` is one.
+- [x] AC24: A view whose result, as its surface serializes it, would exceed the read size collapses its `done (spec is complete)` rows to a count line. It then cuts the rows past the bound and counts the specs not shown, then the next-action names, then collapses each other list to its count. On the model path the result names a list file holding the whole view. A test drives a generated fixture corpus past the bound on both surfaces.
+- [x] AC8: Each command `/ductus` installs has its cost recorded in `specs/080-deterministic-runtime-efficiency/research.md`, with method, units, population and date.
+- [x] AC14: The result sizes recorded in `research.md` come from a script that runs each primitive on a generated fixture corpus and calls no model.
+- [x] AC15: The time and token figures recorded in `research.md` come from an on-demand harness that drives `claude -p` with stream-json output on a fixture project. No CI job runs it, and its first run records whether `claude -p` executes a custom slash command.
 
 ## Applicable Rules
 
