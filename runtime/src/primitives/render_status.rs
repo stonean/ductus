@@ -123,8 +123,8 @@ mod tests {
     }
 
     /// The namespace the result carries is the one the view's hints spell,
-    /// flattened as they are, so Pi's bridge respells every hint of a
-    /// namespace holding a tab or a line break (`BE-INPUT-011`).
+    /// flattened as they are, so it names the `{project}` of every hint, a
+    /// namespace holding a tab or a line break included (`BE-INPUT-011`).
     #[test]
     fn the_namespace_is_spelled_as_the_view_spells_it() {
         let tmp = tempfile::tempdir().unwrap();

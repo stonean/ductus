@@ -61,7 +61,7 @@ The AC19 test renders one model both ways and compares the facts each carries. T
 
 ### `render-status` serves the view, and `dashboard` stops carrying it
 
-`render-status` is a new, argument-free primitive. Its result is `{rendered-markdown, project, form}`, with `lists-file` past the bound (AC13). It takes no arguments because `ductus exec` dispatches a step's backticked primitive with none (spec Resolved Questions, constraint for the plan; `runtime/src/parser/mod.rs:18-19`). `project` is there for Pi's bridge, which reads it on a runtime that serves no `render-help`. It is the namespace as the view's hints spell it, through `view_text`, so the bridge's respelling matches each hint.
+`render-status` is a new, argument-free primitive. Its result is `{rendered-markdown, project, form}`, with `lists-file` past the bound (AC13). It takes no arguments because `ductus exec` dispatches a step's backticked primitive with none (spec Resolved Questions, constraint for the plan; `runtime/src/parser/mod.rs:18-19`). `project` is there for Pi's bridge, which reads it on a runtime that serves no `render-help`. It is the namespace as the view's hints spell it, through `view_text`, so it names the `{project}` of each hint.
 
 `framework/commands/status.md` changes three ways:
 
