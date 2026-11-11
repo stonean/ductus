@@ -41,7 +41,8 @@
 #
 # NOT a finding: a spec with no Acceptance Criteria section at all. Section
 # completeness is /ductus:analyze's artifact-tier concern, and duplicating it
-# would cross the boundary audit.md §Notes draws between the two commands.
+# would cross the boundary audit.md §Boundary with `/ductus:analyze` draws
+# between the two commands.
 #
 # The examined count goes to stderr so a clean exit reads as "examined N done
 # specs, all criteria checked" and never as "nothing to examine", and an empty
