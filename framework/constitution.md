@@ -208,10 +208,10 @@ Before implementation begins, a pass/fail gate:
 #### Implementation requirements
 
 - Code matches the spec's contracts and tests verify its criteria; if new work is discovered, add it as a task first, and a refactor that reveals a missing requirement updates the spec or adds a scenario first
-- **A spec's ticked acceptance criteria are verified against the tree before it closes.** The artifact check that compares criteria to the tree examines `done` specs only, and proves only that a path *resolves*, not that a claim about its contents holds. A criterion that no longer holds means the spec is edited — reopened and corrected, or consolidated away — not left ticked.
+- **A spec's ticked acceptance criteria are verified against the tree before it closes.** The artifact check that compares criteria to the tree examines `in-progress` and `done` specs, and proves only that a path *resolves*, not that a claim about its contents holds. A criterion that no longer holds means the spec is edited — reopened and corrected, or consolidated away — not left ticked.
 - **A spec does not reach `done` with an outstanding SHOULD.** This is §design-principles' completion filter at the review gate, where advisory is not ignorable: it blocks on an unwaived SHOULD as on a MUST; a SHOULD is addressed only when **fixed**, waived with its rationale, or deferred to another spec.
 - **Nothing durable goes in a review record's body.** `/{project}:review` regenerates it whole, keeping only its waiver and decision lists; a triage of findings is not a record, and the fixes it plans are tasks.
-- The review's window and coverage counts are `.ductus/reference/review.md` **§Window and coverage**; measuring the criteria-path family before the close is `.ductus/reference/analyze.md` **§Acceptance-criterion path existence (advisory)**.
+- The review's window and coverage counts are `.ductus/reference/review.md` **§Window and coverage**.
 
 <!-- §constants -->
 

@@ -77,20 +77,27 @@
 //!   not that it is *true*, so a stale claim citing its source passes
 //!   (spec 045). Advisory at introduction, with a documented promotion
 //!   criterion in `analyze.md`.
-//! - **criterion-path-existence** (advisory) — a filesystem path named in a
-//!   `done` spec's acceptance criterion that no longer resolves. An AC is a
-//!   contract, so naming a path asserts it is part of the delivered system;
-//!   nothing re-verifies that after a later spec deletes the subject. Reads
-//!   **inside** inline code spans, the inverse of the family above — which
-//!   is why the two are separate families rather than one check with a flag
-//!   (spec 045).
-//! - **body-path-existence** (advisory) — a path named in a `done` spec's
-//!   body, plan, data model or scenarios that existed in this repository and
-//!   no longer resolves. Body prose may name a dead path correctly while
-//!   describing history, so two discriminators gate it: a path no revision
-//!   ever held is a name, not a file (`never-existed`), and a line describing
-//!   a transition is not a presence claim (`not-a-live-claim`). See
-//!   [`check_body_path_existence`].
+//! - **criterion-path-existence** (advisory) — a filesystem path named in an
+//!   `in-progress` or `done` spec's acceptance criterion that no longer
+//!   resolves. An AC is a contract, so naming a path asserts it is part of
+//!   the delivered system; nothing re-verifies that after a later spec
+//!   deletes the subject. Reads **inside** inline code spans, the inverse of
+//!   the family above — which is why the two are separate families rather
+//!   than one check with a flag (spec 045). A path the repository's ignore
+//!   rules ignore is recorded `gitignored` rather than flagged.
+//! - **body-path-existence** (advisory) — a path named in an `in-progress`
+//!   or `done` spec's body, plan, data model or scenarios that existed in
+//!   this repository and no longer resolves. Body prose may name a dead path
+//!   correctly while describing history, so two discriminators gate it: a
+//!   path no revision ever held is a name, not a file (`never-existed`), and
+//!   a line describing a transition is not a presence claim
+//!   (`not-a-live-claim`). See [`check_body_path_existence`].
+//! - **The two path families are status-gated.** They examine a spec at
+//!   `in-progress` and `done`, where the analysis the pre-`done` gate reads
+//!   is taken; at any other status each records one `status-gated` skip
+//!   naming the spec's `spec.md`, so its silence never reads as a clean
+//!   result (067's `status-gated-families-are-not-silent`). See
+//!   [`path_family_examines`].
 //! - **criterion-labels** (advisory) — the enforcement half of the `AC{n}`
 //!   labelling pass: a duplicate label within one spec, a `next-criterion`
 //!   that no longer exceeds the body, and an unlabelled criterion in a spec
@@ -1162,6 +1169,72 @@ fn contradiction(class: TellClass, state: &TargetState) -> Contradiction {
     }
 }
 
+/// The statuses at which `criterion-path-existence` and `body-path-existence`
+/// examine a spec (spec 067 scenario `status-gated-families-are-not-silent`).
+/// `in-progress` is among them because the analysis the pre-`done` gate reads
+/// is taken there: scoped to `done` alone, the two families never ran for it.
+const PATH_FAMILY_STATUSES: [&str; 2] = ["in-progress", "done"];
+
+/// Whether the path families examine a spec at `status`. At any other status —
+/// `draft`, `clarified`, `planned`, or a value outside the set — `family`
+/// records one `status-gated` skip naming the spec's `spec.md` and examines
+/// nothing, so its silence never reads as a family that ran and found nothing.
+/// Excluded by construction: it recurs on every such run, so it never
+/// restricts decision pruning. A spec with no `status` never reaches here:
+/// `read-spec` refuses its frontmatter, and this primitive with it.
+fn path_family_examines(
+    skipped: &mut Vec<SkippedTarget>,
+    family: &str,
+    status: &str,
+    spec_md: &str,
+) -> bool {
+    if PATH_FAMILY_STATUSES.contains(&status) {
+        return true;
+    }
+    record_skip(skipped, family, "status-gated", spec_md);
+    false
+}
+
+/// The repository's own ignore rules, as `git check-ignore` reads them, for
+/// the criterion family's `gitignored` skip: a criterion naming local state
+/// such as `.ductus/session.toml` resolves in a working checkout and not in a
+/// fresh clone, so without the rule one spec's result differs by tree.
+///
+/// Opened at most once per call, on the first candidate that needs it.
+/// Outside a git repository, or when a lookup fails, nothing is ignored and
+/// the candidate falls through to the finding, as before the rule existed: an
+/// unanswered lookup is not evidence that a path is local state. A rule kept
+/// only inside a directory absent from the tree is not seen, which is why the
+/// shipped gitignore template lists `/.ductus/results/`.
+struct IgnoreRules<'a> {
+    repo: &'a Path,
+    project: std::cell::OnceCell<Option<ProjectRepository>>,
+}
+
+impl<'a> IgnoreRules<'a> {
+    fn new(repo: &'a Path) -> Self {
+        Self {
+            repo,
+            project: std::cell::OnceCell::new(),
+        }
+    }
+
+    /// Whether the ignore rules ignore `rel`, a path from the project root. A
+    /// trailing `/` is kept, so a directory-only rule (`/.ductus/bin/`)
+    /// matches a directory candidate.
+    fn ignores(&self, rel: &str) -> bool {
+        let project = self
+            .project
+            .get_or_init(|| ProjectRepository::discover(self.repo).ok());
+        project.as_ref().is_some_and(|project| {
+            project
+                .repository
+                .is_path_ignored(project.to_git(rel))
+                .unwrap_or(false)
+        })
+    }
+}
+
 /// Record a skipped target once. The fact is about the target, so the same
 /// target reached twice by one family collapses to one entry.
 fn record_skip(skipped: &mut Vec<SkippedTarget>, family: &str, reason: &str, path: &str) {
@@ -1376,10 +1449,13 @@ fn read_target_state(
 
 // --- (g) acceptance-criterion path existence --------------------------------
 
-/// (g) Criterion path existence (advisory) — a filesystem path named in a
-/// `done` spec's acceptance criterion that no longer resolves.
+/// (g) Criterion path existence (advisory) — a filesystem path named in an
+/// `in-progress` or `done` spec's acceptance criterion that no longer resolves.
 ///
-/// Scoped to `## Acceptance Criteria` on `done` specs, and nothing else. An
+/// Scoped to `## Acceptance Criteria` on `in-progress` and `done` specs, and
+/// nothing else; at any other status the family records one `status-gated`
+/// skip ([`path_family_examines`]). An `in-progress` criterion naming a file
+/// the spec has yet to create is a finding until the file lands. An
 /// acceptance criterion is a **contract**: naming a path asserts that path is
 /// part of the delivered system. Body prose may name a dead path perfectly
 /// correctly while describing history — 026's own Behavior section records
@@ -1394,7 +1470,9 @@ fn read_target_state(
 /// hold both rules coherently, which is why these are two.
 ///
 /// A criterion only counts as a live assertion when it actually claims the
-/// path is *present* — see [`NON_ASSERTION_MARKERS`].
+/// path is *present* — see [`NON_ASSERTION_MARKERS`]. An unresolved path the
+/// repository's own ignore rules ignore is recorded `gitignored`, never a
+/// finding ([`IgnoreRules`]).
 fn check_criterion_path_existence(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
@@ -1403,13 +1481,14 @@ fn check_criterion_path_existence(
     spec_path: &Path,
     repo: &Path,
 ) {
-    if status != "done" {
+    let citing = rel_path(spec_path, repo);
+    if !path_family_examines(skipped, "criterion-path-existence", status, &citing) {
         return;
     }
-    let citing = rel_path(spec_path, repo);
     // Read once per feature, not per candidate: the manifest is one file and
     // an empty set (the adopter case) costs a single failed open.
     let ships_elsewhere = adopter_destinations(repo);
+    let ignore_rules = IgnoreRules::new(repo);
     for criterion in &spec.acceptance_criteria {
         let asserts = is_live_assertion(&criterion.text);
         for candidate in candidate_paths(&criterion.text) {
@@ -1465,6 +1544,19 @@ fn check_criterion_path_existence(
                     skipped,
                     "criterion-path-existence",
                     "ships-to-adopter",
+                    &candidate,
+                );
+                continue;
+            }
+            // Local state the repository's own ignore rules keep out of every
+            // clone — a session file, a runtime pointer — resolves in a working
+            // checkout and not in a fresh one, so its absence here says which
+            // tree this is, not whether the criterion holds.
+            if ignore_rules.ignores(&candidate) {
+                record_skip(
+                    skipped,
+                    "criterion-path-existence",
+                    "gitignored",
                     &candidate,
                 );
                 continue;
@@ -1941,9 +2033,13 @@ struct BodyCandidate {
     line: String,
 }
 
-/// (i) Body path existence (advisory) — a path named in a `done` spec's body,
-/// plan, data model or scenarios that existed in this repository and no
-/// longer resolves (spec 067 scenario `body-path-existence-family`).
+/// (i) Body path existence (advisory) — a path named in an `in-progress` or
+/// `done` spec's body, plan, data model or scenarios that existed in this
+/// repository and no longer resolves (spec 067 scenarios
+/// `body-path-existence-family` and `status-gated-families-are-not-silent`).
+/// At any other status the family records one `status-gated` skip
+/// ([`path_family_examines`]). A path an `in-progress` spec has yet to create
+/// is no finding: no revision held it, so it is `never-existed`.
 ///
 /// [`check_criterion_path_existence`] stops at acceptance criteria because
 /// body prose may name a dead path correctly while describing history. Two
@@ -1976,7 +2072,8 @@ fn check_body_path_existence(
     feature_dir: &Path,
     repo: &Path,
 ) {
-    if status != "done" {
+    let spec_md = rel_path(&feature_dir.join("spec.md"), repo);
+    if !path_family_examines(skipped, BODY_PATH_FAMILY, status, &spec_md) {
         return;
     }
     let ships_elsewhere = adopter_destinations(repo);
@@ -3363,14 +3460,52 @@ mod tests {
         );
     }
 
+    /// The analysis the pre-`done` gate reads is taken at `in-progress`, so the
+    /// family runs there as at `done` (067's
+    /// `status-gated-families-are-not-silent`).
     #[test]
-    fn a_body_below_done_is_not_scanned() {
+    fn an_in_progress_body_naming_a_deleted_path_is_a_finding() {
         let tmp = body_fixture(
             "in-progress",
             "# Plan\n\nThe hook runs `scripts/old.sh` on every commit.\n",
             &["scripts/old.sh"],
         );
-        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                vec![(
+                    "specs/042-demo/plan.md".to_string(),
+                    "names `scripts/old.sh`, which existed in this repository and no longer \
+                     resolves: \"The hook runs `scripts/old.sh` on every commit.\""
+                        .to_string()
+                )],
+                Vec::new()
+            )
+        );
+    }
+
+    /// Below `in-progress`, and at a status outside the set, the family
+    /// examines nothing and records one `status-gated` skip naming the spec.
+    #[test]
+    fn a_body_below_in_progress_is_status_gated() {
+        for status in ["draft", "clarified", "planned", "shipped"] {
+            let tmp = body_fixture(
+                status,
+                "# Plan\n\nThe hook runs `scripts/old.sh` on every commit.\n",
+                &["scripts/old.sh"],
+            );
+            assert_eq!(
+                body_outcome(tmp.path()),
+                (
+                    Vec::new(),
+                    vec![(
+                        "status-gated".to_string(),
+                        "specs/042-demo/spec.md".to_string()
+                    )]
+                ),
+                "{status}"
+            );
+        }
     }
 
     // --- review state drift ---------------------------------------------------------
@@ -4555,30 +4690,152 @@ mod tests {
         assert!(found[0].message.contains("Registry equivalence"));
     }
 
+    /// The analysis the pre-`done` gate reads is taken at `in-progress`, so the
+    /// family runs there as at `done` (067's
+    /// `status-gated-families-are-not-silent`).
     #[test]
-    fn a_spec_below_done_is_not_scanned() {
-        // Criteria below `done` describe work in flight, so a path that does
-        // not exist yet is expected rather than drifted.
-        for status in ["draft", "clarified", "planned", "in-progress"] {
+    fn an_in_progress_criterion_naming_a_deleted_path_is_a_finding() {
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(tmp.path(), "in-progress", ORIGINATING_CRITERION);
+        fs::create_dir_all(tmp.path().join("framework")).unwrap();
+        fs::create_dir_all(tmp.path().join("scripts")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = path_findings(&result);
+        assert_eq!(found.len(), 2, "{:?}", result.findings);
+        assert!(
+            found[0]
+                .message
+                .contains("framework/workflows/registry.json"),
+            "{}",
+            found[0].message
+        );
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.family == "criterion-path-existence"),
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    /// Below `in-progress`, and at a status outside the set, the family
+    /// examines nothing and says so once: a `status-gated` skip naming the
+    /// spec, never a finding and never silence.
+    #[test]
+    fn a_criterion_below_in_progress_is_status_gated() {
+        for status in ["draft", "clarified", "planned", "shipped"] {
             let tmp = tempdir().unwrap();
             seed_with_criteria(tmp.path(), status, ORIGINATING_CRITERION);
+            fs::create_dir_all(tmp.path().join("framework")).unwrap();
+            fs::create_dir_all(tmp.path().join("scripts")).unwrap();
             let result = run(&args(), tmp.path()).unwrap();
             assert!(
                 path_findings(&result).is_empty(),
                 "expected no findings at {status}: {:?}",
                 result.findings
             );
-        }
-        // …and being not-applicable is not the same as having tried and
-        // failed, so nothing is recorded as skipped either.
-        let tmp = tempdir().unwrap();
-        seed_with_criteria(tmp.path(), "in-progress", ORIGINATING_CRITERION);
-        let result = run(&args(), tmp.path()).unwrap();
-        assert!(
-            !result
+            let gated: Vec<&SkippedTarget> = result
                 .skipped
                 .iter()
-                .any(|s| s.family == "criterion-path-existence"),
+                .filter(|s| s.family == "criterion-path-existence")
+                .collect();
+            assert_eq!(
+                gated,
+                [&SkippedTarget {
+                    family: "criterion-path-existence".into(),
+                    reason: "status-gated".into(),
+                    path: format!("specs/{FEATURE}/spec.md"),
+                }],
+                "{status}"
+            );
+        }
+    }
+
+    /// A git repository whose `.gitignore` ignores two kinds of local state,
+    /// and a spec at `status` whose criterion names `criterion`. `.ductus/`
+    /// holds a tracked file, so its root is present and the paths reach the
+    /// ignore arm rather than `root-absent`.
+    fn seed_ignored_state(repo: &Path, status: &str, criterion: &str) {
+        git2::Repository::init(repo).unwrap();
+        write(repo, ".gitignore", "/.ductus/session.toml\n/.ductus/bin/\n");
+        write(repo, ".ductus/keep.txt", "tracked\n");
+        seed_with_criteria(repo, status, criterion);
+    }
+
+    /// Local state the repository's ignore rules keep out of every clone
+    /// resolves in a working checkout and not in a fresh one, so it is
+    /// recorded `gitignored`, never a finding; a directory-only rule matches a
+    /// directory candidate.
+    #[test]
+    fn a_criterion_path_git_ignores_is_a_gitignored_skip() {
+        let tmp = tempdir().unwrap();
+        seed_ignored_state(
+            tmp.path(),
+            "done",
+            "- [x] The session is `.ductus/session.toml`, the pointer `.ductus/bin/ductus` in `.ductus/bin/`\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+        let skips: Vec<(&str, &str)> = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == "criterion-path-existence")
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect();
+        assert_eq!(
+            skips,
+            [
+                ("gitignored", ".ductus/session.toml"),
+                ("gitignored", ".ductus/bin/ductus"),
+                ("gitignored", ".ductus/bin/"),
+            ]
+        );
+    }
+
+    /// The same shape of path, not ignored, is still a finding: the arm reads
+    /// the ignore rules, not the root.
+    #[test]
+    fn an_unignored_absent_criterion_path_is_still_a_finding() {
+        let tmp = tempdir().unwrap();
+        seed_ignored_state(
+            tmp.path(),
+            "done",
+            "- [x] The table lives in `.ductus/registry.toml`\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = path_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0].message.contains(".ductus/registry.toml"),
+            "{}",
+            found[0].message
+        );
+    }
+
+    /// A project in a subdirectory of its repository is asked about through
+    /// the work tree's path: its own `.gitignore` ignores the session file
+    /// only as `proj/.ductus/session.toml`.
+    #[test]
+    fn a_subdirectory_project_reads_its_ignore_rules_through_the_work_tree() {
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let (_repository, project) = git_fixture::subdirectory_project(tmp.path());
+        write(&project, ".gitignore", "/.ductus/session.toml\n");
+        seed_with_criteria(
+            &project,
+            "done",
+            "- [x] The session is `.ductus/session.toml`\n",
+        );
+        let result = run(&args(), &project).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.family == "criterion-path-existence"
+                    && s.reason == "gitignored"
+                    && s.path == ".ductus/session.toml"),
             "{:?}",
             result.skipped
         );

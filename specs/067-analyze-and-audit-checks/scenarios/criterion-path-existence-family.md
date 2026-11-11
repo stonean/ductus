@@ -14,7 +14,7 @@ That is not hypothetical. Spec 026 reached `done` with a criterion naming `frame
 
 ## Behavior
 
-**A seventh `check-artifacts` family, `criterion-path-existence`, advisory.** For a spec at `status: done`, each entry under `## Acceptance Criteria` is scanned for filesystem paths, and each path that no longer resolves produces one finding naming the criterion and the path. Criteria come from `read-spec`'s parsed acceptance-criteria list rather than a second section walker.
+**A seventh `check-artifacts` family, `criterion-path-existence`, advisory.** For a spec at `status: in-progress` or `done`, each entry under `## Acceptance Criteria` is scanned for filesystem paths, and each path that no longer resolves produces one finding naming the criterion and the path. Criteria come from `read-spec`'s parsed acceptance-criteria list rather than a second section walker.
 
 **It reads inside inline code spans — the inverse of the family above.** Paths are backticked by convention, which is exactly the context the tell scan must ignore. One family cannot hold both rules coherently, which is why these are two families rather than one check with a flag.
 
@@ -26,16 +26,16 @@ A sixth group is carried by a clause-scoped **predicate** rather than a phrase, 
 
 **An unresolved candidate is a finding only when its own top-level segment exists here.** When that segment is absent, nothing is provable — a framework repo's criteria legitimately name paths living in an *adopter's* checkout — so the candidate is recorded as `root-absent` rather than flagged. Recorded, not exempted: the report says what went unexamined instead of quietly reading as clean. The rule self-corrects where it matters, since in an adopter repo those roots exist and drift beneath them is provable again.
 
-**Scope is `## Acceptance Criteria` on `done` specs, and nothing else.** Body prose may name a dead path perfectly correctly while describing history — 026's own Behavior section now reads that spec 043 "deleted `framework/workflows/`", a true statement about a path that is supposed to be gone. Widening this check to whole spec bodies would flag true statements, which is why the contract framing is load-bearing rather than incidental. Body prose is checked by a sibling family, [body-path-existence-family](body-path-existence-family.md), which adds the two discriminators — history and transition markers — that make a body-wide check safe.
+**Scope is `## Acceptance Criteria` on `in-progress` and `done` specs, and nothing else.** Body prose may name a dead path perfectly correctly while describing history — 026's own Behavior section now reads that spec 043 "deleted `framework/workflows/`", a true statement about a path that is supposed to be gone. Widening this check to whole spec bodies would flag true statements, which is why the contract framing is load-bearing rather than incidental. Body prose is checked by a sibling family, [body-path-existence-family](body-path-existence-family.md), which adds the two discriminators — history and transition markers — that make a body-wide check safe.
 
 ## Edge Cases
 
 - A criterion naming a path that resolves to a **directory** is satisfied; `framework/commands/` is a directory reference, not a malformed file path.
 - A criterion naming no paths at all — the common case — contributes nothing.
-- A spec below `done` is not scanned. Its criteria describe work in flight, so a path that does not exist yet is expected rather than drifted.
+- A spec at `in-progress` is scanned, since the analysis the completion gate reads is taken there ([`status-gated-families-are-not-silent`](status-gated-families-are-not-silent.md)); a criterion naming a file it has yet to create is a finding until the file lands. Until that scenario, a spec below `done` was not scanned.
 - An unbackticked path in a criterion is missed. Accepted: outside code font a `/`-bearing token is more often a slash command, a placeholder, or an `and/or` than a path, and the originating case and every path in this repo's criteria are backticked.
 - An absolute path is rejected by the grammar rather than resolved against the filesystem — the check makes claims about this repository only.
-- The family reads no targets on a spec below `done`, so it records nothing in `skipped`: not applicable is distinct from tried-and-failed.
+- At any other status the family reads no targets and records one `status-gated` entry in `skipped`, its path the spec's `spec.md`, so a run that did not examine the criteria never reads as one that found nothing.
 - **Residual at authoring time, since closed:** an adopter-layout path whose top-level segment *also* exists in the framework repo (`.ductus/constitution.md`, `specs/rules/security-backend.md`, `.githooks/ductus-pre-commit`, `specs/system.md`) used to flag, because `root-absent` could not see that the criterion describes a different checkout. `ships_to_adopter` closed it: a candidate matching a **Shared Files** manifest destination now records a `ships-to-adopter` skip instead of a finding, so the class is named as excluded-by-construction rather than counted as drift. Nineteen of the 28 findings in the 2026-08-03 full-repo run are this class — and every one of those paths is something `ductus` *creates in an adopter project*, absent here only because `ductus` is the source rather than an adopter. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to. It is why the promotion verdict reads *do not promote, and re-measure in an adopter repo*: this repo is the least representative sample the check will ever run against.
 
 ## Open Questions

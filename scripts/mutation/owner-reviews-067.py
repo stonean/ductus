@@ -4,8 +4,9 @@ primitives: `validate-frontmatter`'s severities, the two frontmatter splices
 write, `check-command-flags`' whole pass, `check-rule-ids`' line-scoped
 section scan, `check-corpus-links`' reference sources, `resolve-anchor`'s
 markers basename, `check-promotion-coverage`'s required section set, the
-bound that moves `derive-dependencies`' `unwritable` past the read size, and
-the exec analyze tally's step 6.
+bound that moves `derive-dependencies`' `unwritable` past the read size, the
+exec analyze tally's step 6, and `check-artifacts`' status-gated path families
+and `gitignored` skip.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -428,5 +429,63 @@ MUTATIONS = [
         '        if !frontmatter_parses(&rewritten) {',
         '        if staged.as_ref().is_none_or(|set| set.contains(spec)) && !frontmatter_parses(&rewritten) {',
         'derive_references::tests::an_unstaged_unwritable_spec_is_named_under_staged',
+    ),
+    # -- check-artifacts: the status-gated path families (task 17) --------
+    (
+        'M57 the path families examine a spec at done only',
+        'src/primitives/check_artifacts.rs',
+        'const PATH_FAMILY_STATUSES: [&str; 2] = ["in-progress", "done"];',
+        'const PATH_FAMILY_STATUSES: [&str; 2] = ["done", "done"];',
+        'an_in_progress_criterion_naming_a_deleted_path_is_a_finding an_in_progress_body_naming_a_deleted_path_is_a_finding',
+    ),
+    (
+        'M58 a status-gated path family records no skip',
+        'src/primitives/check_artifacts.rs',
+        '    record_skip(skipped, family, "status-gated", spec_md);\n    false',
+        '    let _ = (&skipped, family, spec_md);\n    false',
+        'a_criterion_below_in_progress_is_status_gated a_body_below_in_progress_is_status_gated',
+    ),
+    (
+        'M59 the criterion family ignores its status gate',
+        'src/primitives/check_artifacts.rs',
+        '    if !path_family_examines(skipped, "criterion-path-existence", status, &citing) {\n        return;\n    }',
+        '    let _ = status;',
+        'a_criterion_below_in_progress_is_status_gated',
+    ),
+    (
+        'M60 the body family ignores its status gate',
+        'src/primitives/check_artifacts.rs',
+        '    if !path_family_examines(skipped, BODY_PATH_FAMILY, status, &spec_md) {\n        return;\n    }',
+        '    let _ = (status, &spec_md);',
+        'a_body_below_in_progress_is_status_gated',
+    ),
+    # -- check-artifacts: a criterion path git ignores (task 17) -----------
+    (
+        'M61 a criterion path git ignores is a finding, not a gitignored skip',
+        'src/primitives/check_artifacts.rs',
+        '            if ignore_rules.ignores(&candidate) {',
+        '            if false && ignore_rules.ignores(&candidate) {',
+        'a_criterion_path_git_ignores_is_a_gitignored_skip a_subdirectory_project_reads_its_ignore_rules_through_the_work_tree',
+    ),
+    (
+        'M62 every unresolved criterion path reads as ignored',
+        'src/primitives/check_artifacts.rs',
+        '            if ignore_rules.ignores(&candidate) {',
+        '            if true || ignore_rules.ignores(&candidate) {',
+        'an_unignored_absent_criterion_path_is_still_a_finding',
+    ),
+    (
+        'M63 the ignore lookup skips the work-tree conversion',
+        'src/primitives/check_artifacts.rs',
+        '                .is_path_ignored(project.to_git(rel))',
+        '                .is_path_ignored(rel)',
+        'a_subdirectory_project_reads_its_ignore_rules_through_the_work_tree',
+    ),
+    (
+        'M64 outside a repository every path reads as ignored',
+        'src/primitives/check_artifacts.rs',
+        '        project.as_ref().is_some_and(|project| {',
+        '        project.as_ref().is_none_or(|project| {',
+        'check_artifacts::tests::the_originating_case_is_reproduced',
     ),
 ]

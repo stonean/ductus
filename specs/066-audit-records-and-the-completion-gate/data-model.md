@@ -159,7 +159,7 @@ Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and
 
 | class | reasons | response |
 | --- | --- | --- |
-| excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed` | none; the exclusion is correct |
+| excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed`, `gitignored`, `status-gated` | none; the exclusion is correct |
 | could not be read | `target-missing`, `target-unparseable`, `no-readable-state`, `referrer-unreadable`, `rule-citations-not-checked`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked` | a real gap in what the run saw |
 | the spec's own artifact | `artifact-unreadable` | **blocking at `done`**, where it is a finding, never a skip |
 
@@ -167,7 +167,7 @@ The first three `could not be read` reasons are `check-artifacts` skips. The res
 
 `artifact-unreadable` is the one reason that escalates: below `done` it is a skipped target, and at `done` it is a blocking finding counted in `blocking-findings`, so the gate holds the spec. The reason set is closed and the map is omitted when empty.
 
-**The subject depends on the spec's status when the record is written.** `criterion-path-existence` and `body-path-existence`, the sources of most skipped targets, examine `done` specs only, so a record written while a spec is reopened describes a smaller subject than the same spec at `done`. Write the record last, after the status is settled.
+**The subject depends on the spec's status when the record is written.** `criterion-path-existence` and `body-path-existence`, the sources of most skipped targets, examine `in-progress` and `done` specs and record a `status-gated` skip at any other status ([067's `status-gated-families-are-not-silent`](../067-analyze-and-audit-checks/scenarios/status-gated-families-are-not-silent.md)), and other families still condition on status, so a record written at one status describes a different subject than the same spec at another. Write the record last, after the status is settled.
 
 ## `check-review-freshness` — whether one spec's review is still current
 

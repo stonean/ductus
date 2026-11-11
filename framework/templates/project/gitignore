@@ -32,6 +32,12 @@
 # that does not have it, so it never needs to arrive with a clone.
 /.ductus/bin/
 
+# ductus result files — a primitive's lists past the configured read size.
+# The directory also ignores itself; listed here so the rule exists in a fresh
+# clone, where the directory does not, and a check reading these ignore rules
+# sees the path as local state.
+/.ductus/results/
+
 # IDE
 .vscode/
 .idea/

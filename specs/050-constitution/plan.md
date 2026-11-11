@@ -80,8 +80,9 @@ pointer (AC3).
 
 **Criterion verification** (AC6) is not in `AGENTS.md` at all — it was learned
 after the survey. It is universal for a structural reason: `check-artifacts`'
-`criterion-path-existence` family examines specs at `done` only, so a spec that
-sits in progress indefinitely never has its criteria examined, and the family
+`criterion-path-existence` family examined specs at `done` only, so a spec that
+sat in progress indefinitely never had its criteria examined (since 067's
+`status-gated-families-are-not-silent` it examines `in-progress` specs too), and the family
 proves only that a path *resolves* — a criterion whose paths all exist while its
 claim about their contents is false is invisible to it. Both halves were
 observed here on 2026-08-17. Adopters run the same pipeline and inherit the same
@@ -244,7 +245,8 @@ worklist, exactly as the first round's classification preceded its promotions.
 
 **Promoted 2026-09-15 by task 23.** All 25 rows in the promote table have their
 canonical text as bullets in `framework/constitution.md` (eight since moved to a
-command reference; see **Relocated to a command reference** below), each under the existing
+command reference; see **Relocated to a command reference** below; one since
+retired, see the amendment there), each under the existing
 section whose subject it shares, and each entry's `AGENTS.md` line is now a
 pointer. The anchor set is byte-identical before and after, so AC10 holds; the
 constitution went 767 → 792 lines and 163 → 188 top-level bullets, and `AGENTS.md`
@@ -278,7 +280,6 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | A spec body must not carry a point-in-time status section | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
 | Only a spec's durable contracts stale its review — `scenarios/*.md` and `data-model.md`, nothing else — and that is what prices a corpus sweep | The digest covers `scenarios/*.md` and `data-model.md` for every adopter; this is what prices any corpus sweep |
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
-| `unexamined` cannot be measured while the spec is `in-progress`, and the gate's own ordering is what hides that | The family is `done`-only and the gate ordering is the shipped one, so the trap is identical in any adopter repo |
 | A spec's own completion commit can destroy content, and a `## Heading` absorbed into an unterminated code span is invisible to every check this project has — including the gate that reads it | **R** — drops the Family-25 scoping note; the blindness is in the shared markdown reader every adopter uses |
 | `write-review` derives `scope` itself, so a count you measured earlier and typed into the Summary can contradict the record it is written into — and nothing compares the two | One call writes both, so nothing can compare them; true wherever the primitive runs |
 | Removing an embedded copy is a corpus sweep, not a deletion — grep for what pointed at it, including the artifacts that *describe* it | The pointer-not-copy rule already ships; this is what *replacing* one costs, classified by tense |
@@ -461,7 +462,7 @@ Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-st
 
 ### Relocated to a command reference — 2026-10-26
 
-The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified.
+The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified. **Amended 2026-11-11:** the *`unexamined` cannot be measured while the spec is `in-progress`* entry was retired with its rule when 067's `status-gated-families-are-not-silent` ran the path families at `in-progress`, so its row here and its promote row above are gone, leaving 24 promote rows.
 
 | Entry | Reason |
 | --- | --- |
@@ -470,7 +471,6 @@ The cut to one read moved these universal rules' canonical text out of the const
 | A spec with no recorded `in-progress` transition derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
 | Only a spec's durable contracts stale its review | `framework/reference/review.md` §Window and coverage |
 | `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |
-| `unexamined` cannot be measured while the spec is `in-progress` | `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory) |
 | `remove-inbox-item` takes the bullet text | `framework/reference/groom.md` §Inbox upkeep |
 | When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |
 | An inbox item blocked on an external event is discarded at `/{project}:groom`, not held | `framework/reference/groom.md` §Groom decision tree |

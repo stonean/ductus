@@ -170,10 +170,11 @@ One rule joins this promotion that was not in the 2026-08-17 survey, because it
 was learned after it, and it is universal for a structural reason.
 
 A ticked acceptance criterion is a completed claim, and nothing verifies it.
-`check-artifacts`' criterion-path-existence family examines specs at `done`
-only — correctly, since a criterion on a spec still in progress may name a path
-not yet created — so a spec that sits in progress indefinitely never has its
-criteria examined at all. The family also only proves a path *resolves*; a
+`check-artifacts`' criterion-path-existence family examined specs at `done`
+only when this rule was written, so a spec that sat in progress indefinitely
+never had its criteria examined at all; since 067's
+`status-gated-families-are-not-silent` it examines `in-progress` specs too. The
+family also only proves a path *resolves*; a
 criterion whose paths all exist while its claim about their contents is false is
 invisible to it, and no deterministic check can close that half.
 
@@ -203,7 +204,7 @@ closing it.
 - [x] AC3: Each promoted entry's `AGENTS.md` line points at its canonical section — the constitution's, or the command reference's for a relocated rule — and states no normative content of its own, so grepping a promoted rule's distinctive phrasing finds one statement and one pointer
 - [x] AC4: No entry classified project-only is altered by this spec. The promotion and relocation passes altered none. Commit `3ebafd8c`, tagged `tasks(050)`, appended a sentence to the project-only gotcha on verifying runtime changes through the built binary; that is a contributor learning made during this spec's work, not a reclassification
 - [x] AC5: Every promoted rule is worded so it holds for an adopter: it cites the constitution, the pipeline commands, the artifacts, or runtime primitives, and never a path that exists only in this repository
-- [x] AC6: The constitution states that a spec's ticked acceptance criteria are verified against the tree before it closes, naming both gaps that make the check necessary — that `check-artifacts` examines `done` specs only, and that a false claim whose paths resolve is not detectable
+- [x] AC6: The constitution states that a spec's ticked acceptance criteria are verified against the tree before it closes, naming both gaps that make the check necessary — that `check-artifacts` examines `done` specs only, and that a false claim whose paths resolve is not detectable. **Superseded in part:** since 067's `status-gated-families-are-not-silent` (2026-11-11) the check examines `in-progress` specs too, so the constitution names the scope it has and the gap that remains, a false claim whose paths resolve
 - [x] AC7: An adopter receives every promoted rule: the sections promoted here are present in the constitution the **Shared Files** manifest copies to `.ductus/constitution.md`, or in the command reference it copies to `.ductus/reference/<command>.md`
 - [x] AC8: `/ductus:audit` passes with the promoted sections in place, Family 1 (cross-doc claim consistency) included, so no promotion contradicts a claim another document makes
 - [x] AC9: `npx markdownlint-cli2` passes over `framework/constitution.md` and `AGENTS.md`

@@ -462,8 +462,12 @@ pub struct AnalyzeBlock {
     ///   tree, not this one), `root-absent`
     ///   (nothing is provable because the path's top-level segment does not
     ///   exist here), `never-existed` (a body path no revision ever held — an
-    ///   example or a never-built alternative, a name rather than a file).
-    ///   Correct, and nothing is owed.
+    ///   example or a never-built alternative, a name rather than a file),
+    ///   `status-gated` (the two path families do not examine a spec at a
+    ///   status other than `in-progress` or `done`, one skip each),
+    ///   `gitignored` (a criterion path the
+    ///   repository's own ignore rules ignore, local state a fresh clone
+    ///   lacks). Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
     ///   `no-readable-state`, `artifact-unreadable`, and the gaps no check
     ///   decided on: `referrer-unreadable` (a referrer
@@ -6163,8 +6167,10 @@ pub struct SkippedTarget {
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,
     /// `target-unparseable`, `no-readable-state`, `root-absent`,
-    /// `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`, or
-    /// `never-existed`.
+    /// `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`,
+    /// `never-existed`, `status-gated` (a path family that does not examine a
+    /// spec at its status, the target its `spec.md`), or `gitignored` (a
+    /// criterion path the repository's own ignore rules ignore).
     pub reason: String,
     /// Repo-relative path of the target that was not examined.
     pub path: String,

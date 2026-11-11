@@ -28,6 +28,8 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 | `artifact-unreadable` | a scanned artifact could not be read at all |
 | `not-a-live-claim` | the criterion naming a path does not claim the path is present |
 | `never-existed` | a body path no revision of the repository ever held — an example or a never-built alternative ([body-path-existence-family](body-path-existence-family.md)) |
+| `gitignored` | a criterion's path is one the repository's own ignore rules ignore, local state a fresh clone lacks ([status-gated-families-are-not-silent](status-gated-families-are-not-silent.md)) |
+| `status-gated` | a path family did not examine the spec because its status is neither `in-progress` nor `done`; the path is the spec's `spec.md` ([status-gated-families-are-not-silent](status-gated-families-are-not-silent.md)) |
 
 **`clean` is unchanged.** It stays `findings.is_empty()`. Redefining it to account for skips would silently change the verdict four shipped families produce, which is a larger behavior change than the honesty problem warrants. The assurance therefore lives in the pair: `clean: true` with an empty `skipped` is a verified-clean result, and `clean: true` with a non-empty `skipped` is a partially-examined one.
 
@@ -41,7 +43,7 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 - The same target skipped by two families produces one record per family: the reason is family-specific, and collapsing them would lose which check went unperformed.
 - The same target skipped twice by one family — two links in one document pointing at the same missing file — produces one record; the fact is about the target, not the citation.
 - `clean: true` alongside a non-empty `skipped` is a legal and meaningful state, not an inconsistency to normalize away.
-- A family that reads no targets at all for a given spec (the path-existence family below `done`, for instance) records nothing: it was not applicable, which is distinct from having tried and failed.
+- A family that reads no targets at all for a given spec records nothing: it was not applicable, which is distinct from having tried and failed. The two path families are the exception: a status their gate keeps them from running at records one `status-gated` entry each, since a check that did not run must never read as one that ran and found nothing ([status-gated-families-are-not-silent](status-gated-families-are-not-silent.md)).
 
 ## Open Questions
 
