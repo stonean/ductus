@@ -18,7 +18,7 @@ The `framework/` directory is ductus's source — everything that ships to adopt
 - `framework/templates/project/` — project document templates consumed once at adoption (agents, claude-md, system, errors, events, project-readme, gitignore, inbox)
 - `framework/commands/` — operational slash command sources only
 - `framework/reference/` — each command's reference, read when one of its steps points at it (lands at `.ductus/reference/` in adopter repos)
-- `framework/bootstrap/` — the `ductus.md` installer plus per-agent permission files at `bootstrap/configure/{key}.md`
+- `framework/bootstrap/` — the `ductus.md` installer plus per-agent configure files at `bootstrap/configure/{key}.md`
 
 When adding files under `framework/`, place them by purpose, not by extension.
 
@@ -149,7 +149,7 @@ For a further tooling-language decision (a second binary the framework might shi
 - **In a `set -e` script, `[ test ] && cmd` as the *last* command of a block exits the script when the test is false.** Write `if [ test ]; then cmd; fi`, or `[ test ] || continue` in a loop; never `|| true`, which swallows a real failure. Check the last command of every block, loop, function and trap.
 - **A feature directory is not necessarily `NNN-slug` — ask `parse_feature_dir`, never the first three bytes.** See [§numbering](framework/constitution.md#numbering-convention). Match `parse_feature_dir`'s `FeatureForm`; `1234.1-slug` is one too. Numbers: `sequential_number()`; order: `feature_dir_cmp`.
 - **clap expands `{n}` in a doc comment as a newline, so a `#[derive(clap::Args)]` field's docs cannot contain one.** Those doc comments in `runtime/src/schema/primitives.rs` render as `--help`; write the placeholder as `<identifier>.<n>-<slug>`. Check with `cargo run -- <subcommand> --help`.
-- **Verify that a recorded *decision* still holds, not only that a criterion does — a rejected alternative that was later adopted is invisible to every check.** Per [§drift-prevention](framework/constitution.md#drift-prevention), §Trade-offs, §Non-goals, Resolved Questions are live; `git log -S` the defining artifact. Pre-017 specs: check 017's reversals.
+- **Verify that a recorded *decision* still holds, not only that a criterion does — a rejected alternative that was later adopted is invisible to every check.** Per [§drift-prevention](framework/constitution.md#drift-prevention), a spec's Trade-offs, Non-goals and Resolved Questions are live; `git log -S` the defining artifact. Pre-017 specs: check 017's reversals.
 - **"Record" spans several destinations in this framework — name the artifact and section, never the verb alone.** [§pipeline-boundaries](framework/constitution.md#pipeline-boundaries).
 - **A retired filename is not a retired name — sweep it by meaning, not by token.** [§drift-prevention](framework/constitution.md#drift-prevention).
 - **Piping a gate command's output replaces its exit status — `cmd | tail` reports `tail`'s success, not `cmd`'s.** [§grounding](framework/constitution.md#grounding).

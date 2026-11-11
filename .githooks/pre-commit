@@ -15,8 +15,10 @@
 #                                framework/bootstrap/configure/claude.md
 #                                (runs before gen-claude-commands.sh so the
 #                                 regenerated configure.md picks up changes)
-#   2. gen-claude-commands.sh  — .claude/commands/ductus/*.md from framework/commands/
-#                                (and .ductus/reference/*.md from framework/reference/)
+#   2. gen-claude-commands.sh  — .claude/commands/ductus/*.md and .pi/prompts/ductus-*.md
+#                                from framework/commands/, .pi/extensions/ductus.ts from
+#                                the Pi bridge, and .ductus/reference/*.md from
+#                                framework/reference/
 #   3. gen-help-tables.sh      — five command tables in framework/commands/help.md
 #
 # The two frontmatter indexes — `dependencies:` and `references:` — are then

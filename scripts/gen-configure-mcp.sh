@@ -57,7 +57,7 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run) dry_run=1 ;;
     -h|--help)
-      sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0") [--dry-run]"
       echo "  --dry-run  Report what would change; exit 1 if any source needs updating."

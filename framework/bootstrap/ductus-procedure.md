@@ -403,7 +403,7 @@ This summary hands off to `/{project}:analyze`, which dispositions each gap in t
 
 Adopted agents: {comma-separated `name` of selected agents}.
 
-Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to a Pi adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
+Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to a Pi adopter names commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
 
 1. Run `/{project}:configure` in each adopted agent to apply the full permission set.
 2. Fill in `AGENTS.md` — tech stack, project structure, code style, testing conventions, gotchas.

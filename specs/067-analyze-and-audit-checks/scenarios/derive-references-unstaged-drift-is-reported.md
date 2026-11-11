@@ -67,7 +67,7 @@ reasoning holds only for a body-derived field, and this is the one derived
 field that has an input outside the body.
 
 Nothing else covers the gap. `check-orphaned-references` has a different
-subject entirely — filesystem paths in four adopter-owned files — and does not
+subject entirely — filesystem paths in a fixed set of adopter-owned files — and does not
 look at frontmatter aliases.
 
 This is `QUAL-CLAIM-001` in the same shape the sibling scenario

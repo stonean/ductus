@@ -22,8 +22,11 @@
 #   2. Every install.sh `case` arm names a registry agent and installs to
 #      that agent's derived path. (Catches: a stale or mis-mapped arm.)
 #   3. Every settings file install.sh pre-seeds matches that agent's
-#      registry settings_template, compared as JSON. (Catches: the seeded
-#      permission copy silently drifting from the registry it duplicates.)
+#      registry settings_template, compared as JSON, and every agent whose
+#      settings_template is non-empty has a seed. (Catches: the seeded
+#      permission copy silently drifting from the registry it duplicates, or
+#      vanishing, which a compare of only the seeds found would pass.) The
+#      count of seeds compared goes to stderr.
 #   4. install.sh's REF_FLOOR equals ductus.md's {ref-floor}, the first
 #      release whose bootstrap honors --ref (spec 061). (Catches: one entry
 #      point accepting a tag the other refuses.)
@@ -201,6 +204,23 @@ def norm(x):
 def finding(loc, msg, fix):
     print(f"{loc}\t{msg}\t{fix}")
 
+# A registry agent whose settings_template is a non-empty object must have a
+# seed: comparing only the seeds found would pass, comparing nothing, when the
+# seed is deleted or written to a path PATH2KEY does not know. The empty pi
+# template needs none (Direction 3b holds it empty).
+for key, template in rows.items():
+    try:
+        parsed = json.loads(template)
+    except json.JSONDecodeError:
+        continue  # reported below only for a seeded key; Direction 3b and 1 cover the row
+    if isinstance(parsed, dict) and parsed and key not in seeds:
+        known = ", ".join(p for p, k in PATH2KEY.items() if k == key) or "none"
+        finding(f"{installer} (agent {key})",
+                f"registry agent '{key}' has a non-empty settings_template but {installer} seeds no settings file for it (paths checked: {known})",
+                f"restore the '{key}' seed heredoc in {installer}, or add its path to PATH2KEY in scripts/audit/installer-registry-parity.sh")
+
+print(f"installer-registry-parity: compared {len(seeds)} settings seed(s) against the registry", file=sys.stderr)
+
 for key, (path, body) in seeds.items():
     if key not in rows:
         finding(f"{installer} ({path})",
@@ -225,6 +245,11 @@ for key, (path, body) in seeds.items():
                 f"re-sync the '{path}' heredoc in {installer} with the '{key}' row in {ductus} §Agent Registry")
 PY
 )"
+seed_rc=$?
+if [ "$seed_rc" -ne 0 ]; then
+  emit "$INSTALLER" "the settings-seed comparison could not run (python3 exited $seed_rc)" \
+    "run scripts/audit/installer-registry-parity.sh by hand and fix the error it prints"
+fi
 if [ -n "$seed_drift" ]; then
   while IFS="$(printf '\t')" read -r loc msg fix; do
     [ -z "$loc" ] && continue

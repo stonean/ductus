@@ -22,7 +22,7 @@ The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive
 - `traverse-deps` MUST detect cycles in the dep graph it walks and emit a structured finding when one is present. The finding names the strongly connected component(s) — slugs in traversal order, one entry per cycle.
 - The finding is at the same severity level as the existing dependency-existence and status-compatibility findings (blocking). `/{project}:analyze` treats it as a finding that fails the analyze gate, consistent with how the existing `traverse-deps` findings are surfaced.
 - Cycle detection runs even when other findings (missing-dependency, status-mismatch) are present. The primitive reports the full set; the cycle is not masked by other defects.
-- The primitive's `success` result shape is unchanged when the graph is acyclic — cycle detection adds findings, it does not restructure the output.
+- When the graph is acyclic the result carries an empty `cycles` list — cycle detection adds a field, it does not restructure the output.
 - `runtime/tests/parity.rs` and `runtime/tests/mcp.rs` run a 2-cycle fixture through the CLI and MCP surfaces and assert each reports the same finding.
 
 ## Edge Cases

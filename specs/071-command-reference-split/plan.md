@@ -11,7 +11,7 @@ the prose the move falsifies: the step pointers, the two directional
 paragraphs, `$ARGUMENTS` and `{cli-config-dir}`, and intra-file links whose
 target stayed behind. The installer ships the files through the Shared Files
 manifest and enforces their directory. The generator dogfoods them. Five audit
-families and two runtime primitives follow the content to its new file, and
+families and three runtime primitives follow the content to its new file, and
 the primitive changes are recorded as scenarios under the specs that own them.
 
 ## Technical Decisions
@@ -189,9 +189,8 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   `manifest_destinations` discards.
 - **`check-step-references`.** A `step N of §X` reference numbers a step of a
   named section's list, not the citing command's, so it is qualified like
-  `X's step N`. Found in review: the pointer rewrite put three such references
-  into `implement.md`'s Instructions, and the primitive had resolved them
-  against implement's own step 5.
+  `X's step N`: the pointer rewrite puts such references into `implement.md`'s
+  Instructions, which would otherwise resolve against implement's own steps.
 - **Doc comments** that place the reference in `analyze.md`
   (`check_artifacts.rs:9`, and the `ArtifactFinding` doc comment in
   `schema/primitives.rs`) and the `check-step-references` description

@@ -17,7 +17,7 @@ Measured over the done specs with a prototype of this design: about 610 raw cand
 
 ## Behavior
 
-- **A tenth `check-artifacts` family, `body-path-existence`, advisory, on `done` specs only.** It reads `spec.md` outside `## Acceptance Criteria` (the criterion family owns that section), `plan.md`, `data-model.md` and every scenario, skipping fenced code blocks and HTML comments, and only inside inline code spans.
+- **A `check-artifacts` family, `body-path-existence`, advisory, on `done` specs only.** It reads `spec.md` outside `## Acceptance Criteria` (the criterion family owns that section), `plan.md`, `data-model.md` and every scenario, skipping fenced code blocks and HTML comments, and only inside inline code spans.
 - **Candidates follow the criterion family's grammar**, with a `#fragment` stripped first. A candidate starting `../` resolves from the citing file's directory and is dropped if it climbs out of the repository; any other resolves from the project root.
 - **An unresolved candidate is examined in order.** A missing top-level segment is recorded `root-absent`; an adopter destination `ships-to-adopter`; a line carrying a criterion marker, a body marker, or a negated-creation clause `not-a-live-claim`. The rest are checked against history.
 - **History decides.** One walk from HEAD per call, every remaining candidate batched, stopping once each is found. A candidate no revision ever held is recorded `never-existed`, a new reason in the excluded-by-construction class. One a revision held is a finding that quotes the line, so the fix is in front of the reader.

@@ -43,8 +43,8 @@ mid-edit is exactly when a pre-commit hook runs.
 
 Both `DeriveDependenciesResult` and `DeriveReferencesResult` gain
 `unparseable: Vec<String>`: the repo-relative paths of specs whose frontmatter
-could not be read well enough to derive from, sorted, absent-when-empty in the
-same sense as the other list fields.
+could not be read well enough to derive from, sorted, and an empty list when
+there are none.
 
 A spec lands there when its frontmatter fence is never closed — the condition
 both splices already detect implicitly by never finding their anchor, made

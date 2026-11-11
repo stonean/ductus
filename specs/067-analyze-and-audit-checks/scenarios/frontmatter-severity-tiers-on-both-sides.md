@@ -26,7 +26,7 @@ The three tests whose names and assertions pin the old contract (`missing_status
 
 ## Edge Cases
 
-- **No code branches on the severity string.** The only other `hard_fail` in `runtime/src` is `AnalyzeBlock`'s count field, which is unrelated. The change is therefore observable only in the rendered report and in tests that assert the literal — which is exactly why it drifted unnoticed and why the consumer half must move in the same change.
+- **When this was written (2026-09-16), no code branched on the severity string.** The only other `hard_fail` in `runtime/src` was `AnalyzeBlock`'s count field, which is unrelated, so the change was observable only in the rendered report and in tests that assert the literal — which is exactly why it drifted unnoticed and why the consumer half had to move in the same change. Since `92b4b18a` the `ductus exec` walker's tally (`by_severity` in `runtime/src/interpreter/analyze_tally.rs`) counts each tier a finding names.
 - **`analyze.md`'s Severity tiers section is not the defect.** It already lists the four tiers correctly; only step 2's flattening rule is wrong. Editing the tier list would be a second, unrelated change.
 - **The corrected rule is *per finding*** and needs no knowledge of the emitter, so `ductus exec` and a host walking step 2 apply it alike.
 - **An eight-site tier raise makes previously-blocking findings hard-fail.** Both tiers already prevent pipeline advancement, so no spec that passed before now fails; what changes is which section of the report the finding lands in and how the run's tier counts split. A run over a corpus with a malformed spec will show a `hard-fail` count where it previously showed `blocking-findings`.

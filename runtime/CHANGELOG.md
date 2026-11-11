@@ -524,7 +524,9 @@ its version and date.
   under `.opencode/command/`. It still refuses a primitive's write into
   those directories and files, as it refuses one into `.vscode/` or `.idea/`.
   An adopter on one of those hosts removes its tree, and any `ductus` MCP
-  registration that host holds, by hand.
+  registration that host holds, by hand. `check-corpus-links` with `scope:
+  repository` no longer excludes those directories as generated command
+  copies, so a copy left tracked there has its links checked.
 
 ### Fixed
 
