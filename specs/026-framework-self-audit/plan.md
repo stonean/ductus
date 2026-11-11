@@ -71,7 +71,7 @@ Two sub-checks composed in one script:
 **`scripts/audit/manifest-parity.sh`** (Family 2)
 One sub-check:
 
-- 2b permission set: extract Claude `permissions.allow` array from `framework/bootstrap/configure/claude.md`, extract Auggie `toolPermissions` array from `framework/bootstrap/configure/auggie.md`. Normalize each entry to `(tool, command-pattern)` per Q6's resolution (strip `^` anchor and trailing space from Auggie regexes; case-normalize). Sort both, diff; finding per asymmetric entry.
+- 2b permission set: extract Claude `permissions.allow` array from `framework/bootstrap/configure/claude.md`. Normalize each entry to `(tool, command-pattern)` per Q6's resolution (case-normalize). With one configure file there is no second set to diff; the block's markers and stray grants are what the family checks.
 
 **`scripts/audit/placeholder-roundtrip.sh`** (Family 4)
 `grep -rn` over `framework/commands/*.md` for hardcoded tokens that should be placeholders: `.claude/` (should be `{cli-config-dir}/`), `gov:` (should be `{project}:`), `/ductus:` (should be `/{project}:`). A few documented exceptions (e.g., `framework/commands/audit.md` itself NOT scaffolded so its self-references stay literal) are allowlisted via a comment-prefix `<!-- audit:ignore-placeholders -->` on the affected line.

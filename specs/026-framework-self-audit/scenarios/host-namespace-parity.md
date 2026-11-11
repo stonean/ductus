@@ -27,7 +27,7 @@ The check belongs to `/ductus:audit` rather than `/ductus:analyze` per the [§Bo
 - **No commands directory installed** — a repo that has never run `/ductus` has nothing to compare against; not a finding. The check asserts agreement between two things that exist, not that either exists.
 - **Fallback happens to match** — an adopter whose repo directory basename is literally the installed namespace passes with no `[host]` block. The fallback is documented behavior, so the family checks agreement, not the presence of the block.
 - **Multiple namespace directories under one `commands/`** — a finding only when *none* matches the effective namespace; an adopter may legitimately install commands from more than one source.
-- **Multiple agent config directories present** (`.claude`, `.augment`, `.opencode`, `.agents`) — each is checked independently. `project` is the shared committed value across agents per spec 012's multi-agent contract, so a namespace present under one config dir and absent under another is itself the finding.
+- **Multiple agent config directories present** — each is checked independently. `project` is the shared committed value across agents per spec 012's multi-agent contract, so a namespace present under one config dir and absent under another is itself the finding.
 - **Placeholder overlap with Family 4** — Family 4 (placeholder roundtrip) forbids a hardcoded `ductus:` inside `framework/commands/` sources; this family compares *resolved* values in an installed repo. The two never look at the same file, so no duplicate finding arises.
 
 ## Open Questions
