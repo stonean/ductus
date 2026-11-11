@@ -15,9 +15,7 @@ frontmatter completeness** check (lines 428–436) named
 `{cli-config-dir}/commands/{project}/help.md`, every `.md` in
 `{cli-config-dir}/commands/{project}/`, and `{cli-config-dir}/commands/ductus.md`.
 
-That shape is right for `claude-style` alone. OpenCode installs to
-`command/{project}/` (singular), Antigravity to
-`skills/{project}-<name>/SKILL.md`, and Pi (064) to flat
+That shape is right for `claude-style` alone. Pi (064) installs to flat
 `prompts/{project}-<name>.md` with the self-install at `prompts/ductus.md`. For
 those adopters the checks read a directory that does not exist, examined
 nothing, and passed — a check that could not tell "clean" from "never
@@ -37,15 +35,14 @@ command is the `help` entry of that same set, not a separately spelled path.
 
 **The set is the project's commands, not the directory's contents.** Membership
 follows the layout's **Slash-command cleanup glob** row, which already draws
-this line: `*.md` in `command/{project}/` for OpenCode, `{project}-*/` skill
-directories for Antigravity, and `{project}-*.md` in `prompts/` for Pi.
+this line: `*.md` in `commands/{project}/` for `claude-style` and
+`{project}-*.md` in `prompts/` for Pi.
 
 **The frontmatter expected is the layout's.** `description:` is required in
 every layout. `argument-hint:` is checked only where the layout carries the
-source frontmatter (`claude-style`, `opencode`, `pi`, which copy it verbatim).
-Antigravity's scaffolding writes a skill's frontmatter as `name:` and
-`description:` alone, so an `argument-hint:` check there would flag every skill
-for a field the layout never writes.
+source frontmatter (`claude-style` and `pi`, which copy it verbatim), so a
+layout that wrote a narrower frontmatter would not be flagged for a field it
+never writes.
 
 **A path that does not resolve is unexamined, not clean.** When the derived
 command set or install path is absent, the check says so and names the path it
@@ -56,13 +53,9 @@ looked for, rather than reporting the frontmatter check as passed.
 - **Pi's prompts directory is shared.** It also holds the adopter's own prompt
   templates. Reading every `.md` there would hold the adopter's prompts to
   ductus's frontmatter rules; the `{project}-` prefix is what scopes the check.
-- **Antigravity's install path is a directory form**
-  (`skills/ductus/SKILL.md`), so "the bootstrap installer lives outside the
-  project namespace" holds by a different shape than a sibling file; the row
-  carries that, and the step does not restate it.
 - **A `claude-style` adopter sees no change.** The derived row for its layout
   is the path the step spells today, so the fix is invisible where the bug was.
-- **Adding a layout costs no edit here.** A fifth layout adds a §Derived values
+- **Adding a layout costs no edit here.** A further layout adds a §Derived values
   column, and `analyze.md` picks it up because it points at the row. Spelling
   each layout in `analyze.md` would be the second copy §drift-prevention rules
   out, and it would go stale at the next agent.
