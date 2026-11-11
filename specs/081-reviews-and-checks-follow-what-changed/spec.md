@@ -1,7 +1,7 @@
 ---
 status: clarified
 dependencies: [079-review-and-analysis-work-converges]
-cross-spec-impact: [026-framework-self-audit, 050-constitution, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges]
+cross-spec-impact: [026-framework-self-audit, 047-analyze-findings-durability, 050-constitution, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges]
 next-criterion: 12
 ---
 
@@ -43,17 +43,17 @@ Specs reached `done` slowly because reviews and checks were owed for changes out
 - **A configured spec root, or a project in a repository subdirectory.** The artifact set is read relative to the project root and the configured spec root, as every other path rule is.
 - **A runtime-source cache miss in CI.** A spec-only push that finds no runtime built from the same sources compiles one and says so. It does not run `runtime.yml`.
 - **The checks follow the change.** A change confined to the project's artifacts owes the artifact checks, and no build, automated test, code lint or code CI. This is the constitution's blast-radius rule made concrete, and it ships to adopters.
-- **The adopter gets it.** The changes ship in a `ductus-v<version>` release.
+- **The adopter gets it.** The changes land in what a `ductus-v<version>` release ships.
 
 ## Acceptance Criteria
 
 - [ ] AC1: A reopening whose window changed the spec's own scenarios or data model, and nothing outside the project's artifacts, has `compute-review-scope` report `review-owed: false`, provided the review record holds nothing only a review clears.
 - [ ] AC2: In that case `check-review-gate` blocks on no review check, `review is stale` included, and holds `done` only on the analysis. A fixture proves both directions: a contract-only change passes the review checks, and a change to a path outside the artifacts still blocks on a review.
-- [ ] AC3: The framework self-audit's Family 19 reports no finding for a `done` spec whose only change since its review is to its own scenarios or data model.
+- [ ] AC3: `check-review-freshness` and the framework self-audit's Family 19, which asked only whether a `done` spec's contracts still matched its review's digest, are retired. `scripts/audit/run-all.sh` registers no Family 19, the runtime serves no `check-review-freshness`, and `merge-permissions` revokes its allow entry from an adopter's settings.
 - [ ] AC4: `framework/constitution.md` states the division (`/{project}:review` for code, `/{project}:analyze` for the project's artifacts) and the check-selection rule. `framework/reference/review.md` no longer says a scenario or data-model edit stales a review.
 - [ ] AC5: 079's Resolved Questions on scenario edits and on attribution record the 2026-11-11 changes and point here, as do its AC4 annotation naming a stale digest and its AC6 rule for a commit several specs claim.
 - [ ] AC6: A push to this repository whose changes are confined to the project's artifacts compiles no Rust in CI when a runtime built from the same runtime sources is cached, and each run that compiles says why. `runtime.yml` still does not run for such a push. `AGENTS.md`'s local-checks rule asks for no build and no code workflow for such a change.
-- [ ] AC7: The changes reach adopters through a `ductus-v<version>` release, and the release ships `63527403`'s removal of the status flip.
+- [ ] AC7: Every change this spec makes to how the pipeline behaves lands in what a `ductus-v<version>` release ships: the runtime, `framework/commands/`, `framework/reference/`, `framework/constitution.md` and `framework/bootstrap/`. None lands only in this repository's `AGENTS.md`, `scripts/` or workflows. Cutting the release is the owner's step once 081 is `done`.
 - [ ] AC8: `compute-review-scope` treats each path in the project's artifacts (the configured spec root, `.ductus/`, `AGENTS.md`, `CLAUDE.md`) as no code. A window holding only such paths reports `review-owed: false` when the record holds nothing only a review clears. This holds under a configured `specs-root` and in a project inside a repository subdirectory, each proven by a fixture.
 - [ ] AC9: Of a commit whose subject names a spec, `compute-review-scope` puts the paths outside every spec directory in the scope of the named specs only. A spec the subject does not name, and whose directory the commit touched, gets only its own directory's paths. A fixture proves both directions.
 - [ ] AC10: Of a commit whose subject names no spec, other than one touching a single spec's directory, `compute-review-scope` puts a code path in a spec's scope only when that spec's plan's Affected Files lists it. Every other code path of the commit in the window is listed in `excluded`. A fixture covers a listed path, an unlisted path and a merge commit.
