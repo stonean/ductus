@@ -65,9 +65,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Command bodies: `gen-spec-deps.sh` references in `implement.md:98`, `clarify.md:102`, `amend.md:43`, `plan.md:74`, `target.md:39`, `specify.md:39,75`, `analyze.md:34,52` → `.ductus/scripts/`; leave `analyze.md`'s `gen-help-tables.sh` (`:34,227`) at `scripts/`
 - [x] Adopter hook `framework/bootstrap/hooks/ductus-pre-commit:27-28` → `.ductus/scripts/` for both shipped gens
 - [x] CI template `adopter-generators.yml:8,28,45,50` → `.ductus/scripts/`
-- [x] Permission allowlists (`configure/claude.md:77-80`, `auggie.md:62-63`, `antigravity.md:56-60`, `opencode.md:58-61`): `gen-*` globs → `.ductus/scripts/`; leave `install-hooks.sh` at `scripts/`; update `.govern.toml`/`.govern.session.toml` permission entries to `.ductus/…`
+- [x] Permission allowlists (`configure/claude.md:77-80`): `gen-*` globs → `.ductus/scripts/`; leave `install-hooks.sh` at `scripts/`; update `.govern.toml`/`.govern.session.toml` permission entries to `.ductus/…`
 
-- **Done when**: every shipped-generator literal resolves to `.ductus/scripts/…`, maintainer-only literals are untouched, and the four agents' permission sets cover the new paths.
+- **Done when**: every shipped-generator literal resolves to `.ductus/scripts/…`, maintainer-only literals are untouched, and the permission set covers the new paths.
 
 ## 9. gitignore template supersession
 

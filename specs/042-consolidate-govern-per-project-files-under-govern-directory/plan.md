@@ -90,7 +90,7 @@ Runtime unit tests for both resolvers (new-only, legacy-only, both-present→new
 | `framework/migrations/govern-dir-consolidate.md` | Create | Migration procedure (3 moves, converge, no inner prompt) |
 | `framework/bootstrap/ductus.md` | Modify | Config/session path prose; write-active-file note |
 | `framework/commands/{implement,clarify,amend,plan,target,specify,analyze,link,review,status,groom,prune,help}.md` | Modify | Config/session path prose |
-| `framework/bootstrap/configure/{claude,auggie,antigravity,opencode}.md` | Modify | Config/session permission paths |
+| `framework/bootstrap/configure/claude.md` | Modify | Config/session permission paths |
 | `framework/templates/project/gitignore` | Modify | Session entry → `/.ductus/session.toml` |
 | `framework/constitution.md` | Modify | Canonical-sources table, session-state para |
 | `AGENTS.md` | Modify | Session/config path notes |
