@@ -67,11 +67,11 @@ A single `ductus.md` that asks "Which CLI are you using?" at runtime. Rejected b
 
 ### Considered: keeping `.claude/` hardcoded in command templates, substituting only in ductus
 
-The ductus command could do `.claude/` → `.augment/` replacement at copy time without changing the source templates. Rejected because it's fragile — any new `.claude/` reference in a template would silently break Auggie adoption. The `{cli-config-dir}` placeholder makes the abstraction explicit and grep-able.
+The ductus command could do `.claude/` → another CLI's directory replacement at copy time without changing the source templates. Rejected because it's fragile — any new `.claude/` reference in a template would silently break adoption on the other CLI. The `{cli-config-dir}` placeholder makes the abstraction explicit and grep-able.
 
 ### Considered: separate command template directories per CLI
 
-Maintaining one command template directory for Claude Code and a second for Auggie. Rejected — the commands are identical except for path prefixes. Duplicating them would create drift. The placeholder approach keeps one source of truth.
+Maintaining one command template directory per CLI. Rejected — the commands are identical except for path prefixes. Duplicating them would create drift. The placeholder approach keeps one source of truth.
 
 ## Open Questions Resolved
 

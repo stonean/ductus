@@ -21,7 +21,6 @@ Running the pipeline on that logic does the work with the wrong rules. A manifes
   - **current** — the two are byte-identical, whether or not the installed copy is pinned. Continue.
   - **stale** — they differ and the installed copy is not pinned.
   - **pinned-divergent** — they differ and the installed copy is listed in `.ductus/config.toml` `pinned.files`. Continue.
-- An Antigravity skill wraps the bootstrap's body in frontmatter of its own, so for that layout the check strips the frontmatter from both sides and compares the bodies.
 - For each **stale** agent, the fetched copy is written over the installed file the comparison read, and the write is checked for integrity. Placeholders stay literal, as in every installed copy of the bootstrap.
 - Any stale agent then stops the run at the pre-flight abort, before inputs are collected, so no answer the user types is discarded. The notice names the source and lists the stale agents updated, and asks the user to start a new session and re-run the command they can actually invoke. Every section past the pre-flight phase is skipped.
 - A **pinned-divergent** agent never stops the run. The post-scaffolding output carries one advisory line for it — `{agent}: ductus.md pinned, upstream has changed` — and only while the pinned copy actually differs from upstream.

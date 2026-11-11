@@ -18,9 +18,9 @@ The command supports every AI coding CLI in its Agent Registry. Each agent gets 
 
 ## Distribution Model
 
-> **Superseded in part by [012-multi-agent-govern](../012-multi-agent-govern/spec.md).** 007 shipped one bootstrap file per CLI — one for Claude Code, one for Auggie — with the target CLI implicit in which file the user installed. 012 replaced them with the single registry-driven installer described here, which selects agents at run time. The `{cli-config-dir}` placeholder approach is 007's and still holds. AC1, AC3 and AC14 record what the per-CLI model delivered and what replaced it.
+> **Superseded in part by [012-multi-agent-govern](../012-multi-agent-govern/spec.md).** 007 shipped one bootstrap file per CLI, with the target CLI implicit in which file the user installed. 012 replaced them with the single registry-driven installer described here, which selects agents at run time. The `{cli-config-dir}` placeholder approach is 007's and still holds. AC1, AC3 and AC14 record what the per-CLI model delivered and what replaced it.
 
-The deliverable is one markdown file, `framework/bootstrap/ductus.md`, serving every supported agent (`012-multi-agent-govern`). It carries an **Agent Registry** with one row per agent, and each agent's paths are derived from its row's `layout` (`028-antigravity-agent`).
+The deliverable is one markdown file, `framework/bootstrap/ductus.md`, serving every supported agent (`012-multi-agent-govern`). It carries an **Agent Registry** with one row per agent, and each agent's paths are derived from its row's `layout`.
 
 The user installs it with `install.sh`, which is attached to every release and places the bootstrap at the agent's install path (`003-bootstrap-automation`):
 
@@ -157,7 +157,7 @@ The installed bootstrap stays in each agent's command directory after the run, a
 
 - [x] AC1: One bootstrap variant exists per supported CLI, in a top-level bootstrap directory. Delivered against the per-CLI bootstrap files of the time. **Superseded twice over:** `012-multi-agent-govern` replaced the per-CLI variants with a single registry-driven installer, so there is no longer one file per CLI; and the repository was later reorganized, so the top-level directory is gone — the installer is `framework/bootstrap/ductus.md`. Annotated rather than rewritten because the claim was superseded, not renamed: restating it as the single-file model would credit 007 with 012's work. `009`'s AC18 carries the same annotation for the same supersession
 - [x] AC2: Running `curl` followed by `/ductus {name}` in an existing git repo produces a complete `ductus` scaffold
-- [x] AC3: Each CLI variant scaffolds into its native directory paths (`.claude/` for Claude Code, `.augment/` for Auggie). **The requirement holds; the enumeration is superseded.** Native-path scaffolding is still exactly what the installer does, and `{cli-config-dir}` is still how it does it. But there are no longer "CLI variants" (012, per AC1), and the registry in `framework/bootstrap/ductus.md` now carries more agents than the two named here. Left as written because the two it names are still correct and the criterion asserts no exclusivity; the registry is the live enumeration
+- [x] AC3: Each CLI variant scaffolds into its native directory paths (`.claude/` for Claude Code, `.pi/` for Pi). **The requirement holds; the "CLI variants" framing is superseded.** Native-path scaffolding is still exactly what the installer does, and `{cli-config-dir}` is still how it does it. But there are no longer "CLI variants" (012, per AC1); the registry in `framework/bootstrap/ductus.md` is the live enumeration
 - [x] AC4: Existing files (.gitignore, AGENTS.md, CLAUDE.md) are not overwritten
 - [x] AC5: `.gitignore` merge is idempotent — running twice does not duplicate the managed patterns
 - [x] AC6: Fetch failures for individual files do not abort the entire process
@@ -168,7 +168,7 @@ The installed bootstrap stays in each agent's command directory after the run, a
 - [x] AC11: Post-scaffolding output displays brownfield-specific next steps
 - [x] AC12: Invalid project names are rejected with a clear error message
 - [x] AC13: Intermediate directories are created as needed
-- [x] AC14: Adding a new CLI requires only a new ductus variant file — no changes to the framework core. Delivered as written, and the *intent* survives: adding an agent still leaves the constitution, templates and command sources untouched. **The mechanism is superseded.** 012 replaced the variant file with a row in the Agent Registry, so adding an agent means a registry row plus a walk of the §Derived values **Layout-derived** table — command path, invocation, install path, settings file, permission shape, native rule-loading dir, native rules file, cleanup glob. That is more than "only a new file", and `AGENTS.md` §Workflow records that nothing audits per-layout behaviour parity, so the walk is contributor discipline rather than a gate
+- [x] AC14: Adding a new CLI requires only a new ductus variant file — no changes to the framework core. Delivered as written, and the *intent* survives: adding an agent still leaves the constitution, templates and command sources untouched. **The mechanism is superseded.** 012 replaced the variant file with a row in the Agent Registry, so adding an agent means a registry row plus a walk of the §Derived values **Layout-derived** table — command path, invocation, install path, settings file, permission shape, native rules file, cleanup glob. That is more than "only a new file", and `AGENTS.md` §Workflow records that nothing audits per-layout behaviour parity, so the walk is contributor discipline rather than a gate
 
 ## Open Questions
 
@@ -180,7 +180,6 @@ None — all resolved.
 - ~~Should there be a `--dry-run` mode?~~ No — the command is idempotent with create/skip/merge strategies, making dry-run unnecessary.
 - ~~How should the file manifest be maintained?~~ Hardcoded in each ductus variant. Updated when the framework templates change. Since 012 there is one variant, so the manifest is the single installer's **Shared Files** and **Per-Agent Scaffolding** tables.
 - ~~CLI-specific command variants or path variable?~~ Path variable (`{cli-config-dir}`) resolved at ductus time. One set of command templates, with the installer doing the substitution — once one installer per CLI, now one for every agent (012).
-- ~~How should `/ductus:setup` work for Auggie?~~ Skipped here — Auggie permissions are global. Auggie later got a setup source of its own, which spec `012-multi-agent-govern` lists (named, not linked: 012 depends on this spec, so a link would close a cycle).
 
 ## References
 
