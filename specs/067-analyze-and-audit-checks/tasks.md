@@ -155,9 +155,10 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
 ## 18. Implement scenario: a-scenario-file-is-checked-against-the-scenario-schema
 
-- [ ] Implement the behavior described in `scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md`
+- [ ] Implement the behavior described in `scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md` (owner, 2026-11-11, option (a2))
+- [ ] Sweep what states the old selection, re-grepped by meaning when this task starts. A grep on 2026-11-11 found: the `path` doc on `ValidateFrontmatterArgs` in `runtime/src/schema/primitives.rs` and `VALIDATE_FRONTMATTER` in `runtime/src/schema/descriptions.rs`; `framework/commands/analyze.md` step 2's sentence that the host judges each scenario's frontmatter; the paragraph of `framework/reference/analyze.md` §Frontmatter schema (hard fail) saying the primitive reads no scenario; this spec's data model; and the scenario-frontmatter reader `runtime/src/primitives/mod.rs` already holds, to share rather than copy
 
-- **Done when**: The scenario's open question is resolved, validate-frontmatter checks a scenario against the scenario row, and fixture tests cover a section-only scenario (clean), a scenario missing section (hard fail) and a spec.md (unchanged).
+- **Done when**: The scenario's open question is resolved; the path chooses the row and any other path is refused; a `spec.md` run checks each scenario beside it; fixture tests cover a section-only scenario (clean), a scenario missing `section` (hard fail), a legacy `spec-ref` scenario (clean), a `spec.md` (unchanged), a `spec.md` run reporting a malformed scenario, a direct record path and a refused path, each failing with its behavior removed; and analyze step 2 and its reference leave no scenario to the host.
 
 ## 19. Implement scenario: shared-constitution-references-are-judged
 
