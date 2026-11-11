@@ -209,7 +209,7 @@ A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependenci
 | `check-unfolded-specs` | `unfolded` |
 | `rewrite-spec-links` | `rewritten`, `skipped`, `kept-tails`, `mentions` |
 | `discover-rule-files` | `rule-files`, with `rules` |
-| `derive-dependencies` | `updated`, `unwritten`, `untracked-skipped`, `absent`, `cycles`, `unparseable` |
+| `derive-dependencies` | `updated`, `unwritten`, `untracked-skipped`, `absent`, `cycles`, `unparseable`, `unwritable`, the last absent inline when empty and its count absent at zero in both forms |
 | `derive-routing-candidates` | `candidates` |
 | `traverse-deps` | `dependencies`, `cycles` |
 

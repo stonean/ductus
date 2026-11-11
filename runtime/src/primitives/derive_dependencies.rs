@@ -49,7 +49,7 @@ use crate::schema::paths;
 use crate::schema::primitives::{DeriveDependenciesArgs, DeriveDependenciesResult, ListsForm};
 
 /// Execute the `derive-dependencies` primitive: [`compute`], returned inline
-/// while it fits `[artifacts] read-size-bytes`, and past it with its six
+/// while it fits `[artifacts] read-size-bytes`, and past it with its seven
 /// lists in the file it names and only their counts inline ([`bound`]; spec
 /// 080, AC7).
 ///
@@ -91,7 +91,7 @@ pub struct Derived {
     pub wrote: bool,
 }
 
-/// `derived` held to `[artifacts] read-size-bytes`: past it, its six lists go
+/// `derived` held to `[artifacts] read-size-bytes`: past it, its seven lists go
 /// to the file it names, with their counts inline (`bounded_lists::place`).
 ///
 /// # Errors
@@ -106,6 +106,7 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         "absent": derived.absent,
         "cycles": derived.cycles,
         "unparseable": derived.unparseable,
+        "unwritable": derived.unwritable,
     });
     let mut result = DeriveDependenciesResult {
         drift: derived.drift,
@@ -122,12 +123,10 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         cycles: Some(derived.cycles),
         unparseable_count: derived.unparseable.len(),
         unparseable: Some(derived.unparseable),
-        // Inline in both forms, so it is not among `lists` and the file form's
-        // moved set is unchanged; moving it later is adding it to `lists`,
-        // clearing it with the other lists below, and `unwritable_count`
-        // already names it for `bounded_lists::counted_lists`.
+        // Absent when empty in the inline form too, so a result with nothing
+        // unwritable reads as it did before the list existed.
         unwritable_count: derived.unwritable.len(),
-        unwritable: derived.unwritable,
+        unwritable: Some(derived.unwritable).filter(|list| !list.is_empty()),
         specs_root: derived.specs_root,
         wrote: derived.wrote,
         form: ListsForm::Inline,
@@ -147,6 +146,7 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         result.absent = None;
         result.cycles = None;
         result.unparseable = None;
+        result.unwritable = None;
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -808,7 +808,7 @@ mod tests {
         for items in [
             "\n  - 009-old\n\n  - 010-older\n",
             "\n- 009-old\n\n\n- 010-older\n",
-            "- 009-old\n# kept for history\n- 010-older\n",
+            "- 009-old\n# goes with the list\n- 010-older\n",
         ] {
             let content =
                 format!("---\nstatus: draft\ndependencies:\n{items}\nnext: 3\n---\n\nbody\n");
@@ -949,7 +949,109 @@ mod tests {
             );
             let bounded = bound(tmp.path(), result).unwrap();
             assert_eq!(bounded.unwritable_count, 1, "write {write}");
+            assert_eq!(
+                bounded.unwritable,
+                Some(vec!["specs/001-a/spec.md".to_string()]),
+                "write {write}"
+            );
         }
+    }
+
+    /// A spec outside the pending commit whose rewrite would not parse is
+    /// still `unwritable` under `staged`, never `unwritten`: the guard runs
+    /// before the staged filter, so the shipped hook's `--staged` run stops a
+    /// commit over it, as its cycle check does (task 14's fourth item, owner,
+    /// 2026-11-11).
+    #[test]
+    fn an_unstaged_unwritable_spec_is_named_under_staged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = tracked_repo(
+            tmp.path(),
+            &[
+                (
+                    "001-a",
+                    "---\nstatus: draft\ntitle: [oops\ndependencies: []\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n",
+                ),
+                (
+                    "002-b",
+                    "---\nstatus: draft\ndependencies: []\n---\n\n# B\n",
+                ),
+            ],
+        );
+        std::fs::write(
+            tmp.path().join("specs/002-b/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# B\n\nSee [a](../001-a/spec.md).\n",
+        )
+        .unwrap();
+        let mut index = repository.index().unwrap();
+        index.add_path(Path::new("specs/002-b/spec.md")).unwrap();
+        index.write().unwrap();
+        for write in [false, true] {
+            let result = run(
+                &DeriveDependenciesArgs {
+                    write,
+                    staged: true,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(
+                result.unwritable,
+                vec!["specs/001-a/spec.md"],
+                "write {write}"
+            );
+            assert_eq!(result.unwritten, [] as [String; 0], "write {write}");
+        }
+    }
+
+    /// Past the read size `unwritable` goes to the list file with the other
+    /// lists and only its count stays inline, since it grows with the corpus
+    /// (067 task 25; spec 080's `BE-PAYLOAD-001` bound).
+    #[test]
+    fn past_the_read_size_unwritable_moves_to_the_list_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        tracked_repo(
+            tmp.path(),
+            &[
+                (
+                    "001-a",
+                    "---\nstatus: draft\ntitle: [oops\ndependencies: []\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n",
+                ),
+                (
+                    "002-b",
+                    "---\nstatus: draft\ndependencies: []\n---\n\n# B\n",
+                ),
+            ],
+        );
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let result = super::run(
+            &DeriveDependenciesArgs {
+                write: false,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert_eq!(result.unwritable, None, "`unwritable` stayed inline");
+        assert_eq!(result.unwritable_count, 1);
+        let file = result.lists_file.clone().expect("a lists-file path");
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(
+            lists["unwritable"],
+            serde_json::json!(["specs/001-a/spec.md"])
+        );
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "derive-dependencies",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 
     /// A block that opens and never closes has nothing derived from it: it

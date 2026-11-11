@@ -11,8 +11,9 @@ section: "Derived frontmatter indexes"
 time, because the honest fix is a result-shape addition and that is a
 deliberate change, not a review-time edit.
 
-`splice_references` places the `references:` block at one of two anchors: the
-line after `dependencies:`, or the closing `---`. A spec whose frontmatter is
+`splice_references` places the `references:` block at one of two anchors:
+after the whole `dependencies:` entry, its continuation lines and a multi-line
+flow value included, or before the closing `---`. A spec whose frontmatter is
 **unterminated** and which carries **no `dependencies:` key** reaches neither.
 The rewrite is skipped, the spec never enters `updated`, and the result is
 byte-identical to one for a spec that genuinely needed no change.

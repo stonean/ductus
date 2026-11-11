@@ -1082,7 +1082,7 @@ mod tests {
             cycles_count: 0,
             unparseable: Some(vec![]),
             unparseable_count: 0,
-            unwritable: vec![],
+            unwritable: None,
             unwritable_count: 0,
             specs_root: "specs".into(),
             wrote: false,
@@ -1121,7 +1121,7 @@ mod tests {
                 !derive_dependencies_blocks(&deps),
                 "unparseable, wrote {wrote}"
             );
-            deps.unwritable = vec!["specs/001-a/spec.md".into()];
+            deps.unwritable = Some(vec!["specs/001-a/spec.md".into()]);
             deps.unwritable_count = 1;
             assert!(
                 derive_dependencies_blocks(&deps),

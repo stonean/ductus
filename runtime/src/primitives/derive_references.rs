@@ -969,6 +969,47 @@ mod tests {
         );
     }
 
+    /// A spec outside the pending commit whose rewrite would not parse is
+    /// still `unwritable` under `staged`, never `unwritten`: the guard runs
+    /// before the staged filter, so the shipped hook's `--staged` run stops a
+    /// commit over it (task 14's fourth item, owner, 2026-11-11).
+    #[test]
+    fn an_unstaged_unwritable_spec_is_named_under_staged() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        git_fixture::write(
+            &tmp.path().join("specs/001-a/spec.md"),
+            "---\nstatus: done\ntitle: [oops\ndependencies: []\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n",
+        );
+        let b = tmp.path().join("specs/002-b/spec.md");
+        git_fixture::write(&b, "---\nstatus: done\ndependencies: []\n---\n\n# B\n");
+        git_fixture::commit_all(&repository, "feat: specs");
+        git_fixture::write(
+            &b,
+            "---\nstatus: done\ndependencies: []\n---\n\n[y](https://github.com/other/t/specs/005-new/spec.md)\n",
+        );
+        let mut index = repository.index().unwrap();
+        index.add_path(Path::new("specs/002-b/spec.md")).unwrap();
+        index.write().unwrap();
+        for write in [false, true] {
+            let result = run(
+                &DeriveReferencesArgs {
+                    write,
+                    staged: true,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(
+                result.unwritable,
+                vec!["specs/001-a/spec.md"],
+                "write {write}"
+            );
+            assert_eq!(result.unwritten, [] as [String; 0], "write {write}");
+        }
+    }
+
     /// A rewrite that would leave a block that does not parse — here the block
     /// was invalid before it, in another key — is `unwritable`, not
     /// `unparseable`, and never written, on a dry run and a write alike.

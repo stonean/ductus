@@ -3,7 +3,9 @@ primitives: `validate-frontmatter`'s severities, the two frontmatter splices
 (`derive-dependencies`, `derive-references`) and the parse check before their
 write, `check-command-flags`' whole pass, `check-rule-ids`' line-scoped
 section scan, `check-corpus-links`' reference sources, `resolve-anchor`'s
-markers basename, and `check-promotion-coverage`'s required section set.
+markers basename, `check-promotion-coverage`'s required section set, the
+bound that moves `derive-dependencies`' `unwritable` past the read size, and
+the exec analyze tally's step 6.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -382,5 +384,49 @@ MUTATIONS = [
         "                '\"' | '\\'' => quote = Some(c),\n",
         '',
         'spec_links::tests::a_flow_value_ends_at_its_balancing_bracket',
+    ),
+    # -- derive-dependencies' bound, and the exec tally's step 6 (task 25) --
+    (
+        'M51 the file-form derive-dependencies result keeps unwritable inline',
+        'src/primitives/derive_dependencies.rs',
+        '        result.unparseable = None;\n        result.unwritable = None;\n',
+        '        result.unparseable = None;\n',
+        'derive_dependencies::tests::past_the_read_size_unwritable_moves_to_the_list_file',
+    ),
+    (
+        'M52 the derive-dependencies list file leaves out unwritable',
+        'src/primitives/derive_dependencies.rs',
+        '        "unwritable": derived.unwritable,\n',
+        '',
+        'derive_dependencies::tests::past_the_read_size_unwritable_moves_to_the_list_file',
+    ),
+    (
+        'M53 the exec analyze tally ignores unwritable',
+        'src/interpreter/analyze_tally.rs',
+        '                for counted in ["unwritable-count", "unparseable-count"] {',
+        '                for counted in ["unparseable-count"] {',
+        'analyze_tally::tests::unwritable_and_unparseable_dependencies_are_advisory',
+    ),
+    (
+        'M54 the exec analyze tally ignores unparseable',
+        'src/interpreter/analyze_tally.rs',
+        '                for counted in ["unwritable-count", "unparseable-count"] {',
+        '                for counted in ["unwritable-count"] {',
+        'analyze_tally::tests::unwritable_and_unparseable_dependencies_are_advisory',
+    ),
+    # -- the guard ahead of the staged filter (task 14's fourth item) ------
+    (
+        'M55 derive-dependencies names an unwritable spec only when it is staged',
+        'src/primitives/derive_dependencies.rs',
+        '        if !frontmatter_parses(&rewritten) {',
+        '        if staged.as_ref().is_none_or(|set| set.contains(spec)) && !frontmatter_parses(&rewritten) {',
+        'derive_dependencies::tests::an_unstaged_unwritable_spec_is_named_under_staged',
+    ),
+    (
+        'M56 derive-references names an unwritable spec only when it is staged',
+        'src/primitives/derive_references.rs',
+        '        if !frontmatter_parses(&rewritten) {',
+        '        if staged.as_ref().is_none_or(|set| set.contains(spec)) && !frontmatter_parses(&rewritten) {',
+        'derive_references::tests::an_unstaged_unwritable_spec_is_named_under_staged',
     ),
 ]

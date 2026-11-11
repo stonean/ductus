@@ -2203,11 +2203,11 @@ pub struct DeriveDependenciesResult {
     /// a block that was invalid before the rewrite. The index is stale and
     /// the primitive cannot fix it, so unlike `unparseable` this is a failure:
     /// the CLI exits non-zero, report-only and `write` alike, naming each spec
-    /// on stderr, and the key is edited by hand. Absent when empty, and inline
-    /// in both forms.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub unwritable: Vec<String>,
-    /// Entries in `unwritable`; absent when zero.
+    /// on stderr, and the key is edited by hand. Absent when empty, and in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unwritable: Option<Vec<String>>,
+    /// Entries in `unwritable`, in either form; absent when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub unwritable_count: usize,
     /// Repo-relative spec-root directory the run enumerated (spec 040), so a
@@ -2218,7 +2218,7 @@ pub struct DeriveDependenciesResult {
     /// Where the lists are: in this result, or, past the read size, in the
     /// file `lists-file` names (spec 080, AC7).
     pub form: ListsForm,
-    /// In the file form, the file holding the six lists whole, from the
+    /// In the file form, the file holding the seven lists whole, from the
     /// project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,

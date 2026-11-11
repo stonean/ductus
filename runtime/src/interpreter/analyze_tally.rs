@@ -119,10 +119,18 @@ impl AnalyzeTally {
                 self.advisory += count("deprecated");
             }
             // Step 6: drift between body links and `dependencies:` is one
-            // advisory finding.
+            // advisory finding, and so is each of a non-empty `unwritable`
+            // and `unparseable`, which `drift` stays false over. Those two
+            // are read from their counts, inline in both forms, an absent
+            // `unwritable-count` being zero.
             "derive-dependencies" => {
                 if count("updated") > 0 {
                     self.advisory += 1;
+                }
+                for counted in ["unwritable-count", "unparseable-count"] {
+                    if result.get(counted).and_then(Value::as_u64).unwrap_or(0) > 0 {
+                        self.advisory += 1;
+                    }
                 }
             }
             // Step 7: each lint violation is advisory.
@@ -367,6 +375,32 @@ mod tests {
                 ["root-absent", 2]
             ])
         );
+    }
+
+    /// Step 6 counts a non-empty `unwritable` and a non-empty `unparseable`
+    /// as one advisory finding each, read from their counts, beside drift,
+    /// and nothing when both counts are zero or absent.
+    #[test]
+    fn unwritable_and_unparseable_dependencies_are_advisory() {
+        let cases = [
+            (json!({ "updated": [], "unparseable-count": 0 }), 0),
+            (
+                json!({ "updated": [], "unwritable-count": 2, "unparseable-count": 0 }),
+                1,
+            ),
+            (json!({ "updated": [], "unparseable-count": 3 }), 1),
+            (
+                json!({ "updated": ["a"], "unwritable-count": 1, "unparseable-count": 1 }),
+                3,
+            ),
+        ];
+        for (result, advisory) in cases {
+            let mut tally = AnalyzeTally::new();
+            tally.record_primitive("derive-dependencies", &result, &Map::new());
+            let bindings = bound(&tally);
+            assert_eq!(bindings["advisory"], advisory, "{result}");
+            assert_eq!(bindings["blocking-findings"], 0, "{result}");
+        }
     }
 
     /// Step 16 counts a plan's sections outside the design record on a

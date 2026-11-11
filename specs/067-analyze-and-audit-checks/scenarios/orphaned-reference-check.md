@@ -73,8 +73,9 @@ count — an empty `findings` array means *examined and found nothing* only when
   Pre-run Migrations, step 8).
 - **No `[migrations]` section at all** (an adopter who has never run a
   migration): `last-applied` is the empty string, meaning no migration has been
-  applied, and never reads as a migration named ""; an empty `migration` under
-  `watermark` means the same.
+  applied, and never reads as a migration named "". An empty `migration` under
+  `watermark` is not a migration named "" either: it means no registry was
+  read, so none was asked which migration claims the path.
 
 ## Open Questions
 
