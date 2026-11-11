@@ -6,12 +6,11 @@ title: "015-tarball-fetch — tasks"
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-## 1. Add `tar` and `mktemp` to the Agent Registry settings_template values
+## 1. Add `tar` and `mktemp` to the Agent Registry settings_template value
 
 - [x] In `framework/bootstrap/ductus.md`, edit the Claude row's `settings_template`: append `"Bash(tar *)"` and `"Bash(mktemp *)"` after the existing `"Bash(ls *)"` in the `permissions.allow` array.
-- [x] Edit the Auggie row's `settings_template`: append two `launch-process` entries with `"shellInputRegex": "^tar "` and `"shellInputRegex": "^mktemp "` after the existing `"^ls "` entry.
-- [x] Verify both rows still parse as inline JSON (no markdown table-cell escaping issues).
-- [x] Done when: both rows include the two new entries in `allow`/`toolPermissions` form, and the surrounding table renders correctly in markdown preview.
+- [x] Verify the row still parses as inline JSON (no markdown table-cell escaping issues).
+- [x] Done when: the row includes the two new entries in `allow` form, and the surrounding table renders correctly in markdown preview.
 
 ## 2. Replace the File Fetching section in ductus.md
 

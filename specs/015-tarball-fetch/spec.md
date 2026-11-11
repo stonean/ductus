@@ -1,6 +1,6 @@
 ---
 title: "015-tarball-fetch — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow, 012-multi-agent-govern, 029-bootstrap-runtime-autowire]
 tags: [bootstrap, performance]
 next-criterion: 14
@@ -73,7 +73,7 @@ The leftover directory is for inspection only — the next `/ductus` run creates
 
 ### Permission bootstrap
 
-The agent registry's `settings_template` currently allows `Bash(curl *)` and `Bash(ls *)` (Claude) and equivalent regex entries (Auggie). The tarball flow needs two additional commands plus, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
+The agent registry's `settings_template` currently allows `Bash(curl *)` and `Bash(ls *)` (Claude). The tarball flow needs two additional commands plus, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
 
 Update each registry row's `settings_template`:
 
@@ -81,7 +81,6 @@ Update each registry row's `settings_template`:
   - `Read(/private/var/folders/**/T/ductus-*/**)` and `Read(//private/var/folders/**/T/ductus-*/**)` (macOS canonical path)
   - `Read(/var/folders/**/T/ductus-*/**)` and `Read(//var/folders/**/T/ductus-*/**)` (macOS non-canonical, defensive)
   - `Read(/tmp/ductus-*/**)` and `Read(//tmp/ductus-*/**)` (Linux)
-- **Auggie:** add equivalent `launch-process` entries with `shellInputRegex` patterns matching `tar` and `mktemp`. Auggie's `view` tool is broadly allowed by `configure/auggie.md`, so no per-path read entries are needed.
 
 The merge logic in **Permission Setup** is unchanged — entries are added if missing, never reordered or deduplicated. Existing adopters get the new entries on their next routine `/ductus` re-run, before any `tar`, `mktemp`, or extracted-archive read is performed.
 
@@ -116,7 +115,7 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 ## Tradeoffs
 
 - **One archive failure vs. many per-file warnings.** Today a single 404 on `framework/templates/project/inbox.md` produces a warning and the rest of the manifest proceeds. With a tarball, that file would simply not exist in the extract, producing the same per-entry warning. The genuine new failure mode is the archive itself failing — and that's a clean abort, since partial scaffolding from a missing archive is impossible.
-- **New permissions.** For Claude, two `Bash` additions (`tar`, `mktemp`) plus six `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), with both single-leading-slash and double-leading-slash forms because Claude Code's permission matcher treats them as distinct prefixes (see **Permission bootstrap → Why both leading-slash forms**, whose signpost records that the seed now keeps the three `//` forms alone). For Auggie, just the two shell-command entries — `view` is unconditionally allowed by configure. Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
+- **New permissions.** For Claude, two `Bash` additions (`tar`, `mktemp`) plus six `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), with both single-leading-slash and double-leading-slash forms because Claude Code's permission matcher treats them as distinct prefixes (see **Permission bootstrap → Why both leading-slash forms**, whose signpost records that the seed now keeps the three `//` forms alone). Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
 - **Bytes over the wire.** When this spec shipped, the full archive was ~hundreds of KB compressed, about the volume the per-file fetches pulled across ~35 round-trips. It has since grown with the repository, to 3,523,152 bytes at `ductus-v0.59.11` (fetched from `codeload.github.com` on 2026-11-09). The saving the design keeps is fewer round-trips and tool-call invocations, and faster perceived run time.
 - **Loss of partial progress.** A network failure mid-fetch today produces ~10 successful files plus warnings on the rest; with a tarball, a network failure produces zero files and a clean abort. Both outcomes leave the project in a recoverable state — re-run resumes idempotently.
 - **Pinning at a ref.** When this spec shipped, every fetch was hardcoded to `main` and the tarball URL pointed at `main` too. A `.ductus/config.toml` `[source] ref` option overriding the ref was named as a natural follow-up and left out of scope — see **Resolved Questions**. **Adopted by 061**, which resolves the ref per run and defaults it to the latest release rather than `main`.
@@ -129,7 +128,7 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 - [x] AC4: A failed archive fetch produces a clean abort with a clear error message and no partial scaffolding
 - [x] AC5: A missing source file within the archive produces a per-entry warning and the remaining manifest continues
 - [x] AC6: The temp directory path is logged in the run summary (and on abort, in the error message); `/ductus` does not delete it
-- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither; every other agent's carries both
+- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither; Claude's carries both
 - [x] AC8: The Claude `settings_template` also adds `Read(...)` globs for `ductus-*` temp paths under both macOS temp roots and Linux `/tmp`, so per-run `Read(...)` entries do not accumulate across `/ductus` invocations
 - [x] AC9: The **Post-Write Integrity Check** for `ductus.md` works against the local source — no additional `curl`
 - [x] AC10: The self-update notice continues to fire when the installed `ductus.md` differs from the archive's copy
@@ -146,7 +145,6 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 - **`.ductus/config.toml` ref pinning** — defer. `.ductus/config.toml` already supports additive sections (currently `[pinned]`), so a `[source] ref = "..."` option can be added in a later spec without migration cost. No adopter has asked for ref pinning, and `main` parity with the current per-file flow keeps this spec's scope to the transport change. v0.1.0 is tagged, but until there is concrete demand, every adopter would still pin to `main` — adding the surface now means documenting and maintaining a feature nobody is using. **Adopted 2026-09-28 by 061**, which adds `[source] ref` and a `--ref` flag and makes the latest release the default. The trigger was not an adopter asking to pin but an update landing on an unfinished series on `main`; 061's Motivation records it.
 - **Fallback to per-file fetch on archive failure** — no fallback. `codeload.github.com` and `raw.githubusercontent.com` are both GitHub-fronted CDNs with correlated availability, so partial outages affecting only one are rare. Maintaining two transport code paths is a permanent tax for a transient failure mode; `/ductus` is idempotent and a re-run after the outage clears is the same recovery path used for any transient `curl` failure today. The clean abort already tells the user what happened.
 - **`rm` permission scope** — drop the `rm` permission entirely; let the OS sweep the temp directory. macOS (`/var/folders/.../T/`) and Linux (`/tmp` via systemd-tmpfiles) both auto-purge their temp roots, so a few hundred KB of extracted files waiting for the next sweep is acceptable. Granting `rm -rf` — even scoped — is a sharper allow than the rest of ductus's bootstrap permissions (`curl`, `ls`, `tar`, `mktemp` are all read-or-create) and adopters with custom `$TMPDIR` would have to edit settings to keep cleanup working. Skipping `rm` removes that friction.
-- **Auggie permission regex** — moot. Without an `rm` permission to express, there is no Auggie-regex problem to solve.
 
 ## References
 

@@ -8,7 +8,7 @@ Implements [015 — Tarball Fetch](spec.md).
 
 ## Overview
 
-The change is localized to a single source file: `framework/bootstrap/ductus.md`. Three sections need edits — the **Agent Registry** table (two `settings_template` values), the **File Fetching** section (replaced wholesale), and the **Post-Write Integrity Check** plus one **Edge Cases** bullet (wording reconciled with the new transport). No new files; no template changes; no scaffolding-manifest changes; no `configure.md` changes.
+The change is localized to a single source file: `framework/bootstrap/ductus.md`. Three sections need edits — the **Agent Registry** table (the Claude `settings_template` value), the **File Fetching** section (replaced wholesale), and the **Post-Write Integrity Check** plus one **Edge Cases** bullet (wording reconciled with the new transport). No new files; no template changes; no scaffolding-manifest changes; no `configure.md` changes.
 
 The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md` — `ductus.md` is hand-maintained per the project's CLAUDE.md ("`framework/bootstrap/ductus.md` … the framework is the everything-that-ships portion"). Edits land directly in the source.
 
@@ -38,16 +38,15 @@ The **.gitignore** subsection of **Shared Files with conflict handling** fetches
 
 ### Agent registry edits
 
-The two `settings_template` values in the registry table are inline JSON. Edits:
+The `settings_template` value in the registry table is inline JSON. Edit:
 
 - **Claude:** `{ "permissions": { "allow": ["Bash(curl *)", "Bash(ls *)", "Bash(tar *)", "Bash(mktemp *)"], "deny": [] } }` — append two array entries after `Bash(ls *)`.
-- **Auggie:** append two `launch-process` entries with `"shellInputRegex": "^tar "` and `"shellInputRegex": "^mktemp "` after the existing `"^ls "` entry.
 
-Order matters for readability but not behavior — the bootstrap merge (ductus.md **Permission Setup** step 2) preserves order on both sides.
+Order matters for readability but not behavior — the bootstrap merge (ductus.md **Permission Setup** step 2) preserves order.
 
 ### Configure surface stays unchanged
 
-`framework/bootstrap/configure/claude.md` already denies `Bash(rm -rf *)`, `Bash(*rm -rf *)`, and four other `rm` patterns. Adding a scoped `rm` allow to the bootstrap registry would be overridden by these denies as soon as `/{project}:configure` runs, independently confirming the spec's "let the OS sweep" decision. No edits to `configure/claude.md` or `configure/auggie.md` are required — they describe the post-adoption full permission set, not bootstrap permissions, and `tar`/`mktemp` are not used by any other slash command.
+`framework/bootstrap/configure/claude.md` already denies `Bash(rm -rf *)`, `Bash(*rm -rf *)`, and four other `rm` patterns. Adding a scoped `rm` allow to the bootstrap registry would be overridden by these denies as soon as `/{project}:configure` runs, independently confirming the spec's "let the OS sweep" decision. No edit to `configure/claude.md` is required — it describes the post-adoption full permission set, not bootstrap permissions, and `tar`/`mktemp` are not used by any other slash command.
 
 ### Edge Cases reconciliation
 
@@ -66,7 +65,7 @@ Current text: "If it does not, the write was corrupted — report the error and 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/ductus.md` | Modify | Update **Agent Registry** `settings_template` values (Claude, Auggie); replace **File Fetching** section with archive-fetch + extract + per-file resolution; update **Post-Write Integrity Check** wording; rewrite the **Edge Cases** bullet for fetch failures. |
+| `framework/bootstrap/ductus.md` | Modify | Update **Agent Registry** `settings_template` values (Claude); replace **File Fetching** section with archive-fetch + extract + per-file resolution; update **Post-Write Integrity Check** wording; rewrite the **Edge Cases** bullet for fetch failures. |
 
 No other files change. The generator (`scripts/gen-claude-commands.sh`) does not need to run because ductus.md is not in its input set.
 
@@ -77,7 +76,6 @@ All four open questions resolved during `/ductus:clarify`. See the spec's **Reso
 - **Ref pinning** — defer to a later spec. Adopted since by 061.
 - **Per-file fallback** — none; archive failure aborts cleanly.
 - **`rm` permission scope** — drop `rm` entirely; the OS sweeps the temp directory.
-- **Auggie regex for `rm`** — moot, given no `rm` permission.
 
 ## Trade-offs
 
