@@ -101,6 +101,12 @@ Exactly AC6's set: `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`. Scena
 
 Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each entry carrying `checked` and `text`), not from a second hand-rolled section walker. `check-artifacts` already delegates task parsing to `read_tasks` (`check_artifacts.rs:96-105`) and scenario questions to `read_spec::collect_scenario_open_questions` (`:377`) for exactly this reason — the module docs state the no-hand-rolled-parsers constraint at `check_artifacts.rs:45-48`. Scope stays `done` specs, `## Acceptance Criteria` only.
 
+### What the families read, and how much they return
+
+Both families read only files under the feature directory the `feature` argument names, and that argument is screened before any of them is opened (`BE-INPUT-004`): `check-artifacts` refuses one that is absolute or carries a `..` component, and one whose path leaves the project through a symbolic link, compared by whole components (`validate_feature_contained`, `runtime/src/primitives/mod.rs`). A sibling link is kept only when its lexical resolution lands inside that directory, and a target reached through a symbolic link is recorded as `target-unparseable` rather than opened. A path the path-existence family probes is not screened that way; 067's task 27 adds the screen.
+
+`findings` and `skipped` grow with the feature, and they are bounded as every list result is (`BE-PAYLOAD-001`): past `[artifacts] read-size-bytes` the result's `form` is `file`, both lists move to a file under `.ductus/results/`, and only their counts stay inline (`specs/080-deterministic-runtime-efficiency/data-model.md`, Bounded results).
+
 ### Constitution amendment shape
 
 §drift-prevention gains `### Decision resolution` immediately after its `### Cross-document references` subsection, which is the obligation it extends. It states the trigger list (closing an open question, shipping a scenario, advancing a status, adopting a previously-rejected option) and the completion rule (a resolution is incomplete while a sibling artifact still describes the prior state).
