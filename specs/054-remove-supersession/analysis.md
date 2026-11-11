@@ -1,19 +1,21 @@
 ---
 spec: 054-remove-supersession
-last-run: 2026-11-09T23:29:49Z
-analyzed-against: ba2768e4b8134777ad3be53e1472cd832df87ef1
+last-run: 2026-11-11T16:25:02Z
+analyzed-against: 98e7dbca744582700ce412c2de6c109f8f8cffce
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
-unexamined: 2
+unexamined: 9
 analyzed-digest:
-  plan.md: 7071a7cc962dbc343df99220acf38f8cc0bf69ca78cf9d240bfccef1c678bec5
-  review.md: 43b9adca098b6cadef45ec9c3fc0e034e784737d108825c45b3f356fd1abe9ed
-  spec.md: 2316e510c35df8faba6bd5ebd25dadfbb3c3eee9f7dfc855dca5557d5c0a31dd
-  tasks.md: d6910ab4ecec3b92d66a989a1837b8ca002ccfc3e6f8b9b288611a7aa656aec2
+  plan.md: d0f5a246671f1066b5e7616cdb38e25939ef264e5ca675470ec90a127f4edbdb
+  review.md: 042ee0413beec8cdb8365fe60b65aed60e86646beeb094b1ef93bf21e927fd8a
+  spec.md: 4a33f7e371cb7bdf147a3b919196b371919c60d4b804cf71436676aa3360c446
+  tasks.md: 1df2348b4af8178037e0d0552eed6150fa5c0873f68424765a24a2b686004126
+unexamined-by-reason:
+  not-a-live-claim: 9
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 0
   deferred: 0
   waived: 1
   undispositioned: 0
@@ -29,7 +31,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 3 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -49,10 +51,8 @@ decisions:
 
 ## Unexamined targets
 
-2 target(s) unexamined; no breakdown recorded.
+- not-a-live-claim: 9
 
 ## Fixed in this run
 
-- grounding — the claim that no spec in the corpus carries a supersedes: key points at no record of the search — `specs/054-remove-supersession/spec.md` — **fixed** (decided by the rule)
-- grounding — next-criterion's never reissuing a retired label is stated with no pointer in the plan — `specs/054-remove-supersession/plan.md` — **fixed** (decided by the rule)
-- grounding — next-criterion's never reissuing a retired label is stated with no pointer in a Resolved Question — `specs/054-remove-supersession/spec.md` — **fixed** (decided by the rule)
+*None.*
