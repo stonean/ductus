@@ -51,3 +51,11 @@ Done when: the one-line `curl … | sh` installer places the bootstrap for every
 - [ ] A real adopter bootstrap naming TypeScript shows the decided outcome
 
 - **Done when**: the scenario's open question is resolved, the step follows it, and a real adopter bootstrap naming TypeScript ends as the scenario states.
+
+## 6. Disposition: nothing installs the project README template since init's retirement
+
+- [ ] `framework/templates/project/project-readme.md` reaches no adopter: `/ductus:init`, which copied it, was retired on 2026-09-15 (this spec's Retired note), and `/ductus` has no manifest row for it, while `framework/bootstrap/ductus-procedure.md`'s What This Command Does NOT Do says it never modifies `README.md`. Only audit Family 1 (`scripts/audit/cross-doc-consistency.sh`, sub-check 1b) reads it, to keep its pipeline diagram consistent. Found by 002's analysis, 2026-11-11; the owner deferred the decision here, since this spec retired `init`
+- [ ] Put the choice to the owner: `/ductus` creates `README.md` from the template when none exists, a `create` row in Shared files with conflict handling of `framework/bootstrap/ductus.md` and its byte copy `framework/bootstrap/govern.md`; or the template is retired, with 002's README criteria annotated and Family 1's sub-check 1b, `scripts/audit/README.md`, 026's spec and 023's AC28 swept
+- [ ] Correct this repository's `AGENTS.md`, whose Project Structure lists `project-readme` among the templates consumed once at adoption, with the change the owner chooses
+
+- **Done when**: the template is installed by `/ductus` or retired, every artifact that names it says which, and `AGENTS.md`'s template list matches
