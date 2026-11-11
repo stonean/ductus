@@ -82,6 +82,15 @@ The capture step becomes step 14 and the render step shifts 14 → 15. Renumberi
 is mechanical, but any cross-reference to "step 14" in the command body has to
 move with it; the implementation greps for step references before renumbering.
 
+### The gate's new block reasons are breaking
+
+`check-review-gate`'s `blocked-by` gained `not-analyzed`, `analyze-findings`
+and `analyze-stale`, values in a response set no schema documents as open, and
+the gate now holds `done` on a spec it passed before, so the change is breaking
+(`BE-COMPAT-001`). The runtime is pre-1.0, so it shipped in minor releases:
+the first two in 0.44.0, which `runtime/CHANGELOG.md` marks breaking for the
+completion gate, and the content-based staleness check by 0.46.0.
+
 ## Affected Files
 
 | File | Action | Purpose |
