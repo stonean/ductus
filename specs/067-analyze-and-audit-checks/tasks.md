@@ -162,12 +162,15 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
 ## 19. Implement scenario: shared-constitution-references-are-judged
 
-- [ ] Implement the behavior described in `scenarios/shared-constitution-references-are-judged.md`
+- [ ] Implement the behavior described in `scenarios/shared-constitution-references-are-judged.md` (owner, 2026-11-11: options (a), (j) with (y), and (c))
 - [ ] Build the minimal fixture (a shared constitution with `§a-b` and `§a-b-c`, one spec citing both) and prove the same-classification test fails against the current resolver before fixing
 - [ ] Correct the constitution's Cross-document references bullet: shared constitutions, unchecked qualified references, and the stale longest-first claim
-- [ ] Update `framework/commands/analyze.md` step 4 and `framework/reference/analyze.md` to match
+- [ ] Update `framework/commands/analyze.md` step 4 and `framework/reference/analyze.md` to match, the two unexamined classes in §Unexamined targets (informational) among it, batched with task 17's edit of the same class lists
+- [ ] Decide with the owner what a reference gets when the only file its line names is not markdown, the false alarm the scenario's Context records, before the wider judgment lands
+- [ ] Decide with the owner how the references the wider judgment flags are disposed of before it lands: measured at 78897161, 42 in `spec.md` files (26 in prose, 16 in criteria, 7 of those in 5 `done` specs: 010, 014, 024, 055, 064, which a rewrite reopens and a waiver leaves as a stored discard) and 12 under `framework/`, which Family 39 fails on; 90 more sit in plans and scenarios that no gate reads
+- [ ] Sweep what states that qualified references are counted and never judged, re-grepped by meaning when this task starts. A grep on 2026-11-11 found: `anchor-reference-kinds`' two resolved questions and `pointers-into-shipped-files-are-judged` in this spec, and this spec's AC2 and data model; 026's AC26 and `scripts/audit/shipped-anchor-resolution.sh`'s header; `RESOLVE_ANCHOR` in `runtime/src/schema/descriptions.rs`; and the config-sourced path boundary's list on `validate_no_traversal` in `runtime/src/primitives/mod.rs`, which gains `resolve-anchor`
 
-- **Done when**: The scenario's open questions are resolved, references into a registered shared constitution classify consistently and are judged against it, /analyze distinguishes unchecked references from checked ones, and the constitution and analyze reference say so.
+- **Done when**: The scenario's open questions are resolved; the markers file is recognized by its resolved path; references into registered documents, references on lines naming other documents, and whole-span citations are judged as the scenario's Behavior states, and what cannot be judged is recorded unexamined in its class; each behavior's test fails with it removed, M31 re-anchored; the flagged references are disposed of as the owner decided, leaving Family 39 with none the wider judgment introduced; and the constitution, the analyze reference and every swept artifact say so.
 
 ## 20. The plan's Overview describes the runtime work 067 did
 
