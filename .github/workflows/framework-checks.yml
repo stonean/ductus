@@ -188,6 +188,15 @@ jobs:
       - name: (p) Deprecated rules are removed on time
         run: bash scripts/tests/test-deprecation-removal.sh
 
+      # (q) Family 17 resolves the namespace the runtime renders as
+      # `Host::load` does, which halts on a config that does not parse.
+      # Step (h) runs the family over this repository, whose config parses,
+      # so a family that fell back to the directory basename again would
+      # pass there. The test builds fixture trees and shows the family fails,
+      # naming the file, on an unparseable config whose basename matches.
+      - name: (q) Host namespace resolution halts on an unparseable config
+        run: bash scripts/tests/test-host-namespace-parity.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

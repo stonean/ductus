@@ -25,7 +25,9 @@
 #       `[host] project` from the newest existing tier of
 #       schema::paths::CONFIG_CHAIN — `.ductus/config.toml`,
 #       `.govern/config.toml`, then the legacy root `.govern.toml`; else
-#       the repo directory basename.
+#       the repo directory basename. A config that cannot be read or does
+#       not parse halts the family, naming the file, as it halts
+#       `Host::load`.
 #   17b Collect the installed namespace directories under every agent
 #       config dir present in the repo: the `commands/` layout, plus the pi
 #       `{project}-*.md` flat prompt-template prefix shape.
@@ -80,21 +82,29 @@ fi
 
 project=""
 if [ -n "$CONFIG_FILE" ]; then
-  # A malformed config is treated as absent, matching `Host::load`'s
-  # own tolerance — namespace resolution must not fail because of an
-  # unrelated config error.
-  project="$(python3 - "$CONFIG_FILE" <<'PY' 2>/dev/null || true
+  # A config that cannot be read or does not parse halts the family, as
+  # it halts `Host::load` (runtime/src/host.rs): falling back to the
+  # basename instead would compare a namespace nothing renders and could
+  # pass, a check that could not run reading as one that passed.
+  project="$(python3 - "$CONFIG_FILE" <<'PY' 2>/dev/null
 import sys, tomllib
 try:
     with open(sys.argv[1], "rb") as fh:
         data = tomllib.load(fh)
 except Exception:
-    sys.exit(0)
+    sys.exit(2)
 value = (data.get("host") or {}).get("project")
 if isinstance(value, str) and value:
     print(value)
 PY
 )"
+  parse_status=$?
+  if [ "$parse_status" -ne 0 ]; then
+    emit "$CONFIG_FILE" \
+      "cannot be read or does not parse as TOML, so the rendered namespace cannot be resolved — Host::load halts on it too" \
+      "fix $CONFIG_FILE so it parses, then re-run"
+    exit 1
+  fi
 fi
 
 source_desc="[host] project in $CONFIG_FILE"
