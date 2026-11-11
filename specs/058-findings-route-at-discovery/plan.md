@@ -509,8 +509,8 @@ owed to another tree no longer holding `done`. The tag `ductus-v0.53.0` is
 cut after 058, 022, and 051 are all `done`, following the `AGENTS.md` release
 entry. The new
 primitive joins `framework/runtime-tools.txt`, whose parity with the registry
-is asserted by `runtime/tests/mcp.rs:109-119`. The configure permission lists
-gain it too (`framework/bootstrap/configure/claude.md:119-120`, `auggie.md:107-108`).
+is asserted by `runtime/tests/mcp.rs:109-119`. The configure permission list
+gains it too (`framework/bootstrap/configure/claude.md:119-120`).
 
 ## Affected Files
 
@@ -534,7 +534,7 @@ gain it too (`framework/bootstrap/configure/claude.md:119-120`, `auggie.md:107-1
 | `runtime/src/interpreter/analyze_tally.rs` | Create | The exec walker's tally of the tier counts an `/{project}:analyze` walk records |
 | `runtime/src/schema/extensions.rs` | Modify | `InboxRoute` docs |
 | `runtime/tests/mcp.rs`, `runtime/tests/walker.rs`, `runtime/tests/golden/{review,analyze,implement,status}-basic.jsonl` | Modify | Wire assertions and goldens for the new shapes |
-| `framework/runtime-tools.txt`, `framework/bootstrap/configure/{claude,auggie}.md` | Modify | The new tool name and its permission |
+| `framework/runtime-tools.txt`, `framework/bootstrap/configure/claude.md` | Modify | The new tool name and its permission |
 | `framework/commands/{review,analyze,implement,amend,groom,log,help,status}.md` | Modify | The new procedures |
 | `.claude/commands/ductus/*.md` | Regenerate | Mirrors, via the pre-commit hook |
 | `framework/constitution.md` | Modify | The rule, stated once |
