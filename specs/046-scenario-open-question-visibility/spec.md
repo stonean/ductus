@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [009-scenario-targeting, 022-deterministic-runtime, 080-deterministic-runtime-efficiency]
 next-criterion: 33
 ---
