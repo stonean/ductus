@@ -6,9 +6,9 @@ section: "Follow-on scenarios"
 
 ## Context
 
-029 wires `ductus` in State B and restarts so the next session runs the cheap deterministic path. That payoff only lands if the next session actually *takes* that path. In end-to-end Antigravity testing it did not: the post-restart session had `ductus` live (it skipped the binary probe — State A — and read the registered server's instructions), yet it walked the markdown `curl`/`tar`/`python3` reference path anyway, re-incurring exactly the token cost and the shell-permission prompts the wiring was meant to remove. Surfaced 2026-06-11.
+029 wires `ductus` in State B and restarts so the next session runs the cheap deterministic path. That payoff only lands if the next session actually *takes* that path. In end-to-end testing it did not: the post-restart session had `ductus` live (it skipped the binary probe — State A — and read the registered server's instructions), yet it walked the markdown `curl`/`tar`/`python3` reference path anyway, re-incurring exactly the token cost and the shell-permission prompts the wiring was meant to remove. Surfaced 2026-06-11.
 
-The cause is that the State-A handoff was **advisory**. The runtime mapping note in `framework/bootstrap/ductus.md` §Instructions says "call the corresponding tool … that is the deterministic path," and State A said only "take the deterministic primitive path for the rest of the run." A capable model honors that; a weaker host model (e.g. Gemini 3.5 Flash) detects the runtime but then executes the prose steps the document spends ~900 lines describing in shell, because nothing told it the shell blocks are *off-limits* once the runtime is live. The procedure described two paths but did not make taking the right one binding.
+The cause is that the State-A handoff was **advisory**. The runtime mapping note in `framework/bootstrap/ductus.md` §Instructions says "call the corresponding tool … that is the deterministic path," and State A said only "take the deterministic primitive path for the rest of the run." A capable model honors that; a weaker host model detects the runtime but then executes the prose steps the document spends ~900 lines describing in shell, because nothing told it the shell blocks are *off-limits* once the runtime is live. The procedure described two paths but did not make taking the right one binding.
 
 ## Behavior
 

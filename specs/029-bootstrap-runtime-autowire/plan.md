@@ -2,7 +2,7 @@
 
 Implements [029 — Bootstrap Runtime Auto-Detect and Wire](spec.md).
 
-> **Signpost (post-031, post-032, post-048):** this plan is the design record for what 029 built, and several of its decisions have since been superseded. The **MCP wiring** target is per-agent rather than per-layout, and only a `write-file` agent gets a file written (`031-agent-mcp-wiring`, extended by `032-opencode-agent`); the `ductus` entry now names the repo-relative pointer rather than a bare `ductus` on `PATH`, and State B acquires the binary rather than requiring the adopter to have installed it (`048-govern-acquired-runtime`, whose scenario `state-b-continues-in-session` also removed the single combined pre-flight abort this plan's first Technical Decision chose). 048 also replaced the `command -v` probe with the store probe `~/.ductus/bin/ductus --version`, seeded only for agents whose seed grants the runtime CLI and in no configure file, and added the version check this plan's **No version check; no data-model.md** decision ruled out. The **Parity enforcement** decision was never applied as written: 029's task 11 added Family 15 rather than extending `installer-registry-parity.sh`, and the owner changed that family's rule on 2026-11-10 (scenario `runtime-probe-parity-audit`). `framework/bootstrap/ductus.md` §MCP registration and the spec's Signpost and Post-completion note carry the current model; the decisions below are left as the record of what was chosen at plan time.
+> **Signpost (post-048):** this plan is the design record for what 029 built, and several of its decisions have since been superseded. The **MCP wiring** target is per-agent rather than per-layout (`framework/bootstrap/ductus.md` §MCP registration); the `ductus` entry now names the repo-relative pointer rather than a bare `ductus` on `PATH`, and State B acquires the binary rather than requiring the adopter to have installed it (`048-govern-acquired-runtime`, whose scenario `state-b-continues-in-session` also removed the single combined pre-flight abort this plan's first Technical Decision chose). 048 also replaced the `command -v` probe with the store probe `~/.ductus/bin/ductus --version`, seeded only for agents whose seed grants the runtime CLI and in no configure file, and added the version check this plan's **No version check; no data-model.md** decision ruled out. The **Parity enforcement** decision was never applied as written: 029's task 11 added Family 15 rather than extending `installer-registry-parity.sh`, and the owner changed that family's rule on 2026-11-10 (scenario `runtime-probe-parity-audit`). `framework/bootstrap/ductus.md` §MCP registration and the spec's Signpost and Post-completion note carry the current model; the decisions below are left as the record of what was chosen at plan time.
 
 ## Overview
 
@@ -20,21 +20,17 @@ Rationale: resolves the compounding-restart problem (spec Resolved Q1) — order
 
 ### State A detection — tool-inventory introspection (no shell, no permission)
 
-The agent inspects its **own** available-tool inventory for any `ductus`-namespaced MCP tool — `mcp__ductus__*` (Claude), `mcp:ductus:*` (Auggie/antigravity) — treating deferred/lazily-loaded tool names as present. Any match ⇒ State A ⇒ deterministic path, no message. No shell call, no permission. Rationale: spec Resolved Q2; the agent always knows its own tools, so this is portable and zero-cost.
+The agent inspects its **own** available-tool inventory for any `ductus`-namespaced MCP tool — `mcp__ductus__*` (Claude) and the `ductus__`-prefixed bridge tools (Pi) — treating deferred/lazily-loaded tool names as present. Any match ⇒ State A ⇒ deterministic path, no message. No shell call, no permission. Rationale: spec Resolved Q2; the agent always knows its own tools, so this is portable and zero-cost.
 
 ### State B/C split — pre-granted binary probe, graceful degradation
 
-Only when introspection finds no `ductus` tool, a `command -v ductus`-equivalent shell probe distinguishes installed-but-unregistered (State B) from absent (State C). The probe command is seeded into each layout's `settings_template` and each configure file (see below). If the probe **cannot run** (no shell) or is **denied**, classify as State C — a harmless false negative; detection never hard-fails.
+Only when introspection finds no `ductus` tool, a `command -v ductus`-equivalent shell probe distinguishes installed-but-unregistered (State B) from absent (State C). The probe command is seeded into each agent's `settings_template` and configure file (see below). If the probe **cannot run** (no shell) or is **denied**, classify as State C — a harmless false negative; detection never hard-fails.
 
-Per-layout probe permission form:
-
-- **Claude** (`permissions.allow`): `Bash(command -v *)`
-- **Auggie** (`toolPermissions[]`): `{ "toolName": "launch-process", "shellInputRegex": "^command -v ", "permission": { "type": "allow" } }`
-- **Antigravity** (`permissions.allow`, token-prefix grammar): `command(command -v)` was proposed with an **open implementation detail** — antigravity's token-prefix matcher treats `command` as the leading token (a shell builtin, not a binary), so `command(command -v)` might over-broaden or fail to match `command -v ductus`, with a `which ductus` probe under `command(which)` as the fallback. **Resolved at implement time to the fallback:** `command(which)` is what ships, in both the §Agent Registry seed and `framework/bootstrap/configure/antigravity.md`, and audit Family 15 (`scripts/audit/runtime-probe-parity.sh`) held the two in parity, and kept holding that literal after 048 replaced the probe, until the owner changed its rule on 2026-11-10; it now skips Antigravity, whose seed carries no CLI entry (scenario `runtime-probe-parity-audit`).
+Probe permission form: **Claude** (`permissions.allow`) takes `Bash(command -v *)`; Pi has no permission gate, so it seeds nothing (scenario `runtime-probe-parity-audit`).
 
 ### MCP wiring — additive, idempotent, in-place JSON merge (host-side)
 
-Per-layout target from ductus.md §Derived values: `.mcp.json` at repo root (`claude-style`), `{config_dir}/mcp_config.json` (`antigravity`). The entry:
+Per-agent target from ductus.md §MCP registration: `.mcp.json` at repo root (Claude). The entry:
 
 ```json
 { "mcpServers": { "ductus": { "command": "ductus", "args": ["mcp"] } } }
@@ -52,7 +48,7 @@ No `merge-mcp-config` primitive is added — State B is runtime-absent by defini
 
 ### ductus tool permissions granted at wiring time (State B)
 
-Alongside the wiring write, State B adds the `ductus` tool permission to the layout's settings file (additively) so the **next** session calls the tools prompt-free. Use the per-layout wildcard — `mcp__ductus__*` (Claude), `mcp:ductus:*` (Auggie), `mcp(ductus/*)` (Antigravity) — the minimal bootstrap grant. The enumerated per-tool set already lives in the generated `<!-- generated:mcp-allow -->` blocks of the configure files and is applied later by `/{project}:configure`; the wildcard at wiring time coexists harmlessly (exact-match dedup leaves both). Rationale: `spec.md` §Permission Setup + Resolved Q3.
+Alongside the wiring write, State B adds the `ductus` tool permission to the layout's settings file (additively) so the **next** session calls the tools prompt-free. Use the per-layout wildcard — `mcp__ductus__*` for Claude — the minimal bootstrap grant. The enumerated per-tool set already lives in the generated `<!-- generated:mcp-allow -->` blocks of the configure files and is applied later by `/{project}:configure`; the wildcard at wiring time coexists harmlessly (exact-match dedup leaves both). Rationale: `spec.md` §Permission Setup + Resolved Q3.
 
 ### Reverse the "wired separately, not scaffolded" decision
 
@@ -64,7 +60,7 @@ Wire on presence of the binary alone — no version-compatibility gate (spec Res
 
 ### Parity enforcement
 
-The probe seed entry must stay in sync across the three Agent Registry `settings_template` blobs and the three configure files. Extend/verify `scripts/audit/installer-registry-parity.sh` (and `registry-equivalence.sh`) so a future drift between a registry seed and its configure file is caught at maintainer time, matching the existing Family-14 parity discipline.
+The probe seed entry must stay in sync across the Agent Registry `settings_template` blobs and the configure files. Extend/verify `scripts/audit/installer-registry-parity.sh` (and `registry-equivalence.sh`) so a future drift between a registry seed and its configure file is caught at maintainer time, matching the existing Family-14 parity discipline.
 
 ## Affected Files
 
@@ -72,14 +68,12 @@ The probe seed entry must stay in sync across the three Agent Registry `settings
 | --- | --- | --- |
 | `framework/bootstrap/ductus.md` | Modify | Fold §ductus.md Self-Update Check into a **Pre-flight Phase**; add three-state `ductus` detection, an **MCP Wiring** subsection, the State-B tool-perm grant; reverse the §Permission Setup "not scaffolded" paragraph; add the probe to each Agent Registry `settings_template`; add new §Edge Cases and the State-C tip in §Post-Scaffolding Output |
 | `framework/bootstrap/configure/claude.md` | Modify | Add `Bash(command -v *)` probe to the canonical allow set (ductus tool perms already present via generated block) |
-| `framework/bootstrap/configure/auggie.md` | Modify | Add the `"^command -v "` probe entry to `toolPermissions` |
-| `framework/bootstrap/configure/antigravity.md` | Modify | Add the probe (`command(command -v)` or `command(which)`) to `permissions.allow` |
 | `README.md` | Modify | Runtime section: reframe to "`/ductus` auto-wires ductus when the binary is detected"; keep the binary-install steps |
 | `scripts/audit/installer-registry-parity.sh` | Modify | Extend parity coverage to the new probe seed entry across registry + configure (verify `registry-equivalence.sh` too) |
 | `specs/029-bootstrap-runtime-autowire/plan.md` | Create | This plan |
 | `specs/029-bootstrap-runtime-autowire/tasks.md` | Create | Task breakdown below |
 
-Cross-spec (informational, not in this scope): a back-linked scenario on **003** and/or **028** noting 029 reverses the "not scaffolded" decision — record via `/ductus:amend` after planning.
+Cross-spec (informational, not in this scope): a back-linked scenario on **003** noting 029 reverses the "not scaffolded" decision — record via `/ductus:amend` after planning.
 
 ## Trade-offs
 
@@ -87,6 +81,5 @@ Cross-spec (informational, not in this scope): a back-linked scenario on **003**
 - **Probe in the always-applied seed vs. only at State B.** The *binary probe* permission goes in the always-applied seed (it must be authorized before the state is known); the *ductus tool* permissions go in at State-B wiring time (they only matter once wired). Considered seeding the tool perms too — rejected as noise for State-C projects that never wire.
 - **No `merge-mcp-config` runtime primitive.** Rejected: State B is runtime-absent by definition, so a primitive could never run there. Revisit only if a future "re-assert wiring while runtime is live" need appears.
 - **Wildcard vs. enumerated ductus tool grant at wiring time.** Chose the per-layout wildcard for the bootstrap grant (minimal, robust); the enumerated set stays owned by the generated configure blocks applied by `/{project}:configure`.
-- **Antigravity probe grammar was left to implement time rather than guessed here.** `command(command -v)` risked over-broadening or mis-matching under token-prefix matching, with a `which ductus` probe as the fallback. It resolved to the fallback — `command(which)` — which Family 15 held the same in the seed and the configure file until its rule changed on 2026-11-10, after 048 had replaced the probe.
 - **Known limitation — mid-session settings reload.** Seeding the probe permission only avoids a prompt if the host re-reads its settings file mid-session (the same assumption `framework/bootstrap/ductus.md` §Permission Setup already relies on). On a host that doesn't, the probe prompts once on first run; the graceful-degradation path (deny ⇒ State C) keeps that from being fatal.
 - **Known limitation — no automated test for agent-driven detection.** The three-state logic is prose the agent executes; verification is the audit parity check (static parts) plus a manual walk-through of each state. No runtime unit test is added.

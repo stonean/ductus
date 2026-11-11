@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-029 added a `command -v ductus`-equivalent binary probe to two places per agent: the bootstrap permission **seed** (the `settings_template` blob in the §Agent Registry table of `framework/bootstrap/ductus.md`, 029 Task 5) and the agent's steady-state permission set (`framework/bootstrap/configure/{key}.md`, 029 Task 6). This family first guarded that pairing. `048-govern-acquired-runtime` then replaced the probe with a filesystem check on the ductus-owned store, `~/.ductus/bin/ductus --version` (`framework/bootstrap/ductus.md` §ductus runtime detection), which the seeds of Claude, Auggie and OpenCode grant and no configure file does. The `command -v` entry stays in the seeds, but no step runs it (§Permission Setup there), so a check on it passed without testing the probe.
+029 added a `command -v ductus`-equivalent binary probe to two places per agent: the bootstrap permission **seed** (the `settings_template` blob in the §Agent Registry table of `framework/bootstrap/ductus.md`, 029 Task 5) and the agent's steady-state permission set (`framework/bootstrap/configure/{key}.md`, 029 Task 6). This family first guarded that pairing. `048-govern-acquired-runtime` then replaced the probe with a filesystem check on the ductus-owned store, `~/.ductus/bin/ductus --version` (`framework/bootstrap/ductus.md` §ductus runtime detection), which the Claude seed grants and no configure file does. The `command -v` entry stays in the seeds, but no step runs it (§Permission Setup there), so a check on it passed without testing the probe.
 
 The probe runs on every `/ductus` run that finds no `ductus` tool, after `framework/bootstrap/ductus.md` §Permission Setup has seeded. A seed that grants the runtime CLI but drops the probe therefore prompts for it on every such run, and nothing else reports that.
 
@@ -25,9 +25,8 @@ The family is wired into `scripts/audit/run-all.sh` as Family 15 and enumerated 
 
 ## Edge Cases
 
-- **Per-agent grammar differs.** The probe is spelled `"Bash(~/.ductus/bin/ductus --version)"` and its `.exe` twin for claude, one `shellInputRegex` of `"^~/\\.ductus/bin/ductus(\\.exe)? --version$"` with an `allow` permission for auggie, and `"~/.ductus/bin/ductus --version": "allow"` and its `.exe` twin for opencode. Each literal carries its grammar's delimiters, so the Windows twin never satisfies the Unix form, and no literal is compared across grammars.
+- **Delimiters are part of the literal.** The probe is spelled `"Bash(~/.ductus/bin/ductus --version)"` and its `.exe` twin for claude. Each literal carries its grammar's delimiters, so the Windows twin never satisfies the Unix form.
 - **Row-scoped, not file-scoped.** The probe's command text also appears in the prose of `framework/bootstrap/ductus.md`, and its §MCP registration has a table keyed by the same agent names, so the family reads only its §Agent Registry table.
-- **Antigravity is skipped by name on stderr.** Its seed carries no CLI entry, so every CLI call prompts there, the probe among them (`framework/bootstrap/ductus.md` §Permission Setup). A CLI entry appearing in its row (`command(.ductus/bin/ductus` or `command(~/.ductus/bin/ductus`) is a finding: the rule then applies, and the skip becomes a check.
 - **Pi is skipped by name on stderr.** It has no permission-gating settings (`064-pi-host-support`), so it has no seed; Family 14 holds its `settings_template` at `{}`.
 - **New agent rows.** The script names the current agents and their probe literals: an agent whose seed grants the CLI is one added `check_agent` line, and any other one `skip_agent` line with its reason. It takes the agent set from the rows of `framework/bootstrap/ductus.md` §Agent Registry, so an agent the registry lists that neither line names is a finding, and a new agent cannot pass unchecked. Read the count off the registry rather than from this bullet.
 

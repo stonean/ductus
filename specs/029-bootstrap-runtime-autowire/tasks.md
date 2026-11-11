@@ -11,14 +11,14 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. Add the three-state detection mechanism
 
-- [x] Document **State A** = tool-inventory introspection (`mcp__ductus__*` / `mcp:ductus:*`, lazy names count as present); no shell, no permission.
+- [x] Document **State A** = tool-inventory introspection (`mcp__ductus__*` on Claude, lazy names count as present); no shell, no permission.
 - [x] Document **State B** = binary probe succeeds, no tools → wire + grant perms + contribute to the pre-flight abort (names every file written).
 - [x] Document **State C** = probe fails *or* cannot run *or* is denied → markdown path + one tip line pointing at README Runtime.
 - Done when: all three states and the "deny/unavailable ⇒ State C" degradation are specified in ductus.md.
 
 ## 3. Add the MCP Wiring subsection
 
-- [x] Specify the per-layout target (`.mcp.json` / `{config_dir}/mcp_config.json`) and the `ductus` entry shape.
+- [x] Specify the per-layout target (`.mcp.json`) and the `ductus` entry shape.
 - [x] Specify the additive/idempotent in-place merge rules: missing file, missing `ductus`, existing `ductus` (no-op), missing `mcpServers` key, malformed JSON (skip + warn + degrade).
 - [x] State explicitly that the write updates and never replaces/truncates the file.
 - Done when: ductus.md's MCP Wiring subsection covers all five merge cases.
@@ -34,16 +34,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 5. Add the probe to the Agent Registry `settings_template` seeds
 
 - [x] Claude row: add `Bash(command -v *)`.
-- [x] Auggie row: add `{ "toolName": "launch-process", "shellInputRegex": "^command -v ", "permission": { "type": "allow" } }`.
-- [x] Antigravity row: add `command(command -v)` (or the validated fallback) and keep it identical to the configure file's form.
-- Done when: all three registry seeds grant the probe.
+- Done when: the registry seed grants the probe.
 
-## 6. Add the probe to the three configure files
+## 6. Add the probe to the configure file
 
 - [x] `configure/claude.md`: add `Bash(command -v *)` to the canonical allow set.
-- [x] `configure/auggie.md`: add the `"^command -v "` `toolPermissions` entry.
-- [x] `configure/antigravity.md`: add the probe to `permissions.allow`, matching the registry-seed form; resolve the token-prefix grammar (`command(command -v)` vs `command(which)`).
-- Done when: each configure file grants the probe in the same form as its registry seed.
+- Done when: the configure file grants the probe in the same form as its registry seed.
 
 ## 7. Reframe the README Runtime section
 
@@ -99,10 +95,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 15. Disposition: the criteria and Family 15 the completion gate found false at aa91cdf2
 
 - [x] AC1, AC8 and AC20 predate 048's State A version check (`171d5024`; `framework/bootstrap/ductus.md` lines 330-334 at aa91cdf2): State A warns on a `[runtime] path` mismatch and, live but stale, re-acquires and runs the rest of the session through `{pointer-path} <primitive>`, which contradicts line 340's "MUST call the MCP tool"; AC8's parenthetical misreads the constitution's Versioning text. Annotate each as superseded in part, and reconcile the two `ductus.md` passages, `govern.md` following byte for byte
-- [x] AC5 and AC21 name the retired `command -v` seed entry, which no step runs (`ductus.md` line 163); the probe is `~/.ductus/bin/ductus --version` (line 294), seeded for Claude, Auggie and OpenCode and in no `framework/bootstrap/configure/*.md`, Antigravity's seed carrying no CLI entry. Family 15 (`scripts/audit/runtime-probe-parity.sh`) checks the retired literal, so it passes without testing the probe. Owner's call (2026-11-10): change the family's both-or-neither rule, not the configure files — Family 15 checks that each agent whose Permission Setup seed carries CLI entries seeds the store probe, which the seed grants before the probe runs on every `/ductus` run (`framework/bootstrap/ductus.md` §Permission Setup, §ductus runtime detection), and skips Antigravity, whose seed carries no CLI entry, and Pi by name; AC21 is amended to state that rule. Then fix the family and its header, correct the `runtime-probe-parity-audit` scenario (it calls `command -v` the probe and names `framework/commands/audit.md`, where the entry is `framework/reference/audit.md`), annotate AC5 and AC21, and show the family fails on a one-sided probe
-- [x] AC15 and AC16 predate Pi (`064-pi-host-support`): Pi restarts once more after the run that writes its bridge (`ductus.md` lines 190 and 552), the registry holds five agents across four layouts, and no text delivers AC15's "the stale abort carries State B's file list" (line 568). Annotate both, and correct or remove the unsupported clause. Owner's call (2026-11-10): fix the bootstrap rather than the clause — the stale abort (`ductus.md` §Pre-flight abort) carries State B's notice, as that file's §Self-update check and `framework/bootstrap/ductus-procedure.md`'s Edge Cases already said it did, so AC11, AC12, AC15 and the State B body hold as written
+- [x] AC5 and AC21 name the retired `command -v` seed entry, which no step runs (`ductus.md` line 163); the probe is `~/.ductus/bin/ductus --version` (line 294), seeded for Claude and in no `framework/bootstrap/configure/*.md`. Family 15 (`scripts/audit/runtime-probe-parity.sh`) checks the retired literal, so it passes without testing the probe. Owner's call (2026-11-10): change the family's both-or-neither rule, not the configure files — Family 15 checks that each agent whose Permission Setup seed carries CLI entries seeds the store probe, which the seed grants before the probe runs on every `/ductus` run (`framework/bootstrap/ductus.md` §Permission Setup, §ductus runtime detection), and skips Pi by name; AC21 is amended to state that rule. Then fix the family and its header, correct the `runtime-probe-parity-audit` scenario (it calls `command -v` the probe and names `framework/commands/audit.md`, where the entry is `framework/reference/audit.md`), annotate AC5 and AC21, and show the family fails on a one-sided probe
+- [x] AC15 and AC16 predate Pi (`064-pi-host-support`): Pi restarts once more after the run that writes its bridge (`ductus.md` lines 190 and 552), and no text delivers AC15's "the stale abort carries State B's file list" (line 568). Annotate both, and correct or remove the unsupported clause. Owner's call (2026-11-10): fix the bootstrap rather than the clause — the stale abort (`ductus.md` §Pre-flight abort) carries State B's notice, as that file's §Self-update check and `framework/bootstrap/ductus-procedure.md`'s Edge Cases already said it did, so AC11, AC12, AC15 and the State B body hold as written
 - [x] AC17: the README's Runtime section no longer says `/ductus` wires the runtime; `cb5b330c` moved that to its Installing and Quick start sections. Annotate it, dropping "when the binary is detected"
-- [x] Correct the false sentences in criteria that otherwise hold, and the stale body text: AC6 omits Pi's `write-file` bridge; AC12's "the abort message's file list" is the Closing restart's since 048; `spec.md`'s "State A is unchanged", its two no-version-check claims (MCP Wiring and the Resolved Question), its signpost's "write-file is Claude and OpenCode", and the Documentation section's restatement of AC17
+- [x] Correct the false sentences in criteria that otherwise hold, and the stale body text: AC6 omits Pi's `write-file` bridge; AC12's "the abort message's file list" is the Closing restart's since 048; `spec.md`'s "State A is unchanged", its two no-version-check claims (MCP Wiring and the Resolved Question), and the Documentation section's restatement of AC17
 - [x] Criteria verified after the items above, against `b7d8a95f` with this task's edits, by one read-only agent reading the source and running Family 15, with no test run (163 s), its claims checked by the operator: all 21 hold, 13 with their annotations; AC17's annotation no longer dates the Installing (per agent) sentence to `cb5b330c`, which predates it. Body, scenarios and plan, corrected by fact or tense (owner's delegation, 2026-11-10): Pi's bridge in §MCP Wiring and its reversal, Pi's prefix in State A's detection, State B's per-agent registration and the permission write for every `mechanism`, the Resolved Questions preamble, and the plan signpost's count; `state-a-deterministic-path-forcing`'s quote of a §runtime-boundary sentence `ad4fae5b` removed; `archive-fetch-direct-codeload`'s `DUCTUS_REPO` URL, its State C and its tool permission; and `project-inputs-asked-once`'s `AGENTS.md` citation, never true
 - [x] Real adopter bootstrap on the stale path (owner's call, 2026-11-10: that path only). Two fresh `claude -p "/ductus --ref=ductus-v0.59.11"` sessions ran on a fixture whose installed bootstrap was `c0090a22`'s, so the release's copy read as stale, and whose store already held 0.59.11 (243 s and 167 s). Each abort carried State B's runtime line and its file list, and closed with the re-run line. The pointer and the `[source]` block were written; the MCP file and settings entry were named as not written, since Claude Code's non-interactive mode refuses the writes to `.mcp.json` and `.claude/` an interactive session asks for. Edit (2), State A's live-but-stale rule, is waived with its reason: it states the route the version-check bullet above it already prescribed, and changes no step, command, permission or write
 - [x] The analysis's detection at `1097c24a` found four § references in `runtime-probe-parity-audit` that name no document, two unresolved by `resolve-anchor`, introduced by this task's rewrite. Fixed by naming `framework/bootstrap/ductus.md` on each line, the owner choosing the fix and a third review over a waiver (2026-11-10); the analysis was not recorded, and runs after that review

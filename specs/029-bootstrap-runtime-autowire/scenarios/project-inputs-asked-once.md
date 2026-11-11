@@ -11,7 +11,7 @@ section: "Follow-on scenarios"
 1. **Collected before the abort.** `§Inputs` prompted for all three *before* the Pre-flight Phase. On a State B adoption (ductus installed but unwired — the common first run) the user typed all three, the run then wired ductus and aborted, and the next session asked again.
 2. **Never persisted as answers.** Even setting the restart aside, every routine re-run (update mode) re-prompted, because the answers were not stored where a later run could read them. The project name *was* already in `.ductus/config.toml` as `[host] project`, but the procedure never read it back; description and languages had no persisted home at all.
 
-Surfaced 2026-06-11 during end-to-end Antigravity testing: the adopter entered name/description/languages twice across the wire-then-restart cycle.
+Surfaced 2026-06-11 during end-to-end testing: the adopter entered name/description/languages twice across the wire-then-restart cycle.
 
 `.ductus/config.toml` is the adopter-side configuration file (`framework/bootstrap/ductus.md` §Project Configuration). It is the proper home for these answers — not a new scratch file, and not a throwaway the abort discards.
 
