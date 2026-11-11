@@ -80,7 +80,6 @@ AC1's test and homes go in §drift-prevention *Shared knowledge stays in git*, a
 | `runtime/src/mcp/server.rs` | Modify | `prune-project` tool |
 | `runtime/src/schema/registry.rs` | Modify | `prune-project` in `PRIMITIVE_REGISTRY` |
 | `framework/bootstrap/configure/claude.md` | Regenerate | `prune-project` permission, via `scripts/gen-configure-mcp.sh` |
-| `framework/bootstrap/configure/auggie.md` | Regenerate | `prune-project` permission, via `scripts/gen-configure-mcp.sh` |
 | `scripts/audit/adopter-shell-behavior.sh` | Modify | Family 22 hook cases |
 | `scripts/gen-help-tables.sh` | Modify | `/prune --project` help entry |
 | `README.md` | Modify | `[artifacts]` entry (AC16) |
