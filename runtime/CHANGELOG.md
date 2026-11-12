@@ -10,6 +10,29 @@ its version and date.
 
 ### Added
 
+- **`/{project}:analyze` records each loaded rule's verdict and judges a rule
+  again only when its subjects changed (spec 082).** `analysis.md` gains
+  `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or
+  `finding` with `at` and `message`), `unjudged-rules` and `rule-digest` (a
+  digest of each loaded rule file's rule IDs, Statements and Verifications).
+  A stored verdict is current while the spec's design subjects (`spec.md`,
+  `plan.md`, `data-model.md`, each scenario, never `tasks.md` or `review.md`)
+  and its rule file are unchanged, and a rule is then not judged again.
+  `discover-rule-files` takes `feature`, under which, with `all` and `rules`,
+  its result gains `verdicts` (`judge`, `reusable` and `reason`, inline or past
+  the read size in its lists file, with `reusable-count` and `judge-count`
+  inline). `write-analysis` takes `rule-verdicts` and `judged-rules` (CLI
+  `--rule-verdicts-json` and `--judged-rule`), reads the rule files itself,
+  carries each current verdict forward, records every assessable rule the run
+  neither judged nor reused under `unjudged-rules`, records an `addressed`
+  verdict whose citation does not resolve there too, refuses a verdict naming
+  no loaded rule and a tier count below its `finding` verdicts, and returns
+  `contradictions` (a finding over unchanged subjects after a not-fired or
+  `addressed` verdict, advisory) beside a new `## Contradictions` body section.
+  `assessSpecQuality`'s response takes an optional `addressed-by`, and the exec
+  walker sends no request for a rule whose verdict is current.
+  `rule-assessments-not-checked` now also counts each rule left unjudged, on
+  the interactive path as under `ductus exec`.
 - **`check-artifacts` runs `/{project}:analyze`'s Spec integrity and Plan
   consistency checks.** Two new blocking families, `spec-integrity` (no
   Acceptance Criteria section, no criterion from `clarified` on, an empty or
