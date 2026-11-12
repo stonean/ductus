@@ -10,7 +10,7 @@ cross-spec-impact: [022-deterministic-runtime, 066-audit-records-and-the-complet
 The runtime primitives that check a spec corpus without judging it: the artifact families `/{project}:analyze` runs, the frontmatter, dependency, anchor and rule-citation checks beside them, the two derived frontmatter indexes, the link and reference integrity checks, and the two `/{project}:audit` families with a runtime half. The parser, the interpreter and the shared scanners they use are [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md)'s; the records these checks feed are [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md)'s. The argument and result shapes are in [data-model.md](data-model.md).
 
 > **Signpost:** [033](../033-rule-surface-setting/spec.md) changed `check-rule-ids`: a citation of a shipped rule whose file `[rules] surfaces` kept uninstalled is reported `not-installed`, an informational state recorded unexamined under `rule-not-installed`, never `missing`.
-
+>
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) added a condition to review-state drift: a `done` spec holding an unticked criterion, with no grandfather rule.
 
 ## Motivation
