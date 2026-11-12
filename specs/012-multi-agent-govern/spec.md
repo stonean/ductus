@@ -103,7 +103,7 @@ The migration is spent: nothing has scaffolded the per-CLI model since, and the 
 Before any scaffolding, the unified command verifies:
 
 - The current directory **is** an existing git repository. If not, stop and report: "This is not a git repository. Run `git init` first."
-- If the spec-root directory (`specs/` by default) already exists, this is a re-run. Report: "Existing {spec-root}/ directory found — running in update mode."
+- Whether this is a re-run is decided by an earlier-adoption signal, not by the spec root existing: a config file at any tier or a ductus-only artifact, as 007's `a-first-adoption-with-existing-specs-is-not-an-update` lists, and the report names the mode and the deciding signal.
 
 These are the checks 007 describes; the unified command runs them once per run, whatever agents are selected.
 
