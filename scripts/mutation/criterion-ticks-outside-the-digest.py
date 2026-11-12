@@ -37,4 +37,11 @@ MUTATIONS = [
         '            Some(_) => String::new(),',
         'analyze_subjects::tests::every_other_spec_edit_still_moves_its_digest check_review_gate::tests::a_criterion_tick_leaves_the_analysis_current_and_another_spec_edit_stales_it',
     ),
+    (
+        'M4 a fenced line inside the criteria section is no longer skipped, so its checkbox is normalized',
+        'src/primitives/mod.rs',
+        '    let mut in_section = false;\n    let mut section_level: u8 = 0;\n    for (idx, line) in lines.iter().enumerate() {\n        if skip.skip(line) {',
+        '    let mut in_section = false;\n    let mut section_level: u8 = 0;\n    for (idx, line) in lines.iter().enumerate() {\n        if false && skip.skip(line) {',
+        'analyze_subjects::tests::every_other_spec_edit_still_moves_its_digest',
+    ),
 ]

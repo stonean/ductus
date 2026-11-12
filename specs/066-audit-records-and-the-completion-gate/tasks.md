@@ -150,6 +150,8 @@ Before the second item, read 078's `status:`. At `done`, that edit is a factual 
 
 - **Done when**: the doc comment reads whole, and each tick in the test moves the digest on its own, shown by a mutation that normalizes only the fenced checkbox
 
+Applied 2026-11-12. The doc comment on `the_review_record_remains_a_subject` (`runtime/src/primitives/analyze_subjects.rs`) opens with "The exclusion is the record's alone — the *review* record stays a" again, lost to 6a08a7ad. `spec_with_criteria` takes `fenced` and `outside` as separate arguments, and `every_other_spec_edit_still_moves_its_digest` asserts the fenced checkbox and the outside one each alone. Mutation M4 in `scripts/mutation/criterion-ticks-outside-the-digest.py` (`section_line_indices` stops skipping a fenced line) is KILLED by that test, filtered to it, with M1 to M3 still killed.
+
 ## 19. Fix what 078's review re-read found in 066 task 10's change
 
 Found by 078's review round 3 (2026-11-04); the round's result file is gitignored and the next 078 review clears it, so each item states its edit. Re-check each against the tree before applying it.

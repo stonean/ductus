@@ -553,13 +553,20 @@ mod tests {
     }
 
     /// A spec whose criteria carry `first` and `second` as their markers,
-    /// with a checkbox outside the criteria and one in a fence inside them.
-    fn spec_with_criteria(first: char, second: char, text: &str, other: char) -> String {
+    /// with a checkbox in a fence inside them (`fenced`) and one outside them
+    /// (`outside`), each set on its own.
+    fn spec_with_criteria(
+        first: char,
+        second: char,
+        text: &str,
+        fenced: char,
+        outside: char,
+    ) -> String {
         format!(
             "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n\n\
              ## Acceptance Criteria\n\n- [{first}] AC1: {text}\n- [{second}] AC2: Second.\n\n\
-             ```text\n- [{other}] Not a criterion: fenced.\n```\n\n\
-             ## Non-Goals\n\n- [{other}] Not a criterion: outside the section.\n"
+             ```text\n- [{fenced}] Not a criterion: fenced.\n```\n\n\
+             ## Non-Goals\n\n- [{outside}] Not a criterion: outside the section.\n"
         )
     }
 
@@ -575,12 +582,15 @@ mod tests {
     fn a_criterion_tick_does_not_move_the_spec_digest() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), "");
-        let analyzed = spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", ' '));
+        let analyzed = spec_digest(
+            tmp.path(),
+            &spec_with_criteria(' ', 'x', "First.", ' ', ' '),
+        );
         for (first, second) in [('x', 'x'), ('X', ' '), (' ', ' ')] {
             assert_eq!(
                 spec_digest(
                     tmp.path(),
-                    &spec_with_criteria(first, second, "First.", ' ')
+                    &spec_with_criteria(first, second, "First.", ' ', ' ')
                 ),
                 analyzed,
                 "[{first}] [{second}]"
@@ -594,22 +604,37 @@ mod tests {
     fn every_other_spec_edit_still_moves_its_digest() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), "");
-        let analyzed = spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", ' '));
+        let analyzed = spec_digest(
+            tmp.path(),
+            &spec_with_criteria(' ', 'x', "First.", ' ', ' '),
+        );
         assert_ne!(
             spec_digest(
                 tmp.path(),
-                &spec_with_criteria(' ', 'x', "First, reworded.", ' ')
+                &spec_with_criteria(' ', 'x', "First, reworded.", ' ', ' ')
             ),
             analyzed,
             "a criterion's text"
         );
         assert_ne!(
-            spec_digest(tmp.path(), &spec_with_criteria(' ', 'x', "First.", 'x')),
+            spec_digest(
+                tmp.path(),
+                &spec_with_criteria(' ', 'x', "First.", 'x', ' ')
+            ),
             analyzed,
-            "a checkbox that is not a criterion's"
+            "a checkbox in a fence inside the criteria"
+        );
+        assert_ne!(
+            spec_digest(
+                tmp.path(),
+                &spec_with_criteria(' ', 'x', "First.", ' ', 'x')
+            ),
+            analyzed,
+            "a checkbox outside the criteria"
         );
     }
 
+    /// The exclusion is the record's alone — the *review* record stays a
     /// subject, body and frontmatter both, because `review.md` is an input to
     /// an analysis rather than its output. Excluding it would exempt the single
     /// edit that most often invalidates an analyze record, which is the
