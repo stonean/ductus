@@ -466,7 +466,7 @@ Args:
 
 - `apply` — `false` (the default) is a preview and writes nothing.
 - `remove` — each entry to delete, by the path and digest a preview reported. On the CLI, one `--remove <digest>:<path>` per entry.
-- `replace` — each entry to replace with the text `with`, which may span lines. MCP only, since the text does not fit a flag.
+- `replace` — each entry to replace with the text `with`, which may span lines. On the CLI, `--replace-json FILE` from a staging directory carries the list, since the text does not fit a scalar flag (022 task 24).
 - `create` — the homes to create from their template, from `system`, `events` and `errors`. On the CLI, one `--create <kind>` each.
 
 Result (never an entry's text):
