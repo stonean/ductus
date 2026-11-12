@@ -35,8 +35,8 @@ Recording a scenario on `063` and `055` takes each from `done` to `in-progress`,
 
 Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entries describe the limit that task makes the check apply. Both lines already name `/target`'s shared-constitution report (`c6a0dca2`); this task adds the four project files to them.
 
-- [ ] Update `README.md`'s `[artifacts]` entry to say `read-size-bytes` also limits the four project files, `AGENTS.md` among them even though it loads in every session rather than through a file read.
-- [ ] Make the same change to the commented schema in `framework/bootstrap/ductus.md` §Project Configuration, and copy it into `framework/bootstrap/govern.md`.
+- [x] Update `README.md`'s `[artifacts]` entry to say `read-size-bytes` also limits the four project files, `AGENTS.md` among them even though it loads in every session rather than through a file read.
+- [x] Make the same change to the commented schema in `framework/bootstrap/ductus.md` §Project Configuration, and copy it into `framework/bootstrap/govern.md`.
 
 - **Done when**: AC16 holds, and 063's AC17 still holds: the default, the whole-number form, and no off switch are each still stated.
 
@@ -44,19 +44,19 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entr
 
 Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, because the hook calls the staged mode that task builds. It lands in one commit with `050-constitution` task 44's last part: the closing sentence of §text-first-artifacts' length bullet, and the bullet `artifacts-are-as-short-as-their-required-content` quotes, reworded to name this refusal. That commit also cuts at least as many constitution bytes as it adds; the owner chooses which, from candidates measured with `wc -c framework/constitution.md` against `scripts/lint-governing-size.sh`'s 50,000-byte ceiling.
 
-- [ ] Add `check-artifact-size --project-files --staged` to `framework/bootstrap/hooks/ductus-pre-commit` after the re-stage block, beside `check-corpus-links`.
-- [ ] Add a capability probe for the flag: capture `check-artifact-size --help` into a variable, check it for `--project-files`, and halt with the too-old message when the flag is missing.
-- [ ] Add Family 22 cases to `scripts/audit/adopter-shell-behavior.sh`. A commit that grows an over-limit file, and one that adds a new file over the limit, are each refused, with the file, size, limit and `/prune --project` named. A commit that shrinks the file, leaves it unchanged, or deletes it passes.
-- [ ] Show that the cases fail with the hook step removed.
-- [ ] Record each layout's impact in the commit.
+- [x] Add `check-artifact-size --project-files --staged` to `framework/bootstrap/hooks/ductus-pre-commit` after the re-stage block, beside `check-corpus-links`.
+- [x] Add a capability probe for the flag: capture `check-artifact-size --help` into a variable, check it for `--project-files`, and halt with the too-old message when the flag is missing.
+- [x] Add Family 22 cases to `scripts/audit/adopter-shell-behavior.sh`. A commit that grows an over-limit file, and one that adds a new file over the limit, are each refused, with the file, size, limit and `/prune --project` named. A commit that shrinks the file, leaves it unchanged, or deletes it passes.
+- [x] Show that the cases fail with the hook step removed.
+- [x] Record each layout's impact in the commit.
 
 - **Done when**: AC14 holds, Family 22 passes, and Family 22 fails when the step is removed.
 
 ## 6. Sweep the prior claims
 
-- [ ] Grep the live-artifact set (`AGENTS.md`, Workflow) by meaning for the retired routing ("this file or a rule file", "append a project-only rule", "contributor knowledge into `AGENTS.md`").
-- [ ] Grep the same set for every statement that `check-artifact-size` measures spec artifacts only, or runs only in `/clarify`, `/plan` and `/analyze`, including the schema comment's *Consumed by* line and `docs/`.
-- [ ] Correct each hit that states current behavior. A hit in a `done` spec's body is a meaningful edit, and its back-edge is named before the write.
+- [x] Grep the live-artifact set (`AGENTS.md`, Workflow) by meaning for the retired routing ("this file or a rule file", "append a project-only rule", "contributor knowledge into `AGENTS.md`").
+- [x] Grep the same set for every statement that `check-artifact-size` measures spec artifacts only, or runs only in `/clarify`, `/plan` and `/analyze`, including the schema comment's *Consumed by* line and `docs/`.
+- [x] Correct each hit that states current behavior. A hit in a `done` spec's body is a meaningful edit, and its back-edge is named before the write.
 
 - **Done when**: no live artifact states the prior routing or the spec-only subject set as current behavior.
 
