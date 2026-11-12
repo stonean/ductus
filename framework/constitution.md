@@ -46,7 +46,7 @@ Constraints on anything the pipeline asks an author or a check to do. Each is a 
 
 - **A check that cannot run MUST never be indistinguishable from a check that passed.** One that skips or cannot reach part of its subject MUST say so — a distinct result, or a count of what *was* examined — as those states are disproportionately the broken ones. Prove a new gate **fails** before trusting that it passes (`QUAL-CLAIM-001`, §rules).
 - **A check that reads git history must be given git history, and a test that reads history or shells out to a project script is a change to the job that runs it.** CI checkouts are shallow by default, so the job needs a full-depth checkout, commented, and the script in its trigger paths, or the test cannot run or silently stops; a local pass is no evidence. Prefer a test that fails loudly on a missing input.
-- **Work that is not complete MUST never be indistinguishable from work that is.** Known outstanding work has exactly three dispositions (§brownfield-inbox): **fix it**; **defer it** where the pipeline will surface it again (a task, scenario, or criterion), the status following that record; or **waive it**, recording why it is out of scope. The inbox is none of the three, since no gate reads it, and neither is a caveat beside a completion claim. Residue knowable only by measuring is **measured**: an unmeasured gap is a task, not a caveat.
+- **Work that is not complete MUST never be indistinguishable from work that is.** Known outstanding work has exactly three dispositions (§brownfield-inbox): **fix it**; **defer it** where the pipeline will surface it again (a task, scenario, or criterion), the status following that record; or **waive it**, recording the requirement that puts it out of scope, not its cost. The inbox is none of the three, since no gate reads it, and neither is a caveat beside a completion claim. Residue knowable only by measuring is **measured**: an unmeasured gap is a task, not a caveat.
 - **Never design a pipeline feature that depends on human diligence.** What requires an author to *remember* is skipped when it matters most: derive the input from artifacts, frontmatter, or history, or do not ship it.
 - **A check whose subject is drawn from repository state can go vacuous, and a naive vacuity guard will then demand that an unhealthy repository exist.** **Build the subject** — a fixture carrying the condition, asserted in both directions — and let the pass over real state report *nothing to compare* as a distinct, non-failing state.
 
@@ -86,7 +86,7 @@ A recommendation is a claim: the agent MUST work it out to its result **before**
 - **A connected database is a primary source, not a hazard.** Confirm schema and data from dev or read-only state, found through the project's configuration and any live-source pointer its `AGENTS.md` declares; reads need no authorization, writes need the task's.
 - **Run the project's own command — never a hand-rolled equivalent of one.** Its declared scripts, targets and CI steps are the command; a substitute that succeeds proves only itself, so iterate narrowly if you like but report the project's command's result. A failing one is a finding to dispose of, not route around; if it cannot do the task, say which command you bypassed and why, and propose a declared one for a recurring operation as a task. A declared command authorizes nothing destructive, and nothing enforces this rule.
 - **Name the assumption when you must infer** — an Open Question in a spec, a labeled assumption in a plan, a task or open question during implementation.
-- **Cite what you consulted** (`path:line`, the query, the command), so the next reader can re-derive it.
+- **Cite what you consulted** (file and symbol, never a bare line number; the query; the command), so the next reader can re-derive it.
 - **A recorded measurement states its method and its units, or it is not re-derivable.** State the denominator, population and boundary a count was taken over: without them a later reader cannot tell a decayed figure from one taken by a different method, and trusting the newer figure is wrong exactly when the older was better informed. On a disagreement, re-derive at the recorded figure's own commit first, then diff the field across its own history. An unstated method is an unmeasured gap wearing a number.
 - **Before reporting that a declarative entry misbehaved, read the entry** — its own gating fields may say it was never supposed to fire.
 - **Substitute a recorded timestamp or commit into the command that writes it — never transcribe either.**
@@ -429,7 +429,6 @@ For every kind of fact described in multiple places, one location is authoritati
 | Pipeline command behavior | `framework/commands/*.md` (or `framework/bootstrap/configure/{key}.md`), with its reference in `framework/reference/*.md` |
 | Lifecycle; rules tier; grounding; contributor-knowledge routing | this document: §spec-lifecycle, §rules, §grounding, §drift-prevention |
 | Frontmatter schema | §text-first-artifacts |
-| Validation severity tiers | §text-first-artifacts, Validation Severity |
 | Per-agent permission set | `framework/bootstrap/configure/{key}.md` |
 | Constitution section anchors | its `<!-- §<anchor> -->` markers |
 | Command frontmatter (description, argument-hint) | each command's own frontmatter |
@@ -443,14 +442,12 @@ For every kind of fact described in multiple places, one location is authoritati
 | Spec-root resolution (`[paths] specs-root`) | §spec-phase |
 | Constitution content — what belongs in it, which rules adopters receive | `specs/050-constitution/spec.md` (a spec that changes *behavior* still amends the principle it contradicts) |
 
-Name the canonical source here for any new kind of fact several documents reference.
-
 ### Cross-document references
 
 When document B describes content authored in document A, B back-links to A — a relative link, an anchor reference (`§anchor`), or a section name. Changing A includes auditing every back-link to A.
 
 - **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), rules, command sources, scripts, CI, docs, README. The uniform sweep is mechanical (§spec-lifecycle), kept apart from unrelated edits; **keep the sweep's own target list current**.
-- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime computes which specs a sweep reopens from the diff, so a reworded line is not mechanical.
+- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime computes which specs a sweep reopens from the diff, so a reworded line is not mechanical. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
 - **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning; one in a `done` spec's scenario or data model is a meaningful edit.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.

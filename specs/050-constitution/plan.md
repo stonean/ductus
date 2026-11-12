@@ -392,6 +392,20 @@ receives cites a rule none of them can read. Promoting DP2 resolves the
 dangling reference; DP1's substance appears at §recommendations as a supporting
 clause rather than as a principle in its own right.
 
+### Adopter practices — classified 2026-11-12
+
+Seven practices an adopter reported as true of every project, classified one at a time by the owner (scenario `adopter-practices-classified-for-promotion`). A practice has one normative statement; the three constitution merges net out against cuts in the same commit, which records the measured size.
+
+| Practice | Destination and reason |
+| --- | --- |
+| Record a decision as the operator's only when the operator made it | `framework/reference/clarify.md` step 1.4, where Resolved Questions are written: the constitution's §recommendations would cost every record a constitution sentence |
+| Name a function, test or file, never a line number | §grounding's *Cite what you consulted*, merged; `framework/reference/plan.md`, `framework/reference/clarify.md`, `framework/commands/plan.md` and `framework/commands/analyze.md` advised `path:line` and are corrected; `AGENTS.md`'s gotcha points at it |
+| A document follows a move by content, not file name | §drift-prevention's *A retired filename is not a retired name*, merged: a split maps one name to several paths |
+| Learn a primitive in a throwaway clone | project-only: host and repository machinery |
+| Measure a reviewer's claim against the tree before recording it | `framework/reference/review.md` §Run review passes |
+| Recommend a waiver only where a recorded requirement backs it | §design-principles' waive disposition, merged, so analysis waivers are covered too |
+| Design rationale routes to a comment at the code | `framework/reference/review.md`'s Observations: a chore fixed in the run |
+
 ### Promoted — universal
 
 | Entry | Reason |
@@ -494,6 +508,8 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
 | `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
 | `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
+| `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Cite a file and symbol, never a bare line number; clarify records a decision as the operator's only when the operator made it |
+| `framework/reference/review.md` | Modify | §Run review passes checks a claim against the tree before recording it; Observations fixes design rationale as a comment |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |
 | `framework/templates/project/agents.md` | Modify | Ships the empty `ductus:memory-routing` markers beneath its header, and names what `CLAUDE.md` holds |

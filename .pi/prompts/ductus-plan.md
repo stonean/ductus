@@ -34,7 +34,7 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 ## Scope Boundaries
 
-- Read only files needed for planning: the target spec, `specs/system.md`, and cross-spec files per **§Cross-spec context checklist** in `.ductus/reference/plan.md`. Do NOT read source code, test files, or unrelated specs *speculatively* or to browse the codebase. **Grounding carve-out (§grounding):** you MAY read the specific existing source, schema, or interface a technical decision directly depends on — read narrowly to substantiate that one decision, never to survey — and MUST cite what you read (`path:line`) or mark the claim an assumption. This is the only sanctioned source read; the ban on speculative reads stands.
+- Read only files needed for planning: the target spec, `specs/system.md`, and cross-spec files per **§Cross-spec context checklist** in `.ductus/reference/plan.md`. Do NOT read source code, test files, or unrelated specs *speculatively* or to browse the codebase. **Grounding carve-out (§grounding):** you MAY read the specific existing source, schema, or interface a technical decision directly depends on — read narrowly to substantiate that one decision, never to survey — and MUST cite what you read (file and symbol, never a bare line number) or mark the claim an assumption. This is the only sanctioned source read; the ban on speculative reads stands.
 - Do NOT begin implementation. This command produces `plan.md` and `tasks.md` only.
 - Reference: §grounding, §plan-phase, §tasks-phase, §readiness-check, §text-first-artifacts (constitution loaded by `/ductus:target` — do not re-read).
 

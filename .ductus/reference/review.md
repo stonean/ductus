@@ -109,7 +109,7 @@ A Statement whose Verification is a design-time commitment is applied by its pas
 Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines: a stale claim the window left alone otherwise surfaces at the completion gate's criterion check, and its correction then stales the analysis. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
-produced.
+produced. A pass's finding, or a reviewer's claim, is checked against the tree before it is recorded; break things only in a clone while reviewers read.
 
 ### Security pass
 
@@ -248,6 +248,8 @@ the exit code. Each entry carries its own one-line text and, optionally, the
 path it anchors to. Lead the text with a category (`security` / `leak` /
 `convention` / `bug` / `perf` / `other`): a `security` or `leak` lead renders
 first, and the rest only help a reader route it.
+
+**An observation that is design rationale is fixed in the run**, as a short why in a comment at the code, a chore.
 
 **Two things a pass notices are no observation.** An edit that would change no
 claim, rule or behavior, such as a stray comma or a hedge, is not reported. A

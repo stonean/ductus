@@ -156,7 +156,7 @@ For a further tooling-language decision (a second binary the framework might shi
 - **A retired filename is not a retired name — sweep it by meaning, not by token.** [§drift-prevention](framework/constitution.md#drift-prevention).
 - **Piping a gate command's output replaces its exit status — `cmd | tail` reports `tail`'s success, not `cmd`'s.** [§grounding](framework/constitution.md#grounding).
 - **A `§` reference resolves by *line*, against a heading its text begins with — a line wrap alone breaks it.** [§drift-prevention](framework/constitution.md#drift-prevention).
-- **A `path:line` citation in a spec body is provenance, not a live claim — do not sweep them, and do not trust one either.** A rotted line number is not a defect. When one is stale, fix the surrounding sentence only if it asserts current behaviour, leaving the citation alone. Cite new ones as a file plus a symbol name.
+- **A `path:line` citation in a spec body is provenance, not a live claim — do not sweep them, and do not trust one either.** [§grounding](framework/constitution.md#grounding)'s *Cite what you consulted*.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** [review reference §Window and coverage](framework/reference/review.md#window-and-coverage).
 - **An acceptance criterion's parenthetical enumeration is a claim of its own, and it drifts from what the artifact does.** [§grounding](framework/constitution.md#grounding).
 - **A spec with no recorded `in-progress` transition derives an *empty* diff base, and `write-review` then resolves `scope: 0`.** [review reference §Window and coverage](framework/reference/review.md#window-and-coverage).
