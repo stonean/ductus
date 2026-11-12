@@ -3561,8 +3561,6 @@ mod tests {
         assert!(!reopening[0].over_bound);
     }
 
-    /// Nothing but text, this spec's own or another's, and the earlier record stands:
-    /// the reopening takes one analysis and no review (AC4).
     /// A stale analysis names every changed artifact: the message shows three
     /// and counts the rest, and `analyze-stale-paths` holds them all inline, or
     /// past the read size in the file the result names, its count inline in
@@ -3611,6 +3609,8 @@ mod tests {
         assert_eq!(listed["analyze-stale-paths"], serde_json::json!(whole));
     }
 
+    /// Nothing but text, this spec's own or another's, and the earlier record stands:
+    /// the reopening takes one analysis and no review (AC4).
     #[test]
     fn a_reopening_that_changed_only_text_passes_on_one_analysis() {
         let tmp = tempdir().unwrap();
