@@ -500,6 +500,53 @@ fn descriptions_hold_the_fix_round_details_the_data_models_point_at() {
     }
 }
 
+/// 067's data model points at `CHECK_ARTIFACTS` for its families' behavior rules (079 task 36).
+#[test]
+fn descriptions_hold_the_check_artifacts_details_067_points_at() {
+    let held = [
+        (descriptions::CHECK_ARTIFACTS, "data-model.md never)"),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "when tasks.md exists: numbering",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "a spec with no tasks.md has no mapping to evaluate",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "records each unmapped scenario in `skipped` as `no-readable-state`",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "a done spec with no review.md is exempt from the record checks, not from the unticked-criterion and unchecked-box ones",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "a path no revision held is skipped `never-existed`",
+        ),
+        (descriptions::CHECK_ARTIFACTS, "skipped `not-a-live-claim`"),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "its feature directory name or its number",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "a table body row, a code span or a word holding a `/`",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "run at every status and add nothing to `skipped`",
+        ),
+    ];
+    let missing: Vec<_> = held
+        .iter()
+        .filter(|(description, detail)| !description.contains(detail))
+        .map(|(_, detail)| detail)
+        .collect();
+    assert!(missing.is_empty(), "missing {missing:?}");
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

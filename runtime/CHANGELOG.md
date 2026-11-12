@@ -191,6 +191,15 @@ its version and date.
 
 ### Changed
 
+- **`check-artifacts`' description states its families' behavior rules (spec
+  079, task 36).** `data-model.md` is never required; a spec with no `tasks.md`
+  has no scenario mapping to evaluate, and an unreadable `tasks.md` history is
+  recorded `no-readable-state`; a `done` spec with no `review.md` is exempt
+  from the record checks but not from the unticked-criterion and unchecked-box
+  ones; the body path family's `never-existed` and `not-a-live-claim` skips;
+  how a plan references its spec and lists a file; and that the label,
+  integrity and plan families run at every status and add nothing to
+  `skipped`. Description only: no result changes.
 - **`read-re-read` says a demoted finding stays in `findings` as a NOTE, and
   `write-review` says a fix round's `excluded` is `brief-re-read`'s (spec 079,
   task 36).** Descriptions only; no result changes.
