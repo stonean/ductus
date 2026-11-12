@@ -14,15 +14,16 @@ Origin: spec 027 plan + tasks, 2026-05-21.
 
 ## Behavior
 
-Family 10 follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only, idempotent. Three checks run unconditionally on every `bash scripts/audit/run-all.sh` invocation:
+Family 10 follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only, idempotent. Four checks run unconditionally on every `bash scripts/audit/run-all.sh` invocation:
 
 1. **10a no-orphan-procedure-files.** For each file matching `framework/migrations/*.md`, verify a `[[migrations]]` entry in `framework/migrations.toml` has `procedure_file = "framework/migrations/{id}.md"` referencing it. A procedure file with no registry entry is an orphan — either the entry was deleted without removing the file, or the file was added without a registry entry.
 2. **10b no-stale-target-paths.** For each active registry entry, iterate `target_paths`. For entries that start with `framework/` (the framework-side artifact that was removed), verify the path does **not** exist in current `framework/`. Adopter-relative paths (paths not prefixed with `framework/`) are skipped — they cannot be verified from this repo. Glob patterns (containing `*`) are expanded and each match is checked. A path that still exists when the registry says "removed" is a real drift.
 3. **10c no-broken-procedure-references.** For each `[[migrations]]` entry, verify the `procedure_file` path exists on disk. A dangling reference means the procedure file was renamed or deleted without a TOML update.
+4. **10d entries-sort-after-earlier-entries.** Each `[[migrations]]` entry sorts after every entry present in an earlier commit of `framework/migrations.toml`, by (`introduced_in`, then `id`), entries added in one commit exempt from each other, since Pre-run Migrations runs only entries after `[migrations] last_applied` and would never run one added later that sorts earlier. It reads git history and reports a shallow clone as a finding, not a pass; the historical `criterion-label-backfill` exception is recorded in the script with its reason (027 task 15).
 
-Family 10 is invoked from `scripts/audit/run-all.sh` immediately after Family 9 and exits with the OR of the three checks' findings. Its findings format matches the rest: `migration-coverage | {location} | {message} | {suggested-fix}`.
+Family 10 is invoked from `scripts/audit/run-all.sh` immediately after Family 9 and exits with the OR of the four checks' findings. Its findings format matches the rest: `migration-coverage | {location} | {message} | {suggested-fix}`.
 
-The CHANGELOG.md archived-entry parsing piece of 10b is deferred until the first sunset commit establishes the archive format by example — the script currently carries a TODO for this and only parses the active registry. The bootstrap loop and Family 10's two other checks function fully without it.
+The CHANGELOG.md archived-entry parsing piece of 10b is deferred until the first sunset commit establishes the archive format by example — the script currently carries a TODO for this and only parses the active registry. The bootstrap loop and Family 10's other checks function fully without it.
 
 ## Edge Cases
 
