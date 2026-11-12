@@ -123,7 +123,7 @@ Blocked on task 6.
 
 ## 13. The completion gate holds done while a loaded rule is unjudged
 
-- [ ] The owner's answer (a), 2026-11-12: an unjudged MUST rule at done is an unverified obligation, and since this spec the next analysis judges only those rules, so closing the gap is cheap. Raised by the independent verification: a spec edit that makes every verdict stale, followed by a run judging nothing, moves a prior MUST finding out of blocking-findings into unjudged-rules, which nothing gated.
-- [ ] The gate surface is 066's (cross-spec-impact already declared on 066): update 066's data model and spec text where the gate's checks are listed, and 082's plan.
+- [x] The owner's answer (a), 2026-11-12: an unjudged MUST rule at done is an unverified obligation, and since this spec the next analysis judges only those rules, so closing the gap is cheap. Raised by the independent verification: a spec edit that makes every verdict stale, followed by a run judging nothing, moves a prior MUST finding out of blocking-findings into unjudged-rules, which nothing gated.
+- [x] The gate surface is 066's (cross-spec-impact already declared on 066): update 066's data model and spec text where the gate's checks are listed, and 082's plan.
 
 - **Done when**: check-review-gate blocks the in-progress to done transition while the spec's analysis record names any rule in unjudged-rules, naming them, with a test in both directions that fails when the check is removed, a mutant, the compiled CHECK_REVIEW_GATE description and 066's gate text updated
