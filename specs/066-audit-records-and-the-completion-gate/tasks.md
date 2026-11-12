@@ -157,10 +157,12 @@ Found by 078's review round 3 (2026-11-04); the round's result file is gitignore
 - [ ] [2] `compute_review_scope.rs`'s module doc defines `scope` as the plain union: its bullet's `commits. Both, because either alone can omit what the review exists to look at.` becomes `commits, less the files deleted since it, which no review can read. Both, because either alone can omit what the review exists to look at.`
 - [ ] [3] `scenarios/review-scope-union.md`'s edge case "An empty `plan-affected` leaves `scope` equal to `modified-since`" gains "less the paths the window deleted"
 - [ ] [4] `framework/commands/review.md`'s Inputs **Scope** bullet: "committed or not — see step 1" becomes "committed or not, less the files since deleted — see step 1"
-- [ ] Disposition note [5]: 066 `spec.md` line 27 and `framework/reference/implement.md` line 75 still describe the scope as a plain union
-- [ ] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
+- [x] Disposition note [5]: 066 `spec.md` line 27 and `framework/reference/implement.md` line 75 still describe the scope as a plain union
+- [x] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
 
 - **Done when**: each finding's edit is applied or the finding otherwise fixed, and each note fixed, deferred or waived with its reason on the task
+
+Note [5], waived 2026-11-12 as overtaken: neither named line describes a union any more. 066's `spec.md` holds no "union" (its 079 signpost says that spec's window and scope "replace the union this spec defined"), and `framework/reference/implement.md` is 70 lines with no definition of the scope; 079 and 081 rewrote both, and "plain union" survives only in this task's text (`git log -S'plain union'`, entered at f47d2b03). Note [6], fixed 2026-11-12 by the owner's answer (b): `/{project}:review` step 1 and its reference name each deleted path, and say no pass could read it, when the scope is empty because the window only deleted files, so the record never reads as a window with no change; the scenario `review-scope-reads-every-cell-path-and-sets-deleted-files-apart` gains the edge case. Options not taken: (a) waive it; (c) a deletions-only window owing no review, which reopens 079 and reverses a decision 079 and 081 took.
 
 ## 20. Implement scenario: freshness-results-have-a-bounded-size
 

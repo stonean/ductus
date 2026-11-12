@@ -27,6 +27,7 @@ section: "The review record"
 - A file moved with `git mv`: its old path is deleted and its new path changed, since the diff detects no renames.
 - A path deleted in the index but present on disk: present, since the working tree decides.
 - A window with no deletion: `deleted` is empty and `deleted-count` is zero.
+- A window that only deleted files resolves `scope-count` zero with `deleted-count` above zero and, when they are the spec's own code, `review-owed` true: `/{project}:review` takes its empty-scope branch, and its report and the record's Summary name each deleted path and say no pass could read it, so the record never reads as a window with no change (066 task 19, note [6]).
 
 ## Open Questions
 

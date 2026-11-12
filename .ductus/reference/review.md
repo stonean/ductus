@@ -17,6 +17,10 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
    `blocking: false`, and exits `0`, skipping items 4–5 and the passes; an
    observation the reviewer supplies is still dispositioned, as
    **Observations** under [Write `review.md`](#write-reviewmd) describes.
+   A scope empty because the window only deleted files (`deleted-count` above
+   zero) is reported by naming each path in `deleted` and saying no pass could
+   read it, in the report and the Summary, so it never reads as a window with
+   no change (066 task 19, note [6]).
    **Distinguish an empty scope from a scope you could not read.** A tool
    that returns an error, a size-cap notice, or a saved-output pointer has
    told you nothing about the scope; resolve it by another route and read
