@@ -369,11 +369,10 @@ Result (a **compact summary — never a section's text**):
   on a `done` spec (scenario
   `a-plan-edit-does-not-reopen-a-done-spec`). A `tasks.md` absent at HEAD
   holds no box, so each one written since is new, as `classify-spec-edit`
-  reads it (spec 079). A preview answers for the tree as it stands, so a reopen
-  from edits made before the run is known before the host writes anything. An apply answers for the tree it leaves, whether or
-  not the removal was refused, because the host's moves are already on disk,
-  and computes it before its own write, so an apply that cannot read HEAD
-  writes nothing. HEAD is read through `ProjectRepository::read_at_head`, so
+  reads it (spec 079). When it is computed, and for which tree, is as
+  `ductus prune-plan --help` states, so a reopen from edits made before the
+  run is known before the host writes anything, and an apply that cannot read
+  HEAD writes nothing. HEAD is read through `ProjectRepository::read_at_head`, so
   a project in a subdirectory of its repository resolves. The command, not
   the primitive, performs the reopen with `set-status`, and decides it on a
   fresh preview taken once the run has finished writing to the spec, so the
@@ -405,12 +404,13 @@ sequential by number, then branch-scoped grouped by identifier with the
 counter compared numerically, so `1234.2-x` precedes `1234.10-x`. It needs no
 session target and writes none.
 
-`prune-tasks` refuses `force` with `all` before reading anything: a forced
-reset across the corpus would discard every in-flight todo under one
-confirmation. With `apply` it writes every spec's permitted reduction, the
-`--reset` gate applied per spec. `prune-plan` refuses `apply` with `all`,
-before it checks the `remove` list: each plan section is a judgment about one
-spec, so a walk is preview-only.
+`prune-tasks` refuses `force` with `all`, and `prune-plan` refuses `apply` with
+it, as `ductus prune-tasks --help` and `ductus prune-plan --help` state; the
+first refusal comes before `prune-tasks` reads anything and the second before
+`prune-plan` checks the `remove` list. A forced reset across the corpus would
+discard every in-flight todo under one confirmation, and each plan section is a
+judgment about one spec, so a walk is preview-only. With `apply`, `prune-tasks`
+writes every spec's permitted reduction, the `--reset` gate applied per spec.
 
 Each result is one object with two flattened, optional halves: a
 single-feature call carries the summary above at the top level, unchanged,
@@ -495,7 +495,7 @@ Args:
 
 - `apply` — `false` (the default) is a preview and writes nothing.
 - `remove` — each entry to delete, by the path and digest a preview reported. On the CLI, one `--remove <digest>:<path>` per entry.
-- `replace` — each entry to replace with the text `with`, which may span lines. On the CLI, `--replace-json FILE` from a staging directory carries the list, since the text does not fit a scalar flag (022 task 24).
+- `replace` — each entry to replace with the text `with`, which may span lines. On the CLI, `--replace-json FILE` carries the list, as the primitive's description states, since the text does not fit a scalar flag (022 task 24).
 - `create` — the homes to create from their template, from `system`, `events` and `errors`. On the CLI, one `--create <kind>` each.
 
 Result (never an entry's text):
@@ -526,8 +526,8 @@ Result (never an entry's text):
 - `threshold` — `[artifacts] read-size-bytes`, resolved by the function `check-artifact-size` uses, so an invalid value fails with that primitive's error (`PrimitiveError::InvalidReadSize`).
 - `files` — all four subjects, in subject order. `state` is `present`, `absent` or `unreadable`. `bytes` and `over-limit` are present when the file is `present`, and an `unreadable` file contributes no entries. A file exactly at the threshold is not over it.
 - `entries` — every entry of every present file, in file and line order. `section` is the enclosing `##` heading's text, absent in the preamble. `hits` is present exactly when `identifier` is and the search ran, and lists the files holding the identifier.
-- `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason` when no repository can be opened. In the `unavailable` case no entry carries `hits`, so a search that could not run never reads as zero hits. It is absent on an apply, which reads no source.
-- `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**: the whole apply is refused and nothing is written, `create` included. Duplicate digests each claim a distinct entry.
+- `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason`, as `ductus prune-project --help` states; in the `unavailable` case no entry carries `hits`. It is absent on an apply, which reads no source.
+- `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**, which `ductus prune-project --help` states; its refusal includes `create`. Duplicate digests each claim a distinct entry.
 - `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are.
 
 An apply removes or replaces the listed entries, then collapses the blank lines at each changed seam to at most one, rewriting nothing else in the file and preserving its line endings. It writes each changed file with `write_atomic`. A created home gets the framework template's text, compiled into the primitive as the `--reset` body is and held to `framework/templates/project/{kind}.md` by a unit test. It is written with mode `0644` on Unix, since `write_atomic` leaves a new file at its tempfile's `0600`.
