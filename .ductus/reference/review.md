@@ -132,8 +132,9 @@ excludes from review included) or the owner's pass is not among the request's
 `passes-run`, so routing never leaves a defect reported by no rule. A clause
 that only narrows the rule's scope and names no owner sets the case aside, as
 at analyze; a case only a spec can show routes nothing. A waiver recorded under
-the yielding rule's ID expires once the finding routes (**§Per-run waiver
-processing**), and one already recorded under the owner's ID applies.
+the yielding rule's ID expires once the finding routes
+(**§Per-run waiver processing**), and one already recorded under the owner's
+ID applies.
 
 That rule holds for every pass below, and it is not a reason to drop what you
 noticed: anything real that matches no loaded rule is an **observation**, which
