@@ -17,6 +17,10 @@ on:
       # edit to its subject.
       - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
+      # tests/lint_markdown_scope.rs runs the markdownlint package-lock.json
+      # pins, so a change to the pin is a change to its subject.
+      - 'package.json'
+      - 'package-lock.json'
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
       - '.github/workflows/runtime-release.yml'
@@ -72,6 +76,10 @@ on:
       - 'framework/commands/*.md'
       - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
+      # tests/lint_markdown_scope.rs runs the markdownlint package-lock.json
+      # pins, so a change to the pin is a change to its subject.
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/runtime-release.yml'
       - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'
@@ -134,6 +142,15 @@ jobs:
 
       - name: cargo build --release --locked
         run: cargo build --release --locked
+
+      # tests/lint_markdown_scope.rs runs the real markdownlint from the
+      # checkout's node_modules and fails loudly without it (022's
+      # lint-markdown-lints-only-what-it-is-given), so the pinned install
+      # framework-checks.yml makes is made here too, from the repository root.
+      # Node is the runner image's own (022 task 3).
+      - name: Install pinned lint tooling
+        working-directory: .
+        run: npm ci
 
       - name: cargo test --release --locked
         run: cargo test --release --locked
