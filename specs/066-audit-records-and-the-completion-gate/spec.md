@@ -21,6 +21,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the records and the gate. `review.md` gains `excluded`, `contract-breaks`, `open-findings` and `fix-rounds-open`, a stored decision may read `decided-by: rule`, the gate blocks on `fix-round-loop-open` and `review-owed` with every review check ahead of the analyze checks, and `compute-review-scope`'s window and scope replace the union this spec defined.
 >
 > **Signpost:** [081 — Reviews and checks follow what changed](../081-reviews-and-checks-follow-what-changed/spec.md) retired the gate's review-staleness check, `check-review-freshness` and audit Family 19. A review is owed for code alone, so a changed scenario or data model owes an analysis and no review; `reviewed-digest` now only puts each contract it says changed in the scope of a review that runs.
+>
+> **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added the rule assessments to the analyze record and `write-analysis`: the `rule-verdicts`, `unjudged-rules` and `rule-digest` fields, the `rule-verdicts` and `judged-rules` arguments, `contradictions` in the result, and a count of the rules left unjudged in `rule-assessments-not-checked`. Its data model carries the shapes.
 
 ## Motivation
 

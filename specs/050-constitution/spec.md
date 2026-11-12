@@ -14,6 +14,8 @@ it, how it is structured, and what reaches adopters through it.
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) amended the constitution. §runtime-boundary makes the binary the source of a primitive's rules, §spec-lifecycle's third back-edge leaves a correction `done`, §brownfield-inbox confirms only a gating write, and the audit-record fields and §drift-prevention's table hold what it added.
 >
 > **Signpost:** spec 081 ([081 — Reviews and checks follow what changed](../081-reviews-and-checks-follow-what-changed/spec.md)) amended §grounding's blast-radius rule: `/{project}:review` reads code and `/{project}:analyze` the artifacts, so a change confined to artifacts owes their checks and no review, build, test, code lint or code CI. It also narrowed the commit-verification rule's digest sentence to the analysis record.
+>
+> **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added three fields to the analyze record row of §text-first-artifacts, `rule-verdicts`, `unjudged-rules` and `rule-digest`, which hold a run's stored rule verdicts and the rules it left unjudged.
 
 ## Ownership
 

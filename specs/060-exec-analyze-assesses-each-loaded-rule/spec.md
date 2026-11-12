@@ -9,6 +9,8 @@ next-criterion: 10
 
 A `ductus exec` `/{project}:analyze` assesses each rule in the tier the rule carries and counts each verdict once, and its record names every loaded rule it did not ask the host about.
 
+> **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) changed the walk this spec defines. Steps 11 and 12 ask only about a rule whose stored verdict is not current, the response carries an optional `addressed-by`, and `write-analysis` derives the rules left unjudged itself, counting them in `rule-assessments-not-checked` beside the rules the walker could not ask about.
+
 ## Motivation
 
 Steps 11 and 12 of `/{project}:analyze` request a semantic assessment for every loaded MUST-tier and SHOULD-tier rule whose Verification trigger fires against the spec. Interactively the host walks each rule. The exec walker sent one `assessSpecQuality` request per step, although [022](../022-deterministic-runtime/spec.md) defines that extension point as per-rule Verification reads, and `resolve_assessed_rule` (`runtime/src/interpreter/payload.rs:883`) filled it with one rule: the first cited rule whose Verification resolved, else the first rule in the loaded files that carried one. The request's tier came from the step's prose (`severity_from_step_prose`, `runtime/src/interpreter/payload.rs:867`), not from the rule.
