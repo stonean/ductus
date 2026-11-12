@@ -157,6 +157,10 @@ ductus --help                        # rendered by clap
 
 Primitive subcommand names match their bare MCP tool names (e.g., `ductus read-spec --feature 022-deterministic-runtime`). This makes the CLI surface a 1:1 mirror of the MCP surface, which is what `framework/runtime-tools.txt` ultimately enumerates.
 
+**A closed stdout is a quiet exit** (022 task 27). A subcommand writes its result through `write_stdout_line` (`runtime/src/main.rs`), never `println!`, which panics when the reader has gone. A broken pipe exits `STDOUT_CLOSED_EXIT`, 141, the shell's `128 + SIGPIPE`, distinct from a failure (1) and from a panic (101); any other write error is reported and exits 1. Whatever the primitive wrote stands, and only its report is lost. 141 rather than 0, because a caller that piped the result into `head` must not read a lost report as a success, and rather than 1, because nothing failed. The `mcp` server's transport is not written there and is unchanged. `runtime/tests/closed_stdout.rs` drops a pipe's reader for three subcommands.
+
+**`lint-markdown` lints only what it is given** (022 task 28). Given paths, it passes `--no-globs`, so markdownlint-cli2 lints exactly them and appends none of the configuration's globs. Paths that name no file are not a clean run: the result is `clean: false` with no violations and exit code 0, carrying no field of its own, since a lint that examined nothing must not read as one that passed, and `check-review-gate` says nothing was examined. Exit 0, because the tool itself did not fail. `runtime/tests/lint_markdown_scope.rs` runs the real markdownlint over a two-file project.
+
 ### Versioning: built-in from `Cargo.toml`
 
 `ductus --version` reads `env!("CARGO_PKG_VERSION")` baked at compile time. Every `error` JSON message includes the runtime version so adopters reporting issues can attach it without an extra invocation. Per the resolved-questions section, there is no startup framework-version comparison; parse failures and primitive errors carry version metadata so mismatch is diagnosable when it arises.
