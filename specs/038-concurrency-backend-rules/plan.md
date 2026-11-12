@@ -4,7 +4,7 @@ Implements [038 — Backend concurrency rules](spec.md).
 
 ## Overview
 
-A rule-introducing, markdown-tier feature — the 034/037 path exactly. It adds one rule file, `framework/rules/concurrency-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md`), and wires it into the `/ductus` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update.
+A rule-introducing, markdown-tier feature — the 034/037 path exactly. It adds one rule file, `framework/rules/concurrency-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md`), and wires it into the `/ductus` Shared Files manifest. `framework/bootstrap/ductus.md` §Shared Files names each rule file by its own row and states no count (made count-free by 036), so no count to update.
 
 Four categories ship — `RACE`, `LOCK`, `TXN`, `COORD` — with thirteen rules, eight of them MUST. Verification is **design-time commitment** framing enforced by `/ductus:analyze` against feature artifacts, matching 034/037.
 
@@ -15,7 +15,7 @@ Four categories ship — `RACE`, `LOCK`, `TXN`, `COORD` — with thirteen rules,
 Modeled on `performance-backend.md` / `observability-backend.md` (same surface, same analyze-time framing):
 
 - **Header.** Title `# Concurrency Rules — Backend` and one paragraph: the scope (server-side concurrency correctness, for a backend surface); these verify design-time commitments enforced by `/{project}:analyze`; a rule is **MUST** only for a scale-independent correctness or corruption hazard, the rest **SHOULD**; the ID-format / category-declaration line stating IDs follow `BE-{CATEGORY}-{NNN}` with categories `RACE` (shared-state races), `LOCK` (locking and deadlock avoidance), `TXN` (transaction isolation), `COORD` (distributed coordination); and a pointer to constitution §rules for severity, ID permanence, and how review selects or excludes the file (008's `rules-are-as-short-as-their-required-content`).
-- **Categories disjoint** from the other backend files (verified: `RACE`/`LOCK`/`TXN`/`COORD` appear in none).
+- **Categories disjoint** from the other backend files (`grep -l '^### BE-\(RACE\|LOCK\|TXN\|COORD\)-' framework/rules/*.md` lists only `concurrency-backend.md`, and no other `*-backend.md` header declares the four).
 
 ### Rule set
 
