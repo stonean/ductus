@@ -274,14 +274,14 @@ Trigger:
 When all three hold, perform the rename:
 
 1. Determine whether the file is tracked: `git ls-files --error-unmatch .githooks/pre-commit` (exit code 0 = tracked).
-2. If tracked: `git mv .githooks/pre-commit .githooks/ductus-pre-commit`. If untracked: `mv .githooks/pre-commit .githooks/ductus-pre-commit`.
+2. Rename it: `mv .githooks/pre-commit .githooks/ductus-pre-commit`, then, if it was tracked, `git add -A -- .githooks/pre-commit .githooks/ductus-pre-commit`, which stages the rename (`/{project}:configure` denies `git mv`).
 3. Continue with the detection ladder and the manifest passes. The renamed inner file is byte-identical to upstream for unmodified adopters, so the `update` strategy on `.githooks/ductus-pre-commit` is a no-op; the `create` strategy on `.githooks/pre-commit` writes the new outer stub since the path is now empty.
 4. Append to the post-scaffolding summary: `migrated pre-commit hook: .githooks/pre-commit → .githooks/ductus-pre-commit; created adopter-owned .githooks/pre-commit stub`.
 
 Recovery branches:
 
 - **Pre-existing `.githooks/ductus-pre-commit` blocks the rename.** If the inner-file destination already exists when the trigger fires, abort the rename without renaming anything. Report `migration skipped: .githooks/ductus-pre-commit already exists; resolve manually` and continue with the detection ladder and manifest passes. The `update` strategy overwrites the pre-existing inner with the shipped contents; the existing `.githooks/pre-commit` (still carrying the sentinel) is left in place but is no longer detected as ductus-managed by the new ladder, so it is treated as adopter-owned going forward. The adopter resolves the duplicate manually.
-- **`git mv` fails (permissions, repo locked, file in use).** Report `migration failed: could not rename .githooks/pre-commit; resolve manually` and continue with the detection ladder and manifest passes. The `update` strategy installs `.githooks/ductus-pre-commit` from scratch (destination doesn't exist); the `create` strategy sees `.githooks/pre-commit` still in place and skips. The adopter ends up with both files (the legacy sentinel'd outer, and the new ductus-owned inner idle, since the outer does not invoke it — so the ladder's wired-outcome precondition reports the skip with the manual integration snippet) and completes the migration manually by editing the outer to invoke the inner hook beside it, as the shipped stub does.
+- **The rename fails (permissions, repo locked, file in use).** Report `migration failed: could not rename .githooks/pre-commit; resolve manually` and continue with the detection ladder and manifest passes. The `update` strategy installs `.githooks/ductus-pre-commit` from scratch (destination doesn't exist); the `create` strategy sees `.githooks/pre-commit` still in place and skips. The adopter ends up with both files (the legacy sentinel'd outer, and the new ductus-owned inner idle, since the outer does not invoke it — so the ladder's wired-outcome precondition reports the skip with the manual integration snippet) and completes the migration manually by editing the outer to invoke the inner hook beside it, as the shipped stub does.
 
 If any of the trigger conditions does not hold, skip the migration silently — the detection ladder handles the case.
 
