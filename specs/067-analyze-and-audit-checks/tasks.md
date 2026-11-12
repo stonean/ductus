@@ -228,8 +228,8 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 28. Analyze flags a decision that rejects an option for the reopen it costs
 
-- [ ] The owner's answer (c) to the reopen-avoidance audit, 2026-11-12: a rule alone (AGENTS.md's, since 2026-11-04) did not stop six decisions resting on a reopen, so the check detects one where it is recorded. Host judgment, not a pattern match: a reopen named as one cost beside a correctness reason is not a finding; a reopen that is the reason is.
-- [ ] Advisory, never gating, since it asks for a re-examination rather than proving a defect. Step 15 already owns host judgments (grounding, integrity); add the clause without renumbering steps. Pairs with 050's new task stating the rule in the constitution.
+- [x] The owner's answer (c) to the reopen-avoidance audit, 2026-11-12: a rule alone (AGENTS.md's, since 2026-11-04) did not stop six decisions resting on a reopen, so the check detects one where it is recorded. Host judgment, not a pattern match: a reopen named as one cost beside a correctness reason is not a finding; a reopen that is the reason is.
+- [x] Advisory, never gating, since it asks for a re-examination rather than proving a defect. Step 15 already owns host judgments (grounding, integrity); add the clause without renumbering steps. Pairs with 050's new task stating the rule in the constitution.
 
 - **Done when**: /{project}:analyze step 15 judges each Resolved Question and each plan Trade-off that rejects or passes over an option, recording one whose stated reason is the reopen or review run that option would start as an advisory finding to re-examine; framework/reference/analyze.md states the check; an exec walk records it unexamined under its reason; and a fixture proves the exec record and that the analyze golden still matches
 
@@ -242,7 +242,7 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 30. A path that leaves the project is its own skip reason, not root-absent
 
-- [ ] The owner's answer (a), 2026-11-12, re-deciding task 27: recording an escaping citation as root-absent kept the closed reason set unchanged to avoid reopening 045, but root-absent means a top-level segment the repository lacks and sits in the excluded-by-construction class, so a suspect citation read as benign.
-- [ ] 045's data-model.md lists the set: its edit reopens 045 (done), a cost the owner accepted; 045 then owes an analysis and a review. Add the reason per docs/developing-ductus.md's procedure for a closed-set member, and sweep the compiled CHECK_ARTIFACTS description and the record_skip site's doc comment.
+- [x] The owner's answer (a), 2026-11-12, re-deciding task 27: recording an escaping citation as root-absent kept the closed reason set unchanged to avoid reopening 045, but root-absent means a top-level segment the repository lacks and sits in the excluded-by-construction class, so a suspect citation read as benign.
+- [x] 045's data-model.md lists the set: its edit reopens 045 (done), a cost the owner accepted; 045 then owes an analysis and a review. Add the reason per docs/developing-ductus.md's procedure for a closed-set member, and sweep the compiled CHECK_ARTIFACTS description and the record_skip site's doc comment.
 
 - **Done when**: check-artifacts records a criterion or body path whose lexical resolution leaves the project under a new outside-project reason, outside the excluded-by-construction class, with a test per path family that fails when it is recorded root-absent again; 067's data-model closed set, framework/reference/analyze.md's class text and 045's data-model.md reason table name it
