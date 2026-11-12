@@ -13,7 +13,7 @@ its version and date.
 - **`/{project}:analyze` records each loaded rule's verdict and judges a rule
   again only when its subjects changed (spec 082).** `analysis.md` gains
   `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or
-  `finding` with `at` and `message`), `unjudged-rules` and `rule-digest` (a
+  `finding` with the `tier` it was counted in, `at` and `message`), `unjudged-rules` and `rule-digest` (a
   digest of each loaded rule file's rule IDs, Statements and Verifications).
   A stored verdict is current while the spec's design subjects (`spec.md`,
   `plan.md`, `data-model.md`, each scenario, never `tasks.md` or `review.md`)

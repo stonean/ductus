@@ -356,6 +356,16 @@ pub struct DecisionRef {
     pub by_rule: bool,
 }
 
+/// The tier a stored `finding` verdict was counted in (spec 082).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum FindingTier {
+    /// Counted in `blocking-findings`.
+    Must,
+    /// Counted in `advisory`.
+    Should,
+}
+
 /// One fired rule's verdict, as `analysis.md`'s `rule-verdicts` stores it and
 /// `write-analysis` takes it (spec 082).
 ///
@@ -375,6 +385,12 @@ pub enum RuleVerdict {
     /// The rule's trigger fires and the spec does not meet it. The rule's tier
     /// is not stored: it follows from the rule text the file's digest covers.
     Finding {
+        /// The tier the finding was counted in: `must` is a Blocking finding
+        /// and `should` an Advisory one. It is the finding's own severity, as
+        /// the run counted it, which is not always its rule's text tier (a
+        /// rule carrying MUST and SHOULD can fail on its SHOULD clause), and a
+        /// run that reuses the verdict reports it in this tier.
+        tier: FindingTier,
         /// `<path>#<Heading>`, where the finding applies.
         at: String,
         /// One line saying what is wrong, reported again by a run that reuses
@@ -730,10 +746,8 @@ pub struct RuleVerdictsBlock {
 pub struct ReusableVerdict {
     /// The rule's ID.
     pub id: String,
-    /// `must` or `should`, from its current Statement.
-    pub tier: String,
-    /// The stored verdict, `verdict` with its `cite`, or its `at` and
-    /// `message`.
+    /// The stored verdict: `verdict` with its `cite`, or its `tier`, `at`
+    /// and `message`.
     #[serde(flatten)]
     pub verdict: RuleVerdict,
 }

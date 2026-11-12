@@ -59,9 +59,9 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
-    Dispositions, RuleContradiction, RuleVerdict, WriteAnalysisArgs, WriteAnalysisResult,
+    Dispositions, FindingTier, RuleContradiction, RuleVerdict, WriteAnalysisArgs,
+    WriteAnalysisResult,
 };
-use crate::schema::severity::RuleSeverity;
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
 /// add to its spec (spec 079).
@@ -628,13 +628,13 @@ fn derive_rule_fields(
             None => {}
         }
     }
+    // The tier a finding was counted in is the one it floors: a rule carrying
+    // MUST and SHOULD can fail on its SHOULD clause alone, which counts
+    // advisory whatever its Statement's tier says.
     let mut owed = [0u32; 2];
-    for (rule, _) in standing.rules() {
-        if matches!(
-            fields.verdicts.get(&rule.id),
-            Some(RuleVerdict::Finding { .. })
-        ) {
-            owed[usize::from(rule.tier == RuleSeverity::Should)] += 1;
+    for verdict in fields.verdicts.values() {
+        if let RuleVerdict::Finding { tier, .. } = verdict {
+            owed[usize::from(*tier == FindingTier::Should)] += 1;
         }
     }
     for (count, argument, supplied, tier) in [
@@ -645,7 +645,7 @@ fn derive_rule_fields(
             return Err(invalid(
                 argument,
                 &format!(
-                    "the record holds {count} {tier}-tier rule finding(s), each at least one live finding, and the count is {supplied}"
+                    "the record holds {count} {tier}-tier finding verdict(s), each at least one live finding, and the count is {supplied}"
                 ),
             ));
         }
@@ -878,8 +878,12 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
                     "{{verdict: addressed, cite: {}}}",
                     yaml_quoted(&single_line(cite))
                 ),
-                RuleVerdict::Finding { at, message } => format!(
-                    "{{verdict: finding, at: {}, message: {}}}",
+                RuleVerdict::Finding { tier, at, message } => format!(
+                    "{{verdict: finding, tier: {}, at: {}, message: {}}}",
+                    match tier {
+                        FindingTier::Must => "must",
+                        FindingTier::Should => "should",
+                    },
                     yaml_quoted(&single_line(at)),
                     yaml_quoted(&single_line(message))
                 ),
@@ -2548,6 +2552,7 @@ mod tests {
                 (
                     "QUAL-CLAIM-001".to_string(),
                     RuleVerdict::Finding {
+                        tier: FindingTier::Must,
                         at: "spec.md#Acceptance Criteria".into(),
                         message: hostile.into(),
                     },
@@ -2556,6 +2561,7 @@ mod tests {
                 (
                     "CFG-CONST-001".to_string(),
                     RuleVerdict::Finding {
+                        tier: FindingTier::Should,
                         at: "plan.md#Constants, and more".into(),
                         message: "two parts, one} rule".into(),
                     },
@@ -2584,7 +2590,7 @@ mod tests {
             rules.verdicts["BE-LOG-002"]
         );
         match &record.rule_verdicts["QUAL-CLAIM-001"] {
-            RuleVerdict::Finding { at, message } => {
+            RuleVerdict::Finding { at, message, .. } => {
                 assert_eq!(at, "spec.md#Acceptance Criteria");
                 // A Unicode line break flattens to a space, as every scalar does.
                 assert_eq!(message, &single_line(hostile));
@@ -2672,7 +2678,12 @@ mod tests {
     }
 
     fn finding_verdict(message: &str) -> RuleVerdict {
+        finding_in(FindingTier::Must, message)
+    }
+
+    fn finding_in(tier: FindingTier, message: &str) -> RuleVerdict {
         RuleVerdict::Finding {
+            tier,
             at: "spec.md#Behavior".into(),
             message: message.into(),
         }
@@ -2872,7 +2883,10 @@ mod tests {
         let mut second = args();
         second.advisory = 1;
         second.judged_rules = rule_ids(1, 1);
-        second.rule_verdicts = BTreeMap::from([("TS-SHLD-001".to_string(), finding_verdict("m"))]);
+        second.rule_verdicts = BTreeMap::from([(
+            "TS-SHLD-001".to_string(),
+            finding_in(FindingTier::Should, "m"),
+        )]);
         let result = run(&second, tmp.path()).unwrap();
         assert_eq!(result.contradictions.len(), 1);
         assert!(!result.blocking);
@@ -2956,7 +2970,10 @@ mod tests {
         a.judged_rules = rule_ids(2, 2);
         a.rule_verdicts = BTreeMap::from([
             ("TS-RULE-001".to_string(), finding_verdict("must")),
-            ("TS-SHLD-001".to_string(), finding_verdict("should")),
+            (
+                "TS-SHLD-001".to_string(),
+                finding_in(FindingTier::Should, "should"),
+            ),
         ]);
         a.blocking_findings = 0;
         a.advisory = 1;
@@ -2986,6 +3003,54 @@ mod tests {
         assert_eq!(written_record(&tmp).rule_verdicts.len(), 2);
     }
 
+    /// A rule carrying MUST and SHOULD is MUST-tier by its Statement, and can
+    /// fail on its SHOULD clause alone. The tier a finding was counted in is
+    /// the one it floors: a `should` verdict is covered by `advisory` and
+    /// refused by a zero there however blocking-findings reads, and a `must`
+    /// one is the converse.
+    #[test]
+    fn a_finding_floors_in_the_tier_it_was_counted_in_not_its_rules_text_tier() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/rules");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("a-cross.md"),
+            "### TS-BOTH-001\n\n> Lists MUST paginate and SHOULD use cursors.\n\n**Verification:** Look.\n",
+        )
+        .unwrap();
+        let verdict = |tier| BTreeMap::from([("TS-BOTH-001".to_string(), finding_in(tier, "m"))]);
+        let mut a = args();
+        a.judged_rules = vec!["TS-BOTH-001".into()];
+
+        // Failed on the SHOULD clause: advisory covers it, blocking need not.
+        a.rule_verdicts = verdict(FindingTier::Should);
+        a.advisory = 1;
+        run(&a, tmp.path()).unwrap();
+        a.advisory = 0;
+        a.blocking_findings = 1;
+        let error = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "advisory"),
+            "{error}"
+        );
+
+        // Failed on the MUST clause: blocking covers it, advisory need not.
+        a.rule_verdicts = verdict(FindingTier::Must);
+        a.advisory = 1;
+        a.blocking_findings = 0;
+        let error = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "blocking-findings"),
+            "{error}"
+        );
+        a.blocking_findings = 1;
+        a.advisory = 0;
+        run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.blocking_findings, 1);
+        assert_eq!(record.advisory, 0);
+    }
+
     /// A verdict for a rule no loaded file defines, or a finding with no
     /// message, is refused before any write.
     #[test]
@@ -3010,7 +3075,10 @@ mod tests {
         let mut first = args();
         first.judged_rules = rule_ids(2, 1);
         first.advisory = 1;
-        first.rule_verdicts = BTreeMap::from([("TS-SHLD-001".to_string(), finding_verdict("m"))]);
+        first.rule_verdicts = BTreeMap::from([(
+            "TS-SHLD-001".to_string(),
+            finding_in(FindingTier::Should, "m"),
+        )]);
         run(&first, tmp.path()).unwrap();
         fs::remove_file(tmp.path().join("specs/rules/b-cross.md")).unwrap();
         run(&args(), tmp.path()).unwrap();

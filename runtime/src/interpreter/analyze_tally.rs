@@ -24,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
-use crate::schema::primitives::RuleVerdict;
+use crate::schema::primitives::{FindingTier, RuleVerdict};
 use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
 
@@ -243,6 +243,17 @@ impl AnalyzeTally {
             }
             return;
         }
+        // The tier the finding is counted in: its own severity when it names
+        // MUST or SHOULD, else the asked rule's (spec 060), stored on the
+        // verdict so a later run reports and floors it in that tier.
+        let tier = match rule_tier(response, "/finding/severity") {
+            Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) => tier,
+            _ => asked,
+        };
+        let counted = match tier {
+            RuleSeverity::Must => FindingTier::Must,
+            _ => FindingTier::Should,
+        };
         let section = response
             .pointer("/finding/location/section")
             .and_then(Value::as_str)
@@ -256,16 +267,13 @@ impl AnalyzeTally {
         self.verdicts.insert(
             rule.to_string(),
             RuleVerdict::Finding {
+                tier: counted,
                 at: section.map_or_else(|| "spec.md".to_string(), |s| format!("spec.md#{s}")),
                 message: message
                     .unwrap_or("the host reported the rule failed and gave no finding")
                     .to_string(),
             },
         );
-        let tier = match rule_tier(response, "/finding/severity") {
-            Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) => tier,
-            _ => asked,
-        };
         match tier {
             RuleSeverity::Must => self.blocking += 1,
             RuleSeverity::Should => self.advisory += 1,
@@ -273,14 +281,13 @@ impl AnalyzeTally {
         }
     }
 
-    /// Count one stored finding a step reused instead of asking, in its rule's
-    /// tier: the walk reports it as it would any finding, and `write-analysis`
-    /// carries it forward itself (spec 082).
-    pub(crate) fn record_reused(&mut self, tier: RuleSeverity) {
+    /// Count one stored finding a step reused instead of asking, in the tier
+    /// its verdict stored: the walk reports it as it would any finding, and
+    /// `write-analysis` carries it forward itself (spec 082).
+    pub(crate) fn record_reused(&mut self, tier: FindingTier) {
         match tier {
-            RuleSeverity::Must => self.blocking += 1,
-            RuleSeverity::Should => self.advisory += 1,
-            RuleSeverity::Info | RuleSeverity::Unspecified => {}
+            FindingTier::Must => self.blocking += 1,
+            FindingTier::Should => self.advisory += 1,
         }
     }
 
@@ -888,8 +895,8 @@ mod tests {
             bindings["rule-verdicts"],
             json!({
                 "TS-A-002": { "verdict": "addressed", "cite": "plan.md#Observability" },
-                "TS-A-004": { "verdict": "finding", "at": "spec.md#Goal", "message": "no owner" },
-                "TS-A-005": { "verdict": "finding", "at": "spec.md",
+                "TS-A-004": { "verdict": "finding", "tier": "must", "at": "spec.md#Goal", "message": "no owner" },
+                "TS-A-005": { "verdict": "finding", "tier": "should", "at": "spec.md",
                     "message": "the host reported the rule failed and gave no finding" },
             })
         );
@@ -911,10 +918,9 @@ mod tests {
     #[test]
     fn a_reused_finding_counts_in_its_tier() {
         let mut tally = AnalyzeTally::new();
-        tally.record_reused(RuleSeverity::Must);
-        tally.record_reused(RuleSeverity::Should);
-        tally.record_reused(RuleSeverity::Should);
-        tally.record_reused(RuleSeverity::Info);
+        tally.record_reused(FindingTier::Must);
+        tally.record_reused(FindingTier::Should);
+        tally.record_reused(FindingTier::Should);
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 1);
         assert_eq!(bindings["advisory"], 2);

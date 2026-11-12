@@ -13,7 +13,7 @@ Three fields join the analysis record, whose other fields [066's data model](../
 A verdict is one of two shapes:
 
 - `addressed` — `{verdict: addressed, cite: "<path>#<Heading>"}`. `cite` names a design subject of the feature (`spec.md`, `plan.md`, `data-model.md`, `scenarios/<slug>.md`) and a heading it contains. One that does not resolve is not stored: the rule goes to `unjudged-rules`.
-- `finding` — `{verdict: finding, at: "<path>#<Heading>", message: "<one line>"}`. The rule's tier is not stored; it follows from the rule text the digest covers.
+- `finding` — `{verdict: finding, tier: must|should, at: "<path>#<Heading>", message: "<one line>"}`. `tier` is the tier the finding was counted in, its own severity, which is not always its rule's text tier; a run that reuses the verdict reports and floors it there.
 
 A loaded rule in neither `rule-verdicts` nor `unjudged-rules` did not fire. A rule with no Verification or no RFC 2119 keyword is in none of the fields: it stays counted under `rule-assessments-not-checked` only.
 
@@ -29,7 +29,7 @@ rule-digest:
   security-backend.md: c07d…
 rule-verdicts:
   BE-LOG-002: {verdict: addressed, cite: "plan.md#Observability"}
-  QUAL-CLAIM-001: {verdict: finding, at: "spec.md#Acceptance Criteria", message: "AC2's record reads as complete when part was judged"}
+  QUAL-CLAIM-001: {verdict: finding, tier: must, at: "spec.md#Acceptance Criteria", message: "AC2's record reads as complete when part was judged"}
 unjudged-rules:
   - BE-AUTHN-004
   - BE-AUTHN-005
@@ -50,8 +50,8 @@ With `rules` and `feature` set, the result gains `verdicts`:
 {
   "reason": null,
   "reusable": [
-    { "id": "BE-LOG-002", "tier": "must", "verdict": "addressed", "cite": "plan.md#Observability" },
-    { "id": "QUAL-CLAIM-001", "tier": "must", "verdict": "finding", "at": "spec.md#Acceptance Criteria", "message": "..." }
+    { "id": "BE-LOG-002", "verdict": "addressed", "cite": "plan.md#Observability" },
+    { "id": "QUAL-CLAIM-001", "verdict": "finding", "tier": "must", "at": "spec.md#Acceptance Criteria", "message": "..." }
   ],
   "judge": ["BE-AUTHN-001", "BE-AUTHN-004"]
 }

@@ -6,7 +6,7 @@ the exec walker asks only about a rule whose verdict is not current
 (`split_reused` in `interpreter/mod.rs`).
 
 Each mutation removes the behavior one unit test names, and its filter selects
-that test. AC1 is held by M1 to M3, M7 and M9, AC2 by M5 and M10, AC3 by M6,
+that test. AC1 is held by M1 to M3, M7 and M9, AC2 by M5 and M10, AC3 by M6, the stored tier by M16 to M18,
 AC4 by `write_analysis::tests::the_rule_fields_read_back_through_the_loader`
 (no mutant: it holds the record's shape, not a behavior one line removes),
 AC5 by M2 and AC6 by M4, each on the interactive and the exec path.
@@ -120,8 +120,8 @@ MUTATIONS = [
     (
         'M13 a reused finding is not counted in its tier',
         'src/interpreter/mod.rs',
-        '                tally.record_reused(tier);',
-        '                let _ = tier;',
+        '                tally.record_reused(stored);',
+        '                let _ = stored;',
         'interpreter::tests::a_second_exec_walk_over_an_unchanged_spec_asks_about_no_rule',
     ),
     (
@@ -137,5 +137,26 @@ MUTATIONS = [
         '        self.judged.insert(rule.to_string());',
         '        let _ = rule;',
         'analyze_tally::tests::each_assessment_leaves_its_verdict_and_judges_its_rule interpreter::tests::an_exec_walk_that_asks_about_fewer_rules_than_were_loaded_names_each_unjudged',
+    ),
+    (
+        'M16 the floor reads the rule text tier, not the tier the finding counted in',
+        'src/primitives/write_analysis.rs',
+        '            owed[usize::from(*tier == FindingTier::Should)] += 1;',
+        '            let _ = tier;\n            owed[0] += 1;',
+        'write_analysis::tests::a_finding_floors_in_the_tier_it_was_counted_in_not_its_rules_text_tier interpreter::tests::a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in',
+    ),
+    (
+        'M17 a finding verdict stores the rule tier, not the tier it counted in',
+        'src/interpreter/analyze_tally.rs',
+        '                tier: counted,',
+        '                tier: if asked == RuleSeverity::Should { FindingTier::Should } else { FindingTier::Must },',
+        'interpreter::tests::a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in analyze_tally::tests::each_assessment_leaves_its_verdict_and_judges_its_rule',
+    ),
+    (
+        'M18 a reused finding is reported in the rule tier, not its stored tier',
+        'src/interpreter/mod.rs',
+        '                tally.record_reused(stored);',
+        '                let _ = stored;\n                tally.record_reused(FindingTier::Must);',
+        'interpreter::tests::a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in',
     ),
 ]

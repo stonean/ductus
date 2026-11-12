@@ -325,15 +325,10 @@ fn verdicts_block(
             flatten_line(reason)
         ));
     }
-    let tier = |tier: RuleSeverity| match tier {
-        RuleSeverity::Must => "must",
-        _ => "should",
-    };
     let reusable: Vec<ReusableVerdict> = standing
         .reusable()
         .map(|(rule, verdict)| ReusableVerdict {
             id: rule.id.clone(),
-            tier: tier(rule.tier).to_string(),
             verdict: verdict.clone(),
         })
         .collect();
@@ -1515,6 +1510,7 @@ mod tests {
             a.rule_verdicts = std::collections::BTreeMap::from([(
                 id.to_string(),
                 crate::schema::primitives::RuleVerdict::Finding {
+                    tier: crate::schema::primitives::FindingTier::Must,
                     at: "spec.md#Goal".into(),
                     message: "no owner".into(),
                 },
@@ -1548,10 +1544,10 @@ mod tests {
         let reusable = block.reusable.unwrap();
         assert_eq!(reusable.len(), 1);
         assert_eq!(reusable[0].id, "TS-RULE-001");
-        assert_eq!(reusable[0].tier, "must");
         assert_eq!(
             reusable[0].verdict,
             crate::schema::primitives::RuleVerdict::Finding {
+                tier: crate::schema::primitives::FindingTier::Must,
                 at: "spec.md#Goal".into(),
                 message: "no owner".into()
             }

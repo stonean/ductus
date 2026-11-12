@@ -79,7 +79,7 @@ use crate::schema::primitives::{
     CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
     CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
     DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, FindingTier,
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
     MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
@@ -615,15 +615,19 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                     .is_none_or(|currency| *currency == Currency::Stale)
             })
             .collect();
-        let reused_findings = standing
+        // Each reused finding is counted at the step of its rule's tier, in
+        // the tier its verdict stored.
+        let reused_findings: Vec<FindingTier> = standing
             .reusable()
-            .filter(|(rule, verdict)| {
-                rule.tier == tier && matches!(verdict, RuleVerdict::Finding { .. })
+            .filter(|(rule, _)| rule.tier == tier)
+            .filter_map(|(_, verdict)| match verdict {
+                RuleVerdict::Finding { tier, .. } => Some(*tier),
+                RuleVerdict::Addressed { .. } => None,
             })
-            .count();
+            .collect();
         if let Some(tally) = &mut self.analyze_tally {
-            for _ in 0..reused_findings {
-                tally.record_reused(tier);
+            for stored in reused_findings {
+                tally.record_reused(stored);
             }
         }
         let reused = total - asked.len();
@@ -2486,6 +2490,52 @@ mod tests {
                     && m.ends_with("asking about 1")),
             "{envelopes:?}"
         );
+    }
+
+    /// A rule carrying MUST and SHOULD, failing on its SHOULD clause and on
+    /// its MUST clause: each counts in the finding's own tier, the record
+    /// floors it there, and a second walk reports the stored finding in that
+    /// tier without asking (spec 082, spec 060).
+    #[test]
+    fn a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in() {
+        let mixed = "### TS-BOTH-001\n\n> Lists MUST paginate and SHOULD use cursors.\n\n**Verification:** Look.\n";
+        for (severity, blocking, advisory) in [("should", 0, 1), ("must", 1, 0)] {
+            let repo = analyze_repo(Some(mixed));
+            let (outcome, _) = walk_analyze(
+                &both_steps(),
+                repo.path(),
+                Some(&[QUALITY]),
+                &llm_response(1, &failed_with(severity, "TS-BOTH-001")),
+            );
+            assert_eq!(outcome, WalkOutcome::Complete, "{severity}");
+            let first = analysis_text(repo.path());
+            assert!(
+                first.contains(&format!("\nblocking-findings: {blocking}\n")),
+                "{first}"
+            );
+            assert!(
+                first.contains(&format!("\nadvisory: {advisory}\n")),
+                "{first}"
+            );
+            assert!(
+                first.contains(&format!("{{verdict: finding, tier: {severity},")),
+                "{first}"
+            );
+
+            let (outcome, envelopes) =
+                walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), "");
+            assert_eq!(outcome, WalkOutcome::Complete);
+            assert_eq!(requests(&envelopes).len(), 0);
+            let second = analysis_text(repo.path());
+            assert!(
+                second.contains(&format!("\nblocking-findings: {blocking}\n")),
+                "{second}"
+            );
+            assert!(
+                second.contains(&format!("\nadvisory: {advisory}\n")),
+                "{second}"
+            );
+        }
     }
 
     /// Spec 082, AC6 through the walker: a pass citing a heading the spec does

@@ -34,6 +34,8 @@ use crate::primitives::analyze_subjects::{is_design_subject, subject_digest};
 use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::rule_sections::{parse_rule_sections, rules_digest};
 use crate::primitives::{RecordLoad, Result, discover_rule_files, load_analyze_record, read_text};
+#[cfg(test)]
+use crate::schema::primitives::FindingTier;
 use crate::schema::primitives::{AnalyzeBlock, RuleVerdict};
 use crate::schema::severity::RuleSeverity;
 
@@ -386,7 +388,7 @@ mod tests {
         fs::write(dir.join("analysis.md"), text).unwrap();
     }
 
-    const ONE_FIRED: &str = "rule-verdicts:\n  TS-MUST-001: {verdict: finding, at: \"spec.md#Goal\", message: \"bad\"}\n";
+    const ONE_FIRED: &str = "rule-verdicts:\n  TS-MUST-001: {verdict: finding, tier: must, at: \"spec.md#Goal\", message: \"bad\"}\n";
 
     fn states(standing: &Standing) -> Vec<(&str, &Currency)> {
         standing
@@ -416,6 +418,7 @@ mod tests {
                 (
                     "TS-MUST-001",
                     &Currency::Fired(RuleVerdict::Finding {
+                        tier: FindingTier::Must,
                         at: "spec.md#Goal".into(),
                         message: "bad".into()
                     })
@@ -710,6 +713,7 @@ mod tests {
     #[test]
     fn a_new_finding_contradicts_a_quiet_or_addressed_rule_only() {
         let finding = RuleVerdict::Finding {
+            tier: FindingTier::Must,
             at: "spec.md#Goal".into(),
             message: "m".into(),
         };
