@@ -137,6 +137,35 @@ primitive errors (`malformed-tasks`) and writes nothing. When the computed
 reset output already equals the file content, `nothing-to-prune: true` and no
 write occurs (idempotent).
 
+### The `next-task:` counter
+
+A `tasks.md` may open with a frontmatter block whose `next-task:` field is a
+positive integer: the number the next appended task takes. It is a high-water
+mark, as `next-criterion` is for criteria, and keeps a number a prune removed
+from being assigned again.
+
+- `prune-tasks` writes it whenever a reduction removes a task section — either
+  mode — as the larger of the existing counter and one past the highest number
+  present before the removal, so it never lowers one. The highest number is read over both task
+  levels by the digits of a suffixed number (`11a` counts as 11). A reduction
+  that removes nothing writes none. The block is created above the `# …`
+  heading when absent, and an existing block gains or updates only this line.
+- `--reset` keeps the frontmatter block, counter included, before the `# …`
+  heading; the rest of the file is the canonical body as above. A reset file
+  with no counter has none.
+- `append-task` assigns `max(counter, highest present + 1)`, then advances the
+  counter to the assigned number plus one. It writes the counter only where one
+  exists: a file with none numbers from the highest present plus one and gains
+  none. A counter at or below the highest present is outvoted by it, so it
+  never causes a duplicate.
+- A block that never closes, or a value that is not a positive integer, is
+  `malformed-tasks` from either primitive, writing nothing: reading it as
+  absent would let a number it was written to keep be reissued.
+
+Every other `tasks.md` reader scans for headings and checkboxes, so the block
+is invisible to `read-tasks`, `mark-task`, `check-stuck` and `check-artifacts`.
+The helpers are `runtime/src/primitives/tasks_counter.rs`.
+
 ## Primitive request/response schema
 
 ### `prune-tasks` — reduce a feature's `tasks.md`
@@ -208,7 +237,7 @@ running it again resumes:
 | --- | --- |
 | `feature-not-found` | feature directory absent under the spec-root |
 | `tasks-file-missing` | feature directory exists but has no `tasks.md` (the command directs the user to `/{project}:plan` when there is no `plan.md` either, and otherwise reduces the plan and reports the missing task list); a walk skips such a spec instead |
-| `malformed-tasks` | file has no `# …` heading (reset cannot preserve identity) |
+| `malformed-tasks` | file has no `# …` heading (reset cannot preserve identity), or its frontmatter never closes or carries a `next-task:` that is not a positive integer |
 | `missing-spec-file` / `status-field-missing` / `missing-frontmatter` | `spec.md` is absent, opens no frontmatter, or its frontmatter has no `status`, when a `reset` reads it for its gate or a walk reads it for a spec it lists |
 | `yaml` | that `spec.md` frontmatter does not parse |
 | `missing-argument` | neither `feature` nor `all` |

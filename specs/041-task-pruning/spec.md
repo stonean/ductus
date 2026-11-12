@@ -2,7 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime]
 cross-spec-impact: [052-spec-supersession-and-consolidation, 022-deterministic-runtime]
-next-criterion: 21
+next-criterion: 22
 ---
 
 # 041 — Spec Directory Pruning
@@ -34,7 +34,7 @@ The command's scope is the spec directory, each artifact reduced by the rule its
 Prune formalizes that `tasks.md` is disposable and that a plan's claims live only in its design record, so the framework must treat each artifact by its durability class end to end. Four alignments make that true:
 
 - The constitution **canonically classifies** `tasks.md` as an ephemeral work-tracking artifact — a view of what is left to do — distinct from the durable spec, data model, scenarios, and rules (with `plan.md` as the design record). Prune and this spec cite that classification directly, not by analogy to the chore durability test.
-- The shared `tasks.md` parsers **ignore HTML-comment content** (`<!-- … -->`), so a reset (template-state) file is genuinely empty to the runtime primitives just as it is to a markdown reader — `read-tasks` reports zero tasks and `append-task` numbers from 1. Without this, the reset target's commented example headings parse as phantom tasks.
+- The shared `tasks.md` parsers **ignore HTML-comment content** (`<!-- … -->`), so a reset (template-state) file is genuinely empty to the runtime primitives just as it is to a markdown reader — `read-tasks` reports zero tasks and `append-task` numbers from 1 (past the `next-task:` counter, when the file carries one). Without this, the reset target's commented example headings parse as phantom tasks.
 - `/{project}:analyze` **does not treat the scenario→task linkage as a durable index**. A `done` spec whose implemented scenario tasks have been pruned is not a drift finding: the durable record of an implemented scenario is the scenario file, the code, and git history — not a retained checkbox.
 - The constitution **classifies `plan.md` as a record of the design whose claims live only in its design record** — the plan template's own `##` sections — so a plan records the design as it stands, never the history of how it got there (`scenarios/plan-records-the-design-as-it-stands.md`). A section outside the record carries no claim the spec relies on, which is what lets prune remove one, once its durable pieces have moved home, and `/{project}:analyze` reports each one as an advisory finding.
 
@@ -57,7 +57,7 @@ Prune formalizes that `tasks.md` is disposable and that a plan's claims live onl
 - [x] AC10: Prune stops without writing when there is no session target (directs to `/{project}:target`) or the target has neither a `tasks.md` nor a `plan.md` (directs to `/{project}:plan`).
 - [x] AC11: The reduction is produced and written by the deterministic runtime prune primitive, with the file body never round-tripped through agent context; on a `--reset` in a project that has customized its own `specs/templates/tasks.md`, the runtime writes the framework body compiled into the primitive. **Superseded in part by spec 079:** as delivered, a markdown-only fallback reached identical bytes by hand; no such path remains.
 - [x] AC12: The constitution canonically classifies `tasks.md` as an ephemeral work-tracking artifact, distinct from the durable spec / data model / scenarios / rules — stated directly, not only by analogy to the chore durability test.
-- [x] AC13: The shared `tasks.md` parsers ignore content inside HTML comments (`<!-- … -->`): a reset (template-state) `tasks.md` parses to zero tasks via `read-tasks` and yields task number 1 from `append-task`, matching what a markdown reader sees.
+- [x] AC13: The shared `tasks.md` parsers ignore content inside HTML comments (`<!-- … -->`): a reset (template-state) `tasks.md` parses to zero tasks via `read-tasks` and, with no `next-task:` counter (AC21), yields task number 1 from `append-task`, matching what a markdown reader sees.
 - [x] AC14: `/{project}:analyze` does not report a scenario-consistency inconsistency when a `done` spec's scenario-linked tasks have been pruned; the scenario→task linkage is not required to persist after the scenario is implemented.
 - [x] AC15: `/{project}:prune` removes a `plan.md` section outside the design record only after the operator confirms, together, the section's removal and the move of each durable piece to its home — a changed decision edited into the design-record entry it amends, contributor knowledge into `AGENTS.md` when it holds for this project alone and otherwise named for the operator to route, owed work onto a pending task in `tasks.md`; a declined section stays byte-for-byte for that run.
 - [x] AC16: The runtime `prune-plan` primitive reports each `##` section of `plan.md` outside the design record — the plan template's own `##` headings, compared case-insensitively, with a heading inside a fenced block or an HTML comment never a section — with its size and digest and never its text, and removes the sections an apply lists by heading and digest, refusing the whole write when any listed section changed since the preview.
@@ -65,6 +65,7 @@ Prune formalizes that `tasks.md` is disposable and that a plan's claims live onl
 - [x] AC18: `/{project}:analyze` reports every `plan.md` section outside the design record on a spec at `planned` or later as an advisory `plan-record` finding, decided or not, keyed by a message the runtime builds from the section's heading.
 - [x] AC19: `/{project}:prune` reopens a `done` spec it writes to exactly when the diff against HEAD adds an unchecked checkbox to `tasks.md`, never for an edit to `plan.md`, names each reopen before the write that causes it, and asks before a reopen it did not name.
 - [x] AC20: The constitution's §plan-phase states that a plan records the design as it stands, that its design record is the plan template's own `##` sections, and where each other kind of content belongs; the plan template names every section `/{project}:plan` fills; and the tasks template's guidance comment says a task body may carry working notes, placed on the task that must wait and never as a checkbox.
+- [ ] AC21: A task number in use before a prune is never assigned to a new task: `tasks.md` carries a `next-task:` frontmatter counter that `prune-tasks` writes past the highest number before removing a section and a `--reset` keeps, and `append-task` assigns the larger of it and the highest number present plus one, then advances it; a file with no counter numbers from the highest present plus one and gains none, and a counter at or below the highest present never causes a duplicate.
 
 ## Edge Cases
 

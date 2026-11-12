@@ -31,7 +31,18 @@ its version and date.
   `--fired-json`; `prune-project` `--replace-json`. Additive: no scalar flag
   and no MCP schema changes. A test in `src/main.rs` asserts each served
   tool's every argument has a flag or its `-json` form.
-
+- **A pruned task number is never reissued.** `prune-tasks` writes a
+  `next-task:` frontmatter counter in `tasks.md`, set past the highest task
+  number the file held before it removed any section (never lowering one
+  already higher), and `append-task` assigns the larger of the counter and the
+  highest number present plus one, then advances it. A `--reset` keeps the
+  file's frontmatter, counter included. A file with no counter numbers from the
+  highest present plus one as before, and `append-task` never creates one; a
+  counter at or below the highest present never causes a duplicate. A block
+  that never closes, or a `next-task:` that is not a positive integer, is
+  `malformed-tasks` and writes nothing. Reset and keep-pending prunes that
+  remove a section now write the frontmatter block, so such a prune's output
+  begins with `---`.
 - **`check-artifact-size` measures the four project files.** `--project-files`
   (`project-files` over MCP) adds `AGENTS.md` and the spec root's `system.md`,
   `events.md` and `errors.md` to the check, against the same

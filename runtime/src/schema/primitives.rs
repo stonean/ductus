@@ -3897,7 +3897,8 @@ pub struct AppendTaskArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct AppendTaskResult {
-    /// Number of the task: the one just appended (`max(existing) + 1`), or,
+    /// Number of the task: the one just appended (the larger of the highest
+    /// number present plus one and the file's `next-task:` counter), or,
     /// when `appended` is `false`, the existing task a dedup guard matched.
     /// A string, since the matched task may carry a hand-inserted suffix
     /// (`11a`) that an integer would drop and so name another task; the one

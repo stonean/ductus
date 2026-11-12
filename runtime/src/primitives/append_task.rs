@@ -1,6 +1,7 @@
 //! `append-task` — append a numbered task block to a feature's `tasks.md`.
 //!
-//! Computes the next task number as `max(existing) + 1` so a tasks file with
+//! Computes the next task number as `max(existing) + 1` (or the `next-task:`
+//! frontmatter counter when larger) so a tasks file with
 //! `## 1.`, `## 3.` headings produces `## 4.` rather than overwriting `## 3.`.
 //! Creates `tasks.md` with a derived heading when absent. Atomic write via
 //! tempfile + rename.
@@ -10,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use crate::primitives::{
     PhaseRange, PrimitiveError, Result, TaskNumber, TasksStructure, detect_tasks_structure,
-    iter_phase_ranges, iter_task_numbers_at_levels, parse_atx_heading, read_text, rel_path,
-    split_frontmatter, strip_bullet_marker, validate_slug, write_atomic,
+    iter_phase_ranges, parse_atx_heading, read_text, rel_path, split_frontmatter,
+    strip_bullet_marker, validate_slug, write_atomic,
 };
 use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 
@@ -126,7 +127,11 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         });
     }
 
-    let next_number = next_task_number(&existing);
+    // The `next-task:` counter (spec 041): a number a prune removed is never
+    // reissued. Maintained only where a file already carries one, so a file
+    // that was never pruned is written exactly as it always was.
+    let counter = super::tasks_counter::read(&existing, &tasks_path)?;
+    let next_number = next_task_number(&existing, counter);
     let new_content = match detect_tasks_structure(&existing) {
         TasksStructure::Flat => {
             let block = render_flat_task_block(next_number, args);
@@ -138,6 +143,10 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     // push `\n` in a dozen places; normalize once here rather than threading
     // the ending through each, so appending a task cannot convert a CRLF
     // `tasks.md` to LF (or leave the appended block disagreeing with it).
+    let new_content = match counter {
+        Some(_) => super::tasks_counter::set(&new_content, next_number + 1, &tasks_path)?,
+        None => new_content,
+    };
     let new_content = super::with_line_ending(&new_content, super::line_ending_of(&existing));
     write_atomic(&tasks_path, &new_content)?;
 
@@ -278,16 +287,14 @@ fn validate_single_line(argument: &str, value: &str) -> Result<()> {
     super::validate_single_line("append-task", argument, value)
 }
 
-/// Return `max(existing-task-number) + 1` across both flat (`## N.`) and
-/// phased (`### N.`) task headings in `tasks.md`. Walking both levels makes
-/// the numbering robust to mixed-structure files: an old `## 1.` flat task
-/// alongside a new `### 2.` phased task produces `next = 3`, not `next = 2`.
-fn next_task_number(content: &str) -> u32 {
-    iter_task_numbers_at_levels(content, &[2, 3])
-        .map(TaskNumber::digits)
-        .max()
-        .unwrap_or(0)
-        + 1
+/// Return the larger of the `next-task:` counter and the highest task number
+/// present plus one, so a counter at or below the highest present never causes
+/// a duplicate. The highest is read across both flat (`## N.`) and phased
+/// (`### N.`) task headings in `tasks.md`, which makes the numbering robust to
+/// mixed-structure files: an old `## 1.` flat task alongside a new `### 2.`
+/// phased task produces `next = 3`, not `next = 2`.
+fn next_task_number(content: &str, counter: Option<u32>) -> u32 {
+    (super::tasks_counter::highest_present(content) + 1).max(counter.unwrap_or(0))
 }
 
 /// Render the flat task block at ATX-2 (`## N. Title`). Always preceded
@@ -1484,5 +1491,86 @@ mod tests {
         let result = run(&a, tmp.path()).unwrap();
         assert!(!result.appended);
         assert_eq!(result.task_number, "11a");
+    }
+
+    const COUNTED: &str = "---\nnext-task: 7\n---\n\n# T\n\n## 1. One\n\n- [ ] a\n- **Done when**: done.\n\n## 2. Two\n\n- [ ] b\n- **Done when**: done.\n";
+
+    /// A pruned number is never reissued: with the counter past the highest
+    /// number present, the append takes the counter and advances it.
+    #[test]
+    fn a_counter_past_the_highest_number_is_assigned_and_advanced() {
+        let tmp = tempdir().unwrap();
+        write_tasks(tmp.path(), COUNTED);
+        let result = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap();
+        assert_eq!(result.task_number, "7");
+        let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+        assert!(
+            body.starts_with("---\nnext-task: 8\n---\n\n# T\n"),
+            "{body}"
+        );
+        assert!(body.contains("## 7. Next"));
+        let again = run(&args("specs/042-foo", "Another", "done."), tmp.path()).unwrap();
+        assert_eq!(again.task_number, "8");
+    }
+
+    /// A counter at or below the highest number present (a hand edit, a
+    /// merge) never causes a duplicate: the highest plus one wins.
+    #[test]
+    fn a_counter_at_or_below_the_highest_number_never_duplicates() {
+        let tmp = tempdir().unwrap();
+        write_tasks(tmp.path(), &COUNTED.replace("next-task: 7", "next-task: 2"));
+        let result = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap();
+        assert_eq!(result.task_number, "3");
+        let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+        assert!(body.contains("next-task: 4\n"), "{body}");
+    }
+
+    /// A file with no counter numbers as it always has and gains no
+    /// frontmatter: the counter is maintained where it exists, never created
+    /// by an append.
+    #[test]
+    fn a_file_without_a_counter_gains_none() {
+        let tmp = tempdir().unwrap();
+        write_tasks(
+            tmp.path(),
+            &COUNTED.replace("---\nnext-task: 7\n---\n\n", ""),
+        );
+        let result = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap();
+        assert_eq!(result.task_number, "3");
+        let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+        assert!(body.starts_with("# T\n"), "{body}");
+    }
+
+    /// A phased file takes the counter at its own task level.
+    #[test]
+    fn a_phased_file_honours_the_counter() {
+        let tmp = tempdir().unwrap();
+        write_tasks(
+            tmp.path(),
+            "---\nnext-task: 9\n---\n\n# T\n\n## Phase A\n\n### 1. One\n\n- [ ] a\n- **Done when**: done.\n",
+        );
+        let result = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap();
+        assert_eq!(result.task_number, "9");
+        let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+        assert!(
+            body.contains("### 9. Next") && body.contains("next-task: 10\n"),
+            "{body}"
+        );
+    }
+
+    /// A counter that cannot be read stops the append: reading it as absent
+    /// would reissue a number it may have been written to keep.
+    #[test]
+    fn an_unreadable_counter_stops_the_append() {
+        let tmp = tempdir().unwrap();
+        write_tasks(
+            tmp.path(),
+            &COUNTED.replace("next-task: 7", "next-task: soon"),
+        );
+        let err = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::MalformedTasks { .. }),
+            "{err:?}"
+        );
     }
 }

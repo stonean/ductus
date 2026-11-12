@@ -82,6 +82,25 @@ preview → apply shape.
   `malformed-tasks` and writes nothing. The constant carries the template's
   whole guidance comment, its handoff-note guidance (below) included.
 
+### A pruned task number is never reissued
+
+`tasks.md` carries a `next-task:` frontmatter counter (shape and rules:
+`data-model.md` §The `next-task:` counter). Chosen over deriving the mark from
+`tasks.md`'s git history, which a shallow clone would under-count silently, and
+over citing tasks by title, which depends on every author remembering to. Two
+choices the scenario left open:
+
+- `append-task` advances the counter only where the file has one and never
+  creates it. A never-pruned file then stays byte-for-byte what an append has
+  always written, and the counter appears with the first prune, the only event
+  that can lower the highest number.
+- A `--reset` keeps the whole frontmatter block, not the counter alone, since
+  the block precedes the `# …` heading the reset already preserves.
+
+All other `tasks.md` readers are line scanners that match headings and
+checkboxes, so the block needs no change in them; a test proves `read-tasks`
+and `mark-task` agree with and without it.
+
 ### Status gate for `--reset`
 
 When `reset` is true the primitive reads `spec.md` frontmatter `status`.
@@ -398,6 +417,9 @@ buys nothing here.
 | `runtime/src/schema/primitives.rs` | Edit | `PrunePlanArgs`/`PrunePlanResult` types; `all` on `PruneTasksArgs`; round-trip tests |
 | `runtime/src/schema/registry.rs` | Edit | `prune-plan` in `PRIMITIVE_REGISTRY` |
 | `runtime/src/primitives/prune_tasks.rs` | Edit | `all` walk; reset constant follows the tasks template; status reader and size shared with `prune-plan` |
+| `runtime/src/primitives/tasks_counter.rs` | Create | The `next-task:` counter: read, set, and the highest number present, shared by `prune-tasks` and `append-task` |
+| `runtime/src/primitives/append_task.rs` | Edit | Assigns the larger of the counter and the highest present plus one, and advances a counter the file carries |
+| `scripts/mutation/pruned-task-number.py` | Create | Mutations proving the counter's tests |
 | `runtime/src/primitives/prune_plan.rs` | Create | Segmentation, classification, finding key, digest-guarded removal, reopen trigger |
 | `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses |
 | `runtime/src/primitives/check_stuck.rs` | Edit | Calls the promoted HEAD-blob reader |

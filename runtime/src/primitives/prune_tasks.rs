@@ -340,6 +340,21 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
         PruneMode::KeepPending => reduce_keep_pending(&content, &blocks),
         PruneMode::Reset => reduce_reset(&content, &blocks, &tasks_path)?,
     };
+    // The `next-task:` counter (spec 041): written past the highest number the
+    // file held before this reduction removed any section, so the next append
+    // never reissues a pruned number; a counter already higher stands, and a
+    // reduction that removed nothing writes none. A reset of a file that
+    // carries one keeps it.
+    let held = super::tasks_counter::read(&content, &tasks_path)?;
+    let new_content = if removed > 0 || held.is_some() {
+        let past = super::tasks_counter::highest_present(&content) + 1;
+        let counted =
+            super::tasks_counter::set(&new_content, past.max(held.unwrap_or(0)), &tasks_path)?;
+        // `set` writes LF where it adds the block; the file keeps its ending.
+        super::with_line_ending(&counted, super::line_ending_of(&content))
+    } else {
+        new_content
+    };
 
     let nothing_to_prune = new_content == content;
     // A write happens only on `apply`, only when there is a change, and (for
@@ -567,8 +582,12 @@ fn reduce_reset(
     // The H1 is lifted from the file being reset, so this is a rewrite of an
     // existing file and not the creation of a new one — the ending it had is
     // the ending it gets back.
+    // The frontmatter block is not the feature's body: it stays, so the
+    // `next-task:` counter survives the reset.
+    let frontmatter = super::tasks_counter::frontmatter(content, tasks_path)?;
+    let lead = if frontmatter.is_empty() { "" } else { "\n" };
     let new_content = super::with_line_ending(
-        &format!("{h1}\n\n{CANONICAL_EMPTY_TASKS_BODY}"),
+        &format!("{frontmatter}{lead}{h1}\n\n{CANONICAL_EMPTY_TASKS_BODY}"),
         super::line_ending_of(content),
     );
 
@@ -692,6 +711,145 @@ mod tests {
         );
     }
 
+    /// The number a prune removed from the top is not reissued: the prune
+    /// writes the counter past the highest number it held, and the next append
+    /// takes it (spec 041, scenario `a-pruned-task-number-is-never-reissued`).
+    #[test]
+    fn a_pruned_top_number_is_not_reissued_by_the_next_append() {
+        let tasks = "# T\n\n## 2. Kept\n\n- [ ] a\n\n## 3. Spent\n\n- [x] b\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        let result = run(&args(false, false, true), &repo).unwrap();
+        assert_eq!(result.removed_count, 1);
+        let path = repo.join("specs/041-task-pruning/tasks.md");
+        let body = fs::read_to_string(&path).unwrap();
+        assert_eq!(
+            body,
+            "---\nnext-task: 4\n---\n\n# T\n\n## 2. Kept\n\n- [ ] a\n"
+        );
+        let appended = crate::primitives::append_task::run(
+            &crate::schema::primitives::AppendTaskArgs {
+                feature_path: "specs/041-task-pruning".into(),
+                title: "New".into(),
+                done_when: "done.".into(),
+                body: Some(vec!["x".into()]),
+                slug: None,
+                parent_heading: None,
+                dedup_title: false,
+            },
+            &repo,
+        )
+        .unwrap();
+        assert_eq!(appended.task_number, "4");
+    }
+
+    /// A prune that removes nothing writes no counter, and a file that was
+    /// never pruned stays byte-for-byte.
+    #[test]
+    fn a_prune_that_removes_nothing_writes_no_counter() {
+        let tasks = "# T\n\n## 1. Pending\n\n- [ ] a\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        let result = run(&args(false, false, true), &repo).unwrap();
+        assert!(result.nothing_to_prune);
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, tasks);
+    }
+
+    /// A counter already past the highest number stands: a prune never lowers it.
+    #[test]
+    fn a_prune_never_lowers_an_existing_counter() {
+        let tasks = "---\nnext-task: 20\n---\n\n# T\n\n## 1. Spent\n\n- [x] a\n\n## 2. Pending\n\n- [ ] b\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        run(&args(false, false, true), &repo).unwrap();
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(body.starts_with("---\nnext-task: 20\n---\n"), "{body}");
+        assert!(!body.contains("## 1."));
+    }
+
+    /// A reset keeps the counter, so the next append continues past every
+    /// number the reset removed; a file with none yields task 1 as AC13 says.
+    #[test]
+    fn a_reset_keeps_the_counter_and_a_file_without_one_gains_none() {
+        let tasks = "# T\n\n## 1. Spent\n\n- [x] a\n\n## 5. Spent\n\n- [x] b\n";
+        let (_tmp, repo) = write_repo(tasks, Some("done"));
+        run(&args(true, false, true), &repo).unwrap();
+        let path = repo.join("specs/041-task-pruning/tasks.md");
+        let body = fs::read_to_string(&path).unwrap();
+        assert!(
+            body.starts_with("---\nnext-task: 6\n---\n\n# T\n\nTasks derived"),
+            "{body}"
+        );
+        // A second reset of the reset file is a no-op, the counter standing.
+        let again = run(&args(true, false, true), &repo).unwrap();
+        assert!(again.nothing_to_prune);
+        assert_eq!(fs::read_to_string(&path).unwrap(), body);
+
+        let (_tmp2, repo2) = write_repo("# T\n\n## Notes\n\nNo tasks.\n", Some("done"));
+        run(&args(true, false, true), &repo2).unwrap();
+        let plain = fs::read_to_string(repo2.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(plain.starts_with("# T\n\nTasks derived"), "{plain}");
+    }
+
+    /// The frontmatter block is invisible to the other `tasks.md` readers:
+    /// `read-tasks` lists the same tasks and `mark-task` ticks the same box
+    /// with and without the counter.
+    #[test]
+    fn the_counter_block_changes_nothing_the_other_readers_see() {
+        use crate::primitives::read_tasks;
+        use crate::schema::primitives::ReadTasksArgs;
+        let plain = "# T\n\n## 2. Kept\n\n- [ ] a\n- [ ] b\n- **Done when**: done.\n";
+        let counted = format!("---\nnext-task: 9\n---\n\n{plain}");
+        let (_tmp, repo) = write_repo(&counted, None);
+        let tasks = read_tasks::compute(
+            &ReadTasksArgs {
+                feature: "041-task-pruning".into(),
+            },
+            &repo,
+        )
+        .unwrap();
+        assert_eq!(tasks.tasks, read_tasks::parse_tasks(plain));
+        assert_eq!(tasks.tasks.len(), 1);
+        crate::primitives::mark_task::run(
+            &crate::schema::primitives::MarkTaskArgs {
+                feature: "041-task-pruning".into(),
+                task_number: "2".into(),
+                subtask_index: 1,
+                checked: true,
+            },
+            &repo,
+        )
+        .unwrap();
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(
+            body,
+            counted.replace("- [ ] b", "- [x] b"),
+            "only the box changed"
+        );
+    }
+
+    /// A reset keeps the whole frontmatter block, not the counter alone: the
+    /// block precedes the heading the reset preserves.
+    #[test]
+    fn a_reset_keeps_the_frontmatter_block() {
+        let tasks = "---\nowner: x\nnext-task: 2\n---\n\n# T\n\n## 5. Spent\n\n- [x] a\n";
+        let (_tmp, repo) = write_repo(tasks, Some("done"));
+        run(&args(true, false, true), &repo).unwrap();
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(
+            body.starts_with("---\nowner: x\nnext-task: 6\n---\n\n# T\n\nTasks derived"),
+            "{body}"
+        );
+    }
+
+    /// A phased file's counter covers every number it held.
+    #[test]
+    fn a_phased_prune_counts_past_the_highest_number() {
+        let tasks = "# T\n\n## Phase A\n\n### 1. Spent\n\n- [x] a\n\n### 12. Spent\n\n- [x] b\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        run(&args(false, false, true), &repo).unwrap();
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(body.starts_with("---\nnext-task: 13\n---\n"), "{body}");
+    }
+
     #[test]
     fn keep_pending_drops_spent_preserves_pending_and_prose() {
         let (_tmp, repo) = write_repo(FLAT, None);
@@ -706,7 +864,11 @@ mod tests {
         assert!(written.contains("## 2. Pending task"));
         assert!(written.contains("## 3. Prose task"));
         // Preamble preserved.
-        assert!(written.starts_with("# 041 — Task Pruning Tasks\n\nTasks derived"));
+        assert!(
+            written.starts_with(
+                "---\nnext-task: 4\n---\n\n# 041 — Task Pruning Tasks\n\nTasks derived"
+            )
+        );
         // Output ends with exactly one trailing newline and no double blanks.
         assert!(written.ends_with('\n') && !written.ends_with("\n\n"));
         assert!(!written.contains("\n\n\n"));
@@ -774,7 +936,10 @@ mod tests {
         assert_eq!(result.gate, PruneGate::Allowed);
         assert!(result.applied);
         let written = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
-        let expected = format!("# 041 — Task Pruning Tasks\n\n{CANONICAL_EMPTY_TASKS_BODY}");
+        // FLAT held tasks 1-3, so the reset keeps a counter past them.
+        let expected = format!(
+            "---\nnext-task: 4\n---\n\n# 041 — Task Pruning Tasks\n\n{CANONICAL_EMPTY_TASKS_BODY}"
+        );
         assert_eq!(written, expected);
     }
 
@@ -1031,7 +1196,9 @@ mod tests {
         let done = fs::read_to_string(tmp.path().join("specs/002-done/tasks.md")).unwrap();
         assert_eq!(
             done,
-            format!("# 041 — Task Pruning Tasks\n\n{CANONICAL_EMPTY_TASKS_BODY}")
+            format!(
+                "---\nnext-task: 4\n---\n\n# 041 — Task Pruning Tasks\n\n{CANONICAL_EMPTY_TASKS_BODY}"
+            )
         );
     }
 
@@ -1076,7 +1243,11 @@ mod tests {
             tasks.tasks.len()
         );
 
-        // append-task must number from 1, not from the commented examples.
+        // Strip the counter the reset kept: a reset file with none (AC13)
+        // numbers from 1, not from the commented examples.
+        let tasks_path = repo.join("specs/041-task-pruning/tasks.md");
+        let kept = fs::read_to_string(&tasks_path).unwrap();
+        fs::write(&tasks_path, kept.replace("---\nnext-task: 4\n---\n\n", "")).unwrap();
         let appended = append_task::run(
             &AppendTaskArgs {
                 feature_path: "specs/041-task-pruning".into(),
