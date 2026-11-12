@@ -162,6 +162,13 @@ its version and date.
 
 ### Changed
 
+- **Every destination-judging writer refuses the runtime pointer's directory
+  (spec 022).** `apply-manifest`, `enforce-manifest`, `merge-managed-block`,
+  `append-task`, `create-scenario` and `merge-permissions` refuse a path under
+  `.ductus/bin`, at any depth, as they refuse Claude Code's protected
+  directories: the pointer there runs at every session start and on Claude's
+  status and help hooks, and `apply-manifest` and `merge-managed-block` could
+  replace it. No primitive wrote it; `/ductus` places it with the shell.
 - **`/configure` no longer grants thirteen Claude allow entries that can run or
   write anything, and retires them from existing settings (spec 022).**
   `curl *`, `make *`, `./.githooks/pre-commit`, `scripts/install-hooks.sh`,

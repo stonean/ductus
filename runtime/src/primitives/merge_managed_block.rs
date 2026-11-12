@@ -1753,6 +1753,34 @@ Thumbs.db";
         assert!(!repo.join(".mcp.json").exists());
     }
 
+    /// The runtime pointer is refused, so a block cannot replace the file
+    /// every session start runs, as task 22's probe did (spec 022 task 22).
+    #[cfg(unix)]
+    #[test]
+    fn a_block_is_not_written_over_the_runtime_pointer() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        fs::create_dir_all(repo.join(".ductus/bin")).unwrap();
+        fs::write(repo.join("store-ductus"), "#!/bin/sh\n").unwrap();
+        std::os::unix::fs::symlink(repo.join("store-ductus"), repo.join(".ductus/bin/ductus"))
+            .unwrap();
+        let args = MergeManagedBlockArgs {
+            path: ".ductus/bin/ductus".into(),
+            block: "x".into(),
+            marker: None,
+            marker_style: Some("line-prefix".into()),
+        };
+        assert!(matches!(
+            run(&args, repo),
+            Err(PrimitiveError::InvalidPath { ref reason, .. }) if reason.contains("task 22")
+        ));
+        let pointer = fs::symlink_metadata(repo.join(".ductus/bin/ductus")).unwrap();
+        assert!(
+            pointer.file_type().is_symlink(),
+            "the pointer is still a link"
+        );
+    }
+
     /// A row is refused too: a block whose marker sits inside a command
     /// file's frontmatter would put a granting key there.
     #[test]

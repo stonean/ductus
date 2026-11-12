@@ -72,4 +72,11 @@ MUTATIONS = [
         '    let _ = &feature_dir;',
         'create_scenario',
     ),
+    (
+        'M6 judge_names pointer-directory refusal removed',
+        'src/primitives/host_config.rs',
+        '    if let Some(seq) = dir_sequence_in(POINTER_DIRS, names) {\n        return Err(refuse_pointer_dir(shown, seq));\n    }',
+        '    if let Some(seq) = dir_sequence_in(POINTER_DIRS, names) {\n        let _ = seq;\n    }',
+        'pointer',
+    ),
 ]

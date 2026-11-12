@@ -103,6 +103,18 @@ const PROTECTED_DIRS: &[&[&str]] = &[
     &[".mvn"],
 ];
 
+/// ductus's own pointer directory, `.ductus/bin`, matched like a
+/// [`PROTECTED_DIRS`] entry at any depth. The pointer in it is what the
+/// committed `.mcp.json` launches at every session start, what Pi's bridge
+/// spawns and what Claude's status and help hooks run, so a write there runs
+/// with no git command in between. No primitive writes it: `/ductus` places
+/// it with the shell (`ln -sf`, or `cp` where the link fails), and the Shared
+/// Files manifest has no row under it (spec 022 task 22, the owner's answer
+/// (a), 2026-11-12). The host does not protect it, and bare `Edit` and `Write`
+/// still reach it (022's plan, *Bare `Edit` and `Write`*), so this closes
+/// ductus's own tools' route.
+const POINTER_DIRS: &[&[&str]] = &[&[".ductus", "bin"]];
+
 /// Files Claude Code never auto-approves a write to, beyond the MCP/settings
 /// files above — its "Protected files" list less `.mcp.json`, already a
 /// `CONFIG_FILES` entry (code.claude.com/docs/en/permission-modes, Protected
@@ -509,6 +521,10 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
     if let Some(seq) = protected_dir_in(names) {
         return Err(refuse_protected_dir(shown, seq));
     }
+    // ductus's own pointer directory refuses the same way (task 22).
+    if let Some(seq) = dir_sequence_in(POINTER_DIRS, names) {
+        return Err(refuse_pointer_dir(shown, seq));
+    }
     for (depth, name) in names.iter().enumerate() {
         let folded = fold(name);
         if let Some(&dir) = OTHER_TOOL_DIRS.iter().find(|dir| folded == **dir) {
@@ -526,7 +542,16 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
 /// single-component entry (`.git`) matches one name; `.config/git` matches the
 /// pair.
 fn protected_dir_in(names: &[String]) -> Option<&'static [&'static str]> {
-    PROTECTED_DIRS.iter().copied().find(|seq| {
+    dir_sequence_in(PROTECTED_DIRS, names)
+}
+
+/// The first of `dirs`' component sequences that appears consecutively in
+/// `names` (compared through [`fold`]), at any depth, or `None`.
+fn dir_sequence_in(
+    dirs: &'static [&'static [&'static str]],
+    names: &[String],
+) -> Option<&'static [&'static str]> {
+    dirs.iter().copied().find(|seq| {
         names.windows(seq.len()).any(|window| {
             window
                 .iter()
@@ -688,6 +713,18 @@ fn refuse_protected_dir(shown: &str, seq: &[&str]) -> PrimitiveError {
         reason: format!(
             "resolves into `{}`, a directory the agent host never auto-approves a write under, \
              which a ductus primitive does not write (spec 022 task 20)",
+            seq.join("/")
+        ),
+    }
+}
+
+fn refuse_pointer_dir(shown: &str, seq: &[&str]) -> PrimitiveError {
+    PrimitiveError::InvalidPath {
+        path: shown.into(),
+        reason: format!(
+            "resolves into `{}`, the runtime pointer's directory, which every session start \
+             and Claude's status and help hooks run from and no ductus primitive writes \
+             (spec 022 task 22)",
             seq.join("/")
         ),
     }
@@ -2101,6 +2138,34 @@ mod tests {
             ".claude.json",
         ] {
             assert!(refused_protected(&judge(repo, rel)), "{rel}");
+        }
+    }
+
+    /// The runtime pointer's directory is refused at any depth, for a write,
+    /// a replacement and a removal alike, since every writer judges its
+    /// destination here; `.ductus/` outside `bin/` is not (spec 022 task 22).
+    #[test]
+    fn the_pointer_directory_is_refused_and_the_rest_of_ductus_state_is_not() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        for rel in [
+            ".ductus/bin/ductus",
+            ".ductus/bin/ductus.exe",
+            "sub/.ductus/bin/ductus",
+        ] {
+            assert!(
+                matches!(judge(repo, rel), Err(PrimitiveError::InvalidPath { ref reason, .. }) if reason.contains("task 22")),
+                "{rel}"
+            );
+        }
+        for rel in [
+            ".ductus/config.toml",
+            ".ductus/session.toml",
+            ".ductus/binaries/x",
+            "bin/ductus",
+        ] {
+            assert_eq!(judge(repo, rel).unwrap(), None, "{rel}");
         }
     }
 
