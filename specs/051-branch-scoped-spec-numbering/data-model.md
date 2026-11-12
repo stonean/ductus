@@ -74,11 +74,11 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | --- | --- | --- | --- |
 | `from` | in | string | The retiring or renamed feature directory name. |
 | `to` | in | string | The fold target — a feature, optionally with a scenario slug. |
-| `rewritten` | out | list of `{path, count}` | Files whose body links, `folds-into` fields or spec-root paths were re-pointed, the referrers outside the spec root included. |
-| `examined` | out | integer | Files scanned, so an empty `rewritten` is not read as "nothing was checked". A skipped referrer is not counted. |
-| `skipped` | out | list of `{path, reason}` | Referrers, the spec root's `system.md` among them, left as they are: a symbolic link, one whose parent resolves outside the project, or one that is not UTF-8 text; then each other symbolic link under the spec root named `*.md` or to a directory, in path order, left as it is and not followed; a spec root that is itself a link is followed and not listed. Every referrer, and every other markdown file under the spec root, is read before anything is written; one of those others that cannot be read as UTF-8 text, or a directory that cannot be listed, stops the run instead. |
-| `kept-tails` | out | list of `{path, line, reference}` | References re-pointed at a feature-only target whose kept tail is not empty (the directory itself), `spec.md`, or under `scenarios/`, so they name the target's file of that name, which a fold did not write; and, on either target, a `scenarios/{name}` tail the retiring directory does not hold, which no fold carried. |
-| `mentions` | out | list of `{path, line}` | Lines of the examined files that still name the retiring directory once the rewrite has run, as a whole token, by its directory name or by the number it is cited by (`NNN`, or `{identifier}.{n}`), outside the frontmatter's derived `dependencies:` and `references:`. Only the examined files are searched. |
+| `rewritten` | out | list of `{path, count}` | Files re-pointed, as `ductus rewrite-spec-links --help` describes. |
+| `examined` | out | integer | Files scanned (`ductus rewrite-spec-links --help`). |
+| `skipped` | out | list of `{path, reason}` | Referrers and other files left as they are, and the reads that stop the run: the reasons are `ductus rewrite-spec-links --help`'s. |
+| `kept-tails` | out | list of `{path, line, reference}` | References re-pointed whose kept tail names a file the fold did not write, as `ductus rewrite-spec-links --help` defines. |
+| `mentions` | out | list of `{path, line}` | Lines of the examined files that still name the retiring directory, as `ductus rewrite-spec-links --help` defines. Only the examined files are searched. |
 
 Each list holds at most one entry per file, per reference, or per line, under the spec root and in the five referrers, so it is bounded by the project's own tree rather than by history (022 `plan.md`'s `BE-PAYLOAD-001` statement).
 
@@ -86,9 +86,11 @@ Each list holds at most one entry per file, per reference, or per line, under th
 
 | Field | Direction | Type | Notes |
 | --- | --- | --- | --- |
-| `feature` | in | string | Must parse as `BranchScoped`; a sequential feature is refused. |
-| `fold-target` | in | string | Must exist. Refusal when it does not is what prevents stranding content. |
-| `retired` | out | boolean | `false` is the domain outcome for "already gone", not an error. |
+| `feature` | in | string | Must parse as `BranchScoped`, unless `allow-sequential` (below). |
+| `fold-target` | in | string | Must be a feature directory holding a `spec.md`; refusal when it is not is what prevents stranding content. |
+| `retired` | out | boolean | The already-gone outcome. |
+
+Refusals, `allow-sequential` and the already-gone outcome are in `ductus retire-feature --help`.
 
 > **Post-completion note (052 — Spec consolidation):** the `feature` row above is no longer the whole rule. `retire-feature` gained an `allow-sequential` argument, off by default, so the sequential refusal is **gated rather than absolute**: `/{project}:consolidate` passes it after naming both specs and confirming the content loss, and nothing else does. `/{project}:fold` — this spec's only caller — does not pass it and has no argument that would, so the refusal behaves here exactly as the row describes. The `fold-target` row is unchanged and applies to both callers.
 
@@ -101,17 +103,17 @@ Each list holds at most one entry per file, per reference, or per line, under th
 | `path` | out | string | Repo-relative spec path, present either way. |
 | `previous-last-run` | out | optional string | The `last-run` that was cleared, so the caller can say *what* it invalidated. |
 
-Resets `review.last-run` and `reviewed-against` to null, zeroes the counts, and clears `blocking` — the un-reviewed state the pre-`done` gate blocks on. **Waivers survive verbatim**, adopter-authored extra fields included: an invalidation says the review is out of date, not that an operator's recorded judgement about a finding was withdrawn.
+What invalidation resets and keeps, waivers included, is in `ductus invalidate-review --help`.
 
-It exists because the gate's staleness check diffs the spec's *durable contracts* (`scenarios/*.md`, `data-model.md`) and `spec.md` is deliberately outside that set. A fold routed into the upstream spec's **body** therefore moves no durable contract, and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it says so rather than leaving the gate to infer it.
+It exists because the gate owes a review for code alone (spec 081), so a fold-back, whichever artifacts it routes into the upstream spec, makes none owed and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it says so rather than leaving the gate to infer it.
 
 ### `append-task` (extended)
 
 | Field | Direction | Type | Notes |
 | --- | --- | --- | --- |
-| `appended` | out | boolean | `false` is the dedup domain outcome: a `slug` was supplied and an existing task already points at `scenarios/{slug}.md`, so `task-number` names that task and `tasks.md` is unchanged. |
+| `appended` | out | boolean | `false` is the dedup domain outcome, when `append-task` writes nothing (`ductus append-task --help`); read the result, not the exit status. |
 
-Reported separately from `created` because the two answer different questions — `created` is about the *file*, `appended` about the *task*. The dedup keys on the whole rendered pointer, so a slug that is a prefix of an existing one is still its own task; without a slug there is no pointer to key on and the call appends as before. This is what lets an interrupted fold be completed by re-running it rather than doubling the upstream spec's task list.
+Reported separately from `created` because the two answer different questions — `created` is about the *file*, `appended` about the *task*. This is what lets an interrupted fold be completed by re-running it rather than doubling the upstream spec's task list.
 
 ### `check-unfolded-specs` (new)
 

@@ -6,7 +6,7 @@ section: "Fold-back on merge"
 
 ## Context
 
-`rewrite-spec-links` writes its `to` argument into every file that names the retiring directory: the feature half replaces the directory segment, and on a fold into a scenario `scenarios/{scenario}.md` replaces the tail. Since task 29 those files include `.githooks/pre-commit`, which git executes, and `CLAUDE.md`'s `@` imports, which every session loads.
+`rewrite-spec-links` writes its `to` argument into every referrer it re-points (`ductus rewrite-spec-links --help`). Since task 29 those files include `.githooks/pre-commit`, which git executes, and `CLAUDE.md`'s `@` imports, which every session loads.
 
 `to` was held only to no parent-directory escape, containment inside the project, and two non-empty halves. The scenario half, which the data model calls a scenario slug, accepted any text — a space, `;`, `$(...)`, a further `/` — and the feature half accepted any directory holding a `spec.md`, `templates` included, which every adopter has. `/{project}:fold` validates the slug one step earlier, at `create-scenario`, so only a caller outside that flow reached the gap; but the primitive is callable on its own, which is why its other guards live inside it. A denylist as the sole defense for a constrained input is what `BE-INPUT-002` forbids, and it is the pattern `retarget-sessions` was held to the session validators for (062). Found by [048](../../048-govern-acquired-runtime/spec.md)'s review on 2026-10-29: `--to '002-b/a b;c'` wrote `specs/002-b/scenarios/a b;c.md` into a fixture's hook and README.
 
