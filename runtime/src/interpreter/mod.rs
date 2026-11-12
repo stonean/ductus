@@ -67,6 +67,7 @@ use serde_json::{Map, Value};
 
 use crate::io::{read_envelope, write_envelope};
 use crate::primitives;
+use crate::primitives::rule_verdicts::Currency;
 use crate::schema::extensions::{
     self, AssessSpecQualityRule, PerformReviewResponse, ValidationError, WriteCodeResponse,
 };
@@ -86,8 +87,9 @@ use crate::schema::primitives::{
     ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
     RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
     ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -518,7 +520,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         let step = Some(format_step_number(number));
         self.load_rules_once();
         let tier = payload::severity_from_step_prose(prose);
-        let (loaded_none, asked, loaded_files): (bool, Vec<AssessSpecQualityRule>, Vec<Value>) =
+        let (loaded_none, in_tier, loaded_files): (bool, Vec<AssessSpecQualityRule>, Vec<Value>) =
             match &self.rules {
                 Some(rules) => (
                     rules.is_empty(),
@@ -532,6 +534,9 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 ),
                 None => (true, Vec::new(), Vec::new()),
             };
+        // A rule whose stored verdict is current is not asked about again
+        // (spec 082): a spec that has not changed is judged once.
+        let (asked, reused) = self.split_reused(in_tier, tier);
         if loaded_none || !matches!(tier, RuleSeverity::Must | RuleSeverity::Should) {
             if let Some(tally) = &mut self.analyze_tally {
                 tally.record_step_asking_nothing();
@@ -544,15 +549,21 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             self.emit_progress(message.into(), step, None)?;
             return Ok(None);
         }
-        if asked.is_empty() {
-            self.emit_progress(
+        let label = tier.as_str().to_uppercase();
+        if reused > 0 {
+            let message = if asked.is_empty() {
                 format!(
-                    "no {}-tier rule loaded to assess",
-                    tier.as_str().to_uppercase()
-                ),
-                step,
-                None,
-            )?;
+                    "every {label}-tier rule has a current verdict in analysis.md; reused {reused}, asked none"
+                )
+            } else {
+                format!(
+                    "reused {reused} current {label}-tier verdict(s) from analysis.md; asking about {}",
+                    asked.len()
+                )
+            };
+            self.emit_progress(message, step.clone(), None)?;
+        } else if asked.is_empty() {
+            self.emit_progress(format!("no {label}-tier rule loaded to assess"), step, None)?;
             return Ok(None);
         }
         for rule in asked {
@@ -572,11 +583,51 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 Err(outcome) => return Ok(Some(outcome)),
             };
             if let Some(tally) = &mut self.analyze_tally {
-                tally.record_assessment(asked_tier, &response);
+                tally.record_assessment(&rule.id, asked_tier, &response);
             }
             self.accept_response(number, ASSESS_SPEC_QUALITY, response)?;
         }
         Ok(None)
+    }
+
+    /// Split `in_tier`, the loaded rules of `tier`, into those to ask about
+    /// and the number whose stored verdict is current. Each current finding
+    /// is counted in the tally as the finding it is; a rule the walk has no
+    /// standing for is asked about.
+    fn split_reused(
+        &mut self,
+        in_tier: Vec<AssessSpecQualityRule>,
+        tier: RuleSeverity,
+    ) -> (Vec<AssessSpecQualityRule>, usize) {
+        let Some(standing) = self
+            .rules
+            .as_ref()
+            .and_then(|rules| rules.standing.as_ref())
+        else {
+            return (in_tier, 0);
+        };
+        let total = in_tier.len();
+        let asked: Vec<AssessSpecQualityRule> = in_tier
+            .into_iter()
+            .filter(|rule| {
+                standing
+                    .currency(&rule.id)
+                    .is_none_or(|currency| *currency == Currency::Stale)
+            })
+            .collect();
+        let reused_findings = standing
+            .reusable()
+            .filter(|(rule, verdict)| {
+                rule.tier == tier && matches!(verdict, RuleVerdict::Finding { .. })
+            })
+            .count();
+        if let Some(tally) = &mut self.analyze_tally {
+            for _ in 0..reused_findings {
+                tally.record_reused(tier);
+            }
+        }
+        let reused = total - asked.len();
+        (asked, reused)
     }
 
     /// `/clarify` step 6: one `askClarifyQuestion` round trip per open
@@ -2232,6 +2283,240 @@ mod tests {
         );
         assert!(
             analysis.contains("  rule-file-unreadable: 1\n"),
+            "{analysis}"
+        );
+    }
+
+    /// Two MUST-tier rules and one SHOULD-tier rule, none carrying both
+    /// keywords, so a finding's tier is its rule's.
+    const THREE_RULES: &str = "### TS-MUST-001\n\n> Specs MUST name their constants.\n\n**Verification:** Look for constants.\n\n\
+        ### TS-MUST-002\n\n> Specs MUST name an owner.\n\n**Verification:** Look for an owner.\n\n\
+        ### TS-SHOULD-001\n\n> Specs SHOULD name a cursor.\n\n**Verification:** Look for a cursor.\n";
+
+    const QUALITY: &str = "framework/rules/quality-cross.md";
+
+    fn both_steps() -> Procedure {
+        analyze_procedure(vec![assess_tier(11, "MUST"), assess_tier(12, "SHOULD")])
+    }
+
+    fn analysis_text(repo: &Path) -> String {
+        std::fs::read_to_string(repo.join("specs/001-x/analysis.md")).unwrap()
+    }
+
+    /// The record's rule fields, as text: what two runs must agree on.
+    fn rule_lines(analysis: &str) -> Vec<&str> {
+        let front = analysis.split("\n---\n").next().unwrap_or_default();
+        let mut keep = false;
+        front
+            .lines()
+            .filter(|line| {
+                if !line.starts_with(' ') && !line.starts_with('-') {
+                    keep = line.starts_with("rule-") || line.starts_with("unjudged-");
+                }
+                keep
+            })
+            .collect()
+    }
+
+    /// Spec 082, AC1 under `ductus exec`: a second walk over an unchanged spec
+    /// sends no request for a rule whose stored verdict is current, says it
+    /// reused them, and records the verdicts and counts the first did.
+    #[test]
+    fn a_second_exec_walk_over_an_unchanged_spec_asks_about_no_rule() {
+        let repo = analyze_repo(Some(THREE_RULES));
+        let responses = [
+            llm_response(1, &failed_with("must", "TS-MUST-001")),
+            llm_response(2, "{\"passed\":true}"),
+            llm_response(3, "{\"passed\":true,\"addressed-by\":\"spec.md#x\"}"),
+        ]
+        .concat();
+        let (first, envelopes) =
+            walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), &responses);
+        assert_eq!(first, WalkOutcome::Complete);
+        assert_eq!(requests(&envelopes).len(), 3);
+        let before = analysis_text(repo.path());
+        assert!(before.contains("\nblocking-findings: 1\n"), "{before}");
+        assert!(
+            before.contains("TS-MUST-001: {verdict: finding"),
+            "{before}"
+        );
+        assert!(
+            before.contains("TS-SHOULD-001: {verdict: addressed, cite: \"spec.md#x\"}"),
+            "{before}"
+        );
+
+        let (second, envelopes) = walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), "");
+        assert_eq!(second, WalkOutcome::Complete);
+        assert_eq!(requests(&envelopes).len(), 0, "{envelopes:?}");
+        assert!(
+            progress_at(&envelopes, "11")
+                .iter()
+                .any(|m| m.starts_with("every MUST-tier rule has a current verdict")),
+            "{envelopes:?}"
+        );
+        assert!(
+            progress_at(&envelopes, "12")
+                .iter()
+                .any(|m| m.starts_with("every SHOULD-tier rule has a current verdict")),
+            "{envelopes:?}"
+        );
+        let after = analysis_text(repo.path());
+        assert!(
+            rule_lines(&before).len() >= 5,
+            "the comparison holds the digest and both verdicts: {before}"
+        );
+        assert_eq!(rule_lines(&before), rule_lines(&after));
+        assert!(after.contains("\nblocking-findings: 1\n"), "{after}");
+        assert!(!after.contains("rule-assessments-not-checked"), "{after}");
+    }
+
+    /// Spec 082, AC2 under `ductus exec`: a walk whose steps ask about fewer
+    /// rules than were loaded records each rule left unjudged and a non-zero
+    /// `rule-assessments-not-checked`, and one that asks about every loaded
+    /// rule records neither.
+    #[test]
+    fn an_exec_walk_that_asks_about_fewer_rules_than_were_loaded_names_each_unjudged() {
+        let repo = analyze_repo(Some(THREE_RULES));
+        let only_must = analyze_procedure(vec![assess_tier(11, "MUST")]);
+        let responses = [
+            llm_response(1, "{\"passed\":true}"),
+            llm_response(2, "{\"passed\":true}"),
+        ]
+        .concat();
+        let (outcome, _) = walk_analyze(&only_must, repo.path(), Some(&[QUALITY]), &responses);
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let analysis = analysis_text(repo.path());
+        assert!(
+            analysis.contains("unjudged-rules:\n  - TS-SHOULD-001\n"),
+            "{analysis}"
+        );
+        assert!(
+            analysis.contains("  rule-assessments-not-checked: 1\n"),
+            "{analysis}"
+        );
+
+        let responses = [responses, llm_response(3, "{\"passed\":true}")].concat();
+        let (outcome, _) = walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), &responses);
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let analysis = analysis_text(repo.path());
+        assert!(!analysis.contains("unjudged-rules"), "{analysis}");
+        assert!(
+            !analysis.contains("rule-assessments-not-checked"),
+            "{analysis}"
+        );
+    }
+
+    /// Spec 082, AC5 through the walker: a rule edited between two walks over
+    /// an unchanged spec is asked about again, and its file's other rules are
+    /// not asked about a second time because of a rationale edit.
+    #[test]
+    fn an_exec_walk_asks_again_about_a_rule_that_was_edited() {
+        let repo = analyze_repo(Some(THREE_RULES));
+        let pass = |n| llm_response(n, "{\"passed\":true}");
+        let (_, _) = walk_analyze(
+            &both_steps(),
+            repo.path(),
+            Some(&[QUALITY]),
+            &[pass(1), pass(2), pass(3)].concat(),
+        );
+        let file = repo.path().join(QUALITY);
+        std::fs::write(&file, format!("{THREE_RULES}\n**Rationale:** Prose.\n")).unwrap();
+        let (_, envelopes) = walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), "");
+        assert_eq!(
+            requests(&envelopes).len(),
+            0,
+            "a rationale edit is no rule edit"
+        );
+
+        std::fs::write(
+            &file,
+            THREE_RULES.replace("Look for an owner.", "Look for owners."),
+        )
+        .unwrap();
+        let (outcome, envelopes) = walk_analyze(
+            &both_steps(),
+            repo.path(),
+            Some(&[QUALITY]),
+            &[pass(1), pass(2), pass(3)].concat(),
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+        assert_eq!(
+            requests(&envelopes).len(),
+            3,
+            "the edited file's rules are judged again"
+        );
+    }
+
+    /// A step with some current verdicts and some stale ones reuses the first
+    /// and asks about the others, saying how many of each.
+    #[test]
+    fn an_exec_step_reuses_the_current_verdicts_and_asks_about_the_rest() {
+        let repo = analyze_repo(None);
+        let rules = repo.path().join("framework/rules");
+        std::fs::create_dir_all(&rules).unwrap();
+        let (a, b) = (rules.join("a-cross.md"), rules.join("b-cross.md"));
+        let one =
+            "### TS-MUST-001\n\n> Specs MUST name their constants.\n\n**Verification:** Look.\n";
+        let two = "### TS-MUST-002\n\n> Specs MUST name an owner.\n\n**Verification:** Look.\n";
+        std::fs::write(&a, one).unwrap();
+        std::fs::write(&b, two).unwrap();
+        let files = ["framework/rules/a-cross.md", "framework/rules/b-cross.md"];
+        let must_only = analyze_procedure(vec![assess_tier(11, "MUST")]);
+        let pass = |n| llm_response(n, "{\"passed\":true}");
+        let (outcome, _) = walk_analyze(
+            &must_only,
+            repo.path(),
+            Some(&files),
+            &[pass(1), pass(2)].concat(),
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+
+        std::fs::write(&b, two.replace("Look.", "Look closely.")).unwrap();
+        let (outcome, envelopes) = walk_analyze(&must_only, repo.path(), Some(&files), &pass(1));
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let asked: Vec<&str> = requests(&envelopes)
+            .iter()
+            .map(|r| r["request"]["rule"]["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(asked, ["TS-MUST-002"]);
+        assert!(
+            progress_at(&envelopes, "11")
+                .iter()
+                .any(|m| m.starts_with("reused 1 current MUST-tier verdict(s)")
+                    && m.ends_with("asking about 1")),
+            "{envelopes:?}"
+        );
+    }
+
+    /// Spec 082, AC6 through the walker: a pass citing a heading the spec does
+    /// not hold is recorded among the rules left unjudged, never as
+    /// `addressed`, while one citing a heading it holds is stored.
+    #[test]
+    fn an_exec_pass_citing_a_missing_heading_is_recorded_unjudged() {
+        let repo = analyze_repo(Some(THREE_RULES));
+        let responses = [
+            llm_response(1, "{\"passed\":true,\"addressed-by\":\"spec.md#x\"}"),
+            llm_response(
+                2,
+                "{\"passed\":true,\"addressed-by\":\"spec.md#No such heading\"}",
+            ),
+            llm_response(3, "{\"passed\":true,\"addressed-by\":\"tasks.md#x\"}"),
+        ]
+        .concat();
+        let (outcome, _) = walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), &responses);
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let analysis = analysis_text(repo.path());
+        assert!(
+            analysis.contains("TS-MUST-001: {verdict: addressed"),
+            "{analysis}"
+        );
+        assert!(!analysis.contains("TS-MUST-002: {"), "{analysis}");
+        assert!(
+            analysis.contains("unjudged-rules:\n  - TS-MUST-002\n  - TS-SHOULD-001\n"),
+            "{analysis}"
+        );
+        assert!(
+            analysis.contains("  rule-assessments-not-checked: 2\n"),
             "{analysis}"
         );
     }

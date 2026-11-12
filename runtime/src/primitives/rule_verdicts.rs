@@ -27,9 +27,6 @@
 //! run, and treating it as unjudged would name them all in
 //! `rule-assessments-not-checked`.
 
-// Wired in by the callers of spec 082's tasks 4 to 6.
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::path::{Component, Path};
 

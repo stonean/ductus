@@ -39,6 +39,7 @@ use crate::host::Host;
 use crate::primitives::bounded_lists::counted_lists;
 use crate::primitives::read_tasks;
 use crate::primitives::rule_sections::parse_rule_sections;
+use crate::primitives::rule_verdicts;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
     FoldSourceScenario, LoadedReviewRuleFile, PerformReviewRequest, PlanRelevantFile,
@@ -1142,6 +1143,11 @@ pub(crate) struct LoadedRules {
     /// order: the files whose rules the walk assessed, and so the only ones
     /// a load-conditioned yield may name as loaded.
     pub(crate) files: Vec<String>,
+    /// Where each assessable rule stands against the feature's stored
+    /// verdicts (spec 082), so the walk asks only about those with no current
+    /// one; `None` when the walk names no feature that exists, which judges
+    /// every rule.
+    pub(crate) standing: Option<rule_verdicts::Standing>,
 }
 
 impl LoadedRules {
@@ -1158,6 +1164,7 @@ impl LoadedRules {
 /// keyword, never the asking step's ([`RuleSection::tier`]).
 pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRules {
     let mut loaded = LoadedRules::default();
+    let mut digested: Vec<rule_verdicts::LoadedRuleFile> = Vec::new();
     for rel in string_array(context, "rule-files") {
         let Some(rule_file) = read_repo_file(repo, &rel) else {
             loaded.unreadable_files += 1;
@@ -1165,6 +1172,7 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
         };
         if let Some(name) = Path::new(&rel).file_name().and_then(|name| name.to_str()) {
             loaded.files.push(name.to_string());
+            digested.push(rule_verdicts::LoadedRuleFile::read(name, &rule_file));
         }
         for section in parse_rule_sections(&rule_file) {
             let tier = section.tier();
@@ -1181,7 +1189,19 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
             }
         }
     }
+    loaded.standing = feature_dir(context, repo)
+        .map(|feature_dir| rule_verdicts::standing(&feature_dir, &digested));
     loaded
+}
+
+/// The directory of the feature the walk targets, when it names one that
+/// exists under the project's spec root.
+fn feature_dir(context: &Map<String, Value>, repo: &Path) -> Option<std::path::PathBuf> {
+    let feature = context.get("feature").and_then(Value::as_str)?;
+    let root = crate::schema::paths::Paths::load(repo).ok()?.specs_root;
+    crate::primitives::validate_feature_argument(repo, &root, feature).ok()?;
+    let dir = repo.join(&root).join(feature);
+    dir.is_dir().then_some(dir)
 }
 
 fn load_current_task(feature: &str, context: &Map<String, Value>, repo: &Path) -> WriteCodeTask {

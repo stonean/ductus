@@ -20,10 +20,11 @@
 //! targets section gives it. The procedure is the authority: a step whose
 //! tiering changes changes here in the same commit.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
+use crate::schema::primitives::RuleVerdict;
 use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
 
@@ -53,6 +54,11 @@ pub(crate) struct AnalyzeTally {
     /// runs, the targets its detection steps report they could not reach, and
     /// the loaded rules steps 11 and 12 did not ask the host about.
     unexamined: BTreeMap<String, u32>,
+    /// The rules the walk asked the host about, fired or not (spec 082).
+    judged: BTreeSet<String>,
+    /// The verdict of each asked rule that fired: a finding, or a pass the
+    /// host cited as `addressed-by`.
+    verdicts: BTreeMap<String, RuleVerdict>,
 }
 
 impl AnalyzeTally {
@@ -67,6 +73,8 @@ impl AnalyzeTally {
                 .iter()
                 .map(|reason| ((*reason).to_string(), 1))
                 .collect(),
+            judged: BTreeSet::new(),
+            verdicts: BTreeMap::new(),
         }
     }
 
@@ -212,14 +220,63 @@ impl AnalyzeTally {
     /// tier comes first so a rule carrying both keywords, asked as MUST-tier,
     /// can still fail advisory on its SHOULD clause alone. It is read through
     /// [`RuleSeverity`], case-insensitively, as validation accepts it.
-    pub(crate) fn record_assessment(&mut self, asked: RuleSeverity, response: &Value) {
+    ///
+    /// The verdict is kept for `write-analysis` (spec 082): a pass carrying
+    /// `addressed-by` is `addressed` with that citation, a plain pass is a rule
+    /// that did not fire and leaves no verdict, and a failure is a `finding`
+    /// at the section its finding names.
+    pub(crate) fn record_assessment(&mut self, rule: &str, asked: RuleSeverity, response: &Value) {
+        self.judged.insert(rule.to_string());
         if response.get("passed") == Some(&Value::Bool(true)) {
+            let cited = response
+                .get("addressed-by")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|cite| !cite.is_empty());
+            if let Some(cite) = cited {
+                self.verdicts.insert(
+                    rule.to_string(),
+                    RuleVerdict::Addressed {
+                        cite: cite.to_string(),
+                    },
+                );
+            }
             return;
         }
+        let section = response
+            .pointer("/finding/location/section")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|section| !section.is_empty());
+        let message = response
+            .pointer("/finding/message")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|message| !message.is_empty());
+        self.verdicts.insert(
+            rule.to_string(),
+            RuleVerdict::Finding {
+                at: section.map_or_else(|| "spec.md".to_string(), |s| format!("spec.md#{s}")),
+                message: message
+                    .unwrap_or("the host reported the rule failed and gave no finding")
+                    .to_string(),
+            },
+        );
         let tier = match rule_tier(response, "/finding/severity") {
             Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) => tier,
             _ => asked,
         };
+        match tier {
+            RuleSeverity::Must => self.blocking += 1,
+            RuleSeverity::Should => self.advisory += 1,
+            RuleSeverity::Info | RuleSeverity::Unspecified => {}
+        }
+    }
+
+    /// Count one stored finding a step reused instead of asking, in its rule's
+    /// tier: the walk reports it as it would any finding, and `write-analysis`
+    /// carries it forward itself (spec 082).
+    pub(crate) fn record_reused(&mut self, tier: RuleSeverity) {
         match tier {
             RuleSeverity::Must => self.blocking += 1,
             RuleSeverity::Should => self.advisory += 1,
@@ -260,6 +317,14 @@ impl AnalyzeTally {
                     .map(|(reason, count)| serde_json::json!([reason, count]))
                     .collect(),
             ),
+        );
+        bindings.insert(
+            "rule-verdicts".into(),
+            serde_json::to_value(&self.verdicts).unwrap_or(Value::Null),
+        );
+        bindings.insert(
+            "judged-rules".into(),
+            Value::Array(self.judged.iter().cloned().map(Value::String).collect()),
         );
     }
 
@@ -401,14 +466,20 @@ mod tests {
             &context,
         );
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Must,
             &json!({ "passed": false, "finding": { "severity": "must" } }),
         );
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Should,
             &json!({ "passed": false, "finding": { "severity": "should" } }),
         );
-        tally.record_assessment(RuleSeverity::Must, &json!({ "passed": true }));
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Must,
+            &json!({ "passed": true }),
+        );
 
         let bindings = bound(&tally);
         assert_eq!(bindings["hard-fail"], 1);
@@ -672,17 +743,19 @@ mod tests {
     fn an_assessment_counts_whatever_its_case_and_with_or_without_a_finding() {
         let mut tally = AnalyzeTally::new();
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Should,
             &json!({ "passed": false, "finding": { "severity": "MUST" } }),
         );
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Must,
             &json!({ "passed": false, "finding": { "severity": "Should" } }),
         );
         let failed = json!({ "passed": false });
-        tally.record_assessment(RuleSeverity::Must, &failed);
-        tally.record_assessment(RuleSeverity::Should, &failed);
-        tally.record_assessment(RuleSeverity::Info, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, &failed);
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 2);
         assert_eq!(bindings["advisory"], 2);
@@ -696,10 +769,12 @@ mod tests {
     fn a_failure_whose_finding_names_no_analyze_tier_counts_in_the_asked_tier() {
         let mut tally = AnalyzeTally::new();
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Must,
             &json!({ "passed": false, "finding": { "severity": "info" } }),
         );
         tally.record_assessment(
+            "TS-RULE-001",
             RuleSeverity::Should,
             &json!({ "passed": false, "finding": { "severity": "" } }),
         );
@@ -714,8 +789,16 @@ mod tests {
     #[test]
     fn a_passed_assessment_counts_nowhere() {
         let mut tally = AnalyzeTally::new();
-        tally.record_assessment(RuleSeverity::Must, &json!({ "passed": true }));
-        tally.record_assessment(RuleSeverity::Should, &json!({ "passed": true }));
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Must,
+            &json!({ "passed": true }),
+        );
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Should,
+            &json!({ "passed": true }),
+        );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 0);
         assert_eq!(bindings["advisory"], 0);
@@ -765,5 +848,75 @@ mod tests {
                 ["rule-assessments-not-checked", 2]
             ])
         );
+    }
+
+    /// Spec 082: each asked rule is judged, a pass citing `addressed-by` is an
+    /// `addressed` verdict, a plain pass leaves none, and a failure is a
+    /// `finding` at its section with its message; the tally binds both.
+    #[test]
+    fn each_assessment_leaves_its_verdict_and_judges_its_rule() {
+        let mut tally = AnalyzeTally::new();
+        tally.record_assessment("TS-A-001", RuleSeverity::Must, &json!({ "passed": true }));
+        tally.record_assessment(
+            "TS-A-002",
+            RuleSeverity::Must,
+            &json!({ "passed": true, "addressed-by": " plan.md#Observability " }),
+        );
+        tally.record_assessment(
+            "TS-A-003",
+            RuleSeverity::Must,
+            &json!({ "passed": true, "addressed-by": "  " }),
+        );
+        tally.record_assessment(
+            "TS-A-004",
+            RuleSeverity::Must,
+            &json!({ "passed": false, "finding": {
+                "severity": "must", "rule-id": "TS-A-004",
+                "location": { "section": "Goal", "line": 3 }, "message": "no owner" } }),
+        );
+        tally.record_assessment(
+            "TS-A-005",
+            RuleSeverity::Should,
+            &json!({ "passed": false }),
+        );
+        let bindings = bound(&tally);
+        assert_eq!(
+            bindings["judged-rules"],
+            json!(["TS-A-001", "TS-A-002", "TS-A-003", "TS-A-004", "TS-A-005"])
+        );
+        assert_eq!(
+            bindings["rule-verdicts"],
+            json!({
+                "TS-A-002": { "verdict": "addressed", "cite": "plan.md#Observability" },
+                "TS-A-004": { "verdict": "finding", "at": "spec.md#Goal", "message": "no owner" },
+                "TS-A-005": { "verdict": "finding", "at": "spec.md",
+                    "message": "the host reported the rule failed and gave no finding" },
+            })
+        );
+        assert_eq!(bindings["blocking-findings"], 1);
+        assert_eq!(bindings["advisory"], 1);
+    }
+
+    /// A walk that asked about no rule still binds empty verdicts, so nothing
+    /// the context holds can stand in for what the walk judged.
+    #[test]
+    fn a_walk_that_judged_nothing_binds_empty_verdicts() {
+        let bindings = bound(&AnalyzeTally::new());
+        assert_eq!(bindings["rule-verdicts"], json!({}));
+        assert_eq!(bindings["judged-rules"], json!([]));
+    }
+
+    /// A reused finding counts in its rule's tier, and no other kind of
+    /// reuse counts.
+    #[test]
+    fn a_reused_finding_counts_in_its_tier() {
+        let mut tally = AnalyzeTally::new();
+        tally.record_reused(RuleSeverity::Must);
+        tally.record_reused(RuleSeverity::Should);
+        tally.record_reused(RuleSeverity::Should);
+        tally.record_reused(RuleSeverity::Info);
+        let bindings = bound(&tally);
+        assert_eq!(bindings["blocking-findings"], 1);
+        assert_eq!(bindings["advisory"], 2);
     }
 }

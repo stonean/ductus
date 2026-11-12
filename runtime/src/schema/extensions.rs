@@ -99,6 +99,14 @@ pub struct AssessSpecQualityResponse {
     /// The finding when `passed` is false; `None` when `passed` is true.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub finding: Option<AssessSpecQualityFinding>,
+    /// With `passed: true`, where the spec already addresses the rule, as
+    /// `<path>#<Heading>`: a design subject of the feature and a heading it
+    /// holds (spec 082). The verdict is then `addressed`, which `write-analysis`
+    /// stores only if the citation resolves; without it a `passed: true`
+    /// is a rule that did not fire. Additive, so a host that sends none
+    /// records every pass as not fired.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub addressed_by: Option<String>,
 }
 
 // -- writeCode ---------------------------------------------------------------
@@ -941,6 +949,7 @@ mod tests {
                 },
                 message: "criterion 8 is not testable".into(),
             }),
+            addressed_by: None,
         };
         let r_value: serde_json::Value = serde_json::to_value(&response).unwrap();
         assert_eq!(r_value["finding"]["rule-id"], "QUAL-CLARITY-001");
@@ -949,10 +958,20 @@ mod tests {
         let passed = AssessSpecQualityResponse {
             passed: true,
             finding: None,
+            addressed_by: None,
         };
         let p_value: serde_json::Value = serde_json::to_value(&passed).unwrap();
         assert!(!p_value.as_object().unwrap().contains_key("finding"));
+        assert!(!p_value.as_object().unwrap().contains_key("addressed-by"));
         assert_eq!(round_trip(&passed), passed);
+
+        // `addressed-by` is additive: a response without it parses, and one
+        // with it carries the citation (spec 082).
+        let cited: AssessSpecQualityResponse =
+            serde_json::from_str(r#"{"passed":true,"addressed-by":"plan.md#Observability"}"#)
+                .unwrap();
+        assert_eq!(cited.addressed_by.as_deref(), Some("plan.md#Observability"));
+        assert_eq!(round_trip(&cited), cited);
     }
 
     #[test]
