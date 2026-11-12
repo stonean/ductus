@@ -135,7 +135,7 @@ enum Command {
     #[command(about = descriptions::summary(descriptions::COMPUTE_REVIEW_SCOPE), long_about = descriptions::COMPUTE_REVIEW_SCOPE)]
     ComputeReviewScope(ComputeReviewScopeArgs),
     #[command(about = descriptions::summary(descriptions::WRITE_REVIEW), long_about = descriptions::WRITE_REVIEW)]
-    WriteReview(WriteReviewArgs),
+    WriteReview(Box<WriteReviewArgs>),
     #[command(about = descriptions::summary(descriptions::WRITE_ANALYSIS), long_about = descriptions::WRITE_ANALYSIS)]
     WriteAnalysis(WriteAnalysisArgs),
     #[command(about = descriptions::summary(descriptions::MARK_TASK), long_about = descriptions::MARK_TASK)]
@@ -323,6 +323,101 @@ fn hydrate_enforce_manifest(args: &mut EnforceManifestArgs) -> Result<(), String
         args.pinned = load_json_arg("pinned-json", &path)?;
     }
     Ok(())
+}
+
+/// Fill `field` from the file `flag` names, when one was given. The field keeps
+/// its value otherwise, so an absent flag is the absent MCP argument.
+fn hydrate_field<T: serde::de::DeserializeOwned>(
+    flag: &str,
+    path: Option<&String>,
+    field: &mut T,
+) -> Result<(), String> {
+    if let Some(path) = path {
+        *field = load_json_arg(flag, path)?;
+    }
+    Ok(())
+}
+
+/// Fill `process-waivers`' structured argument from its `--*-json` path.
+fn hydrate_process_waivers(args: &mut ProcessWaiversArgs) -> Result<(), String> {
+    hydrate_field("fired-json", args.fired_json.as_ref(), &mut args.fired)
+}
+
+/// Fill `process-decisions`' structured argument from its `--*-json` path.
+fn hydrate_process_decisions(args: &mut ProcessDecisionsArgs) -> Result<(), String> {
+    hydrate_field("fired-json", args.fired_json.as_ref(), &mut args.fired)
+}
+
+/// Fill `write-review`'s structured arguments from their `--*-json` paths.
+fn hydrate_write_review(args: &mut WriteReviewArgs) -> Result<(), String> {
+    hydrate_field(
+        "findings-json",
+        args.findings_json.as_ref(),
+        &mut args.findings,
+    )?;
+    hydrate_field(
+        "applied-waivers-json",
+        args.applied_waivers_json.as_ref(),
+        &mut args.applied_waivers,
+    )?;
+    hydrate_field(
+        "expired-waivers-json",
+        args.expired_waivers_json.as_ref(),
+        &mut args.expired_waivers,
+    )?;
+    hydrate_field(
+        "new-waivers-json",
+        args.new_waivers_json.as_ref(),
+        &mut args.new_waivers,
+    )?;
+    hydrate_field(
+        "observations-json",
+        args.observations_json.as_ref(),
+        &mut args.observations,
+    )?;
+    hydrate_field(
+        "expired-decisions-json",
+        args.expired_decisions_json.as_ref(),
+        &mut args.expired_decisions,
+    )?;
+    hydrate_field(
+        "decided-by-json",
+        args.decided_by_json.as_ref(),
+        &mut args.decided_by,
+    )?;
+    hydrate_field(
+        "fix-rounds-json",
+        args.fix_rounds_json.as_ref(),
+        &mut args.fix_rounds,
+    )
+}
+
+/// Fill `write-analysis`' structured arguments from their `--*-json` paths.
+fn hydrate_write_analysis(args: &mut WriteAnalysisArgs) -> Result<(), String> {
+    hydrate_field(
+        "findings-json",
+        args.findings_json.as_ref(),
+        &mut args.findings,
+    )?;
+    hydrate_field(
+        "expired-decisions-json",
+        args.expired_decisions_json.as_ref(),
+        &mut args.expired_decisions,
+    )?;
+    hydrate_field(
+        "decided-by-json",
+        args.decided_by_json.as_ref(),
+        &mut args.decided_by,
+    )
+}
+
+/// Fill `prune-project`'s structured argument from its `--*-json` path.
+fn hydrate_prune_project(args: &mut PruneProjectArgs) -> Result<(), String> {
+    hydrate_field(
+        "replace-json",
+        args.replace_json.as_ref(),
+        &mut args.replace,
+    )
 }
 
 fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
@@ -945,17 +1040,25 @@ fn main() -> ExitCode {
         Command::DiscoverRuleFiles(args) => {
             emit_result(primitives::discover_rule_files::run(&args, &repo))
         }
-        Command::ProcessWaivers(args) => {
-            emit_result(primitives::process_waivers::run(&args, &repo))
-        }
-        Command::ProcessDecisions(args) => {
-            emit_result(primitives::process_decisions::run(&args, &repo))
-        }
+        Command::ProcessWaivers(mut args) => match hydrate_process_waivers(&mut args) {
+            Ok(()) => emit_result(primitives::process_waivers::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
+        Command::ProcessDecisions(mut args) => match hydrate_process_decisions(&mut args) {
+            Ok(()) => emit_result(primitives::process_decisions::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
         Command::ComputeReviewScope(args) => {
             emit_result(primitives::compute_review_scope::run(&args, &repo))
         }
-        Command::WriteReview(args) => emit_result(primitives::write_review::run(&args, &repo)),
-        Command::WriteAnalysis(args) => emit_result(primitives::write_analysis::run(&args, &repo)),
+        Command::WriteReview(mut args) => match hydrate_write_review(&mut args) {
+            Ok(()) => emit_result(primitives::write_review::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
+        Command::WriteAnalysis(mut args) => match hydrate_write_analysis(&mut args) {
+            Ok(()) => emit_result(primitives::write_analysis::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
         Command::MarkTask(args) => emit_result(primitives::mark_task::run(&args, &repo)),
         Command::MarkCriterion(args) => emit_result(primitives::mark_criterion::run(&args, &repo)),
         Command::SetStatus(args) => emit_result(primitives::set_status::run(&args, &repo)),
@@ -1108,7 +1211,10 @@ fn main() -> ExitCode {
         }
         Command::PruneTasks(args) => emit_result(primitives::prune_tasks::run(&args, &repo)),
         Command::PrunePlan(args) => emit_result(primitives::prune_plan::run(&args, &repo)),
-        Command::PruneProject(args) => emit_result(primitives::prune_project::run(&args, &repo)),
+        Command::PruneProject(mut args) => match hydrate_prune_project(&mut args) {
+            Ok(()) => emit_result(primitives::prune_project::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
         Command::Dashboard(args) => emit_result(primitives::dashboard::run(&args, &repo)),
         Command::RenderStatus(args) => emit_result(primitives::render_status::run(&args, &repo)),
         Command::RenderHelp(args) => emit_result(primitives::render_help::run(&args, &repo)),
@@ -1469,5 +1575,111 @@ mod tests {
              in the registry, missing a `Command` variant + dispatch arm: {missing:?}\n  \
              on the CLI, missing a registry entry: {phantom:?}"
         );
+    }
+
+    /// Every argument a served primitive's MCP tool accepts has a CLI form: a
+    /// flag of the same name, or its own `--{name}-json FILE` for a structured
+    /// one (spec 022, scenario `every-mcp-argument-has-a-cli-form`). The MCP
+    /// side is read from the tool's input schema, which is the allowlist the
+    /// server enforces, so an argument added to a primitive's `Args` struct
+    /// without a clap field makes this fail naming the primitive and argument.
+    /// Arguments are matched by clap id, which is the field name, so a flag
+    /// renamed with `long = ...` still counts.
+    #[test]
+    fn every_mcp_argument_has_a_cli_form() {
+        use ductus::mcp::server::GovRuntimeServer;
+        use rmcp::ServiceExt;
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let tools = runtime.block_on(async {
+            let (server_side, client_side) = tokio::io::duplex(64 * 1024);
+            let server = GovRuntimeServer::new(std::env::temp_dir());
+            tokio::spawn(async move {
+                if let Ok(service) = server.serve(server_side).await {
+                    let _ = service.waiting().await;
+                }
+            });
+            let client = ().serve(client_side).await.unwrap();
+            client.list_tools(Option::default()).await.unwrap().tools
+        });
+        assert!(!tools.is_empty(), "the MCP server listed no tools");
+
+        let command = Cli::command();
+        let mut uncovered = Vec::new();
+        let mut examined = 0_usize;
+        for tool in &tools {
+            let subcommand = command
+                .find_subcommand(tool.name.as_ref())
+                .unwrap_or_else(|| panic!("no CLI subcommand for tool `{}`", tool.name));
+            let ids: BTreeSet<&str> = subcommand
+                .get_arguments()
+                .map(|arg| arg.get_id().as_str())
+                .collect();
+            let properties = tool
+                .input_schema
+                .get("properties")
+                .and_then(serde_json::Value::as_object);
+            for name in properties.into_iter().flat_map(serde_json::Map::keys) {
+                examined += 1;
+                let field = name.replace('-', "_");
+                if !ids.contains(field.as_str()) && !ids.contains(format!("{field}_json").as_str())
+                {
+                    uncovered.push(format!("{}: {name}", tool.name));
+                }
+            }
+        }
+        assert!(examined > 0, "no MCP argument was examined");
+        assert!(
+            uncovered.is_empty(),
+            "MCP arguments with no CLI flag and no `--<name>-json` flag: {uncovered:?}"
+        );
+    }
+
+    /// The `--{name}-json` flags read their file as the MCP argument: a
+    /// structured argument supplied through one reaches the primitive, and a
+    /// file outside a staging directory is refused naming the path.
+    #[test]
+    fn a_json_flag_fills_its_argument_and_is_staging_bound() {
+        use ductus::schema::primitives::{ProcessWaiversArgs, WriteReviewArgs};
+
+        let dir = tempfile::tempdir().unwrap();
+        let staged = dir.path().join("fired.json");
+        std::fs::write(&staged, r#"[{"rule":"R-1","file":"a.rs"}]"#).unwrap();
+        let mut args = ProcessWaiversArgs {
+            fired_json: Some(staged.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        super::hydrate_process_waivers(&mut args).unwrap();
+        assert_eq!(args.fired.len(), 1);
+        assert_eq!(args.fired[0].rule, "R-1");
+
+        // Malformed JSON for the field is an error naming the flag, never an empty default.
+        std::fs::write(&staged, r#"{"rule":"R-1"}"#).unwrap();
+        let err = super::hydrate_process_waivers(&mut args).unwrap_err();
+        assert!(err.starts_with("--fired-json: "), "{err}");
+
+        // A file outside a staging directory is refused before it is read.
+        let outside = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        let mut refused = ProcessWaiversArgs {
+            fired_json: Some(outside.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let err = super::hydrate_process_waivers(&mut refused).unwrap_err();
+        assert!(err.starts_with("--fired-json: "), "{err}");
+
+        // An explicit empty list is distinct from the flag being absent.
+        let empty = dir.path().join("rounds.json");
+        std::fs::write(&empty, "[]").unwrap();
+        let mut review = WriteReviewArgs {
+            fix_rounds_json: Some(empty.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        super::hydrate_write_review(&mut review).unwrap();
+        assert_eq!(review.fix_rounds, Some(vec![]));
+        let mut absent = WriteReviewArgs::default();
+        super::hydrate_write_review(&mut absent).unwrap();
+        assert_eq!(absent.fix_rounds, None);
     }
 }

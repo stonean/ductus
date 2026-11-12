@@ -1132,6 +1132,7 @@ mod tests {
             findings: vec![],
             expired_decisions: vec![],
             decided_by: None,
+            ..WriteAnalysisArgs::default()
         }
     }
 
@@ -1845,6 +1846,7 @@ mod tests {
                 fired: keys.iter().map(|k| (*k).to_string()).collect(),
                 restricted: false,
                 since: None,
+                fired_json: None,
             },
             tmp.path(),
         )

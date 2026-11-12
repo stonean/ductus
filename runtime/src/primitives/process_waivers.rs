@@ -301,6 +301,7 @@ mod tests {
             fired: fired(fired_pairs),
             skipped_passes: Vec::new(),
             since: None,
+            ..ProcessWaiversArgs::default()
         }
     }
 
@@ -314,6 +315,7 @@ mod tests {
             fired: fired(fired_pairs),
             skipped_passes: skipped.iter().map(|s| (*s).to_string()).collect(),
             since: None,
+            ..ProcessWaiversArgs::default()
         }
     }
 

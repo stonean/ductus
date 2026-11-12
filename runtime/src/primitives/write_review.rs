@@ -2742,6 +2742,7 @@ mod tests {
             examined: None,
             fix_rounds: None,
             loop_open: false,
+            ..WriteReviewArgs::default()
         }
     }
 

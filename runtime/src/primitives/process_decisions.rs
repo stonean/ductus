@@ -305,6 +305,7 @@ mod tests {
             fired: fired.iter().map(|k| (*k).to_string()).collect(),
             restricted,
             since: None,
+            fired_json: None,
         }
     }
 

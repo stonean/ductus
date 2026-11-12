@@ -711,10 +711,16 @@ pub struct ProcessWaiversArgs {
     #[arg(long)]
     pub feature: String,
     /// Currently-firing `(rule, file)` findings from the review passes.
-    /// Supplied via MCP/interpreter JSON; not a CLI flag.
+    /// On the CLI, `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<FiredFinding>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `fired` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub fired_json: Option<String>,
     /// Dimensions skipped this run (via `--security` / `--simplicity` /
     /// `--quality`). When non-empty, the run is dimension-restricted and
     /// lacks the full-review picture, so a non-firing waiver is **retained**
@@ -781,12 +787,17 @@ pub struct ProcessDecisionsArgs {
     /// This run's finding keys — for each finding, the stored key the host
     /// matched it to, or else its own key: `{family} — {message}` for analyze;
     /// for review, the observation's rendered line, or `rule {rule-id} at
-    /// {file}` for a MUST or SHOULD violation. MCP only, as
-    /// `process-waivers`' `fired` is: the keys come from the host's passes,
-    /// which the CLI surface has no way to run.
+    /// {file}` for a MUST or SHOULD violation. On the CLI,
+    /// `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<String>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `fired` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub fired_json: Option<String>,
     /// The run did not evaluate every source — a review with a pass that did
     /// not run, or an analysis that could not read a target it meant to
     /// examine (a skipped target in the *could not be read* class) or could
@@ -1427,10 +1438,16 @@ pub struct WriteReviewArgs {
     #[arg(long = "skipped-pass")]
     pub skipped_passes: Vec<String>,
     /// Pass findings as a single array (the content-ingestion convention).
-    /// Supplied via MCP/interpreter JSON; not a CLI flag.
+    /// On the CLI, `--findings-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub findings: Vec<ReviewFinding>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `findings` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub findings_json: Option<String>,
     /// Applied waivers from `process-waivers`; matching findings are excluded
     /// from the counts and listed under Waived findings. The `alias` reads
     /// `process-waivers`' `applied` result key directly, so the waiver set
@@ -1439,6 +1456,12 @@ pub struct WriteReviewArgs {
     #[serde(default, alias = "applied")]
     #[arg(skip)]
     pub applied_waivers: Vec<WaiverRef>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `applied-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub applied_waivers_json: Option<String>,
     /// Expired anchors from `process-waivers`; each one's path is dropped
     /// from the `waivers` list in `review.md`'s frontmatter on this write, and
     /// a waiver left with no path with it. The `alias` reads
@@ -1446,6 +1469,12 @@ pub struct WriteReviewArgs {
     #[serde(default, alias = "expired")]
     #[arg(skip)]
     pub expired_waivers: Vec<WaiverRef>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `expired-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub expired_waivers_json: Option<String>,
     /// Each `--waive` this run takes. One `waivers:` entry is recorded per item,
     /// listing every file its rule fires at in this run that no applied waiver
     /// holds, stamped from `reviewed-at` and `decided-by`, and those findings leave
@@ -1453,29 +1482,52 @@ pub struct WriteReviewArgs {
     #[serde(default)]
     #[arg(skip)]
     pub new_waivers: Vec<NewWaiver>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `new-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub new_waivers_json: Option<String>,
     /// Reviewer observations that map to no loaded rule, each with its
     /// disposition. Excluded from every violation count and from `blocking`;
     /// counted under `dispositions:`. A deferred or waived observation that
-    /// matches no stored decision becomes one. Supplied via MCP/interpreter
-    /// JSON; not a CLI flag.
+    /// matches no stored decision becomes one. On the CLI,
+    /// `--observations-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub observations: Vec<ReviewObservation>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `observations` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub observations_json: Option<String>,
     /// Stored decisions `process-decisions` reported expired or lapsed;
     /// dropped from `review.md`'s `decisions:` list on this write. No alias: the exec walker
     /// never runs `process-decisions`, and `expired` already binds waivers.
     #[serde(default)]
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `expired-decisions` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub expired_decisions_json: Option<String>,
     /// Who made this run's new decisions — `git config user.email`, as
     /// `waived-by` is. Required when any observation is newly deferred or
     /// waived, or any violation newly deferred; a stored decision nobody can
-    /// attribute is not auditable. Not a CLI flag: `observations` and
-    /// `findings` are not either, so a CLI call can make no decision to
-    /// attribute.
+    /// attribute is not auditable. On the CLI, `--decided-by-json FILE` holding a
+    /// JSON string.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(skip)]
     pub decided_by: Option<String>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `decided-by` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub decided_by_json: Option<String>,
     /// How many of this run's in-scope files the five passes actually read.
     ///
     /// The **numerator** of a claim whose denominator the primitive derives
@@ -1505,11 +1557,17 @@ pub struct WriteReviewArgs {
     /// scope (spec 078). `write-review` derives every loop field in the record
     /// from this list and accepts no count. `None` writes none of them, since
     /// a run that stated nothing about its fixes is not one with no rounds; an
-    /// empty list writes them all at zero. Supplied via MCP/interpreter JSON;
-    /// not a CLI flag.
+    /// empty list writes them all at zero. On the CLI, `--fix-rounds-json FILE`;
+    /// a file holding `[]` is the empty list, no flag is `None`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(skip)]
     pub fix_rounds: Option<Vec<FixRound>>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `fix-rounds` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub fix_rounds_json: Option<String>,
     /// Marks the run's fix-round loop open in the record, as `fix-rounds-open`
     /// (spec 079, AC14). Every review-command write but the last passes it;
     /// `ductus exec`, whose walker has no loop, never passes it.
@@ -1693,23 +1751,40 @@ pub struct WriteAnalysisArgs {
     /// (`live: false`, gone from the re-check) and the re-check's live
     /// findings. The tier counts above stay the authority on how many live
     /// findings there are; a live finding this list omits is counted as
-    /// undispositioned, so an omission can never read as handled. Supplied via
-    /// MCP/interpreter JSON; not a CLI flag.
+    /// undispositioned, so an omission can never read as handled. On the CLI,
+    /// `--findings-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub findings: Vec<AnalysisFinding>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `findings` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub findings_json: Option<String>,
     /// Stored decisions `process-decisions` reported expired or lapsed;
     /// dropped from `analysis.md`'s `decisions:` list on this write.
     #[serde(default)]
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `expired-decisions` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub expired_decisions_json: Option<String>,
     /// Who made this run's new decisions — `git config user.email`. Required
-    /// when any live finding is newly deferred or waived. Not a CLI flag:
-    /// `findings` is not one either, so a CLI call can make no decision to
-    /// attribute.
+    /// when any live finding is newly deferred or waived. On the CLI,
+    /// `--decided-by-json FILE` holding a JSON string.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(skip)]
     pub decided_by: Option<String>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `decided-by` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub decided_by_json: Option<String>,
 }
 
 /// Parse a `reason=count` pair for `--unexamined-reason`.
@@ -4305,10 +4380,16 @@ pub struct PruneProjectArgs {
     #[arg(long = "remove", value_parser = parse_entry_removal)]
     pub remove: Vec<EntryRemoval>,
     /// The entries an apply replaces, each with the text that takes its
-    /// place. Not on the CLI: the text may span lines.
+    /// place. On the CLI, `--replace-json FILE`: the text may span lines.
     #[serde(default)]
     #[arg(skip)]
     pub replace: Vec<EntryReplacement>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `replace` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
+    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub replace_json: Option<String>,
     /// The homes an apply creates from their template when absent. On the
     /// CLI, one `--create <kind>` each.
     #[serde(default)]
@@ -7773,6 +7854,7 @@ mod tests {
                 with: "- a pointer".into(),
             }],
             create: vec![ProjectHome::System],
+            replace_json: None,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["create"], serde_json::json!(["system"]));
@@ -9158,6 +9240,7 @@ mod tests {
             fired: vec!["grounding — m".into()],
             restricted: true,
             since: None,
+            fired_json: None,
         };
         let v = serde_json::to_value(&args).unwrap();
         assert_eq!(v["record"], "analysis");

@@ -18,6 +18,19 @@ its version and date.
   `loaded-rule-files`, every loaded file with its pass, and `passes-run`, the
   passes the procedure performs. The security pass applies a rule's
   **Not flagged:** routing from them. Spec 020.
+- **Every MCP argument has a CLI form (spec 022).** The 14 structured
+  arguments with none gain a `--{name}-json FILE` flag, read from a staging
+  directory like `apply-manifest`'s (`BE-INPUT-004`) and refused naming the
+  flag when outside one, unreadable, or not valid JSON for the field:
+  `write-review` `--findings-json`, `--applied-waivers-json`,
+  `--expired-waivers-json`, `--new-waivers-json`, `--observations-json`,
+  `--expired-decisions-json`, `--decided-by-json` and `--fix-rounds-json` (a
+  file holding `[]` is the empty list; no flag leaves it absent);
+  `write-analysis` `--findings-json`, `--expired-decisions-json` and
+  `--decided-by-json`; `process-waivers` and `process-decisions`
+  `--fired-json`; `prune-project` `--replace-json`. Additive: no scalar flag
+  and no MCP schema changes. A test in `src/main.rs` asserts each served
+  tool's every argument has a flag or its `-json` form.
 
 - **`check-artifact-size` measures the four project files.** `--project-files`
   (`project-files` over MCP) adds `AGENTS.md` and the spec root's `system.md`,
