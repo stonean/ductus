@@ -203,7 +203,7 @@ A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependenci
 | `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
 | `prune-plan` | `features`, `skipped` under `all` |
 | `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse |
-| `check-review-gate` | `violations`, `cross-spec-impact` |
+| `check-review-gate` | `violations`, `cross-spec-impact`, `analyze-stale-paths` |
 | `check-artifacts` | `findings`, `skipped` |
 | `check-corpus-links` | `broken`, `examined`, `skipped` |
 | `check-unfolded-specs` | `unfolded` |
