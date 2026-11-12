@@ -30,6 +30,8 @@ The currency decision is deterministic, so it belongs to the runtime (§runtime-
 
 Under `ductus exec` the walker calls `rule_verdicts` as a library, as `load_current_task` in `runtime/src/interpreter/payload.rs` already calls `read_tasks::compute`. `Walker::handle_assessments` in `runtime/src/interpreter/mod.rs` drops each rule whose verdict is current from `asked`, so AC1 holds on both paths. `LoadedRules` gains the reusable verdicts, and the walker emits a progress line naming how many it reused, so a skipped rule is visible in the stream. A reused finding still counts in the tier counts: `AnalyzeTally` adds a `record_reused` that counts it by the rule's tier.
 
+`verdicts` is computed only with `all`, `rules` and `feature`. Review's `discover-rule-files` walk binds `feature` from the context too, so a `feature` without `all` is not an error: it reads nothing and `verdicts` is absent, which a caller sees. A record that does not parse is reason `record-unreadable` with a notice, and `judge` holds every assessable rule, so it is never read as holding no verdicts and the call does not fail (`validate-frontmatter` hard-fails the record at step 2). One `place` call covers `rule-files`, `reusable` and `judge`, so past the read size the file holds all three, `verdicts.reusable-count` and `verdicts.judge-count` stay inline, and the nested block carries no top-level `-count` key.
+
 ### The exec response says whether a fired rule was addressed
 
 `AssessSpecQualityResponse` in `runtime/src/schema/extensions.rs` gains an optional `addressed-by`, a `path#Heading` citation. `passed: true` with it is `addressed`, `passed: true` without it is not fired, and `passed: false` is a finding whose `message` and `location` the tally stores. The field is additive, so a host that sends none records every `passed: true` as not fired, which is the walk before this spec. `AnalyzeTally` keeps `verdicts` and `judged` and `bind`s them as `write-analysis`' `rule-verdicts` and `judged-rules`.
@@ -42,6 +44,8 @@ Under `ductus exec` the walker calls `rule_verdicts` as a library, as `load_curr
 - **Carried-forward verdicts.** Each prior verdict still current under the rule above is carried into the new map unless this run judged that rule, so a host cannot drop a reusable `finding` by not passing it.
 - **`unjudged-rules`.** The universe less `judged-rules` less the carried-forward rules, plus each rule this run's `addressed` verdict cited badly. Its count is added to `rule-assessments-not-checked` in `by_reason`, as the unresolved-constitution count is today, so a caller cannot supply a total that contradicts the list. The count's meaning widens as the spec decides: it keeps 060's rules the walker could not ask about, and also counts the rules not judged.
 - **A tier-count floor.** The run is refused when a tier's supplied count plus its released findings is below its number of `finding` verdicts, since each stands for at least one live finding. The tier is the rule's own, read from the current rule text. Reused findings are the host's to count, and the exec tally does; the floor keeps an omission from dropping a MUST failure from `blocking-findings` (`QUAL-CLAIM-001`).
+
+A verdict naming no assessable loaded rule, or a `finding` with a blank message, is refused before any write. A rule with a verdict is judged whether or not it is in `judged-rules`. A prior record that does not parse reuses nothing and is overwritten, so every rule is named unjudged, and its decisions are read as before. The rule files the runtime itself could not read count under `rule-file-unreadable` at most once beside the host's count, taking the larger, since a walk counts the same files. The body's `## Contradictions` section follows `## Deferred to other specs`, and the Unexamined targets section names each rule left unjudged.
 
 The write stays whole and atomic through `write_atomic`, so under two concurrent runs the later record stands (Edge Cases).
 
@@ -67,18 +71,21 @@ When this run judges a rule whose prior verdict is current under the three-part 
 | `runtime/src/primitives/mod.rs` | Modify | Declare the `rule_verdicts` module |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | `feature` argument and `verdicts` block |
 | `runtime/src/primitives/write_analysis.rs` | Modify | New args, carry-forward, derived unjudged list, citation check, floor, contradictions, three fields and body section |
-| `runtime/src/schema/primitives.rs` | Modify | `AnalyzeBlock`, both args and both results |
+| `runtime/src/schema/primitives.rs` | Modify | `RuleVerdict`, `AnalyzeBlock`, both args and both results |
+| `runtime/src/primitives/write_review.rs` | Modify | `yaml_quoted`, the always-quoted form a flow mapping's text values take |
+| `runtime/src/primitives/validate_frontmatter.rs` | Modify | A test that a verdict map that does not parse is a hard fail |
+| `runtime/src/main.rs` | Modify | `--rule-verdicts-json` hydration |
 | `runtime/src/schema/descriptions.rs` | Modify | `DISCOVER_RULE_FILES` and `WRITE_ANALYSIS` descriptions |
 | `runtime/src/schema/extensions.rs` | Modify | `addressed-by` on `AssessSpecQualityResponse` |
 | `runtime/src/interpreter/payload.rs` | Modify | `LoadedRules` carries reusable verdicts and file digests |
 | `runtime/src/interpreter/mod.rs` | Modify | `handle_assessments` skips current rules |
 | `runtime/src/interpreter/analyze_tally.rs` | Modify | Verdicts, judged set, reused findings, bindings |
-| `runtime/tests/rule_verdicts.rs` | Create | AC1 to AC6 over both paths, each proved red |
+| `runtime/src/interpreter/mod.rs` and `runtime/src/primitives/discover_rule_files.rs` tests | Modify | AC1 to AC6 over both paths: the unit tests the mutation list's killers are, since `run.py` runs unit tests only |
 | `runtime/tests/result_sizes.rs` | Modify | `discover-rule-files` case with a `feature` |
-| `runtime/tests/golden/analyze-basic.jsonl` | Modify | Re-blessed exec stream, diff read |
 | `scripts/mutation/rule-verdicts-converge.py` | Create | One mutant per behavior, each killed by a named test |
 | `framework/commands/analyze.md` | Modify | Steps 11, 12, 21 and 22 |
 | `framework/reference/analyze.md` | Modify | Rules, Unexamined targets, Record fields, and a rule-verdicts section |
+| `docs/analyze.md` | Modify | The three record fields |
 | `framework/constitution.md` | Modify | Analyze record row |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | Record fields, `write-analysis` args and result |
 | `specs/022-deterministic-runtime/data-model.md` | Modify | `assessSpecQuality` response and `discover-rule-files` |
@@ -97,7 +104,7 @@ When this run judges a rule whose prior verdict is current under the three-part 
 - **`finding` verdicts store their message and location.** AC1 forbids asking about a rule with a current `finding`, and the next run must still report it in its tier, so the message stays in the record. The spec's 26 to 61 bytes per fired rule held for `addressed`; a `finding` entry carries about 100 more.
 - **A fix re-judges every rule.** A chore fix edits a design subject, so the re-check (step 20) finds every verdict stale. Skipping the first pass's verdicts there would judge a fix's own effects against stale text, so the re-check pays one full pass.
 - **The `rule-assessments-not-checked` count can overlap.** A step whose prose names no tier still records its one target under 060's rule, beside the unjudged rules `write-analysis` now names. The state is a defect, and removing the walker's call would change 060 for no reader.
-- **Fired-rule fraction is unmeasured.** The map approaches a full one if most rules fire. Task 11 measures it.
+- **The fired-rule fraction is bounded, not measured.** Measured 2026-11-12 with the release binary, from a scratch copy of this repository under its own `git init`, `ductus exec analyze` over three `done` specs (`001-system-spec-templates`, `021-runtime-boundary`, `034-performance-backend-rules`), a script answering `passed: true` to each request, since no LLM host was available. Denominator, the rules the walk loaded: 310 asked of 310 in 12 files (228 MUST-tier, 82 SHOULD-tier); the second walk of each asked 0 and said it reused 228 and 82. The records came to 2,603 to 2,904 bytes in all, with 12 `rule-digest` lines (64-hex digests, about 1.1 KB) and no verdict: the cost when nothing fires. How many rules fire needs a host's judgments and is unmeasured. Its bound is the 73 `analysis.md` records in the tree at that commit: `blocking-findings` plus `advisory` per record has median 0, mean 1.73 and maximum 20, 46 of 73 at 0, counted after dispositions, so a finding fixed in the run is missing, and counting findings no rule raised, so it bounds neither side exactly. At about 100 bytes a `finding` entry, 20 is about 2 KB, and the map would approach a full one only with rules fired in the hundreds. The count of `addressed` verdicts stays unmeasured, since no record stores one.
 - Rejected: a new `assess-rules` primitive, for the registration sites above; letting the host assemble the list from `discover-rule-files` and a stored map, which leaves the currency rule to every host and every session.
 
 ## Open Questions Resolved
