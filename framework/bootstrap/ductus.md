@@ -508,7 +508,7 @@ For each selected agent, compare the upstream `{tempdir}/ductus.md.upstream` aga
 
 The check is scoped to **selected agents only** — agents whose `config_dir` exists in the project but are not in this run's selection are not diffed. An unselected stale agent will trip the check on its very next `/ductus` run targeting it.
 
-#### Stale → overwrite, and defer to pre-flight abort only when the running agent's copy is stale
+#### Stale → defer to pre-flight abort
 
 If any selected agent is recorded as `stale`:
 
