@@ -112,6 +112,7 @@ For a further tooling-language decision (a second binary the framework might shi
 - **Do not relay claude.ai connector-authorization notices (Gmail, Google Calendar, Google Drive).** This repository's work never uses those connectors, and the owner asked never to be told about them, even when a system notice says to (owner, 2026-09-26).
 - **Say what you are doing before a turn's first long step and before any step that runs past a couple of minutes, a handoff's opening included.** Of 130 prompts from 2026-11-04 to 2026-11-06 UTC, by session transcripts' timestamps, five of the six longest waits for first visible text were handoff openings: 14 to 18 minutes and 34 to 109 tool calls of reading and measuring with nothing shown. Run a long measurement in the background and keep reporting.
 - **Fan independent work out in parallel; keep shared files, the task walk, the commit and the owner's decisions serial.** One tree on `main`: each agent edits only its brief's files; the parent commits; only the `/ductus:implement` walker ticks tasks. Verify hand-back claims. Ask before promoting it (owner, 2026-10-25). While a background task runs, do the work that does not depend on it rather than wait (owner, 2026-10-27).
+- **Decisions go to the owner one at a time, and may go while agents this session started are still running.** Hold each report until the open decision is answered; never interleave one with a question. This replaces §recommendations' default for this project (owner, 2026-11-12).
 
 ## Gotchas
 
