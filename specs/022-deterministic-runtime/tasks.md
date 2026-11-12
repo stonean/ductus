@@ -345,10 +345,12 @@ Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_
 
 Each is measured, written up as its own question when it needs the owner, and fixed, deferred or waived, after tasks 14 and 11.
 
-- [ ] `lint-markdown` and `check-review-gate` run project code: the local `node_modules/.bin/markdownlint-cli2`, and markdownlint-cli2's `.cjs`/`.mjs` configuration and `customRules` (task 14's last paragraph). On Claude, `apply-manifest` (task 11), `merge-managed-block` (re-read 2 created a `.markdownlint-cli2.cjs` with it, and `node` ran the block's code, its default `<!-- … -->` markers included) or the agent's own `Write` writes them
-- [ ] Claude's canonical set (`framework/bootstrap/configure/claude.md`) allows `Bash(make *)` and bare `Write`, so an agent can write a Makefile and run any command through `make` without a prompt; `Bash(./.githooks/pre-commit)` with a writable hook does the same
+- [x] `lint-markdown` and `check-review-gate` run project code: the local `node_modules/.bin/markdownlint-cli2`, and markdownlint-cli2's `.cjs`/`.mjs` configuration and `customRules` (task 14's last paragraph). On Claude, `apply-manifest` (task 11), `merge-managed-block` (re-read 2 created a `.markdownlint-cli2.cjs` with it, and `node` ran the block's code, its default `<!-- … -->` markers included) or the agent's own `Write` writes them
+- [x] Claude's canonical set (`framework/bootstrap/configure/claude.md`) allows `Bash(make *)` and bare `Write`, so an agent can write a Makefile and run any command through `make` without a prompt; `Bash(./.githooks/pre-commit)` with a writable hook does the same
 
 Found 2026-10-22 by task 11's measurement, for these items: (item 2) `.githooks/` is not on Claude Code's protected list, which names `.husky`, `.pre-commit-config.yaml` and `lefthook.yml` among others (code.claude.com/docs/en/permission-modes, Protected paths), and `apply-manifest` writes the executable `.githooks/pre-commit` and `.githooks/ductus-pre-commit` that `git commit` runs once `core.hooksPath` points there; the agent's own `Write` reaches the same files.
+
+Disposed 2026-11-12, asked that day. Item 1: waived, the owner's answer (b): no switch in markdownlint-cli2 0.24.0 turns its JavaScript off, question 3 of task 18 kept `npx markdownlint-cli2 *`, which runs the same code, and a screen of configuration keys (option (c)) would miss the vendored binary, drift, and refuse legitimate configurations; plan.md's *What this leaves* states the reach. Item 2: fixed by task 18, question 3 (a) (`make *`, `./.githooks/pre-commit` and the install scripts retired) and disclosed by its question 4 (a) (bare `Write` kept).
 
 ## 16. Decide: what installing ductus lets an agent do without a prompt (asked first; tasks 11 and 14 wait on it)
 
