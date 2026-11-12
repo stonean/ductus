@@ -51,7 +51,7 @@ A deferral releases a gating finding as `framework/reference/review.md` §Deferr
 
 An unreadable target is matched as stored, with a notice, so a check that could not run never looks like a lapse or a hold.
 
-`prune-tasks` has no renumbering step (`runtime/src/primitives/prune_tasks.rs`: no `renumber` hit), and `append-task` numbers `max + 1` (`AppendTaskResult.task_number`, `runtime/src/schema/primitives.rs:2753`). So a task number names one task for its life.
+`prune-tasks` has no renumbering step (`runtime/src/primitives/prune_tasks.rs`: no `renumber` hit), and `append-task` numbers past the highest present and past the `next-task:` counter `prune-tasks` writes when it removes a section (`AppendTaskResult.task_number`, `runtime/src/schema/primitives.rs:2753`; spec 041's data model, *The `next-task:` counter*). So a task number names one task for its life.
 
 ### One disposition per finding goes through the existing drop lists
 

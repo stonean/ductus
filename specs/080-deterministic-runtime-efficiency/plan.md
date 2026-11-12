@@ -164,7 +164,7 @@ The scenario `reference-reads-follow-the-cited-sections` has a run read only the
 
 The scenario `rules-load-without-shell-reads` has the rules a review or an analysis loads reach the model as tool results. The design is the owner's choice (2026-11-09), over a separate `read-rules` primitive, which would cost review a second call that waits on the first's selection.
 
-- **`rules`.** `discover-rule-files` gains a boolean `rules`. When it is set, the result also lists each selected file's rules, in heading order: each rule's ID, its tier, and its Statement, parsed by `rule_sections::parse_rule_sections`, the reading `check-rule-ids` and the exec walker share. `verification` adds each rule's Verification: its paragraph, and a pipe table directly after it, one row per line, as BE-API-001's header values follow its paragraph, so the listing carries all of it and analyze reads no rule file. A rule whose Statement carries no RFC 2119 keyword has no tier, as `rule_sections` reads it.
+- **`rules`.** `discover-rule-files` gains a boolean `rules`. When it is set, the result also lists each selected file's rules, in heading order: each rule's ID, its tier, and its Statement, parsed by `rule_sections::parse_rule_sections`, the reading `check-rule-ids` and the exec walker share. `verification` adds each rule's Verification: the whole field, to its next `**Field:**` line or heading, a table's rows and a list's items keeping their line breaks, as BE-API-001's header values follow its paragraph (spec 060 task 12), so the listing carries all of it and analyze reads no rule file. A rule whose Statement carries no RFC 2119 keyword has no tier, as `rule_sections` reads it.
 - **`all`.** `all` selects every rule file in the directory, whatever its suffix, `[rules] surfaces` and `disabled-rule-files` say, as analyze loads them (§rules). Its notices name what it loaded, as review's do.
 - **`extra-files`.** Repo-relative rule files outside the directory, which review loads when `AGENTS.md` references them, are parsed and listed the same way, each passing the same path screen (`validate_contained`, called from `runtime/src/primitives/discover_rule_files.rs`).
 - **Unreadable.** A file that cannot be read, or is not UTF-8 text, is listed under `unreadable` with its reason, and a file holding no rule heading lists no rules. Neither is dropped silently.
@@ -223,7 +223,7 @@ It runs one round after the view, the hook and tool loading land. That round rec
 | `framework/commands/*.md` | Modify | Each "Where a named section lives" paragraph invokes `read-section` |
 | `framework/reference/review.md` | Modify | §Load rules reads the rules from `discover-rule-files` |
 | `framework/reference/analyze.md` | Modify | §Rules (blocking and advisory) reads every file's rules from `discover-rule-files` with `all` |
-| `runtime/src/primitives/rule_sections.rs` | Modify | Each rule section keeps its heading line, and its Verification the table directly after it |
+| `runtime/src/primitives/rule_sections.rs` | Modify | Each rule section keeps its heading line, and its Verification the whole field to its next field or heading |
 | `scripts/mutation/reference-and-rule-reads.py` | Create | `read-section`'s and the rules listing's mutations |
 | `framework/commands/groom.md` | Modify | Step 2 derives routing candidates per item |
 | `framework/reference/groom.md` | Modify | The decision tree's Step 2 starts from those candidates |
