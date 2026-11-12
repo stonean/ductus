@@ -620,7 +620,7 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 
 ## 24. Implement scenario: every-mcp-argument-has-a-cli-form
 
-- [ ] Implement the behavior described in `scenarios/every-mcp-argument-has-a-cli-form.md`
+- [x] Implement the behavior described in `scenarios/every-mcp-argument-has-a-cli-form.md`
 
 - **Done when**: The scenario's open question is resolved, write-review, write-analysis, process-waivers and process-decisions accept their structured arguments on the CLI, and a test fails when an MCP argument has no CLI form.
 
@@ -632,7 +632,7 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 
 ## 26. Implement scenario: an-unsubstituted-placeholder-is-not-a-clean-run
 
-- [ ] Implement the behavior described in `scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md`
+- [x] Implement the behavior described in `scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md`
 
 - **Done when**: The scenario's open question is resolved, a fixture reproduces the literal-placeholder write (or shows it does not occur), and a test proves a map missing a key is no longer reported as a clean run while keep-literals are honored.
 
