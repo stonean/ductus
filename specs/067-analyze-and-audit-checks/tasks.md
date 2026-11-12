@@ -182,9 +182,9 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 
 Starts once spec 076's runtime work has landed: registering a primitive edits `runtime/src/main.rs`, `runtime/src/mcp/server.rs` and `runtime/src/schema/primitives.rs`, which held 076's uncommitted work when this task was written (owner, 2026-11-02).
 
-- [ ] Implement the behavior described in `scenarios/deprecation-labels-are-read-by-the-runtime.md`
-- [ ] The primitive, registered at every site `docs/developing-ductus.md` lists, sharing `check-rule-ids`' label reader
-- [ ] `scripts/audit/deprecation-removal.sh` calls it and drops its own parse, and the cases of `scripts/tests/test-deprecation-removal.sh` carry over unchanged, its fixture builder supplying the runtime binary
+- [x] Implement the behavior described in `scenarios/deprecation-labels-are-read-by-the-runtime.md`
+- [x] The primitive, registered at every site `docs/developing-ductus.md` lists, sharing `check-rule-ids`' label reader
+- [x] `scripts/audit/deprecation-removal.sh` calls it and drops its own parse, and the cases of `scripts/tests/test-deprecation-removal.sh` carry over unchanged, its fixture builder supplying the runtime binary
 
 - **Done when**: Family 40 reads every label through the primitive, its test passes, and the primitive's tests fail when its label reader is removed.
 
@@ -204,7 +204,7 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 24. check_artifacts.rs's module doc counts the families it owns
 
-- [ ] `runtime/src/primitives/check_artifacts.rs`'s module doc says it "Owns ten families", while it emits eleven family literals since 079 added `cross-spec-impact-drift`: state the count the code holds, or point at `schema::descriptions::CHECK_ARTIFACTS` instead of counting (054's review, 2026-11-09, outside its scope; deferred here by the delegated rule)
+- [x] `runtime/src/primitives/check_artifacts.rs`'s module doc says it "Owns ten families", while it emits eleven family literals since 079 added `cross-spec-impact-drift`: state the count the code holds, or point at `schema::descriptions::CHECK_ARTIFACTS` instead of counting (054's review, 2026-11-09, outside its scope; deferred here by the delegated rule)
 
 - **Done when**: the module doc states no family count the code does not hold
 
@@ -222,6 +222,6 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 27. The path families record a candidate that leaves the project, never probe it
 
-- [ ] `check_criterion_path_existence` probes `repo.join(candidate).exists()` with no `..` screen, and `resolve_body_path` passes a candidate whose `..` is interior (`specs/../../x`) through as project-relative, so a criterion or body line naming such a path makes the runtime stat a file outside the project (`BE-INPUT-004`, `runtime/src/primitives/check_artifacts.rs`). Found by 045's analysis; the owner deferred it here, since this spec owns the analyze checks (2026-11-11). Resolve every candidate lexically, as `resolve_sibling` does, and record one whose resolution leaves the project as a skip instead of probing it, with a test per family that fails with the screen removed. Recording it as `root-absent`, since `..` is no top-level segment this repository contains, keeps the closed reason set unchanged; a new reason would also change 045's `data-model.md`, which lists that set, and reopen 045
+- [x] `check_criterion_path_existence` probes `repo.join(candidate).exists()` with no `..` screen, and `resolve_body_path` passes a candidate whose `..` is interior (`specs/../../x`) through as project-relative, so a criterion or body line naming such a path makes the runtime stat a file outside the project (`BE-INPUT-004`, `runtime/src/primitives/check_artifacts.rs`). Found by 045's analysis; the owner deferred it here, since this spec owns the analyze checks (2026-11-11). Resolve every candidate lexically, as `resolve_sibling` does, and record one whose resolution leaves the project as a skip instead of probing it, with a test per family that fails with the screen removed. Recording it as `root-absent`, since `..` is no top-level segment this repository contains, keeps the closed reason set unchanged; a new reason would also change 045's `data-model.md`, which lists that set, and reopen 045
 
 - **Done when**: neither path family probes a path outside the project, each records such a candidate as a skip, and a test per family fails with the screen removed

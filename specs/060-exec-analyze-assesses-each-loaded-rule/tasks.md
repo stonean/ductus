@@ -97,9 +97,9 @@ Operator-approved (2026-09-27, with the `cross-spec-impact:` declaration): this 
 
 ## 12. An assessment sees the rule it asks about
 
-- [ ] Implement the behavior described in `scenarios/an-assessment-sees-the-rule-it-asks-about.md`
-- [ ] `AssessSpecQualityRule` (`runtime/src/schema/extensions.rs`) gains the rule's Statement, which `load_rules` (`runtime/src/interpreter/payload.rs`) fills from `RuleSection`, so the `rule` object `build_assess_spec_quality_request` emits carries it, and `rule_sections.rs` reads a Verification to the rule's next field or heading, keeping a table's line breaks
-- [ ] 022's `data-model.md` §`assessSpecQuality` and `framework/commands/analyze.md` steps 11 and 12 describe the Statement and the bound; generated command copies and the golden holding an `assessSpecQuality` request regenerated
-- [ ] A test proved to fail without the Statement, and one proved to fail when `BE-API-001`'s table is cut, cover the request
+- [x] Implement the behavior described in `scenarios/an-assessment-sees-the-rule-it-asks-about.md`
+- [x] `AssessSpecQualityRule` (`runtime/src/schema/extensions.rs`) gains the rule's Statement, which `load_rules` (`runtime/src/interpreter/payload.rs`) fills from `RuleSection`, so the `rule` object `build_assess_spec_quality_request` emits carries it, and `rule_sections.rs` reads a Verification to the rule's next field or heading, keeping a table's line breaks
+- [x] 022's `data-model.md` §`assessSpecQuality` and `framework/commands/analyze.md` steps 11 and 12 describe the Statement and the bound; generated command copies and the golden holding an `assessSpecQuality` request regenerated
+- [x] A test proved to fail without the Statement, and one proved to fail when `BE-API-001`'s table is cut, cover the request
 
 - **Done when**: every assessSpecQuality request carries its rule's Statement and the whole Verification to the next field, each covered by a test proved to fail without it, and 008 task 39's call is back-linked by the scenario
