@@ -642,6 +642,14 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         prose: &str,
     ) -> std::io::Result<Result<Value, WalkOutcome>> {
         let request_id = self.fresh_request_id();
+        if identifier == "performReview" {
+            let passes = payload::passes_run(self.procedure)
+                .into_iter()
+                .map(|pass| Value::String(pass.into()))
+                .collect();
+            self.context
+                .insert(payload::PASSES_RUN_KEY.into(), Value::Array(passes));
+        }
         let request = match payload::build_extension_request(
             identifier,
             &self.context,

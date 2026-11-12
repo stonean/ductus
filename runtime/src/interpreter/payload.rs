@@ -41,9 +41,9 @@ use crate::primitives::read_tasks;
 use crate::primitives::rule_sections::parse_rule_sections;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
-    FoldSourceScenario, PerformReviewRequest, PlanRelevantFile, ReviewRuleFile, ReviewScopeFile,
-    RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec, VerifyCriteriaRequest,
-    VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
+    FoldSourceScenario, LoadedReviewRuleFile, PerformReviewRequest, PlanRelevantFile,
+    ReviewRuleFile, ReviewScopeFile, RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec,
+    VerifyCriteriaRequest, VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
 };
 use crate::schema::paths;
 use crate::schema::primitives::ReadTasksArgs;
@@ -193,7 +193,7 @@ pub fn build_extension_request(
     match identifier {
         "writeCode" => build_write_code_request(context, repo, command_name),
         "writeSpecBody" => build_write_spec_body_request(context, repo, command_name, step_prose),
-        "performReview" => Ok(build_perform_review_request(context, repo)),
+        "performReview" => Ok(build_perform_review_request(context, repo, step_prose)),
         "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo)),
         "askClarifyQuestion" => build_ask_clarify_question_request(context, repo),
         "routeInboxItem" => build_route_inbox_item_request(context, repo),
@@ -277,28 +277,109 @@ fn typed_only<T: Serialize>(typed: &T) -> Value {
     serde_json::to_value(typed).unwrap_or(Value::Null)
 }
 
+/// The five review passes, in the order `/review`'s steps run them.
+pub(crate) const REVIEW_PASSES: [&str; 5] =
+    ["security", "reuse", "quality", "efficiency", "simplicity"];
+
+/// The context key under which the walker records the passes its procedure
+/// runs (see [`passes_run`]); filtered from the legacy tail by the `walker:`
+/// prefix, so it reaches a request only as the typed `passes-run`.
+pub(crate) const PASSES_RUN_KEY: &str = "walker:passes-run";
+
+/// The pass that applies a loaded rule file: `security-*.md` the security
+/// pass, `performance-*.md` the efficiency pass, and every other file, the
+/// quality pass — `quality-cross.md`, the design-time files, and a
+/// project-authored file with an unrecognized suffix alike (spec 020,
+/// scenario `every-loaded-rule-file-has-a-pass`). The one table the
+/// `framework/reference/review.md` §Load rules mapping is held to by
+/// `review_reference_names_the_rule_file_mapping`.
+pub(crate) fn review_pass_for_rule_file(name: &str) -> &'static str {
+    if name.starts_with("security-") {
+        "security"
+    } else if name.starts_with("performance-") {
+        "efficiency"
+    } else {
+        "quality"
+    }
+}
+
+/// The pass a `/review` step runs, named in its prose as `**pass**` ("Run the
+/// **security** pass ..."). `None` when the prose names none.
+pub(crate) fn pass_from_step_prose(prose: &str) -> Option<&'static str> {
+    let lower = prose.to_lowercase();
+    REVIEW_PASSES
+        .into_iter()
+        .find(|pass| lower.contains(&format!("**{pass}**")))
+}
+
+/// The passes a procedure runs: those its `performReview` steps name, in
+/// step order. A pass a dimension-restricting flag skips is absent from the
+/// procedure, so is absent here.
+pub(crate) fn passes_run(procedure: &crate::schema::procedure::Procedure) -> Vec<&'static str> {
+    procedure
+        .steps
+        .iter()
+        .filter_map(|step| match step {
+            crate::schema::procedure::Step::Extension {
+                identifier, prose, ..
+            } if identifier == "performReview" => pass_from_step_prose(prose),
+            _ => None,
+        })
+        .collect()
+}
+
 /// Build the `performReview` request for one pass. Loads the in-scope files
 /// (`scope`, from `compute-review-scope`, whole even past the read size, since
 /// [`restore_lists`] put a moved list back when the result arrived) and the
-/// pass's rule files (`selected` basenames under `rules-dir`, from
-/// `discover-rule-files`) off disk, and pairs them with the `pass` name.
+/// loaded rule files (`selected` basenames under `rules-dir`, from
+/// `discover-rule-files`) off disk. The pass is the one the step's prose
+/// names, else the context's `pass`. `rule-files` carries only the files
+/// [`review_pass_for_rule_file`] maps to that pass; `loaded-rule-files` names
+/// every loaded file with its pass, and `passes-run` the passes this walk
+/// runs, which is what the security pass needs to apply a rule's
+/// **Not flagged:** routing: a load condition is judged against the loaded
+/// names, and a finding stays with the yielding rule when the owner's file is
+/// not loaded or its pass is not in `passes-run` (spec 020, scenario
+/// `review-reports-a-defect-under-its-owner`).
 /// Missing/unreadable files are skipped rather than erroring — the pass
 /// reviews what it can read. The typed prefix leads (cache-anchor order:
 /// `scope-files` is stable across passes); legacy context fields follow for
 /// hosts that already parse them.
-fn build_perform_review_request(context: &Map<String, Value>, repo: &Path) -> Value {
-    let pass = context
-        .get("pass")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
+fn build_perform_review_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+    step_prose: &str,
+) -> Value {
+    let pass = pass_from_step_prose(step_prose)
+        .map(str::to_string)
+        .or_else(|| {
+            context
+                .get("pass")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
+        .unwrap_or_default();
     let scope_files = load_scope_files(context, repo);
-    let rule_files = load_rule_files(context, repo);
+    let all_rule_files = load_rule_files(context, repo);
+    let loaded_rule_files = all_rule_files
+        .iter()
+        .map(|file| LoadedReviewRuleFile {
+            name: file.name.clone(),
+            pass: review_pass_for_rule_file(&file.name).to_string(),
+        })
+        .collect();
+    let rule_files = all_rule_files
+        .into_iter()
+        .filter(|file| review_pass_for_rule_file(&file.name) == pass)
+        .collect();
+    let passes_run = string_array(context, PASSES_RUN_KEY);
 
     let typed = PerformReviewRequest {
         scope_files,
         rule_files,
         pass,
+        loaded_rule_files,
+        passes_run,
     };
     // Filtered merge: pass N must not see passes 1..N-1's accumulated
     // `findings` or raw `llm:performReview` echoes, but keeps the
@@ -1579,6 +1660,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::schema::procedure::{Procedure, SourceRange, Step, StepNumber};
     use std::fs;
     use tempfile::tempdir;
 
@@ -2746,7 +2828,7 @@ mod tests {
             Value::Array(vec![Value::String("security-backend.md".into())]),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path(), "");
         let obj = value.as_object().unwrap();
         // Typed prefix leads in cache-anchor order.
         let prefix: Vec<&str> = obj.keys().map(String::as_str).take(3).collect();
@@ -2760,12 +2842,166 @@ mod tests {
         assert_eq!(value["rule-files"][0]["content"], "# Security\n");
     }
 
+    /// A review fixture loading one file of each mapping class.
+    fn review_rules_fixture() -> (tempfile::TempDir, Map<String, Value>) {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
+        let names = [
+            "security-backend.md",
+            "security-frontend.md",
+            "performance-backend.md",
+            "quality-cross.md",
+            "api-backend.md",
+            "project-notes.md",
+        ];
+        for name in names {
+            fs::write(tmp.path().join("framework/rules").join(name), "# Rules\n").unwrap();
+        }
+        let mut ctx = Map::new();
+        ctx.insert("rules-dir".into(), Value::String("framework/rules".into()));
+        ctx.insert(
+            "selected".into(),
+            Value::Array(names.iter().map(|n| Value::String((*n).into())).collect()),
+        );
+        (tmp, ctx)
+    }
+
+    fn rule_file_names(value: &Value) -> Vec<String> {
+        value["rule-files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["name"].as_str().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn perform_review_names_the_pass_and_carries_only_its_rule_files() {
+        // Spec 020, scenario `every-loaded-rule-file-has-a-pass`: the walker
+        // names the pass from the step's prose, and each pass's `rule-files`
+        // holds the loaded files the mapping gives it — security-*.md to
+        // security, performance-*.md to efficiency, every other file
+        // (quality-cross.md, design-time files, an unrecognized suffix) to
+        // quality; reuse and simplicity apply none.
+        let (tmp, ctx) = review_rules_fixture();
+        let request = |prose: &str| build_perform_review_request(&ctx, tmp.path(), prose);
+
+        let security = request("Run the **security** pass over the in-scope files");
+        assert_eq!(security["pass"], "security");
+        assert_eq!(
+            rule_file_names(&security),
+            ["security-backend.md", "security-frontend.md"]
+        );
+        let quality = request("Run the **quality** pass: detect bugs");
+        assert_eq!(quality["pass"], "quality");
+        assert_eq!(
+            rule_file_names(&quality),
+            ["quality-cross.md", "api-backend.md", "project-notes.md"]
+        );
+        let efficiency = request("Run the **efficiency** pass: flag N+1 queries");
+        assert_eq!(efficiency["pass"], "efficiency");
+        assert_eq!(rule_file_names(&efficiency), ["performance-backend.md"]);
+        for pass in ["reuse", "simplicity"] {
+            let value = request(&format!("Run the **{pass}** pass"));
+            assert_eq!(value["pass"], pass);
+            assert!(rule_file_names(&value).is_empty(), "{pass} applies no file");
+        }
+    }
+
+    #[test]
+    fn perform_review_carries_what_the_security_pass_needs_to_route() {
+        // Spec 020, scenario `review-reports-a-defect-under-its-owner`: a
+        // load condition is judged against every loaded file, and the pass
+        // that applies an owner's file is known, so a finding stays with the
+        // yielding rule when the owner's file is not loaded or its pass did
+        // not run.
+        let (tmp, mut ctx) = review_rules_fixture();
+        ctx.insert(
+            PASSES_RUN_KEY.into(),
+            serde_json::json!(["security", "quality"]),
+        );
+        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass");
+        let loaded: Vec<(&str, &str)> = value["loaded-rule-files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| (f["name"].as_str().unwrap(), f["pass"].as_str().unwrap()))
+            .collect();
+        assert_eq!(
+            loaded,
+            [
+                ("security-backend.md", "security"),
+                ("security-frontend.md", "security"),
+                ("performance-backend.md", "efficiency"),
+                ("quality-cross.md", "quality"),
+                ("api-backend.md", "quality"),
+                ("project-notes.md", "quality"),
+            ]
+        );
+        assert_eq!(
+            value["passes-run"],
+            serde_json::json!(["security", "quality"])
+        );
+    }
+
+    #[test]
+    fn passes_run_names_the_passes_a_procedure_performs() {
+        let step = |n: u32, prose: &str| Step::Extension {
+            number: StepNumber(vec![n]),
+            identifier: "performReview".into(),
+            prose: prose.into(),
+            location: SourceRange {
+                start_line: n,
+                start_col: 1,
+                end_line: n,
+                end_col: 1,
+            },
+        };
+        let procedure = Procedure {
+            command: "review".into(),
+            steps: vec![
+                step(1, "Run the **security** pass"),
+                step(2, "Run the **efficiency** pass"),
+            ],
+        };
+        assert_eq!(passes_run(&procedure), ["security", "efficiency"]);
+    }
+
+    #[test]
+    fn review_reference_names_the_rule_file_mapping() {
+        // The compiled table `review_pass_for_rule_file` is canonical, and
+        // `framework/reference/review.md` §Load rules states it in prose.
+        // This holds the two together: the section names every pattern the
+        // table keys on, each beside the pass it maps to.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let text = fs::read_to_string(root.join("framework/reference/review.md")).unwrap();
+        let start = text.find("## Load rules").expect("§Load rules heading");
+        let section = &text[start..];
+        let section = &section[..section[3..].find("\n## ").map_or(section.len(), |i| i + 3)];
+        for (pattern, probe) in [
+            ("`security-*.md`", "security-x.md"),
+            ("`performance-*.md`", "performance-x.md"),
+            ("`quality-cross.md`", "quality-cross.md"),
+            ("every other loaded file", "other-x.md"),
+        ] {
+            let pass = review_pass_for_rule_file(probe);
+            let line = section
+                .lines()
+                .find(|l| l.contains(pattern))
+                .unwrap_or_else(|| panic!("§Load rules names no `{pattern}` mapping"));
+            assert!(
+                line.contains(&format!("{pass} pass")),
+                "`{pattern}` line must name the {pass} pass: {line}"
+            );
+        }
+    }
+
     #[test]
     fn build_perform_review_request_is_empty_without_scope_or_rules() {
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
         ctx.insert("pass".into(), Value::String("reuse".into()));
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path(), "");
         assert_eq!(value["pass"], "reuse");
         assert_eq!(
             value["scope-files"].as_array().unwrap().as_slice(),
@@ -3052,7 +3288,7 @@ mod tests {
             serde_json::json!({ "findings": [] }),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path());
+        let value = build_perform_review_request(&ctx, tmp.path(), "");
         let obj = value.as_object().unwrap();
         assert!(!obj.contains_key("findings"));
         assert!(!obj.contains_key("observations"));

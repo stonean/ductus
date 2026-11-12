@@ -10,6 +10,15 @@ its version and date.
 
 ### Added
 
+- **`performReview` names its pass and carries the rule-file mapping.** The
+  walker takes each request's `pass` from its step's `**pass**` prose, so it
+  is no longer empty; `rule-files` holds the loaded files that pass applies
+  (`security-*.md` the security pass, `performance-*.md` efficiency, every
+  other file quality; reuse and simplicity none), and two fields trail it:
+  `loaded-rule-files`, every loaded file with its pass, and `passes-run`, the
+  passes the procedure performs. The security pass applies a rule's
+  **Not flagged:** routing from them. Spec 020.
+
 - **`check-artifact-size` measures the four project files.** `--project-files`
   (`project-files` over MCP) adds `AGENTS.md` and the spec root's `system.md`,
   `events.md` and `errors.md` to the check, against the same

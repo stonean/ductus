@@ -91,6 +91,19 @@ Load these inputs inline as the authoritative review criteria:
 These are the **only** sources of normative rules for the review. Do not
 introduce review criteria from outside the project.
 
+**Every loaded rule file has a pass that applies it to the code in scope.** The
+runtime carries the mapping, which this list states
+(`review_pass_for_rule_file`, a test holds the two together), and the request
+each pass receives names its own files, every loaded file with its pass, and
+the passes this run performs:
+
+- `security-*.md` — the security pass.
+- `performance-*.md` — the efficiency pass.
+- `quality-cross.md` — the quality pass.
+- every other loaded file, a design-time file or a project-authored file with an unrecognized suffix among them — the quality pass.
+
+A Statement whose Verification is a design-time commitment is applied by its pass only where the code in scope shows what it governs; a Statement the code does not reach records nothing. The reuse and simplicity passes apply no rule file. On a dimension-restricted run (`--security`), a loaded file whose pass did not run is named in the Summary as unapplied, never folded into a clean result.
+
 ## Run review passes
 
 Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines: a stale claim the window left alone otherwise surfaces at the completion gate's criterion check, and its correction then stales the analysis. When a flag restricts dimensions (`--security`,
@@ -100,11 +113,27 @@ produced.
 
 ### Security pass
 
-Walk every file in scope against the loaded security rules. For each finding,
+Walk every file in scope against the loaded security rules (the files **§Load rules** maps to this pass). For each finding,
 record: rule ID, severity (MUST or SHOULD), file path, line range, the rule
 text, and a one-sentence explanation of how the code violates it. **Do not
 flag patterns that are not in the loaded rules** — the project's rule set is
 authoritative.
+
+**Report a defect under its owner.** Where a loaded rule's Verification yields
+the case the code shows to another rule with a **Not flagged:** clause, as
+`/{project}:analyze` applies it, the finding is reported under the owner, at
+the owner's tier, and not under the yielding rule: one defect is one finding,
+counted once toward blocking, needing one waiver. A load condition in the
+clause ("where `security-backend.md` is also loaded") is judged against the
+files this review loaded (the request's `loaded-rule-files`), so a
+frontend-only review keeps the frontend rule's finding. The finding stays with
+the yielding rule when the owner's file is not loaded (a file the project
+excludes from review included) or the owner's pass is not among the request's
+`passes-run`, so routing never leaves a defect reported by no rule. A clause
+that only narrows the rule's scope and names no owner sets the case aside, as
+at analyze; a case only a spec can show routes nothing. A waiver recorded under
+the yielding rule's ID expires once the finding routes (**§Per-run waiver
+processing**), and one already recorded under the owner's ID applies.
 
 That rule holds for every pass below, and it is not a reason to drop what you
 noticed: anything real that matches no loaded rule is an **observation**, which

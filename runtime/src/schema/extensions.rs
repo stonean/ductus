@@ -244,22 +244,45 @@ pub struct ReviewRuleFile {
     pub content: String,
 }
 
+/// One loaded rule file named with the pass that applies it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LoadedReviewRuleFile {
+    /// Rule-file basename (e.g., "api-backend.md").
+    pub name: String,
+    /// The pass that applies the file: `security` for `security-*.md`,
+    /// `efficiency` for `performance-*.md`, `quality` for every other file.
+    pub pass: String,
+}
+
 /// Request payload for `performReview` — one single-shot request per pass
 /// (five passes: security, reuse, quality, efficiency, simplicity).
 ///
 /// `scope-files` is identical across every pass of a run, so it leads the
 /// payload as the cache-stable prefix; `rule-files` and `pass` vary per pass
-/// and trail it.
+/// and trail it, then `loaded-rule-files` and `passes-run`, which are the
+/// same for every pass.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct PerformReviewRequest {
     /// In-scope files under review (same set across all passes).
     pub scope_files: Vec<ReviewScopeFile>,
-    /// Rule files loaded for this pass.
+    /// The loaded rule files mapped to this pass (`reuse` and `simplicity`
+    /// carry none).
     pub rule_files: Vec<ReviewRuleFile>,
     /// Pass name: `security` / `reuse` / `quality` / `efficiency` /
     /// `simplicity`.
     pub pass: String,
+    /// Every rule file the review loaded, each with the pass that applies it:
+    /// the basis for a load condition ("where `security-backend.md` is also
+    /// loaded") and for the pass that applies a **Not flagged:** owner.
+    #[serde(default)]
+    pub loaded_rule_files: Vec<LoadedReviewRuleFile>,
+    /// The passes this run performs. A finding stays with the yielding rule
+    /// when the owner's file is not in `loaded-rule-files` or its pass is not
+    /// here. Empty when the walker names none.
+    #[serde(default)]
+    pub passes_run: Vec<String>,
 }
 
 /// Response payload for `performReview`. The `findings` array flows directly
@@ -858,8 +881,8 @@ mod tests {
         AskClarifyQuestionRequest, AskClarifyQuestionResponse, AssessSpecQualityFinding,
         AssessSpecQualityRequest, AssessSpecQualityResponse, AssessSpecQualityRule,
         ClarifyQuestion, FindingLocation, FoldRoute, FoldSourceScenario, InboxRoute,
-        PassObservation, PerformReviewRequest, PerformReviewResponse, PlanRelevantFile,
-        ReviewRuleFile, ReviewScopeFile, RouteFoldRequest, RouteFoldResponse,
+        LoadedReviewRuleFile, PassObservation, PerformReviewRequest, PerformReviewResponse,
+        PlanRelevantFile, ReviewRuleFile, ReviewScopeFile, RouteFoldRequest, RouteFoldResponse,
         RouteInboxItemRequest, RouteInboxItemResponse, RouteInboxSpec, VerifyCriteriaRequest,
         VerifyCriteriaResponse, VerifyCriterion, VerifyCriterionResult, WriteCodeAction,
         WriteCodeEdit, WriteCodeRequest, WriteCodeResponse, WriteCodeTask, WriteSpecBodyRequest,
@@ -1314,6 +1337,11 @@ mod tests {
                 content: "# Security".into(),
             }],
             pass: "security".into(),
+            loaded_rule_files: vec![LoadedReviewRuleFile {
+                name: "security-backend.md".into(),
+                pass: "security".into(),
+            }],
+            passes_run: vec!["security".into()],
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         // Cache-stable prefix leads: scope-files, then rule-files, then pass.
@@ -1323,7 +1351,16 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(keys, vec!["scope-files", "rule-files", "pass"]);
+        assert_eq!(
+            keys,
+            vec![
+                "scope-files",
+                "rule-files",
+                "pass",
+                "loaded-rule-files",
+                "passes-run"
+            ]
+        );
         assert_eq!(value["scope-files"][0]["path"], "runtime/src/main.rs");
         assert_eq!(round_trip(&request), request);
 
