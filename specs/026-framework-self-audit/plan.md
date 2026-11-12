@@ -65,7 +65,7 @@ The eight scripts, with implementation notes. **Recorded as planned; each family
 **`scripts/audit/cross-doc-consistency.sh`** (Family 1)
 Two sub-checks composed in one script:
 
-- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle, `README.md`, and `framework/templates/project/project-readme.md`. Verify all three visit the same five states in the same order; finding per divergence.
+- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle and `README.md` (the adopter README template was a subject until spec 003 task 6 retired it). Verify both visit the same five states in the same order; finding per divergence.
 - 1c back-edge wording: extract the back-edge sentences from §spec-lifecycle, then compare against the references in `framework/commands/amend.md` and `framework/commands/target.md`'s Status→next-action table.
 
 **`scripts/audit/manifest-parity.sh`** (Family 2)

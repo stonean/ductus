@@ -20,16 +20,16 @@
 #       state name is seen rather than filtered out. A sequence that differs
 #       from `STATES`, or a diagram that yields no states, is a finding.
 #
-#       Comparison: in each of framework/constitution.md, README.md, and
-#       framework/templates/project/project-readme.md, find the first line
-#       carrying an arrow glyph (▶ or →) and every name in `STATES`, extract
-#       the order in which those names first occur on it, and report README.md
-#       or project-readme.md when its order differs from the constitution's.
+#       Comparison: in each of framework/constitution.md and README.md, find
+#       the first line carrying an arrow glyph (▶ or →) and every name in
+#       `STATES`, extract the order in which those names first occur on it,
+#       and report README.md when its order differs from the constitution's.
 #       A file with no such line is a finding. Only the `STATES` names are
 #       read on that line — command names and gate annotations between them
-#       may differ per file (project-readme uses {project}: placeholders), and
-#       an extra state on a README line is not seen here; the guard is what
-#       catches the constitution growing one.
+#       may differ per file, and an extra state on a README line is not seen
+#       here; the guard is what catches the constitution growing one. (The
+#       adopter README template this also compared was retired with
+#       `/ductus:init`, spec 003 task 6.)
 #
 #   1c. Back-edge wording.
 #
@@ -151,14 +151,12 @@ extract_diagram_states() {
 }
 
 sub_1b() {
-  # Three files to compare; constitution is canonical. macOS ships bash 3.2
-  # which lacks associative arrays, so use parallel scalars.
+  # Two files to compare; constitution is canonical.
   local readme="README.md"
-  local project_readme="framework/templates/project/project-readme.md"
   local fix_missing
   fix_missing="add a pipeline diagram referencing $(printf '%s' "$STATES" | sed 's/ / → /g')"
 
-  local seq_constitution seq_readme seq_project_readme
+  local seq_constitution seq_readme
   local missing=0
   if ! seq_constitution="$(extract_diagram_states "$CONSTITUTION")"; then
     emit "$CONSTITUTION" "pipeline diagram not found (no arrow line names every lifecycle state: $STATES)" "$fix_missing"
@@ -168,18 +166,11 @@ sub_1b() {
     emit "$readme" "pipeline diagram not found (no arrow line names every lifecycle state: $STATES)" "$fix_missing"
     missing=1
   fi
-  if ! seq_project_readme="$(extract_diagram_states "$project_readme")"; then
-    emit "$project_readme" "pipeline diagram not found (no arrow line names every lifecycle state: $STATES)" "$fix_missing"
-    missing=1
-  fi
   if [ "$missing" -eq 1 ]; then
     return
   fi
   if [ "$seq_readme" != "$seq_constitution" ]; then
     emit "$readme" "pipeline diagram state sequence differs from framework/constitution.md" "reconcile the diagram to visit the same states in the same order as the constitution"
-  fi
-  if [ "$seq_project_readme" != "$seq_constitution" ]; then
-    emit "$project_readme" "pipeline diagram state sequence differs from framework/constitution.md" "reconcile the diagram to visit the same states in the same order as the constitution"
   fi
 }
 

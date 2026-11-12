@@ -20,16 +20,7 @@ Bootstrapping a new project requires creating several files that follow `ductus`
 
 ### README.md template
 
-A project README that includes:
-
-- Project name and description placeholder
-- Quick start commands section
-- Getting started section that references `/{project}:configure` and `/{project}:status` as the onramp for new contributors
-- Documentation links (constitution, AGENTS, system specs)
-- Feature specs table (with columns for spec, status, dependencies, description)
-- Pipeline overview with slash command references
-- Slash command reference table
-- Instructions for working on existing specs
+**Retired** (spec 003 task 6, the owner's answer (A), 2026-11-12). The template reached no adopter once `/{project}:init`, which copied it, was retired: `/ductus` never writes `README.md`, and an adopter's README serves its own product's users (013). Its file is deleted, and AC1 and AC5 are annotated.
 
 ### .gitignore template
 
@@ -50,11 +41,11 @@ A minimal file whose imports use Claude Code's `@path` form, the only one it res
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/templates/project/project-readme.md` exists with placeholder sections for project name, quick start, getting started (referencing the configure and status commands), documentation links, feature table, pipeline overview, and slash command reference
+- [x] AC1: framework/templates/project/project-readme.md exists with placeholder sections for project name, quick start, getting started (referencing the configure and status commands), documentation links, feature table, pipeline overview, and slash command reference **Retired (2026-11-12):** the template is deleted, since it reached no adopter after `/{project}:init` was retired (spec 003 task 6).
 - [x] AC2: `framework/templates/project/gitignore` exists with minimal sections for secrets, claude settings, IDE files, and OS files — no language-specific patterns
 - [x] AC3: `framework/templates/project/claude-md.md` exists, imports `.ductus/constitution.md` as `@.ductus/constitution.md` and `AGENTS.md` as `@AGENTS.md`, and holds no `@import` line
 - [x] AC4: Each template uses `{project}` placeholder where the project name appears
-- [x] AC5: The README template includes a feature table matching the format used by constitution's spec numbering convention
+- [x] AC5: The README template includes a feature table matching the format used by constitution's spec numbering convention **Retired (2026-11-12)** with the template (spec 003 task 6).
 - [x] AC6: The .gitignore preserves `.claude/commands/` while excluding other `.claude/` contents
 - [x] AC7: All markdown templates pass markdownlint
 

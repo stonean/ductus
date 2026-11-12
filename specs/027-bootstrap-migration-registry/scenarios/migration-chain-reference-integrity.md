@@ -38,8 +38,8 @@ the path half: `README.md` still reads *"the `govern` framework"* and links
 reachability check would flag it — but `AGENTS.md` records that the redirect
 holds only while the retired name stays unused, so an adopter's README is
 carrying a reference with an expiry nobody is tracking. It is in scope here
-because the form is **shipped**: `framework/templates/project/project-readme.md`
-seeds it, so a migration can target the known form the way
+because the form was **shipped**: the adopter README template, retired by spec 003
+task 6, seeded it, so a migration can target the known form the way
 `constitution-relocate` already targets README's constitution links, warning
 rather than rewriting when the text was hand-altered.
 

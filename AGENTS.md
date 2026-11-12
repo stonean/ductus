@@ -15,7 +15,7 @@ The `framework/` directory is ductus's source — everything that ships to adopt
 - `framework/constitution.md` — the constitution shipped to adopted projects (lands at `.ductus/constitution.md` in adopter repos)
 - `framework/rules/` — domain rule sets adopted projects can reference (security-backend, security-frontend, …)
 - `framework/templates/spec/` — templates consumed by an agent during the pipeline (spec, plan, tasks, data-model, research, scenario)
-- `framework/templates/project/` — project document templates consumed once at adoption (agents, claude-md, system, errors, events, project-readme, gitignore, inbox)
+- `framework/templates/project/` — project document templates consumed once at adoption (agents, claude-md, system, errors, events, gitignore, inbox)
 - `framework/commands/` — operational slash command sources only
 - `framework/reference/` — each command's reference, read when one of its steps points at it (lands at `.ductus/reference/` in adopter repos)
 - `framework/bootstrap/` — the `ductus.md` installer plus per-agent configure files at `bootstrap/configure/{key}.md`
