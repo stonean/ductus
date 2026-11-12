@@ -176,6 +176,8 @@ Result:
 }
 ```
 
+`retired` (a citation's boolean and the result's list, each omitted when false or empty) is the state of a citation that no loaded rule file defines and whose `spec.md` lists the ID in its `retired-rules:` frontmatter, a record of the rule's retirement (scenario [`a-record-cites-a-removed-rule`](scenarios/a-record-cites-a-removed-rule.md)). It is neither `found` nor `missing`. The list is read from a `spec.md` only, and is no citation itself; a citation of a removed rule in any other file or of an unlisted ID stays `missing`.
+
 `examined` is the count of rule files read — the denominator `missing` is asserted against. An empty `rule-files` makes every citation `missing`, and `/{project}:analyze` treats `missing` as blocking, so `examined: 0` is how *I was given nothing to check against* stays distinct from *these IDs do not exist*.
 
 ## `derive-dependencies` / `derive-references` — the frontmatter index derivations

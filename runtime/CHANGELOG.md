@@ -10,6 +10,13 @@ its version and date.
 
 ### Added
 
+- **`check-rule-ids` passes a spec's record of a removed rule.** A `spec.md`'s
+  optional `retired-rules:` frontmatter list names the removed rules it records
+  the retirement of; a citation of a listed ID that no loaded rule file defines
+  is reported `retired` (the citation's `retired` flag and the result's
+  `retired` list, each omitted when empty), neither found nor missing. A
+  citation in any other file, or of an unlisted ID, stays missing, and the list
+  line is no citation (spec 067).
 - **`performReview` names its pass and carries the rule-file mapping.** The
   walker takes each request's `pass` from its step's `**pass**` prose, so it
   is no longer empty; `rule-files` holds the loaded files that pass applies

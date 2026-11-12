@@ -28,6 +28,16 @@ The sections moved from 022 keep every argument and result shape and every field
 
 Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on both surfaces rather than reporting zero counts, and the CLI's repeatable `--section` parses as empty when omitted, so an optional argument became required. `BE-COMPAT-001` classes that as breaking; it ships with the pending 0.60.0 minor bump, the pre-1.0 boundary for a breaking change (071's plan). The one in-repo caller, `scripts/audit/promotion-coverage.sh`, passes four `--section` flags.
 
+### A spec records a removed rule's retirement in `retired-rules:`
+
+`check-rule-ids` reads the optional `retired-rules:` frontmatter list of a `spec.md` (`retired_rules_and_body` in `runtime/src/primitives/check_rule_ids.rs`) and reports a citation of a listed ID that no loaded rule file defines as `retired`, never `found` and never `missing`. Choices the scenario left open:
+
+- **The list is not a citation.** The scan reads the body when the file has frontmatter, so a listed ID is checked only by the body citations it exempts and a mistyped entry exempts only its own mistyped citation. Scanning the whole file would report every listed ID `retired` from the list line alone.
+- **Only a `spec.md` is read for the list**, so the same list in a `plan.md` exempts nothing, as the scenario's "any other artifact" requires.
+- **A list that cannot be read fails closed.** A non-list value, a non-string entry, or frontmatter that does not parse yields no exemption, so the citation stays the blocking `missing`; `validate-frontmatter` treats `retired-rules` as an unknown field the open-schema rule admits and checks its shape nowhere, since a malformed list can only add findings, never hide one.
+- **A loaded definition wins.** A listed ID a loaded rule file still defines is `found` (or `deprecated`), as today, so the list exempts nothing until the rule is gone.
+- **Retired passes without an unexamined record.** The rule was removed, so there is no text to assess and nothing the run could not read; the step 5 tally counts `missing` alone.
+
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
 The rule counts a new value in a response set the schema documents as closed as breaking, as it does a narrowed request or a changed exit status, which is the CLI's machine-readable contract. The runtime is pre-1.0, so a breaking change ships with a minor bump; the unreleased ones ship with 0.60.0. Commits carrying 067's number that change no interface — the logical-line reading and its markers (`0e484e52`, `0a157563`, `cba81b63`, `3b6e6946`, `3b2f0856`, `830e90cb`), the reference-prefix rules of `check-orphaned-references` and `rewrite-spec-links` (`d1853444`, `3fc5755a`, `54715126`, `38fc39f6`), the derive splices (`2be18da6`) and the reference sweeps (`13acc295`, `bd4da459`) — change which findings fire, not the shape or the contract.
@@ -44,6 +54,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `63527403` (task 17) | `check-artifacts` | the closed `reason` set gains `status-gated` and `gitignored`; the path families report at `in-progress` | breaking: new values of a closed response set |
 | `286c2c09` (task 18) | `validate-frontmatter` | a path of no schema row is refused; a scenario path takes the scenario row; a `spec.md` run reports its scenarios' findings | breaking: a request accepted before is refused |
 | `8651d466` (task 19) | `resolve-anchor` | references gain `unjudged` and the result two counts; a `qualified` reference can be unresolved; a basename no longer names the markers file; a malformed registry is an error; a span citation is a reference | breaking: the fields are additive, the meaning of `qualified` and of the markers match is not |
+| (task 22) | `check-rule-ids` | `citations` entries gain `retired` and the result `retired`, both omitted when empty; a `spec.md`'s `retired-rules:` list passes its citation of a removed rule, and the list itself is no citation | additive: a new optional state, no closed set changes, and a spec with no list reads as before |
 
 ## Affected Files
 

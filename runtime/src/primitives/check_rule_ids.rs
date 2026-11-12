@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::primitives::rule_sections::{heading_id_regex, section_label_lines};
-use crate::primitives::{Result, contained_path, read_text};
+use crate::primitives::{Result, contained_path, read_text, split_frontmatter};
 use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitation};
 
 /// Execute the `check-rule-ids` primitive.
@@ -48,11 +48,13 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
     }
 
     let content = read_text(&target)?;
+    let (retired_rules, scanned) = retired_rules_and_body(&target, &content);
     let mut citations: Vec<RuleCitation> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     let mut missing: HashSet<String> = HashSet::new();
     let mut deprecated_hits: HashSet<String> = HashSet::new();
-    for cap in citation_regex().captures_iter(&content) {
+    let mut retired_hits: HashSet<String> = HashSet::new();
+    for cap in citation_regex().captures_iter(scanned) {
         let id = cap[0].to_string();
         if !seen.insert(id.clone()) {
             continue;
@@ -64,19 +66,35 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
                     rule_id: id,
                     found: true,
                     deprecated: true,
+                    retired: false,
                 });
             }
             Some(false) => citations.push(RuleCitation {
                 rule_id: id,
                 found: true,
                 deprecated: false,
+                retired: false,
             }),
+            // No loaded file defines it, and the citing spec lists it as a
+            // rule it records the retirement of: a record, not a citation
+            // of a current requirement. Its own state, never found, never
+            // missing.
+            None if retired_rules.contains(&id) => {
+                retired_hits.insert(id.clone());
+                citations.push(RuleCitation {
+                    rule_id: id,
+                    found: false,
+                    deprecated: false,
+                    retired: true,
+                });
+            }
             None => {
                 missing.insert(id.clone());
                 citations.push(RuleCitation {
                     rule_id: id,
                     found: false,
                     deprecated: false,
+                    retired: false,
                 });
             }
         }
@@ -86,12 +104,52 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
     missing.sort();
     let mut deprecated: Vec<String> = deprecated_hits.into_iter().collect();
     deprecated.sort();
+    let mut retired: Vec<String> = retired_hits.into_iter().collect();
+    retired.sort();
     Ok(CheckRuleIdsResult {
         citations,
         missing,
         deprecated,
+        retired,
         examined: args.rule_files.len(),
     })
+}
+
+/// The rule IDs a spec's optional `retired-rules:` frontmatter list names —
+/// the removed rules the spec records the retirement of (spec 067 scenario
+/// `a-record-cites-a-removed-rule`) — and the text scanned for citations.
+///
+/// The scanned text is the body when the target has frontmatter, so the list
+/// itself is no citation: a listed ID is checked only by the body citations it
+/// exempts, and a mistyped one exempts nothing but its own. A target without
+/// parseable frontmatter is scanned whole.
+///
+/// Only a `spec.md` carries the list, so a citation of a removed rule in any
+/// other artifact stays missing. A `retired-rules` that is not a list, or an
+/// entry that is not a string, yields nothing for that part: the citation
+/// stays missing, the blocking side, and `validate-frontmatter` owns
+/// diagnosing the file.
+fn retired_rules_and_body<'a>(target: &Path, content: &'a str) -> (HashSet<String>, &'a str) {
+    let Ok((fm_text, body)) = split_frontmatter(content, target) else {
+        return (HashSet::new(), content);
+    };
+    if target.file_name().is_none_or(|name| name != "spec.md") {
+        return (HashSet::new(), body);
+    }
+    let retired = serde_norway::from_str::<serde_norway::Value>(fm_text)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("retired-rules")
+                .and_then(serde_norway::Value::as_sequence)
+                .map(|ids| {
+                    ids.iter()
+                        .filter_map(|id| id.as_str().map(str::to_string))
+                        .collect()
+                })
+        })
+        .unwrap_or_default();
+    (retired, body)
 }
 
 /// Plain text citations: `BE-AUTHN-001` anywhere in a body (not the heading
@@ -434,11 +492,13 @@ mod tests {
                     rule_id: "BE-EM-001".into(),
                     found: true,
                     deprecated: true,
+                    retired: false,
                 },
                 RuleCitation {
                     rule_id: "BE-EM-002".into(),
                     found: true,
                     deprecated: false,
+                    retired: false,
                 },
             ]
         );
@@ -489,5 +549,113 @@ mod tests {
             .collect();
         assert!(found.contains(&"FE-A11YFORM-001"));
         assert!(found.contains(&"FE-A11YMEDIA-002"));
+    }
+
+    /// Run the primitive on `target` (a file written under a temp project)
+    /// against one rule file defining `BE-LIVE-001` only.
+    fn run_on(target: &str, content: &str) -> CheckRuleIdsResult {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(target), content).unwrap();
+        std::fs::write(tmp.path().join("rules.md"), "### BE-LIVE-001\n\n> Live.\n").unwrap();
+        run(
+            &CheckRuleIdsArgs {
+                path: target.into(),
+                rule_files: vec!["rules.md".into()],
+            },
+            tmp.path(),
+        )
+        .unwrap()
+    }
+
+    fn citation<'a>(result: &'a CheckRuleIdsResult, id: &str) -> &'a RuleCitation {
+        result
+            .citations
+            .iter()
+            .find(|c| c.rule_id == id)
+            .unwrap_or_else(|| panic!("{id} not cited in {:?}", result.citations))
+    }
+
+    /// Spec 067 `a-record-cites-a-removed-rule`: a spec's `retired-rules:`
+    /// list passes its own citation of a removed rule, in a state of its own.
+    #[test]
+    fn a_listed_removed_rule_is_retired_not_missing() {
+        let result = run_on(
+            "spec.md",
+            "---\nstatus: done\nretired-rules: [BE-OLD-005]\n---\n\nBE-OLD-005 was removed.\n",
+        );
+        assert_eq!(result.retired, vec!["BE-OLD-005".to_string()]);
+        assert_eq!(result.missing, [] as [String; 0]);
+        let cited = citation(&result, "BE-OLD-005");
+        assert!(cited.retired && !cited.found && !cited.deprecated);
+    }
+
+    /// The exemption is the list and nothing else: the same citation in a
+    /// spec with no list, or listing a different ID, stays the blocking
+    /// finding, so a removed rule cited as a current requirement is caught.
+    #[test]
+    fn an_unlisted_removed_rule_stays_missing() {
+        for content in [
+            "---\nstatus: done\n---\n\nBE-OLD-005 MUST hold.\n",
+            "---\nstatus: done\nretired-rules: [BE-OLD-006]\n---\n\nBE-OLD-005 MUST hold.\n",
+            "---\nstatus: done\nretired-rules: BE-OLD-005\n---\n\nBE-OLD-005 MUST hold.\n",
+            "---\nstatus: done\nretired-rules: [5]\n---\n\nBE-OLD-005 MUST hold.\n",
+        ] {
+            let result = run_on("spec.md", content);
+            assert_eq!(result.missing, vec!["BE-OLD-005".to_string()], "{content}");
+            assert!(result.retired.is_empty(), "{content}");
+            assert!(!citation(&result, "BE-OLD-005").retired, "{content}");
+        }
+    }
+
+    /// Only a spec records a retirement: the same list in another artifact,
+    /// plan.md here, exempts nothing.
+    #[test]
+    fn a_list_outside_a_spec_exempts_nothing() {
+        let result = run_on(
+            "plan.md",
+            "---\nretired-rules: [BE-OLD-005]\n---\n\nBE-OLD-005 was removed.\n",
+        );
+        assert_eq!(result.missing, vec!["BE-OLD-005".to_string()]);
+        assert_eq!(result.retired, [] as [String; 0]);
+    }
+
+    /// A listed ID a loaded file still defines is found, as today: the list
+    /// exempts nothing until the rule is gone.
+    #[test]
+    fn a_listed_rule_a_loaded_file_defines_is_found() {
+        let result = run_on(
+            "spec.md",
+            "---\nstatus: done\nretired-rules: [BE-LIVE-001]\n---\n\nBE-LIVE-001 holds.\n",
+        );
+        assert!(citation(&result, "BE-LIVE-001").found);
+        assert!(!citation(&result, "BE-LIVE-001").retired);
+        assert_eq!(result.retired, [] as [String; 0]);
+        assert_eq!(result.missing, [] as [String; 0]);
+    }
+
+    /// A mistyped ID on the list passes its own spec's citation of the same
+    /// mistyped ID and no other citation: the list is checked only by the
+    /// citations it exempts.
+    #[test]
+    fn a_mistyped_listed_id_exempts_only_its_own_citation() {
+        let result = run_on(
+            "spec.md",
+            "---\nstatus: done\nretired-rules: [BE-OLD-0005]\n---\n\nBE-OLD-0005 and BE-OLD-005.\n",
+        );
+        assert_eq!(result.retired, vec!["BE-OLD-0005".to_string()]);
+        assert_eq!(result.missing, vec!["BE-OLD-005".to_string()]);
+    }
+
+    /// A spec with no frontmatter, or frontmatter that is not YAML, has no
+    /// list to read: the citation stays missing and the run does not error.
+    #[test]
+    fn a_target_whose_list_cannot_be_read_keeps_its_citations_missing() {
+        for content in [
+            "BE-OLD-005 was removed.\n",
+            "---\nretired-rules: [BE-OLD-005\n---\n\nBE-OLD-005\n",
+        ] {
+            let result = run_on("spec.md", content);
+            assert_eq!(result.missing, vec!["BE-OLD-005".to_string()], "{content}");
+        }
     }
 }

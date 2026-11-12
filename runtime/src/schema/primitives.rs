@@ -3034,6 +3034,11 @@ pub struct RuleCitation {
     pub found: bool,
     /// Whether the ID is deprecated.
     pub deprecated: bool,
+    /// Whether no loaded rule file defines the ID and the citing spec lists
+    /// it in `retired-rules:`: a record of a removed rule, neither found nor
+    /// missing (spec 067 scenario `a-record-cites-a-removed-rule`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub retired: bool,
 }
 
 /// Result for `check-rule-ids`.
@@ -3046,6 +3051,12 @@ pub struct CheckRuleIdsResult {
     pub missing: Vec<String>,
     /// Cited rule IDs that exist but are deprecated.
     pub deprecated: Vec<String>,
+    /// Cited rule IDs that no loaded rule file defines and the citing spec
+    /// lists in its `retired-rules:` frontmatter, so they pass as a record of
+    /// the rule's retirement. Not in `missing`; a listed ID a loaded file
+    /// still defines is `found`, never here. Omitted when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retired: Vec<String>,
     /// How many rule files were read to build the known-ID set — the
     /// denominator `missing` is asserted against.
     ///
@@ -8359,9 +8370,11 @@ mod tests {
                 rule_id: "SEC-AUTH-001".into(),
                 found: true,
                 deprecated: false,
+                retired: false,
             }],
             missing: vec![],
             deprecated: vec![],
+            retired: vec![],
             examined: 1,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
