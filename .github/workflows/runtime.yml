@@ -68,6 +68,9 @@ on:
       # no key Pi's substitutions replace (spec 080, AC26), so an edit to the
       # bridge is an edit to that test's subject.
       - 'framework/bootstrap/pi/ductus-bridge.ts'
+      # The build-and-test job runs this measurement against the build, so an
+      # edit to it is an edit to the job (spec 048, task 29).
+      - 'scripts/measure-replace-under-server.sh'
   push:
     branches:
       - main
@@ -94,6 +97,7 @@ on:
       - 'framework/bootstrap/ductus.md'
       - 'framework/bootstrap/configure/claude.md'
       - 'framework/bootstrap/pi/ductus-bridge.ts'
+      - 'scripts/measure-replace-under-server.sh'
 
 permissions:
   contents: read
@@ -142,6 +146,19 @@ jobs:
 
       - name: cargo build --release --locked
         run: cargo build --release --locked
+
+      # Spec 048, task 29: whether the store and the pointer can be replaced
+      # while a `ductus mcp` server runs from them, each replaced the way
+      # framework/bootstrap/ductus.md replaces it. The script prints what every
+      # replacement did and fails only when it cannot measure, never on an
+      # outcome; it runs before the tests so its record arrives early.
+      - name: Replace the store and the pointer under a running server
+        working-directory: .
+        shell: bash
+        run: |
+          ext=""
+          [ "${{ matrix.os }}" = "windows-latest" ] && ext=".exe"
+          bash scripts/measure-replace-under-server.sh "runtime/target/release/ductus${ext}"
 
       # tests/lint_markdown_scope.rs runs the real markdownlint from the
       # checkout's node_modules and fails loudly without it (022's
