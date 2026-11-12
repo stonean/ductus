@@ -429,12 +429,11 @@ For every kind of fact described in multiple places, one location is authoritati
 | Pipeline command behavior | `framework/commands/*.md` (or `framework/bootstrap/configure/{key}.md`), with its reference in `framework/reference/*.md` |
 | Lifecycle; rules tier; grounding; contributor-knowledge routing | this document: §spec-lifecycle, §rules, §grounding, §drift-prevention |
 | Frontmatter schema | §text-first-artifacts |
-| Per-agent permission set | `framework/bootstrap/configure/{key}.md` |
-| Constitution section anchors | its `<!-- §<anchor> -->` markers |
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
 | A primitive's behavior | its compiled description (`ductus <name> --help`; `runtime/src/schema/descriptions.rs`) |
 | Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; another prefix: the data-model of the spec that introduced its file, else the file's header |
 | Service registry schema (`.ductus/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
+| Shared-constitution registry schema (`[constitutions.*]`) | `specs/055-shared-constitution/data-model.md` |
 | A plan's design record | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
 | Decision-drift tell lists and grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 | Scenario→task referencing rule | `specs/067-analyze-and-audit-checks/data-model.md` |

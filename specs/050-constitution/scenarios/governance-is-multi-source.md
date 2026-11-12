@@ -28,7 +28,7 @@ The three tiers are then a question about the rule's population, which is what t
 
 The reword test carries over too, with its scope narrowed to match the tier. A universal rule must be statable without naming machinery only this repository has; a shared rule must be statable without naming machinery only *one project in the organization* has, or it is project-only wearing a shared label.
 
-One bound belongs with the rule rather than being discovered later: a shared rule may add to the framework's rules and tighten them, never loosen them. The framework constitution is a floor, and [§governance-precedence](../../../framework/constitution.md#governance-sources-and-which-governs) is where that order is stated — together with the fact that nothing enforces it.
+One bound belongs with the rule rather than being discovered later: a shared rule may add to the framework's rules and tighten them, never loosen them, except a rule that names itself a default a project may replace. The framework constitution is a floor, and [§governance-precedence](../../../framework/constitution.md#governance-sources-and-which-governs) is where that order is stated — together with the fact that nothing enforces it.
 
 ## Edge Cases
 
