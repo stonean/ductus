@@ -195,7 +195,6 @@ const CANONICAL_ALLOW_STATIC: &[&str] = &[
     "Bash(git commit *)",
     "Bash(git push *)",
     "Bash(git status *)",
-    "Bash(curl *)",
     "Bash(gh api *)",
     "Bash(command -v *)",
     "Bash(npx markdownlint-cli2 *)",
@@ -260,6 +259,7 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "Bash(mkdir -p *)",
     "Bash(chmod +x *)",
     "Bash(git config core.hooksPath *)",
+    "Bash(curl *)",
 ];
 
 /// [`canonical_allow`] in the order the canonical call appends missing
@@ -1516,7 +1516,7 @@ mod tests {
     /// The entries that can run or write anything and that no step needs in
     /// their broad form leave the canonical set and are retired, so a
     /// `/configure` run removes them and the ceiling refuses them (022 task
-    /// 18, question 3 (a)).
+    /// 18, questions 3 (a) and 2 (a)).
     #[test]
     fn the_run_or_write_entries_are_retired_not_granted() {
         let canonical = canonical_allow();
@@ -1533,6 +1533,7 @@ mod tests {
             "Bash(mkdir -p *)",
             "Bash(chmod +x *)",
             "Bash(git config core.hooksPath *)",
+            "Bash(curl *)",
         ] {
             assert!(!canonical.contains(entry), "{entry} is still granted");
             assert!(RETIRED_ALLOW.contains(&entry), "{entry} is not retired");

@@ -72,11 +72,11 @@ The leftover directory is for inspection only — the next `/ductus` run creates
 
 ### Permission bootstrap
 
-The agent registry's `settings_template` currently allows `Bash(curl *)` and `Bash(ls *)` (Claude). The tarball flow needs two additional commands plus, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
+The agent registry's `settings_template` allowed `Bash(curl *)` and `Bash(ls *)` (Claude) when this was written; 022's task 18 question 2 has since dropped `Bash(curl *)`. The tarball flow needs two additional commands plus, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
 
 Update each registry row's `settings_template`:
 
-- **Claude:** add `Bash(tar *)`, `Bash(mktemp *)` (since narrowed by 022's task 18 to the exact command a step runs, `Bash(mktemp -d -t ductus-XXXXXX)`, with `framework/bootstrap/ductus.md` §Permission Setup retiring the broad form), and six `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, with both single-leading-slash and double-leading-slash forms (see "Why both leading-slash forms" below):
+- **Claude:** add `Bash(tar *)` (since dropped by 022's task 18 question 2, since it can run any command), `Bash(mktemp *)` (since narrowed by 022's task 18 to the exact command a step runs, `Bash(mktemp -d -t ductus-XXXXXX)`, with `framework/bootstrap/ductus.md` §Permission Setup retiring the broad form), and six `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, with both single-leading-slash and double-leading-slash forms (see "Why both leading-slash forms" below):
   - `Read(/private/var/folders/**/T/ductus-*/**)` and `Read(//private/var/folders/**/T/ductus-*/**)` (macOS canonical path)
   - `Read(/var/folders/**/T/ductus-*/**)` and `Read(//var/folders/**/T/ductus-*/**)` (macOS non-canonical, defensive)
   - `Read(/tmp/ductus-*/**)` and `Read(//tmp/ductus-*/**)` (Linux)

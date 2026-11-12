@@ -170,7 +170,7 @@ The whole acquisition sequence is pre-authorized in Claude's grammar, execution 
 
 The surface is larger than the question assumed, for a structural reason: **acquisition cannot use `fetch-archive` and `extract-archive`, because the runtime is what is being acquired.** Every step is host shell work, expressed in Claude's `Bash(…)` patterns.
 
-Measured against the current seed, `curl`, `tar`, `chmod`, `ls`, `mktemp`, `awk`, and `command -v` are already granted. Acquisition adds four:
+Measured against the seed of the time, `curl`, `tar`, `chmod`, `ls`, `mktemp`, `awk`, and `command -v` were already granted; 022's task 18 has since narrowed `chmod`, `mktemp` and `awk` to the exact commands a step runs and dropped `curl` and `tar`. Acquisition adds four:
 
 - `mkdir` — creating the store directory.
 - a **checksum tool**, which varies by platform: `shasum -a 256` on macOS, `sha256sum` on Linux, `certutil -hashfile` on Windows.

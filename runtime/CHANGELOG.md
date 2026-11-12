@@ -162,16 +162,19 @@ its version and date.
 
 ### Changed
 
-- **`/configure` no longer grants twelve Claude allow entries that can run or
+- **`/configure` no longer grants thirteen Claude allow entries that can run or
   write anything, and retires them from existing settings (spec 022).**
-  `make *`, `./.githooks/pre-commit`, `scripts/install-hooks.sh`,
+  `curl *`, `make *`, `./.githooks/pre-commit`, `scripts/install-hooks.sh`,
   `./scripts/install-hooks.sh`, `git diff *`, `git log *`, `git show *`,
   `markdownlint *`, `markdownlint-cli2 *`, `mkdir -p *`, `chmod +x *` and
   `git config core.hooksPath *` leave `merge-permissions`' canonical set
-  (`CANONICAL_ALLOW_STATIC`, 29 entries to 17) for its retired list, so the
+  (`CANONICAL_ALLOW_STATIC`, 29 entries to 16) for its retired list, so the
   canonical call revokes each and the ceiling refuses each as an `allow`
-  entry. The seed's retired list gains `Bash(git diff *)`. A command an
-  adopter ran through one of them now prompts.
+  entry. `/ductus`'s Claude seed no longer grants `Bash(curl *)` or
+  `Bash(tar *)` (`curl -o` writes anywhere, `tar --to-command` runs
+  anything), and its retired list gains both and `Bash(git diff *)`, so a
+  first run in Manual mode prompts for its downloads and extraction. A
+  command an adopter ran through one of them now prompts.
 - **BREAKING: `apply-manifest` refuses an entry that would be written with a
   known placeholder unsubstituted (spec 022).** With a non-empty
   substitutions map, an `update` or `create` entry whose substituted text

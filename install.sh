@@ -211,9 +211,7 @@ case "$agent" in
 {
   "permissions": {
     "allow": [
-      "Bash(curl *)",
       "Bash(ls *)",
-      "Bash(tar *)",
       "Bash(mktemp -d -t ductus-XXXXXX)",
       "Bash(git status *)",
       "Bash(git config --get core.hooksPath)",

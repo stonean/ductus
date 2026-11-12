@@ -17,7 +17,7 @@ curl -fsSL "https://codeload.github.com/${DUCTUS_REPO:-stonean/ductus}/tar.gz/{a
   -o {tempdir}/framework.tar.gz
 ```
 
-The direct URL returns the archive with no redirect (HTTP 200, zero redirects), so the seed's pre-granted `curl` permission covers it and no prompt fires. The tarball is byte-equivalent to the redirect form's: the same top-level directory, which the bootstrap reads back from the extraction as `{framework-root}`, and the same `{framework-root}/framework/...` layout. Extraction and per-file resolution are unchanged.
+The direct URL returns the archive with no redirect (HTTP 200, zero redirects), so one `curl` fetches it: an allow a project grants itself covers it, and since 022's task 18 question 2 Claude's seed grants no `curl` (it can write anywhere with `-o`), so in Manual mode it is one prompt rather than two. The tarball is byte-equivalent to the redirect form's: the same top-level directory, which the bootstrap reads back from the extraction as `{framework-root}`, and the same `{framework-root}/framework/...` layout. Extraction and per-file resolution are unchanged.
 
 > **Signpost:** `{archive-ref}` and `{framework-root}` are [061 — Updates track the latest release tag](../../061-updates-track-the-latest-release-tag/spec.md)'s. When this scenario shipped the archive was always `main`'s, fetched from `refs/heads/main` and extracted to `ductus-main/` — which is what the Context above records. Since 061 a run fetches the archive at the one source it resolves, the latest release by default, and GitHub names the extracted directory after that ref, so the bootstrap derives the root instead of spelling it. The direct-codeload decision this scenario made is unchanged and holds on every ref.
 

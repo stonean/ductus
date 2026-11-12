@@ -47,7 +47,6 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: a `Bash(git -C <wildcard> status <wildcard>)` shape lets that leading wildcard span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly this over-broadening reason. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
 
    **Utility:**
-   - `Bash(curl *)`
    - `Bash(gh api *)`
    - `Bash(command -v *)`
 
@@ -187,7 +186,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__write-supersession-annotation`
    - `mcp__ductus__check-review-freshness`
 
-   **Entries that can run or write anything, which no step needs in this form** (dropped from the canonical set by spec 022 task 18, question 3, the owner's answer (a), 2026-11-12). Each can, through its own options, run another command or write a path outside the project: `make`, the hook and the two install scripts run project-written code; `git diff`, `git log` and `git show` write a file with `--output`; the bare lint entries run the project's JavaScript configuration; and the broad `mkdir -p`, `chmod +x` and `git config core.hooksPath` forms re-granted what the seed grants in the exact forms a step runs. A step that reads a diff, as a review's re-read does, runs a read-only `git diff` form the host prompts for or approves itself:
+   **Entries that can run or write anything, which no step needs in this form** (dropped from the canonical set by spec 022 task 18, question 3, the owner's answer (a), 2026-11-12). Each can, through its own options, run another command or write a path outside the project: `make`, the hook and the two install scripts run project-written code; `git diff`, `git log` and `git show` write a file with `--output`; the bare lint entries run the project's JavaScript configuration; and the broad `mkdir -p`, `chmod +x` and `git config core.hooksPath` forms re-granted what the seed grants in the exact forms a step runs; and `curl` writes anywhere with `-o`, so it left with the seed's (question 2). A step that reads a diff, as a review's re-read does, runs a read-only `git diff` form the host prompts for or approves itself:
    - `Bash(make *)`
    - `Bash(./.githooks/pre-commit)`
    - `Bash(scripts/install-hooks.sh)`
@@ -200,6 +199,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(mkdir -p *)`
    - `Bash(chmod +x *)`
    - `Bash(git config core.hooksPath *)`
+   - `Bash(curl *)`
 
    **Why this list lives here and not in a `/ductus` migration.** The registry in `framework/migrations.toml` is the framework's usual home for adopter-side cleanup, and it is the wrong mechanism for this one. Its `[migrations].last_applied` marker lives in the **committed** `.ductus/config.toml`, while this file is **per-contributor and gitignored** — so the first teammate to run `/ductus` would mark the entry applied for the whole repo and every other teammate would keep the retired entries forever. `/ductus` also never writes the full permission set (it seeds only the bootstrap entries and directs the operator here). This command has neither problem: it is the sole owner of this file, it runs per-contributor, and it is idempotent, so retirement simply happens on the next run for each person who runs it.
 
