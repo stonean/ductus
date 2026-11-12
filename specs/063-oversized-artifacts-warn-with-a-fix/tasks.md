@@ -114,12 +114,12 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 
 Every message this task adds names `/prune --project`, which `041-task-pruning`'s task 23 landed on 2026-10-29, so this task no longer waits on it. The design is `075-agents-md-holds-what-every-session-needs`'s plan, §`check-artifact-size` measures the project files (063): arguments, the two-half result, staged mode, and `/analyze`'s seed. The result's project half goes in this spec's `data-model.md`. `075`'s tasks 4 and 5 wait on this task.
 
-- [ ] Implement the behavior described in `scenarios/project-files-are-measured.md`
+- [x] Implement the behavior described in `scenarios/project-files-are-measured.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 16. A permission test that cannot run as root fails instead of passing
 
-- [ ] `an_unreadable_subject_is_skipped_never_clean` and `an_unlistable_scenarios_directory_is_skipped` in `runtime/src/primitives/check_artifact_size.rs` `return` when the 0o000 subject can still be opened or listed, so a run as root reports both `ok` without exercising either (§design-principles: a check that cannot run never looks like one that passed; prefer a test that fails loudly on a missing input). Make each panic naming why, as `rewrite_spec_links.rs`'s two permission tests do since 048's 2026-10-29 review. Found by that review; the pattern predates its window (`5b575782`)
+- [x] `an_unreadable_subject_is_skipped_never_clean` and `an_unlistable_scenarios_directory_is_skipped` in `runtime/src/primitives/check_artifact_size.rs` `return` when the 0o000 subject can still be opened or listed, so a run as root reports both `ok` without exercising either (§design-principles: a check that cannot run never looks like one that passed; prefer a test that fails loudly on a missing input). Make each panic naming why, as `rewrite_spec_links.rs`'s two permission tests do since 048's 2026-10-29 review. Found by that review; the pattern predates its window (`5b575782`)
 
 - **Done when**: Neither test can pass without exercising its unreadable subject: a run where permissions do not bind fails with a message naming that, and `cargo test` passes as a non-root user
