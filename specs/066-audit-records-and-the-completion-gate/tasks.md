@@ -130,6 +130,8 @@ Pi has no seed. Family 32 holds each retired list disjoint from its seed and can
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
 
+Fixed 2026-11-12, as decided: the two `compute-review-scope` entries are out of the `claude` `settings_template` cell and join its **Retired seed entries** bullet in `framework/bootstrap/ductus.md` and `govern.md` (still byte-identical), and §Permission Setup's clause for the command is gone, leaving the eleven plus `merge-status-hook`; `install.sh`'s `claude` heredoc drops the same two lines; 022's `plan.md` **The seeds** loses the clause. Re-checked first: `grep` finds no other `compute-review-scope *` allow entry in `framework/`, `install.sh` or `docs/`, and `framework/commands/review.md` step 1 runs the command only through the MCP tool.
+
 ## 17. Implement scenario: a-supplied-summary-carries-the-loops-account
 
 Before the second item, read 078's `status:`. At `done`, that edit is a factual correction to a durable contract, so it takes 078's `done → in-progress` back-edge and stales its review (§spec-lifecycle): put it to the owner first. If the line already says the Summary, supplied or generated, the item is satisfied.
