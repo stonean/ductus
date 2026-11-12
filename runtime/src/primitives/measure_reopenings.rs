@@ -25,7 +25,7 @@ use git2::{Commit, ErrorCode, ObjectType, Oid, Repository, Sort, Tree};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-use crate::primitives::decisions::{RULE_DECIDER, RawDecision};
+use crate::primitives::decisions::{RULE_DECIDER, RawDecision, same_key};
 use crate::primitives::read_tasks::unchecked_lines;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, ProjectRepository, REVIEW_RECORD_FILE, Result, flatten_line,
@@ -303,8 +303,13 @@ struct Run {
     stamp: String,
     /// The run left a gating finding.
     gating: bool,
-    /// The decisions stamped with this run's time that a person made.
+    /// The decisions and waivers stamped with this run's time that a person made, less
+    /// the decisions [`OpenPass::drop_carried`] found another spec's record already held.
     decisions_by_person: usize,
+    /// The keys and outcomes of those decisions, which the carry check reads.
+    person_decisions: Vec<(String, String)>,
+    /// The oldest commit the walk has met that wrote this run, set as it observes.
+    first_write: Option<Oid>,
 }
 
 /// Each run's count of a person's decisions, oldest first.
@@ -366,14 +371,15 @@ impl StoredDecisions {
     /// support: a decision the rule made is not a person's, a round `[review]
     /// re-reads-off` waives is the config file's, and a person's decline with no reason
     /// leaves no entry at all (spec 079, AC17).
-    fn by_person_at(&self, last_run: &str) -> usize {
+    fn by_person_at(&self, last_run: &str) -> (usize, Vec<(String, String)>) {
         let at_this_run = |at: &Option<String>| at.as_deref().map(str::trim) == Some(last_run);
-        let decisions = self
+        let decisions: Vec<(String, String)> = self
             .decisions
             .iter()
             .filter(|decision| at_this_run(&decision.decided_at))
             .filter(|decision| decision.decided_by.as_deref().map(str::trim) != Some(RULE_DECIDER))
-            .count();
+            .map(|decision| (stored_key(decision), outcome_of(decision)))
+            .collect();
         let waivers = self
             .waivers
             .iter()
@@ -387,7 +393,22 @@ impl StoredDecisions {
                 })
             })
             .count();
-        decisions + waivers
+        (decisions.len() + waivers, decisions)
+    }
+}
+
+/// An entry's key, `""` for one naming none, which no other record's key equals.
+fn stored_key(decision: &RawDecision) -> String {
+    decision.key.clone().unwrap_or_default()
+}
+
+/// An entry's outcome under the current names: a record written before spec 076 spells
+/// them `routed` and `discarded`.
+fn outcome_of(decision: &RawDecision) -> String {
+    match decision.outcome.as_deref().map(str::trim) {
+        Some("routed") => "deferred".to_string(),
+        Some("discarded") => "waived".to_string(),
+        other => other.unwrap_or_default().to_string(),
     }
 }
 
@@ -414,10 +435,13 @@ fn record_state<T: DeserializeOwned>(
     let Some(last_run) = last_run else {
         return RecordState::NoRun;
     };
+    let (decisions_by_person, person_decisions) = stored.by_person_at(last_run);
     RecordState::Run(Run {
         stamp: last_run.to_string(),
         gating,
-        decisions_by_person: stored.by_person_at(last_run),
+        decisions_by_person,
+        person_decisions,
+        first_write: None,
     })
 }
 
@@ -446,6 +470,7 @@ struct History<'a> {
     statuses: HashMap<Oid, Option<String>>,
     reviews: HashMap<Oid, RecordState>,
     analyses: HashMap<Oid, RecordState>,
+    held: HashMap<Oid, Rc<Vec<(String, String)>>>,
 }
 
 impl<'a> History<'a> {
@@ -457,7 +482,40 @@ impl<'a> History<'a> {
             statuses: HashMap::new(),
             reviews: HashMap::new(),
             analyses: HashMap::new(),
+            held: HashMap::new(),
         }
+    }
+
+    /// The key and outcome of every decision either record of a feature directory
+    /// stores, whoever made it, read once per directory version. A record that does not
+    /// parse holds none, so a decision it might have held counts as new.
+    fn decisions_held(&mut self, directory: Oid) -> Result<Rc<Vec<(String, String)>>> {
+        if let Some(cached) = self.held.get(&directory) {
+            return Ok(Rc::clone(cached));
+        }
+        let mut held = Vec::new();
+        for name in [REVIEW_RECORD_FILE, ANALYSIS_RECORD_FILE] {
+            let Some(bytes) = self.file_in(directory, name)? else {
+                continue;
+            };
+            let Ok(text) = std::str::from_utf8(&bytes) else {
+                continue;
+            };
+            let Ok((frontmatter, _)) = split_frontmatter(text, Path::new(name)) else {
+                continue;
+            };
+            if let Ok(stored) = serde_norway::from_str::<StoredDecisions>(frontmatter) {
+                held.extend(
+                    stored
+                        .decisions
+                        .iter()
+                        .map(|decision| (stored_key(decision), outcome_of(decision))),
+                );
+            }
+        }
+        let held = Rc::new(held);
+        self.held.insert(directory, Rc::clone(&held));
+        Ok(held)
     }
 
     /// Each feature directory `commit` holds, with its tree. Membership is
@@ -634,19 +692,51 @@ impl OpenPass {
     /// Take in one version of the records. The walk runs newest first, so the first
     /// version naming a run is that run's last write, whose findings are the ones it
     /// left.
-    fn observe(&mut self, records: &Records) {
+    fn observe(&mut self, records: &Records, commit: Oid) {
         for (runs, state) in [
             (&mut self.reviews, &records.review),
             (&mut self.analyses, &records.analysis),
         ] {
             match state {
                 RecordState::Unparseable => self.unreadable = true,
-                RecordState::Run(run) if !runs.iter().any(|r| r.stamp == run.stamp) => {
-                    runs.push(run.clone());
-                }
+                RecordState::Run(run) => match runs.iter_mut().find(|r| r.stamp == run.stamp) {
+                    Some(seen) => seen.first_write = Some(commit),
+                    None => runs.push(Run {
+                        first_write: Some(commit),
+                        ..run.clone()
+                    }),
+                },
                 _ => {}
             }
         }
+    }
+
+    /// Take from each run the decisions another spec's record already held at the
+    /// parents of the run's first write with the same key and outcome: a decision
+    /// carried from that record is that record's, and counts there alone (spec 079,
+    /// AC17). The spec's own earlier records are not read, since a writer keeps a stored
+    /// decision's stamp, so only another spec's record can hand one over.
+    fn drop_carried(&mut self, history: &mut History<'_>, feature: &str) -> Result<()> {
+        for run in self.reviews.iter_mut().chain(self.analyses.iter_mut()) {
+            let Some(first) = run.first_write.filter(|_| !run.person_decisions.is_empty()) else {
+                continue;
+            };
+            let mut held = Vec::new();
+            for parent in history.repository.find_commit(first)?.parents() {
+                for (name, directory) in history.directories_of(&parent)?.iter() {
+                    if name != feature {
+                        held.extend(history.decisions_held(*directory)?.iter().cloned());
+                    }
+                }
+            }
+            let carried = run
+                .person_decisions
+                .iter()
+                .filter(|(key, outcome)| held.iter().any(|(k, o)| same_key(k, key) && o == outcome))
+                .count();
+            run.decisions_by_person -= carried;
+        }
+        Ok(())
     }
 
     /// The reopening whole, given the commit that started it and the runs its parents
@@ -784,7 +874,7 @@ fn walk(
             let Some(pass) = open.get_mut(feature) else {
                 continue;
             };
-            pass.observe(&history.records_of(*directory)?);
+            pass.observe(&history.records_of(*directory)?, commit.id());
             let entered = status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS);
             let left_done =
                 status.as_deref() != Some(DONE) && any_parent(DONE) && !any_parent(IN_PROGRESS);
@@ -798,7 +888,8 @@ fn walk(
                         }
                     }
                 }
-                if let Some(pass) = open.remove(feature) {
+                if let Some(mut pass) = open.remove(feature) {
+                    pass.drop_carried(history, feature)?;
                     match pass.close(feature, commit.id(), &carried_in) {
                         Ok(reopening) => reopenings.push(reopening),
                         Err(uncounted) => not_counted.push(uncounted),
@@ -1321,6 +1412,51 @@ mod tests {
                     decisions_by_person: 1,
                 },
             ]
+        );
+    }
+
+    /// A decision one spec's review carried from another's record is that record's, so a
+    /// person who made it once is counted once, in the run that first recorded it; a
+    /// decision no other record held is still the carrying run's own.
+    #[test]
+    fn a_decision_carried_from_another_specs_record_counts_where_it_began() {
+        let fixture = Fixture::new();
+        let decision = |key: &str, at: &str| {
+            format!(
+                "  - key: {key}\n    outcome: waived\n    reason: r\n    decided-at: {at}\n    decided-by: owner@example.com\n"
+            )
+        };
+        let (first, second) = ("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+        let other = |file: &str, body: &str| {
+            write(&fixture.root.join("specs").join("013-b").join(file), body);
+            commit_all(&fixture.repository, "work(013): step");
+        };
+        let flip = |status: &str| other("spec.md", &spec(status).replace("012", "013"));
+        flip("in-progress");
+        let began = format!("decisions:\n{}", decision("shared", first));
+        let record = review(first, &began).replace(FEATURE, "013-b");
+        other("review.md", &record);
+        flip("done");
+
+        fixture.status("in-progress");
+        let carried = format!(
+            "decisions:\n{}{}",
+            decision("shared", second),
+            decision("own", second)
+        );
+        fixture.commit("review.md", &review(second, &carried));
+        fixture.status("done");
+
+        let measurement = fixture.measure();
+        let by_person: Vec<(&str, usize)> = measurement
+            .reopenings
+            .iter()
+            .map(|r| (r.feature.as_str(), r.decisions_by_person))
+            .collect();
+        assert_eq!(by_person, [(FEATURE, 1), ("013-b", 1)], "{measurement:?}");
+        assert_eq!(
+            measurement.reopenings[0].run_decisions[0].decisions_by_person,
+            1
         );
     }
 

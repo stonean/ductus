@@ -162,6 +162,12 @@ its version and date.
 
 ### Changed
 
+- **`measure-reopenings` counts a decision as a person's only in the record that
+  first holds its key.** A decision a review carried from another spec's record,
+  with the same key and outcome, stood in that record at the parents of the run's
+  first write and was counted again as the carrying run's, overstating
+  `decisions-by-person` (22 of the 30 person-stamped decisions in five measured
+  runs were carried). The compiled description says so (spec 079, AC17).
 - **`write-review` and `check-review-gate` bound a stale analysis's path list
   (066).** `write-review`'s `analyze-freshness.paths` and `check-review-gate`'s
   new `analyze-stale-paths` (the artifacts the message shows three of) are

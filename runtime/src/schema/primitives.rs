@@ -5648,7 +5648,8 @@ pub struct Reopening {
     /// A second or later run of a kind followed a run that left no gating finding.
     pub over_bound: bool,
     /// Stored decisions and waivers stamped with one of its runs' times that a person
-    /// recorded; a decline with no reason stores nothing, so it counts as none.
+    /// recorded; a decline with no reason stores nothing, so it counts as none, and a
+    /// decision another spec's record already held counts in that record alone.
     pub decisions_by_person: usize,
     /// That count per run, oldest first within each record (spec 079, AC17).
     pub run_decisions: Vec<RunDecisions>,
@@ -5662,7 +5663,8 @@ pub struct RunDecisions {
     pub record: DecisionRecord,
     /// The run's `last-run`.
     pub last_run: String,
-    /// Stored decisions and waivers stamped with this run's time that a person recorded.
+    /// Stored decisions and waivers stamped with this run's time that a person recorded,
+    /// less decisions another spec's record already held with the same key and outcome.
     pub decisions_by_person: usize,
 }
 
