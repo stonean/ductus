@@ -330,6 +330,36 @@ fn no_tool_spells_its_description_as_a_literal() {
     );
 }
 
+/// A spec's data model or scenario points at a primitive's description for what it
+/// states (079 task 36), so each detail those passages used to carry, and that a
+/// description once lacked, must be there to point at.
+#[test]
+fn descriptions_hold_the_detail_specs_point_at() {
+    let held = [
+        (descriptions::RESOLVE_CONSTITUTIONS, "`examined`"),
+        (descriptions::RELOCATE_AUDIT_RECORDS, "`disagreements`"),
+        (
+            descriptions::WRITE_SESSION,
+            "`clear` removes the target block",
+        ),
+        (descriptions::WRITE_SESSION, "`last-used`"),
+        (descriptions::RESOLVE_SESSION, "`consolidated`"),
+        (descriptions::RETARGET_SESSIONS, "`cause`"),
+        (descriptions::DASHBOARD, "`fold-target-missing`"),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            "no round.toml was written",
+        ),
+        (descriptions::CHECK_ARTIFACT_SIZE, "named on stderr"),
+        (descriptions::READ_DEPRECATION_LABELS, "labels both rules"),
+        (descriptions::CLASSIFY_SPEC_EDIT, "absent on either side"),
+    ];
+    for (description, detail) in held {
+        assert!(description.contains(detail), "missing {detail}");
+    }
+    assert!(!descriptions::RELOCATE_AUDIT_RECORDS.contains("never overwrites"));
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

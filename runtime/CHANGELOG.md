@@ -191,6 +191,17 @@ its version and date.
 
 ### Changed
 
+- **Primitive descriptions gain the detail specs used to restate, and two
+  stale ones are corrected (spec 079 task 36).** `relocate-audit-records`'
+  description said it never overwrites an existing artifact; it merges the block
+  into one, the spec block winning, and reports each disagreeing key.
+  `resolve-constitutions` names its `examined` count. `write-session` states
+  `clear` and the peer and result shapes, `resolve-session` the null and notice
+  rules, `retarget-sessions` its arguments, `dashboard` each spec's scenario
+  question and fold fields, `check-prescriptions` its missing-`round.toml` case,
+  `check-artifact-size` the `--staged` stderr naming, `read-deprecation-labels`
+  its section-run rule and `classify-spec-edit` the absent `spec.md`. Text only.
+
 - **`measure-reopenings` counts a decision as a person's only in the record that
   first holds its key.** A decision a review carried from another spec's record,
   with the same key and outcome, stood in that record at the parents of the run's
