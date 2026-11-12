@@ -897,6 +897,8 @@ On the runtime path both are `apply-manifest` `create` entries (§Instructions s
 
    If the file is being re-merged on a subsequent run and a `# {Language}` section is already present, leave it alone — language sections, once written, are adopter territory.
 
+   GitHub names its templates by ecosystem, not always by language, so a language may have no template of its name (`TypeScript.gitignore` is a 404). **Language-to-template map:** `TypeScript` → `Node`, `JavaScript` → `Node`. A mapped language is fetched under its mapped name, its section headed `# {Language}` as usual; two languages mapping to one template append it once. An entry is added to the map only on the evidence of a real bootstrap run that fetched and confirmed the template. An unmapped language whose fetch fails never halts the run and is never passed in silence: the closing summary names each language whose patterns were not appended, with its reason, reporting apart a 404 (no template of that name, so the operator can name GitHub's template on the next run) and any other failure (no network, a server error, so retry or name another language).
+
 **Shared constitution imports** (strategy: merge, layout-derived) — install or update a framework-managed block in each selected layout's **native rules file**, listing the shared constitutions registered in `[constitutions.*]` (§Project Configuration, spec 055).
 
 1. Invoke `resolve-constitutions` with `unmeasured: true` (`--unmeasured` on the CLI) to get the registered entries split into `loaded` and `skipped`. Unmeasured, it reads no `[artifacts]` setting, which this step does not use, so a malformed one never halts `/ductus`; `/{project}:target` is where each source's size is reported.
