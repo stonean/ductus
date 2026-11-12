@@ -112,7 +112,7 @@ procedure_file = "framework/migrations/govern-dir-consolidate.md"
 id = "constitution-relocate"
 introduced_in = "0.24.0"
 # No sunset_after: high-impact layout move kept active indefinitely (like
-# govern-dir-consolidate), so any adopter still carrying the root
+# govern-dir-consolidate), so any adopter still carrying a root ductus
 # constitution.md is converged on their next /ductus run. No runtime fallback
 # exists to pair with it — no primitive reads the constitution; the shipped
 # command bodies are rescaffolded to the new path in the same /ductus run

@@ -13,7 +13,7 @@ This migration has no runtime primitive; it is a file move plus reference rewrit
 
 **Convergence rule (for the move in step 2).** The manifest's `update` pass writes `.govern/constitution.md` from this run onward, so a lingering root copy after the move is *dead* — nothing reads it. The move **converges** rather than skip-and-leaves: when the destination already exists, compare it to the legacy root file — if identical, delete the legacy file silently; if they differ, delete the legacy file and emit one line `warning: constitution.md diverged from .govern/constitution.md; removed the stale legacy copy (.govern/constitution.md wins; the legacy content was already ignored — recover from git if needed).` A stale root copy is never left in place. When the destination does not exist, move the file via `git mv` when the source is tracked (so the rename is recorded) or `mv` otherwise, preserving any adopter customization — a pinned, hand-edited constitution moves with its edits intact.
 
-1. **Idempotency check.** If no `constitution.md` exists at the repo root, exit silently — the project is already on the `.govern/` layout (or never had the file; the manifest's `update` strategy lands a fresh `.govern/constitution.md` later in this run either way).
+1. **Idempotency and content check.** If no `constitution.md` exists at the repo root, exit silently — the project is already on the `.govern/` layout (or never had the file; the manifest's `update` strategy lands a fresh `.govern/constitution.md` later in this run either way). If one exists, relocate it only when it is a ductus copy, recognized by its content: its first line is `# Constitution` **and** it carries the `<!-- §principles -->` marker (a local edit keeps both, so an edited legacy copy still qualifies). A file lacking either is the project's own: decline it — move, overwrite and re-link nothing, running none of steps 2–6 — and emit one line naming it: `constitution.md at the repo root is not a ductus constitution (no "# Constitution" first line with a "<!-- §principles -->" marker); left in place.`
 
 2. **Move the file.** Move root `constitution.md` to `.govern/constitution.md` (creating `.govern/` if absent) under the convergence rule above.
 
@@ -31,6 +31,7 @@ This migration has no runtime primitive; it is a file move plus reference rewrit
 ## Notes
 
 - The migration is one-way. There is no reverse path.
+- A root `constitution.md` that is not a ductus copy is never touched (step 1). A project's own that opens `# Constitution` and carries a `<!-- §principles -->` marker reads as a ductus copy and is relocated, since the marker is ductus's own anchor grammar; git holds its content.
 - Interrupted runs converge: `[migrations].last_applied` advances only after the whole procedure completes, and the move and each rewrite are independently idempotent, so a re-run finishes the remainder without double-moving.
 - The gitignore needs no change: `.govern/constitution.md` is committed content, and the session-file entry (`/.govern/session.toml`) never covered it.
 - Composes with `govern-dir-consolidate` (0.22.0, runs first): an adopter far enough behind gets `.govern/` created there; this migration only needs the directory and creates it if somehow absent.
