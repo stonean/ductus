@@ -341,6 +341,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 | `references` | no | list of `{service, spec}` | **Generated** by `derive-references`; navigation only |
 | `next-criterion` | no | integer | **Maintained by the labelling pass**; never lowered, and absent means no criterion has been labelled yet |
 | `cross-spec-impact` | no | list of spec slugs | **Hand-authored** obligations under §cross-spec-impact |
+| `retired-rules` | no | list of rule IDs | **Hand-authored**; removed rules it records retiring |
 
 #### Scenario files
 
@@ -484,7 +485,7 @@ Knowledge that would help another contributor belongs in git, never in an agent'
 
 ### Concurrent Features
 
-**Each agent process holds its own session target**, identified by `DUCTUS_SESSION`, else the agent's session identifier (Claude Code's `CLAUDE_CODE_SESSION_ID`), in gitignored `.ductus/sessions/`; within a process, one target and a pipeline serial within a feature. Every target write also sets the shared default, `.ductus/session.toml`, which an unidentified process uses and an identified one adopts once. Sessions on one feature are told of each other, never blocked.
+**Each agent process holds its own session target**, identified by `DUCTUS_SESSION`, else the agent's session identifier (Claude Code's `CLAUDE_CODE_SESSION_ID`), in gitignored `.ductus/sessions/`; within a process, one target and a pipeline serial within a feature. Every target write also sets the shared default, `.ductus/session.toml`, which an unidentified process uses and an identified one adopts once.
 
 Per-process targets isolate the target only: agents in one tree share files, index and commits, so `git worktree` and platform isolation remain the answer for isolating edits. A push carries every local commit, so name another session's before pushing. Two bounds stay open: processes with no identity share one target, and with two agent CLIs in one tree the runtime reads command files from the agent `/ductus` last recorded. A command that removes a feature's directory leaves no session in this tree pointing at it: `/{project}:fold` re-targets each to the spec its content moved to, and `/{project}:consolidate` clears each, keeping `cli-config-dir`, since its target is a spec nobody chose to work on; a teammate's session in another clone may still name the removed directory.
 
