@@ -12,6 +12,11 @@
 //! per host and per host setting, so a file's length on disk is the measurable proxy and
 //! the threshold is a heuristic the project may set. The warning therefore says a file
 //! *may* not be read in one call, never that it *will* be truncated.
+//!
+//! **Project files** (spec 063, scenario `project-files-are-measured`, for spec
+//! 075) are a second subject set: `AGENTS.md` and the spec root's `system.md`,
+//! `events.md` and `errors.md`, against the same threshold. `staged` measures
+//! each one's index copy against its `HEAD` copy for the pre-commit hook.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -19,14 +24,15 @@ use std::path::{Path, PathBuf};
 use crate::primitives::decisions::{RawDecision, read_decisions};
 use crate::primitives::prune_tasks::read_status;
 use crate::primitives::{
-    ANALYSIS_RECORD_FILE, PrimitiveError, Result, flatten_line, read_text, rel_path,
-    scenario_name_cmp,
+    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, flatten_line, read_text,
+    rel_path, scenario_name_cmp,
 };
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-    FixKind, OnDone, OversizedArtifact, ReadSizeThreshold, SkippedTarget, ThresholdSource,
+    FixKind, OnDone, OversizedArtifact, ProjectFileKind, ProjectFileSize, ProjectSizeState,
+    ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
 };
 
 /// The finding family `/{project}:analyze` records an oversized artifact
@@ -62,11 +68,14 @@ pub(crate) const MIN_READ_SIZE_BYTES: u64 = 1;
 pub(crate) const SECTION: &str = "artifacts";
 pub(crate) const KEY: &str = "read-size-bytes";
 
-/// Measure `args.feature`'s subject artifacts against the configured read
-/// size.
+/// Measure `args.feature`'s subject artifacts, the four project files, or
+/// both, against the configured read size.
 ///
 /// # Errors
 ///
+/// - [`PrimitiveError::MissingArgument`] when neither `feature` nor
+///   `project-files` is named, or `staged` is set without `project-files`.
+/// - [`PrimitiveError::InvalidArgument`] when `staged` is set with `feature`.
 /// - [`PrimitiveError::InvalidPath`] when `feature` would escape the spec root,
 ///   or when the feature directory, or a link inside it, resolves outside the
 ///   project.
@@ -83,53 +92,239 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///   is set to anything but a positive whole number, or `artifacts` is not a
 ///   table: the project set a value, so the default never stands in for it.
 /// - [`PrimitiveError::Io`] when the config file exists but cannot be read.
+/// - [`PrimitiveError::Git`] when `staged` is set and the project's repository
+///   or its index or `HEAD` cannot be read: a staged check that could not look
+///   never reads as one that found nothing.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
+    check_args(args)?;
     let root = paths::Paths::load(repo)?.specs_root;
-    super::validate_feature_argument(repo, &root, &args.feature)?;
-    let feature_dir = repo.join(&root).join(&args.feature);
-    if !feature_dir.is_dir() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root,
-            feature: args.feature.clone(),
-        });
-    }
-    let status = read_status(&feature_dir, &root, &args.feature)?;
+    let feature = match &args.feature {
+        Some(feature) => {
+            super::validate_feature_argument(repo, &root, feature)?;
+            let feature_dir = repo.join(&root).join(feature);
+            if !feature_dir.is_dir() {
+                return Err(PrimitiveError::FeatureNotFound {
+                    root,
+                    feature: feature.clone(),
+                });
+            }
+            let status = read_status(&feature_dir, &root, feature)?;
+            Some((feature.clone(), feature_dir, status))
+        }
+        None => None,
+    };
     let (threshold, mut notices) = resolve_threshold(repo)?;
 
     let mut skipped = Vec::new();
     let mut examined: u32 = 0;
     let mut oversized = Vec::new();
-    for (path, kind) in subjects(&feature_dir, repo, &mut skipped) {
-        let rel = rel_path(&path, repo);
-        let Some(bytes) = measure(&path, &rel, &mut skipped) else {
-            continue;
-        };
-        examined += 1;
-        let pages = bytes.div_ceil(threshold.bytes).max(1);
-        if pages >= 2 {
-            oversized.push(oversized_artifact(
-                rel,
-                kind,
-                bytes,
-                pages,
-                threshold.bytes,
-                &status,
-            ));
+    if let Some((_, feature_dir, status)) = &feature {
+        for (path, kind) in subjects(feature_dir, repo, &mut skipped) {
+            let rel = rel_path(&path, repo);
+            let Some(bytes) = measure(&path, &rel, &mut skipped) else {
+                continue;
+            };
+            examined += 1;
+            let pages = bytes.div_ceil(threshold.bytes).max(1);
+            if pages >= 2 {
+                oversized.push(oversized_artifact(
+                    rel,
+                    kind,
+                    bytes,
+                    pages,
+                    threshold.bytes,
+                    status,
+                ));
+            }
         }
     }
 
-    let decisions = decide(&feature_dir, repo, &mut oversized, &mut notices);
-    Ok(CheckArtifactSizeResult {
-        feature: args.feature.clone(),
+    let project = if args.project_files {
+        let records = measure_project_files(args.staged, repo, &root, threshold.bytes)?;
+        for record in &records {
+            match (record.state, record.bytes) {
+                (ProjectSizeState::Measured, Some(bytes)) => {
+                    examined += 1;
+                    let pages = bytes.div_ceil(threshold.bytes).max(1);
+                    if pages >= 2 {
+                        oversized.push(oversized_artifact(
+                            record.path.clone(),
+                            ArtifactKind::ProjectFile,
+                            bytes,
+                            pages,
+                            threshold.bytes,
+                            "",
+                        ));
+                    }
+                }
+                (ProjectSizeState::Unreadable, _) => skip(&mut skipped, record.path.clone()),
+                _ => {}
+            }
+        }
+        Some(SizeProjectHalf {
+            project_files: records,
+        })
+    } else {
+        None
+    };
+
+    let spec = feature.map(|(feature, feature_dir, status)| SizeSpecHalf {
+        decisions: decide(&feature_dir, repo, &mut oversized, &mut notices),
+        path: rel_path(&feature_dir.join("spec.md"), repo),
+        feature,
         status,
+    });
+    Ok(CheckArtifactSizeResult {
         threshold,
         examined,
         oversized,
         skipped,
-        decisions,
         notices,
-        path: rel_path(&feature_dir.join("spec.md"), repo),
+        spec,
+        project,
     })
+}
+
+const PRIMITIVE: &str = "check-artifact-size";
+
+/// Refuse an argument set that names nothing to measure, or a staged mode
+/// that has no project files to read or a feature it cannot read from the
+/// index, before anything is read.
+fn check_args(args: &CheckArtifactSizeArgs) -> Result<()> {
+    if args.feature.is_none() && !args.project_files {
+        return Err(PrimitiveError::MissingArgument {
+            primitive: PRIMITIVE.into(),
+            argument: "feature".into(),
+            reason: "name a feature, or set project-files to measure the four project files".into(),
+        });
+    }
+    if args.staged && !args.project_files {
+        return Err(PrimitiveError::MissingArgument {
+            primitive: PRIMITIVE.into(),
+            argument: "project-files".into(),
+            reason: "staged measures the project files' index copies, so set project-files".into(),
+        });
+    }
+    if args.staged && args.feature.is_some() {
+        return Err(PrimitiveError::InvalidArgument {
+            primitive: PRIMITIVE.into(),
+            argument: "staged".into(),
+            reason: "staged measures project files only; drop feature".into(),
+        });
+    }
+    Ok(())
+}
+
+/// The four project files, in subject order, each with its project-relative
+/// path. `prune-project` walks the same four.
+fn project_subjects(root: &str) -> [(ProjectFileKind, String); 4] {
+    [
+        (ProjectFileKind::Agents, "AGENTS.md".to_string()),
+        (ProjectFileKind::System, format!("{root}/system.md")),
+        (ProjectFileKind::Events, format!("{root}/events.md")),
+        (ProjectFileKind::Errors, format!("{root}/errors.md")),
+    ]
+}
+
+/// One record per project file. A file that does not exist is `absent`, which
+/// a missing spec subject never is: a project with no `events.md` must read
+/// differently from one whose `events.md` was measured.
+fn measure_project_files(
+    staged: bool,
+    repo: &Path,
+    root: &str,
+    threshold: u64,
+) -> Result<Vec<ProjectFileSize>> {
+    let project = staged
+        .then(|| ProjectRepository::discover(repo))
+        .transpose()?;
+    let mut records = Vec::new();
+    for (kind, rel) in project_subjects(root) {
+        let record = |state, bytes: Option<u64>| ProjectFileSize {
+            path: rel.clone(),
+            kind,
+            state,
+            bytes,
+            head_bytes: None,
+            refused: None,
+        };
+        let Some(project) = &project else {
+            let on_disk = repo.join(&rel);
+            records.push(match on_disk.symlink_metadata() {
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    record(ProjectSizeState::Absent, None)
+                }
+                _ => match measure(&on_disk, &rel, &mut Vec::new()) {
+                    Some(bytes) => record(ProjectSizeState::Measured, Some(bytes)),
+                    None => record(ProjectSizeState::Unreadable, None),
+                },
+            });
+            continue;
+        };
+        let mut entry = match staged_bytes(project, &rel) {
+            Staged::Absent => record(ProjectSizeState::Absent, None),
+            Staged::Unreadable => record(ProjectSizeState::Unreadable, None),
+            Staged::Measured(bytes) => record(ProjectSizeState::Measured, Some(bytes)),
+        };
+        if let Some(bytes) = entry.bytes {
+            let head = head_bytes(project, &rel)?;
+            entry.head_bytes = head;
+            entry.refused = Some(bytes > threshold && head.is_none_or(|head| bytes > head));
+        }
+        records.push(entry);
+    }
+    Ok(records)
+}
+
+/// A project file's copy in the index.
+enum Staged {
+    /// The index holds no copy: never added, or deleted in this commit.
+    Absent,
+    /// The index holds the path but its blob cannot be read, or it is in an
+    /// unresolved conflict, so there is no one staged copy.
+    Unreadable,
+    Measured(u64),
+}
+
+fn staged_bytes(project: &ProjectRepository, rel: &str) -> Staged {
+    let git_path = project.to_git(rel);
+    let Ok(index) = project.repository.index() else {
+        return Staged::Unreadable;
+    };
+    let Some(entry) = index.get_path(Path::new(&git_path), 0) else {
+        let conflicted = (1..=3).any(|stage| index.get_path(Path::new(&git_path), stage).is_some());
+        return if conflicted {
+            Staged::Unreadable
+        } else {
+            Staged::Absent
+        };
+    };
+    match project.repository.find_blob(entry.id) {
+        Ok(blob) => Staged::Measured(blob.size() as u64),
+        Err(_) => Staged::Unreadable,
+    }
+}
+
+/// The length of `rel`'s blob in `HEAD`'s tree: `None` when `HEAD` has no
+/// copy, or the repository has no commits.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when `HEAD` exists and cannot be read, so a staged
+/// check that could not compare never reads as one that found no `HEAD` copy.
+fn head_bytes(project: &ProjectRepository, rel: &str) -> Result<Option<u64>> {
+    let head = match project.repository.head() {
+        Ok(head) => head,
+        Err(err) if err.code() == git2::ErrorCode::UnbornBranch => return Ok(None),
+        Err(err) => return Err(err.into()),
+    };
+    let tree = head.peel_to_commit()?.tree()?;
+    let entry = match tree.get_path(Path::new(&project.to_git(rel))) {
+        Ok(entry) => entry,
+        Err(err) if err.code() == git2::ErrorCode::NotFound => return Ok(None),
+        Err(err) => return Err(err.into()),
+    };
+    Ok(Some(project.repository.find_blob(entry.id())?.size() as u64))
 }
 
 /// Mark each oversized artifact a stored waiver still covers, and say
@@ -415,6 +610,10 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
             FixKind::Promote,
             "promote the scenario to its own spec with the specify command (§scenario-promotion)",
         )],
+        ArtifactKind::ProjectFile => vec![(
+            FixKind::PruneProject,
+            "move its entries to their homes with the prune command, run as prune --project",
+        )],
     }
 }
 
@@ -426,7 +625,11 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
 /// the spec only when it changes a criterion or an open question.
 fn on_done(kind: ArtifactKind, fix: FixKind) -> OnDone {
     match (kind, fix) {
-        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,
+        // A project file belongs to no spec, so pruning one reopens none; the
+        // caller passes it no `done` status, so the effect is never rendered.
+        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {
+            OnDone::Never
+        }
         (_, FixKind::Split | FixKind::Promote) | (ArtifactKind::DataModel, FixKind::Trim) => {
             OnDone::Always
         }
@@ -537,10 +740,15 @@ mod tests {
         tmp
     }
 
+    fn spec_half(result: &CheckArtifactSizeResult) -> &SizeSpecHalf {
+        result.spec.as_ref().expect("a feature half")
+    }
+
     fn check(tmp: &TempDir) -> Result<CheckArtifactSizeResult> {
         run(
             &CheckArtifactSizeArgs {
-                feature: "001-a".into(),
+                feature: Some("001-a".into()),
+                ..Default::default()
             },
             tmp.path(),
         )
@@ -552,7 +760,7 @@ mod tests {
         assert_eq!(result.threshold.bytes, 50_000);
         assert_eq!(result.threshold.source, ThresholdSource::Default);
         assert_eq!(result.notices, [] as [String; 0]);
-        assert_eq!(result.status, "draft");
+        assert_eq!(spec_half(&result).status, "draft");
     }
 
     #[test]
@@ -1150,7 +1358,7 @@ mod tests {
     #[test]
     fn no_record_decides_nothing() {
         let result = check(&three_page_plan()).unwrap();
-        assert_eq!(result.decisions, DecisionsState::Absent);
+        assert_eq!(spec_half(&result).decisions, DecisionsState::Absent);
         assert!(!result.oversized[0].decided);
     }
 
@@ -1163,7 +1371,7 @@ mod tests {
         )
         .unwrap();
         let result = check(&tmp).unwrap();
-        assert_eq!(result.decisions, DecisionsState::Read);
+        assert_eq!(spec_half(&result).decisions, DecisionsState::Read);
         assert!(!result.oversized[0].decided);
     }
 
@@ -1201,7 +1409,7 @@ mod tests {
         let key = stored_key(PLAN, 240, 3, 100);
         record(&tmp, &[(&key, "waived")]);
         let result = check(&tmp).unwrap();
-        assert_eq!(result.decisions, DecisionsState::Read);
+        assert_eq!(spec_half(&result).decisions, DecisionsState::Read);
         let plan = &result.oversized[0];
         assert!(plan.decided);
         // The stored key, not today's message: the bytes have changed, and the
@@ -1259,7 +1467,7 @@ mod tests {
             ],
         );
         let result = check(&tmp).unwrap();
-        assert_eq!(result.decisions, DecisionsState::Read);
+        assert_eq!(spec_half(&result).decisions, DecisionsState::Read);
         assert!(!result.oversized[0].decided);
     }
 
@@ -1282,7 +1490,7 @@ mod tests {
         )
         .unwrap();
         let result = check(&tmp).unwrap();
-        assert_eq!(result.decisions, DecisionsState::Unreadable);
+        assert_eq!(spec_half(&result).decisions, DecisionsState::Unreadable);
         assert!(!result.oversized[0].decided);
         assert_eq!(result.notices.len(), 1);
         assert!(
@@ -1308,7 +1516,8 @@ mod tests {
         let tmp = repo(None);
         let err = run(
             &CheckArtifactSizeArgs {
-                feature: "999-none".into(),
+                feature: Some("999-none".into()),
+                ..Default::default()
             },
             tmp.path(),
         )
@@ -1317,5 +1526,323 @@ mod tests {
             matches!(err, PrimitiveError::FeatureNotFound { .. }),
             "{err:?}"
         );
+    }
+
+    // -- project files (scenario `project-files-are-measured`) ---------------
+
+    fn project_args(feature: Option<&str>, staged: bool) -> CheckArtifactSizeArgs {
+        CheckArtifactSizeArgs {
+            feature: feature.map(str::to_string),
+            project_files: true,
+            staged,
+        }
+    }
+
+    fn project(result: &CheckArtifactSizeResult) -> &[ProjectFileSize] {
+        &result
+            .project
+            .as_ref()
+            .expect("a project half")
+            .project_files
+    }
+
+    fn state_of(result: &CheckArtifactSizeResult, path: &str) -> (ProjectSizeState, Option<u64>) {
+        let file = project(result).iter().find(|f| f.path == path).unwrap();
+        (file.state, file.bytes)
+    }
+
+    /// A project at a 100-byte threshold with `AGENTS.md` and `system.md`
+    /// written, `events.md` and `errors.md` absent.
+    fn project_tree(agents: usize, system: usize) -> TempDir {
+        let tmp = repo(Some("[artifacts]\nread-size-bytes = 100\n"));
+        std::fs::write(tmp.path().join("AGENTS.md"), "x".repeat(agents)).unwrap();
+        std::fs::write(tmp.path().join("specs/system.md"), "x".repeat(system)).unwrap();
+        tmp
+    }
+
+    #[test]
+    fn a_call_naming_nothing_to_measure_is_an_argument_error() {
+        let tmp = project_tree(1, 1);
+        let none = run(&CheckArtifactSizeArgs::default(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(none, PrimitiveError::MissingArgument { .. }),
+            "{none:?}"
+        );
+        let staged_alone = CheckArtifactSizeArgs {
+            staged: true,
+            feature: Some("001-a".into()),
+            ..Default::default()
+        };
+        let err = run(&staged_alone, tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::MissingArgument { .. }),
+            "{err:?}"
+        );
+        let both = project_args(Some("001-a"), true);
+        let err = run(&both, tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidArgument { .. }),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn the_two_halves_share_no_key_and_a_feature_call_is_unchanged() {
+        let tmp = project_tree(1, 1);
+        let feature_only = serde_json::to_value(check(&tmp).unwrap()).unwrap();
+        let mut keys: Vec<&String> = feature_only.as_object().unwrap().keys().collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            [
+                "decisions",
+                "examined",
+                "feature",
+                "notices",
+                "oversized",
+                "path",
+                "skipped",
+                "status",
+                "threshold"
+            ]
+        );
+        let project_only =
+            serde_json::to_value(run(&project_args(None, false), tmp.path()).unwrap()).unwrap();
+        let object = project_only.as_object().unwrap();
+        assert!(object.contains_key("project-files"));
+        for key in ["feature", "status", "decisions", "path"] {
+            assert!(!object.contains_key(key), "{key}");
+        }
+    }
+
+    #[test]
+    fn one_byte_over_is_reported_and_the_threshold_itself_is_not() {
+        let tmp = project_tree(101, 100);
+        let result = run(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(paths_of(&result), ["AGENTS.md"]);
+        let agents = &result.oversized[0];
+        assert_eq!(
+            (agents.kind, agents.bytes, agents.pages),
+            (ArtifactKind::ProjectFile, 101, 2)
+        );
+        assert_eq!(
+            state_of(&result, "specs/system.md"),
+            (ProjectSizeState::Measured, Some(100))
+        );
+        assert_eq!(result.examined, 2);
+        assert!(result.spec.is_none());
+    }
+
+    #[test]
+    fn an_absent_project_file_is_reported_though_a_missing_spec_subject_is_not() {
+        let tmp = project_tree(1, 1);
+        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        assert_eq!(
+            state_of(&result, "specs/events.md"),
+            (ProjectSizeState::Absent, None)
+        );
+        assert_eq!(
+            state_of(&result, "specs/errors.md"),
+            (ProjectSizeState::Absent, None)
+        );
+        // 001-a has only spec.md: the missing plan.md is left out, silently.
+        assert_eq!(result.skipped, []);
+        assert_eq!(result.examined, 3, "spec.md, AGENTS.md and system.md");
+        let kinds: Vec<ProjectFileKind> = project(&result).iter().map(|f| f.kind).collect();
+        assert_eq!(
+            kinds,
+            [
+                ProjectFileKind::Agents,
+                ProjectFileKind::System,
+                ProjectFileKind::Events,
+                ProjectFileKind::Errors
+            ]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_project_file_is_skipped_never_clean() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = project_tree(1, 1);
+        let agents = tmp.path().join("AGENTS.md");
+        std::fs::set_permissions(&agents, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
+        if std::fs::File::open(&agents).is_ok() {
+            std::fs::set_permissions(&agents, std::fs::Permissions::from_mode(0o644)).unwrap();
+            panic!("permissions do not bind (running as root?): no file can be made unreadable");
+        }
+        let result = run(&project_args(None, false), tmp.path());
+        std::fs::set_permissions(&agents, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let result = result.unwrap();
+        assert_eq!(
+            state_of(&result, "AGENTS.md"),
+            (ProjectSizeState::Unreadable, None)
+        );
+        let skipped: Vec<(&str, &str)> = result
+            .skipped
+            .iter()
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect();
+        assert_eq!(skipped, [("artifact-unreadable", "AGENTS.md")]);
+        assert_eq!(result.examined, 1, "only system.md was measured");
+    }
+
+    #[test]
+    fn a_project_file_names_one_fix_and_no_effect_on_a_done_spec() {
+        let tmp = project_tree(250, 1);
+        let spec = tmp.path().join("specs/001-a/spec.md");
+        std::fs::write(&spec, "---\nstatus: done\n---\n\n# 001 — A\n").unwrap();
+        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let agents = &result.oversized[0];
+        assert_eq!(fix_kinds(agents), [FixKind::PruneProject]);
+        assert_eq!(agents.fixes[0].on_done, None);
+        assert!(
+            agents.warning.contains("prune --project"),
+            "{}",
+            agents.warning
+        );
+        assert!(agents.warning.contains("may not read it in one call"));
+        assert_eq!(
+            agents.message,
+            "`AGENTS.md` is 250 bytes, 3 read pages at the 100-byte read size"
+        );
+    }
+
+    #[test]
+    fn a_stored_waiver_covers_a_project_file_until_it_grows_a_page() {
+        let tmp = project_tree(250, 1);
+        record(&tmp, &[(&stored_key("AGENTS.md", 250, 3, 100), "waived")]);
+        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        assert!(result.oversized[0].decided);
+        std::fs::write(tmp.path().join("AGENTS.md"), "x".repeat(350)).unwrap();
+        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        assert!(!result.oversized[0].decided, "grew into a fourth page");
+    }
+
+    /// A repository whose project sits in `proj/`, at a 100-byte threshold,
+    /// with `files` (project path, bytes) committed.
+    fn staged_project(files: &[(&str, usize)]) -> (TempDir, git2::Repository, PathBuf) {
+        use crate::primitives::git_fixture::{commit_all, subdirectory_project, write};
+        let tmp = TempDir::new().unwrap();
+        let (repository, project) = subdirectory_project(tmp.path());
+        write(
+            &project.join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        );
+        for (path, bytes) in files {
+            write(&project.join(path), &"x".repeat(*bytes));
+        }
+        if !files.is_empty() {
+            commit_all(&repository, "base");
+        }
+        (tmp, repository, project)
+    }
+
+    /// Stage `path` (project-relative) with `bytes` of content.
+    fn stage(repository: &git2::Repository, project: &Path, path: &str, bytes: usize) {
+        crate::primitives::git_fixture::write(&project.join(path), &"x".repeat(bytes));
+        let mut index = repository.index().unwrap();
+        index.add_path(&Path::new("proj").join(path)).unwrap();
+        index.write().unwrap();
+    }
+
+    fn refused(project: &Path, path: &str) -> (Option<u64>, Option<u64>, Option<bool>) {
+        let result = run(&project_args(None, true), project).unwrap();
+        let file = self::project(&result)
+            .iter()
+            .find(|f| f.path == path)
+            .unwrap();
+        (file.bytes, file.head_bytes, file.refused)
+    }
+
+    #[test]
+    fn staged_growth_of_an_over_limit_file_is_refused_and_a_shrink_or_no_change_is_not() {
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 150)]);
+        // Unchanged: the index copy is the HEAD copy.
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(150), Some(150), Some(false))
+        );
+        stage(&repository, &project, "AGENTS.md", 151);
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(151), Some(150), Some(true))
+        );
+        stage(&repository, &project, "AGENTS.md", 120);
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(120), Some(150), Some(false))
+        );
+        // Growth that stays within the limit is never refused.
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 50)]);
+        stage(&repository, &project, "AGENTS.md", 100);
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(100), Some(50), Some(false))
+        );
+        stage(&repository, &project, "AGENTS.md", 101);
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(101), Some(50), Some(true))
+        );
+    }
+
+    #[test]
+    fn staged_measures_the_index_copy_not_the_work_tree() {
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 10)]);
+        stage(&repository, &project, "AGENTS.md", 20);
+        // An unstaged edit past the limit is not what the commit carries.
+        std::fs::write(project.join("AGENTS.md"), "x".repeat(500)).unwrap();
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(20), Some(10), Some(false))
+        );
+    }
+
+    #[test]
+    fn a_staged_new_file_over_the_limit_is_refused_and_so_is_one_in_a_repository_with_no_commits() {
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 5)]);
+        stage(&repository, &project, "specs/events.md", 101);
+        assert_eq!(
+            refused(&project, "specs/events.md"),
+            (Some(101), None, Some(true))
+        );
+        // No commits at all: nothing has a HEAD copy.
+        let (_tmp, repository, project) = staged_project(&[]);
+        stage(&repository, &project, "AGENTS.md", 101);
+        assert_eq!(
+            refused(&project, "AGENTS.md"),
+            (Some(101), None, Some(true))
+        );
+        stage(&repository, &project, "specs/system.md", 100);
+        assert_eq!(
+            refused(&project, "specs/system.md"),
+            (Some(100), None, Some(false))
+        );
+    }
+
+    #[test]
+    fn a_staged_deletion_leaves_the_file_absent_and_not_refused() {
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 150)]);
+        let mut index = repository.index().unwrap();
+        index
+            .remove_path(&Path::new("proj").join("AGENTS.md"))
+            .unwrap();
+        index.write().unwrap();
+        let result = run(&project_args(None, true), &project).unwrap();
+        let file = &self::project(&result)[0];
+        assert_eq!(
+            (file.state, file.bytes, file.refused),
+            (ProjectSizeState::Absent, None, None)
+        );
+        assert_eq!(result.oversized, []);
+    }
+
+    #[test]
+    fn staged_without_a_repository_is_an_error_never_clean() {
+        let tmp = project_tree(1, 1);
+        let err = run(&project_args(None, true), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Git(_)), "{err:?}");
     }
 }

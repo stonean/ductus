@@ -6212,16 +6212,28 @@ pub struct CheckArtifactsResult {
 
 // -- check-artifact-size -------------------------------------------------------
 
-/// Args for `check-artifact-size`. Measures one feature's spec artifacts
-/// against the configured read size and reports each an agent may not read in
-/// one call. Read-only. See
-/// `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+/// Args for `check-artifact-size`. Measures one feature's spec artifacts, the
+/// four project files, or both, against the configured read size and reports
+/// each an agent may not read in one call. A call names `feature`,
+/// `project-files`, or both; naming neither is an argument error. Read-only.
+/// See `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactSizeArgs {
     /// Feature directory name under the configured spec root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
+    /// Measure the four project files: `AGENTS.md` at the project root and
+    /// `system.md`, `events.md` and `errors.md` under the spec root.
+    #[serde(default)]
+    #[arg(long)]
+    pub project_files: bool,
+    /// Measure each project file's index copy against its `HEAD` copy, for
+    /// the pre-commit hook. Requires `project-files`; excludes `feature`.
+    #[serde(default)]
+    #[arg(long)]
+    pub staged: bool,
 }
 
 /// Where the threshold a check ran at came from.
@@ -6259,6 +6271,9 @@ pub enum ArtifactKind {
     DataModel,
     /// A `*.md` directly under `scenarios/`.
     Scenario,
+    /// One of the four project files: `AGENTS.md`, or `system.md`,
+    /// `events.md` or `errors.md` under the spec root.
+    ProjectFile,
 }
 
 /// A fix for an oversized artifact.
@@ -6273,6 +6288,9 @@ pub enum FixKind {
     Trim,
     /// Promote the scenario to its own spec.
     Promote,
+    /// Move a project file's entries to their homes, with the prune
+    /// command's `--project` walk.
+    PruneProject,
 }
 
 /// What a fix does to a `done` spec, by §spec-lifecycle's rules for an edit
@@ -6346,35 +6364,100 @@ pub enum DecisionsState {
     Unreadable,
 }
 
-/// Result for `check-artifact-size`.
+/// Result for `check-artifact-size`: the shared keys at the top level, then
+/// two flattened halves that share no key, so a result carries the keys of
+/// whichever half the call asked for and nothing of the other. A feature-only
+/// call returns exactly the keys it always has.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactSizeResult {
+    /// The threshold the check ran at.
+    pub threshold: ReadSizeThreshold,
+    /// Subjects that exist and were measured.
+    pub examined: u32,
+    /// Subjects over the threshold, in subject order: the spec's, then the
+    /// project files'. Empty means none over it among the `examined`; it says
+    /// nothing about the `skipped`.
+    pub oversized: Vec<OversizedArtifact>,
+    /// Subjects that exist but could not be measured: family
+    /// `artifact-size`, reason `artifact-unreadable`. A spec subject that does
+    /// not exist is never listed; an absent project file is reported in
+    /// `project-files` instead.
+    #[serde(default)]
+    pub skipped: Vec<SkippedTarget>,
+    /// Notices every caller shows: that the stored decisions could not be
+    /// read. An invalid threshold is an error, never a notice.
+    #[serde(default)]
+    pub notices: Vec<String>,
+    /// The feature half; absent when no `feature` was named.
+    #[serde(flatten)]
+    pub spec: Option<SizeSpecHalf>,
+    /// The project-file half; absent unless `project-files` was set.
+    #[serde(flatten)]
+    pub project: Option<SizeProjectHalf>,
+}
+
+/// The keys of a `check-artifact-size` result that describe a feature.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SizeSpecHalf {
     /// Feature directory name echoed from the args.
     pub feature: String,
     /// The spec's frontmatter `status`, which each fix's `on-done` is
     /// computed against.
     pub status: String,
-    /// The threshold the check ran at.
-    pub threshold: ReadSizeThreshold,
-    /// Subjects that exist and were measured.
-    pub examined: u32,
-    /// Subjects over the threshold, in subject order. Empty means none over
-    /// it among the `examined`; it says nothing about the `skipped`.
-    pub oversized: Vec<OversizedArtifact>,
-    /// Subjects that exist but could not be measured: family
-    /// `artifact-size`, reason `artifact-unreadable`. A subject that does not
-    /// exist is never listed.
-    #[serde(default)]
-    pub skipped: Vec<SkippedTarget>,
     /// Whether the stored decisions behind `decided` were read.
     pub decisions: DecisionsState,
-    /// Notices every caller shows: that the stored decisions could not be
-    /// read. An invalid threshold is an error, never a notice.
-    #[serde(default)]
-    pub notices: Vec<String>,
     /// Repo-relative path to the spec file.
     pub path: String,
+}
+
+/// The keys of a `check-artifact-size` result that describe the project
+/// files.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SizeProjectHalf {
+    /// One record per project file, in subject order: `AGENTS.md`, then
+    /// `system.md`, `events.md` and `errors.md` under the spec root.
+    pub project_files: Vec<ProjectFileSize>,
+}
+
+/// Whether a project file was measured.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProjectSizeState {
+    /// It exists and was measured.
+    Measured,
+    /// It does not exist (or, staged, is not in the index): a state, never
+    /// "clean".
+    Absent,
+    /// It exists but could not be measured; it is also in `skipped`.
+    Unreadable,
+}
+
+/// One project file's measurement.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ProjectFileSize {
+    /// Project-relative path.
+    pub path: String,
+    /// Which project file it is.
+    pub kind: ProjectFileKind,
+    /// Whether it was measured.
+    pub state: ProjectSizeState,
+    /// Its length: on disk, or in the index when `staged`. Present exactly
+    /// when `state` is `measured`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Staged mode only: the length of its `HEAD` copy; absent when `HEAD`
+    /// has none, or the repository has no commits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head_bytes: Option<u64>,
+    /// Staged mode only, for a measured file: whether the commit is refused,
+    /// because the staged copy is over the threshold and either has no `HEAD`
+    /// copy or is larger than it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<bool>,
 }
 
 // -- derive-routing-candidates -------------------------------------------------
@@ -7255,7 +7338,8 @@ mod tests {
     };
     use super::{
         ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-        FixKind, OnDone, OversizedArtifact, ReadSizeThreshold, SkippedTarget, ThresholdSource,
+        FixKind, OnDone, OversizedArtifact, ProjectFileSize, ProjectSizeState, ReadSizeThreshold,
+        SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
     };
     use super::{
         EntryKind, EntryRemoval, EntryReplacement, ProjectEntry, ProjectFile, ProjectFileKind,
@@ -7773,13 +7857,21 @@ mod tests {
     #[test]
     fn check_artifact_size_round_trip() {
         let args = CheckArtifactSizeArgs {
-            feature: "063-oversized-artifacts-warn-with-a-fix".into(),
+            feature: Some("063-oversized-artifacts-warn-with-a-fix".into()),
+            ..Default::default()
         };
         assert_eq!(round_trip(&args), args);
+        let staged = CheckArtifactSizeArgs {
+            project_files: true,
+            staged: true,
+            ..Default::default()
+        };
+        assert_eq!(round_trip(&staged), staged);
+        let wire: serde_json::Value = serde_json::to_value(&staged).unwrap();
+        assert_eq!(wire["project-files"], true);
+        assert!(!wire.as_object().unwrap().contains_key("feature"));
 
         let result = CheckArtifactSizeResult {
-            feature: "063-oversized-artifacts-warn-with-a-fix".into(),
-            status: "done".into(),
             threshold: ReadSizeThreshold {
                 bytes: 120_000,
                 source: ThresholdSource::Config,
@@ -7805,9 +7897,14 @@ mod tests {
                 reason: "artifact-unreadable".into(),
                 path: "specs/063/plan.md".into(),
             }],
-            decisions: DecisionsState::Read,
             notices: vec!["n".into()],
-            path: "specs/063/spec.md".into(),
+            spec: Some(SizeSpecHalf {
+                feature: "063-oversized-artifacts-warn-with-a-fix".into(),
+                status: "done".into(),
+                decisions: DecisionsState::Read,
+                path: "specs/063/spec.md".into(),
+            }),
+            project: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["threshold"]["source"], "config");
@@ -7818,6 +7915,7 @@ mod tests {
         );
         assert_eq!(value["oversized"][0]["decision-key"], "artifact-size — m");
         assert_eq!(value["decisions"], "read");
+        assert!(!value.as_object().unwrap().contains_key("project-files"));
         assert_eq!(round_trip(&result), result);
 
         // Not computed is absent: a fix below `done` has no `on-done`, an
@@ -7850,6 +7948,38 @@ mod tests {
                 .contains_key("on-done")
         );
         assert_eq!(round_trip(&below), below);
+    }
+
+    #[test]
+    fn check_artifact_size_project_half_round_trip() {
+        let both = CheckArtifactSizeResult {
+            threshold: ReadSizeThreshold {
+                bytes: 50_000,
+                source: ThresholdSource::Default,
+            },
+            examined: 1,
+            oversized: vec![],
+            skipped: vec![],
+            notices: vec![],
+            spec: None,
+            project: Some(SizeProjectHalf {
+                project_files: vec![ProjectFileSize {
+                    path: "AGENTS.md".into(),
+                    kind: ProjectFileKind::Agents,
+                    state: ProjectSizeState::Measured,
+                    bytes: Some(51_000),
+                    head_bytes: Some(50_500),
+                    refused: Some(true),
+                }],
+            }),
+        };
+        // The project half carries its own keys and none of the spec half's.
+        let value: serde_json::Value = serde_json::to_value(&both).unwrap();
+        assert_eq!(value["project-files"][0]["state"], "measured");
+        assert_eq!(value["project-files"][0]["head-bytes"], 50_500);
+        assert_eq!(value["project-files"][0]["refused"], true);
+        assert!(!value.as_object().unwrap().contains_key("feature"));
+        assert_eq!(round_trip(&both), both);
     }
 
     #[test]

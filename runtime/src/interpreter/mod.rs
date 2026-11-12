@@ -1246,6 +1246,11 @@ fn spec_file(repo: &Path, path: &str) -> String {
 ///   as the glob `check-review-gate` lints. A scenario pair in the session
 ///   does not narrow it. Unbound without a `feature` to name the directory.
 ///
+/// - `project-files` — `true`, step 17's second subject set: the four project
+///   files `check-artifact-size` measures beside the feature's artifacts (spec
+///   063, scenario `project-files-are-measured`). A dispatch carries no
+///   per-step arguments, so the walk seeds the key rather than naming it.
+///
 /// `analyzed-at` and `analyzed-against` are not derived: the caller supplies
 /// them, as `/analyze`'s host does, and a missing one fails by name at
 /// `write-analysis`.
@@ -1261,6 +1266,7 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) -> primit
         };
         context.insert("rule-files".into(), Value::Array(rule_files));
     }
+    context.entry("project-files").or_insert(Value::Bool(true));
     if !context.contains_key("paths")
         && let Some(Value::String(feature)) = context.get("feature")
     {
@@ -1959,6 +1965,63 @@ mod tests {
         assert!(analysis.contains("  undispositioned: 1\n"), "{analysis}");
     }
 
+    /// An exec `/analyze` measures the project files too: the walker seeds
+    /// `project-files`, so an over-limit `AGENTS.md` is one more advisory
+    /// finding beside the oversized plan (spec 063, scenario
+    /// `project-files-are-measured`), and an exec `/clarify` seeds nothing.
+    #[test]
+    fn an_exec_analyze_counts_an_oversized_project_file_and_clarify_does_not() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: clarified\ndependencies: []\n---\n\n# x\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        std::fs::write(tmp.path().join("AGENTS.md"), "x".repeat(250)).unwrap();
+        let step = |n: u32, name: &str| Step::Primitive {
+            number: StepNumber(vec![n]),
+            name: name.into(),
+            prose: String::new(),
+            location: loc(),
+        };
+        let measured = |command: &str| -> Value {
+            let procedure = Procedure {
+                command: command.into(),
+                steps: vec![step(17, "check-artifact-size")],
+            };
+            let mut context = Map::new();
+            context.insert("feature".into(), Value::String("001-x".into()));
+            let mut reader = Cursor::new(String::new());
+            let mut writer: Vec<u8> = Vec::new();
+            let mut walker = Walker::new(
+                &procedure,
+                tmp.path().to_path_buf(),
+                context,
+                &mut reader,
+                &mut writer,
+            )
+            .unwrap();
+            assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+            Value::Object(walker.context.clone())
+        };
+        let analyze = measured("analyze");
+        assert_eq!(analyze["oversized"][0]["path"], "AGENTS.md", "{analyze}");
+        let clarify = measured("clarify");
+        assert_eq!(
+            clarify["oversized"].as_array().unwrap().len(),
+            0,
+            "{clarify}"
+        );
+    }
+
     /// A tempdir holding a `clarified` spec at `specs/001-x/spec.md` and, when
     /// `rules` is given, `framework/rules/quality-cross.md` carrying it.
     fn analyze_repo(rules: Option<&str>) -> tempfile::TempDir {
@@ -2371,6 +2434,7 @@ mod tests {
             ])
         );
         assert_eq!(context["paths"], serde_json::json!(["specs/001-x/**/*.md"]));
+        assert_eq!(context["project-files"], serde_json::json!(true));
     }
 
     /// A seeded list is the caller's, so it is used as given — which is why the
@@ -2384,6 +2448,7 @@ mod tests {
         context.insert("feature".into(), Value::String("001-x".into()));
         context.insert("rule-files".into(), serde_json::json!(["mine.md"]));
         context.insert("paths".into(), serde_json::json!(["specs/001-x/spec.md"]));
+        context.insert("project-files".into(), serde_json::json!(false));
         let seeded = context.clone();
         derive_analyze_seeds(&mut context, tmp.path()).unwrap();
         assert_eq!(context, seeded);

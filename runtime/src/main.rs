@@ -12,23 +12,23 @@ use ductus::primitives;
 use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
-    CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
-    CheckOrphanedReferencesArgs, CheckPrescriptionsArgs, CheckPromotionCoverageArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
-    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
-    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
-    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
-    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
-    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
-    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
-    WriteReviewArgs, WriteSessionArgs,
+    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
+    CheckCorpusLinksArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
+    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs,
+    DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
+    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -450,6 +450,51 @@ fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
         );
         eprintln!("Re-point them, or — when a later spec removed the target — name it in prose");
         eprintln!("instead of linking it. `git commit --no-verify` bypasses this deliberately.");
+    }
+}
+
+/// Whether a staged `check-artifact-size` exits non-zero: a project file
+/// refused, or one that could not be measured.
+fn size_check_blocks(result: &CheckArtifactSizeResult) -> bool {
+    !result.skipped.is_empty()
+        || result.project.as_ref().is_some_and(|half| {
+            half.project_files
+                .iter()
+                .any(|file| file.refused == Some(true))
+        })
+}
+
+/// Name each refused project file's path, size and limit on stderr, with its
+/// one fix, so an author whose commit is stopped knows what to run. Each
+/// unmeasurable one is named too: the commit is blocked for it as well.
+fn report_refused_project_files(result: &CheckArtifactSizeResult) {
+    let Some(half) = &result.project else {
+        return;
+    };
+    let mut stderr = io::stderr().lock();
+    for file in &half.project_files {
+        if file.refused == Some(true) {
+            let head = file.head_bytes.map_or_else(
+                || "no HEAD copy".to_string(),
+                |head| format!("HEAD copy {head} bytes"),
+            );
+            let _ = writeln!(
+                stderr,
+                "check-artifact-size: {} is {} bytes staged ({head}), over the {}-byte read size \
+                 ([artifacts] read-size-bytes). Run /prune --project to move its entries to their homes. \
+                 `git commit --no-verify` bypasses this deliberately.",
+                file.path,
+                file.bytes.unwrap_or_default(),
+                result.threshold.bytes
+            );
+        }
+    }
+    for skip in &result.skipped {
+        let _ = writeln!(
+            stderr,
+            "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
+            skip.path, skip.reason
+        );
     }
 }
 
@@ -1012,7 +1057,19 @@ fn main() -> ExitCode {
             emit_result(primitives::check_artifacts::run(&args, &repo))
         }
         Command::CheckArtifactSize(args) => {
-            emit_result(primitives::check_artifact_size::run(&args, &repo))
+            let outcome = primitives::check_artifact_size::run(&args, &repo);
+            if args.staged {
+                // The hook is the one caller that reads an exit status: a
+                // commit that grows a project file past the limit is refused,
+                // and so is one the check could not measure, since a check
+                // that could not run must never exit like one that passed.
+                if let Ok(result) = &outcome {
+                    report_refused_project_files(result);
+                }
+                emit_result_gated(outcome, size_check_blocks)
+            } else {
+                emit_result(outcome)
+            }
         }
         Command::PruneTasks(args) => emit_result(primitives::prune_tasks::run(&args, &repo)),
         Command::PrunePlan(args) => emit_result(primitives::prune_plan::run(&args, &repo)),

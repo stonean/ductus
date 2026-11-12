@@ -44,6 +44,8 @@ Suggested fix per finding: run `/ductus:prune`, which moves the section's durabl
 
 Warns when a spec artifact is larger than an agent may read in one call (§grounding, *A partial read is not a read*), from `check-artifact-size`'s result (step 17). Its warning and per-kind fixes are what the report renders; here a waiver with its reason is the further fix, and it reopens nothing.
 
+The check also measures the four project files — `AGENTS.md`, and `system.md`, `events.md` and `errors.md` under the spec root — against the same threshold (spec 063, scenario `project-files-are-measured`). Each one over it is an advisory finding like a spec artifact, whose one fix is `/ductus:prune --project`, and a stored waiver in the targeted feature's `analysis.md` covers it by the same rule. An absent project file is reported in the result's `project-files` and is no finding; one that cannot be read is unexamined under `artifact-unreadable`.
+
 Bytes are a proxy: the runtime has no tokenizer and the cap differs per host and per host setting, so the threshold is a heuristic the project sets, and no value switches the check off.
 
 **A waiver holds until the file grows into another read page**, because the reason given for one page does not cover two. The primitive decides that numeric rule and returns the covering waiver's key.
@@ -56,7 +58,7 @@ The size check never escalates an unreadable subject: on a `done` spec, **Scenar
 
 - Tasks reference the plan
 - Each task has a "done when" condition
-- Tasks are numbered and ordered
+- Tasks are numbered in strictly increasing order: digits and at most one lowercase letter before the dot (`11`, `11a`), ordered by digits then suffix (`11` < `11a` < `12`)
 
 ## Grounding (advisory)
 

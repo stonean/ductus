@@ -42,15 +42,15 @@ MUTATIONS = [
     (
         'M4 trimming a done spec plan can reopen it',
         'src/primitives/check_artifact_size.rs',
-        '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
-        '        (_, FixKind::Prune) => OnDone::Never,',
+        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {\n            OnDone::Never\n        }',
+        '        (_, FixKind::Prune | FixKind::PruneProject) => OnDone::Never,',
         'check_artifact_size::tests::the_effect_on_done_is_named_only_at_done',
     ),
     (
         'M5 a data-model trim on a done spec is exempt like the plan trim',
         'src/primitives/check_artifact_size.rs',
-        '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
-        '        (_, FixKind::Prune) | (ArtifactKind::Plan | ArtifactKind::DataModel, FixKind::Trim) => OnDone::Never,',
+        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {\n            OnDone::Never\n        }',
+        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan | ArtifactKind::DataModel, FixKind::Trim) => OnDone::Never,',
         'check_artifact_size::tests::a_data_model_trim_reopens_a_done_spec',
     ),
 ]

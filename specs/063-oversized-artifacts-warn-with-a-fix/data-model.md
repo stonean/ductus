@@ -1,6 +1,6 @@
 # 063 — Oversized artifacts warn with a fix Data Model
 
-Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `OnDone` and `DecisionsState` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
+Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `OnDone`, `DecisionsState`, `SizeSpecHalf`, `SizeProjectHalf`, `ProjectFileSize` and `ProjectSizeState` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
 
 ## Configuration
 
@@ -31,21 +31,51 @@ Every command that invokes `check-artifact-size` halts on it. A string or a frac
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `feature` | string | Feature directory name under the configured spec root. |
+| `feature` | string, optional | Feature directory name under the configured spec root. |
+| `project-files` | boolean, default `false` | Also measure the four project files: `AGENTS.md` at the project root, and `system.md`, `events.md` and `errors.md` under the spec root (`scenarios/project-files-are-measured.md`). On the CLI, `--project-files`. |
+| `staged` | boolean, default `false` | Measure each project file's index copy against its `HEAD` copy, for the pre-commit hook. Requires `project-files` and excludes `feature`. On the CLI, `--staged`. |
+
+A call naming neither `feature` nor `project-files` is an argument error (`missing-argument`), as is `staged` without `project-files`; `staged` with `feature` is an `invalid-argument`.
 
 ## `CheckArtifactSizeResult`
+
+The shared keys sit at the top level. The spec half and the project half follow, flattened and sharing no key: a result carries the keys of the half the call asked for and none of the other's, and a feature-only call returns exactly the keys it always has.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `threshold` | `ReadSizeThreshold` | The threshold the check ran at, and where it came from. |
+| `examined` | integer | Subjects that exist and were measured, project files included. |
+| `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order, the spec's then the project files'. Empty means none over it, among the `examined`. |
+| `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing spec subject is never listed; a missing project file is reported in `project-files`. |
+| `notices` | list of strings | Human-readable notices every caller shows: a line for each key in `[artifacts]` the shared config-key registry does not recognize, `unknown config key: [artifacts] {key} ({config file}) — this version of ductus does not read it` (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019), then the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
+
+### The spec half (`SizeSpecHalf`), present with `feature`
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `feature` | string | Echoed from the args. |
 | `status` | string | The spec's frontmatter `status`, which the `on-done` effects are computed against. |
-| `threshold` | `ReadSizeThreshold` | The threshold the check ran at, and where it came from. |
-| `examined` | integer | Subjects that exist and were measured. |
-| `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order. Empty means none over it, among the `examined`. |
-| `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing subject is never listed. |
 | `decisions` | `DecisionsState` | Whether `analysis.md`'s stored decisions were read. |
-| `notices` | list of strings | Human-readable notices every caller shows: a line for each key in `[artifacts]` the shared config-key registry does not recognize, `unknown config key: [artifacts] {key} ({config file}) — this version of ductus does not read it` (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019), then the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
 | `path` | string | Repo-relative path of `spec.md`. |
+
+### The project half (`SizeProjectHalf`), present with `project-files`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `project-files` | list of `ProjectFileSize` | One record per file, in subject order: `AGENTS.md`, then `system.md`, `events.md` and `errors.md` under the spec root. |
+
+`ProjectFileSize`:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `path` | string | Project-relative path. |
+| `kind` | string | `agents`, `system`, `events` or `errors`. |
+| `state` | `ProjectSizeState` | `measured`; `absent` (no such file, or, staged, none in the index, a file deleted in the commit among them); or `unreadable` (it also appears in `skipped`, and staged, an unresolved conflict or an unreadable blob is one). A missing spec subject is never reported, but a missing project file is, so a project with no `events.md` reads differently from one whose `events.md` was measured. |
+| `bytes` | integer, optional | The length on disk, or, staged, the index copy's. Present exactly when `state` is `measured`. |
+| `head-bytes` | integer, optional | Staged only: the `HEAD` copy's length. Absent when `HEAD` has none, or the repository has no commits. |
+| `refused` | boolean, optional | Staged only, for a measured file: the staged copy is over the threshold and either has no `HEAD` copy or is larger than it. An unchanged or shrunk over-limit file is not refused. |
+
+A project file over the threshold joins `oversized` with kind `project-file`, whose one fix is `prune-project`, with no `on-done` whatever the feature's status. Its `warning` and `message` are worded as a spec subject's, and a stored waiver in the named feature's `analysis.md` covers it by the decided rule below. Staged, `oversized` is judged on the staged copy. The CLI, with `--staged`, exits 1 when any file is refused or any is in `skipped`, naming each on stderr with its size, the limit and `/prune --project`; a repository, index or `HEAD` that cannot be read is an error, never a clean result.
 
 Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the scenarios in the shared scenario ordering (case-insensitive, raw-byte tiebreak).
 
@@ -61,7 +91,7 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `path` | string | Repo-relative path of the subject. |
-| `kind` | `ArtifactKind` | `spec`, `plan`, `tasks`, `data-model`, or `scenario`. |
+| `kind` | `ArtifactKind` | `spec`, `plan`, `tasks`, `data-model`, `scenario`, or `project-file`. |
 | `bytes` | integer | The file's length on disk. |
 | `pages` | integer | `ceil(bytes / threshold)`; at least 2 for every entry here. |
 | `fixes` | list of `ArtifactFix` | The fixes for this kind, in the spec's table order. Never includes a waiver. |
@@ -74,11 +104,11 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `fix` | `FixKind` | `prune`, `split`, `trim`, or `promote`. |
+| `fix` | `FixKind` | `prune`, `split`, `trim`, `promote`, or `prune-project`. |
 | `text` | string | The fix as the warning words it. A `split` names the manual route and no split command. |
-| `on-done` | `OnDone`, optional | Present only when `status` is `done`: `never` (prune, and a `plan.md` trim), `always` (split, promote, and a `data-model.md` trim), or `if-requirement-changes` (any other trim, which edits `spec.md`). |
+| `on-done` | `OnDone`, optional | Present only when `status` is `done`: `never` (prune, and a `plan.md` trim), `always` (split, promote, and a `data-model.md` trim), or `if-requirement-changes` (any other trim, which edits `spec.md`). Never present on a `project-file`: it belongs to no spec. |
 
-Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that apply if it is still over after pruning; `spec` and `plan` → `split`, `trim`; `data-model` → `split`, `trim` (whose text forbids sub-files); `scenario` → `promote`.
+Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that apply if it is still over after pruning; `spec` and `plan` → `split`, `trim`; `data-model` → `split`, `trim` (whose text forbids sub-files); `scenario` → `promote`; `project-file` → `prune-project`.
 
 ## `DecisionsState`
 
@@ -86,7 +116,7 @@ Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that ap
 
 ## The `artifact-size` finding
 
-`/{project}:analyze` records each oversized subject as an advisory finding with family `artifact-size`, path the subject's, and message:
+`/{project}:analyze` records each oversized subject, a project file included, as an advisory finding with family `artifact-size`, path the subject's, and message:
 
 ```text
 `{path}` is {bytes} bytes, {pages} read pages at the {threshold}-byte read size
