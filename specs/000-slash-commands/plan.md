@@ -44,6 +44,10 @@ Each command is based on the corresponding command in that project with these tr
 
 The message shape is one bullet in the constitution's §spec-lifecycle, which every command loads; `amend`, `clarify`, `plan`, `implement` and `target` point at it, never copy it, and `target`'s `done` row takes the qualified form. The bullet states the "Not built yet: {request}." line, said only when new work is asked for, and the qualified `done`, always; `/{project}:status`'s cell is unchanged, and the bullet leaves it unnamed since the constitution sits at its byte ceiling. `cross-spec-impact:` names `014-reclarify-backedge` only: its criteria quote `/clarify`'s `done` message and `/amend`'s re-open prompt. `023-govern-refinement`'s AC30 still holds (the `done` row points at `/amend`); only its annotation's quote of the old row wording is provenance of the day it shipped, so it takes no entry.
 
+### `/amend`'s criterion route writes with host tools, not a primitive
+
+No runtime primitive appends an acceptance criterion, and none is added. The route is a classifier signal plus four steps in `framework/commands/amend.md`: a normalized-whitespace duplicate check by the host (the check the question route's preview already makes), the host appending `- [ ] {text}` to `## Acceptance Criteria` (creating the section in template order when missing), `label-criteria` for the label, and `set-status` for the `done` back-edge. The label, the counter and the status are the primitives' writes; the append is one unlabelled list item, which a primitive would only restate. A `draft` spec is refused, since `/{project}:clarify` owns criteria there (owner, 2026-11-12).
+
 ## Affected Files
 
 | File | Action | Purpose |

@@ -27,7 +27,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 
 ## Scope Boundaries
 
-- This command reads the target artifact, appends to its `## Open Questions` section or writes a new `scenarios/{slug}.md` file and appends a linked task to `tasks.md`, and — when a back-edge applies — updates the spec's frontmatter `status` field. No other artifact contents are modified. Plan files and source code are never read or written — except the files a confirmed chore fix names (see **Refine the input (scenario route)**), the one case in which this command writes outside the spec directory, and it records nothing on the spec.
+- This command reads the target artifact, appends to its `## Open Questions` section, appends an unchecked item to its `## Acceptance Criteria` section (the criterion route, with the host's file-editing tool and no other change to the spec body) or writes a new `scenarios/{slug}.md` file and appends a linked task to `tasks.md`, and — when a back-edge applies — updates the spec's frontmatter `status` field. No other artifact contents are modified. Plan files and source code are never read or written — except the files a confirmed chore fix names (see **Refine the input (scenario route)**), the one case in which this command writes outside the spec directory, and it records nothing on the spec.
 - Spec `status` is mutated by this command only on a back-edge (clarified+ → draft or done → in-progress).
 - For the impact display, this command may read sibling specs' frontmatter (only) under `specs/` to detect dependents. It does not read sibling spec bodies.
 - For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits, and no other git command; `classify-spec-edit` reads the diff. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
@@ -128,7 +128,9 @@ Apply the heuristic to route the input. The classification is provisional — th
 - Concrete event/state language: `on`, `when`, `if`, `after`, `during`, `before`.
 - No terminal `?`; no interrogative starter.
 
-**Status tiebreaker:** when signals are mixed or absent on a **`done` spec**, default to scenario (the back-edge from `done` is owned by the scenario path; the question path refuses on `done`). When signals are mixed on any other status, default to question.
+**Criterion signals (route → criterion):** the input names itself an acceptance criterion (`criterion`, `acceptance criterion`, an `AC` prefix, or a leading `- [ ]`), or states a testable condition of the whole spec — "`X` is done when `Y`" — rather than a situation and its behavior. Nothing else routes here by default: an input that merely reads as declarative is a scenario until the user `flip`s it.
+
+**Status tiebreaker:** when signals are mixed or absent on a **`done` spec**, default to scenario (the question path refuses on `done`; the criterion route is chosen only by its signals or a `flip`). When signals are mixed on any other status, default to question. On a `draft` spec the criterion route is unavailable: `/{project}:clarify` owns criteria there, so say so, name it, and route the input as a question or scenario.
 
 ### Refine the input (question route)
 
@@ -137,6 +139,13 @@ The goal is a question that is precise, actionable, and self-contained — someo
 1. **Understand intent** — read the target artifact to understand how the question relates to its behaviors, contracts, acceptance criteria, or open areas. If the question's connection to the artifact is unclear, ask the user to explain how it applies.
 2. **Draft a refined version** — rewrite the question so it is specific to the spec's domain and terminology, identifies which behavior or criterion it affects, states what decision or information is needed, and stands alone.
 3. **Check for duplicates** — compare against entries already in the target artifact's `## Open Questions` section. Use a normalized-whitespace comparison (collapse runs of whitespace, trim, case-insensitive). If the refined form matches an existing entry, report: "An equivalent question is already recorded: '{existing entry}'. Skip or refine further?" On skip, exit without recording; on refine further, incorporate feedback and loop.
+
+### Refine the input (criterion route)
+
+The goal is one testable condition `/{project}:implement`'s completion gate can verify, stated in the spec's terms and without an implementation.
+
+1. **Draft** the criterion as one sentence a check could pass or fail, with a backticked repo-relative path where it names a file (§spec-requirements). Do not write an `AC{n}:` label.
+2. **Check for duplicates** — compare against the entries under the target's `## Acceptance Criteria` with the normalized-whitespace, case-insensitive comparison the question route uses, ignoring each entry's checkbox and `AC{n}:` label. On a match, report: "An equivalent criterion is already recorded: '{existing entry}'. Skip or refine further?" On skip, exit without recording.
 
 ### Refine the input (scenario route)
 
@@ -156,7 +165,7 @@ The goal is a scenario that captures a specific situation and the concrete behav
 Show the user:
 
 ```text
-Recording as [question|scenario] — preview drafted at [`## Open Questions` entry | `scenarios/{slug}.md`].
+Recording as [question|scenario|criterion] — preview drafted at [`## Open Questions` entry | `scenarios/{slug}.md` | `## Acceptance Criteria` item].
 
 {preview of the refined content}
 
@@ -165,7 +174,7 @@ Accept this form, refine further, or `flip` to switch route?
 
 - **Accept** → proceed to **Record the input**.
 - **Refine further** → incorporate feedback, redraft, re-present.
-- **`flip`** → switch the classification to the other route. Discard the current refined draft. Re-enter the appropriate **Refine the input** section under the new route. The flip keyword is recognized only as a standalone command at this prompt, not mid-sentence in user-provided content. **On a `done` spec, `flip` toward the question route is rejected**, so `append-question` is never called on a `done` spec. Reject with: "A `done` spec accepts only scenarios — `flip` to the question route is unavailable. Reopen the spec first (record a scenario, or reflect an on-disk delta) to raise open questions."
+- **`flip`** → switch the classification to another route (name it when more than one remains). Discard the current refined draft. Re-enter the appropriate **Refine the input** section under the new route. The flip keyword is recognized only as a standalone command at this prompt, not mid-sentence in user-provided content. **On a `done` spec, `flip` toward the question route is rejected**, so `append-question` is never called on a `done` spec. Reject with: "A `done` spec accepts only scenarios and criteria — `flip` to the question route is unavailable. Reopen the spec first (record a scenario, or reflect an on-disk delta) to raise open questions."
 
 The user's acceptance at this gate is the consent for any status mutation that follows. Do not prompt again for the back-edge.
 
@@ -179,6 +188,10 @@ When the question route is recording on a non-`draft` spec, display the impact b
 - A one-line dependency note when this spec is named in any other spec's frontmatter `dependencies` field. Scan sibling specs' frontmatter only (no body reads). When matches exist, render: "Note: this spec is a dependency of {comma-separated dependent slugs}; their pipeline checks will block until this spec returns to `clarified`."
 
 This display is informational only — the user's prior acceptance is the consent.
+
+### Impact display (spec target, criterion route, status = done)
+
+Display the same reopen impact as the scenario route, with the criterion in place of the scenario: the prior status qualified as §spec-lifecycle's *A `done` stop never says the request is built* says, preceded by "Not built yet: {request}."; the criterion's text; and a note that the criterion lands unchecked and the spec returns to `done` only once `/{project}:implement` verifies it.
 
 ### Impact display (spec target, scenario route, status = done)
 
@@ -205,6 +218,13 @@ Informational; no separate confirmation prompt.
 4. Invoke `write-session` to set the new scenario as the session target: pass the feature slug as the feature argument, the repo-relative spec directory as the path argument, the new scenario slug as the scenario argument, and `specs/{feature}/scenarios/{slug}.md` as the scenario-path argument. Display what the write reports: any `notices` it delivered, the `peers` — each other session on this feature, with its scenario when it has one and when it last used its target (§concurrent-features) — and any `expired` or `unreadable` session.
 5. Invoke `lint-markdown` on every modified file.
 
+**Criterion route:** the runtime has no primitive that appends a criterion, so the host writes it (000's `plan.md` records why).
+
+1. With the host's file-editing tool, append `- [ ] {criterion}` — unchecked and with no label — as the last item of the spec's `## Acceptance Criteria` list. When the section is missing, add it in template order, before `## Applicable Rules`, else before `## Open Questions`. Change nothing else in `spec.md`.
+2. Invoke `label-criteria` against the feature, which assigns the new item its `AC{n}:` label and advances `next-criterion`. Never write the label by hand.
+3. If the spec's `status` is `done`, invoke `set-status` to flip `done → in-progress`. (For other statuses, no status mutation occurs.)
+4. Invoke `lint-markdown` on `spec.md`.
+
 ### Status mutation summary
 
 | Target | Prior status | Route | Behavior |
@@ -213,6 +233,9 @@ Informational; no separate confirmation prompt.
 | Spec | `clarified` / `planned` / `in-progress` | question | Show impact display, append question, revert `status` to `draft` in the same write. |
 | Spec | `done` | question | Not reachable: the tiebreaker routes a `done` spec to scenario, and `flip` toward the question route is rejected. |
 | Spec | `draft` / `clarified` / `planned` / `in-progress` | scenario | Create scenario, append task, update session target. No status mutation. |
+| Spec | `clarified` / `planned` / `in-progress` | criterion | Append the unchecked criterion, label it. No status mutation. |
+| Spec | `done` | criterion | Show reopen impact, append the unchecked criterion, label it, revert `status` to `in-progress`. |
+| Spec | `draft` | criterion | Not reachable: `/{project}:clarify` owns criteria on a `draft` spec. |
 | Spec | `done` | scenario | Show reopen impact, create scenario, append task, revert `status` to `in-progress` in the same write, update session target. |
 | Spec | any | chore (scenario-route guard) | Fix it in this run once the user confirms, and exit. No question, scenario, task, or status mutation. |
 | Spec | `done` (on-disk delta `classify-spec-edit` reads as `correction`, `mechanical` or `none`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
@@ -230,6 +253,7 @@ When the user is done, display the next step:
 
 - If a question was recorded on a spec: "Question recorded. Run `/{project}:clarify` to resolve it." On a spec, the status is now `draft` regardless of where it started.
 - If a question was recorded on a scenario: "Question recorded. Run `/{project}:clarify` to resolve it." The parent spec's status is unchanged.
+- If a criterion was recorded: "Criterion recorded unchecked as {label}." On a reopened spec add "The spec is `in-progress`; run `/{project}:implement` to build and verify it."
 - If a scenario was recorded: "Scenario recorded at `specs/{feature}/scenarios/{slug}.md` and set as the session target. Run `/{project}:implement` to work on the new task."
 - If the input was a chore: "That's general maintenance, not a spec addition — fixed in {files}." Nothing was recorded on the spec. If the user declined the fix, say that nothing was written.
 - If the user aborted before accepting any input, exit silently — no input was recorded and no status mutation occurred.
