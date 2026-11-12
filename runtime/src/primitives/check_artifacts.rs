@@ -2311,7 +2311,6 @@ fn is_path_like(content: &str) -> bool {
 
 // --- (i) body path existence -----------------------------------------------
 
-/// The family name [`check_body_path_existence`] reports and skips under.
 /// The skip reason of a path-family candidate whose lexical resolution leaves
 /// the project. In the *could not be read* class, not the excluded-by-
 /// construction one `root-absent` sits in (`framework/reference/analyze.md`,
@@ -2321,6 +2320,8 @@ const OUTSIDE_PROJECT: &str = "outside-project";
 /// The family a skipped link that leaves the project is recorded under: the
 /// link guard is no check of its own, so it emits no finding, only skips.
 const OUTWARD_LINK_FAMILY: &str = "outward-link";
+
+/// The family name [`check_body_path_existence`] reports and skips under.
 const BODY_PATH_FAMILY: &str = "body-path-existence";
 
 /// Phrases that mark a body line as describing a transition rather than
