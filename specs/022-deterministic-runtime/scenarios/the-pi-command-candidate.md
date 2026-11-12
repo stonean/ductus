@@ -15,7 +15,7 @@ The pi host support feature ([064](../../064-pi-host-support/spec.md), 064) adds
 
 Each adopter installs into exactly one layout, selected by the agent's registry row; the `cli-config-dir` in the gitignored session file is the real selector, and the candidate order is belt-and-braces — trying both lets the runtime resolve any supported layout without knowing which agent wrote the file. The pre-existing candidate keeps its position first, so every pre-pi adopter resolves identically.
 
-The runtime's two resolution callsites (`main::run_exec` and `interpreter::payload::locate_command_file`) MUST build their candidate list through this method rather than formatting the installed path inline, so the layout set lives in one place and the callsites cannot drift; both walk the list in order and take the first path that exists. The surrounding candidates are unchanged: `framework/commands/<name>.md` is tried first (the framework's own repo), the installed candidates next, and `framework/bootstrap/<name>.md` last (bootstrap procedures invoked before any framework files exist).
+The runtime's four resolution callsites (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve` and `render_help::guide`) MUST build their candidate list through this method rather than formatting the installed path inline, so the layout set lives in one place and the callsites cannot drift; each walks the list in order and takes the first path that exists. The surrounding candidates are unchanged: `framework/commands/<name>.md` is tried first (the framework's own repo), the installed candidates next, and `framework/bootstrap/<name>.md` last (bootstrap procedures invoked before any framework files exist).
 
 ## Edge Cases
 
