@@ -141,6 +141,11 @@ its version and date.
   (the `ductus` self-install) is never checked; other brace tokens are not
   refused. The set is compiled in and a test pins it to
   `framework/bootstrap/ductus.md` §Placeholder Substitution.
+- **`check-artifacts`' two path families never probe outside the project.**
+  A criterion or body-line candidate is resolved lexically before any stat, and
+  one whose `..` leaves the project is recorded as a `root-absent` skip (the
+  body family used to drop a leading-`..` one silently and probe an interior
+  one). The reason set is unchanged.
 
 - **BREAKING: `append-task`'s `task-number` is a string, and a suffixed task
   number is a task.** The result field was an integer and is now a string,
