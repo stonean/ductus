@@ -139,6 +139,10 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   traversal validation and before any filesystem operation, for the same
 ///   reason: a bad map must halt the walk with zero writes rather than leave
 ///   a half-substituted tree.
+/// - [`PrimitiveError::InvalidArgument`] (`substitutions`) when the map is
+///   non-empty and an `update` or `create` entry's substituted text still
+///   carries a known placeholder the map lacks and the entry does not keep
+///   literal, checked for every entry before any write.
 pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult> {
     for key in args.substitutions.keys() {
         validate_substitution_key(key)?;
@@ -151,6 +155,11 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     }
 
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
+    if !args.substitutions.is_empty() {
+        for entry in &args.entries {
+            check_no_unsubstituted_placeholder(entry, &source_root, &args.substitutions, &pinned)?;
+        }
+    }
     let tool_search = if args.entries.iter().any(|entry| entry.tool_search_line) {
         Some(tool_search_context(
             &source_root,
@@ -783,6 +792,70 @@ fn validate_substitution_key(key: &str) -> Result<()> {
     Ok(())
 }
 
+/// The placeholders `framework/bootstrap/ductus.md` §Placeholder Substitution
+/// declares, as map keys (bare, as [`validate_substitution_key`] holds them).
+/// A test pins this list to that section, so the two cannot diverge.
+const KNOWN_PLACEHOLDERS: &[&str] = &[
+    "project",
+    "cli-config-dir",
+    "project-name",
+    "One-line project description.",
+];
+
+/// Refuse an entry whose substituted text would still carry a known
+/// placeholder the call neither maps nor keeps literal, before any write.
+///
+/// A map that is well formed but lacks a key the sources use would otherwise
+/// write `{key}` literally while `substitutions-applied` and
+/// `entries-substituted` read as a clean run (`QUAL-CLAIM-001`). Only the four
+/// [`KNOWN_PLACEHOLDERS`] are looked for: scanning for the brace grammar would
+/// flag every `{feature}` and JSON example in the sources. An empty map is the
+/// `ductus` self-install's deliberate "substitute nothing" and is never
+/// checked (the caller skips it); an entry that is pinned, has no source,
+/// is not UTF-8 text, or is copied without substitution
+/// (`skip-if-conflict`) has nothing to check.
+fn check_no_unsubstituted_placeholder(
+    entry: &ManifestEntry,
+    source_root: &Path,
+    substitutions: &BTreeMap<String, String>,
+    pinned: &[String],
+) -> Result<()> {
+    if !matches!(entry.strategy.as_str(), "update" | "create") || pinned_match(pinned, &entry.dest)
+    {
+        return Ok(());
+    }
+    let source = source_root.join(Path::new(&entry.source));
+    let exists = source.try_exists().map_err(|src| PrimitiveError::Io {
+        path: source.clone(),
+        source: src,
+    })?;
+    if !exists {
+        return Ok(());
+    }
+    let (bytes, applied) =
+        read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?;
+    if applied.is_none() {
+        return Ok(());
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    let kept = entry.keep_literals.as_deref().unwrap_or_default();
+    for key in KNOWN_PLACEHOLDERS {
+        let unmapped = !substitutions.contains_key(*key) && !kept.iter().any(|k| k == key);
+        if unmapped && text.contains(&format!("{{{key}}}")) {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "apply-manifest".into(),
+                argument: "substitutions".into(),
+                reason: format!(
+                    "entry `{}` would be written with the placeholder `{{{key}}}` unsubstituted: \
+                     the map has no `{key}` key and the entry does not keep it literal",
+                    entry.source
+                ),
+            });
+        }
+    }
+    Ok(())
+}
+
 /// Build the per-entry substitution map by removing every key listed in
 /// `keep_literals`. Listed keys absent from the input map are no-ops.
 /// When `keep_literals` is `None` or empty, the input map is cloned
@@ -1188,6 +1261,127 @@ mod tests {
             run(&args, tmp.path()).unwrap_err(),
             PrimitiveError::InvalidSubstitutionKey { .. }
         ));
+    }
+
+    /// A well-formed map that lacks a key the sources use wrote `{key}`
+    /// literally while `substitutions-applied` read as a clean run (spec 022,
+    /// `an-unsubstituted-placeholder-is-not-a-clean-run`). It now refuses
+    /// before any write, naming the entry and the placeholder.
+    #[test]
+    fn a_known_placeholder_the_map_lacks_refuses_before_any_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                ("a.md", "Run /{project}:review\n"),
+                ("b.md", "# {project-name}\n"),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("a.md", "a.md", "update"),
+                entry("b.md", "b.md", "create"),
+            ],
+            vec![],
+            subs(&[("project", "magpie")]),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        let text = err.to_string();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { .. })
+                && text.contains("b.md")
+                && text.contains("{project-name}"),
+            "{text}"
+        );
+        assert!(
+            !dst.join("a.md").exists() && !dst.join("b.md").exists(),
+            "the refusal must precede every write, the earlier entry's included"
+        );
+    }
+
+    #[test]
+    fn an_unsubstituted_placeholder_that_is_kept_literal_or_absent_is_not_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                ("kept.md", "{project-name} stays\n"),
+                ("braces.md", "{feature} {NNN} {\"a\": 1}\n"),
+                ("clean.md", "no placeholder\n"),
+                ("copied.md", "{project-name} copied\n"),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+        let mut kept = entry("kept.md", "kept.md", "update");
+        kept.keep_literals = Some(vec!["project-name".into()]);
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                kept,
+                entry("braces.md", "braces.md", "update"),
+                entry("clean.md", "clean.md", "update"),
+                entry("copied.md", "copied.md", "skip-if-conflict"),
+            ],
+            vec![],
+            subs(&[("project", "magpie")]),
+        );
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("kept.md")).unwrap(),
+            "{project-name} stays\n"
+        );
+    }
+
+    #[test]
+    fn an_empty_map_is_never_refused_for_a_placeholder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("ductus.md", "{project} {cli-config-dir}\n")]);
+        let dst = tmp.path().join("dst");
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("ductus.md", "ductus.md", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("ductus.md")).unwrap(),
+            "{project} {cli-config-dir}\n"
+        );
+    }
+
+    /// The compiled set is the four placeholders `framework/bootstrap/ductus.md`
+    /// §Placeholder Substitution lists, so adding one there without here, or
+    /// the reverse, fails this.
+    #[test]
+    fn the_known_placeholders_are_the_ones_the_installer_declares() {
+        let installer = fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/bootstrap/ductus.md"),
+        )
+        .unwrap();
+        let section = installer
+            .split("\n## Placeholder Substitution\n")
+            .nth(1)
+            .expect("ductus.md has a Placeholder Substitution section")
+            .split("\n## ")
+            .next()
+            .unwrap();
+        let declared: std::collections::BTreeSet<String> = section
+            .lines()
+            .filter_map(|line| line.strip_prefix("- `{"))
+            .filter_map(|rest| rest.split_once("}`").map(|(key, _)| key.to_string()))
+            .collect();
+        let compiled: std::collections::BTreeSet<String> = KNOWN_PLACEHOLDERS
+            .iter()
+            .map(|k| (*k).to_string())
+            .collect();
+        assert!(!declared.is_empty(), "no placeholder bullets were parsed");
+        assert_eq!(declared, compiled);
     }
 
     /// A key that merely looks unusual must still be accepted — the check is

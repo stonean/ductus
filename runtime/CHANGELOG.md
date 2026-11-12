@@ -104,6 +104,20 @@ its version and date.
 
 ### Changed
 
+- **BREAKING: `apply-manifest` refuses an entry that would be written with a
+  known placeholder unsubstituted (spec 022).** With a non-empty
+  substitutions map, an `update` or `create` entry whose substituted text
+  still carries `{project}`, `{cli-config-dir}`, `{project-name}` or
+  `{One-line project description.}`, where the map has no such key and the
+  entry does not keep it literal, halts the call before any write, an earlier
+  entry's included, with an error naming the entry and the placeholder. It
+  narrows what the primitive accepts, so it is a breaking change under
+  `BE-COMPAT-001`, made within major version zero: a call that wrote the
+  placeholder literally while reporting a clean run now fails. An empty map
+  (the `ductus` self-install) is never checked; other brace tokens are not
+  refused. The set is compiled in and a test pins it to
+  `framework/bootstrap/ductus.md` §Placeholder Substitution.
+
 - **BREAKING: `append-task`'s `task-number` is a string, and a suffixed task
   number is a task.** The result field was an integer and is now a string,
   since a dedup guard may match a task a person hand-inserted as `11a`, and
