@@ -191,14 +191,14 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 ## 22. Implement scenario: a-record-cites-a-removed-rule
 
 - [x] Resolve the scenario's open question with `/ductus:clarify`, before the release that removes 077's four deprecated rules (0.62.0)
-- [ ] Implement the behavior described in `scenarios/a-record-cites-a-removed-rule.md`
-- [ ] `check-rule-ids` passes a record's citation of a removed rule and still reports one as a current requirement, each shown by a test that fails without it
+- [x] Implement the behavior described in `scenarios/a-record-cites-a-removed-rule.md`
+- [x] `check-rule-ids` passes a record's citation of a removed rule and still reports one as a current requirement, each shown by a test that fails without it
 
 - **Done when**: a record citing a removed rule passes `check-rule-ids`, a current-requirement citation of one still fails it, and both are tested.
 
 ## 23. Implement scenario: spec-integrity-and-plan-consistency-are-run
 
-- [ ] Implement the behavior described in `scenarios/spec-integrity-and-plan-consistency-are-run.md`
+- [x] Implement the behavior described in `scenarios/spec-integrity-and-plan-consistency-are-run.md`
 
 - **Done when**: every `/{project}:analyze` path runs §Spec integrity (blocking) and §Plan consistency (blocking if plan exists) of `framework/reference/analyze.md`, each failure a Blocking finding and each check a path cannot run recorded unexamined, proved to fail on a fixture holding each condition
 
