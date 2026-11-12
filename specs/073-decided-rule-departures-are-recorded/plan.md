@@ -23,15 +23,7 @@ At analyze, a rule an entry names is still judged for whether its trigger fires,
 
 ### The entry grammar is a nested bullet
 
-Decided by the owner, 2026-11-12, of three options (nested bullets, one line, a fenced YAML block):
-
-```markdown
-- departs: `BE-COMPAT-001`
-  - reason: the credential field is removed rather than versioned; clients were told in advance
-  - cited: §shared-compatibility-exceptions
-```
-
-An entry is a list item under `## Applicable Rules` whose text is the literal key `departs:` and one backticked rule ID. Its children are `reason:` (required, non-empty) and `cited:` (optional, one `§anchor` reference); any other child key is malformed. HTML comments and fenced code are skipped, so the template's commented example is no entry and passes by default (§template-rule-alignment). A `§` citation, not a markdown link, keeps the entry from creating a `dependencies:` edge (§text-first-artifacts). Measured 2026-11-12: 9 of the 76 specs carry `## Applicable Rules`, holding 20 bullets, all `` - `ID` — reason ``; none opens with `departs:`, so no existing citation reads as a departure.
+Decided by the owner, 2026-11-12, of three options (nested bullets, one line, a fenced YAML block); the grammar is **§Departure entry** in `data-model.md`. An entry is a list item under `## Applicable Rules` whose text is the literal key `departs:` and one backticked rule ID. Its children are `reason:` (required, non-empty) and `cited:` (optional, one `§anchor` reference); any other child key is malformed. HTML comments and fenced code are skipped, so the template's commented example is no entry and passes by default (§drift-prevention, its template-rule alignment). A `§` citation, not a markdown link, keeps the entry from creating a `dependencies:` edge (§text-first-artifacts). Measured 2026-11-12: 9 of the 76 specs carry `## Applicable Rules`, holding 20 bullets, all `` - `ID` — reason ``; none opens with `departs:`, so no existing citation reads as a departure.
 
 ### One reader, one attribution rule, four consumers
 
@@ -112,7 +104,7 @@ The runtime and the reference prose are agent-neutral, and the command sources a
 
 ## Data Model
 
-[data-model.md](data-model.md) defines the entry grammar, the `waived` verdict, `check-departures`' result and the review waiver's `departure` marker. 082's data model and 066's record schema carry the verdict shape in the record (spec 073 §The analyze waiver); 073's data model owns the entry and the primitive's result and points at them.
+[data-model.md](data-model.md) defines the entry grammar, the `waived` verdict, `check-departures`' result and the review waiver's `departure` marker. 082's data model and 066's record schema carry the verdict shape in the record (**§The analyze waiver** in `spec.md`); 073's data model owns the entry and the primitive's result and points at them.
 
 ## Trade-offs
 
