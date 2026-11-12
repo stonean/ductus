@@ -23,6 +23,7 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 | `target-missing` | the target path resolves to no file on disk |
 | `target-unparseable` | the target exists but its frontmatter will not parse |
 | `no-readable-state` | the target carries no state the check can be evaluated against |
+| `outside-project` | a path family's candidate resolves, lexically, outside the project: it is recorded and never probed, and counts among the targets that could not be read |
 | `root-absent` | a criterion's path names a top-level segment this repo does not contain |
 | `ships-to-adopter` | a criterion's path is a file this repo scaffolds into an adopter's checkout — a **Shared Files** manifest destination, or a registered agent's scaffold path ([per-agent-scaffold-paths-ship-to-adopter](per-agent-scaffold-paths-ship-to-adopter.md)) |
 | `artifact-unreadable` | a scanned artifact could not be read at all |

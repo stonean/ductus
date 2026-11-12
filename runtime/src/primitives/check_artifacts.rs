@@ -1810,13 +1810,15 @@ fn check_criterion_path_existence(
             // entry satisfies the criterion.
             // Resolved lexically before any probe: a candidate whose `..`
             // leaves the project is never stat'd (`BE-INPUT-004`), only
-            // recorded.
+            // recorded as `outside-project`, a gap in what the run could see:
+            // `root-absent` says a top-level segment is missing here, which a
+            // suspect citation is not.
             let Some(trimmed) = lexical_in_project(candidate.trim_end_matches('/'), repo, repo)
             else {
                 record_skip(
                     skipped,
                     "criterion-path-existence",
-                    "root-absent",
+                    OUTSIDE_PROJECT,
                     &candidate,
                 );
                 continue;
@@ -2310,6 +2312,12 @@ fn is_path_like(content: &str) -> bool {
 // --- (i) body path existence -----------------------------------------------
 
 /// The family name [`check_body_path_existence`] reports and skips under.
+/// The skip reason of a path-family candidate whose lexical resolution leaves
+/// the project. In the *could not be read* class, not the excluded-by-
+/// construction one `root-absent` sits in (`framework/reference/analyze.md`,
+/// Unexamined targets).
+const OUTSIDE_PROJECT: &str = "outside-project";
+
 /// The family a skipped link that leaves the project is recorded under: the
 /// link guard is no check of its own, so it emits no finding, only skips.
 const OUTWARD_LINK_FAMILY: &str = "outward-link";
@@ -2377,7 +2385,7 @@ struct BodyCandidate {
 /// The acceptance criteria are skipped (the criterion family owns them), as are
 /// fenced blocks and HTML comments. Candidates follow the criterion grammar,
 /// with a `#fragment` stripped; one starting `../` resolves from the citing
-/// file's directory, and one that climbs out of the project is recorded `root-absent`. A
+/// file's directory, and one that climbs out of the project is recorded `outside-project`. A
 /// history that cannot be consulted fails safe, as `scenario-consistency`
 /// does: each remaining candidate is recorded `no-readable-state` and nothing
 /// is flagged.
@@ -2421,7 +2429,7 @@ fn check_body_path_existence(
                     .any(|marker| lowered.contains(marker));
             for candidate in candidate_paths(line) {
                 let Some(resolved) = resolve_body_path(&candidate, from_dir, repo) else {
-                    record_skip(skipped, BODY_PATH_FAMILY, "root-absent", &candidate);
+                    record_skip(skipped, BODY_PATH_FAMILY, OUTSIDE_PROJECT, &candidate);
                     continue;
                 };
                 if resolved.is_empty() || repo.join(&resolved).exists() {
@@ -2550,8 +2558,8 @@ fn lexical_in_project(path: &str, base: &Path, repo: &Path) -> Option<String> {
 /// A candidate's project-relative path, its `#fragment` stripped and any
 /// trailing slash dropped. A candidate starting `..` resolves from `from_dir`,
 /// any other from the project root; either way the resolution is lexical.
-/// `None` when it leaves the project, which the caller records as a
-/// `root-absent` skip.
+/// `None` when it leaves the project, which the caller records as an
+/// `outside-project` skip.
 fn resolve_body_path(candidate: &str, from_dir: &Path, repo: &Path) -> Option<String> {
     let file_part = candidate.split('#').next()?.trim_end_matches('/');
     let base = if file_part.starts_with("..") {
@@ -5399,7 +5407,7 @@ mod tests {
             .filter(|s| s.family == "criterion-path-existence")
             .collect();
         assert_eq!(skips.len(), 1, "{:?}", result.skipped);
-        assert_eq!(skips[0].reason, "root-absent");
+        assert_eq!(skips[0].reason, "outside-project");
         assert_eq!(skips[0].path, "specs/../../secret.txt");
     }
 
@@ -5419,7 +5427,7 @@ mod tests {
             .filter(|s| s.family == BODY_PATH_FAMILY)
             .map(|s| (s.reason.as_str(), s.path.as_str()))
             .collect();
-        assert_eq!(skips, vec![("root-absent", "specs/../../secret.txt")]);
+        assert_eq!(skips, vec![("outside-project", "specs/../../secret.txt")]);
         assert!(
             result.findings.iter().all(|f| f.family != BODY_PATH_FAMILY),
             "{:?}",

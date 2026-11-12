@@ -47,6 +47,10 @@ Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on b
 - **A linked `spec.md` ends the run.** There is no status to gate a family on, so the result carries the skip alone, status `unreadable`, `clean: true` with a non-empty `skipped` (partially examined, `QUAL-CLAIM-001`).
 - **A feature directory that is itself a link out** is still refused whole, as the argument check refuses it for every primitive.
 
+### A path that leaves the project is `outside-project`, not `root-absent`
+
+Both path families resolve a candidate lexically before any probe (`lexical_in_project`, `resolve_body_path` in `runtime/src/primitives/check_artifacts.rs`) and record one that leaves the project. `root-absent` said "a top-level segment this repository lacks", which sits in the excluded-by-construction class that recurs on every run and is correct, so a suspect citation read as benign. The new reason `outside-project` sits in the *could not be read* class, the one a stored decision is retained against (reference §Unexamined targets, step 18). It is named in the closed sets of this spec's data model and its `check-artifacts-skipped-targets` scenario, in 045's `data-model.md` and 066's class table, and in the compiled docs of `SkippedTarget` and `unexamined_by_reason`; 045's edit reopens it, a cost the owner accepted (2026-11-12). Nothing in the runtime classifies reasons, so no code beyond the two sites changes.
+
 ### The integrity checks split between a primitive and step 15
 
 §Spec integrity and §Plan consistency have eight bullets. The deterministic ones run in `check-artifacts` as two families (`check_spec_integrity`, `check_plan_consistency` in `runtime/src/primitives/check_artifacts.rs`), and the three semantic ones (implementation code in the spec, a decision without a rationale, a plan contradicting `system.md`) are added to step 15's host reading rather than a new step, because a new step renumbers steps 16–21, which the runtime's walker, the references and the `done` specs' plans cite by number. Step 15 therefore owns two exec reasons, `grounding-not-checked` and the new `integrity-not-checked`, both recorded once per exec run.

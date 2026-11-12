@@ -168,6 +168,12 @@ its version and date.
   first write and was counted again as the carrying run's, overstating
   `decisions-by-person` (22 of the 30 person-stamped decisions in five measured
   runs were carried). The compiled description says so (spec 079, AC17).
+- **A path citation that leaves the project is skipped as `outside-project`,
+  no longer `root-absent`.** The two path families resolve a candidate
+  lexically and record one that leaves the project without probing it, as
+  before; the reason is new and sits with the targets that could not be read,
+  where `root-absent` says an excluded-by-construction top-level segment is
+  missing here (spec 067, spec 045).
 - **`check-artifacts` opens nothing through a link that leaves the project.**
   It walks the feature directory as every other feature-argument primitive
   does, but records each link in it that resolves outside the project as a

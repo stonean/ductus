@@ -469,7 +469,9 @@ pub struct AnalyzeBlock {
     ///   repository's own ignore rules ignore, local state a fresh clone
     ///   lacks). Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
-    ///   `no-readable-state`, `artifact-unreadable`, and the gaps no check
+    ///   `no-readable-state`, `outside-project` (a path family's candidate
+    ///   whose lexical resolution leaves the project, recorded and never
+    ///   probed), `artifact-unreadable`, and the gaps no check
     ///   decided on: `referrer-unreadable` (a referrer
     ///   `check-orphaned-references` could not read),
     ///   `rule-citations-not-checked` (citations `check-rule-ids` checked
@@ -6372,8 +6374,9 @@ pub struct SkippedTarget {
     pub family: String,
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,
-    /// `target-unparseable`, `no-readable-state`, `root-absent`,
-    /// `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`,
+    /// `target-unparseable`, `no-readable-state`, `outside-project` (a path
+    /// family's candidate whose lexical resolution leaves the project),
+    /// `root-absent`, `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`,
     /// `never-existed`, `status-gated` (a path family that does not examine a
     /// spec at its status, the target its `spec.md`), or `gitignored` (a
     /// criterion path the repository's own ignore rules ignore).

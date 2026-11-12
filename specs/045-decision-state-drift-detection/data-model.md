@@ -85,6 +85,7 @@ pub struct SkippedTarget {
 | `target-missing` | the link resolves to a path with no file on disk |
 | `target-unparseable` | the target exists but could not be read, or is reached through a symbolic link inside the feature directory |
 | `no-readable-state` | the target carries no state the tell's class can be evaluated against |
+| `outside-project` | a checked path's lexical resolution leaves the project, so it is recorded and never probed; unlike `root-absent` it is a suspect citation, not an exclusion by construction ([067's check-artifacts-skipped-targets](../067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md)) |
 | `root-absent` | a checked path names a top-level segment this repo does not contain |
 | `ships-to-adopter` | a checked path is a **Shared Files** manifest destination or a registered agent's scaffold path, or a directory containing one — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
 | `artifact-unreadable` | a scanned *citing* artifact could not be read at all, below `done`; on a `done` spec it is a blocking finding instead (`8c4ca744`) |
