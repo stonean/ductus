@@ -46,11 +46,12 @@
 //!
 //! Defined by `specs/047-analyze-findings-durability/scenarios/analyze-run-durability.md`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::primitives::decisions;
+use crate::primitives::rule_verdicts::{self, Currency};
 use crate::primitives::write_review::{yaml_quoted, yaml_string};
 use crate::primitives::{
     PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter, write_atomic,
@@ -58,8 +59,9 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
-    Dispositions, RuleVerdict, WriteAnalysisArgs, WriteAnalysisResult,
+    Dispositions, RuleContradiction, RuleVerdict, WriteAnalysisArgs, WriteAnalysisResult,
 };
+use crate::schema::severity::RuleSeverity;
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
 /// add to its spec (spec 079).
@@ -217,6 +219,13 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
                 .or_default() += 1;
         }
     }
+    // The rule assessments, derived from the loaded rule files, the prior
+    // record and what the host judged, for the same reason: a caller that had
+    // to name the rules it left unjudged could leave out the ones it skipped
+    // (spec 082, AC2, `QUAL-CLAIM-001`). Both counts land in the breakdown,
+    // so the total cannot contradict the list.
+    let rules = derive_rule_fields(args, repo, &feature_dir)?;
+    count_rule_gaps(&mut by_reason, &rules);
     let by_reason = by_reason;
 
     let unexamined = if by_reason.is_empty() {
@@ -242,7 +251,6 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // same state on disk. That is the byte-identical failure `write-analysis`
     // was built to end, one level out. The refusals are the ones above: a spec
     // or a prior record this run cannot read.
-    let rule_fields = RuleFields::default();
     let report = render_analysis(
         args,
         &Derived {
@@ -253,7 +261,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         },
         &by_reason,
         &subjects,
-        &rule_fields,
+        &rules.fields,
         &merged,
     );
     write_atomic(&analysis_path, &report)?;
@@ -263,6 +271,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         blocking,
         unexamined,
         replaced,
+        contradictions: rules.fields.contradictions,
         dispositions,
     })
 }
@@ -498,6 +507,153 @@ struct RuleFields {
     verdicts: BTreeMap<String, RuleVerdict>,
     unjudged: Vec<String>,
     digest: BTreeMap<String, String>,
+    /// Reported in the result and the body, recorded in no field.
+    contradictions: Vec<RuleContradiction>,
+}
+
+/// Add the gaps [`derive_rule_fields`] found to the unexamined breakdown: each
+/// unjudged rule under `rule-assessments-not-checked`, and the rule files the
+/// runtime could not read under `rule-file-unreadable`, where a walk counts
+/// the files it could not read too, and the run's two reads of the one
+/// directory are one gap, not two.
+fn count_rule_gaps(by_reason: &mut BTreeMap<String, u32>, rules: &DerivedRules) {
+    if !rules.fields.unjudged.is_empty() {
+        *by_reason
+            .entry("rule-assessments-not-checked".to_string())
+            .or_default() += u32::try_from(rules.fields.unjudged.len()).unwrap_or(u32::MAX);
+    }
+    if rules.unreadable_files > 0 {
+        let counted = by_reason
+            .entry("rule-file-unreadable".to_string())
+            .or_default();
+        *counted = (*counted).max(rules.unreadable_files);
+    }
+}
+
+/// What [`derive_rule_fields`] found.
+struct DerivedRules {
+    fields: RuleFields,
+    /// Rule files listed that could not be read, whose rules cannot be named.
+    unreadable_files: u32,
+}
+
+/// Derive the record's rule fields (spec 082).
+///
+/// The universe is every assessable rule of every file in the rule-file
+/// directory, as `/{project}:analyze` loads them, so a host that treated a
+/// file as unloadable still has its rules named unjudged. Each rule is then
+/// one of: judged by this run (a verdict stored when it fired, its `addressed`
+/// citation checked), reused from a prior verdict that is still current
+/// (carried forward, so a host cannot drop a reusable finding by not passing
+/// it), or left unjudged. A rule the prior record held that no loaded file
+/// defines is in none of them, so its verdict is dropped.
+///
+/// A new `finding` over a rule whose prior verdict was current and quiet or
+/// addressed is a contradiction, reported and held against nothing.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] when a verdict names a rule no loaded
+/// file defines as assessable, when a `finding` verdict has no message, or
+/// when a tier's supplied count is below the number of `finding` verdicts of
+/// its rules: each stands for at least one live finding, and a count under
+/// that would drop a MUST failure from `blocking-findings`. The rule's tier is
+/// read from the current rule text. Reused findings are the host's to count,
+/// and the exec tally does.
+fn derive_rule_fields(
+    args: &WriteAnalysisArgs,
+    repo: &Path,
+    feature_dir: &Path,
+) -> Result<DerivedRules> {
+    let universe = rule_verdicts::load_universe(repo)?;
+    let standing = rule_verdicts::standing(feature_dir, &universe.files);
+    for (id, verdict) in &args.rule_verdicts {
+        if standing.currency(id).is_none() {
+            return Err(invalid(
+                format!("rule-verdicts.{id}"),
+                "names no assessable rule of the loaded rule files",
+            ));
+        }
+        if let RuleVerdict::Finding { message, .. } = verdict
+            && single_line(message).is_empty()
+        {
+            return Err(invalid(
+                format!("rule-verdicts.{id}.message"),
+                "a finding verdict's message is empty",
+            ));
+        }
+    }
+    let judged: BTreeSet<&str> = args
+        .judged_rules
+        .iter()
+        .map(String::as_str)
+        .chain(args.rule_verdicts.keys().map(String::as_str))
+        .collect();
+    let mut fields = RuleFields {
+        digest: universe
+            .files
+            .iter()
+            .map(|file| (file.name.clone(), file.digest.clone()))
+            .collect(),
+        ..RuleFields::default()
+    };
+    for (rule, current) in standing.rules() {
+        let id = rule.id.as_str();
+        if !judged.contains(id) {
+            match current {
+                Currency::Fired(verdict) => {
+                    fields.verdicts.insert(rule.id.clone(), verdict.clone());
+                }
+                Currency::NotFired => {}
+                Currency::Stale => fields.unjudged.push(rule.id.clone()),
+            }
+            continue;
+        }
+        match args.rule_verdicts.get(id) {
+            // A judgment no later run can test is no judgment.
+            Some(RuleVerdict::Addressed { cite })
+                if !rule_verdicts::cite_resolves(feature_dir, cite) =>
+            {
+                fields.unjudged.push(rule.id.clone());
+            }
+            Some(verdict) => {
+                if let Some(earlier) = rule_verdicts::contradiction(current, verdict) {
+                    fields.contradictions.push(RuleContradiction {
+                        rule: rule.id.clone(),
+                        earlier: earlier.to_string(),
+                    });
+                }
+                fields.verdicts.insert(rule.id.clone(), verdict.clone());
+            }
+            None => {}
+        }
+    }
+    let mut owed = [0u32; 2];
+    for (rule, _) in standing.rules() {
+        if matches!(
+            fields.verdicts.get(&rule.id),
+            Some(RuleVerdict::Finding { .. })
+        ) {
+            owed[usize::from(rule.tier == RuleSeverity::Should)] += 1;
+        }
+    }
+    for (count, argument, supplied, tier) in [
+        (owed[0], "blocking-findings", args.blocking_findings, "MUST"),
+        (owed[1], "advisory", args.advisory, "SHOULD"),
+    ] {
+        if supplied < count {
+            return Err(invalid(
+                argument,
+                &format!(
+                    "the record holds {count} {tier}-tier rule finding(s), each at least one live finding, and the count is {supplied}"
+                ),
+            ));
+        }
+    }
+    Ok(DerivedRules {
+        fields,
+        unreadable_files: universe.unreadable,
+    })
 }
 
 /// The counts this call derived, rendered into the record.
@@ -652,14 +808,56 @@ fn render_analysis(
         "## Deferred to other specs\n\n{}\n",
         render_list(&released)
     );
-    let _ = writeln!(
-        out,
-        "## Unexamined targets\n\n{}\n",
-        render_unexamined(unexamined, by_reason)
-    );
+    out.push_str(&render_rule_sections(unexamined, by_reason, rules));
     let fixed: Vec<&AnalysisFinding> = args.findings.iter().filter(|f| !f.live).collect();
     let _ = write!(out, "## Fixed in this run\n\n{}\n", render_list(&fixed));
     out
+}
+
+/// The `## Contradictions` and `## Unexamined targets` sections: the second
+/// names each rule left unjudged beside the breakdown that counts them.
+fn render_rule_sections(
+    unexamined: u32,
+    by_reason: &BTreeMap<String, u32>,
+    rules: &RuleFields,
+) -> String {
+    let mut unexamined_section = render_unexamined(unexamined, by_reason);
+    if !rules.unjudged.is_empty() {
+        let _ = write!(
+            unexamined_section,
+            "\n\nRules left unjudged: {}.",
+            rules
+                .unjudged
+                .iter()
+                .map(|id| plain(id))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    format!(
+        "## Contradictions\n\n{}\n\n## Unexamined targets\n\n{unexamined_section}\n\n",
+        render_contradictions(&rules.contradictions)
+    )
+}
+
+/// Each rule whose verdict turned from quiet or addressed to a finding over
+/// unchanged subjects, or `*None.*`. A note, never a finding: the finding is
+/// recorded in its own tier (spec 082, AC3).
+fn render_contradictions(contradictions: &[RuleContradiction]) -> String {
+    if contradictions.is_empty() {
+        return "*None.*".to_string();
+    }
+    contradictions
+        .iter()
+        .map(|c| {
+            format!(
+                "- {} — judged a finding over unchanged subjects, against an earlier verdict of {}",
+                plain(&c.rule),
+                plain(&c.earlier)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// The rule-assessment fields, each omitted when empty. A verdict is a flow
@@ -926,6 +1124,7 @@ mod tests {
             "## Hard failures",
             "## Blocking findings",
             "## Advisory findings",
+            "## Contradictions",
             "## Unexamined targets",
             "## Fixed in this run",
         ];
@@ -2364,6 +2563,7 @@ mod tests {
             ]),
             unjudged: vec!["BE-AUTHN-004".into(), "BE-AUTHN-005".into()],
             digest: BTreeMap::from([("quality-cross.md".to_string(), "ab".repeat(32))]),
+            contradictions: Vec::new(),
         };
         let dir = tmp.path().join("specs/042-demo");
         fs::write(dir.join("analysis.md"), rendered_with(&rules)).unwrap();
@@ -2432,5 +2632,430 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    // -- rule assessments (spec 082) --------------------------------------
+
+    /// A project holding `must` MUST-tier rules in `a-cross.md` and `should`
+    /// SHOULD-tier rules in `b-cross.md`, IDs `TS-RULE-001…` and
+    /// `TS-SHLD-001…`, each with a Verification.
+    fn with_rules(tmp: &TempDir, must: usize, should: usize) {
+        let dir = tmp.path().join("specs/rules");
+        fs::create_dir_all(&dir).unwrap();
+        let body = |prefix: &str, keyword: &str, n: usize| {
+            (1..=n).fold(String::new(), |mut out, i| {
+                let _ = write!(
+                    out,
+                    "### TS-{prefix}-{i:03}\n\n> Specs {keyword} do {i}.\n\n**Verification:** Check {i}.\n\n"
+                );
+                out
+            })
+        };
+        fs::write(dir.join("a-cross.md"), body("RULE", "MUST", must)).unwrap();
+        fs::write(dir.join("b-cross.md"), body("SHLD", "SHOULD", should)).unwrap();
+    }
+
+    fn rule_ids(must: usize, should: usize) -> Vec<String> {
+        (1..=must)
+            .map(|i| format!("TS-RULE-{i:03}"))
+            .chain((1..=should).map(|i| format!("TS-SHLD-{i:03}")))
+            .collect()
+    }
+
+    fn written_record(tmp: &TempDir) -> crate::schema::primitives::AnalyzeBlock {
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_analyze_record(&tmp.path().join("specs/042-demo"))
+        else {
+            panic!("the record did not load");
+        };
+        record
+    }
+
+    fn finding_verdict(message: &str) -> RuleVerdict {
+        RuleVerdict::Finding {
+            at: "spec.md#Behavior".into(),
+            message: message.into(),
+        }
+    }
+
+    fn addressed(cite: &str) -> RuleVerdict {
+        RuleVerdict::Addressed { cite: cite.into() }
+    }
+
+    /// Spec 082, AC2: a run that judges fewer rules than were loaded records
+    /// each rule left unjudged and a non-zero `rule-assessments-not-checked`,
+    /// and one that judges them all records neither.
+    #[test]
+    fn a_run_judging_fewer_rules_than_were_loaded_names_each_one_unjudged() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 100, 41);
+        let all = rule_ids(100, 41);
+        assert_eq!(all.len(), 141);
+
+        let mut a = args();
+        a.judged_rules = all[..30].to_vec();
+        let result = run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.unjudged_rules, all[30..].to_vec());
+        assert_eq!(
+            record.unexamined_by_reason["rule-assessments-not-checked"],
+            111
+        );
+        assert_eq!(result.unexamined, 111);
+        assert_eq!(record.rule_digest.len(), 2);
+        assert!(
+            analysis_md(&tmp).contains("Rules left unjudged: TS-RULE-031, "),
+            "{}",
+            analysis_md(&tmp)
+        );
+
+        a.judged_rules = all.clone();
+        let result = run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.unjudged_rules.len(), 0);
+        assert!(
+            !record
+                .unexamined_by_reason
+                .contains_key("rule-assessments-not-checked")
+        );
+        assert_eq!(result.unexamined, 0);
+        assert!(analysis_md(&tmp).contains("*None — every target was examined.*"));
+    }
+
+    /// Spec 082, AC1: a second run over an unchanged spec, told nothing,
+    /// records the verdicts the first did: a fired finding and an addressed
+    /// verdict are carried, a quiet rule stays quiet, and nothing is
+    /// unjudged.
+    #[test]
+    fn a_second_run_over_an_unchanged_spec_carries_every_verdict_and_judges_nothing() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 2);
+        let mut first = args();
+        first.judged_rules = rule_ids(3, 2);
+        first.blocking_findings = 1;
+        first.rule_verdicts = BTreeMap::from([
+            (
+                "TS-RULE-001".to_string(),
+                finding_verdict("names no constant"),
+            ),
+            ("TS-SHLD-002".to_string(), addressed("spec.md#Behavior")),
+        ]);
+        run(&first, tmp.path()).unwrap();
+        let before = written_record(&tmp);
+        assert_eq!(before.rule_verdicts.len(), 2);
+
+        // Nothing judged, nothing passed: only the count the host re-reports.
+        let mut second = args();
+        second.blocking_findings = 1;
+        run(&second, tmp.path()).unwrap();
+        let after = written_record(&tmp);
+        assert_eq!(after.rule_verdicts, before.rule_verdicts);
+        assert_eq!(after.rule_digest, before.rule_digest);
+        assert_eq!(after.unjudged_rules, before.unjudged_rules);
+        assert_eq!(after.unjudged_rules.len(), 0);
+        assert!(after.unexamined_by_reason.is_empty());
+    }
+
+    /// Spec 082, AC1 and the Resolved Questions: a `tasks.md` tick between the
+    /// runs changes no design subject, so the verdicts still carry.
+    #[test]
+    fn a_task_tick_between_runs_leaves_the_verdicts_carried() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        let tasks = tmp.path().join("specs/042-demo/tasks.md");
+        fs::write(&tasks, "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n").unwrap();
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 0);
+        run(&first, tmp.path()).unwrap();
+        fs::write(
+            &tasks,
+            "# T\n\n## 1. A\n\n- [x] a\n- [x] b\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules.len(), 0);
+
+        fs::write(
+            tmp.path().join("specs/042-demo/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# 042\n\n## Behavior\n\nEdited.\n",
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules, rule_ids(2, 0));
+    }
+
+    /// Spec 082, AC3: a finding over unchanged subjects, against a rule that
+    /// did not fire or was addressed, is recorded as a finding in its tier and
+    /// reported as a contradiction naming the earlier verdict; a finding
+    /// against a finding is none; the contradiction holds nothing.
+    #[test]
+    fn a_finding_after_a_quiet_or_addressed_verdict_is_a_recorded_contradiction() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 0);
+        let mut first = args();
+        first.judged_rules = rule_ids(3, 0);
+        first.blocking_findings = 1;
+        first.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-002".to_string(), addressed("spec.md#Behavior")),
+            ("TS-RULE-003".to_string(), finding_verdict("old")),
+        ]);
+        assert_eq!(run(&first, tmp.path()).unwrap().contradictions.len(), 0);
+
+        let mut second = args();
+        second.blocking_findings = 3;
+        second.judged_rules = rule_ids(3, 0);
+        second.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), finding_verdict("was quiet")),
+            ("TS-RULE-002".to_string(), finding_verdict("was addressed")),
+            ("TS-RULE-003".to_string(), finding_verdict("still bad")),
+        ]);
+        let result = run(&second, tmp.path()).unwrap();
+        assert_eq!(
+            result.contradictions,
+            [
+                RuleContradiction {
+                    rule: "TS-RULE-001".into(),
+                    earlier: "not-fired".into()
+                },
+                RuleContradiction {
+                    rule: "TS-RULE-002".into(),
+                    earlier: "addressed".into()
+                },
+            ]
+        );
+        // The finding is recorded in its tier; the contradiction is no count.
+        let record = written_record(&tmp);
+        assert_eq!(record.rule_verdicts.len(), 3);
+        assert_eq!(record.blocking_findings, 3);
+        assert!(record.blocking);
+        let report = analysis_md(&tmp);
+        assert!(
+            report.contains("- TS-RULE-002 — judged a finding over unchanged subjects, against an earlier verdict of addressed"),
+            "{report}"
+        );
+
+        // Contradictions alone hold nothing: with the finding counted nowhere
+        // else, a run whose only news is one is still not blocking.
+        let mut third = args();
+        third.advisory = 0;
+        third.judged_rules = rule_ids(3, 0);
+        third.blocking_findings = 3;
+        let result = run(&third, tmp.path()).unwrap();
+        assert_eq!(result.contradictions.len(), 0);
+    }
+
+    /// A rule given a verdict is judged by that alone, listed or not.
+    #[test]
+    fn a_rule_given_a_verdict_is_judged_without_being_listed() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        let mut a = args();
+        a.blocking_findings = 1;
+        a.rule_verdicts = BTreeMap::from([("TS-RULE-001".to_string(), finding_verdict("m"))]);
+        a.judged_rules = vec!["TS-RULE-002".into()];
+        run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.rule_verdicts.len(), 1);
+        assert_eq!(record.unjudged_rules.len(), 0);
+    }
+
+    /// A contradiction over a SHOULD-tier rule is an advisory finding, so the
+    /// record it lands in does not block: the note holds nothing and the
+    /// finding holds what its tier does.
+    #[test]
+    fn a_contradiction_over_a_should_rule_holds_nothing() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 1, 1);
+        let mut first = args();
+        first.judged_rules = rule_ids(1, 1);
+        run(&first, tmp.path()).unwrap();
+        let mut second = args();
+        second.advisory = 1;
+        second.judged_rules = rule_ids(1, 1);
+        second.rule_verdicts = BTreeMap::from([("TS-SHLD-001".to_string(), finding_verdict("m"))]);
+        let result = run(&second, tmp.path()).unwrap();
+        assert_eq!(result.contradictions.len(), 1);
+        assert!(!result.blocking);
+        let record = written_record(&tmp);
+        assert_eq!((record.blocking_findings, record.advisory), (0, 1));
+    }
+
+    /// Spec 082, AC5: a rule edited between two runs over an unchanged spec is
+    /// judged again, and its file's neighbours are not.
+    #[test]
+    fn an_edited_rule_file_is_judged_again_over_an_unchanged_spec() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 2);
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 2);
+        run(&first, tmp.path()).unwrap();
+
+        let rules = tmp.path().join("specs/rules/a-cross.md");
+        let text = fs::read_to_string(&rules).unwrap();
+        fs::write(&rules, text.replace("Check 2.", "Check 2, and more.")).unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.unjudged_rules, rule_ids(2, 0));
+        assert_eq!(
+            record.unexamined_by_reason["rule-assessments-not-checked"],
+            2
+        );
+
+        // A rationale edit is no rule edit.
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 2);
+        run(&first, tmp.path()).unwrap();
+        let text = fs::read_to_string(&rules).unwrap();
+        fs::write(&rules, format!("{text}\n**Rationale:** Prose.\n")).unwrap();
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules.len(), 0);
+    }
+
+    /// Spec 082, AC6: an `addressed` verdict whose citation does not resolve
+    /// is recorded among the rules left unjudged, never as `addressed`.
+    #[test]
+    fn an_addressed_verdict_whose_citation_does_not_resolve_is_unjudged() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 5, 0);
+        let mut a = args();
+        a.judged_rules = rule_ids(5, 0);
+        a.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), addressed("spec.md#Behavior")),
+            (
+                "TS-RULE-002".to_string(),
+                addressed("spec.md#No such heading"),
+            ),
+            ("TS-RULE-003".to_string(), addressed("")),
+            ("TS-RULE-004".to_string(), addressed("tasks.md#Behavior")),
+            ("TS-RULE-005".to_string(), addressed("gone.md#Behavior")),
+        ]);
+        run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(
+            record.rule_verdicts.keys().collect::<Vec<_>>(),
+            ["TS-RULE-001"]
+        );
+        assert_eq!(
+            record.unjudged_rules,
+            ["TS-RULE-002", "TS-RULE-003", "TS-RULE-004", "TS-RULE-005"]
+        );
+        assert_eq!(
+            record.unexamined_by_reason["rule-assessments-not-checked"],
+            4
+        );
+    }
+
+    /// A tier count under the number of `finding` verdicts is refused with
+    /// nothing written, and a carried finding the host forgets to count is
+    /// refused too: the count a record gates on cannot drop a rule failure.
+    #[test]
+    fn a_finding_verdict_the_tier_counts_do_not_cover_is_refused() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 2);
+        let mut a = args();
+        a.judged_rules = rule_ids(2, 2);
+        a.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), finding_verdict("must")),
+            ("TS-SHLD-001".to_string(), finding_verdict("should")),
+        ]);
+        a.blocking_findings = 0;
+        a.advisory = 1;
+        let error = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "blocking-findings"),
+            "{error}"
+        );
+        assert!(!analysis_exists(&tmp));
+        a.blocking_findings = 1;
+        a.advisory = 0;
+        let error = run(&a, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "advisory"),
+            "{error}"
+        );
+        assert!(!analysis_exists(&tmp));
+        a.advisory = 1;
+        run(&a, tmp.path()).unwrap();
+
+        // Carried forward, the finding still owes its count.
+        let mut again = args();
+        again.advisory = 1;
+        assert!(run(&again, tmp.path()).is_err());
+        again.blocking_findings = 1;
+        run(&again, tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).rule_verdicts.len(), 2);
+    }
+
+    /// A verdict for a rule no loaded file defines, or a finding with no
+    /// message, is refused before any write.
+    #[test]
+    fn a_verdict_naming_no_loaded_rule_or_no_message_is_refused() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 1, 0);
+        let mut a = args();
+        a.blocking_findings = 1;
+        a.rule_verdicts = BTreeMap::from([("TS-NONE-001".to_string(), finding_verdict("m"))]);
+        assert!(run(&a, tmp.path()).is_err());
+        a.rule_verdicts = BTreeMap::from([("TS-RULE-001".to_string(), finding_verdict(" "))]);
+        assert!(run(&a, tmp.path()).is_err());
+        assert!(!analysis_exists(&tmp));
+    }
+
+    /// A stored verdict naming a rule no loaded file defines any longer is
+    /// dropped rather than carried as a judgment of a rule nobody loaded.
+    #[test]
+    fn a_rule_removed_between_runs_loses_its_verdict() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 1);
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 1);
+        first.advisory = 1;
+        first.rule_verdicts = BTreeMap::from([("TS-SHLD-001".to_string(), finding_verdict("m"))]);
+        run(&first, tmp.path()).unwrap();
+        fs::remove_file(tmp.path().join("specs/rules/b-cross.md")).unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert!(record.rule_verdicts.is_empty());
+        assert_eq!(
+            record.rule_digest.keys().collect::<Vec<_>>(),
+            ["a-cross.md"]
+        );
+    }
+
+    /// A prior record whose verdict map does not parse reuses nothing and is
+    /// repaired by the write: every rule is named unjudged.
+    #[test]
+    fn a_prior_verdict_map_that_does_not_parse_reuses_nothing() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        fs::write(
+            tmp.path().join("specs/042-demo/analysis.md"),
+            "---\nspec: 042-demo\nlast-run: 2026-09-05T18:00:00Z\nrule-verdicts: [TS-RULE-001]\n---\n",
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules, rule_ids(2, 0));
+    }
+
+    /// A rule file the run cannot read is counted under `rule-file-unreadable`,
+    /// without doubling what a walk already counted.
+    #[test]
+    fn a_rule_file_the_runtime_cannot_read_is_counted_once() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 1, 0);
+        fs::write(tmp.path().join("specs/rules/c-cross.md"), [0xff, 0xfe]).unwrap();
+        let mut a = args();
+        a.judged_rules = rule_ids(1, 0);
+        run(&a, tmp.path()).unwrap();
+        assert_eq!(
+            written_record(&tmp).unexamined_by_reason["rule-file-unreadable"],
+            1
+        );
+        a.unexamined_by_reason = vec![("rule-file-unreadable".into(), 1)];
+        run(&a, tmp.path()).unwrap();
+        assert_eq!(
+            written_record(&tmp).unexamined_by_reason["rule-file-unreadable"],
+            1
+        );
     }
 }

@@ -393,6 +393,11 @@ fn hydrate_write_analysis(args: &mut WriteAnalysisArgs) -> Result<(), String> {
         "decided-by-json",
         args.decided_by_json.as_ref(),
         &mut args.decided_by,
+    )?;
+    hydrate_field(
+        "rule-verdicts-json",
+        args.rule_verdicts_json.as_ref(),
+        &mut args.rule_verdicts,
     )
 }
 

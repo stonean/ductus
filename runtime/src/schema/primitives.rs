@@ -1849,6 +1849,29 @@ pub struct WriteAnalysisArgs {
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub decided_by_json: Option<String>,
+    /// This run's newly judged fired rules, each with its verdict, keyed by
+    /// rule ID (spec 082): `addressed` with a `cite` naming the design
+    /// subject and heading that addresses it, or `finding` with its `at` and
+    /// `message`. A rule judged and not fired has no entry. Each key must name
+    /// an assessable loaded rule. An `addressed` verdict whose `cite` does not
+    /// resolve is not stored: the rule is recorded among those left unjudged.
+    /// On the CLI, `--rule-verdicts-json FILE`.
+    #[serde(default)]
+    #[arg(skip)]
+    pub rule_verdicts: BTreeMap<String, RuleVerdict>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `rule-verdicts` argument as the MCP tool takes it (spec 022).
+    /// `#[serde(skip)]` keeps it out of the MCP schema, as
+    /// [`ApplyManifestArgs::entries_json`] is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub rule_verdicts_json: Option<String>,
+    /// Every rule the run judged, fired or not (spec 082). A loaded rule the
+    /// run neither judged here nor reused from the prior record is recorded
+    /// as left unjudged. Repeatable on the CLI (`--judged-rule BE-LOG-002`).
+    #[serde(default)]
+    #[arg(long = "judged-rule")]
+    pub judged_rules: Vec<String>,
 }
 
 /// Parse a `reason=count` pair for `--unexamined-reason`.
@@ -1895,8 +1918,25 @@ pub struct WriteAnalysisResult {
     /// replaced it, as opposed to writing the spec's first. Reported so a
     /// caller can tell a re-analysis from a first one.
     pub replaced: bool,
+    /// Each rule this run judged a finding although its prior verdict, over
+    /// the same design subjects and rule text, was not fired or addressed
+    /// (spec 082). Advisory: it holds nothing, and its finding counts in its
+    /// own tier as any finding does.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contradictions: Vec<RuleContradiction>,
     /// The `dispositions:` map actually written.
     pub dispositions: Dispositions,
+}
+
+/// One verdict that turned from quiet to a finding with nothing changed, in a
+/// `write-analysis` result (spec 082).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RuleContradiction {
+    /// The rule's ID.
+    pub rule: String,
+    /// The earlier verdict, `not-fired` or `addressed`.
+    pub earlier: String,
 }
 
 /// Parsed spec frontmatter.
