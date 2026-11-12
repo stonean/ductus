@@ -94,8 +94,8 @@ Done when: the spec status is `done` and the change is committed.
 
 ## 13. Agent Selection names a dropped host's leftover tree
 
-- [ ] Record the requirement in 012 first, as a scenario (`a-dropped-hosts-leftover-tree-is-named`) or an acceptance criterion: when the project holds `.augment/`, `.agents/`, `.opencode/` or a root `opencode.json` or `opencode.jsonc` and no Agent Registry row names it, `/ductus` prints one non-gating line saying the host is no longer supported, that `/ductus` leaves the tree alone (the runtime refuses writes there), and how to remove it by hand
-- [ ] `framework/bootstrap/ductus.md` §Agent Selection: add the notice beside rule 2's auto-detection, worded so it never prompts and never changes the agent set; mirror it to `framework/bootstrap/govern.md` (Family 21)
+- [x] Record the requirement in 012 first, as a scenario (`a-dropped-hosts-leftover-tree-is-named`) or an acceptance criterion: when the project holds `.augment/`, `.agents/`, `.opencode/` or a root `opencode.json` or `opencode.jsonc` and no Agent Registry row names it, `/ductus` prints one non-gating line saying the host is no longer supported, that `/ductus` leaves the tree alone (the runtime refuses writes there), and how to remove it by hand
+- [x] `framework/bootstrap/ductus.md` §Agent Selection: add the notice beside rule 2's auto-detection, worded so it never prompts and never changes the agent set; mirror it to `framework/bootstrap/govern.md` (Family 21)
 - [ ] Verify it in task 12's real adopter run on a subject carrying a dropped host's tree, and state the line it printed in the closing commit
 
 - **Done when**: 012 records the requirement, both bootstrap copies print the notice for each of the five paths when no registry row names them and stay silent otherwise, and a real adopter run shows it
