@@ -346,7 +346,7 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
     // reduction that removed nothing writes none. A reset of a file that
     // carries one keeps it.
     let held = super::tasks_counter::read(&content, &tasks_path)?;
-    let new_content = if removed > 0 || held.is_some() {
+    let new_content = if removed > 0 {
         let past = super::tasks_counter::highest_present(&content) + 1;
         let counted =
             super::tasks_counter::set(&new_content, past.max(held.unwrap_or(0)), &tasks_path)?;
@@ -750,6 +750,20 @@ mod tests {
         let (_tmp, repo) = write_repo(tasks, None);
         let result = run(&args(false, false, true), &repo).unwrap();
         assert!(result.nothing_to_prune);
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, tasks);
+    }
+
+    /// A counter that lags the highest number (a hand edit) is left as it is
+    /// when nothing is removed: the reduction writes nothing, and the next
+    /// append still outvotes the counter, so no number is duplicated.
+    #[test]
+    fn a_lagging_counter_is_not_rewritten_when_nothing_is_removed() {
+        let tasks = "---\nnext-task: 3\n---\n\n# T\n\n## 5. Pending\n\n- [ ] a\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        let result = run(&args(false, false, true), &repo).unwrap();
+        assert!(result.nothing_to_prune);
+        assert!(!result.applied);
         let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
         assert_eq!(body, tasks);
     }

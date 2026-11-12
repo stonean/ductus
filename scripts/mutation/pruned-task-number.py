@@ -48,9 +48,16 @@ MUTATIONS = [
     (
         'M5 prune-tasks writes no counter',
         'src/primitives/prune_tasks.rs',
-        'if removed > 0 || held.is_some() {',
+        'if removed > 0 {',
         'if false {',
         'a_pruned_top_number',
+    ),
+    (
+        'M11 prune-tasks rewrites a lagging counter when it removes nothing',
+        'src/primitives/prune_tasks.rs',
+        'if removed > 0 {',
+        'if removed > 0 || held.is_some() {',
+        'a_lagging_counter_is_not_rewritten',
     ),
     (
         'M6 prune-tasks lowers a counter already past the highest number',
