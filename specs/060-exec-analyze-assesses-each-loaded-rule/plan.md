@@ -67,7 +67,7 @@ Loading records its own gaps in the tally once per walk rather than once per ste
 
 ### One request per rule of the step's tier
 
-`handle_extension` (`runtime/src/interpreter/mod.rs:364`) builds one request per step today. For `assessSpecQuality` it builds a list: one `AssessSpecQualityRequest` for each assessable rule whose tier matches the step's, each carrying that rule's ID, Verification and tier in its `rule` object (`runtime/src/schema/extensions.rs:28`), beside `loaded-rule-files`, the basenames of the rule files the walk read, against which the host evaluates a Verification's "where `{file}` is also loaded" yield (scenario `an-assessment-sees-the-loaded-rule-files`). It then emits, awaits, validates and records each in turn. Every other extension point builds its single request exactly as before. The step's tier still comes from `severity_from_step_prose` (`runtime/src/interpreter/payload.rs:867`), but it now selects which rules a step asks about, and never assigns a tier to a rule. That is AC1's distinction.
+`handle_extension` (`runtime/src/interpreter/mod.rs:364`) builds one request per step today. For `assessSpecQuality` it builds a list: one `AssessSpecQualityRequest` for each assessable rule whose tier matches the step's and, since spec 082, whose stored verdict is not current, each carrying that rule's ID, Verification and tier in its `rule` object (`runtime/src/schema/extensions.rs:28`), beside `loaded-rule-files`, the basenames of the rule files the walk read, against which the host evaluates a Verification's "where `{file}` is also loaded" yield (scenario `an-assessment-sees-the-loaded-rule-files`). It then emits, awaits, validates and records each in turn. Every other extension point builds its single request exactly as before. The step's tier still comes from `severity_from_step_prose` (`runtime/src/interpreter/payload.rs:867`), but it now selects which rules a step asks about, and never assigns a tier to a rule. That is AC1's distinction.
 
 Requests go out in rule-file order, then heading order, with `fresh_request_id` numbering them as it does today, so request ids and goldens are reproducible. Each response is validated as any extension response is. A failure halts the walk with `error: schema-mismatch` before `write-analysis` at step 20, so no record is written (`runtime/src/interpreter/mod.rs:600`). The `llm:assessSpecQuality` context key keeps the last response, as before. No step reads it: `llm:*` keys are read only by `verifyCriteria`'s gate (`runtime/src/interpreter/mod.rs:772`) and filtered out of every outbound request (`runtime/src/interpreter/payload.rs:193`).
 
@@ -106,13 +106,13 @@ A second test scripts a malformed response partway through the loop and asserts 
 
 `framework/commands/analyze.md` steps 11 and 12 gain an exec-path sentence each (AC8):
 
-- `ductus exec` asks about every loaded rule of the step's tier, one request per rule;
+- `ductus exec` asks about every loaded rule of the step's tier that has no current stored verdict (spec 082), one request per rule;
 - the rule's tier comes from its Statement's keyword;
 - the host judges whether the rule's Verification trigger fires, and answers `passed: true` when it does not.
 
 The steps keep their `MUST-tier` and `SHOULD-tier` phrases, which `severity_from_step_prose` reads. The step list is unchanged, so no other golden's step numbers move. The generated `.claude/commands/ductus/analyze.md` is rewritten by the pre-commit hook.
 
-022's `assessSpecQuality` section (`specs/022-deterministic-runtime/data-model.md:1273`) gains the same statement: the exec walker sends one request per loaded rule carrying a tier and a Verification, and a trigger that does not fire is answered `passed: true`.
+022's `assessSpecQuality` section (`specs/022-deterministic-runtime/data-model.md:1273`) gains the same statement: the exec walker sends one request per loaded rule carrying a tier and a Verification, since spec 082 only for one whose stored verdict is not current, and a trigger that does not fire is answered `passed: true`.
 
 ### 022 is reopened, corrected, and re-reviewed
 

@@ -76,6 +76,12 @@ analyzed-digest:
   tasks.md: b085…
 unexamined-by-reason:
   root-absent: 4
+rule-digest:
+  quality-cross.md: 5e1c…
+  security-backend.md: a07d…
+rule-verdicts:
+  BE-LOG-002: {verdict: addressed, cite: "plan.md#Observability"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
 blocking: false
 dispositions:
   fixed: 1
@@ -114,6 +120,9 @@ decisions:
 | `unexamined-by-reason` | Map of `reason: count` | The `unexamined` total broken out over a closed reason set. Omitted entirely when empty |
 | `analyzed-digest` | Map of `path: sha256` | Per-path digest of every `.md` under the feature **as this run read it**, keyed within the feature directory, `review.md` included and this file excluded whole. The staleness basis. Omitted when empty, which only a pre-digest record can be |
 | `analyzed-unreadable` | List of paths | Subjects that exist but could not be read when the digest was taken, recorded rather than digested as empty. Omitted when empty |
+| `rule-digest` | Map of `rule file: sha256` | A digest of each loaded rule file's rules (ID, Statement and Verification). A later run reuses a stored verdict only while its rule's file, the set of loaded files and the design subjects are unchanged (spec 082). Omitted when no rule file was loaded |
+| `rule-verdicts` | Map of rule ID to verdict | Each loaded rule that fired: `addressed`, with the `cite` of the design-subject heading that addresses it, or `finding`, with the `tier` it counted in, `at` and `message`. A loaded rule in neither this map nor `unjudged-rules` did not fire. Omitted when empty |
+| `unjudged-rules` | List of rule IDs | Each assessable rule the run neither judged nor reused a current verdict for, counted into `rule-assessments-not-checked`; the completion gate holds `done` while it names any. Omitted when empty |
 | `dispositions` | Map of four integers | What the run did with its findings, in every tier: `fixed`, `deferred`, `waived`, `undispositioned`. **Derived**; always written. Absent means the record predates dispositions. A record written before spec 076 carries `routed` and `discarded`, read as `deferred` and `waived` |
 | `decisions` | List | Stored deferred and waived decisions, keyed `{family} — {message}`, each with its outcome, its work reference (`target`, `task`, `work-item`) or `reason`, `decided-at`, and `decided-by`. A deferral of a hard-fail or blocking finding that does not release `done` also carries `gating: true`. Omitted when empty |
 | `blocking` | Boolean | **Derived**, never supplied: `true` when `hard-fail` or `blocking-findings` exceeds zero |
@@ -160,7 +169,7 @@ Two classes live in the set, and they call for opposite responses. **Excluded by
 
 ### `rule-verdicts`, `unjudged-rules` and `rule-digest`
 
-A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
+A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, or a rule file was added or removed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
 
 ### `blocking`
 

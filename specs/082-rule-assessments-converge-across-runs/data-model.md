@@ -44,11 +44,10 @@ unjudged-rules:
 
 ## `discover-rule-files` with a `feature`
 
-With `rules` and `feature` set, the result gains `verdicts`:
+With `all`, `rules` and `feature` set, the result gains `verdicts`:
 
 ```json
 {
-  "reason": null,
   "reusable": [
     { "id": "BE-LOG-002", "verdict": "addressed", "cite": "plan.md#Observability" },
     { "id": "QUAL-CLAIM-001", "verdict": "finding", "tier": "must", "at": "spec.md#Acceptance Criteria", "message": "..." }
@@ -57,13 +56,14 @@ With `rules` and `feature` set, the result gains `verdicts`:
 }
 ```
 
-`reason` is `no-prior-verdicts`, `subjects-changed` or `record-unreadable` (also a notice) when nothing is reusable, `reusable-count` and `judge-count` are inline in both forms, then `judge` holds every assessable rule. A rule absent from `reusable` and `judge` is current and did not fire. Both lists follow `bounded_lists::place`'s inline-or-file form.
+`reason` is absent while the prior record's verdicts can be reused, even when none fired; otherwise it is `no-prior-verdicts`, `subjects-changed`, `rule-files-changed` (the rule files loaded now are not the set the record's `rule-digest` names) or `record-unreadable` (also a notice), and `judge` holds every assessable rule. `reusable-count` and `judge-count` are inline in both forms. A rule of a readable file absent from `reusable` and `judge` is current and did not fire; the rules of a file that cannot be read are in neither, and the file is named under the result's `unreadable`. Both lists follow `bounded_lists::place`'s inline-or-file form.
 
 ## `write-analysis` arguments and result
 
 - `rule-verdicts`: map of rule ID → verdict, this run's newly judged fired rules. CLI `--rule-verdicts-json FILE`.
 - `judged-rules`: list of rule IDs the run judged, fired or not. CLI `--judged-rule`, repeatable.
-- Result gains `contradictions`: list of `{rule, earlier}` with `earlier` one of `not-fired` or `addressed`, and the body a `## Contradictions` section.
+- A bare `unexamined` total, passed with no `unexamined-by-reason`, is recorded under the reason `unclassified` beside the reasons `write-analysis` derives, so `unexamined` stays the breakdown's sum (066).
+- Result gains `contradictions`: list of `{rule, earlier}` with `earlier` one of `not-fired` or `addressed`, bounded as `bounded_lists::place` bounds a list: `form` and `contradictions-count` are inline in both forms, and past the read size the list is absent and `lists-file` names the file holding it. The body gains a `## Contradictions` section.
 
 ## `assessSpecQuality` response
 
