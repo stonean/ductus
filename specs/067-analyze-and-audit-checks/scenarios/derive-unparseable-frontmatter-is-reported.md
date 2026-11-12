@@ -49,9 +49,9 @@ there are none.
 A spec lands there when its frontmatter fence is never closed — the condition
 both splices already detect implicitly by never finding their anchor, made
 explicit and reported instead of swallowed. A rewritten frontmatter that
-would not parse as YAML is a different case: each primitive re-parses the
-block it is about to write and never writes one that fails, leaving the file
-byte-identical (since 2026-10-26, 071's re-review of 067, after a YAML
+would not parse as YAML is a different case: a rewrite that would leave
+unparseable YAML is refused and named in `unwritable`, per each primitive's
+compiled description (since 2026-10-26, 071's re-review of 067, after a YAML
 indentless sequence was spliced into invalid frontmatter and reported
 `updated`). Since task 14 such a spec is named in `unwritable`, not here, as
 the data model records.
@@ -71,8 +71,8 @@ The CLI's blocking contract is unchanged — an unparseable spec does not fail
 the check, because it is not drift. It is an unknown, and the existing rule
 that an unknown is never escalated into a defect holds here too. A refused
 rewrite is not an unknown: the index it could not write is stale, so since
-task 14 the CLI fails on `unwritable`, naming each spec on stderr (owner,
-2026-11-10).
+task 14 the CLI fails on `unwritable` (owner, 2026-11-10); its exit status
+is in each primitive's `--help`.
 
 ## Edge Cases
 

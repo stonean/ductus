@@ -8,7 +8,7 @@ section: "Link and reference integrity"
 
 Three checks sit near this ground and none of them covers it.
 
-- `check-orphaned-references` scopes to the five adopter-owned bootstrap referrers (`CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`, and the spec root's `system.md`) pointing into ductus-managed roots. Spec-to-spec links are outside it by design.
+- `check-orphaned-references` examines the adopter-owned referrers its compiled description names (`ductus check-orphaned-references --help`), for references into ductus-managed paths. Spec-to-spec links are outside it by design.
 - `/ductus:analyze` is bounded to one feature directory plus its declared dependencies, so it cannot see the corpus.
 - `scripts/audit/broken-relative-links.sh` (Family 26) performs exactly the right check and is **maintainer-only** — adopters never invoke `/ductus:audit`.
 

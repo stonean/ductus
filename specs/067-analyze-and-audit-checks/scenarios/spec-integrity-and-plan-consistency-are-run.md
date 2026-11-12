@@ -6,7 +6,7 @@ section: "Artifact checks"
 
 ## Context
 
-`framework/reference/analyze.md` states two blocking families, §Spec integrity (blocking) and §Plan consistency (blocking if plan exists). `docs/analyze.md` lists the first as Blocking, and 000's AC8 says `/{project}:analyze` checks spec integrity. But no numbered step of `framework/commands/analyze.md` runs either family, and `check-artifacts` implements neither, so a run on the runtime path or under `ductus exec` records `blocking-findings: 0` without examining them, and nothing reports them unexamined. Found while verifying 077's work (2026-11-03). Deferred here rather than waived, as `8359fbf0` had recorded it (owner, 2026-11-03, option a).
+`framework/reference/analyze.md` states two blocking families, §Spec integrity (blocking) and §Plan consistency (blocking if plan exists). `docs/analyze.md` lists the first as Blocking, and 000's AC8 says `/{project}:analyze` checks spec integrity. But no numbered step of `framework/commands/analyze.md` runs either family, and, when this was found, `check-artifacts` implemented neither (it now runs both families), so a run on the runtime path or under `ductus exec` records `blocking-findings: 0` without examining them, and nothing reports them unexamined. Found while verifying 077's work (2026-11-03). Deferred here rather than waived, as `8359fbf0` had recorded it (owner, 2026-11-03, option a).
 
 ## Behavior
 

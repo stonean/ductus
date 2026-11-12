@@ -10,7 +10,7 @@ The 2026-07-11 coverage review found that several of `/ductus:analyze`'s determi
 
 ## Behavior
 
-A new `check-artifacts` primitive owns the residual deterministic families: given a feature, it reports findings for artifact completeness per status, task-numbering/done-when consistency, scenario→task mapping (treating a missing task as satisfied when any revision of `tasks.md` named the scenario, so the check never requires a spent task to persist per §tasks-phase — [`scenario-consistency-reads-tasks-history`](scenario-consistency-reads-tasks-history.md)), and review-state drift on done specs (a `review.md` record with `last-run` unset, `blocking: true`, or a non-zero `should-violations`) — each finding carrying the check family, severity tier, and location. `/ductus:analyze`'s Instructions gain a numbered step invoking it. Command-frontmatter completeness stays with the host (it reads the host's command directory, which the runtime does not own).
+A new `check-artifacts` primitive owns the residual deterministic families: given a feature, it owns the residual deterministic families (`ductus check-artifacts --help` lists them and the finding shape), scenario→task mapping among them, which treats a missing task as satisfied when any revision of `tasks.md` named the scenario, so the check never requires a spent task to persist per §tasks-phase — [`scenario-consistency-reads-tasks-history`](scenario-consistency-reads-tasks-history.md). `/ductus:analyze`'s Instructions gain a numbered step invoking it. Command-frontmatter completeness stays with the host (it reads the host's command directory, which the runtime does not own).
 
 ## Edge Cases
 
