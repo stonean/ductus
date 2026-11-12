@@ -168,6 +168,12 @@ its version and date.
   first write and was counted again as the carrying run's, overstating
   `decisions-by-person` (22 of the 30 person-stamped decisions in five measured
   runs were carried). The compiled description says so (spec 079, AC17).
+- **`check-artifacts` opens nothing through a link that leaves the project.**
+  It walks the feature directory as every other feature-argument primitive
+  does, but records each link in it that resolves outside the project as a
+  `target-unparseable` skip (family `outward-link`) and keeps running, instead
+  of reading the file behind it. A linked `spec.md` ends the run with the skip
+  alone and the status `unreadable` (spec 067, spec 022).
 - **`write-review` and `check-review-gate` bound a stale analysis's path list
   (066).** `write-review`'s `analyze-freshness.paths` and `check-review-gate`'s
   new `analyze-stale-paths` (the artifacts the message shows three of) are

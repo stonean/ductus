@@ -194,6 +194,46 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     Ok(result)
 }
 
+/// The links under the feature directory that leave the project, and a
+/// `target-unparseable` skip for each. The caller opens nothing at or beneath
+/// one ([`super::OutwardLinks::covers`]).
+fn skip_outward_links(
+    repo: &Path,
+    root: &str,
+    feature: &str,
+) -> Result<(super::OutwardLinks, Vec<SkippedTarget>)> {
+    let outward = super::OutwardLinks::find(repo, &format!("{root}/{feature}"))?;
+    let mut skipped = Vec::new();
+    for link in outward.links() {
+        record_skip(
+            &mut skipped,
+            OUTWARD_LINK_FAMILY,
+            "target-unparseable",
+            &rel_path(link, repo),
+        );
+    }
+    Ok((outward, skipped))
+}
+
+/// The families that read the spec's and its siblings' text: link-adjacent
+/// drift, both path-existence families, and the integrity families.
+fn check_text_families(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    spec: &read_spec::SpecRead,
+    (root, feature): (&str, &str),
+    repo: &Path,
+    outward: &super::OutwardLinks,
+) {
+    let feature_dir = repo.join(root).join(feature);
+    let spec_path = feature_dir.join("spec.md");
+    let status = spec.frontmatter.status.as_str();
+    check_link_adjacent_drift(findings, skipped, &feature_dir, spec, repo, outward);
+    check_criterion_path_existence(findings, skipped, status, spec, &spec_path, repo);
+    check_body_path_existence(findings, skipped, status, &feature_dir, repo, outward);
+    check_integrity(findings, spec, (root, feature), &spec_path, repo, outward);
+}
+
 /// One check of a feature's artifacts, whole: what `check-artifacts` returns,
 /// before its result is bounded. Each field is [`CheckArtifactsResult`]'s of
 /// the same name.
@@ -207,6 +247,26 @@ pub(crate) struct Checked {
     pub(crate) path: String,
 }
 
+impl Checked {
+    /// A result with no finding, carrying only `skipped`: the run examined
+    /// nothing else.
+    fn empty(
+        args: &CheckArtifactsArgs,
+        repo: &Path,
+        spec_path: &Path,
+        skipped: Vec<SkippedTarget>,
+    ) -> Self {
+        Self {
+            feature: args.feature.clone(),
+            status: String::new(),
+            findings: Vec::new(),
+            clean: true,
+            skipped,
+            path: rel_path(spec_path, repo),
+        }
+    }
+}
+
 /// Run every family, every finding and skip whole.
 ///
 /// # Errors
@@ -214,10 +274,11 @@ pub(crate) struct Checked {
 /// As [`run`], less the list file's.
 pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
     let root = paths::Paths::load(repo)?.specs_root;
-    // The argument is checked, the directory's contents are not: this
-    // primitive skips a linked sibling as `target-unparseable` and keeps
-    // running (scenario `sibling-symlink-trust-boundary`), which the walk in
-    // `validate_feature_argument` would pre-empt by refusing the whole call.
+    // The argument is checked whole, as every primitive's is, and the
+    // directory is walked as `validate_feature_argument` walks it, but a link
+    // that leaves the project is not a refusal of the call: it is a
+    // `target-unparseable` skip and nothing behind it is opened (scenario
+    // `sibling-symlink-trust-boundary`).
     super::validate_feature_contained(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
@@ -226,7 +287,17 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
             feature: args.feature.clone(),
         });
     }
+    let (outward, mut skipped) = skip_outward_links(repo, &root, &args.feature)?;
     let spec_path = feature_dir.join("spec.md");
+    if outward.covers(&spec_path) {
+        // The spec is the subject: with it unread there is no status to gate
+        // a family on and no criterion to check, so the run ends with the
+        // skip alone, which says nothing was examined.
+        return Ok(Checked {
+            status: "unreadable".into(),
+            ..Checked::empty(args, repo, &spec_path, skipped)
+        });
+    }
     // One read of the spec, through `read-spec` — the same delegation the task
     // list and the scenario questions already use. Parsing it a second time
     // here would leave two independent notions of the spec's frontmatter in
@@ -235,13 +306,14 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
     // FeatureNotFound / MissingFrontmatter / UnclosedFrontmatter / Yaml / Io
     // variants on the same file, so the documented error contract above is
     // unchanged.
-    let spec = read_spec::read_checked(
+    let spec = read_spec::read_checked_unlinked(
         &ReadSpecArgs {
             feature: args.feature.clone(),
             include_body: false,
         },
         repo,
         &root,
+        &|path| outward.covers(path),
     )?;
     let frontmatter = &spec.frontmatter;
     let status = frontmatter.status.clone();
@@ -250,7 +322,8 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
     check_completeness(&mut findings, &feature_dir, &root, &args.feature, &status);
 
     // Task parsing is shared by families (b) and (c); parse once.
-    let tasks = if feature_dir.join("tasks.md").is_file() {
+    let tasks_md = feature_dir.join("tasks.md");
+    let tasks = if tasks_md.is_file() && !outward.covers(&tasks_md) {
         Some(read_tasks::read_checked(
             &ReadTasksArgs {
                 feature: args.feature.clone(),
@@ -264,15 +337,14 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
     if let Some(tasks) = &tasks {
         check_task_consistency(&mut findings, &tasks.tasks, &tasks.path);
     }
-    let mut skipped: Vec<SkippedTarget> = Vec::new();
     check_scenario_consistency(
         &mut findings,
         &mut skipped,
-        &root,
-        &args.feature,
+        (&root, &args.feature),
         &status,
         tasks.as_ref().map(|t| t.tasks.as_slice()),
         repo,
+        &outward,
     );
     // The records live in their own artifacts now (spec 057), and `read-spec`
     // has already loaded the review record. An unreadable one is deliberately
@@ -291,12 +363,8 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
         repo,
     );
     if status == "done" && tasks.is_some() {
-        check_unchecked_boxes(
-            &mut findings,
-            &feature_dir.join("tasks.md"),
-            &spec_path,
-            repo,
-        )?;
+        // `tasks` is `Some` only for a `tasks.md` the link guard let through.
+        check_unchecked_boxes(&mut findings, &tasks_md, &spec_path, repo)?;
     }
     check_disposition_drift(&mut findings, review_record, &status, &spec_path, repo);
     check_cross_spec_impact_drift(
@@ -315,17 +383,14 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
         &spec_path,
         repo,
     );
-    check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, &spec, repo);
-    check_criterion_path_existence(
+    check_text_families(
         &mut findings,
         &mut skipped,
-        &status,
         &spec,
-        &spec_path,
+        (&root, &args.feature),
         repo,
+        &outward,
     );
-    check_body_path_existence(&mut findings, &mut skipped, &status, &feature_dir, repo);
-    check_integrity(&mut findings, &spec, &root, &args.feature, &spec_path, repo);
 
     let clean = findings.is_empty();
     Ok(Checked {
@@ -343,15 +408,15 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
 fn check_integrity(
     findings: &mut Vec<ArtifactFinding>,
     spec: &read_spec::SpecRead,
-    root: &str,
-    feature: &str,
+    (root, feature): (&str, &str),
     spec_path: &Path,
     repo: &Path,
+    outward: &super::OutwardLinks,
 ) {
     check_criterion_labels(findings, spec, spec_path, repo);
     check_spec_integrity(findings, spec, &spec.frontmatter.status, spec_path, repo);
     let feature_dir = repo.join(root).join(feature);
-    check_plan_consistency(findings, &feature_dir, root, feature);
+    check_plan_consistency(findings, &feature_dir, root, feature, outward);
 }
 
 /// Spec integrity (blocking) — reference §"Spec integrity (blocking)", its
@@ -434,8 +499,12 @@ fn check_plan_consistency(
     feature_dir: &Path,
     root: &str,
     feature: &str,
+    outward: &super::OutwardLinks,
 ) {
     let plan = feature_dir.join("plan.md");
+    if outward.covers(&plan) {
+        return;
+    }
     let Ok(text) = read_text(&plan) else {
         return;
     };
@@ -652,16 +721,16 @@ fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], t
 fn check_scenario_consistency(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
-    root: &str,
-    feature: &str,
+    (root, feature): (&str, &str),
     status: &str,
     tasks: Option<&[Task]>,
     repo: &Path,
+    outward: &super::OutwardLinks,
 ) {
     let Some(tasks) = tasks else {
         return;
     };
-    let unmapped: Vec<String> = scenario_slugs(&repo.join(root).join(feature))
+    let unmapped: Vec<String> = scenario_slugs(&repo.join(root).join(feature), outward)
         .into_iter()
         .filter(|slug| !scenario_mapped(tasks, slug))
         .collect();
@@ -778,9 +847,11 @@ fn ever_tasked_slugs(
 /// absent. Enumerates via the shared [`list_scenario_files`] so the `.md`
 /// match is CASE-INSENSITIVE — the same set `dashboard` counts, closing
 /// the `FOO.MD`-counted-by-one-surface-only divergence.
-fn scenario_slugs(feature_dir: &Path) -> Vec<String> {
-    let mut slugs: Vec<String> = list_scenario_files(&feature_dir.join("scenarios"))
+fn scenario_slugs(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<String> {
+    let scenarios_dir = feature_dir.join("scenarios");
+    let mut slugs: Vec<String> = list_scenario_files(&scenarios_dir)
         .iter()
+        .filter(|name| !outward.covers(&scenarios_dir.join(name)))
         .filter_map(|name| {
             Path::new(name)
                 .file_stem()
@@ -1237,6 +1308,7 @@ fn check_link_adjacent_drift(
     feature_dir: &Path,
     spec: &read_spec::SpecRead,
     repo: &Path,
+    outward: &super::OutwardLinks,
 ) {
     let spec_status = spec.frontmatter.status.clone();
     let spec_questions = spec.open_questions.len();
@@ -1265,7 +1337,7 @@ fn check_link_adjacent_drift(
         .filter_map(|stem| stem.to_str().map(str::to_string))
         .collect();
 
-    for artifact in scanned_artifacts(feature_dir) {
+    for artifact in scanned_artifacts(feature_dir, outward) {
         let citing = rel_path(&artifact, repo);
         let (Ok(content), Some(from_dir)) = (read_text(&artifact), artifact.parent()) else {
             // The family could not read an artifact it was meant to scan.
@@ -1483,17 +1555,18 @@ fn record_skip(skipped: &mut Vec<SkippedTarget>, family: &str, reason: &str, pat
 /// `review.md` is deliberately absent: a review record is pinned to its
 /// `reviewed-against` sha and describes the state at that commit, so its prose
 /// is correct as written and would flag systematically.
-fn scanned_artifacts(feature_dir: &Path) -> Vec<PathBuf> {
+fn scanned_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]
         .iter()
         .map(|name| feature_dir.join(name))
-        .filter(|path| path.is_file())
+        .filter(|path| path.is_file() && !outward.covers(path))
         .collect();
     let scenarios_dir = feature_dir.join("scenarios");
     out.extend(
         list_scenario_files(&scenarios_dir)
             .iter()
-            .map(|name| scenarios_dir.join(name)),
+            .map(|name| scenarios_dir.join(name))
+            .filter(|path| !outward.covers(path)),
     );
     out
 }
@@ -2237,6 +2310,9 @@ fn is_path_like(content: &str) -> bool {
 // --- (i) body path existence -----------------------------------------------
 
 /// The family name [`check_body_path_existence`] reports and skips under.
+/// The family a skipped link that leaves the project is recorded under: the
+/// link guard is no check of its own, so it emits no finding, only skips.
+const OUTWARD_LINK_FAMILY: &str = "outward-link";
 const BODY_PATH_FAMILY: &str = "body-path-existence";
 
 /// Phrases that mark a body line as describing a transition rather than
@@ -2311,6 +2387,7 @@ fn check_body_path_existence(
     status: &str,
     feature_dir: &Path,
     repo: &Path,
+    outward: &super::OutwardLinks,
 ) {
     let spec_md = rel_path(&feature_dir.join("spec.md"), repo);
     if !path_family_examines(skipped, BODY_PATH_FAMILY, status, &spec_md) {
@@ -2318,7 +2395,7 @@ fn check_body_path_existence(
     }
     let ships_elsewhere = adopter_destinations(repo);
     let mut pending: Vec<BodyCandidate> = Vec::new();
-    for artifact in body_artifacts(feature_dir) {
+    for artifact in body_artifacts(feature_dir, outward) {
         let citing = rel_path(&artifact, repo);
         let Ok(text) = read_text(&artifact) else {
             record_unreadable_artifact(findings, skipped, BODY_PATH_FAMILY, status, citing);
@@ -2432,16 +2509,21 @@ fn logical_lines(text: &str) -> Vec<String> {
 /// The artifacts [`check_body_path_existence`] reads, in a fixed order:
 /// `spec.md`, `plan.md` and `data-model.md` when present, then each scenario
 /// in the shared scenario order.
-fn body_artifacts(feature_dir: &Path) -> Vec<PathBuf> {
+fn body_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]
         .iter()
         .map(|name| feature_dir.join(name))
-        .filter(|path| path.is_file())
+        .filter(|path| path.is_file() && !outward.covers(path))
         .collect();
     let scenarios = feature_dir.join("scenarios");
     let mut names = list_scenario_files(&scenarios);
     names.sort_by(|a, b| scenario_name_cmp(a, b));
-    out.extend(names.into_iter().map(|name| scenarios.join(name)));
+    out.extend(
+        names
+            .into_iter()
+            .map(|name| scenarios.join(name))
+            .filter(|path| !outward.covers(path)),
+    );
     out
 }
 
@@ -5179,6 +5261,126 @@ mod tests {
         let project = outer.path().join("project");
         std::fs::create_dir(&project).unwrap();
         (outer, project)
+    }
+
+    /// Replace `rel` under `project` with a link to a file, in the directory
+    /// above it, holding `body`: a link that leaves the project.
+    #[cfg(unix)]
+    fn link_outside(project: &Path, rel: &str, body: &str) {
+        let outside = project
+            .parent()
+            .unwrap()
+            .join(format!("outside-{}", rel.replace('/', "-")));
+        fs::write(&outside, body).unwrap();
+        let link = project.join(rel);
+        let _ = fs::remove_file(&link);
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+    }
+
+    fn outward_skips(result: &Checked) -> Vec<(&str, &str)> {
+        result
+            .skipped
+            .iter()
+            .filter(|s| s.family == OUTWARD_LINK_FAMILY)
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_linked_outside_the_project_is_skipped_while_the_run_continues() {
+        // Scenario sibling-symlink-trust-boundary: a link that leaves the
+        // project is never read through (`BE-INPUT-004`). The scenario behind
+        // it asks a question; read through, it would block this `done` spec.
+        let (_outer, project) = project_beside_a_file();
+        seed_with_questioning_scenario(&project, "done");
+        link_outside(
+            &project,
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_ASKING,
+        );
+        let result = run(&args(), &project).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert_eq!(
+            outward_skips(&result),
+            vec![(
+                "target-unparseable",
+                "specs/042-demo/scenarios/retry-on-timeout.md"
+            )]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fixed_name_file_linked_outside_the_project_is_never_read() {
+        // Each file is replaced in turn by a link to content that would
+        // produce a finding if read, and the run still reports the rest.
+        let bad_review = format!(
+            "---\nspec: {FEATURE}\n{}\n---\n",
+            CLEAN_REVIEW
+                .replace("blocking: false", "blocking: true")
+                .replace("  ", "")
+        );
+        for (file, body) in [
+            ("plan.md", "# No link, no decisions\n"),
+            ("tasks.md", "# Tasks\n\n## 1. No done-when\n\n- [ ] x\n"),
+            ("review.md", bad_review.as_str()),
+        ] {
+            let (_outer, project) = project_beside_a_file();
+            seed_with_questioning_scenario(&project, "done");
+            seed_review(&project, CLEAN_REVIEW);
+            link_outside(&project, &format!("specs/{FEATURE}/{file}"), body);
+            let result = run(&args(), &project).unwrap();
+            assert_eq!(
+                outward_skips(&result),
+                vec![(
+                    "target-unparseable",
+                    format!("specs/{FEATURE}/{file}").as_str()
+                )],
+                "{file}"
+            );
+            let blocked: Vec<_> = result
+                .findings
+                .iter()
+                .filter(|f| f.family != "scenario-open-questions")
+                .collect();
+            assert!(blocked.is_empty(), "{file}: {blocked:?}");
+            assert!(
+                result
+                    .findings
+                    .iter()
+                    .any(|f| f.family == "scenario-open-questions"),
+                "{file}: the rest of the run still examined the scenario"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_linked_outside_the_project_ends_the_run_with_the_skip_alone() {
+        let (_outer, project) = project_beside_a_file();
+        seed_with_questioning_scenario(&project, "done");
+        link_outside(&project, &format!("specs/{FEATURE}/spec.md"), &spec("done"));
+        let result = run(&args(), &project).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert_eq!(result.status, "unreadable");
+        assert_eq!(
+            outward_skips(&result),
+            vec![("target-unparseable", "specs/042-demo/spec.md")]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_that_stays_inside_the_project_is_not_an_outward_link() {
+        let (_outer, project) = project_beside_a_file();
+        seed_with_questioning_scenario(&project, "done");
+        write(&project, "shared/retry.md", SCENARIO_ASKING);
+        let link = project.join(format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"));
+        fs::remove_file(&link).unwrap();
+        std::os::unix::fs::symlink(project.join("shared/retry.md"), &link).unwrap();
+        let result = run(&args(), &project).unwrap();
+        assert!(outward_skips(&result).is_empty(), "{:?}", result.skipped);
     }
 
     #[test]

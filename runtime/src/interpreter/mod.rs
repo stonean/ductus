@@ -3319,20 +3319,26 @@ mod tests {
         assert!(!outside.join("001-out/scenarios/s.md").exists());
     }
 
-    /// Every feature-argument call site but `check-artifacts` walks the
-    /// feature directory and refuses an outward link beneath it, which the
-    /// argument check alone does not see. `check-artifacts` keeps 067's
-    /// skip-and-continue (scenario `sibling-symlink-trust-boundary`).
+    /// Every feature-argument call site walks the feature directory and
+    /// finds an outward link beneath it, which the argument check alone does
+    /// not see. All but `check-artifacts` refuse the call; it keeps 067's
+    /// skip-and-continue (scenario `sibling-symlink-trust-boundary`) and
+    /// records the link as a `target-unparseable` skip.
     #[cfg(unix)]
     #[test]
-    fn every_feature_argument_site_but_check_artifacts_walks_the_feature_directory() {
+    fn every_feature_argument_site_walks_the_feature_directory() {
         let fixture = escape_fixture();
         for (name, args) in feature_argument_cases("002-in", "003-clean") {
             let result = dispatch_primitive(name, &context_of(&args), &fixture.repo);
             if name == "check-artifacts" {
                 assert!(
                     !refused_through_a_symlink(&result),
-                    "`check-artifacts` is exempt from the walk: {result:?}"
+                    "`check-artifacts` skips an outward link, never refuses: {result:?}"
+                );
+                let shown = format!("{result:?}");
+                assert!(
+                    shown.contains("outward-link") && shown.contains("specs/002-in/tasks.md"),
+                    "`check-artifacts` did not walk its feature directory: {shown}"
                 );
             } else {
                 assert!(

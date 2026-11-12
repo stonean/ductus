@@ -6366,7 +6366,9 @@ pub struct ArtifactFinding {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct SkippedTarget {
-    /// Family that skipped it, matching [`ArtifactFinding::family`].
+    /// Family that skipped it, matching [`ArtifactFinding::family`], or
+    /// `outward-link` for a file in the feature directory that links outside
+    /// the project, which no family reads.
     pub family: String,
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,

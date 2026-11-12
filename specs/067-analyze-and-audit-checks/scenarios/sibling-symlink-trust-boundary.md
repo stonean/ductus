@@ -43,6 +43,13 @@ Two gates use it:
    symlinked sibling is reported as `target-unparseable` rather than read
    through.
 
+3. The feature-directory walk `validate_feature_argument` runs for every other
+   feature-argument primitive (spec 022, scenario
+   `a-path-argument-resolves-inside-its-base`) runs here too, but a link that
+   resolves outside the project is a skip, not a refusal of the call:
+   `OutwardLinks::find` returns each one, and `check-artifacts` opens nothing
+   at or beneath it.
+
 `target-unparseable` is an existing member of the closed skip-reason set, so no
 result shape changes. The honesty contract holds: the target lands in `skipped`
 rather than being silently dropped, so a feature containing one cannot report
@@ -61,6 +68,14 @@ as fully scanned.
   `target-missing` outcome reports it.
 - **Target outside `base`** — `strip_prefix` fails and the walk returns
   `false`; containment is `resolve_sibling`'s job and it has already run.
+- **A fixed-name file or directory that links outside the project** —
+  `spec.md`, `plan.md`, `tasks.md`, `review.md`, a scenario, or `scenarios/`
+  itself is recorded `target-unparseable` under the family `outward-link`
+  and never opened, so the run reports what else it examined. A link that
+  stays inside the project is not an outward link: it is read as before,
+  except where the sibling gate above skips it. A linked `spec.md` leaves
+  nothing to gate a family on, so that run ends with the skip alone and the
+  status `unreadable`.
 - **Windows** — `symlink_metadata` is cross-platform; the regression test is
   `#[cfg(unix)]` only because creating the fixture link is.
 - **A legitimately symlinked artifact** — would now be skipped rather than

@@ -1704,13 +1704,14 @@ fn check_links_on(base: &Path, canonical_base: &Path, rel: &str) -> Result<()> {
 }
 
 /// [`validate_contained`] for a feature argument, a name under the spec root
-/// `root`, without the walk of [`validate_feature_argument`]: what
-/// `check-artifacts` runs, since it skips a linked sibling as
-/// `target-unparseable` and keeps running (spec 067, scenario
-/// `sibling-symlink-trust-boundary`), which the walk would pre-empt by
-/// refusing the whole call. The name is screened on its own first: joined to
-/// the root, an absolute name would read as a relative one (`specs//etc` is
-/// `specs/etc`).
+/// `root`, without the walk of [`validate_feature_argument`]: for a caller
+/// that opens no file beneath the directory (`create-feature`, naming a
+/// directory it creates) or that walks it for its own purpose (`decisions`,
+/// judging a target). `check-artifacts` runs this on its argument and then
+/// finds the outward links itself ([`OutwardLinks`]), since it skips a linked
+/// file and keeps running instead of refusing the call. The name is screened
+/// on its own first: joined to the root, an absolute name would read as a
+/// relative one (`specs//etc` is `specs/etc`).
 pub(crate) fn validate_feature_contained(repo: &Path, root: &str, feature: &str) -> Result<()> {
     validate_no_traversal(feature)?;
     validate_contained(repo, &format!("{root}/{feature}"))
@@ -2120,6 +2121,25 @@ fn walk_for_outward_links(
     start: PathBuf,
     rel: &str,
 ) -> Result<()> {
+    match collect_outward_links(repo, canonical_base, start, rel)
+        .into_iter()
+        .next()
+    {
+        Some((_, refusal)) => Err(refusal),
+        None => Ok(()),
+    }
+}
+
+/// The links of [`walk_for_outward_links`]' walk that resolve outside
+/// `canonical_base`, or cannot be resolved, each with the refusal that walk
+/// raises for it, in walk order. An outward link is not descended into.
+fn collect_outward_links(
+    repo: &Path,
+    canonical_base: &Path,
+    start: PathBuf,
+    rel: &str,
+) -> Vec<(PathBuf, PrimitiveError)> {
+    let mut found = Vec::new();
     let mut visited = std::collections::BTreeSet::new();
     let mut pending = vec![start];
     while let Some(dir) = pending.pop() {
@@ -2139,8 +2159,9 @@ fn walk_for_outward_links(
             };
             let entry_path = entry.path();
             if kind.is_symlink() {
-                refuse_outward_link(&entry_path, repo, canonical_base, rel)?;
-                if entry_path.is_dir() {
+                if let Err(refusal) = refuse_outward_link(&entry_path, repo, canonical_base, rel) {
+                    found.push((entry_path, refusal));
+                } else if entry_path.is_dir() {
                     pending.push(entry_path);
                 }
             } else if kind.is_dir() {
@@ -2148,7 +2169,46 @@ fn walk_for_outward_links(
             }
         }
     }
-    Ok(())
+    found
+}
+
+/// The symlinks under a feature directory that leave the project, found
+/// without refusing the call: what `check-artifacts` runs in place of
+/// [`validate_feature_argument`]'s walk, since it records each as a
+/// `target-unparseable` skip and keeps running (spec 067, scenario
+/// `sibling-symlink-trust-boundary`). Same walk, same notion of outward, as
+/// the refusal.
+pub(crate) struct OutwardLinks {
+    links: Vec<PathBuf>,
+}
+
+impl OutwardLinks {
+    /// Walk the feature directory `rel`, a project-relative path whose own
+    /// containment the caller has already checked
+    /// ([`validate_feature_contained`]).
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::Io`] when the project root cannot be resolved.
+    pub(crate) fn find(repo: &Path, rel: &str) -> Result<Self> {
+        let canonical_base = canonical_base(repo)?;
+        let links = collect_outward_links(repo, &canonical_base, repo.join(rel), rel)
+            .into_iter()
+            .map(|(link, _)| link)
+            .collect();
+        Ok(Self { links })
+    }
+
+    /// Whether `path` is one of the links or lies beneath one, so opening it
+    /// would read through a link that leaves the project.
+    pub(crate) fn covers(&self, path: &Path) -> bool {
+        self.links.iter().any(|link| path.starts_with(link))
+    }
+
+    /// The links, as absolute paths in walk order.
+    pub(crate) fn links(&self) -> &[PathBuf] {
+        &self.links
+    }
 }
 
 /// The `base`-relative, `/`-separated path `rel` reaches once its symlinks

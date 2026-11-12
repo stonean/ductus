@@ -79,9 +79,10 @@ pub(crate) fn compute(args: &ReadTasksArgs, repo: &Path) -> Result<TaskList> {
 }
 
 /// [`compute`] without its walk of the feature directory, for a caller that
-/// has already checked the feature argument itself: `check-artifacts`, which
-/// is exempt from the walk (spec 022, scenario
-/// `a-path-argument-resolves-inside-its-base`) and reads its task list here.
+/// has already checked the feature argument itself and found the links that
+/// leave the project: `check-artifacts`, which skips a linked `tasks.md`
+/// instead of refusing the call (spec 067, scenario
+/// `sibling-symlink-trust-boundary`) and reads its task list here.
 ///
 /// # Errors
 ///

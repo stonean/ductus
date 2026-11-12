@@ -38,6 +38,15 @@ Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on b
 - **A loaded definition wins.** A listed ID a loaded rule file still defines is `found` (or `deprecated`), as today, so the list exempts nothing until the rule is gone.
 - **Retired passes without an unexamined record.** The rule was removed, so there is no text to assess and nothing the run could not read; the step 5 tally counts `missing` alone.
 
+### `check-artifacts` walks the feature directory and skips an outward link
+
+022's walk (`validate_feature_argument`) refuses the whole call on the first link that leaves the project, which would break 067's promise that a linked target is skipped and the run continues. `check-artifacts` therefore calls `OutwardLinks::find` (`runtime/src/primitives/mod.rs`), which runs the same walk, `collect_outward_links`, and returns every such link instead of the first refusal. `validate_feature_contained` stays: `create-feature` and `decisions` call it.
+
+- **Skips, under the family `outward-link`.** The skip's family is a name of its own rather than a borrowed one, because the guard is no check and the link may be a file no family reads; reason `target-unparseable`, path the link.
+- **Nothing behind a link is opened.** `read_spec::read_checked_unlinked` takes a predicate and skips a covered scenario and `review.md`; `tasks.md` and `plan.md` are skipped at the call; `scenario_slugs`, `scanned_artifacts` and `body_artifacts` drop a covered path. `artifact-completeness` still stats `plan.md` and `tasks.md` to see that they exist, which opens nothing.
+- **A linked `spec.md` ends the run.** There is no status to gate a family on, so the result carries the skip alone, status `unreadable`, `clean: true` with a non-empty `skipped` (partially examined, `QUAL-CLAIM-001`).
+- **A feature directory that is itself a link out** is still refused whole, as the argument check refuses it for every primitive.
+
 ### The integrity checks split between a primitive and step 15
 
 §Spec integrity and §Plan consistency have eight bullets. The deterministic ones run in `check-artifacts` as two families (`check_spec_integrity`, `check_plan_consistency` in `runtime/src/primitives/check_artifacts.rs`), and the three semantic ones (implementation code in the spec, a decision without a rationale, a plan contradicting `system.md`) are added to step 15's host reading rather than a new step, because a new step renumbers steps 16–21, which the runtime's walker, the references and the `done` specs' plans cite by number. Step 15 therefore owns two exec reasons, `grounding-not-checked` and the new `integrity-not-checked`, both recorded once per exec run.

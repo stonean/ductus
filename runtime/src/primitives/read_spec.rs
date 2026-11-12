@@ -95,14 +95,28 @@ pub(crate) fn compute(args: &ReadSpecArgs, repo: &Path) -> Result<SpecRead> {
 }
 
 /// [`compute`] without its walk of the feature directory, for a caller that
-/// has already checked the feature argument itself: `check-artifacts`, which
-/// is exempt from the walk (spec 022, scenario
-/// `a-path-argument-resolves-inside-its-base`) and reads its spec here.
+/// has checked the feature argument itself and found the links that leave the
+/// project: `check-artifacts`, which skips a linked file instead of refusing
+/// the call (spec 067, scenario `sibling-symlink-trust-boundary`) and reads
+/// its spec here through [`read_checked_unlinked`].
 ///
 /// # Errors
 ///
 /// As [`compute`], less the walk's refusal.
 pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Result<SpecRead> {
+    read_checked_unlinked(args, repo, root, &|_| false)
+}
+
+/// [`read_checked`] that opens no file `covered` names: `check-artifacts`
+/// passes the links that leave the project, so a scenario or the review record
+/// behind one is left unread (it records each as a skip) rather than read
+/// through. `spec.md` itself is the caller's to check first.
+pub(crate) fn read_checked_unlinked(
+    args: &ReadSpecArgs,
+    repo: &Path,
+    root: &str,
+    covered: &dyn Fn(&Path) -> bool,
+) -> Result<SpecRead> {
     let feature_dir = repo.join(root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
@@ -122,7 +136,7 @@ pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Resu
     let sections = parse_sections(body, args.include_body);
     let acceptance_criteria = parse_checkboxes(body, "Acceptance Criteria");
     let open_questions = parse_open_questions(body, "Open Questions");
-    let scan = collect_scenario_open_questions(&feature_dir);
+    let scan = collect_scenario_open_questions_unlinked(&feature_dir, covered);
     let scenario_open_questions = scan.questions;
     let scenario_files_unreadable = scan.unreadable;
 
@@ -130,9 +144,13 @@ pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Resu
     // `check-artifacts`' drift family; absent and unreadable both collapse to
     // `None`, because a caller that must tell them apart is a gate and gates
     // load the record directly.
-    let review = crate::primitives::load_review_record(&feature_dir)
-        .as_present()
-        .cloned();
+    let review = if covered(&feature_dir.join(crate::primitives::REVIEW_RECORD_FILE)) {
+        None
+    } else {
+        crate::primitives::load_review_record(&feature_dir)
+            .as_present()
+            .cloned()
+    };
 
     Ok(SpecRead {
         frontmatter,
@@ -170,11 +188,24 @@ pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Resu
 /// scenario-question reader could disagree with the count surfaced to the
 /// user, so there is deliberately only one (spec 046).
 pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> ScenarioQuestionScan {
+    collect_scenario_open_questions_unlinked(feature_dir, &|_| false)
+}
+
+/// [`collect_scenario_open_questions`] that opens no scenario `covered`
+/// names, nor one beneath a covered `scenarios/`: the caller accounts for
+/// each (`check-artifacts`, as a skip).
+fn collect_scenario_open_questions_unlinked(
+    feature_dir: &Path,
+    covered: &dyn Fn(&Path) -> bool,
+) -> ScenarioQuestionScan {
     let scenarios_dir = feature_dir.join("scenarios");
     let mut out = Vec::new();
     let mut unreadable = Vec::new();
     for name in list_scenario_files(&scenarios_dir) {
         let scenario_path = scenarios_dir.join(&name);
+        if covered(&scenario_path) {
+            continue;
+        }
         let Ok(content) = read_text(&scenario_path) else {
             unreadable.push(
                 Path::new(&name)
