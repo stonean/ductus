@@ -383,6 +383,108 @@ fn descriptions_hold_the_detail_specs_point_at() {
     assert!(!descriptions::PRUNE_TASKS.contains("so a reset file with no counter yields task 1"));
 }
 
+/// The same, for the details 079 task 36's second sweep moved from the 051, 063,
+/// 067, 078 and 079 data models and the descriptions' own truth-checks added.
+#[test]
+fn descriptions_hold_the_detail_the_second_sweep_points_at() {
+    let held = [
+        (
+            descriptions::WRITE_SESSION,
+            "passed through unchanged and does not exclude the peer",
+        ),
+        (descriptions::PROCESS_WAIVERS, "a deleted file's included"),
+        (
+            descriptions::PROCESS_WAIVERS,
+            "a file the plan names counts as read",
+        ),
+        (
+            descriptions::REWRITE_SPEC_LINKS,
+            "no scenario tail is listed on that account",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "takes precedence over anchor-target-unjudgeable",
+        ),
+        (descriptions::BRIEF_RE_READ, "`empty` returns none"),
+        (
+            descriptions::BRIEF_RE_READ,
+            ".ductus/results/brief-re-read/{feature}/",
+        ),
+        (descriptions::READ_RE_READ, "as `unprescribed`"),
+        (
+            descriptions::READ_RE_READ,
+            ".ductus/results/read-re-read/{feature}/",
+        ),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            "a checkout that converts line endings on disk compares alike",
+        ),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            "`{finding, edit, path, occurrences}`",
+        ),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            "a file the snapshot does not hold as text has none",
+        ),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            "by the tree-to-tree diff brief-re-read uses",
+        ),
+        (
+            descriptions::CHECK_PRESCRIPTIONS,
+            ".ductus/results/check-prescriptions/{feature}/",
+        ),
+        (
+            descriptions::WRITE_REVIEW,
+            "`ductus exec`, with no loop, never does",
+        ),
+        (
+            descriptions::WRITE_REVIEW,
+            "a waiver is then recorded `decided-by: rule`",
+        ),
+        (
+            descriptions::WRITE_REVIEW,
+            "a `ductus exec` review pass that judges an observation a broken contract",
+        ),
+        (
+            descriptions::DERIVE_DEPENDENCIES,
+            "that `staged` left unwritten",
+        ),
+        (
+            descriptions::DERIVE_DEPENDENCIES,
+            "the cycles sorted by least member",
+        ),
+        (
+            descriptions::DERIVE_DEPENDENCIES,
+            "a file with no frontmatter at all is not unparseable",
+        ),
+        (
+            descriptions::DERIVE_REFERENCES,
+            "a file with no frontmatter at all is not unparseable",
+        ),
+        (
+            descriptions::DERIVE_REFERENCES,
+            "only when `unparseable` and `unwritable` are also empty",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "the latest in registry order winning",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "which the result does not distinguish",
+        ),
+        (
+            descriptions::CHECK_COMMAND_FLAGS,
+            "command files were examined and none holds a Flags table",
+        ),
+    ];
+    for (description, detail) in held {
+        assert!(description.contains(detail), "missing {detail}");
+    }
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

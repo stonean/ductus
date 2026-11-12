@@ -193,6 +193,24 @@ its version and date.
 
 - **Built with Rust 1.100.0**, up from 1.99.1. The pinned toolchain and every
   workflow's `dtolnay/rust-toolchain` input moved together; MSRV stays 1.89.
+- **Compiled descriptions state what the specs that point at them used to carry
+  (spec 079, task 36).** `write-session`'s peer `last-used` is the record's
+  used-at verbatim; `process-waivers` retains a non-firing waiver on a file a
+  plan names, and, under an unreadable scope, on a deleted file; `rewrite-spec-links`
+  lists no scenario tail in `kept-tails` once the retiring directory is gone;
+  `resolve-anchor` ranks `anchor-target-unreadable` before
+  `anchor-target-unjudgeable`, for qualified references; `brief-re-read`,
+  `read-re-read` and `check-prescriptions` name their list file's directory and
+  `empty` returning no snapshot, `unprescribed`, the `failed` entry's fields and
+  how a text-less file and a line-ending conversion compare; `write-review` says
+  `ductus exec` never passes `loop-open`, that `by-rule` records `decided-by:
+  rule` and that an exec review pass carries `contract-break`;
+  `derive-dependencies` and `derive-references` say what `unwritten` and an
+  empty `updated` mean, `derive-dependencies` how `cycles` sort;
+  `check-orphaned-references` how `registry` attribution resolves and what
+  `watermark` covers; `check-command-flags` when `guidance` is set. The
+  `check_artifact_size` `run` doc comment no longer calls an unreadable index
+  an error. Descriptions only: no result changes.
 - **`write-analysis`'s `contradictions` is bounded to the read size, and a
   caller's bare `unexamined` total is never lost (spec 082).** The result gains
   `form`, `contradictions-count` (inline in both forms) and `lists-file`: past

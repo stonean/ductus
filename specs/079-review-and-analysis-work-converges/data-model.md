@@ -31,10 +31,10 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `loop-open` | boolean, MCP and CLI | Writes `fix-rounds-open`; passed by every review-command write but the last, so `ductus exec` never sets it |
-| `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
-| `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings`; waived, the rule's stored waiver must be in `expired-decisions`. A `performReview` pass carries it too |
-| `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
+| `loop-open` | boolean, MCP and CLI | as `ductus write-review --help` states |
+| `fix-rounds[].excluded` | list of paths | as `ductus write-review --help` states |
+| `observations[].contract-break` | boolean | as `ductus write-review --help` states |
+| `observations[].disposition.by-rule` | boolean | as `ductus write-review --help` states |
 | `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, as `ductus write-review --help` states. A run's two writes pass it alike |
 
 `write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` outside a task this run's own deferral names (by `refuse_while_tasks_are_open`, which counts boxes by `describe_unchecked`'s test), and `write-review` also on an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, which a run's own earlier write is not, and on a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.

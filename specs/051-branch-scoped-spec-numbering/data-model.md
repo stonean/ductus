@@ -77,7 +77,7 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `rewritten` | out | list of `{path, count}` | Files re-pointed, as `ductus rewrite-spec-links --help` describes. |
 | `examined` | out | integer | Files scanned (`ductus rewrite-spec-links --help`). |
 | `skipped` | out | list of `{path, reason}` | Referrers and other files left as they are, and the reads that stop the run: the reasons are `ductus rewrite-spec-links --help`'s. |
-| `kept-tails` | out | list of `{path, line, reference}` | References re-pointed whose kept tail names a file the fold did not write, as `ductus rewrite-spec-links --help` defines. |
+| `kept-tails` | out | list of `{path, line, reference}` | References re-pointed whose kept tail names a file the fold did not write, or a `scenarios/` tail the retiring directory does not hold (never listed on that account once the directory is gone), as `ductus rewrite-spec-links --help` defines. |
 | `mentions` | out | list of `{path, line}` | Lines of the examined files that still name the retiring directory, as `ductus rewrite-spec-links --help` defines. Only the examined files are searched. |
 
 Each list holds at most one entry per file, per reference, or per line, under the spec root and in the five referrers, so it is bounded by the project's own tree rather than by history (022 `plan.md`'s `BE-PAYLOAD-001` statement).

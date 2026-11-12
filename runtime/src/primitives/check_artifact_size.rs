@@ -93,8 +93,10 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///   table: the project set a value, so the default never stands in for it.
 /// - [`PrimitiveError::Io`] when the config file exists but cannot be read.
 /// - [`PrimitiveError::Git`] when `staged` is set and the project's repository
-///   or its index or `HEAD` cannot be read: a staged check that could not look
-///   never reads as one that found nothing.
+///   or its `HEAD` cannot be read: a staged check that could not look never
+///   reads as one that found nothing. An index that cannot be read is not an
+///   error: each project file is then `unreadable` and listed in `skipped`, so
+///   the CLI exits 1.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
     check_args(args)?;
     let root = paths::Paths::load(repo)?.specs_root;
