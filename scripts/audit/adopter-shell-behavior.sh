@@ -206,7 +206,7 @@ check_halts_without_runtime() {
 # an escape sequence or a forged second line in it would otherwise be written
 # to the operator's terminal as is (048's analysis, BE-INPUT-011).
 check_too_old_runtime_echo_is_printable() {
-  local fixture out status esc
+  local fixture out status esc over
   fixture="$(mktemp -d 2>/dev/null)" || fixture=""
   if [ -z "$fixture" ] || ! scaffold "$fixture" specs; then
     fixture_failed "the too-old-runtime fixture" "$fixture"
@@ -215,7 +215,11 @@ check_too_old_runtime_echo_is_printable() {
   cat > "$fixture/.ductus/bin/ductus" <<'STUB'
 #!/usr/bin/env bash
 if [ "${1:-}" = "--version" ]; then
-  printf 'ductus 0.1.0\033[31m-red\nFORGED second line\n'
+  printf 'ductus 0.1.0\033[31m-red'
+  head -c 120 /dev/zero | tr '\0' 'x'
+  printf '\nFORGED second line\n'
+  # Over a pipe buffer: a producer cut off by `head` would die of SIGPIPE.
+  head -c 200000 /dev/zero | tr '\0' 'y'
   exit 0
 fi
 exit 2
@@ -240,6 +244,43 @@ STUB
          "the too-old halt echoed the binary's control output to the terminal" \
          "keep the echoed version to one line of printable characters" ;;
   esac
+  # The echoed version is cut to 80 columns: 'ductus 0.1.0[31m-red' is 20 of
+  # them, so 61 x's can only come from an uncut line.
+  over="$(head -c 61 /dev/zero | tr '\0' 'x')"
+  case "$out" in
+    *"$over"*) emit "framework/bootstrap/hooks/ductus-pre-commit" \
+         "the too-old halt echoed more than 80 columns of the binary's version output" \
+         "cut the echoed version to 80 columns" ;;
+  esac
+  rm -rf "$fixture"
+}
+
+# --- Case 1c: a runtime that hangs is bounded, not waited on ----------------
+#
+# The capability guard probes the binary with `--help` and `--version`; a hung
+# binary must end the commit with a halt rather than hang it (BE-TIMEOUT-001).
+# The watchdog's bound is 10 seconds, so this case waits that long once.
+check_hung_runtime_is_bounded() {
+  local fixture out status start elapsed
+  fixture="$(mktemp -d 2>/dev/null)" || fixture=""
+  if [ -z "$fixture" ] || ! scaffold "$fixture" specs; then
+    fixture_failed "the hung-runtime fixture" "$fixture"
+    return
+  fi
+  cat > "$fixture/.ductus/bin/ductus" <<'STUB'
+#!/usr/bin/env bash
+exec sleep 60
+STUB
+  chmod +x "$fixture/.ductus/bin/ductus"
+  start="$(date +%s)"
+  out="$(cd "$fixture" && PATH=/usr/bin:/bin bash .githooks/ductus-pre-commit 2>&1)"
+  status=$?
+  elapsed=$(( $(date +%s) - start ))
+  if [ "$status" -eq 0 ] || [ "$elapsed" -ge 40 ]; then
+    emit "framework/bootstrap/hooks/ductus-pre-commit" \
+      "the hook did not halt within its probe bound over a runtime that hangs (exit $status after ${elapsed}s): ${out:-<no output>}" \
+      "run the capability guard's four probes under the 10-second watchdog"
+  fi
   rm -rf "$fixture"
 }
 
@@ -529,6 +570,7 @@ check_refuses_project_file_growth() {
 
 check_halts_without_runtime
 check_too_old_runtime_echo_is_printable
+check_hung_runtime_is_bounded
 build_and_run specs      # default root — isolates runtime resolution
 build_and_run features   # configured root (spec 040) — isolates scoping
 # Both directory forms the runtime recognizes, against the shipped hook.

@@ -120,13 +120,44 @@ fi
 # I am about to call — so it also covers a hand-placed binary and any future
 # primitive this hook grows. Probing capability rather than parsing a version
 # means there is no pin for the hook to get out of sync with.
+#
+# The guard's four probes of the binary (the two `--help` capability reads and
+# the two `--version` echoes) run bounded, so a binary that hangs cannot hang
+# the commit (BE-TIMEOUT-001). `timeout` is not on macOS, so `probe` is a
+# portable watchdog: 10 seconds, the bound `/ductus` puts on its own
+# `--version` probes (`{probe-timeout}`). A probe it ended returns 124, which
+# the caller reads as a failed probe. The `derive-*` and `check-corpus-links`
+# calls below stay unbounded on purpose: a fixed bound could kill a derive over
+# a large repository, which is slow and not hung.
+probe() {
+  local pid watcher rc=0
+  "$@" &
+  pid=$!
+  ( sleep 10; kill "$pid" 2> /dev/null ) > /dev/null 2>&1 &
+  watcher=$!
+  wait "$pid" || rc=$?
+  kill "$watcher" 2> /dev/null || true
+  wait "$watcher" 2> /dev/null || true
+  # 143 is SIGTERM, which only the watchdog sends.
+  if [ "$rc" -eq 143 ]; then rc=124; fi
+  return "$rc"
+}
+
+# The binary's own `--version` output, echoed to the terminal: its first line
+# only, cut before any pipe so a long output cannot SIGPIPE a producer under
+# `pipefail`, kept to printable characters and 80 columns, so it cannot carry
+# an escape sequence or a forged line into the message (048's analysis,
+# BE-INPUT-011).
+installed_version() {
+  local out
+  out="$(probe "$ductus_bin" --version 2> /dev/null)" || out="version unknown"
+  out="${out%%$'\n'*}"
+  printf '%s' "$out" | LC_ALL=C tr -cd '[:print:]' | cut -c1-80
+}
+
 for primitive in derive-dependencies derive-references check-corpus-links; do
-  if ! "$ductus_bin" "$primitive" --help > /dev/null 2>&1; then
-    # The binary's own output, echoed to the terminal: kept to printable
-    # characters and one short line, so it cannot carry an escape sequence or
-    # a forged line into the message (048's analysis, BE-INPUT-011).
-    installed="$("$ductus_bin" --version 2>/dev/null || echo 'version unknown')"
-    installed="$(printf '%s' "$installed" | head -n 1 | LC_ALL=C tr -cd '[:print:]' | cut -c1-80)"
+  if ! probe "$ductus_bin" "$primitive" --help > /dev/null 2>&1; then
+    installed="$(installed_version)"
     echo "ductus: pre-commit halted — the installed runtime is too old." >&2
     echo "  $ductus_bin reports: $installed" >&2
     echo "  It has no \`$primitive\` subcommand, which this hook calls to derive" >&2
@@ -143,12 +174,11 @@ done
 # usage error. Capture the help once and match it with `case`, never a pipe:
 # `grep -q` exits at its first match, and under `pipefail` the producer's
 # SIGPIPE would then read as a missing flag.
-size_help="$("$ductus_bin" check-artifact-size --help 2>/dev/null || true)"
+size_help="$(probe "$ductus_bin" check-artifact-size --help 2>/dev/null || true)"
 case "$size_help" in
   *--project-files*--staged*|*--staged*--project-files*) ;;
   *)
-    installed="$("$ductus_bin" --version 2>/dev/null || echo 'version unknown')"
-    installed="$(printf '%s' "$installed" | head -n 1 | LC_ALL=C tr -cd '[:print:]' | cut -c1-80)"
+    installed="$(installed_version)"
     echo "ductus: pre-commit halted — the installed runtime is too old." >&2
     echo "  $ductus_bin reports: $installed" >&2
     echo "  Its \`check-artifact-size\` has no \`--project-files\` and \`--staged\`" >&2

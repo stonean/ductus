@@ -46,10 +46,13 @@ one, else `{store-path}` — and read its reported version. This is the same pro
 and `framework/bootstrap/ductus.md` §Permission Setup already authorizes it, so
 the check costs a version comparison and nothing new.
 
-Three outcomes:
+Four outcomes:
 
 - **Reports `{pin}`** — proceed exactly as before: nothing added to the
   pending-restart set, no message. This is the routine path and it is unchanged.
+- **A project-supplied `[runtime] path` does not execute** — it does not exist,
+  will not run, or its probe expired: halt as Branch 1 step 4 does, naming the
+  path. Acquiring over it would discard the project's stated choice unsaid.
 - **A project-supplied `[runtime] path` reports something else** — emit Branch
   1's existing warning and continue. A project naming a path has stated
   deliberately which binary it wants, and a development build running ahead of
@@ -77,6 +80,11 @@ same reason.
   characters, so the binary's own output cannot write an escape sequence or a
   second line to the terminal (`BE-INPUT-011`); the bootstrap's own halts are
   the host agent's messages in its session, not a log.
+  The guard's four probes of the binary, the two `--help` capability reads and
+  the two `--version` echoes, run under a 10-second watchdog (`BE-TIMEOUT-001`;
+  macOS has no `timeout`), and one it ends reads as a failed probe. The hook's
+  `derive-*` and `check-corpus-links` calls are not bounded: a fixed bound
+  could kill a derive over a large repository that is slow, not hung.
   It asks **capability**, not version — there is no pin for the hook to drift
   from, and a hand-placed binary or a future primitive is covered by the same
   question.
@@ -88,7 +96,9 @@ same reason.
 - **The probe itself fails** — the binary will not execute, or reports nothing.
   `framework/bootstrap/ductus.md` §Runtime acquisition step 2 already settles
   this: treat it as *no usable runtime* rather than *version unknown*, and
-  acquire. A false negative costs a
+  acquire. For a project-supplied `[runtime] path` it halts instead, as Branch 1
+  step 4 does, since acquiring would override the path the project chose. A
+  false negative costs a
   version comparison; a false positive costs the failure this scenario exists to
   end.
 - **State A with no store and no `[runtime] path`.** Possible when an adopter's
