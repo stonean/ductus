@@ -713,10 +713,10 @@ mod tests {
             .collect()
     }
 
-    /// The nine entries the `retired-permission-entries` migration
-    /// retires: seven wildcard-before-subcommand git allows (spec 023
-    /// task 21) and two inert `Write(path)` allows (spec 023's
-    /// `configure-inert-write-path-entries`).
+    /// The first nine entries of [`RETIRED_ALLOW`], step 4's retired list,
+    /// the ones that name no tool: seven wildcard-before-subcommand git
+    /// allows (spec 023 task 21) and two inert `Write(path)` allows (spec
+    /// 023's `configure-inert-write-path-entries`).
     const RETIRED: &[&str] = &[
         "Bash(git -C * add *)",
         "Bash(git -C * commit *)",

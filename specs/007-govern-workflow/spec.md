@@ -145,7 +145,7 @@ The installed bootstrap stays in each agent's command directory after the run, a
 
 ## Edge Cases
 
-- **No network access** — the pre-flight phase cannot resolve the source or fetch the bootstrap, and halts the run with an error before the archive is fetched, so no framework file is written. Only the additive permission entries seeded earlier in the run remain.
+- **No network access** — the pre-flight phase cannot resolve the source or fetch the bootstrap, and halts the run with an error before the archive is fetched, so no framework file is written. Only the **Permission Setup** step's changes remain: the seed's entries added, and its retired seed entries removed.
 - **Partial previous run** — idempotency handles it: `create` skips files that exist, `update` rewrites only what differs, and the `.gitignore` managed block is rewritten in place rather than appended again.
 - **`.gitignore` merge dedup** — the managed block is found by its `# ductus` line and replaced, never appended twice, and a managed pattern copied outside the block is removed.
 - **A source file missing from the archive** — the command warns and continues with the remaining entries.
