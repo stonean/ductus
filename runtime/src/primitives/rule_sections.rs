@@ -37,10 +37,13 @@ pub(crate) struct RuleSection {
     /// The section's first block quote, `>` markers stripped and lines
     /// joined with single spaces. Empty when the section has none.
     pub(crate) statement: String,
-    /// The section's first `**Verification:**` paragraph, wrapped lines
-    /// joined with single spaces, then, after a blank line, the pipe table
-    /// directly following it, one row per line, as BE-API-001's header values
-    /// follow its paragraph (spec 080). `None` when absent or empty.
+    /// The section's first `**Verification:**` field, from its marker to the
+    /// next `**Field:**` line or heading, blank lines and every block between
+    /// included. Blocks are separated by a blank line; a wrapped paragraph's
+    /// lines are joined with single spaces, while a table row, a list item
+    /// and a fenced block keep their line breaks, so a table after the first
+    /// blank line, as BE-API-001's header values follow its paragraph, stays
+    /// readable. `None` when absent or empty.
     pub(crate) verification: Option<String>,
 }
 
@@ -146,9 +149,8 @@ pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
 /// next rule heading, or to the next heading of the same or higher level,
 /// the boundary `check-rule-ids` uses to scope a deprecation label. A deeper
 /// heading that is not a rule's is a subsection and stays in scope. The
-/// Statement is the section's first block quote. The Verification paragraph
-/// ends at a blank line, the next `**Field:**`, or any heading, and a pipe
-/// table directly after that blank line is the Verification's too.
+/// Statement is the section's first block quote. The Verification runs to the
+/// next `**Field:**` line or any heading, every block between included.
 pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
     let mut sections = Vec::new();
     let mut open: Option<OpenSection> = None;
@@ -171,7 +173,7 @@ pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
             continue;
         }
         if let Some(section) = open.as_mut() {
-            section.read(trimmed);
+            section.read(trimmed, line);
         }
     }
     if let Some(section) = open {
@@ -188,14 +190,11 @@ enum Quote {
     Done,
 }
 
-/// Where a section's reader stands in its Verification paragraph.
+/// Where a section's reader stands in its Verification field.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Paragraph {
     NotStarted,
     Reading,
-    /// A blank line ended the paragraph, and a pipe table may still follow.
-    Blank,
-    Table,
     Done,
 }
 
@@ -206,8 +205,9 @@ struct OpenSection {
     level: u8,
     statement: Vec<String>,
     quote: Quote,
+    /// The field's lines as read, blank ones included, trailing whitespace
+    /// trimmed: [`render_verification`] joins them at the end.
     verification: Vec<String>,
-    table: Vec<String>,
     paragraph: Paragraph,
 }
 
@@ -220,13 +220,12 @@ impl OpenSection {
             statement: Vec::new(),
             quote: Quote::NotStarted,
             verification: Vec::new(),
-            table: Vec::new(),
             paragraph: Paragraph::NotStarted,
         }
     }
 
-    /// Read one non-heading line of the section, trimmed.
-    fn read(&mut self, trimmed: &str) {
+    /// Read one non-heading line of the section, trimmed and as it stands.
+    fn read(&mut self, trimmed: &str, raw: &str) {
         let quoted = trimmed.strip_prefix('>');
         match (self.quote, quoted) {
             (Quote::NotStarted | Quote::Reading, Some(rest)) => {
@@ -243,35 +242,22 @@ impl OpenSection {
             Paragraph::NotStarted => {
                 if let Some(rest) = trimmed.strip_prefix("**Verification:**") {
                     self.paragraph = Paragraph::Reading;
-                    self.push_verification(rest);
+                    self.push_verification(rest.trim());
                 }
             }
             Paragraph::Reading => {
-                if trimmed.is_empty() {
-                    self.paragraph = Paragraph::Blank;
-                } else if trimmed.starts_with("**") {
+                if is_field_line(trimmed) {
                     self.paragraph = Paragraph::Done;
                 } else {
-                    self.push_verification(trimmed);
-                }
-            }
-            Paragraph::Blank | Paragraph::Table => {
-                if trimmed.starts_with('|') {
-                    self.paragraph = Paragraph::Table;
-                    self.table.push(trimmed.to_string());
-                } else if !trimmed.is_empty() || self.paragraph == Paragraph::Table {
-                    self.paragraph = Paragraph::Done;
+                    self.push_verification(raw.trim_end());
                 }
             }
             Paragraph::Done => {}
         }
     }
 
-    fn push_verification(&mut self, text: &str) {
-        let text = text.trim();
-        if !text.is_empty() {
-            self.verification.push(text.to_string());
-        }
+    fn push_verification(&mut self, line: &str) {
+        self.verification.push(line.to_string());
     }
 
     /// A heading inside the section ends the Statement and any Verification
@@ -280,29 +266,110 @@ impl OpenSection {
         if self.quote == Quote::Reading {
             self.quote = Quote::Done;
         }
-        if matches!(
-            self.paragraph,
-            Paragraph::Reading | Paragraph::Blank | Paragraph::Table
-        ) {
+        if self.paragraph == Paragraph::Reading {
             self.paragraph = Paragraph::Done;
         }
     }
 
     fn finish(self) -> RuleSection {
-        let mut verification = self.verification.join(" ");
-        if !self.table.is_empty() {
-            if !verification.is_empty() {
-                verification.push_str("\n\n");
-            }
-            verification.push_str(&self.table.join("\n"));
-        }
         RuleSection {
             id: self.id,
             heading: self.heading,
             statement: self.statement.join(" "),
-            verification: (!verification.is_empty()).then_some(verification),
+            verification: render_verification(&self.verification),
         }
     }
+}
+
+/// Whether `trimmed` opens a `**Field:**` paragraph, which ends a
+/// Verification: `**Source:**`, `**Rationale:**`, `**DEPRECATED in 0.5.0:**`.
+/// A line that merely begins with bold text is a continuation.
+fn is_field_line(trimmed: &str) -> bool {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"^\*\*[A-Za-z][^*]*:\*\*").expect("hard-coded regex compiles"))
+        .is_match(trimmed)
+}
+
+/// What kind of line an entry of a block was, which decides whether the next
+/// line joins it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Entry {
+    Paragraph,
+    Item,
+    Row,
+    Fence,
+}
+
+/// A fence delimiter line: three backticks or tildes.
+fn fence_marker(trimmed: &str) -> Option<&'static str> {
+    ["```", "~~~"]
+        .into_iter()
+        .find(|marker| trimmed.starts_with(marker))
+}
+
+/// A list item line: a `-`, `*` or `+` bullet, or an `N.` marker, then a space.
+fn is_list_item(trimmed: &str) -> bool {
+    let digits = trimmed.bytes().take_while(u8::is_ascii_digit).count();
+    ["- ", "* ", "+ "]
+        .iter()
+        .any(|marker| trimmed.starts_with(marker))
+        || (digits > 0 && trimmed[digits..].starts_with(". "))
+}
+
+/// Render a Verification's lines (blank ones included, as read) as its text:
+/// blocks split at blank lines outside a fence and joined with one blank line;
+/// within a block a wrapped paragraph or list item's continuation joins with a
+/// single space, and a table row, list item or fence line keeps its own line.
+/// `None` when nothing is left.
+fn render_verification(lines: &[String]) -> Option<String> {
+    let mut blocks: Vec<Vec<String>> = Vec::new();
+    let mut block: Vec<String> = Vec::new();
+    let mut last = Entry::Paragraph;
+    let mut fence: Option<&'static str> = None;
+    for line in lines {
+        let trimmed = line.trim();
+        if let Some(marker) = fence {
+            block.push(line.clone());
+            if trimmed.starts_with(marker) {
+                fence = None;
+            }
+            continue;
+        }
+        if trimmed.is_empty() {
+            if !block.is_empty() {
+                blocks.push(std::mem::take(&mut block));
+            }
+            continue;
+        }
+        if let Some(marker) = fence_marker(trimmed) {
+            fence = Some(marker);
+            block.push(line.clone());
+            last = Entry::Fence;
+        } else if trimmed.starts_with('|') {
+            block.push(trimmed.to_string());
+            last = Entry::Row;
+        } else if is_list_item(trimmed) {
+            block.push(line.clone());
+            last = Entry::Item;
+        } else if matches!(last, Entry::Paragraph | Entry::Item)
+            && let Some(previous) = block.last_mut()
+        {
+            previous.push(' ');
+            previous.push_str(trimmed);
+        } else {
+            block.push(trimmed.to_string());
+            last = Entry::Paragraph;
+        }
+    }
+    if !block.is_empty() {
+        blocks.push(block);
+    }
+    let text = blocks
+        .iter()
+        .map(|block| block.join("\n"))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    (!text.is_empty()).then_some(text)
 }
 
 #[cfg(test)]
@@ -432,10 +499,11 @@ mod tests {
         );
     }
 
-    /// A pipe table directly after the Verification paragraph is the
-    /// Verification's, as BE-API-001's header values are, so a reader of the
-    /// rules listing gets it without the rule file (spec 080). A paragraph
-    /// after the blank line is not, nor a table after that paragraph.
+    /// A Verification runs to the next field, every block after its first
+    /// blank line included: a table keeps its rows, as BE-API-001's header
+    /// values do, so a reader of the rules listing or an exec-path request
+    /// gets it without the rule file (spec 060, scenario
+    /// `an-assessment-sees-the-rule-it-asks-about`).
     #[test]
     fn a_table_after_the_verification_is_part_of_it() {
         let section = only(
@@ -445,9 +513,6 @@ mod tests {
             section.verification.as_deref(),
             Some("The values:\n\n| a | b |\n| --- | --- |\n| 1 | 2 |")
         );
-        let prose =
-            only("### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v\n\nA note.\n\n| x |\n");
-        assert_eq!(prose.verification.as_deref(), Some("v"));
         let shipped = shipped_rule_files()
             .iter()
             .flat_map(|path| parse_rule_sections(&std::fs::read_to_string(path).unwrap()))
@@ -458,6 +523,48 @@ mod tests {
             verification.contains("their values:\n\n| Header | Value | Applies to |")
                 && verification.contains("| `Content-Type` |"),
             "{verification}"
+        );
+    }
+
+    /// A paragraph or list after the first blank line is the Verification's
+    /// too, not only a table: a list keeps its line breaks, a wrapped
+    /// paragraph is joined with single spaces, and a wrapped list item's
+    /// continuation joins its item.
+    #[test]
+    fn a_paragraph_or_list_after_the_first_blank_line_is_part_of_it() {
+        let section = only(
+            "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v one\nwrapped.\n\nThen a note\nthat wraps.\n\n- first item\n  continued\n- second item\n\n1. ordered\n\n**Source:** s\n",
+        );
+        assert_eq!(
+            section.verification.as_deref(),
+            Some(
+                "v one wrapped.\n\nThen a note that wraps.\n\n- first item continued\n- second item\n\n1. ordered"
+            )
+        );
+    }
+
+    /// A fenced block keeps its lines and its blank lines.
+    #[test]
+    fn a_fenced_block_in_a_verification_keeps_its_lines() {
+        let section = only(
+            "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v:\n\n```text\na\n\nb\n```\n\nafter\n\n**Source:** s\n",
+        );
+        assert_eq!(
+            section.verification.as_deref(),
+            Some("v:\n\n```text\na\n\nb\n```\n\nafter")
+        );
+    }
+
+    /// A line that merely begins with bold text continues the paragraph; only
+    /// a `**Field:**` line ends it.
+    #[test]
+    fn a_bold_led_line_continues_the_verification_and_a_field_ends_it() {
+        let section = only(
+            "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** a\n**bold** continues\n**Source:** s\n",
+        );
+        assert_eq!(
+            section.verification.as_deref(),
+            Some("a **bold** continues")
         );
     }
 

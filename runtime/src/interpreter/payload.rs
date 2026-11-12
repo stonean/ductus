@@ -1082,6 +1082,7 @@ fn build_assess_spec_quality_request(context: &Map<String, Value>, repo: &Path) 
         .and_then(|rule| serde_json::from_value::<AssessSpecQualityRule>(rule.clone()).ok())
         .unwrap_or_else(|| AssessSpecQualityRule {
             id: String::new(),
+            statement: String::new(),
             verification: String::new(),
             severity: RuleSeverity::Unspecified,
         });
@@ -1171,6 +1172,7 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
                 (Some(severity), Some(verification)) => {
                     loaded.assessable.push(AssessSpecQualityRule {
                         id: section.id,
+                        statement: section.statement,
                         verification,
                         severity,
                     });
@@ -2601,6 +2603,7 @@ mod tests {
             ASSESSED_RULE_KEY.into(),
             serde_json::json!({
                 "id": "CFG-CONST-001",
+                "statement": "Constants MUST live in a single central module.",
                 "verification": "Every constant is sourced from the central module.",
                 "severity": "must"
             }),
@@ -2635,6 +2638,10 @@ mod tests {
         assert_eq!(value["spec-content"], "# Spec body\n");
         assert_eq!(value["rule"]["id"], "CFG-CONST-001");
         assert_eq!(value["rule"]["severity"], "must");
+        assert_eq!(
+            value["rule"]["statement"],
+            "Constants MUST live in a single central module."
+        );
         assert_eq!(
             value["rule"]["verification"],
             "Every constant is sourced from the central module."
@@ -2773,12 +2780,53 @@ mod tests {
             ]
         );
         assert_eq!(loaded.assessable[0].verification, "a must.");
+        assert_eq!(loaded.assessable[0].statement, "A MUST.");
         assert_eq!(loaded.unassessable, 2);
         assert_eq!(loaded.unreadable_files, 2);
         // Only the files read are loaded, by basename and in listed order:
         // a load-conditioned yield never names a file nobody assessed.
         assert_eq!(loaded.files, ["a.md", "b.md"]);
         assert!(!loaded.is_empty());
+    }
+
+    /// An assessment sees the rule it asks about (spec 060, scenario
+    /// `an-assessment-sees-the-rule-it-asks-about`): the request for a shipped
+    /// rule carries its Statement, and `BE-API-001`'s Verification with the
+    /// header table its own text points at ("the headers below"), which sits
+    /// after the Verification's first blank line. Read through the shipped
+    /// rule file so a change to how either is read fails here.
+    #[test]
+    fn a_request_carries_the_rules_statement_and_the_whole_verification() {
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut ctx = Map::new();
+        ctx.insert(
+            "rule-files".into(),
+            serde_json::json!(["framework/rules/security-backend.md"]),
+        );
+        let loaded = load_rules(&ctx, &repo);
+        let rule = loaded
+            .assessable
+            .into_iter()
+            .find(|rule| rule.id == "BE-API-001")
+            .expect("BE-API-001 is assessable");
+        assert!(
+            rule.statement.contains("MUST"),
+            "the Statement is carried: {:?}",
+            rule.statement
+        );
+        let mut request_ctx = Map::new();
+        request_ctx.insert(
+            ASSESSED_RULE_KEY.into(),
+            serde_json::to_value(&rule).unwrap(),
+        );
+        let request = build_assess_spec_quality_request(&request_ctx, &repo);
+        assert_eq!(request["rule"]["statement"], rule.statement.as_str());
+        let verification = request["rule"]["verification"].as_str().unwrap();
+        assert!(
+            verification.contains("| Header | Value | Applies to |")
+                && verification.contains("\n| `Content-Type` |"),
+            "the header table reaches the request, a row to a line: {verification}"
+        );
     }
 
     /// No rule file is an empty rule set; a set of only unassessable rules is

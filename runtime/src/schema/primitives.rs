@@ -550,8 +550,9 @@ pub struct LoadedRule {
     pub tier: Option<String>,
     /// Its Statement, `>` markers stripped and lines joined.
     pub statement: String,
-    /// With `verification`, its Verification, when it has one: the paragraph,
-    /// and a pipe table directly after it, one row per line.
+    /// With `verification`, its Verification, when it has one: from its
+    /// marker to the rule's next field or heading, a wrapped paragraph joined
+    /// with spaces and a table or list keeping its line breaks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verification: Option<String>,
 }

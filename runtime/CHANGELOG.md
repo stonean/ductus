@@ -31,6 +31,19 @@ its version and date.
   `--fired-json`; `prune-project` `--replace-json`. Additive: no scalar flag
   and no MCP schema changes. A test in `src/main.rs` asserts each served
   tool's every argument has a flag or its `-json` form.
+- **An exec `/analyze` assessment request carries the rule's Statement and its
+  whole Verification.** `assessSpecQuality`'s `rule` object gains `statement`,
+  the rule's first block quote, beside `id`, `verification` and `severity`; a
+  host that resolved a Verification's "the Statement's allowlist" or "all four
+  requirements" only from the rule file can now do so from the request. The
+  Verification now runs from its `**Verification:**` marker to the rule's next
+  `**Field:**` line or heading, every block between included, instead of
+  stopping at its first blank line unless a pipe table followed: a wrapped
+  paragraph still joins with single spaces, while a table, list or fenced block
+  keeps its line breaks. Among the shipped rules only `BE-API-001` gains text
+  (its header table already arrived since spec 080). The same reading serves
+  `discover-rule-files`' `verification`, so a project rule with a paragraph or
+  list after the first blank line is no longer cut.
 - **A pruned task number is never reissued.** `prune-tasks` writes a
   `next-task:` frontmatter counter in `tasks.md`, set past the highest task
   number the file held before it removed any section (never lowering one

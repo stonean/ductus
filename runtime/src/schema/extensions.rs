@@ -28,7 +28,16 @@ use crate::schema::severity::RuleSeverity;
 pub struct AssessSpecQualityRule {
     /// Rule ID (e.g., "QUAL-CLARITY-001").
     pub id: String,
-    /// Verification phrase from the rule's definition.
+    /// The rule's Statement: its first block quote, `>` markers stripped and
+    /// lines joined, which a Verification may point at ("the Statement's
+    /// allowlist", "all four requirements") and a host cannot resolve
+    /// without it (spec 060, scenario `an-assessment-sees-the-rule-it-asks-about`).
+    /// Empty when a request was built with no rule supplied.
+    pub statement: String,
+    /// The rule's Verification, from its `**Verification:**` marker to the
+    /// next field or heading: a wrapped paragraph joined with single spaces,
+    /// and every later block, a table or list among them, with its line
+    /// breaks.
     pub verification: String,
     /// Obligation level of the rule being assessed: the tier its Statement's
     /// RFC 2119 keyword states, never the asking step's (spec 060). The exec
@@ -905,6 +914,7 @@ mod tests {
             spec_content: "# spec".into(),
             rule: AssessSpecQualityRule {
                 id: "QUAL-CLARITY-001".into(),
+                statement: "Criteria MUST be testable.".into(),
                 verification: "Acceptance criteria are concrete and testable".into(),
                 severity: crate::schema::severity::RuleSeverity::Must,
             },
@@ -916,6 +926,7 @@ mod tests {
             "specs/022-deterministic-runtime/spec.md"
         );
         assert_eq!(value["spec-content"], "# spec");
+        assert_eq!(value["rule"]["statement"], "Criteria MUST be testable.");
         assert_eq!(value["loaded-rule-files"][0], "quality-cross.md");
         assert_eq!(round_trip(&request), request);
 

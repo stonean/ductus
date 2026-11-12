@@ -24,8 +24,9 @@ pub(crate) struct RuleSection {
     pub(crate) id: String,
     /// The section's first block quote, `>` markers stripped, lines joined with spaces.
     pub(crate) statement: String,
-    /// The first `**Verification:**` paragraph, wrapped lines joined, then a pipe table directly
-    /// after it, one row per line (spec 080); `None` when absent or empty.
+    /// The first `**Verification:**` field to the next `**Field:**` line or heading, every block
+    /// between included: a paragraph's wrapped lines joined, a table or list keeping its line
+    /// breaks (scenario `an-assessment-sees-the-rule-it-asks-about`); `None` when absent or empty.
     pub(crate) verification: Option<String>,
 }
 
@@ -130,7 +131,7 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 | `runtime/src/primitives/check_rule_ids.rs` | Modify | Import `heading_id_regex` from `rule_sections` |
 | `runtime/src/interpreter/mod.rs` | Modify | Lazy rule-set load, per-rule request loop, empty-step progress, tests |
 | `runtime/src/interpreter/payload.rs` | Modify | Per-rule request builder carrying the loaded rule files; remove the single-rule resolver and its parsers; doc comment |
-| `runtime/src/schema/extensions.rs` | Modify | `AssessSpecQualityRequest` gains `loaded-rule-files` |
+| `runtime/src/schema/extensions.rs` | Modify | `AssessSpecQualityRequest` gains `loaded-rule-files`; `AssessSpecQualityRule` gains `statement` |
 | `runtime/src/interpreter/analyze_tally.rs` | Modify | Tier from the asked rule; rule-set and empty-step records; tests |
 | `runtime/src/schema/primitives.rs` | Modify | `unexamined_by_reason` doc: new and redefined reasons |
 | `runtime/tests/fixtures/analyze-basic/framework/rules/configuration.md` | Modify | Statement gains MUST |

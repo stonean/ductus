@@ -621,6 +621,8 @@ One request carries one rule. The exec walker sends one per loaded rule of the a
 
 `loaded-rule-files` lists the basenames of the rule files the walk loaded, in its `rule-files` order; a listed file it could not read is absent, so the list names exactly the files whose rules the walk assessed. A Verification that yields a case "where `{file}` is also loaded" (`specs/008-security-rules/data-model.md` §Verification phrasing item 6) yields it only when `{file}` is in the list; a file it names that the list lacks, and a request carrying no list, which a runtime predating the field sends, make the condition false, so the yielding rule keeps the case (spec 060, scenario `an-assessment-sees-the-loaded-rule-files`).
 
+`rule.statement` is the rule's Statement, its first block quote with the `>` markers stripped and the lines joined, and `rule.verification` runs from the rule's `**Verification:**` marker to its next `**Field:**` line or heading, every block between included: a wrapped paragraph is joined with single spaces, while a table, a list or a fenced block keeps its line breaks, so `BE-API-001`'s header table, set after the Verification's first blank line, arrives. A Verification may point at the Statement ("the Statement's allowlist", "all four requirements"), and an exec-path host resolves it only from this field, as a markdown-only host does from the rule file (spec 060, scenario `an-assessment-sees-the-rule-it-asks-about`).
+
 Request payload:
 
 ```json
@@ -629,6 +631,7 @@ Request payload:
   "spec-content": "...full spec text...",
   "rule": {
     "id": "QUAL-CLARITY-001",
+    "statement": "Acceptance criteria MUST be concrete and testable.",
     "verification": "Acceptance criteria are concrete and testable",
     "severity": "must"
   },

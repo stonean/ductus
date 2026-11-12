@@ -26,4 +26,4 @@ An `assessSpecQuality` request carries a rule's ID, Verification and tier beside
 
 ## Resolved Questions
 
-*None yet.*
+- **Does an exec-path assessment see the rule's Statement?** Yes: the request carries it, and the Verification is read to the rule's next field or heading, rather than every Verification being made to stand alone or the difference recorded. This is the call recorded on [008 — Security Rules](../../008-security-rules/spec.md) task 39 (owner, 2026-11-02, option a), which its `cross-spec-impact:` entry for this spec routes here.
