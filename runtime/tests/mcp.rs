@@ -485,6 +485,21 @@ fn descriptions_hold_the_detail_the_second_sweep_points_at() {
     }
 }
 
+/// 078's and 079's data models point at these for what a fix round's lists carry.
+#[test]
+fn descriptions_hold_the_fix_round_details_the_data_models_point_at() {
+    let held = [
+        (descriptions::READ_RE_READ, "stays in `findings` as one"),
+        (
+            descriptions::WRITE_REVIEW,
+            "is the `excluded` list of that round's brief-re-read result",
+        ),
+    ];
+    for (description, detail) in held {
+        assert!(description.contains(detail), "missing {detail}");
+    }
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

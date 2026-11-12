@@ -214,9 +214,10 @@ The existing three write shapes stay (`runtime/src/primitives/write_session.rs:7
     writer is told about peers in the result, so the next resolution does not
     tell it again.
   - The result gains `identity` and `peers`. Each peer entry carries a label,
-    a feature, an optional scenario, and `last-used`: the peer's `used-at`, an
-    RFC 3339 date-time in UTC with the `Z` offset, or `null` when its record
-    holds none (AC19).
+    a feature, an optional scenario, and `last-used`: the peer's `used-at`
+    string verbatim (an RFC 3339 date-time in UTC with the `Z` offset when the
+    runtime wrote it, any other value passed through unchanged), or `null` when
+    its record holds none (AC19).
 - **Clear write:**
   - With an identity, the own file becomes `cleared = true` with no target
     keys.

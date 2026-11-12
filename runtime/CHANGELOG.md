@@ -191,6 +191,9 @@ its version and date.
 
 ### Changed
 
+- **`read-re-read` says a demoted finding stays in `findings` as a NOTE, and
+  `write-review` says a fix round's `excluded` is `brief-re-read`'s (spec 079,
+  task 36).** Descriptions only; no result changes.
 - **Built with Rust 1.100.0**, up from 1.99.1. The pinned toolchain and every
   workflow's `dtolnay/rust-toolchain` input moved together; MSRV stays 1.89.
 - **Compiled descriptions state what the specs that point at them used to carry
