@@ -538,6 +538,14 @@ fn descriptions_hold_the_check_artifacts_details_067_points_at() {
             descriptions::CHECK_ARTIFACTS,
             "run at every status and add nothing to `skipped`",
         ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "at every status, an unmapped scenario is a finding only when no revision of tasks.md ever named it",
+        ),
+        (
+            descriptions::CHECK_ARTIFACTS,
+            "which holds something outside comments",
+        ),
     ];
     let missing: Vec<_> = held
         .iter()
@@ -717,6 +725,34 @@ fn descriptions_hold_the_review_gate_details_066_points_at() {
         (
             descriptions::CHECK_REVIEW_GATE,
             "blocks as record-unreadable, an analysis.md as analyze-record-unreadable, never as not-reviewed or not-analyzed",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "blocks as not-reviewed when review.md is absent or its last-run is missing or null",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "and as must-violations when it carries blocking: true",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "not-analyzed (analysis.md absent, or last-run missing or null)",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "and as analyze-findings (blocking: true)",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "an analysis record with no unjudged-rules field blocks on nothing there",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "names the count and the scenarios, and its guidance points at scenario-targeted clarify",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "sends the operator to analyze, which judges only those rules while the other verdicts are current",
         ),
     ];
     let missing: Vec<_> = held

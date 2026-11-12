@@ -191,6 +191,14 @@ its version and date.
 
 ### Changed
 
+- **`check-review-gate`'s and `check-artifacts`' descriptions restore what
+  triggers a block and two family rules (spec 079, task 36).** The gate says
+  what makes each of `not-reviewed`, `must-violations`, `not-analyzed` and
+  `analyze-findings` block, what the scenario-question and `unjudged-rules`
+  messages carry, and that an analysis with no `unjudged-rules` field blocks on
+  nothing there; `check-artifacts` says scenario consistency runs at every
+  status and plan consistency needs a Technical Decisions section that holds
+  something outside comments. Descriptions only: no result changes.
 - **`check-review-gate`'s description states each check's rule (spec 079, task
   36).** Only the exact status `done` blocks as `already-done`; the lint is
   recursive and a lint that linted nothing or exited unattributed blocks; an
