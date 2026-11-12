@@ -20,8 +20,8 @@ Falling back to host-side `Edit` calls for these two operations was considered a
 Two new primitives. Each is independently testable, atomic via tempfile + rename, and exposed on both surfaces (CLI subcommand and MCP tool, registered under its bare name on the `ductus` MCP server).
 
 1. **`create-scenario`** — write a scenario file from the scenario template with frontmatter and body content populated.
-   - Args: `feature-path: String` (e.g., `specs/042-foo`), `slug: String` (the scenario slug, no extension), `section: String` (the `section:` frontmatter value), `context: String` (Context section body), `behavior: String` (Behavior section body), `edge-cases: Option<String>` (when present, populates the Edge Cases section; when absent, the section is omitted).
-   - Behavior: resolve the scenario template at `framework/templates/spec/scenario.md`, substitute the supplied values, write to `{feature-path}/scenarios/{slug}.md`. Create the scenarios subdirectory if absent. Atomic via tempfile-in-parent + `persist` rename. Refuse with a clean operational error if the destination already exists.
+   - Args: `feature-path: String` (e.g., `specs/042-foo`), `slug: String` (the scenario slug, no extension), `section: String` (the `section:` frontmatter value), `body: String` (the assembled `## Context` … `## Edge Cases` markdown the LLM authored, one payload per the content-ingestion convention; the primitive adds the frontmatter, the H1 and the Open and Resolved Questions scaffolding).
+   - Behavior: resolve the scenario template at `framework/templates/spec/scenario.md`, frame the supplied `body` with the frontmatter, write to `{feature-path}/scenarios/{slug}.md`. Create the scenarios subdirectory if absent. Atomic via tempfile-in-parent + `persist` rename. Refuse with a clean operational error if the destination already exists.
    - Result: `{ "created": "{feature-path}/scenarios/{slug}.md" }` on success; operational error on slug conflict or write failure.
 
 2. **`append-task`** — append a new numbered task block to `tasks.md`.
@@ -34,12 +34,11 @@ Both primitives compose with existing primitives at the procedure level — `/am
 The CLI surfaces follow the same shape as existing write primitives:
 
 ```text
-ductus create-scenario --feature specs/042-foo --slug retry-on-timeout \
+ductus create-scenario --feature-path specs/042-foo --slug retry-on-timeout \
   --section "Network failure handling" \
-  --context "Connections to the upstream may time out..." \
-  --behavior "On timeout, the client retries up to three times..."
+  --body "## Context\n\nConnections to the upstream may time out...\n\n## Behavior\n\nOn timeout, the client retries up to three times..."
 
-ductus append-task --feature specs/042-foo \
+ductus append-task --feature-path specs/042-foo \
   --title "Implement scenario: retry-on-timeout" \
   --done-when "the scenario's described behavior is correctly implemented and tested."
 ```
@@ -50,7 +49,7 @@ Both register under their bare names (`create-scenario`, `append-task`) on the `
 
 - **`create-scenario` with a slug that already exists** — refuse with a clean operational error: `scenario already exists: {feature-path}/scenarios/{slug}.md`. The caller (host or `/amend`'s scenario branch) decides whether to surface the conflict to the user or to retry under a different slug.
 - **`create-scenario` against a feature path that does not exist** — refuse with `feature path does not exist: {feature-path}`. Do not create the parent feature directory; `/specify` owns feature creation.
-- **`create-scenario` with no Edge Cases content** — omit the `## Edge Cases` section entirely from the rendered file. Matches the template's "remove this section if none apply" guidance.
+- **`create-scenario` with no Edge Cases content** — the caller omits the `## Edge Cases` section from `body`, matching the template's "remove this section if none apply" guidance.
 - **`append-task` against a feature with no existing `tasks.md`** — create the file with the heading `# {NNN} — {Feature Name} Tasks`. When the feature's `spec.md` is unreadable (frontmatter parse failure, missing file), fall back to a minimal heading `# Tasks` and continue; do not halt on a soft failure to derive the feature name.
 - **`append-task` with task numbers that skip values in the existing file** — use `max(existing) + 1` rather than `count + 1`, so a tasks file with `## 1.`, `## 3.` produces a new `## 4.` rather than overwriting `## 3.`. A `next-task:` counter written by `prune-tasks` raises that floor, so a number pruned from the top of the file is never reissued (spec 041).
 - **Cross-platform tempfile-rename semantics** — same as the existing write primitives. `NamedTempFile` in the parent directory + `persist` rename. On Windows, fall back to the documented best-effort path (matching `mark-task` / `set-status` behavior) and surface the rename error if the platform rejects atomic semantics.

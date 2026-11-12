@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-The `check-stuck` primitive at [`runtime/src/primitives/check_stuck.rs`](../../../runtime/src/primitives/check_stuck.rs) currently sets `stuck = count >= threshold` based purely on the number of commits touching `tasks.md` since the most-recent `in-progress` transition. The [`/ductus:implement`](../../../framework/commands/implement.md) contract (and the spec 022 `runtime-primitive-structural-bugs` scenario's bug-4 description) specifies a second condition that the implementation does not enforce: `stuck: true` should only fire when **the same task is still the first incomplete one** — no checkbox has flipped to `- [x]` between the commits in the count window.
+The `check-stuck` primitive at [`runtime/src/primitives/check_stuck.rs`](../../../runtime/src/primitives/check_stuck.rs) once set `stuck = count >= threshold` based purely on the number of commits touching `tasks.md` since the spec's reopening started. The [`/ductus:implement`](../../../framework/commands/implement.md) contract (and the spec 022 `runtime-primitive-structural-bugs` scenario's bug-4 description) specifies a second condition that the implementation then did not enforce, and `ductus check-stuck --help` states it now: `stuck: true` should only fire when **the same task is still the first incomplete one** — no checkbox has flipped to `- [x]` between the commits in the count window.
 
 Without the second condition, once 3+ commits land on `tasks.md` — even when each flips a different subtask checkbox — `stuck: true` fires on every subsequent `/{project}:implement` run for the remainder of the feature. The warning becomes background noise; agents and operators learn to dismiss it; the warning's signal-to-noise ratio collapses to zero.
 
@@ -17,17 +17,17 @@ Reported 2026-05-17 from an adopter repo's own spec 017 implement session as a s
 `check-stuck` returns `stuck: true` if AND ONLY IF both conditions hold:
 
 1. `commit_count >= threshold` (existing behavior).
-2. **The index of the first `- [ ]` group in `tasks.md` has not advanced across the walked commit window.** The check identifies the first incomplete subtask at the `since-sha` commit and at HEAD. When the indices match (no progress on the first incomplete subtask), the second condition is satisfied. When the index has advanced (a subtask got flipped between then and now), the condition is false and `stuck` stays `false` regardless of `commit_count`.
+2. **The line index of the first `- [ ]` group in `tasks.md` has not advanced across the walked commit window.** The check finds the first unchecked box at the `since-sha` commit and at HEAD. When the line indices match (no progress on the first incomplete subtask), the second condition is satisfied. When the index has moved (a subtask got flipped between then and now), the condition is false and `stuck` stays `false` regardless of `commit-count`.
 
-The primitive's existing result shape is preserved — only the value of the `stuck` boolean changes for the false-positive case. `commit_count` and `since_sha` still report the unchanged values they did before.
+The primitive's existing result shape is preserved — only the value of the `stuck` boolean changes for the false-positive case. `commit-count` and `since-sha` still report the unchanged values they did before.
 
 ## Edge Cases
 
 - **`tasks.md` doesn't exist at `since-sha`.** Treat as "no first-incomplete subtask at baseline"; the second condition is vacuously false (the index can't fail to advance from a state that didn't exist). `stuck` stays `false`.
 - **All subtasks complete at HEAD.** The first `- [ ]` group at HEAD doesn't exist. The second condition is vacuously true (or false, depending on framing); the safe answer is `stuck: false` because completion is the opposite of stuck.
-- **The first `- [ ]` group changed identity between `since-sha` and HEAD** (e.g., a task was reordered or its heading was rewritten). Treat as "advanced" — heading-content equality at the index defines "same subtask"; any divergence means progress.
+- **A task was reordered or its heading rewritten between `since-sha` and HEAD.** Equality is by line index alone (see Resolved Questions), so heading text is not compared: a first-box line that stays put reads as unadvanced, and one that moves reads as advanced.
 - **`tasks.md` uses phased structure** (per the `read-tasks` fix in `runtime-primitive-structural-bugs`). The "first incomplete subtask" is still well-defined in phased files — walk phases in order, walk subtasks in order, find the first `- [ ]`. The check applies uniformly.
-- **No commits touched `tasks.md`** in the window. `commit_count: 0`, `stuck: false` — both conditions fail. No change from current behavior.
+- **No commits touched `tasks.md`** in the window. `commit-count: 0`, `stuck: false` — both conditions fail. No change from current behavior.
 
 ## Open Questions
 

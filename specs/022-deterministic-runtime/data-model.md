@@ -337,7 +337,7 @@ Result:
 }
 ```
 
-The boundary is `git diff --name-only <first-commit-on-spec-dir>..HEAD` plus the spec dir, emitted as **directory-zone globs**: each changed path contributes `{dir}/**`, so a new file in a touched directory is admitted, and a root-level file stays an exact path. The exec walker merges it into `write-boundary` as a **union** with any session-seeded value; with neither, the first out-of-spec writeCode edit halts with `out-of-boundary-edit` (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)).
+The derivation and its directory-zone globs are `ductus derive-boundary --help`'s. The exec walker merges it into `write-boundary` as a **union** with any session-seeded value; with neither, the first out-of-spec writeCode edit halts with `out-of-boundary-edit` (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)).
 
 ### `check-stuck` — count tasks.md commits since `in-progress`
 
@@ -367,7 +367,7 @@ Result:
 { "drift": false, "stdout": "...", "stderr": "...", "exit-code": 0 }
 ```
 
-Non-zero exit code is a drift finding (`drift: true`), not an operational error.
+A non-zero exit is drift (`drift: true`), as `ductus run-generator --help` states, not an operational error.
 
 ### `lint-markdown` — wrap `npx markdownlint-cli2`
 
@@ -397,7 +397,7 @@ Result:
 { "confirmed": true }
 ```
 
-Under the MCP surface, this is the only primitive whose semantics depend on host capability — an MCP host that cannot route a prompt to the user returns `confirmed: false` and the procedure halts at the gate.
+The two surfaces differ (`ductus gate-confirm --help`): an MCP call returns the gate prompt payload and never blocks, and the `{confirmed}` result above is the exec and CLI shape, where a gate-response line decides it.
 
 ### `dashboard` — fields added since (addendum)
 
@@ -427,7 +427,7 @@ Args: none. The view is rendered from the read `dashboard` makes, without its st
 { "rendered-markdown": "Target: 042-widget / planned / next: /ductus:implement\n\n| Feature | Status | … |\n…", "project": "ductus", "form": "inline" }
 ```
 
-`rendered-markdown` is the whole view as one markdown fragment, with `/{project}:…` texts in the adopter's namespace, which `project` names. It is data the host may restyle, never printed. The view's blocks, its two renderings and its bound are canonical in spec 080's `data-model.md`, and `runtime/src/primitives/pipeline_view.rs` holds the formats.
+`rendered-markdown` and `project` are as `ductus render-status --help` describes. It is data the host may restyle, never printed. The view's blocks, its two renderings and its bound are canonical in spec 080's `data-model.md`, and `runtime/src/primitives/pipeline_view.rs` holds the formats.
 
 ### `resolve-feature` — resolve an identifier to a feature directory
 
@@ -461,7 +461,7 @@ Result (ambiguous / not-found):
 { "outcome": "ambiguous", "candidates": ["022-deterministic-runtime", "023-command-runtime"] }
 ```
 
-Matching order: exact directory name, then feature number (`7` and `007` both match the zero-padded `007-` prefix), then case-insensitive partial slug substring. Ambiguity and no-match are domain outcomes in the result — never operational errors; disambiguation stays with the user through the host. `scenario` is present only when the args named a slug and the outcome is `resolved`; `status` is best-effort (absent when `spec.md` is unreadable). The scenario `section` field falls back to the legacy `spec-ref` frontmatter key.
+Identifier forms, the ambiguity and no-match domain outcomes and the `scenario` block are `ductus resolve-feature --help`'s. Precedence is exact directory name, then feature number, then case-insensitive partial slug substring; disambiguation stays with the user through the host; `status` is best-effort (absent when `spec.md` is unreadable); the scenario `section` field falls back to the legacy `spec-ref` frontmatter key.
 
 ### `create-feature` — scaffold the next feature directory
 
@@ -482,7 +482,7 @@ Result:
 }
 ```
 
-The number is `max(existing three-digit prefix) + 1`, zero-padded; the slug is the lowercased title with non-alphanumeric runs collapsed to single hyphens and trimmed. The spec template is resolved in `writeSpecBody`'s candidate order — `{specs-root}/templates/spec.md`, then `framework/templates/spec/spec.md` — and copied atomically with the source file's mode mirrored. An already-existing target directory is the `created: false` domain outcome (`template` absent, nothing written); a missing template is an operational error raised before the directory is created.
+Numbering, the slug, the atomic mode-mirroring copy and the `created: false` refusal are `ductus create-feature --help`'s. The slug is the lowercased title with non-alphanumeric runs collapsed to single hyphens and trimmed. The spec template is resolved in `writeSpecBody`'s candidate order — `{specs-root}/templates/spec.md`, then `framework/templates/spec/spec.md`; `template` is absent on `created: false`, and a missing template is an operational error raised before the directory is created.
 
 **`path` here is the spec *directory*, and on the exec path it is pinned once written.** A successful `create-feature` (and, on `/{project}:target`, a `resolved` `resolve-feature`) retargets the session, so the walker lets its `feature` and `path` override even session-seeded values — then **pins both keys for the rest of the walk**. The pin is what keeps the later `write-session` binding a directory: nearly every spec-reading primitive that can run in between (`read-spec`, `label-criteria`, `mark-criterion`) reports its own `path`, the spec **file**, and results merge at the top level by bare key. The retargeting primitives stay exempt from their own pin, so a walk that resolves twice still records the second.
 
@@ -507,9 +507,9 @@ Result:
 }
 ```
 
-The plan-side mirror of `create-feature` and the deterministic surface behind `/ductus:plan`'s template-copy and existing-artifact detection (step 3). Copies each missing artifact's template into the existing feature directory using the same candidate order and atomic, mode-mirroring write as `create-feature`; every needed template is resolved before the first write, so a missing template is one operational error with nothing half-copied. `data-model.md` joins the copy set only when `include-data-model` is passed (whether the feature has domain entities is the host's judgment), but a pre-existing `data-model.md` is always reported so the existing-artifact prompt sees the full set; when it is neither requested nor on disk it is omitted from `artifacts`.
+The plan-side mirror of `create-feature` and the deterministic surface behind `/ductus:plan`'s template-copy and existing-artifact detection (step 3). Which templates are copied and the atomic, mode-preserving write are `ductus create-plan-artifacts --help`'s, with `create-feature`'s candidate order. Every needed template is resolved before the first write, so a missing template is one operational error with nothing half-copied. Whether the feature has domain entities is the host's judgment, so `data-model.md` joins the copy set only on `include-data-model`; a pre-existing one is always reported so the existing-artifact prompt sees the full set, and when it is neither requested nor on disk it is omitted from `artifacts`.
 
-Per-artifact `action` is the domain outcome: `created` (was missing, template copied), `kept` (pre-existing, untouched — never an error), or `replaced` (pre-existing, template copied over; only with `overwrite: true`, the confirmed "replace" branch of the prompt). `template` names the copied template and is absent on `kept`. No last-modified stamp accompanies `kept` entries — primitive results carry no wall-clock data (the same rule that keeps `write-session`'s `set-at` in the file, out of the result), so the exec envelope stream stays deterministic; the prompt's timestamp listing stays a markdown-only-path detail. A missing feature directory is an operational error (`create-feature` owns directory creation).
+Per-artifact `action` is the domain outcome: `created` (was missing, template copied), `kept` or `replaced` (both as the description states). `template` names the copied template and is absent on `kept`. The no-wall-clock rule is the same one that keeps `write-session`'s `set-at` in the file, out of the result, so the exec envelope stream stays deterministic. A missing feature directory is an operational error (`create-feature` owns directory creation).
 
 ### `append-question` — append one bullet to Open Questions
 
@@ -530,9 +530,9 @@ Result:
 }
 ```
 
-The deterministic surface behind `/ductus:amend`'s question-route write. Appends `- {question}` to the target artifact's `## Open Questions` section — the feature's `spec.md` by default, `scenarios/{slug}.md` when `scenario` is passed (slug validated against the framework slug grammar; `question` is single-line, embedded newlines rejected).
+The deterministic surface behind `/ductus:amend`'s question-route write. Target selection is `ductus append-question --help`'s; the slug is validated against the framework slug grammar and `question` is single-line, embedded newlines rejected.
 
-Dedup uses amend's normalized-whitespace comparison (collapse whitespace runs, trim, case-insensitive) against exactly the entries `read-spec`'s question parser reports (continuation lines folded, placeholders skipped), so `append-question` and `read-spec` agree on question identity; a match is the `appended: false` domain outcome with the existing entry echoed verbatim in `duplicate-of`, nothing written. A missing section is created per template order — immediately before `## Resolved Questions` when present (the scenario scaffold), else at end of file (the spec template) — and a `*None …*` scaffold placeholder is replaced by the first real entry. On a spec target whose status is `clarified`, `planned`, or `in-progress`, the frontmatter status reverts to `draft` in the same atomic write (`status-reverted` + `previous-status` report it) — never a window where the body holds an unresolved question while the status claims otherwise. `done` is **excluded** from the back-edge (§spec-lifecycle, spec 014): a `done` spec reopens only via the scenario route (`done → in-progress`), so a question appended to a `done` spec is recorded but leaves the status at `done` — the command layer never routes a question there. Scenario targets have no status field and never back-edge; a status value outside the lifecycle set is left alone (`validate-frontmatter` owns flagging it).
+Dedup, section creation, the draft back-edge and the `done` exclusion are `ductus append-question --help`'s. Question identity is exactly what `read-spec`'s question parser reports (continuation lines folded, placeholders skipped), so the two agree; the existing entry is echoed verbatim in `duplicate-of`. A created section goes immediately before `## Resolved Questions` when present (the scenario scaffold), else at end of file (the spec template), and a `*None …*` scaffold placeholder is replaced by the first real entry. `status-reverted` and `previous-status` report the back-edge. Scenario targets have no status field and never back-edge; a status value outside the lifecycle set is left alone (`validate-frontmatter` owns flagging it).
 
 ### `append-inbox` — append one bullet to the inbox
 
@@ -548,7 +548,7 @@ Result:
 { "path": "specs/inbox.md", "created": false, "item-count": 4 }
 ```
 
-Appends `- [ ] {text}` (the checkbox inbox form constitution §bug-handling documents) atomically to `{specs-root}/inbox.md`, creating the file when missing (from `framework/templates/project/inbox.md` when that file exists on disk — the framework source repo — else a bare `# Inbox` heading). Bullet scanning, for the count, is comment/fence-aware — a `-` line inside an HTML comment, such as the `<!-- Rules: … -->` guidance block older inboxes carry, is not an item. `item-count` reports the total inbox bullets after the call. Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
+The append, the creation and `item-count` are `ductus append-inbox --help`'s. A new file starts from `framework/templates/project/inbox.md` when that file exists on disk (the framework source repo), else a bare `# Inbox` heading. Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
 
 ### `derive-routing-candidates` — the homes proposed work could already have
 
@@ -581,13 +581,9 @@ Result:
 }
 ```
 
-The deterministic half of `/{project}:specify`'s routing gate, run **before** `create-feature` writes anything (scenario `specify-routes-before-scaffolding`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26). Three sources, in result precedence order:
+The deterministic half of `/{project}:specify`'s routing gate, run **before** `create-feature` writes anything (scenario `specify-routes-before-scaffolding`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26). The three sources, in result precedence order, are `ductus derive-routing-candidates --help`'s. `runtime-work` takes a primitive from the parser's `PRIMITIVE_NAMES` and resolves to the lowest-numbered feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through `compute_review_scope::read_plan_affected`. `rule-surface` sets the `-backend` / `-frontend` / `-cross` suffix aside and resolves directories as `discover-rule-files` does. `spec-corpus` omits a spec `runtime-work` already offered.
 
-- **`runtime-work`** — the description names a primitive (from the parser's `PRIMITIVE_NAMES`) or a path under `runtime/`. The candidate is the lowest-numbered feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through `compute_review_scope::read_plan_affected` — derived from the corpus, never a slug named in code.
-- **`rule-surface`** — a rule file whose category stem the description shares, the `-backend` / `-frontend` / `-cross` suffix set aside; directories resolve as `discover-rule-files` resolves them.
-- **`spec-corpus`** — a spec whose slug shares vocabulary with the description, unless `runtime-work` already offered it.
-
-Matching is lexical (lowercased alphanumeric tokens of four or more characters, minus a short stopword list) and **advisory**: the decision stays at the `routeInboxItem` extension point and with the operator. `reopens` is true when accepting a candidate implies the `done → in-progress` back-edge; `route` is drawn from the `routeInboxItem` vocabulary, and `spec` never appears as a candidate. **Every source lands in `sources-examined` or in `skipped`, never both and never neither**, so empty `candidates` with empty `skipped` (*matched nothing*) and with a non-empty one (*could not derive*) stay distinct; the runtime-work signal with no derivable home is a skip. Only an empty `description` is an operational error. `routed-by` returns `gate-required: false` with nothing else, so a tree that already ran is not asked twice; `description` carries a `title` alias and is echoed in the result.
+Advisory matching, the candidate fields, the examined-or-skipped invariant and `routed-by` are `ductus derive-routing-candidates --help`'s. Tokens are lowercased alphanumerics of four or more characters, minus a short stopword list; `route` is drawn from the `routeInboxItem` vocabulary and `spec` is never a candidate; the runtime-work signal with no derivable home is a skip. `description` carries a `title` alias and is echoed in the result, and only an empty one is an operational error.
 
 ### `routeInboxItem` — `candidates` request field (addendum)
 
@@ -607,7 +603,7 @@ Result:
 { "path": "specs/inbox.md", "removed": true, "remaining-count": 3 }
 ```
 
-The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 9). Removes the first bullet from `{specs-root}/inbox.md` whose text — after the `-` bullet marker and an optional `[ ]`/`[x]` checkbox are stripped via the shared bullet grammar — equals the trimmed `item`, writing atomically. Bullet scanning is comment/fence-aware (shared with `append-inbox`), so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. A no-match, or a missing inbox file, is a clean domain outcome (`removed: false`), never an operational error; `remaining-count` reports the bullets left after the operation. Embedded newlines in `item` are rejected (single-line rule).
+The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 9). Removal, the `removed: false` outcome and `remaining-count` are `ductus remove-inbox-item --help`'s. Matching strips the `-` bullet marker and an optional `[ ]`/`[x]` checkbox through the shared bullet grammar, comment/fence-aware as `append-inbox`'s scan is, so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. Embedded newlines in `item` are rejected (single-line rule).
 
 ## Extension-point schemas (initial release)
 

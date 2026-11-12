@@ -76,8 +76,8 @@ behavior.
 - **An empty `body` array with a `slug` supplied** renders exactly the default
   body — the same output as omitting `body` entirely, which is the consistent
   reading rather than a special case.
-- **Idempotency is unchanged.** `append-task` appends a new numbered block per
-  invocation; it does not deduplicate, and this scenario does not ask it to.
+- **Whether a call writes a new block or matches an existing task** is as
+  `ductus append-task --help` states; this scenario changes neither.
 
 ## Open Questions
 
