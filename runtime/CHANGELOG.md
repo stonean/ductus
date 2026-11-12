@@ -580,6 +580,12 @@ its version and date.
   root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
+- **A closed stdout is a quiet exit, not a panic.** A subcommand whose stdout
+  reader has gone (`ductus dashboard | true`) exits 141 (`128 + SIGPIPE`),
+  distinct from a failure (1) and a panic (101), with no panic message; any
+  other stdout write error is reported and exits 1. The `mcp` server's
+  transport is unchanged.
+
 - **`read-tasks` returns a wrapped `Done when` clause whole.** The clause is
   its first line joined, by single spaces, with each following more-indented
   line that is not a list item, up to a blank line, a heading, a bullet or a

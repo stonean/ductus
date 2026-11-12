@@ -246,13 +246,36 @@ enum Command {
     RetargetSessions(RetargetSessionsArgs),
 }
 
+/// Exit status of a run whose stdout reader went away before the result was written: the
+/// shell's `128 + SIGPIPE`, distinct from a failure (1) and from a panic (101). Only the
+/// report is lost; whatever the primitive wrote stands.
+const STDOUT_CLOSED_EXIT: u8 = 141;
+
+/// Write `text` and a newline to stdout. A broken pipe is a quiet exit
+/// ([`STDOUT_CLOSED_EXIT`]) and any other write error is reported and exits 1: `println!`
+/// panics on either, and `SIGPIPE` is ignored by the Rust runtime, so the write is the only
+/// place the closed reader is seen. The `mcp` server's transport is not written here.
+fn write_stdout_line(text: &str) -> std::result::Result<(), ExitCode> {
+    let mut stdout = io::stdout().lock();
+    match writeln!(stdout, "{text}").and_then(|()| stdout.flush()) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == io::ErrorKind::BrokenPipe => {
+            Err(ExitCode::from(STDOUT_CLOSED_EXIT))
+        }
+        Err(err) => {
+            let _ = writeln!(io::stderr(), "failed to write result: {err}");
+            Err(ExitCode::from(1))
+        }
+    }
+}
+
 fn emit_protocol_schema() -> ExitCode {
     let schema = schemars::schema_for!(ductus::schema::protocol::ProtocolMessage);
     match serde_json::to_string_pretty(&schema) {
-        Ok(text) => {
-            println!("{text}");
-            ExitCode::SUCCESS
-        }
+        Ok(text) => match write_stdout_line(&text) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(code) => code,
+        },
         Err(err) => {
             eprintln!("failed to serialize protocol schema: {err}");
             ExitCode::from(1)
@@ -307,10 +330,10 @@ fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
 ) -> ExitCode {
     match result {
         Ok(value) => match serde_json::to_string(&value) {
-            Ok(text) => {
-                println!("{text}");
-                ExitCode::SUCCESS
-            }
+            Ok(text) => match write_stdout_line(&text) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(code) => code,
+            },
             Err(err) => {
                 eprintln!("failed to serialize result: {err}");
                 ExitCode::from(1)
@@ -343,14 +366,11 @@ where
         Ok(value) => {
             let blocked = blocks(&value);
             match serde_json::to_string(&value) {
-                Ok(text) => {
-                    println!("{text}");
-                    if blocked {
-                        ExitCode::from(1)
-                    } else {
-                        ExitCode::SUCCESS
-                    }
-                }
+                Ok(text) => match write_stdout_line(&text) {
+                    Ok(()) if blocked => ExitCode::from(1),
+                    Ok(()) => ExitCode::SUCCESS,
+                    Err(code) => code,
+                },
                 Err(err) => {
                     eprintln!("failed to serialize result: {err}");
                     ExitCode::from(1)
@@ -522,10 +542,10 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
                 ExitCode::SUCCESS
             } else {
                 match serde_json::to_string_pretty(&procedure) {
-                    Ok(text) => {
-                        println!("{text}");
-                        ExitCode::SUCCESS
-                    }
+                    Ok(text) => match write_stdout_line(&text) {
+                        Ok(()) => ExitCode::SUCCESS,
+                        Err(code) => code,
+                    },
                     Err(err) => {
                         eprintln!("failed to serialize AST: {err}");
                         ExitCode::from(1)
