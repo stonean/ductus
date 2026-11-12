@@ -17,6 +17,8 @@ The path chooses the row: a `spec.md` takes the spec row, a file under `scenario
 - Open questions consistent with status — the **spec body's** `## Open Questions` (`clarified` or later must have none); a scenario's have their own check below and never count here. Suggested fix on failure: run `/ductus:clarify`, whose recovery path (spec 014) reverts the status to `draft` and walks the questions, or `/ductus:amend` on a fresh question, which takes the back-edge itself.
 - No implementation code blocks (function signatures, package paths, language-specific snippets) in the spec — those belong in plan.md. Format examples, directory structures, and user-facing commands are acceptable when they define behavioral contracts.
 
+**How each runs.** `check-artifacts` (step 8) runs the family `spec-integrity` over the first three bullets: a spec with no `## Acceptance Criteria` section, one at `clarified` or later whose section holds no checkbox, a criterion that is empty or only a placeholder (`TBD`, `TODO`, `TBC`, `FIXME`, `placeholder`, `n/a`, an ellipsis, or text wholly in `<>` or `{}`), and a spec at `clarified` or later with an open question in its own body are each one Blocking finding. The fourth bullet is the host's judgment in step 15: an implementation code block is a Blocking finding. Under `ductus exec` step 15 does not run, and the run records that judgment unexamined under `integrity-not-checked`.
+
 ## Artifact completeness (blocking)
 
 - If status is `planned` or later: plan.md exists
@@ -29,6 +31,8 @@ The path chooses the row: a `spec.md` takes the spec row, a file under `scenario
 - Technical decisions section has at least one decision with rationale
 - Affected files section lists specific file paths
 - Plan does not contradict `specs/system.md`
+
+**How each runs.** `check-artifacts` (step 8) runs the family `plan-consistency` when `plan.md` exists, and a spec with no plan skips it: the plan carries no link to its spec's `spec.md` and names neither its feature directory nor its number (a plan written before the template carried the link names its feature in its title), its Technical Decisions section holds nothing outside comments, or its Affected Files section names no file path, each one Blocking finding. Whether a decision carries a rationale and whether the plan contradicts `system.md` are the host's judgments in step 15, each failure a Blocking finding, recorded unexamined under `integrity-not-checked` under `ductus exec`.
 
 ## Plan record (advisory)
 
@@ -114,7 +118,7 @@ The checks above read *targets* that may be unreadable: a link resolving to a fi
 
 They are not silent either. The `check-artifacts` result carries a `skipped` list of `{family, reason, path}` records. Render them in the **Informational** tier. `clean` means only no findings, so the assurance lives in the pair (`QUAL-CLAIM-001`): clean with nothing skipped is verified-clean, clean with something skipped is partially examined.
 
-**The reasons form a closed set in two classes, and they call for opposite responses.** *Excluded by construction* — `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed`, `gitignored`, `status-gated`, `anchor-target-unjudgeable` — are targets a check decided not to examine; they recur on every run and the exclusion is correct. *Could not be read* — `target-missing`, `target-unparseable`, `no-readable-state`, `artifact-unreadable`, `referrer-unreadable`, `anchor-target-unreadable`, `rule-citations-not-checked`, `rule-not-installed`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked` — are real gaps in what the run saw. Step 18 reads the split: only the second class sets `restricted`, so a stored decision is retained when its finding's source may have gone unseen, and pruned when the finding genuinely stopped firing. A reason added later is classified here, once.
+**The reasons form a closed set in two classes, and they call for opposite responses.** *Excluded by construction* — `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed`, `gitignored`, `status-gated`, `anchor-target-unjudgeable` — are targets a check decided not to examine; they recur on every run and the exclusion is correct. *Could not be read* — `target-missing`, `target-unparseable`, `no-readable-state`, `artifact-unreadable`, `referrer-unreadable`, `anchor-target-unreadable`, `rule-citations-not-checked`, `rule-not-installed`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked`, `integrity-not-checked` — are real gaps in what the run saw. Step 18 reads the split: only the second class sets `restricted`, so a stored decision is retained when its finding's source may have gone unseen, and pruned when the finding genuinely stopped firing. A reason added later is classified here, once.
 
 Every reason from `referrer-unreadable` on in the second class comes from outside `check-artifacts`, as does `anchor-target-unjudgeable`, the one exclusion by construction that does. `artifact-unreadable` has a second source too: step 17 records it for a subject the size check could not measure.
 
@@ -125,7 +129,7 @@ Every reason from `referrer-unreadable` on in the second class comes from outsid
 - `rule-not-installed` counts the spec's citations of a rule the framework ships whose file the project never installed, as under a `[rules] surfaces` that leaves the surface out (`check-rule-ids`' `not-installed`): informational, never missing, and unexamined because no rule text was loaded to assess the spec against. An ID no shipped file defines stays missing.
 - `rule-assessments-not-checked` counts the loaded rules steps 11 and 12 did not ask about — a rule with no Verification, or whose Statement carries no MUST or SHOULD keyword and so has no tier to be asked in. Under `ductus exec` it also counts a step once when the walk loaded no rule at all, or when the step's prose names no MUST or SHOULD tier: that step examined nothing, and the record says so.
 - `rule-file-unreadable` counts the rule files steps 11 and 12 could not read, whose rules could not even be counted. A host that cannot read a rule file, or finds a rule it cannot place in either tier, records it under the same reason the walker would.
-- `references-not-checked`, `applicable-rules-not-checked` and `grounding-not-checked` are steps 13–15, which `ductus exec` no-ops as host prose, so an exec run records each once whether or not the step would have applied. A host that runs those steps never records them.
+- `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked` and `integrity-not-checked` are steps 13–15, which `ductus exec` no-ops as host prose, so an exec run records each once whether or not the step would have applied; step 15 is the reading of the spec and plan for both grounding and §Spec integrity's and §Plan consistency's three judged items, and so owns two reasons. A host that runs those steps never records them.
 
 ## Unresolved shared constitutions (informational)
 

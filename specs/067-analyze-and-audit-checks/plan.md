@@ -38,6 +38,16 @@ Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on b
 - **A loaded definition wins.** A listed ID a loaded rule file still defines is `found` (or `deprecated`), as today, so the list exempts nothing until the rule is gone.
 - **Retired passes without an unexamined record.** The rule was removed, so there is no text to assess and nothing the run could not read; the step 5 tally counts `missing` alone.
 
+### The integrity checks split between a primitive and step 15
+
+§Spec integrity and §Plan consistency have eight bullets. The deterministic ones run in `check-artifacts` as two families (`check_spec_integrity`, `check_plan_consistency` in `runtime/src/primitives/check_artifacts.rs`), and the three semantic ones (implementation code in the spec, a decision without a rationale, a plan contradicting `system.md`) are added to step 15's host reading rather than a new step, because a new step renumbers steps 16–21, which the runtime's walker, the references and the `done` specs' plans cite by number. Step 15 therefore owns two exec reasons, `grounding-not-checked` and the new `integrity-not-checked`, both recorded once per exec run.
+
+- **A placeholder criterion** is empty, a placeholder word, an ellipsis, or text wholly inside `<>` or `{}`; a longer phrase merely containing `TBD` is a real criterion.
+- **A plan references its spec** by a link to its `spec.md`, or by naming its feature directory or number: 13 `done` specs predating the plan template's link name the spec only in the title, and requiring the link would block every analysis of them. The check is a floor, not proof the plan describes that spec.
+- **Technical Decisions and Affected Files** are read after dropping comments, single-line ones included, so the template's own guidance comments never satisfy them. Whether a decision has a rationale stays the host's.
+- **The existing `check_artifacts` tests run through a helper that drops these two families**, since their fixtures are sparse specs and plans written for the family each names; the new tests call the unfiltered one.
+- **Measured** at this change over the 77 specs in `specs/` with the release binary: no finding from either family.
+
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
 The rule counts a new value in a response set the schema documents as closed as breaking, as it does a narrowed request or a changed exit status, which is the CLI's machine-readable contract. The runtime is pre-1.0, so a breaking change ships with a minor bump; the unreleased ones ship with 0.60.0. Commits carrying 067's number that change no interface — the logical-line reading and its markers (`0e484e52`, `0a157563`, `cba81b63`, `3b6e6946`, `3b2f0856`, `830e90cb`), the reference-prefix rules of `check-orphaned-references` and `rewrite-spec-links` (`d1853444`, `3fc5755a`, `54715126`, `38fc39f6`), the derive splices (`2be18da6`) and the reference sweeps (`13acc295`, `bd4da459`) — change which findings fire, not the shape or the contract.
@@ -56,6 +66,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `8651d466` (task 19) | `resolve-anchor` | references gain `unjudged` and the result two counts; a `qualified` reference can be unresolved; a basename no longer names the markers file; a malformed registry is an error; a span citation is a reference | breaking: the fields are additive, the meaning of `qualified` and of the markers match is not |
 | (task 22) | `check-rule-ids` | `citations` entries gain `retired` and the result `retired`, both omitted when empty; a `spec.md`'s `retired-rules:` list passes its citation of a removed rule, and the list itself is no citation | additive: a new optional state, no closed set changes, and a spec with no list reads as before |
 | (033 task 10) | `check-rule-ids` | `citations` entries gain `not-installed` and the result `not-installed`, both omitted when empty; the closed `reason` set gains `rule-not-installed` | breaking: a new value of a response set documented closed, and a citation that was `missing` is now informational |
+| (task 23) | `check-artifacts` | `family` gains `spec-integrity` and `plan-consistency`; the closed `reason` set gains `integrity-not-checked` (recorded by the exec walker) | breaking: new values of response sets documented closed, and a spec the checks flag now carries a blocking finding |
 
 ## Affected Files
 

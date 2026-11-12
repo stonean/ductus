@@ -8,6 +8,12 @@
 //! spec 058 for disposition drift). What each does is
 //! `schema::descriptions::CHECK_ARTIFACTS`; these notes are for maintainers:
 //!
+//! - **spec-integrity** (blocking) and **plan-consistency** (blocking when
+//!   `plan.md` exists) — the deterministic items of reference §"Spec
+//!   integrity" and §"Plan consistency" (spec 067, scenario
+//!   `spec-integrity-and-plan-consistency-are-run`); the semantic ones are
+//!   the host's, step 15. See [`check_spec_integrity`] and
+//!   [`check_plan_consistency`].
 //! - **artifact-completeness** (blocking) — reference §"Artifact
 //!   completeness (blocking)": `plan.md` and
 //!   `tasks.md` are required when status is `planned` or later
@@ -301,7 +307,6 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
         &spec_path,
         repo,
     );
-
     check_scenario_open_questions(
         &mut findings,
         &mut skipped,
@@ -320,7 +325,7 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
         repo,
     );
     check_body_path_existence(&mut findings, &mut skipped, &status, &feature_dir, repo);
-    check_criterion_labels(&mut findings, &spec, &spec_path, repo);
+    check_integrity(&mut findings, &spec, &root, &args.feature, &spec_path, repo);
 
     let clean = findings.is_empty();
     Ok(Checked {
@@ -330,6 +335,193 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
         clean,
         skipped,
         path: rel_path(&spec_path, repo),
+    })
+}
+
+/// The families that read the spec's own text and its plan: criterion labels,
+/// then spec integrity and plan consistency, for the feature under `root`.
+fn check_integrity(
+    findings: &mut Vec<ArtifactFinding>,
+    spec: &read_spec::SpecRead,
+    root: &str,
+    feature: &str,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    check_criterion_labels(findings, spec, spec_path, repo);
+    check_spec_integrity(findings, spec, &spec.frontmatter.status, spec_path, repo);
+    let feature_dir = repo.join(root).join(feature);
+    check_plan_consistency(findings, &feature_dir, root, feature);
+}
+
+/// Spec integrity (blocking) — reference §"Spec integrity (blocking)", its
+/// deterministic half (spec 067, scenario
+/// `spec-integrity-and-plan-consistency-are-run`): the spec has an
+/// `## Acceptance Criteria` section, with at least one checkbox from
+/// `clarified` on, none of its criteria empty or a placeholder, and no open
+/// question in its own body from `clarified` on. A `draft` with no criteria
+/// is not flagged: the minimum belongs to the clarify gate. The fourth bullet,
+/// no implementation code in the spec, is the host's judgment (step 15).
+fn check_spec_integrity(
+    findings: &mut Vec<ArtifactFinding>,
+    spec: &read_spec::SpecRead,
+    status: &str,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    let path = rel_path(spec_path, repo);
+    let mut blocking = |message: String| {
+        findings.push(ArtifactFinding {
+            family: "spec-integrity".into(),
+            severity: AnalyzeSeverity::Blocking,
+            message,
+            path: path.clone(),
+        });
+    };
+    if !spec
+        .sections
+        .iter()
+        .any(|section| section.heading == "Acceptance Criteria")
+    {
+        blocking("the spec has no '## Acceptance Criteria' section".into());
+    } else if status != "draft" && spec.acceptance_criteria.is_empty() {
+        blocking(format!(
+            "status '{status}' needs at least one acceptance criterion (a checkbox item), and \
+             the spec has none"
+        ));
+    }
+    for criterion in &spec.acceptance_criteria {
+        if is_placeholder_criterion(&criterion.text) {
+            blocking(format!(
+                "acceptance criterion is empty or a placeholder: {:?}",
+                criterion.text
+            ));
+        }
+    }
+    if status != "draft" && !spec.open_questions.is_empty() {
+        blocking(format!(
+            "status '{status}' with {} open question(s) in the spec body: only 'draft' \
+             tolerates them (run /clarify, or /amend on a fresh question)",
+            spec.open_questions.len()
+        ));
+    }
+}
+
+/// Whether a criterion's text is empty or only a template slot: nothing, a
+/// placeholder word (`TBD`, `TODO`, `TBC`, `FIXME`, `placeholder`, `n/a`), an
+/// ellipsis, or text wholly inside angle or curly brackets.
+fn is_placeholder_criterion(text: &str) -> bool {
+    let text = text.trim();
+    let bare = text.trim_end_matches(['.', ':']).to_lowercase();
+    let bracketed = (text.starts_with('<') && text.ends_with('>'))
+        || (text.starts_with('{') && text.ends_with('}'));
+    text.is_empty()
+        || bracketed
+        || matches!(
+            bare.as_str(),
+            "tbd" | "todo" | "tbc" | "fixme" | "placeholder" | "n/a" | "" | "…"
+        )
+}
+
+/// Plan consistency (blocking if `plan.md` exists) — reference §"Plan
+/// consistency (blocking if plan exists)", its deterministic half: the plan
+/// links this spec, its Technical Decisions section holds something, and its
+/// Affected Files section names at least one path. A decision's rationale and
+/// a contradiction of `system.md` are the host's judgment (step 15). A spec
+/// with no `plan.md` is skipped, as the heading says.
+fn check_plan_consistency(
+    findings: &mut Vec<ArtifactFinding>,
+    feature_dir: &Path,
+    root: &str,
+    feature: &str,
+) {
+    let plan = feature_dir.join("plan.md");
+    let Ok(text) = read_text(&plan) else {
+        return;
+    };
+    let path = format!("{root}/{feature}/plan.md");
+    let mut blocking = |message: String| {
+        findings.push(ArtifactFinding {
+            family: "plan-consistency".into(),
+            severity: AnalyzeSeverity::Blocking,
+            message,
+            path: path.clone(),
+        });
+    };
+    if !plan_references_spec(&text, feature) {
+        blocking(
+            "the plan does not reference its spec (no link to spec.md, and neither the feature \
+             directory name nor its number appears)"
+                .into(),
+        );
+    }
+    let lines: Vec<&str> = text.lines().collect();
+    let decisions = section_line_indices(&lines, "Technical Decisions");
+    if !decisions
+        .iter()
+        .any(|&i| !without_inline_comments(lines[i]).trim().is_empty())
+    {
+        blocking("the plan's Technical Decisions section states no decision".into());
+    }
+    let names_a_path = section_line_indices(&lines, "Affected Files")
+        .into_iter()
+        .any(|i| {
+            let line = without_inline_comments(lines[i]);
+            inline_code_spans(&line).into_iter().any(|span| {
+                let code = &line[span];
+                code.contains('/')
+                    || code
+                        .rsplit_once('.')
+                        .is_some_and(|(_, ext)| !ext.is_empty())
+            })
+        });
+    if !names_a_path {
+        blocking("the plan's Affected Files section names no file path".into());
+    }
+}
+
+/// Whether a plan references its spec: a link to its `spec.md`, or the feature
+/// named by directory name or by its number (the part before the first `-`),
+/// as the plans written before the plan template carried the link do in their
+/// title.
+fn plan_references_spec(text: &str, feature: &str) -> bool {
+    let own = format!("{feature}/spec.md");
+    let links = markdown_link_targets(text).any(|target| {
+        let target = target.trim_start_matches("./");
+        target == "spec.md" || target.ends_with(&own)
+    });
+    let number = feature.split('-').next().unwrap_or(feature);
+    links
+        || text.contains(feature)
+        || text
+            .split(|c: char| !(c.is_alphanumeric() || c == '.'))
+            .any(|token| token.trim_matches('.') == number)
+}
+
+/// `line` with each `<!-- ... -->` that opens and closes on it removed, the
+/// inline comments the shared scanner leaves in (it skips only multi-line
+/// ones).
+fn without_inline_comments(line: &str) -> String {
+    let mut out = String::new();
+    let mut rest = line;
+    while let Some(open) = rest.find("<!--") {
+        out.push_str(&rest[..open]);
+        match rest[open..].find("-->") {
+            Some(close) => rest = &rest[open + close + 3..],
+            None => return out,
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The target of every inline markdown link `](target)` in `text`, anchor
+/// and title stripped.
+fn markdown_link_targets(text: &str) -> impl Iterator<Item = &str> {
+    text.split("](").skip(1).filter_map(|rest| {
+        let end = rest.find(')')?;
+        let target = rest[..end].split(['#', ' ']).next()?;
+        (!target.is_empty()).then_some(target)
     })
 }
 
@@ -2420,8 +2612,21 @@ mod tests {
     use super::*;
 
     /// The tests read the whole result: [`super::compute`], which [`super::run`]
-    /// bounds.
+    /// bounds, less the two integrity families: the fixtures below are sparse
+    /// specs and plans written for the family each names, and `spec-integrity`
+    /// and `plan-consistency` have their own tests, which call
+    /// [`run_every_family`].
     fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
+        let mut checked = compute(args, repo)?;
+        checked
+            .findings
+            .retain(|f| !matches!(f.family.as_str(), "spec-integrity" | "plan-consistency"));
+        checked.clean = checked.findings.is_empty();
+        Ok(checked)
+    }
+
+    /// Every family, the two integrity families included.
+    fn run_every_family(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked> {
         compute(args, repo)
     }
     use std::fs;
@@ -5458,5 +5663,127 @@ mod tests {
             numbering_findings(&twice),
             vec!["task numbering is not strictly increasing: task 11a follows task 11a"]
         );
+    }
+
+    // --- spec integrity and plan consistency ----------------------------------
+
+    const GOOD_PLAN: &str = "# Plan\n\nImplements [042 — Demo](spec.md).\n\n## Technical Decisions\n\n\
+        Use a queue, because it bounds memory.\n\n## Affected Files\n\n\
+        | File | Action | Purpose |\n| --- | --- | --- |\n| `src/queue.rs` | Create | The queue |\n";
+
+    fn spec_with(status: &str, body: &str) -> String {
+        format!("---\nstatus: {status}\ndependencies: []\n---\n\n# Demo\n\n{body}")
+    }
+
+    /// The integrity findings of a `{status}` spec and optional plan, as
+    /// `(family, message)`.
+    fn integrity(status: &str, body: &str, plan: Option<&str>) -> Vec<(String, String)> {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec_with(status, body),
+        );
+        if let Some(plan) = plan {
+            write(tmp.path(), "specs/042-demo/plan.md", plan);
+        }
+        run_every_family(&args(), tmp.path())
+            .unwrap()
+            .findings
+            .into_iter()
+            .filter(|f| matches!(f.family.as_str(), "spec-integrity" | "plan-consistency"))
+            .inspect(|f| assert_eq!(f.severity, AnalyzeSeverity::Blocking))
+            .map(|f| (f.family, f.message))
+            .collect()
+    }
+
+    const GOOD_BODY: &str = "## Acceptance Criteria\n\n- [ ] The queue bounds memory.\n\n\
+        ## Open Questions\n\n*None.*\n";
+
+    #[test]
+    fn a_whole_spec_and_plan_raise_no_integrity_finding() {
+        assert_eq!(integrity("planned", GOOD_BODY, Some(GOOD_PLAN)), vec![]);
+    }
+
+    #[test]
+    fn a_spec_without_an_acceptance_criteria_section_is_blocking_at_every_status() {
+        for status in ["draft", "clarified", "done"] {
+            let found = integrity(status, "## Open Questions\n\n*None.*\n", None);
+            assert_eq!(found.len(), 1, "{status}: {found:?}");
+            assert_eq!(found[0].0, "spec-integrity");
+            assert!(found[0].1.contains("no '## Acceptance Criteria' section"));
+        }
+    }
+
+    /// The scenario's first edge case: the minimum belongs to the clarify
+    /// gate, so a draft with an empty section is clean and a clarified one is
+    /// not.
+    #[test]
+    fn a_criterion_free_section_is_blocking_only_from_clarified() {
+        let body = "## Acceptance Criteria\n\nTo be written.\n";
+        assert_eq!(integrity("draft", body, None), vec![]);
+        let found = integrity("clarified", body, None);
+        assert_eq!(found.len(), 1);
+        assert!(found[0].1.contains("at least one acceptance criterion"));
+    }
+
+    #[test]
+    fn an_empty_or_placeholder_criterion_is_blocking() {
+        for text in ["", "TBD", "todo.", "<criterion>", "{criterion}", "N/A"] {
+            let body = format!("## Acceptance Criteria\n\n- [ ] {text}\n- [ ] A real one.\n");
+            let found = integrity("draft", &body, None);
+            assert_eq!(found.len(), 1, "{text:?}: {found:?}");
+            assert!(found[0].1.contains("empty or a placeholder"), "{text:?}");
+        }
+        let real = "## Acceptance Criteria\n\n- [ ] Handles TBD values without crashing.\n";
+        assert_eq!(integrity("draft", real, None), vec![]);
+    }
+
+    #[test]
+    fn an_open_question_is_blocking_from_clarified_and_tolerated_at_draft() {
+        let body = "## Acceptance Criteria\n\n- [ ] One.\n\n## Open Questions\n\n- Which queue?\n";
+        assert_eq!(integrity("draft", body, None), vec![]);
+        for status in ["clarified", "in-progress"] {
+            let found = integrity(status, body, None);
+            assert_eq!(found.len(), 1, "{status}: {found:?}");
+            assert!(found[0].1.contains("open question"));
+        }
+    }
+
+    #[test]
+    fn a_plan_that_does_not_reference_its_spec_is_blocking() {
+        let plan = GOOD_PLAN.replace("Implements [042 — Demo](spec.md).", "Implements the thing.");
+        let found = integrity("planned", GOOD_BODY, Some(&plan));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].0, "plan-consistency");
+        assert!(found[0].1.contains("does not reference its spec"));
+        // A plan written before the template carried the link names its feature.
+        let old = GOOD_PLAN.replace("Implements [042 — Demo](spec.md).", "# 042 — Demo Plan");
+        assert_eq!(integrity("planned", GOOD_BODY, Some(&old)), vec![]);
+        // Another spec's link is no reference to this one.
+        let other = GOOD_PLAN
+            .replace("(spec.md)", "(../043-other/spec.md)")
+            .replace("[042 — Demo]", "[Other]");
+        assert_eq!(integrity("planned", GOOD_BODY, Some(&other)).len(), 1);
+    }
+
+    #[test]
+    fn a_plan_with_no_decision_or_no_affected_path_is_blocking() {
+        let no_decision = "# Plan\n\n[spec](spec.md)\n\n## Technical Decisions\n\n\
+            <!-- decisions go here -->\n\n## Affected Files\n\n`src/a.rs`\n";
+        let found = integrity("planned", GOOD_BODY, Some(no_decision));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("states no decision"));
+        let no_path = "# Plan\n\n[spec](spec.md)\n\n## Technical Decisions\n\nUse X.\n\n\
+            ## Affected Files\n\nTo be listed.\n";
+        let found = integrity("planned", GOOD_BODY, Some(no_path));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("names no file path"));
+    }
+
+    /// The scenario's second edge case: no plan, no plan check.
+    #[test]
+    fn a_spec_with_no_plan_skips_plan_consistency() {
+        assert_eq!(integrity("clarified", GOOD_BODY, None), vec![]);
     }
 }

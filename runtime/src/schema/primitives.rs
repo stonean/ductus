@@ -480,7 +480,7 @@ pub struct AnalyzeBlock {
     ///   step that loaded no rule or named no tier), `rule-file-unreadable`
     ///   (rule files those steps could not read), and
     ///   `references-not-checked`, `applicable-rules-not-checked`,
-    ///   `grounding-not-checked` (the host detection an exec walk never
+    ///   `grounding-not-checked`, `integrity-not-checked` (the host detection an exec walk never
     ///   runs). A real gap in what the run could see, and the class worth
     ///   acting on.
     ///
@@ -6304,7 +6304,8 @@ pub struct ArtifactFinding {
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
     /// `criterion-path-existence`, `body-path-existence`,
-    /// `criterion-labels`, `disposition-drift`, or `cross-spec-impact-drift`, matching the
+    /// `criterion-labels`, `disposition-drift`, `cross-spec-impact-drift`,
+    /// `spec-integrity`, or `plan-consistency`, matching the
     /// `family:` literals the primitive emits.
     pub family: String,
     /// Severity tier: `blocking` or `advisory`. Which family takes which is

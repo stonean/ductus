@@ -584,15 +584,20 @@ async fn resolve_feature_reports_not_found_as_domain_outcome() {
 }
 
 #[tokio::test]
-async fn check_artifacts_reports_clean_fixture() {
-    // 001-basic is `clarified` with a well-formed tasks.md and no
-    // scenarios — every family passes.
+async fn check_artifacts_reports_the_fixture_s_one_open_question() {
+    // 001-basic is `clarified` with a well-formed tasks.md and no scenarios,
+    // and keeps one open question on purpose, for the parser tests that read
+    // it: the one finding is spec-integrity's, a clarified spec holding a
+    // question, and every other family passes.
     let client = start_pair(fixture_repo()).await;
     let result = call_tool(&client, "check-artifacts", json!({"feature": "001-basic"})).await;
     let obj = structured_object(&result);
-    assert_eq!(obj["clean"], true);
+    assert_eq!(obj["clean"], false);
     assert_eq!(obj["status"], "clarified");
-    assert_eq!(obj["findings"].as_array().unwrap().len(), 0);
+    let findings = obj["findings"].as_array().unwrap();
+    assert_eq!(findings.len(), 1, "{findings:?}");
+    assert_eq!(findings[0]["family"], "spec-integrity");
+    assert_eq!(findings[0]["severity"], "blocking");
     assert_eq!(obj["path"], "specs/001-basic/spec.md");
 }
 

@@ -28,15 +28,18 @@ use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
 
 /// Steps 13–15 — cross-service references, `## Applicable Rules` citations,
-/// and grounding — by the reason each is recorded under. They are detection
+/// and the host's reading of the spec and plan, which judges grounding and the
+/// three checks of §Spec integrity and §Plan consistency a primitive cannot
+/// make — by the reason each is recorded under (step 15 under two). They are detection
 /// the procedure leaves to the host, and the walker no-ops host prose, so an
 /// exec run examines none of them. Each is recorded once, on every run: whether
 /// a step would have applied to this spec is itself something the walk never
 /// looked at.
-const HOST_DETECTION: [&str; 3] = [
+const HOST_DETECTION: [&str; 4] = [
     "references-not-checked",
     "applicable-rules-not-checked",
     "grounding-not-checked",
+    "integrity-not-checked",
 ];
 
 /// The running tier counts of one exec analyze walk.
@@ -310,6 +313,7 @@ mod tests {
         json!([
             ["applicable-rules-not-checked", 1],
             ["grounding-not-checked", 1],
+            ["integrity-not-checked", 1],
             ["references-not-checked", 1]
         ])
     }
@@ -393,6 +397,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["root-absent", 2]
             ])
@@ -517,6 +522,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["rule-citations-not-checked", 2]
             ])
@@ -560,6 +566,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["rule-not-installed", 2]
             ])
@@ -589,6 +596,7 @@ mod tests {
                 ["anchor-target-unreadable", 1],
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1]
             ])
         );
@@ -617,6 +625,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["referrer-unreadable", 2]
             ])
@@ -695,6 +704,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["rule-assessments-not-checked", 2],
                 ["rule-file-unreadable", 1]
@@ -717,6 +727,7 @@ mod tests {
             json!([
                 ["applicable-rules-not-checked", 1],
                 ["grounding-not-checked", 1],
+                ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
                 ["rule-assessments-not-checked", 2]
             ])
