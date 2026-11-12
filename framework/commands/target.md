@@ -67,7 +67,7 @@ The scenario-targeted path (step 7) is unchanged: when a scenario is targeted, i
 | clarified | 0 | /{project}:plan |
 | planned | 0 | /{project}:implement |
 | in-progress | 0 | /{project}:implement |
-| done | any | confirm complete; run /{project}:amend to record a scenario and reopen |
+| done | any | complete for what it specifies; run /{project}:amend to record new work |
 
 When the status is clarified, planned, or in-progress AND the open-question count is at least one, the next step is `/{project}:clarify` (recovery). This state usually arises from a manual frontmatter edit; the normal back-edge via `/{project}:amend` keeps status and open-question presence in sync.
 

@@ -166,9 +166,10 @@ Any other edit there reopens, a typo fixed in one file as much as a **factual co
 Operational rules:
 
 - **A retired feature's spec is deleted, not left at `done`**, which means *delivered, and still true*. When its content survives elsewhere, `/{project}:consolidate` re-points every inbound pointer it reads **before** removing the directory, lest it dangle; when nothing survives, the spec goes; retiring *part* of a feature is an ordinary body edit.
+- **A `done` stop never says the request is built.** A command that stops on or shows a `done` spec says "Not built yet: {request}." first if new work is asked for, then qualifies `done` ("`{slug}` is `done` for what it specifies; this request is not part of it.").
 - **Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk.**
 - **Syncing a canonical record on another spec leaves it `done` only as a correction** (`classify-spec-edit`): one in its `spec.md` outside the criteria, `plan.md` or `tasks.md`; one in its data model or a scenario reopens it, and a table synced twice moves to the spec owning the behavior.
-- **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole; to separate one from edits on disk, set them aside, commit it, then restore them, or transition first.
+- **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole.
 
 <!-- §plan-phase -->
 
@@ -401,7 +402,7 @@ A capability is runtime-eligible only when **all three** hold:
 2. **Currently mechanical** — already either (a) executed by an LLM following procedural instructions in a slash command body, or (b) implemented as a bash script the framework invokes (pre-commit hooks, generators, CI).
 3. **Specifiable** — the primitive's compiled description can state its rules completely, and it introduces no policy of its own.
 
-**Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails, since each such parser is a copy of a tested parse that drifts.
+**Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails.
 
 #### Acquisition invariant
 
@@ -438,7 +439,6 @@ For every kind of fact described in multiple places, one location is authoritati
 | A plan's design record | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
 | Decision-drift tell lists and grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 | Scenario→task referencing rule | `specs/067-analyze-and-audit-checks/data-model.md` |
-| Spec-root resolution (`[paths] specs-root`) | §spec-phase |
 | Constitution content — what belongs in it, which rules adopters receive | `specs/050-constitution/spec.md` (a spec that changes *behavior* still amends the principle it contradicts) |
 
 ### Cross-document references
@@ -457,7 +457,7 @@ When document B describes content authored in document A, B back-links to A — 
 
 ### Decision resolution
 
-Closing an open question, shipping a scenario, advancing a status, or adopting a rejected option obliges correcting, in the same change, every artifact that described the prior state. **A resolution is not complete while a sibling artifact still describes the prior state**: it reads as work owed, not as stale.
+Closing an open question, shipping a scenario, advancing a status, or adopting a rejected option obliges correcting, in the same change, every artifact that described the prior state. **A resolution is not complete while a sibling artifact still describes the prior state**.
 
 ### Template-rule alignment
 

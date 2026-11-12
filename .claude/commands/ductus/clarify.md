@@ -31,7 +31,7 @@ On a feature-targeted run, read the spec's frontmatter `status` field and count 
 | `draft` | no | Verify acceptance criteria, then advance to `clarified` (existing hot path) |
 | `clarified` / `planned` / `in-progress` | no | Stop with: "Spec is already `{status}`. Run `/ductus:plan` to create the technical plan." for `clarified`, or "Run `/ductus:implement` to continue implementation." for `planned` / `in-progress`. |
 | `clarified` / `planned` / `in-progress` | yes | Run **§Recovery path: non-`draft` spec with open questions** in `.ductus/reference/clarify.md`. |
-| `done` | (any) | Stop with: "Spec is `done`. Run `/ductus:amend` to capture this as a scenario instead." Exit without mutation. |
+| `done` | (any) | Stop with the message §spec-lifecycle's *A `done` stop never says the request is built* says, then "Run `/ductus:amend` to capture this as a scenario instead." Exit without mutation. |
 
 The "already `{status}`" branch and the `done` branch never modify any file.
 

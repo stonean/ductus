@@ -4,6 +4,7 @@ status: in-progress
 dependencies: []
 tags: [commands, pipeline, templates]
 next-criterion: 16
+cross-spec-impact: [014-reclarify-backedge]
 ---
 
 # 000 — Slash Command Templates

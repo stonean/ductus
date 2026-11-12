@@ -43,7 +43,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 2. Read the target artifact (scenario file if targeted, otherwise `spec.md`).
 3. **Recompute dependencies (safety net).** If the target is a spec, invoke `derive-dependencies` in its report-only default. When it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. A non-zero `unwritable-count` counts specs whose derived `dependencies:` cannot be written without breaking their frontmatter: name each, from `unwritable` or, past the read size, the file `lists-file` names, and say to edit that key by hand, since the pre-commit hook stops every commit until then. A non-zero `unparseable-count` counts specs whose frontmatter never closes: name each the same way, as not derived, never as in sync. Neither stops this command. Do **not** pass `--write` here: this command's writes are limited to the target's questions/scenario/task/status and the session file (see Scope Boundaries). (Skip on scenario targets, which have no `dependencies` field.)
 4. If the target is a spec, read its frontmatter `status` field now, for the gate, the impact display, the classifier's status tiebreaker, and the post-record mutation.
-5. Display the feature name, scenario name (if targeted), status, and a brief summary of what the artifact covers.
+5. Display the feature name, scenario name (if targeted), status, and a brief summary of what the artifact covers. A `done` status is displayed as §spec-lifecycle's *A `done` stop never says the request is built* says.
 
 ### Re-open precondition and reconcile pass (spec target)
 
@@ -91,7 +91,7 @@ Which half runs depends on status and input:
 5. If no task was appended and the status is `done`, invoke `classify-spec-edit` against the feature. On `correction`, `mechanical` or `none`, report that the spec stays `done` because the delta changes no criterion, open question or unchecked task, and is at most a sweep's or a cross-service reference's in a contract, and continue to **Gather the input**, changing nothing. On `reopens`, or an error, which means the classification did not run and is said so, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
 
    ```text
-   Spec is `done` but the feature directory has un-tracked scenario or task edits:
+   Spec is `done` for what it specifies, but the feature directory has un-tracked scenario or task edits:
      {path-1}  ({untracked|modified}, mtime {ts})
      {path-2}  ({untracked|modified}, mtime {ts})
      ...
@@ -184,7 +184,7 @@ This display is informational only — the user's prior acceptance is the consen
 
 When the scenario route is recording on a `done` spec, display the reopen impact:
 
-- The spec's prior status (`done`, which will revert to `in-progress`).
+- The spec's prior status (`done`, qualified as §spec-lifecycle's *A `done` stop never says the request is built* says, which will revert to `in-progress`).
 - The new scenario's path: `scenarios/{slug}.md`.
 - A note that the scenario adds a task to `tasks.md` and must be implemented before the spec returns to `done`.
 

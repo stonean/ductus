@@ -67,7 +67,7 @@ The scenario-targeted path (step 7) is unchanged: when a scenario is targeted, i
 | clarified | 0 | /ductus:plan |
 | planned | 0 | /ductus:implement |
 | in-progress | 0 | /ductus:implement |
-| done | any | confirm complete; run /ductus:amend to record a scenario and reopen |
+| done | any | complete for what it specifies; run /ductus:amend to record new work |
 
 When the status is clarified, planned, or in-progress AND the open-question count is at least one, the next step is `/ductus:clarify` (recovery). This state usually arises from a manual frontmatter edit; the normal back-edge via `/ductus:amend` keeps status and open-question presence in sync.
 

@@ -30,7 +30,7 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 - `draft` → "Spec has unresolved open questions. Run `/ductus:clarify` first."
 - `planned` / `in-progress` → "Spec is already planned. Run `/ductus:implement` to begin implementation."
-- `done` → "Spec is `done`. Run `/ductus:amend` to capture new work as a scenario."
+- `done` → the message §spec-lifecycle's *A `done` stop never says the request is built* says, then "Run `/ductus:amend` to capture new work as a scenario."
 
 ## Scope Boundaries
 

@@ -40,6 +40,10 @@ Each command is based on the corresponding command in that project with these tr
 
 `/{project}:analyze` lints every markdown file in the feature directory through `lint-markdown`, which runs `markdownlint-cli2`, and reports each violation as an advisory finding.
 
+### A `done` stop says the request is not built
+
+The message shape is one bullet in the constitution's §spec-lifecycle, which every command loads; `amend`, `clarify`, `plan`, `implement` and `target` point at it, never copy it, and `target`'s `done` row takes the qualified form. The bullet states the "Not built yet: {request}." line, said only when new work is asked for, and the qualified `done`, always; `/{project}:status`'s cell is unchanged, and the bullet leaves it unnamed since the constitution sits at its byte ceiling. `cross-spec-impact:` names `014-reclarify-backedge` only: its criteria quote `/clarify`'s `done` message and `/amend`'s re-open prompt. `023-govern-refinement`'s AC30 still holds (the `done` row points at `/amend`); only its annotation's quote of the old row wording is provenance of the day it shipped, so it takes no entry.
+
 ## Affected Files
 
 | File | Action | Purpose |
