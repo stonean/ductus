@@ -363,7 +363,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `analyzed-against`: sha; `analyzed-digest`: map of path → sha256; `analyzed-unreadable`: list; **`hard-fail`**, **`blocking-findings`**, **`advisory`**, **`unexamined`**: integer; `unexamined-by-reason`: map of reason → integer; `dispositions`: map of counts; `decisions`: list; **`blocking`**: boolean, derived |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `analyzed-against`: sha; `analyzed-digest`: map of path → sha256; `analyzed-unreadable`: list; **`hard-fail`**, **`blocking-findings`**, **`advisory`**, **`unexamined`**: integer; `unexamined-by-reason`: map of reason → integer; `rule-verdicts`: map of rule ID → verdict; `unjudged-rules`: list; `rule-digest`: map of rule file → sha256; `dispositions`: map of counts; `decisions`: list; **`blocking`**: boolean, derived |
 
 #### Open-schema rule
 

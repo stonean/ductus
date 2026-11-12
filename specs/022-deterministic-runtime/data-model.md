@@ -655,6 +655,10 @@ Response payload:
 
 When `passed: true`, `finding` is `null`.
 
+The response carries an optional `addressed-by` (`"<path>#<Heading>"`) beside `passed` and `finding` (spec 082). With `passed: true` it makes the verdict `addressed`, citing the design subject and heading that addresses the rule, which `write-analysis` stores only when the citation resolves; without it a `passed: true` is a rule that did not fire, so a host that sends none records the walk it recorded before spec 082. A `passed: false` is a finding whose `message` and `location.section` the walk keeps as the rule's verdict.
+
+The walker asks about a rule only when the feature's stored verdict for it is not current: the request for a rule whose verdict is current is not sent, its stored finding counts in its tier, and the stream says how many verdicts were reused ([082](../082-rule-assessments-converge-across-runs/spec.md)). On the interactive path `discover-rule-files` called with `all`, `rules` and `feature` returns the same decision as a `verdicts` block: `reason` (`no-prior-verdicts`, `subjects-changed` or `record-unreadable`, absent when some verdict is reusable), `judge` (the IDs of the rules to judge) and `reusable` (each current fired verdict with its `id`, `tier`, and its `cite`, or its `at` and `message`), each list inline or, past the read size, in the file `lists-file` names with `reusable-count` and `judge-count` inline.
+
 ### `writeCode`
 
 Used by `/ductus:implement`'s per-task work step.
