@@ -109,19 +109,19 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 14. Every loaded rule file has a pass
 
-- [ ] Implement the behavior described in `scenarios/every-loaded-rule-file-has-a-pass.md`
+- [x] Implement the behavior described in `scenarios/every-loaded-rule-file-has-a-pass.md`
 - [x] Resolve the scenario's open question (which design)
-- [ ] framework/commands/review.md names the pass that applies each loaded rule file; generated command copies regenerated
-- [ ] The runtime performReview extension and its payload carry the chosen mapping, with a test
-- [ ] quality-cross.md's header claim about its enforcing pass agrees with review.md
+- [x] framework/commands/review.md names the pass that applies each loaded rule file; generated command copies regenerated
+- [x] The runtime performReview extension and its payload carry the chosen mapping, with a test
+- [x] quality-cross.md's header claim about its enforcing pass agrees with review.md
 
 - **Done when**: Every rule file /review loads is applied to code by a pass review.md names, and 020 is re-reviewed back to done.
 
 ## 15. Review reports a defect under its owner
 
-- [ ] Implement the behavior described in `scenarios/review-reports-a-defect-under-its-owner.md`
-- [ ] `framework/reference/review.md` §Security pass applies a loaded rule's Not-flagged routing, its load conditions judged against the files the review loaded, and keeps a finding with the yielding rule where the owner's file is not loaded or no pass applies it; `security-frontend.md`'s header agrees; generated command copies regenerated
-- [ ] The runtime's `performReview` extension carries what the pass needs to apply the routing, with a test that fails when the routing is removed
+- [x] Implement the behavior described in `scenarios/review-reports-a-defect-under-its-owner.md`
+- [x] `framework/reference/review.md` §Security pass applies a loaded rule's Not-flagged routing, its load conditions judged against the files the review loaded, and keeps a finding with the yielding rule where the owner's file is not loaded or no pass applies it; `security-frontend.md`'s header agrees; generated command copies regenerated
+- [x] The runtime's `performReview` extension carries what the pass needs to apply the routing, with a test that fails when the routing is removed
 
 - **Done when**: review reports a defect two loaded rules overlap on under the owner a loaded rule's Verification names, the yielding rule keeping it where the owner's file is not loaded or has no pass, and 008 task 36's call is back-linked by the scenario
 
