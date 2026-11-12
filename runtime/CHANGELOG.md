@@ -191,16 +191,22 @@ its version and date.
 
 ### Changed
 
-- **Primitive descriptions gain the detail specs used to restate, and two
-  stale ones are corrected (spec 079 task 36).** `relocate-audit-records`'
-  description said it never overwrites an existing artifact; it merges the block
-  into one, the spec block winning, and reports each disagreeing key.
-  `resolve-constitutions` names its `examined` count. `write-session` states
-  `clear` and the peer and result shapes, `resolve-session` the null and notice
-  rules, `retarget-sessions` its arguments, `dashboard` each spec's scenario
-  question and fold fields, `check-prescriptions` its missing-`round.toml` case,
-  `check-artifact-size` the `--staged` stderr naming, `read-deprecation-labels`
-  its section-run rule and `classify-spec-edit` the absent `spec.md`. Text only.
+- **Primitive descriptions gain the detail specs used to restate, and two stale
+  ones are corrected (spec 079 task 36).** `relocate-audit-records`' description
+  said it never overwrites an existing artifact; it merges the block into one,
+  the spec block winning, and reports each disagreeing key.
+  `create-plan-artifacts`' said a kept artifact reports its `template`; a kept
+  one carries none. `resolve-constitutions` names its `examined` count.
+  `write-session` states `clear`, the peer and result shapes and which
+  unreadable files its sweep leaves in place, `resolve-session` the null and
+  notice rules, `retarget-sessions` its arguments, `dashboard` each spec's
+  scenario question and fold fields, `append-task` what its dedup keys on,
+  `write-review` that a run's own earlier write never refuses its empty scope,
+  `rewrite-spec-links` what `examined` leaves out, `start-fix-rounds`,
+  `brief-re-read` and `check-prescriptions` the brief's contents, the inline
+  counts and the missing-`round.toml` case, `check-artifact-size` what
+  `--staged` names on stderr, `read-deprecation-labels` its section-run rule and
+  `classify-spec-edit` the absent `spec.md`. Text only.
 
 - **`measure-reopenings` counts a decision as a person's only in the record that
   first holds its key.** A decision a review carried from another spec's record,

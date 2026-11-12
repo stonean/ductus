@@ -353,11 +353,29 @@ fn descriptions_hold_the_detail_specs_point_at() {
         (descriptions::CHECK_ARTIFACT_SIZE, "named on stderr"),
         (descriptions::READ_DEPRECATION_LABELS, "labels both rules"),
         (descriptions::CLASSIFY_SPEC_EDIT, "absent on either side"),
+        (descriptions::APPEND_TASK, "keyed on that whole pointer"),
+        (descriptions::APPEND_TASK, "`dedup-title`, which is opt-in"),
+        (descriptions::WRITE_SESSION, "cannot be proven idle"),
+        (descriptions::WRITE_REVIEW, "this run's own earlier write"),
+        (
+            descriptions::REWRITE_SPEC_LINKS,
+            "a skipped referrer is not counted",
+        ),
+        (descriptions::START_FIX_ROUNDS, "a snapshot of nothing"),
+        (descriptions::BRIEF_RE_READ, "data model and scenarios"),
+        (descriptions::BRIEF_RE_READ, "never read for a newer brief"),
+        (descriptions::BRIEF_RE_READ, "excluded-count stay inline"),
+        (descriptions::CHECK_ARTIFACT_SIZE, "each unmeasurable one"),
+        (descriptions::CREATE_PLAN_ARTIFACTS, "with no `template`"),
+        (descriptions::DASHBOARD, "`scenario-open-question-count`"),
+        (descriptions::RESOLVE_SESSION, "`identity` is null"),
+        (descriptions::RESOLVE_SESSION, "`co-target`"),
     ];
     for (description, detail) in held {
         assert!(description.contains(detail), "missing {detail}");
     }
     assert!(!descriptions::RELOCATE_AUDIT_RECORDS.contains("never overwrites"));
+    assert!(!descriptions::CREATE_PLAN_ARTIFACTS.contains("action, template"));
 }
 
 /// The manifest names each primitive the server does not serve on a
