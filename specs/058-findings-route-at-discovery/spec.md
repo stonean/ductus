@@ -430,7 +430,8 @@ spec's links to it. Each also gets the contract change itself:
   analyze hard-fail or blocking finding is fixed or deferred. It keeps blocking
   until the re-check no longer produces it or its deferral releases it,
   because waiving it would add a bypass the gate does not have
-  today; whether one can be waived is 073's question. A waiver applies to
+  today. 073 settles a decided departure from a rule before any finding
+  exists, so it leaves none to waive (073's Resolved Questions). A waiver applies to
   advisory findings, review observations, review MUST and SHOULD violations,
   and implementation disposition tasks; review violations can also be deferred
   (076).

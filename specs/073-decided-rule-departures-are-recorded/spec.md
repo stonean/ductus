@@ -1,8 +1,8 @@
 ---
-status: draft
-dependencies: [016-cross-cutting-rules, 020-code-review, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate]
-cross-spec-impact: [050-constitution]
-next-criterion: 7
+status: clarified
+dependencies: [016-cross-cutting-rules, 020-code-review, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 082-rule-assessments-converge-across-runs]
+cross-spec-impact: [020-code-review, 050-constitution]
+next-criterion: 9
 ---
 
 # 073 — Decided Rule Departures Are Recorded
@@ -23,26 +23,41 @@ An adopter's spec listed two MUST rules — a compatibility rule, for a credenti
 
 ## Departure entries
 
-A departure is stated once, in the spec, as a structured entry under `## Applicable Rules`: the rule ID, the reason, who decided it and when, and optionally a citation to the governing document that decided it. Both commands read the entry, so the decision is never restated per command or per run, and nothing depends on an author remembering to waive it twice. A departure every spec carries is settled at the rule or as a project-wide exception; this entry is for a spec-specific one.
+A departure is stated once, in the spec, as a structured entry under `## Applicable Rules`: the rule ID, of any tier, the reason, and optionally a citation to the governing document that decided it; who decided it and when are read from the commit that introduced it (Resolved Questions). Both commands read the entry, so the decision is never restated per command or per run, and nothing depends on an author remembering to waive it twice. A departure every spec carries is settled at the rule or as a project-wide exception; this entry is for a spec-specific one.
 
 ## The analyze waiver
 
-`/{project}:analyze` records each departure whose rule's trigger fires as a waiver in `analysis.md`, keyed on rule and spec and carrying the entry's fields. A waived rule is listed apart from the rules that passed, in the record and in the report. A waiver carries forward when the record is regenerated while its rule still fires, and is pruned once it no longer does, as review's waivers are. It builds on the dispositions of [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md), the record and gate of [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md), the review waivers of [020 — Code review](../020-code-review/spec.md), and the Applicable Rules template of [016 — Cross-cutting rules](../016-cross-cutting-rules/spec.md). The constitution's Audit records schema and Finding dispositions rule change in the same change (`cross-spec-impact:` on 050).
+`/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in the rule-verdict map of [082 — Rule assessments converge across runs](../082-rule-assessments-converge-across-runs/spec.md), with the entry's reason, its derived `decided-by` and `decided-at`, and its citation. The rule is assessed as waived, never as failing, so it produces no finding. A waived rule is listed apart from the rules that passed, in the record and in the report, waived MUSTs first. The map is rewritten each run, so a waiver carries forward while its rule fires and is gone once it does not. It builds on the dispositions of [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md), the record and gate of [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md), the review waivers of [020 — Code review](../020-code-review/spec.md), and the Applicable Rules template of [016 — Cross-cutting rules](../016-cross-cutting-rules/spec.md). The constitution's Finding dispositions rule changes in the same change (`cross-spec-impact:` on 050); the record field is 082's.
+
+## Edge Cases
+
+- **An entry whose rule does not fire**: no verdict is recorded for it; the entry stays the spec's record of the decision.
+- **An entry naming a rule since removed or deprecated**: a finding (AC1), so the entry is re-pointed or removed rather than silently waiving nothing.
+- **Two entries naming one rule**: a finding (AC1); a rule has one departure.
+- **An entry edited after it was committed**: `decided-by` and `decided-at` stay those of the commit that introduced it; the edit is the spec's history.
+- **An entry removed**: the next run assesses the rule as any other, so a MUST failure blocks again.
+- **A waived rule the assessment would pass**: still recorded `waived`, since the entry, not the assessment, decides it.
 
 ## Acceptance Criteria
 
-- [ ] AC1: A spec can state a departure as a structured entry under `## Applicable Rules` naming the rule ID, the reason, who decided it and when, and optionally the governing document that decided it, and `/{project}:analyze` reports an entry missing a required field, or naming an unknown or deprecated rule ID, as a finding.
-- [ ] AC2: `/{project}:analyze` records each departure whose rule's trigger fires as a waiver in `analysis.md`, keyed on rule and spec and carrying the entry's fields, and a failing assessment of a waived rule does not count toward `blocking-findings`.
+- [ ] AC1: A spec can state a departure as a structured entry under `## Applicable Rules` naming a rule ID of any tier and the reason, and optionally the governing document that decided it, and `/{project}:analyze` reports as a finding an entry missing a required field, naming an unknown or deprecated rule ID, naming a rule another entry already names, or citing a governing document `resolve-anchor` cannot resolve.
+- [ ] AC2: `/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in 082's rule-verdict map, with the entry's reason, its derived `decided-by` and `decided-at`, and its citation; the rule is assessed as waived and produces no finding, so it never counts toward `blocking-findings`.
 - [ ] AC3: `analysis.md` and the analyze report list waived rules apart from passing ones, so a run in which a MUST rule was waived is distinguishable from one in which it was satisfied.
 - [ ] AC4: A waiver carries forward when `analysis.md` is regenerated while its rule still fires, and is pruned from the record when the rule no longer fires.
-- [ ] AC5: `/{project}:review` honors the same departure entries, so a departure decided once in the spec needs no second `--waive`.
-- [ ] AC6: The constitution's Audit records schema and Finding dispositions rule describe the analyze waiver, in the same change as the behavior.
+- [ ] AC5: `/{project}:review` honors the same departure entries at every file in the spec's review scope, writing each file's anchor into `review.md`'s `waivers:`, so a departure decided once in the spec needs no second `--waive`.
+- [ ] AC6: The constitution's Finding dispositions rule, and the analysis-record row 082 adds, describe the analyze waiver, in the same change as the behavior.
+- [ ] AC7: An entry's `decided-by` and `decided-at` are the author and date of the commit that introduced it; an entry history cannot attribute (not yet committed, or a shallow checkout) is recorded `decided-by: unattributed`, and a fixture proves both, its test run in a job with a full-depth checkout.
+- [ ] AC8: A departure entry naming a SHOULD rule waives it at review as one naming a MUST does, and a fixture proves it.
 
 ## Open Questions
 
-- At review, does a departure entry waive its rule for every file in scope, or per file — given review anchors a waiver per rule and file and records a rule against extending that anchor?
-- Is a decided waiver a disposition of a blocking finding — overturning 058's edge case that waiving one "would add a bypass the gate does not have" — or a state settled before any finding is produced, so the rule is assessed as waived and never as failing?
-- Does a decided departure from a MUST revisit 008 Resolved Q1, which declined an acknowledge tier in favour of a SHOULD whose rationale asks for a recorded deviation, or is it distinct from a severity tier?
-- How is `decided-by` derived rather than typed, and may a governing document's advance decision (a shared constitution's pre-decided departures) stand in for a per-spec operator decision?
-- Does `analysis.md` keep a count of waived rules, beyond review's model of a `waivers:` list and a Waived findings body?
-- Does a departure entry also apply to a SHOULD rule, since an unwaived SHOULD also holds a spec short of `done`?
+*None — all resolved.*
+
+## Resolved Questions
+
+- **Is a decided departure a disposition of a blocking finding, or settled before any finding exists?** Settled before: a rule a departure entry names is assessed as waived, never as failing, so it produces no finding, and 058's AC30 and `write-analysis`'s refusal of a waiver on a blocking finding stand unchanged. The bypass 058's edge case names is gated by the review of the spec edit that adds the entry, and made visible by the record and the report listing each waived MUST before anything else (AC3). Rejected: a disposition of a blocking finding confirmed through `gate-confirm`, which changes 058's AC30, the refusal and the reference, four edits for a confirmation the listing and a derived `decided-by` stand in for (the agent's recommendation, adopted by the owner, 2026-11-12).
+- **At review, does a departure entry waive its rule for every file in scope, or per file?** Every file in the spec's review scope, at each run: the run writes the per-file anchors into `review.md`'s `waivers:`, so each still expires on its own and the record names the files, and a file added later where the rule fires is covered with no second decision (AC5). 020's scenario `waiver-expiry` keeps its rule that a waiver never extends to another location, with one exception sentence: a departure is bounded by the spec's own scope. Rejected: an entry listing its files, a list the author must keep current as code moves, losing coverage silently on a rename; and an entry covering only where its rule fired when it was written, which needs history for nothing more (the agent's recommendation, adopted by the owner, 2026-11-12).
+- **Does a decided departure from a MUST revisit 008's Resolved Question 1?** No: it is not a severity tier. The rule stays MUST and no tier is added; a departure entry is the per-spec record of a deviation that 008's question asked a SHOULD's rationale to request, here extended to a MUST, as 020 already records single-author MUST waivers at review. 008 is unchanged, since its reason for refusing an acknowledge tier, no extra severity level, still holds (the agent's recommendation, adopted by the owner, 2026-11-12).
+- **How is `decided-by` derived, and may a governing document stand in for a per-spec decision?** From history: `/{project}:analyze` reads the author and date of the commit that introduced the entry, and when history cannot say (an entry not yet committed, a shallow checkout) the record carries `decided-by: unattributed`, a state of its own, never a silent pass; the test that reads history runs in a job with a full-depth checkout (§design-principles). The entry's optional governing-document citation is checked with `resolve-anchor`, so a cited advance decision is verifiable. A governing document never replaces `decided-by`: its advance decision is shown by the citation, while the entry's author is who accepted it for this spec. Rejected: typed `decided-by` and `decided-at` alone, an attribution nothing checks (the agent's recommendation, adopted by the owner, 2026-11-12).
+- **Does `analysis.md` keep a count of waived rules?** No count of its own: a waived rule is a `waived` value in the rule-verdict map spec 082 adds to the record (`082-rule-assessments-converge-across-runs`), beside `addressed` and `finding`, and its details stay in the spec's departure entry, so the count is derived from the map. The map is rewritten each run from the spec and the rules that fired, so a waiver carries forward while its rule fires and is gone once it does not, which AC4 asks. 073 so builds on 082 and lands after it. Rejected: a `waivers:` list of the record's own, a second structure holding what the map does; and a list with an integer beside it, a count that can disagree with its list (the agent's recommendation, adopted by the owner, 2026-11-12).
+- **Does a departure entry also apply to a SHOULD rule?** Yes: an entry may name a rule of any tier, the tier coming from the rule. At `/{project}:analyze` a SHOULD finding is advisory and already waived by the disposition rule with its reason, so the entry matters at `/{project}:review`, where an unwaived SHOULD holds `done` (§implement-phase) and the entry removes the second `--waive` there too (AC5). Rejected: MUST only, which needs a tier lookup and leaves a SHOULD departure needing `--waive` at review (the agent's recommendation, adopted by the owner, 2026-11-12).
