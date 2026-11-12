@@ -37,7 +37,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
 | `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, as `ductus write-review --help` states. A run's two writes pass it alike |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` (by `describe_unchecked`'s test), and `write-review` also on an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, which a run's own earlier write is not, and on a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` outside a task this run's own deferral names (by `refuse_while_tasks_are_open`, which counts boxes by `describe_unchecked`'s test), and `write-review` also on an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, which a run's own earlier write is not, and on a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.
 
 ## `brief-re-read` result and `round.toml`
 
