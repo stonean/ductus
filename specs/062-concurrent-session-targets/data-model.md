@@ -93,54 +93,16 @@ Result:
 }
 ```
 
-- `identity`: the display label, or `null` when unidentified.
-- `source`: `own`, `adopted`, `default` (unidentified), `cleared`, or `none`.
-- `target`: `null` for `cleared` and `none`.
-- `notices[].kind`: `adopted`, `co-target`, `folded`, or `consolidated`.
-  `message` is the rendered sentence the host displays.
-- `unreadable`: repo-relative session files that could not be parsed while
-  checking for other sessions on the same feature, named rather than read as
-  "none" (AC22); omitted when empty. The dashboard carries the same list as
-  `session-unreadable`.
+Each field's states (`identity`, `source`, `target`, the notice kinds and `unreadable`) are `ductus resolve-session --help`'s; `unreadable` is named rather than read as "none" (AC22), and the dashboard carries it as `session-unreadable`.
 
 ## `write-session` result additions
 
 The existing `path` (the default's repo-relative path) and `created` fields are
-unchanged. Added:
-
-- `identity`: the display label; absent when unidentified, so an unidentified
-  write's result keeps its pre-062 shape (AC3).
-- `own-path`: the per-process file written; absent when unidentified.
-- `peers`: `[{ "session", "feature", "scenario", "last-used" }]`, the other
-  unexpired sessions targeting the same feature. `scenario` is `null` when the
-  peer targets none. `last-used` is the peer record's `used-at`, an RFC 3339
-  date-time in UTC with the `Z` offset, to the second, the form `set-at` has
-  (`2026-11-10T01:32:46Z`), or `null` when that record holds none. Empty on
-  clear and host-config writes, and on an unidentified write.
-- `expired`: labels of the per-process targets the sweep removed.
-- `unreadable`: repo-relative paths the write could not read — a file that
-  does not parse, or whose `used-at` the sweep cannot read: other sessions'
-  files, which the sweep leaves in place, and the process's own record or the
-  shared default when either did not parse, which this write replaces (AC22).
-  A replaced default's `cli-config-dir` is not carried forward.
-- `notices`: a pending removal notice this write replaced along with the
-  process's own record, delivered here so that no write, whichever command
-  makes it, discards one undelivered (AC21).
-
-The four lists are omitted when empty, like the two fields above when
-absent.
+unchanged. The added fields (`identity`, `own-path`, `peers`, `expired`, `unreadable`, `notices`), the peer record's shape and which lists are omitted when empty are `ductus write-session --help`'s. An unidentified write's result keeps its pre-062 shape (AC3), and `notices` delivers a pending removal notice this write replaced, so that no write, whichever command makes it, discards one undelivered (AC21).
 
 ## `retarget-sessions`
 
-Arguments:
-
-| Key | Required | Meaning |
-| --- | --- | --- |
-| `from` | yes | The removed feature's directory name |
-| `feature`, `path` | with a re-target | The new target |
-| `scenario`, `scenario-path` | optional, together | The new target's scenario |
-| `clear` | instead of a new target | Clear rather than re-target |
-| `cause` | yes | `fold` or `consolidate` |
+Arguments are `ductus retarget-sessions --help`'s.
 
 Supplying both `clear` and a new target is an `InvalidArgument`; supplying
 neither is a `MissingArgument` naming the argument the cause still needs.
@@ -156,11 +118,4 @@ ASCII — whitespace, a control or non-ASCII character — or a backslash: no
 session can target one until it is renamed. `write-session` holds its `feature` and `scenario` to the same
 rule.
 
-Result:
-
-- `retargeted`: labels of the sessions re-pointed, with `default` for the
-  shared default.
-- `cleared`: labels of the sessions cleared, with `default` for the shared
-  default.
-- `unreadable`: paths that could not be parsed. These are left in place and
-  reported, because a removal cannot prove they do not name `from`.
+The result's `retargeted`, `cleared` and `unreadable` lists are `ductus retarget-sessions --help`'s.
