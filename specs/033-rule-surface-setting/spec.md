@@ -2,6 +2,7 @@
 status: in-progress
 dependencies: [017-derive-dont-ask, 020-code-review, 024-rule-loader, 025-rule-opt-out]
 next-criterion: 11
+cross-spec-impact: [067-analyze-and-audit-checks]
 ---
 
 # 033 — Explicit project rule-surface setting
@@ -55,7 +56,7 @@ A list (rather than a single enum) composes naturally with the suffix model and 
 - [x] AC4: When `surfaces` contradicts the detected stack, `/ductus` installs per the explicit setting and emits a one-line notice naming the discrepancy.
 - [x] AC5: When a surface is added to `surfaces`, the next `/ductus` run installs the newly-relevant rule files; a removed surface's files are left in place and no longer updated.
 - [x] AC6: `/ductus:review` enforces only the configured surface(s) plus `-cross.md` when the setting is set, and falls back to 024 derivation when unset.
-- [x] AC7: `/ductus:analyze` still resolves rule citations against the full rule-file set regardless of `surfaces`, so an out-of-surface citation does not produce a spurious finding.
+- [x] AC7: `/ductus:analyze` loads every rule file present regardless of `surfaces`, and a citation of a shipped rule whose file `surfaces` kept out of the project is reported by `check-rule-ids` as informational (known, not installed) and recorded unexamined, never as a blocking unknown rule.
 - [x] AC8: A pinned rule file (`[pinned] files`) is never overwritten regardless of surface configuration.
 - [x] AC9: When `surfaces` is unset, no command outside `/ductus` prompts for it and no command errors on its absence (behavior matches 024 derivation today).
 - [x] AC10: The `[rules] surfaces` setting, its accepted values, and its precedence relative to 024 derivation are documented in the `.ductus/config.toml` schema documentation and the relevant command sources.

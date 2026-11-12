@@ -473,7 +473,8 @@ pub struct AnalyzeBlock {
     ///   decided on: `referrer-unreadable` (a referrer
     ///   `check-orphaned-references` could not read),
     ///   `rule-citations-not-checked` (citations `check-rule-ids` checked
-    ///   against no rule file), `rule-assessments-not-checked` (loaded
+    ///   against no rule file), `rule-not-installed` (citations of a rule the
+    ///   framework ships whose file the project never installed), `rule-assessments-not-checked` (loaded
     ///   rules steps 11 and 12 did not ask about — no Verification, or no
     ///   RFC 2119 keyword to take a tier from — and, on the exec path, a
     ///   step that loaded no rule or named no tier), `rule-file-unreadable`
@@ -3039,6 +3040,12 @@ pub struct RuleCitation {
     /// missing (spec 067 scenario `a-record-cites-a-removed-rule`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub retired: bool,
+    /// Whether no file given defines the ID but the framework ships it: its
+    /// rule file was never installed, as for a surface a project does not
+    /// enforce. Informational, never `missing` (spec 033 scenario
+    /// `an-out-of-surface-citation-resolves`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub not_installed: bool,
 }
 
 /// Result for `check-rule-ids`.
@@ -3057,6 +3064,13 @@ pub struct CheckRuleIdsResult {
     /// still defines is `found`, never here. Omitted when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub retired: Vec<String>,
+    /// Cited rule IDs no file given defines that the framework ships, read
+    /// from an index of the shipped rule IDs at the runtime's version: known,
+    /// not installed. Not in `missing`, and no rule text was available to
+    /// judge them against, so `/{project}:analyze` records each unexamined.
+    /// Omitted when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_installed: Vec<String>,
     /// How many rule files were read to build the known-ID set — the
     /// denominator `missing` is asserted against.
     ///
@@ -8371,10 +8385,12 @@ mod tests {
                 found: true,
                 deprecated: false,
                 retired: false,
+                not_installed: false,
             }],
             missing: vec![],
             deprecated: vec![],
             retired: vec![],
+            not_installed: vec![],
             examined: 1,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();

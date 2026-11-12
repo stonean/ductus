@@ -42,7 +42,9 @@ surfaces = ["backend"]   # list; members ∈ {"backend", "frontend"}; full-stack
 
 ### `/ductus:analyze` and citation resolution
 
-No behavior change. `/ductus:analyze` continues to load every discovered rule file for citation resolution regardless of `surfaces` (the constitution's "loads every discovered file regardless of stack" invariant). A short note is added to `framework/commands/analyze.md` making explicit that `[rules] surfaces` scopes `/ductus:review` enforcement only, never analyze's citation set.
+`/ductus:analyze` continues to load every discovered rule file regardless of `surfaces` (the constitution's "loads every discovered file regardless of stack" invariant), and `[rules] surfaces` scopes `/ductus:review` enforcement only. A citation to a rule on a surface whose file was never installed resolves from an index of the shipped rule IDs: `check-rule-ids` (owned by [067](../067-analyze-and-audit-checks/spec.md)) reports it `not-installed`, informational and never missing, and analyze records it unexamined under `rule-not-installed`, since the rule's text was not available.
+
+**The index is compiled into the binary** (`runtime/src/primitives/shipped_rule_ids.txt`, `include_str!`ed by `check_rule_ids.rs`), generated from `framework/rules/*.md`, and `shipped_rule_index_matches_the_framework_rules` fails when it drifts (regenerate with `BLESS_RULE_INDEX=1`). The runtime ships in lockstep with the framework, so the binary holds the IDs of the version an adopter runs with no file in the adopter's tree, and no second shipped file needs a manifest entry, a path in an adopter's checkout or a generator workflow step. A generated file shipped beside the rules would need all three, and its drift check would run in the same test suite anyway.
 
 ### Documentation
 
@@ -66,7 +68,7 @@ No behavior change. `/ductus:analyze` continues to load every discovered rule fi
 - **List vs. single enum** — chose list. An enum (`backend|frontend|fullstack`) is simpler to validate but does not compose with the suffix model or future surfaces; the list mirrors how files are already classified.
 - **Prompt-in-`/ductus` vs. replace derivation everywhere** — chose: derivation stays the default, the prompt lives only in `/ductus`, and the persisted value is an override. Forcing an "ask" into every command would reverse [017-derive-dont-ask](../017-derive-dont-ask/spec.md); confining it to the installer keeps zero-config projects zero-config.
 - **Leave vs. prune on surface removal** — chose leave-in-place. Deleting a now-irrelevant rule file is destructive and could drop adopter-pinned edits; omitting it from the manifest (no update, no delete) is reversible and consistent with how `[pinned]` already protects files. A future explicit prune can be added if demand appears.
-- **Analyze load-all vs. surface-scoped** — chose load-all (no change). Scoping analyze to `surfaces` would make a legitimate cross-surface citation (a backend spec citing a frontend rule) report as an unknown rule; resolution must stay global while only enforcement is scoped.
+- **Analyze load-all vs. surface-scoped** — chose load-all. Scoping analyze to `surfaces` would make a legitimate cross-surface citation (a backend spec citing a frontend rule) report as an unknown rule; resolution must stay global while only enforcement is scoped. Because installation is scoped, load-all alone does not resolve a citation whose file was never installed; the shipped-ID index above does (the rejected alternatives, installing every file and resolving silently as found, are in the scenario `an-out-of-surface-citation-resolves`).
 - **Known limitation** — the contradiction check is heuristic (compares `surfaces` against `[project] languages`), advisory only, and will not catch every mismatch; the operator's explicit choice is always honored.
 
 ## Cross-spec impact

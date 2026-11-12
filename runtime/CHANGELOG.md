@@ -10,6 +10,16 @@ its version and date.
 
 ### Added
 
+- **`check-rule-ids` reports a citation of a shipped rule whose file is not
+  installed as `not-installed`, not missing.** A project with
+  `surfaces = ["backend"]` never receives `security-frontend.md`, so a
+  citation of `FE-XSS-001` was a blocking unknown rule. The runtime now holds
+  an index of the shipped rule IDs (`shipped_rule_ids.txt`, generated from
+  `framework/rules/*.md` and held to it by a test), and a citation no given
+  file defines but the index does is reported in the citation's
+  `not-installed` flag and the result's `not-installed` list, each omitted
+  when empty. `/{project}:analyze`'s exec walk records each under the new
+  unexamined reason `rule-not-installed` (spec 033, spec 067).
 - **`check-rule-ids` passes a spec's record of a removed rule.** A `spec.md`'s
   optional `retired-rules:` frontmatter list names the removed rules it records
   the retirement of; a citation of a listed ID that no loaded rule file defines

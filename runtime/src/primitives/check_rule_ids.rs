@@ -54,6 +54,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
     let mut missing: HashSet<String> = HashSet::new();
     let mut deprecated_hits: HashSet<String> = HashSet::new();
     let mut retired_hits: HashSet<String> = HashSet::new();
+    let mut not_installed_hits: HashSet<String> = HashSet::new();
     for cap in citation_regex().captures_iter(scanned) {
         let id = cap[0].to_string();
         if !seen.insert(id.clone()) {
@@ -67,6 +68,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
                     found: true,
                     deprecated: true,
                     retired: false,
+                    not_installed: false,
                 });
             }
             Some(false) => citations.push(RuleCitation {
@@ -74,6 +76,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
                 found: true,
                 deprecated: false,
                 retired: false,
+                not_installed: false,
             }),
             // No loaded file defines it, and the citing spec lists it as a
             // rule it records the retirement of: a record, not a citation
@@ -86,6 +89,21 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
                     found: false,
                     deprecated: false,
                     retired: true,
+                    not_installed: false,
+                });
+            }
+            // No file it was given defines it, but the framework ships it:
+            // its file was never installed (a surface the project does not
+            // enforce). Informational, known and not installed, never missing
+            // (spec 033 scenario `an-out-of-surface-citation-resolves`).
+            None if shipped_rule_ids().contains(id.as_str()) => {
+                not_installed_hits.insert(id.clone());
+                citations.push(RuleCitation {
+                    rule_id: id,
+                    found: false,
+                    deprecated: false,
+                    retired: false,
+                    not_installed: true,
                 });
             }
             None => {
@@ -95,6 +113,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
                     found: false,
                     deprecated: false,
                     retired: false,
+                    not_installed: false,
                 });
             }
         }
@@ -106,12 +125,30 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
     deprecated.sort();
     let mut retired: Vec<String> = retired_hits.into_iter().collect();
     retired.sort();
+    let mut not_installed: Vec<String> = not_installed_hits.into_iter().collect();
+    not_installed.sort();
     Ok(CheckRuleIdsResult {
         citations,
         missing,
         deprecated,
         retired,
+        not_installed,
         examined: args.rule_files.len(),
+    })
+}
+
+/// The IDs of every rule the framework's rule files define at this runtime's
+/// version, compiled in from `shipped_rule_ids.txt` (one ID per line) so a
+/// citation of a rule whose file a project never installed is told from one
+/// no rule defines. The index is generated from `framework/rules/*.md`, and
+/// `shipped_rule_index_matches_the_framework_rules` fails when it drifts.
+fn shipped_rule_ids() -> &'static HashSet<&'static str> {
+    static IDS: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    IDS.get_or_init(|| {
+        include_str!("shipped_rule_ids.txt")
+            .lines()
+            .filter(|line| !line.is_empty())
+            .collect()
     })
 }
 
@@ -219,9 +256,9 @@ mod tests {
     fn examined_distinguishes_a_real_miss_from_an_empty_rule_file_list() {
         let tmp = tempfile::tempdir().unwrap();
         let spec_path = tmp.path().join("spec.md");
-        std::fs::write(&spec_path, "# Demo\n\nReferences BE-AUTHN-001.\n").unwrap();
+        std::fs::write(&spec_path, "# Demo\n\nReferences BE-DEMO-001.\n").unwrap();
         let rule_path = tmp.path().join("rules.md");
-        std::fs::write(&rule_path, "# Rules\n\n### BE-AUTHN-001\n\n> Hashed.\n").unwrap();
+        std::fs::write(&rule_path, "# Rules\n\n### BE-DEMO-001\n\n> Hashed.\n").unwrap();
 
         // Given nothing to check against: the citation reports missing, and
         // `examined: 0` is the field that says why.
@@ -237,7 +274,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(blind.missing, vec!["BE-AUTHN-001".to_string()]);
+        assert_eq!(blind.missing, vec!["BE-DEMO-001".to_string()]);
         assert_eq!(blind.examined, 0, "no rule file was read");
 
         // Given the file that defines it: nothing missing, denominator 1.
@@ -493,12 +530,14 @@ mod tests {
                     found: true,
                     deprecated: true,
                     retired: false,
+                    not_installed: false,
                 },
                 RuleCitation {
                     rule_id: "BE-EM-002".into(),
                     found: true,
                     deprecated: false,
                     retired: false,
+                    not_installed: false,
                 },
             ]
         );
@@ -657,5 +696,103 @@ mod tests {
             let result = run_on("spec.md", content);
             assert_eq!(result.missing, vec!["BE-OLD-005".to_string()], "{content}");
         }
+    }
+
+    /// The IDs every `framework/rules/*.md` heading defines, sorted, one per
+    /// line: what `shipped_rule_ids.txt` must hold.
+    fn framework_rule_ids() -> String {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/rules");
+        let mut ids: Vec<String> = Vec::new();
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|ext| ext != "md") {
+                continue;
+            }
+            let content = std::fs::read_to_string(&path).unwrap();
+            ids.extend(
+                heading_id_regex()
+                    .captures_iter(&content)
+                    .map(|cap| cap[1].to_string()),
+            );
+        }
+        assert!(!ids.is_empty(), "no rule IDs under {}", dir.display());
+        ids.sort();
+        ids.dedup();
+        let mut index = String::new();
+        for id in &ids {
+            index.push_str(id);
+            index.push('\n');
+        }
+        index
+    }
+
+    /// The compiled index of shipped rule IDs is the IDs `framework/rules/`
+    /// defines. Regenerate with `BLESS_RULE_INDEX=1 cargo test --lib
+    /// shipped_rule_index`, and read the diff: a removed ID is a rule a
+    /// framework release retired.
+    #[test]
+    fn shipped_rule_index_matches_the_framework_rules() {
+        let expected = framework_rule_ids();
+        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/primitives/shipped_rule_ids.txt");
+        if std::env::var_os("BLESS_RULE_INDEX").is_some() {
+            std::fs::write(&file, &expected).unwrap();
+        }
+        assert_eq!(
+            include_str!("shipped_rule_ids.txt"),
+            expected,
+            "runtime/src/primitives/shipped_rule_ids.txt drifted from framework/rules/*.md: \
+             regenerate with `BLESS_RULE_INDEX=1 cargo test --lib shipped_rule_index`, then rebuild"
+        );
+    }
+
+    /// Spec 033 `an-out-of-surface-citation-resolves`: a project with
+    /// `surfaces = ["backend"]` never receives `security-frontend.md`, so its
+    /// citation of `FE-XSS-001` is known and not installed, never missing,
+    /// while an ID no shipped file defines stays missing and an installed
+    /// rule is found.
+    #[test]
+    fn an_out_of_surface_citation_is_not_installed_rather_than_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".ductus")).unwrap();
+        std::fs::write(
+            root.join(".ductus/config.toml"),
+            "[rules]\nsurfaces = [\"backend\"]\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(root.join("specs/rules")).unwrap();
+        std::fs::write(
+            root.join("specs/rules/security-backend.md"),
+            "### BE-AUTHN-001\n\n> Hashed.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("spec.md"),
+            "Cites BE-AUTHN-001, FE-XSS-001 and FE-NOPE-999.\n",
+        )
+        .unwrap();
+        let result = run(
+            &CheckRuleIdsArgs {
+                path: "spec.md".into(),
+                rule_files: vec!["specs/rules/security-backend.md".into()],
+            },
+            root,
+        )
+        .unwrap();
+        assert_eq!(result.not_installed, vec!["FE-XSS-001".to_string()]);
+        assert_eq!(result.missing, vec!["FE-NOPE-999".to_string()]);
+        let xss = citation(&result, "FE-XSS-001");
+        assert!(xss.not_installed && !xss.found && !xss.deprecated && !xss.retired);
+        assert!(citation(&result, "BE-AUTHN-001").found);
+        assert!(!citation(&result, "FE-NOPE-999").not_installed);
+    }
+
+    /// A shipped rule whose file is installed is found, not not-installed.
+    #[test]
+    fn an_installed_shipped_rule_is_found() {
+        let result = run_on("spec.md", "BE-LIVE-001 and FE-XSS-001.\n");
+        assert!(citation(&result, "BE-LIVE-001").found);
+        assert_eq!(result.not_installed, vec!["FE-XSS-001".to_string()]);
     }
 }

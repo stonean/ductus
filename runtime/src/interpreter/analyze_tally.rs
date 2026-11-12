@@ -130,6 +130,11 @@ impl AnalyzeTally {
             "check-rule-ids" => {
                 if result.get("examined").and_then(Value::as_u64).unwrap_or(0) > 0 {
                     self.blocking += count("missing");
+                    // A shipped rule whose file was never installed is known
+                    // and not missing, but its text was not available to
+                    // judge the spec against: unexamined, never clean (spec
+                    // 033 scenario `an-out-of-surface-citation-resolves`).
+                    self.record_unexamined("rule-not-installed", count("not-installed"));
                 } else {
                     self.record_unexamined("rule-citations-not-checked", count("citations"));
                 }
@@ -529,6 +534,36 @@ mod tests {
             &Map::new(),
         );
         assert_eq!(bound(&tally)["unexamined-by-reason"], host_detection());
+    }
+
+    /// A citation of a shipped rule whose file is not installed is no finding,
+    /// and is recorded unexamined, one per citation, beside the blocking
+    /// `missing` ones.
+    #[test]
+    fn a_rule_that_is_not_installed_is_recorded_unexamined_not_blocking() {
+        let mut tally = AnalyzeTally::new();
+        tally.record_primitive(
+            "check-rule-ids",
+            &json!({
+                "citations": [],
+                "missing": ["X-9"],
+                "deprecated": [],
+                "not-installed": ["FE-XSS-001", "FE-XSS-002"],
+                "examined": 1
+            }),
+            &Map::new(),
+        );
+        let bindings = bound(&tally);
+        assert_eq!(bindings["blocking-findings"], 1);
+        assert_eq!(
+            bindings["unexamined-by-reason"],
+            json!([
+                ["applicable-rules-not-checked", 1],
+                ["grounding-not-checked", 1],
+                ["references-not-checked", 1],
+                ["rule-not-installed", 2]
+            ])
+        );
     }
 
     /// A reference `resolve-anchor` could not judge is unexamined under the

@@ -55,6 +55,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `286c2c09` (task 18) | `validate-frontmatter` | a path of no schema row is refused; a scenario path takes the scenario row; a `spec.md` run reports its scenarios' findings | breaking: a request accepted before is refused |
 | `8651d466` (task 19) | `resolve-anchor` | references gain `unjudged` and the result two counts; a `qualified` reference can be unresolved; a basename no longer names the markers file; a malformed registry is an error; a span citation is a reference | breaking: the fields are additive, the meaning of `qualified` and of the markers match is not |
 | (task 22) | `check-rule-ids` | `citations` entries gain `retired` and the result `retired`, both omitted when empty; a `spec.md`'s `retired-rules:` list passes its citation of a removed rule, and the list itself is no citation | additive: a new optional state, no closed set changes, and a spec with no list reads as before |
+| (033 task 10) | `check-rule-ids` | `citations` entries gain `not-installed` and the result `not-installed`, both omitted when empty; the closed `reason` set gains `rule-not-installed` | breaking: a new value of a response set documented closed, and a citation that was `missing` is now informational |
 
 ## Affected Files
 
