@@ -5323,7 +5323,11 @@ mod tests {
     #[test]
     fn a_fixed_name_file_linked_outside_the_project_is_never_read() {
         // Each file is replaced in turn by a link to content that would
-        // produce a finding if read, and the run still reports the rest.
+        // produce a finding if read, and the run still reports the rest. The
+        // families that read `plan.md` and the scenarios' bodies are not run
+        // here (`run` drops the integrity families, and the body-path and
+        // drift families need history and a link target), so
+        // `a_linked_body_is_read_by_no_family` covers those reads.
         let bad_review = format!(
             "---\nspec: {FEATURE}\n{}\n---\n",
             CLEAN_REVIEW
@@ -5361,6 +5365,110 @@ mod tests {
                     .any(|f| f.family == "scenario-open-questions"),
                 "{file}: the rest of the run still examined the scenario"
             );
+        }
+    }
+
+    /// A `done` spec in a repository whose `scripts/old.sh` existed and is
+    /// gone, with the settled scenario `retry-on-timeout` and the review
+    /// record the spec's status asks for. Nothing in it is linked outside the
+    /// project yet.
+    #[cfg(unix)]
+    fn linked_body_fixture() -> (tempfile::TempDir, std::path::PathBuf) {
+        use crate::primitives::git_fixture;
+        let (outer, project) = project_beside_a_file();
+        let repository = git2::Repository::init(&project).unwrap();
+        write(
+            &project,
+            &format!("specs/{FEATURE}/spec.md"),
+            &format!(
+                "{}\n## Acceptance Criteria\n\n- [x] It works\n",
+                spec("done")
+            ),
+        );
+        write(
+            &project,
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Plan\n\nSee [the spec](spec.md).\n\n## Technical Decisions\n\n\
+             ### Retry\n\nRetry once, because a second failure is not transient.\n\n\
+             ## Affected Files\n\n- `scripts/keep.sh`\n",
+        );
+        write(&project, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            &project,
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_SETTLED,
+        );
+        seed_review(&project, CLEAN_REVIEW);
+        write(&project, "scripts/keep.sh", "#!/bin/sh\n");
+        write(&project, "scripts/old.sh", "gone soon\n");
+        git_fixture::commit_all(&repository, "feat: the files exist");
+        fs::remove_file(project.join("scripts/old.sh")).unwrap();
+        let mut index = repository.index().unwrap();
+        index.update_all(["*"], None).unwrap();
+        index.write().unwrap();
+        git_fixture::commit_all(&repository, "chore: remove it");
+        (outer, project)
+    }
+
+    /// The families that find something in `result`, sorted and distinct.
+    #[cfg(unix)]
+    fn finding_families(result: &Checked) -> Vec<&str> {
+        let mut out: Vec<&str> = result.findings.iter().map(|f| f.family.as_str()).collect();
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_body_is_read_by_no_family() {
+        // A body every family that reads it would flag: the plan has no link
+        // to its spec, names a deleted path, and asserts an open question on a
+        // settled scenario; the scenario names the same deleted path, asserts
+        // its spec unbuilt, and no task references it. As a file in the tree
+        // the run flags each family; behind a link that leaves the project it
+        // flags none, so removing a guard on any of those reads fails here.
+        let plan = "# Plan\n\nThe hook runs `scripts/old.sh` on every commit.\n\n\
+                    The [retry scenario](scenarios/retry-on-timeout.md) still has an open question.\n";
+        let scenario = "---\nsection: Behavior\n---\n\n# Unmapped\n\n\
+                        The hook runs `scripts/old.sh` on every commit.\n\n\
+                        The [spec](../spec.md) is not yet implemented.\n";
+        for (rel, body, expected) in [
+            (
+                "plan.md",
+                plan,
+                vec![BODY_PATH_FAMILY, "link-adjacent-drift", "plan-consistency"],
+            ),
+            (
+                "scenarios/unmapped.md",
+                scenario,
+                vec![
+                    BODY_PATH_FAMILY,
+                    "link-adjacent-drift",
+                    "scenario-consistency",
+                ],
+            ),
+        ] {
+            let file = format!("specs/{FEATURE}/{rel}");
+            // The control: the same body as a file in the tree.
+            let (_outer, project) = linked_body_fixture();
+            write(&project, &file, body);
+            let read = run_every_family(&args(), &project).unwrap();
+            assert_eq!(
+                finding_families(&read),
+                expected,
+                "{rel} as a file: {:?}",
+                read.findings
+            );
+            // The same body behind a link that leaves the project.
+            let (_outer, project) = linked_body_fixture();
+            link_outside(&project, &file, body);
+            let linked = run_every_family(&args(), &project).unwrap();
+            assert_eq!(
+                outward_skips(&linked),
+                vec![("target-unparseable", file.as_str())]
+            );
+            assert!(linked.findings.is_empty(), "{rel}: {:?}", linked.findings);
         }
     }
 
