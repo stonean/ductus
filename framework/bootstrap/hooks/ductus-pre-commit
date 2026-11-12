@@ -21,8 +21,8 @@
 #      dependencies (spec 030). It exits non-zero on an `unwritable` spec the
 #      same way, across every tracked spec.
 #
-# Finally — after every write above has landed and been staged — it checks the
-# corpus for dangling pointers:
+# Finally — after every write above has landed and been staged — it runs two
+# read-only checks, the first over the corpus for dangling pointers:
 #
 #   3. ductus check-corpus-links — every relative markdown link under the spec
 #      root that resolves to nothing. Corpus-wide rather than staged-scoped,
@@ -32,10 +32,20 @@
 #      miss the case it exists for. It exits non-zero on a broken link, on an
 #      unreadable spec file, and on a spec root it could not list — the last
 #      two because a check that could not run must not exit like one that
-#      passed. It is ordered last because it is the only read-only step: a
+#      passed. It is ordered after the writes because it only reads: a
 #      blocking read before the staging block would abort the commit with the
 #      derived rewrites unstaged, leaving a blocked commit and a passing one
 #      in different tree states.
+#
+#   4. ductus check-artifact-size --project-files --staged — refuses a commit
+#      that grows a project file (AGENTS.md, and system.md, events.md and
+#      errors.md under the spec root) already over `[artifacts]
+#      read-size-bytes`, or adds one over it, naming the file, its staged and
+#      HEAD sizes, the limit and `/prune --project`. A shrink, an unchanged
+#      file and a deletion pass, so a project already over the limit can still
+#      commit its way down (spec 075). It exits non-zero on a file it refused
+#      or could not read, for the same reason step 3 does, and is read-only, so
+#      it follows step 3 under the same ordering argument.
 #
 # Before that it runs the acceptance-criterion labelling pass over each staged spec —
 # `ductus label-criteria`, which assigns the stable `AC{n}:` label a criterion
@@ -127,6 +137,29 @@ for primitive in derive-dependencies derive-references check-corpus-links; do
   fi
 done
 
+# The staged size check calls a flag, not a subcommand, so the loop above cannot
+# see it missing: an older runtime has `check-artifact-size` with no
+# `--project-files` or `--staged`, and would fail the call below with a bare
+# usage error. Capture the help once and match it with `case`, never a pipe:
+# `grep -q` exits at its first match, and under `pipefail` the producer's
+# SIGPIPE would then read as a missing flag.
+size_help="$("$ductus_bin" check-artifact-size --help 2>/dev/null || true)"
+case "$size_help" in
+  *--project-files*--staged*|*--staged*--project-files*) ;;
+  *)
+    installed="$("$ductus_bin" --version 2>/dev/null || echo 'version unknown')"
+    installed="$(printf '%s' "$installed" | head -n 1 | LC_ALL=C tr -cd '[:print:]' | cut -c1-80)"
+    echo "ductus: pre-commit halted — the installed runtime is too old." >&2
+    echo "  $ductus_bin reports: $installed" >&2
+    echo "  Its \`check-artifact-size\` has no \`--project-files\` and \`--staged\`" >&2
+    echo "  options, which this hook calls to refuse growth of a project file" >&2
+    echo "  already over the artifact size limit." >&2
+    echo "  Run /ductus to acquire the pinned runtime, or commit with" >&2
+    echo "  --no-verify to bypass this hook deliberately." >&2
+    exit 1
+    ;;
+esac
+
 "$ductus_bin" derive-dependencies --write --staged > /dev/null
 "$ductus_bin" derive-references --write --staged > /dev/null
 
@@ -180,7 +213,7 @@ if [ -n "$staged_specs" ]; then
   done
 fi
 
-# Dangling spec-to-spec pointers, checked LAST — after every write above has
+# Dangling spec-to-spec pointers, checked after the writes — after every write above has
 # landed and been staged.
 #
 # Three checks sit near this ground and none of them covers it:
@@ -198,13 +231,18 @@ fi
 # --no-verify` is the deliberate bypass, which is what makes this safe to
 # adopt into a repo that already carries broken links.
 #
-# It runs last because it is the only step here that *reads* rather than
+# It runs after the writes because it only *reads* rather than
 # writes: putting a blocking read before the staging block would abort the
 # commit with the derived rewrites sitting unstaged on disk, so a blocked
-# commit and a passing one would leave the tree in different states. Last
-# means the author fixes the link and re-commits against a tree the hook has
+# commit and a passing one would leave the tree in different states. After
+# the writes means the author fixes the link and re-commits against a tree the hook has
 # already finished preparing.
 #
 # stdout is the JSON result and is discarded; the human-readable citations
 # and the fix guidance go to stderr, which is what the author needs to see.
 "$ductus_bin" check-corpus-links > /dev/null
+
+# Project-file growth, checked after the links for the same reason that check
+# is last: it only reads. stdout is the JSON result and is discarded; the
+# refused files and the `/prune --project` fix go to stderr.
+"$ductus_bin" check-artifact-size --project-files --staged > /dev/null

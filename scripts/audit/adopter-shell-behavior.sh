@@ -160,6 +160,10 @@ if [ "${1:-}" = "derive-dependencies" ] && [ "${2:-}" = "--write" ]; then
       "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   done
 fi
+# The hook's capability probe reads the flags off `--help`.
+if [ "${1:-}" = "check-artifact-size" ] && [ "${2:-}" = "--help" ]; then
+  echo "--project-files --staged"
+fi
 exit 0
 STUB
   chmod +x "$fixture/.ductus/bin/ductus"
@@ -284,6 +288,16 @@ build_and_run() {
            "invoke both derivation primitives with --write --staged before the re-stage loop" ;;
     esac
   done
+
+  # Assertion 2b — the staged project-file size check runs (spec 075). The
+  # stub cannot measure anything, so this holds the step's presence and its
+  # arguments; the refusal itself is check_refuses_project_file_growth's.
+  case "$invoked" in
+    *"check-artifact-size --project-files --staged"*) ;;
+    *) emit "framework/bootstrap/hooks/ductus-pre-commit" \
+         "with specs-root '$specs_dir' the hook never ran check-artifact-size --project-files --staged" \
+         "run the staged project-file size check after the corpus-link check" ;;
+  esac
 
   # Assertion 3 — the derivation reached the spec: the stub rewrites only on
   # the hook's `--write` call. If it did not, assertion 4
@@ -423,6 +437,96 @@ check_subdirectory_project() {
   rm -rf "$repo_root"
 }
 
+# --- Case 5: a commit may not grow a project file already over the limit -----
+#
+# `check-artifact-size --project-files --staged` measures each staged project
+# file against its HEAD copy and exits 1 on one that is over the limit and
+# new, or larger than HEAD's (spec 075). Unlike the cases above this one needs
+# the real runtime: what is under test is that the hook surfaces the
+# primitive's refusal as a failed commit, and a stub that always exits 0 or 1
+# would assert only itself. A runtime that cannot be reached is a finding, not
+# a skip (QUAL-CLAIM-001).
+#
+# project_file_fixture BASE_BYTES — a fixture whose committed AGENTS.md is
+# BASE_BYTES long under `[artifacts] read-size-bytes = 200`, the real runtime
+# reachable only at `.ductus/bin/ductus`. Prints the directory.
+sized_text() { head -c "$1" /dev/zero | tr '\0' 'x'; echo; }
+project_file_fixture() {
+  local fixture bin
+  bin="$(ductus_bin)"
+  fixture="$(mktemp -d 2>/dev/null)" || fixture=""
+  if [ -z "$bin" ] || [ -z "$fixture" ] || ! scaffold "$fixture" specs \
+    || ! ln -s "$ROOT/$bin" "$fixture/.ductus/bin/ductus" 2>/dev/null; then
+    rm -rf "$fixture"
+    return 1
+  fi
+  [ -x "$fixture/.ductus/bin/ductus" ] || { rm -rf "$fixture"; return 1; }
+  printf '\n[artifacts]\nread-size-bytes = 200\n' >> "$fixture/.ductus/config.toml"
+  sized_text "$1" > "$fixture/AGENTS.md"
+  if ! (
+    cd "$fixture" || exit 1
+    git add -A && fixture_git commit -qm seed
+  ) > /dev/null 2>&1; then
+    rm -rf "$fixture"
+    return 1
+  fi
+  echo "$fixture"
+}
+
+# run_project_file_case NAME BASE_BYTES STAGE_CMD WANT — build the fixture, run
+# STAGE_CMD (a shell snippet, in the fixture) to stage a change, run the hook,
+# and compare its exit with WANT (refused or passes).
+run_project_file_case() {
+  local name="$1" base="$2" stage="$3" want="$4" fixture out code
+  if ! fixture="$(project_file_fixture "$base")"; then
+    fixture_failed "the project-file fixture for: $name (no runtime reachable, or git failed)" ""
+    return
+  fi
+  if ! (cd "$fixture" && eval "$stage") > /dev/null 2>&1; then
+    fixture_failed "the staged change for: $name" "$fixture"
+    return
+  fi
+  out="$(cd "$fixture" && PATH=/usr/bin:/bin bash .githooks/ductus-pre-commit 2>&1 > /dev/null)"
+  code=$?
+  case "$want" in
+    refused)
+      if [ "$code" -eq 0 ]; then
+        emit "framework/bootstrap/hooks/ductus-pre-commit" \
+          "$name: the hook exited 0 on a commit it should refuse" \
+          "run check-artifact-size --project-files --staged after the re-stage block, so its exit stops the commit"
+      else
+        case "$out" in
+          *"/prune --project"*) ;;
+          *) emit "framework/bootstrap/hooks/ductus-pre-commit" \
+               "$name: the refusal did not name /prune --project: ${out:-<no output>}" \
+               "let the primitive's stderr through; it names the file, sizes, limit and fix" ;;
+        esac
+      fi
+      ;;
+    passes)
+      if [ "$code" -ne 0 ]; then
+        emit "framework/bootstrap/hooks/ductus-pre-commit" \
+          "$name: the hook exited $code on a commit it should pass: ${out:-<no output>}" \
+          "refuse only growth of, or a new, over-limit project file"
+      fi
+      ;;
+  esac
+  rm -rf "$fixture"
+}
+
+check_refuses_project_file_growth() {
+  run_project_file_case "a commit that grows an over-limit AGENTS.md" 300 \
+    'sized_text 400 > AGENTS.md && git add AGENTS.md' refused
+  run_project_file_case "a commit that adds a new over-limit specs/system.md" 100 \
+    'sized_text 300 > specs/system.md && git add specs/system.md' refused
+  run_project_file_case "a commit that shrinks an over-limit AGENTS.md" 300 \
+    'sized_text 250 > AGENTS.md && git add AGENTS.md' passes
+  run_project_file_case "a commit that leaves an over-limit AGENTS.md unchanged" 300 \
+    'sized_text 100 > specs/events.md && git add specs/events.md' passes
+  run_project_file_case "a commit that deletes an over-limit AGENTS.md" 300 \
+    'git rm -q AGENTS.md' passes
+}
+
 check_halts_without_runtime
 check_too_old_runtime_echo_is_printable
 build_and_run specs      # default root — isolates runtime resolution
@@ -436,5 +540,6 @@ build_and_run specs 1000-thousandth   # sequential past the three-digit pad
 build_and_run specs 1234.1-staged     # branch-scoped staging form (spec 051)
 check_survives_deleted_spec
 check_subdirectory_project
+check_refuses_project_file_growth
 
 exit "$drift"
