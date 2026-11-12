@@ -358,3 +358,10 @@ At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25
 - [x] `specs/081-reviews-and-checks-follow-what-changed` — closed at `6d583778` over AC1's bound with one review (`58878cfb`) and two analyses (`45ef17b9`, `9e33f4b7`), by `measure-reopenings --since 2026-11-11` at `932d10e0`. The first analysis judged a keyword-filtered subset of the 310 loaded rules' Verification triggers, against analyze step 11's every loaded rule, and missed `BE-PAYLOAD-001`; the second read every trigger and fixed it. Decide whether the cause wants a pipeline change or a waiver with its reason — deferred to `082-rule-assessments-converge-across-runs`, whose AC2 has a run that judges fewer rules than it loaded record each one left unjudged on the interactive path, which would have shown the first run incomplete (owner, 2026-11-11)
 
 - **Done when**: the miss's cause is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 35. measure-reopenings counts a decision as a person's only in the run that first recorded it
+
+- [ ] The owner's answer (a), 2026-11-12, re-deciding task 30's waiver: the measure stamped a decision carried forward from an earlier record as the carrying run's, overstating person decisions (22 of 30 in the five measured runs were carried); the waiver was recorded so the spec stays done, a reason the owner has since ruled out.
+- [ ] Touch runtime/src/primitives/measure_reopenings.rs and write_review.rs (where a carried decision's stamp is written); add a CHANGELOG [Unreleased] entry and update the compiled descriptions.
+
+- **Done when**: measure-reopenings attributes a stored decision to a person only in the record that first holds its key (a carried decision keeps its first record's stamp, or is not counted again), a fixture of two records carrying one person's decision counts it once and fails with the old stamping restored, and AC17 and its Resolved Question state the rule
