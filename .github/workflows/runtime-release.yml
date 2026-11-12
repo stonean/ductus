@@ -72,7 +72,7 @@ jobs:
       # Pre-installing them here keeps that auto-install path from running.
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
           components: clippy, rustfmt
 
       - name: Run /audit
@@ -108,7 +108,7 @@ jobs:
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
           components: clippy, rustfmt
 
       # Prebuilt binary — a cargo install would recompile cargo-audit on every
@@ -164,7 +164,7 @@ jobs:
       # Pre-installing them here keeps that auto-install path from running.
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
           targets: ${{ matrix.target }}
           components: clippy, rustfmt
 
@@ -423,7 +423,7 @@ jobs:
       # `components` must match the toolchain file (see build job above).
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
           components: clippy, rustfmt
 
       - name: Install cargo-cyclonedx
@@ -490,7 +490,7 @@ jobs:
       # `components` must match the toolchain file (see build job above).
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
           components: clippy, rustfmt
       - name: cargo publish
         env:

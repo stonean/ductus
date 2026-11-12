@@ -191,6 +191,8 @@ its version and date.
 
 ### Changed
 
+- **Built with Rust 1.100.0**, up from 1.99.1. The pinned toolchain and every
+  workflow's `dtolnay/rust-toolchain` input moved together; MSRV stays 1.89.
 - **`write-analysis`'s `contradictions` is bounded to the read size, and a
   caller's bare `unexamined` total is never lost (spec 082).** The result gains
   `form`, `contradictions-count` (inline in both forms) and `lists-file`: past
