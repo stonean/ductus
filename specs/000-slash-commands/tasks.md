@@ -147,8 +147,8 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 
 ## 21. Implement scenario: a-done-stop-says-the-request-is-not-built
 
-- [ ] Implement the behavior described in `scenarios/a-done-stop-says-the-request-is-not-built.md`
-- [ ] Declare `cross-spec-impact:` on `014-reclarify-backedge` (`/clarify`'s `done` branch and `/amend`'s status display), and on `023-govern-refinement` if the `/status` cell changes
+- [x] Implement the behavior described in `scenarios/a-done-stop-says-the-request-is-not-built.md`
+- [x] Declare `cross-spec-impact:` on `014-reclarify-backedge` (`/clarify`'s `done` branch and `/amend`'s status display), and on `023-govern-refinement` if the `/status` cell changes
 - [ ] Check whether `criterion-route-after-draft` (task 18, ticked) ever held — `/amend` has no step classifying input as a criterion — and finish it, or correct the record, per what `git show` of its delivering commit says — it never held (`ccdd3ac6` changed only `/{project}:amend`'s Purpose and Back-edges lines), and the owner chose to finish the route (2026-11-12): `/{project}:amend` classifies input as a criterion and records it unchecked and unlabelled, deduplicated like `append-question`, `label-criteria` assigning the label, a `done` spec taking the back-edge
 
 - **Done when**: The scenario's open question is resolved, every surface it names states a done spec qualified and says whether requested work exists, the message shape lives in one place the commands point at, and the criterion-route check is disposed of.

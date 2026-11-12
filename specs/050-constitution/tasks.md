@@ -349,7 +349,7 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 
 ## 42. Implement scenario: adopter-practices-classified-for-promotion
 
-- [ ] Implement the behavior described in `scenarios/adopter-practices-classified-for-promotion.md`
+- [x] Implement the behavior described in `scenarios/adopter-practices-classified-for-promotion.md`
 
 - **Done when**: The scenario's open question is resolved, each practice's destination and reason is recorded, each promoted one has one normative statement with any AGENTS.md mirror pointing at it, and the constitution's size is measured within 072's bound.
 
@@ -363,14 +363,14 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 
 The routing text, the tree definitions, and the corrections to §Classification and `knowledge-routes-by-population-not-by-kind` landed on 2026-10-29. They are offset by the five cuts the owner chose: the backfill sentence, which 068, 069 and 070 now signpost, the disposition-task bullet, the frontmatter list, the requirement clause and the runtime intro's first clause. The constitution measured 49,972 bytes (`wc -c`). `artifacts-are-as-short-as-their-required-content`'s *Existing artifacts are not swept* now excepts the four project files, landed with 041 task 23's command item. One part remains: the enforcement sentence and that scenario's quoted bullet, which go with 075's task 5 and need a constitution cut the owner chooses. Since then 3297fbd6, the fix round of 051's 2026-10-29 review, changed two of this spec's subjects. §spec-lifecycle's consolidate bullet now reads "re-points every inbound pointer it reads **before** removing the directory, lest it dangle", which leaves the constitution at 49,973 bytes (`wc -c`, at 3297fbd6). Scenario `a-retired-feature-leaves-no-spec` got the same bound, which stales 050's review. 051's review read both changes in depth, so 050's next review can read them from that record.
 
-- [ ] Implement the behavior described in `scenarios/agents-md-holds-only-what-every-session-needs.md`
+- [x] Implement the behavior described in `scenarios/agents-md-holds-only-what-every-session-needs.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 45. 050's copies of governance precedence and the canonical-sources table catch up with the constitution
 
-- [ ] `specs/050-constitution/spec.md` (its Classification section's floor statement) and `scenarios/governance-is-multi-source.md` restate that a shared source may never loosen a framework rule, without the exception `be893cd0` added (a rule that names itself a default a project may replace): point at §governance-precedence or carry the exception
-- [ ] The constitution's §drift-prevention canonical-sources table names no source for the `[constitutions.*]` schema, which `specs/055-shared-constitution/data-model.md` declares canonical, as it does for `[services]` (055's criteria verification and analysis, 2026-11-09; deferred here, since 050 owns constitution content)
+- [x] `specs/050-constitution/spec.md` (its Classification section's floor statement) and `scenarios/governance-is-multi-source.md` restate that a shared source may never loosen a framework rule, without the exception `be893cd0` added (a rule that names itself a default a project may replace): point at §governance-precedence or carry the exception
+- [x] The constitution's §drift-prevention canonical-sources table names no source for the `[constitutions.*]` schema, which `specs/055-shared-constitution/data-model.md` declares canonical, as it does for `[services]` (055's criteria verification and analysis, 2026-11-09; deferred here, since 050 owns constitution content)
 
 - **Done when**: no 050 artifact restates the precedence order without its exception, and the table names the schema's canonical source, or a recorded reason says why not
 
