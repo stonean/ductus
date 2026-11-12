@@ -703,6 +703,15 @@ its version and date.
 
 ### Fixed
 
+- **A `--*-json` path with a line break in it no longer reaches stderr as
+  several lines, and a proxy value with `://` in its credentials is redacted
+  whole.** A path refused for lying outside a staging directory, and one whose
+  file is not valid JSON, are now named on one line, as an unreadable one
+  already was. `fetch-archive`'s refusal of a proxy value took the first `://`
+  as the scheme, so a value with no scheme and `://` in its credentials showed
+  part of them; a scheme now ends only after scheme characters. The five
+  `--*-json` flags' `--help` text says the file is read from a staging
+  directory (spec 048 task 30).
 - **`retire-feature --allow-sequential` no longer deletes every spec on a
   name that is no feature directory.** `--feature .` resolved to the spec
   root and removed it. The flag now widens the accepted forms to the

@@ -285,33 +285,16 @@ fn emit_protocol_schema() -> ExitCode {
     }
 }
 
-/// Read a `--<flag> PATH` payload into the field the MCP and interpreter paths
-/// receive through the JSON context.
-///
-/// `apply-manifest`'s `entries` / `pinned` / `substitutions` and
-/// `enforce-manifest`'s `expected` / `pinned` are arrays and maps of objects,
-/// which clap cannot express as flags. A State-B `/{project}` run drives the
-/// whole bootstrap through the CLI (spec 048 `state-b-continues-in-session`),
-/// so without this the two primitives would receive **empty** collections —
-/// and an empty manifest is a *legal* manifest, so `apply-manifest` would copy
-/// nothing and report success. Every failure here is therefore an error, never
-/// a default: the silent-empty path is the whole thing this guards against.
-fn load_json_arg<T: serde::de::DeserializeOwned>(flag: &str, path: &str) -> Result<T, String> {
-    let text = ductus::primitives::read_cli_json_file(flag, path)?;
-    serde_json::from_str(&text)
-        .map_err(|err| format!("--{flag}: `{path}` is not valid JSON for this field: {err}"))
-}
-
 /// Fill `apply-manifest`'s context-supplied fields from their `--*-json` paths.
 fn hydrate_apply_manifest(args: &mut ApplyManifestArgs) -> Result<(), String> {
     if let Some(path) = args.entries_json.clone() {
-        args.entries = load_json_arg("entries-json", &path)?;
+        args.entries = ductus::primitives::load_cli_json("entries-json", &path)?;
     }
     if let Some(path) = args.pinned_json.clone() {
-        args.pinned = load_json_arg("pinned-json", &path)?;
+        args.pinned = ductus::primitives::load_cli_json("pinned-json", &path)?;
     }
     if let Some(path) = args.substitutions_json.clone() {
-        args.substitutions = load_json_arg("substitutions-json", &path)?;
+        args.substitutions = ductus::primitives::load_cli_json("substitutions-json", &path)?;
     }
     Ok(())
 }
@@ -319,10 +302,10 @@ fn hydrate_apply_manifest(args: &mut ApplyManifestArgs) -> Result<(), String> {
 /// Fill `enforce-manifest`'s context-supplied fields from their `--*-json` paths.
 fn hydrate_enforce_manifest(args: &mut EnforceManifestArgs) -> Result<(), String> {
     if let Some(path) = args.expected_json.clone() {
-        args.expected = load_json_arg("expected-json", &path)?;
+        args.expected = ductus::primitives::load_cli_json("expected-json", &path)?;
     }
     if let Some(path) = args.pinned_json.clone() {
-        args.pinned = load_json_arg("pinned-json", &path)?;
+        args.pinned = ductus::primitives::load_cli_json("pinned-json", &path)?;
     }
     Ok(())
 }
@@ -335,7 +318,7 @@ fn hydrate_field<T: serde::de::DeserializeOwned>(
     field: &mut T,
 ) -> Result<(), String> {
     if let Some(path) = path {
-        *field = load_json_arg(flag, path)?;
+        *field = ductus::primitives::load_cli_json(flag, path)?;
     }
     Ok(())
 }
@@ -976,10 +959,10 @@ fn main() -> ExitCode {
     // subcommand (`CFG-ENV-001`), and primitives answer from this reading.
     // `ductus hook` reads `CLAUDE_PROJECT_DIR` once at its own start, since
     // nothing else reads it.
-    // The inventory is docs/runtime.md's. The certificate variables are the
-    // one exception it names: on Linux and other non-Apple Unix,
-    // `fetch-archive` reads them once per
-    // process, at its first fetch (spec 048, `fetch-archive-reads-its-proxy-once`).
+    // The inventory is docs/runtime.md's. `init_proxy_env` captures the
+    // certificate variables here too, where the verifier would read them (spec
+    // 048, `fetch-archive-reads-its-proxy-once`); with neither set, the first
+    // fetch reads them again through the platform store.
     ductus::session::init_process_identity();
     ductus::primitives::fetch_archive::init_insecure_hosts();
     ductus::primitives::fetch_archive::init_proxy_env();

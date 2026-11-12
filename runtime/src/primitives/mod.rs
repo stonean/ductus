@@ -1875,10 +1875,51 @@ pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
 /// A message naming `--{flag}`: the path is not inside a staging directory,
 /// or the file cannot be read. An unreadable file is never an empty default.
 pub fn read_cli_json_file(flag: &str, path: &str) -> std::result::Result<String, String> {
+    read_json_file_in(staging_roots(), flag, path)
+}
+
+/// [`read_cli_json_file`] against named staging roots, the seam a test uses
+/// to hold the check to directories it controls.
+fn read_json_file_in(
+    roots: &[PathBuf],
+    flag: &str,
+    path: &str,
+) -> std::result::Result<String, String> {
     let shown = flatten_line(path);
-    let resolved = validate_in_temp_dir(path).map_err(|err| format!("--{flag}: {err}"))?;
-    std::fs::read_to_string(&resolved)
+    let staged = validate_in_staging(roots, path)
+        .map_err(|err| format!("--{flag}: {}", flatten_line(&err.to_string())))?;
+    std::fs::read_to_string(&staged)
         .map_err(|err| format!("--{flag}: cannot read `{shown}`: {err}"))
+}
+
+/// Read a `--<flag> PATH` payload into the field the MCP and interpreter paths
+/// receive through the JSON context.
+///
+/// `apply-manifest`'s `entries` / `pinned` / `substitutions` and
+/// `enforce-manifest`'s `expected` / `pinned` are arrays and maps of objects,
+/// which clap cannot express as flags. A State-B `/{project}` run drives the
+/// whole bootstrap through the CLI (spec 048 `state-b-continues-in-session`),
+/// so without this the two primitives would receive **empty** collections —
+/// and an empty manifest is a *legal* manifest, so `apply-manifest` would copy
+/// nothing and report success. Every failure here is therefore an error, never
+/// a default: the silent-empty path is the whole thing this guards against.
+/// The path in a message is on one line, whatever the argument held.
+///
+/// # Errors
+///
+/// As [`read_cli_json_file`]; additionally a message naming `--{flag}` when
+/// the file is not valid JSON for `T`.
+pub fn load_cli_json<T: serde::de::DeserializeOwned>(
+    flag: &str,
+    path: &str,
+) -> std::result::Result<T, String> {
+    let text = read_cli_json_file(flag, path)?;
+    serde_json::from_str(&text).map_err(|err| {
+        format!(
+            "--{flag}: `{}` is not valid JSON for this field: {err}",
+            flatten_line(path)
+        )
+    })
 }
 
 /// [`validate_in_temp_dir`] plus the bound that the staging path lie *outside*
@@ -5123,24 +5164,47 @@ mod tests {
 
     /// 048's analysis (2026-10-29, `BE-INPUT-004`): a `--{field}-json` file
     /// is read only from a staging directory, and a path outside one is
-    /// refused naming the flag before it is opened. Killed by M5.
+    /// refused naming the flag before it is opened. Killed by M6
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
     #[test]
     fn a_cli_json_file_is_read_only_from_a_staging_directory() {
         let staging = tempfile::tempdir().unwrap();
+        let roots = [staging.path().to_path_buf()];
         let inside = staging.path().join("entries.json");
         std::fs::write(&inside, "[]").unwrap();
         assert_eq!(
-            read_cli_json_file("entries-json", &inside.to_string_lossy()).unwrap(),
+            read_json_file_in(&roots, "entries-json", &inside.to_string_lossy()).unwrap(),
             "[]"
         );
-        let outside = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        // A real file made outside every root, so only the root check can
+        // refuse it, wherever the crate or the system temp directory lies.
+        let elsewhere = tempfile::tempdir().unwrap();
+        let outside = elsewhere.path().join("entries.json");
+        std::fs::write(&outside, "[]").unwrap();
         for arg in [
             outside.to_string_lossy().into_owned(),
             "entries.json".into(),
+            format!("{}/a\nFORGED", elsewhere.path().display()),
         ] {
-            let err = read_cli_json_file("entries-json", &arg).unwrap_err();
+            let err = read_json_file_in(&roots, "entries-json", &arg).unwrap_err();
             assert!(err.starts_with("--entries-json: "), "{arg}: {err}");
+            assert!(!err.contains('\n'), "{err:?}");
         }
+    }
+
+    /// A `--{field}-json` file that is not valid JSON is named on one line,
+    /// whatever its path held. Killed by M12
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
+    #[cfg(unix)]
+    #[test]
+    fn an_invalid_cli_json_file_is_named_on_one_line() {
+        let staging = tempfile::tempdir().unwrap();
+        let file = staging.path().join("a\nFORGED.json");
+        std::fs::write(&file, "not json").unwrap();
+        let err =
+            load_cli_json::<Vec<String>>("entries-json", &file.to_string_lossy()).unwrap_err();
+        assert!(err.contains("is not valid JSON"), "{err}");
+        assert!(!err.contains('\n'), "{err:?}");
     }
 
     /// The staging roots follow `temp_dir`, each once. Off macOS on Unix an

@@ -776,8 +776,21 @@ pub fn init_proxy_env() {
             std::env::var_os("REQUEST_METHOD").is_some(),
         )
     });
-    if VERIFIER_READS_CERT_ENV {
-        CERT_ENV.get_or_init(|| CertEnv::capture(|name| std::env::var_os(name)));
+    capture_cert_env(&CERT_ENV, VERIFIER_READS_CERT_ENV, |name| {
+        std::env::var_os(name)
+    });
+}
+
+/// Capture the certificate variables into `cell` from a variable `lookup`,
+/// only where `verifier_reads` says the verifier would read them: the seam
+/// [`init_proxy_env`] runs this through, so a test can hold both branches.
+fn capture_cert_env(
+    cell: &OnceLock<CertEnv>,
+    verifier_reads: bool,
+    lookup: impl Fn(&str) -> Option<std::ffi::OsString>,
+) {
+    if verifier_reads {
+        cell.get_or_init(|| CertEnv::capture(lookup));
     }
 }
 
@@ -785,7 +798,16 @@ pub fn init_proxy_env() {
 /// (`CFG-ENV-006`, `BE-INPUT-011`): a proxy URL can carry `user:password@`,
 /// and the error naming a value that did not parse must not print them.
 fn redact_proxy(value: &str) -> String {
-    let start = value.find("://").map_or(0, |scheme| scheme + 3);
+    // `://` ends a scheme only after scheme characters: one after a `:` or
+    // an `@` sits in the credentials, which are then redacted whole.
+    let start = value
+        .find("://")
+        .filter(|&at| {
+            value[..at]
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+        })
+        .map_or(0, |scheme| scheme + 3);
     let shown = match value[start..].rfind('@') {
         Some(at) => format!("{}***{}", &value[..start], &value[start + at..]),
         None => value.to_string(),
@@ -795,7 +817,7 @@ fn redact_proxy(value: &str) -> String {
 
 /// Apply `proxies` — those [`ProxyEnv::parse`] built — to a client under
 /// construction, or none. Either way reqwest's system proxy is off —
-/// `no_proxy` and `proxy` both clear its `auto_sys_proxy` (reqwest 0.13.4,
+/// `no_proxy` and `proxy` both clear its `auto_sys_proxy` (reqwest 0.13.5,
 /// `async_impl/client.rs`) — so the build reads no environment variable.
 /// `Proxy::http`, `https` and `all` compile to the matcher the system proxy
 /// would have built (`proxy.rs`, `into_matcher`).
@@ -861,7 +883,7 @@ static SYSTEM_ROOTS: OnceLock<std::result::Result<Vec<reqwest::Certificate>, Str
 
 /// The system certificate roots, loaded once per process. There the platform
 /// verifier is `WebPKI` over exactly these roots, and `tls_certs_only` builds
-/// the same `WebPKI` verifier over the roots it is given (reqwest 0.13.4,
+/// the same `WebPKI` verifier over the roots it is given (reqwest 0.13.5,
 /// `async_impl/client.rs`, the `with_root_certificates` branch), so handing
 /// them over changes what is trusted in no way — only how often the store is
 /// read.
@@ -881,8 +903,10 @@ fn system_roots() -> std::result::Result<&'static [reqwest::Certificate], &'stat
 }
 
 /// The certificates the first fetch trusts: those the paths `captured` at
-/// startup name, read with `from_paths` as rustls-native-certs reads them,
-/// when either variable named one; otherwise the platform store, through
+/// startup name, each path read with `from_paths` on its own (so
+/// rustls-native-certs' de-duplication across paths does not apply, and a
+/// certificate named twice is loaded twice, which is harmless), when either
+/// variable named one; otherwise the platform store, through
 /// `platform`. The platform store is reachable only through
 /// `load_native_certs`, which reads both variables itself; it runs only when
 /// the capture found both unset, so it reads what the capture did. A process
@@ -1181,12 +1205,12 @@ mod tests {
     use super::{
         CertEnv, Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchArchiveArgs, FetchScreen,
         MAX_FETCH_BYTES, MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme,
-        RedirectVerdict, Screen, fetch_bytes_with, is_internal_ip, is_sha256_hex, load_once,
-        native_certs, parse_sidecar_hex, read_capped, redirect_verdict, roots_from, run,
-        sha256_hex, validate_fetch_url,
+        RedirectVerdict, Screen, capture_cert_env, fetch_bytes_with, is_internal_ip, is_sha256_hex,
+        load_once, native_certs, parse_sidecar_hex, read_capped, redact_proxy, redirect_verdict,
+        roots_from, run, sha256_hex, validate_fetch_url,
     };
     use std::net::ToSocketAddrs;
-    use std::sync::Arc;
+    use std::sync::{Arc, OnceLock};
 
     /// The screen a fetch from this test process uses: the system resolver,
     /// no allowlist (the process never captured one) and no proxy.
@@ -1822,7 +1846,9 @@ mod tests {
     /// variable it came from with its credentials redacted, before anything
     /// is resolved or sent, rather than sending that scheme's fetches direct
     /// past the operator's proxy (`CFG-ENV-008`; 048's analysis, 2026-10-29).
-    /// Killed by M1, which skips the value, and M2, which prints it raw.
+    /// Killed by M1, which skips the value, M2, which prints it raw, and M3,
+    /// which accepts a scheme this build cannot speak at startup
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
     #[test]
     fn a_proxy_value_that_does_not_parse_refuses_every_fetch() {
         for (name, value) in [
@@ -1853,7 +1879,8 @@ mod tests {
     /// loads the roots from the captured paths, each read the way
     /// rustls-native-certs reads them, and never from the platform store,
     /// whose loader reads the environment itself (`CFG-ENV-001`). Killed by
-    /// M3, which ignores the capture.
+    /// M4, which ignores the capture
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
     #[test]
     fn captured_cert_paths_are_read_instead_of_the_platform_store() {
         let env = CertEnv {
@@ -1904,7 +1931,8 @@ mod tests {
     }
 
     /// The capture reads `SSL_CERT_DIR` as rustls-native-certs does: split on
-    /// the platform's path separator, empty entries dropped. Killed by M4.
+    /// the platform's path separator, empty entries dropped. Killed by M5
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
     #[test]
     fn the_cert_capture_splits_the_directory_list() {
         let joined = std::env::join_paths(["/certs/a", "", "/certs/b"]).unwrap();
@@ -1916,6 +1944,89 @@ mod tests {
         );
         assert!(env.is_set());
         assert!(!CertEnv::capture(|_| None).is_set());
+    }
+
+    /// The certificate variables are captured at startup where the verifier
+    /// reads them, and nowhere else. Killed by M7, which drops the capture
+    /// (`scripts/mutation/fetch-archive-startup-env.py`).
+    #[test]
+    fn the_cert_variables_are_captured_only_where_the_verifier_reads_them() {
+        let vars = |name: &str| (name == "SSL_CERT_FILE").then(|| "/certs/bundle.pem".into());
+        let reads = OnceLock::new();
+        capture_cert_env(&reads, true, vars);
+        assert_eq!(
+            reads.get().map(|env| env.file.clone()),
+            Some(Some(PathBuf::from("/certs/bundle.pem")))
+        );
+        let skips = OnceLock::new();
+        capture_cert_env(&skips, false, vars);
+        assert!(skips.get().is_none());
+    }
+
+    /// A proxy value naming no scheme is read from its credentials, and a
+    /// value never reaches a message on more than one line. Killed by M8,
+    /// which drops the flattening, and M9, which takes the first `://` as the
+    /// scheme (`scripts/mutation/fetch-archive-startup-env.py`).
+    #[test]
+    fn a_redacted_proxy_value_is_one_line_without_its_credentials() {
+        assert_eq!(
+            redact_proxy("http://ops:hunter2@proxy.corp:99999\nFORGED: line"),
+            "http://***@proxy.corp:99999 FORGED: line"
+        );
+        assert!(!redact_proxy("http://a@b\nc").contains('\n'));
+        let shown = redact_proxy("ops:pa://ss@proxy.corp:3128");
+        assert_eq!(shown, "***@proxy.corp:3128");
+        assert!(!shown.contains("ss"), "{shown}");
+    }
+
+    /// A host `NO_PROXY` names is reached directly, never through the proxy
+    /// the captured variables configure. Killed by M10, which applies no
+    /// exemption (`scripts/mutation/fetch-archive-startup-env.py`).
+    #[test]
+    fn a_host_no_proxy_names_is_fetched_without_the_proxy() {
+        use std::io::{BufRead, BufReader, Write};
+
+        let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        proxy.set_nonblocking(true).unwrap();
+        let proxy_url = format!("http://{}", proxy.local_addr().unwrap());
+        let origin = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/main.tar.gz", origin.local_addr().unwrap());
+        std::thread::spawn(move || {
+            let (stream, _) = origin.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap() > 2 {
+                line.clear();
+            }
+            let mut stream = stream;
+            stream
+                .write_all(
+                    b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .unwrap();
+        });
+        let env = ProxyEnv::capture(
+            lookup(&[
+                ("HTTP_PROXY", proxy_url.as_str()),
+                ("NO_PROXY", "127.0.0.1"),
+            ]),
+            false,
+        );
+        let screen = Screen::new(
+            Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+            vec!["127.0.0.1".into()],
+            &env,
+        );
+        let err = fetch_bytes_with(&url, &env, FETCH_TIMEOUT, FETCH_DEADLINE, Arc::new(screen))
+            .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::HttpStatus { status: 404, .. }),
+            "{err:?}"
+        );
+        assert!(
+            proxy.accept().is_err(),
+            "the fetch went through the proxy NO_PROXY exempts"
+        );
     }
 
     #[test]

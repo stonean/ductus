@@ -3413,17 +3413,20 @@ pub struct ApplyManifestArgs {
     #[serde(default)]
     #[arg(skip)]
     pub substitutions: std::collections::BTreeMap<String, String>,
-    /// CLI-only: path to a JSON file holding the `entries` array.
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `entries` array.
     /// `#[serde(skip)]` keeps it out of the MCP schema, so the tool contract
     /// is unchanged and an MCP caller passing it is still rejected as unknown.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub entries_json: Option<String>,
-    /// CLI-only: path to a JSON file holding the `pinned` array.
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `pinned` array.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub pinned_json: Option<String>,
-    /// CLI-only: path to a JSON file holding the `substitutions` map.
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `substitutions` map.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub substitutions_json: Option<String>,
@@ -3530,12 +3533,14 @@ pub struct EnforceManifestArgs {
     #[serde(default)]
     #[arg(skip)]
     pub pinned: Vec<String>,
-    /// CLI-only: path to a JSON file holding the `expected` array. See
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `expected` array. See
     /// [`ApplyManifestArgs::entries_json`] for why this surface exists.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub expected_json: Option<String>,
-    /// CLI-only: path to a JSON file holding the `pinned` array.
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `pinned` array.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub pinned_json: Option<String>,
