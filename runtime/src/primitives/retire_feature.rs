@@ -75,19 +75,28 @@ pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult>
     // Refusal 2 below is deliberately *not* gated: it is what stops a
     // retirement stranding content, and that guarantee is owed to both
     // callers equally.
-    if !args.allow_sequential
-        && !matches!(
-            parse_feature_dir(&args.feature),
-            Some(FeatureForm::BranchScoped { .. })
-        )
-    {
+    //
+    // The opt-in widens the accepted forms to the sequential one and no
+    // further: a name `parse_feature_dir` does not accept (`.`, an empty
+    // component, a dotfile) is refused either way, since the removal below
+    // would otherwise resolve it to the spec root itself and delete every
+    // spec (spec 052). `validate_feature_argument`'s denylist alone does not
+    // catch that.
+    let form = parse_feature_dir(&args.feature);
+    let accepted = match form {
+        Some(FeatureForm::BranchScoped { .. }) => true,
+        Some(_) => args.allow_sequential,
+        None => false,
+    };
+    if !accepted {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "retire-feature".into(),
             argument: "feature".into(),
             reason: format!(
                 "{:?} is not a branch-scoped feature (<identifier>.<n>-<slug>); only the \
                  staging form is retired, and a sequential spec is completed rather than \
-                 removed",
+                 removed (a name that is no feature directory is refused even with \
+                 allow-sequential)",
                 args.feature
             ),
         });
@@ -246,6 +255,26 @@ mod tests {
 
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
         assert!(tmp.path().join("specs/1234.1-staged/spec.md").is_file());
+    }
+
+    /// Spec 052: the opt-in widens the accepted forms to the sequential one
+    /// and no further. `.` resolves to the spec root, so without this screen
+    /// `--allow-sequential` deleted every spec.
+    #[test]
+    fn allow_sequential_still_refuses_a_name_that_is_no_feature_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "001-x");
+        for bad in [".", "notes", "..hidden", "12-short"] {
+            let err = run(&consolidating(bad, "001-x"), tmp.path()).unwrap_err();
+            assert!(
+                matches!(
+                    err,
+                    PrimitiveError::InvalidArgument { .. } | PrimitiveError::InvalidPath { .. }
+                ),
+                "{bad}: unexpected error: {err:?}"
+            );
+            assert!(tmp.path().join("specs/001-x/spec.md").is_file(), "{bad}");
+        }
     }
 
     /// The sequential form is permanent: without the opt-in only

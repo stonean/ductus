@@ -545,6 +545,12 @@ its version and date.
 
 ### Fixed
 
+- **`retire-feature --allow-sequential` no longer deletes every spec on a
+  name that is no feature directory.** `--feature .` resolved to the spec
+  root and removed it. The flag now widens the accepted forms to the
+  sequential one only: a `feature` that `parse_feature_dir` does not accept
+  is refused before anything touches the filesystem, with or without it.
+
 - **The latest-release lookup quotes its URL.** `/ductus`'s Source
   resolution and Pi's `/{project}:configure` put
   `${DUCTUS_REPO:-stonean/ductus}` inside a quoted URL, so a `DUCTUS_REPO`
