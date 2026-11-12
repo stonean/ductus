@@ -1,7 +1,7 @@
 ---
 status: clarified
 dependencies: [016-cross-cutting-rules, 020-code-review, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 082-rule-assessments-converge-across-runs]
-cross-spec-impact: [020-code-review, 050-constitution]
+cross-spec-impact: [020-code-review, 050-constitution, 066-audit-records-and-the-completion-gate, 082-rule-assessments-converge-across-runs]
 next-criterion: 9
 ---
 
@@ -27,7 +27,7 @@ A departure is stated once, in the spec, as a structured entry under `## Applica
 
 ## The analyze waiver
 
-`/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in the rule-verdict map of [082 — Rule assessments converge across runs](../082-rule-assessments-converge-across-runs/spec.md), with the entry's reason, its derived `decided-by` and `decided-at`, and its citation. The rule is assessed as waived, never as failing, so it produces no finding. A waived rule is listed apart from the rules that passed, in the record and in the report, waived MUSTs first. The map is rewritten each run, so a waiver carries forward while its rule fires and is gone once it does not. It builds on the dispositions of [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md), the record and gate of [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md), the review waivers of [020 — Code review](../020-code-review/spec.md), and the Applicable Rules template of [016 — Cross-cutting rules](../016-cross-cutting-rules/spec.md). The constitution's Finding dispositions rule changes in the same change (`cross-spec-impact:` on 050); the record field is 082's.
+`/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in the rule-verdict map of [082 — Rule assessments converge across runs](../082-rule-assessments-converge-across-runs/spec.md), with the entry's reason, its derived `decided-by` and `decided-at`, and its citation. The rule is assessed as waived, never as failing, so it produces no finding. A waived rule is listed apart from the rules that passed, in the record and in the report, waived MUSTs first. The map is rewritten each run, so a waiver carries forward while its rule fires and is gone once it does not. It builds on the dispositions of [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md), the record and gate of [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md), the review waivers of [020 — Code review](../020-code-review/spec.md), and the Applicable Rules template of [016 — Cross-cutting rules](../016-cross-cutting-rules/spec.md). The constitution's Finding dispositions rule changes in the same change (`cross-spec-impact:` on 050). 082's map carries no `waived` value until this spec adds it with the entries that write it, so 082's data model and 066's record schema gain it here (`cross-spec-impact:` on both; the owner, 2026-11-12).
 
 ## Edge Cases
 
