@@ -194,25 +194,13 @@ const CANONICAL_ALLOW_STATIC: &[&str] = &[
     "Bash(git add *)",
     "Bash(git commit *)",
     "Bash(git push *)",
-    "Bash(git log *)",
-    "Bash(git diff *)",
     "Bash(git status *)",
-    "Bash(git show *)",
     "Bash(curl *)",
     "Bash(gh api *)",
-    "Bash(mkdir -p *)",
-    "Bash(chmod +x *)",
     "Bash(command -v *)",
-    "Bash(make *)",
-    "Bash(markdownlint *)",
-    "Bash(markdownlint-cli2 *)",
     "Bash(npx markdownlint-cli2 *)",
-    "Bash(git config core.hooksPath *)",
     "Bash(git config --get core.hooksPath)",
     "Bash(git config --unset core.hooksPath)",
-    "Bash(./.githooks/pre-commit)",
-    "Bash(scripts/install-hooks.sh)",
-    "Bash(./scripts/install-hooks.sh)",
 ];
 
 /// Claude's canonical `permissions.deny` set, step 3 of
@@ -260,6 +248,18 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "mcp__ductus__read-supersession-pair",
     "mcp__ductus__write-supersession-annotation",
     "mcp__ductus__check-review-freshness",
+    "Bash(make *)",
+    "Bash(./.githooks/pre-commit)",
+    "Bash(scripts/install-hooks.sh)",
+    "Bash(./scripts/install-hooks.sh)",
+    "Bash(git diff *)",
+    "Bash(git log *)",
+    "Bash(git show *)",
+    "Bash(markdownlint *)",
+    "Bash(markdownlint-cli2 *)",
+    "Bash(mkdir -p *)",
+    "Bash(chmod +x *)",
+    "Bash(git config core.hooksPath *)",
 ];
 
 /// [`canonical_allow`] in the order the canonical call appends missing
@@ -713,10 +713,10 @@ mod tests {
             .collect()
     }
 
-    /// The first nine entries of [`RETIRED_ALLOW`], step 4's retired list,
-    /// the ones that name no tool: seven wildcard-before-subcommand git
-    /// allows (spec 023 task 21) and two inert `Write(path)` allows (spec
-    /// 023's `configure-inert-write-path-entries`).
+    /// The first nine entries of [`RETIRED_ALLOW`], step 4's retired list:
+    /// seven wildcard-before-subcommand git allows (spec 023 task 21) and
+    /// two inert `Write(path)` allows (spec 023's
+    /// `configure-inert-write-path-entries`).
     const RETIRED: &[&str] = &[
         "Bash(git -C * add *)",
         "Bash(git -C * commit *)",
@@ -1511,6 +1511,36 @@ mod tests {
             "the parse found the bullets: {documented:?}"
         );
         assert_eq!(documented, to_strings(RETIRED_ALLOW));
+    }
+
+    /// The entries that can run or write anything and that no step needs in
+    /// their broad form leave the canonical set and are retired, so a
+    /// `/configure` run removes them and the ceiling refuses them (022 task
+    /// 18, question 3 (a)).
+    #[test]
+    fn the_run_or_write_entries_are_retired_not_granted() {
+        let canonical = canonical_allow();
+        for entry in [
+            "Bash(make *)",
+            "Bash(./.githooks/pre-commit)",
+            "Bash(scripts/install-hooks.sh)",
+            "Bash(./scripts/install-hooks.sh)",
+            "Bash(git diff *)",
+            "Bash(git log *)",
+            "Bash(git show *)",
+            "Bash(markdownlint *)",
+            "Bash(markdownlint-cli2 *)",
+            "Bash(mkdir -p *)",
+            "Bash(chmod +x *)",
+            "Bash(git config core.hooksPath *)",
+        ] {
+            assert!(!canonical.contains(entry), "{entry} is still granted");
+            assert!(RETIRED_ALLOW.contains(&entry), "{entry} is not retired");
+            assert!(
+                refuse_beyond_ceiling(&[entry.to_string()]).is_err(),
+                "{entry} passes the ceiling"
+            );
+        }
     }
 
     /// A project named `acme`, its spec root `root` when one is given.
