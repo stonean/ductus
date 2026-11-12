@@ -361,10 +361,12 @@ At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25
 
 ## 35. measure-reopenings counts a decision as a person's only in the run that first recorded it
 
-- [ ] The owner's answer (a), 2026-11-12, re-deciding task 30's waiver: the measure stamped a decision carried forward from an earlier record as the carrying run's, overstating person decisions (22 of 30 in the five measured runs were carried); the waiver was recorded so the spec stays done, a reason the owner has since ruled out.
-- [ ] Touch runtime/src/primitives/measure_reopenings.rs and write_review.rs (where a carried decision's stamp is written); add a CHANGELOG [Unreleased] entry and update the compiled descriptions.
+- [x] The owner's answer (a), 2026-11-12, re-deciding task 30's waiver: the measure stamped a decision carried forward from an earlier record as the carrying run's, overstating person decisions (22 of 30 in the five measured runs were carried); the waiver was recorded so the spec stays done, a reason the owner has since ruled out.
+- [x] Touch runtime/src/primitives/measure_reopenings.rs and write_review.rs (where a carried decision's stamp is written); add a CHANGELOG [Unreleased] entry and update the compiled descriptions.
 
 - **Done when**: measure-reopenings attributes a stored decision to a person only in the record that first holds its key (a carried decision keeps its first record's stamp, or is not counted again), a fixture of two records carrying one person's decision counts it once and fails with the old stamping restored, and AC17 and its Resolved Question state the rule
+
+Landed as 771e655b and 619ed609: the rule lives on the measure side, so `write_review.rs` needed no change (plan.md, *The measurement*). Independently verified: at `b84ebcb4`, the commit the task cites, person decisions fall by exactly the 22 carried; the outcome-match mutant is killed by 619ed609's test.
 
 ## 36. Copies of a primitive's behavior in other specs become pointers, not left until next edited
 
