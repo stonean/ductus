@@ -75,6 +75,38 @@ impl RuleSection {
     }
 }
 
+/// A digest of what a rule file asks of a spec: each rule's ID, Statement
+/// and Verification, in heading order, from [`parse_rule_sections`], the one
+/// reading of what a rule is. A Rationale or any prose between rules moves
+/// nothing, and neither does a deprecation label; a Statement or Verification
+/// edit, a rule added, removed or reordered, moves it (spec 082).
+///
+/// Each field is length-prefixed, and a Verification's absence is its own
+/// byte, so no two different rule sets hash alike by running a boundary
+/// together. The digest of a file with no rule is the digest of nothing.
+#[allow(dead_code)] // read by `rule_verdicts` (spec 082, task 3)
+pub(crate) fn rules_digest(content: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    let mut field = |bytes: &[u8]| {
+        hasher.update((bytes.len() as u64).to_le_bytes());
+        hasher.update(bytes);
+    };
+    for section in parse_rule_sections(content) {
+        field(section.id.as_bytes());
+        field(section.statement.as_bytes());
+        match &section.verification {
+            Some(verification) => {
+                field(b"1");
+                field(verification.as_bytes());
+            }
+            None => field(b"0"),
+        }
+    }
+    crate::primitives::hex(&hasher.finalize())
+}
+
 /// `### BE-AUTHN-001` — matches rule-ID headings inside a rule file. The
 /// category segment follows the schema grammar `[A-Z][A-Z0-9]*` (digits are
 /// permitted after the first letter, e.g. `FE-A11YFORM-001`), per
@@ -449,6 +481,70 @@ mod tests {
         files.sort();
         assert!(!files.is_empty(), "no rule files under {}", dir.display());
         files
+    }
+
+    /// A rule file's digest covers each rule's ID, Statement and Verification
+    /// and nothing else: a Rationale edit and prose between rules leave it, a
+    /// Statement edit, a Verification edit, a rule added and a rule reordered
+    /// move it (spec 082, AC5).
+    #[test]
+    fn a_rationale_edit_leaves_the_rules_digest_and_a_statement_or_verification_edit_moves_it() {
+        let base = format!(
+            "# Rules\n\n{}\n{}",
+            rule("TS-RULE-001", "A MUST b.", "Check one."),
+            rule("TS-RULE-002", "A SHOULD c.", "Check two.")
+        );
+        let digest = rules_digest(&base);
+        assert_eq!(digest, rules_digest(&base), "a digest is deterministic");
+
+        let rationale = base.replace("**Rationale:** Why.", "**Rationale:** A different why.");
+        assert_ne!(rationale, base);
+        assert_eq!(
+            digest,
+            rules_digest(&rationale),
+            "a Rationale edit must not move it"
+        );
+        let prose = base.replace("# Rules\n", "# Rules\n\nSome new introductory prose.\n");
+        assert_eq!(
+            digest,
+            rules_digest(&prose),
+            "prose between rules must not move it"
+        );
+
+        for edited in [
+            base.replace("A MUST b.", "A MUST NOT b."),
+            base.replace("Check two.", "Check two, and three."),
+            format!("{base}\n{}", rule("TS-RULE-003", "A MAY d.", "Check.")),
+            format!(
+                "# Rules\n\n{}\n{}",
+                rule("TS-RULE-002", "A SHOULD c.", "Check two."),
+                rule("TS-RULE-001", "A MUST b.", "Check one.")
+            ),
+            base.replace("TS-RULE-002", "TS-RULE-009"),
+        ] {
+            assert_ne!(digest, rules_digest(&edited), "{edited}");
+        }
+    }
+
+    /// The digest frames each field, so a boundary moved between two fields
+    /// is a different rule set, and a file with no rule digests as nothing.
+    #[test]
+    fn the_rules_digest_frames_each_field() {
+        let none = "### TS-RULE-001\n\n> A MUST b.\n";
+        let moved = "### TS-RULE-001\n\n> A MUST\n\n**Verification:** b.\n";
+        assert_ne!(rules_digest(none), rules_digest(moved));
+        let split = format!(
+            "{}\n{}",
+            rule("TS-RULE-001", "a", "1b"),
+            rule("TS-RULE-002", "d", "e")
+        );
+        let joined = format!(
+            "{}\n{}",
+            rule("TS-RULE-001", "a1", "b"),
+            rule("TS-RULE-002", "d", "e")
+        );
+        assert_ne!(rules_digest(&split), rules_digest(&joined));
+        assert_eq!(rules_digest("# No rules\n"), rules_digest(""));
     }
 
     /// A rule heading with a tab after its `#` run renders as a heading but

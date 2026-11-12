@@ -78,6 +78,26 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
+/// The design subjects of a spec: what a rule's Verification is judged
+/// against, `spec.md`, `plan.md`, `data-model.md` and each scenario, and the
+/// set a stored rule verdict's currency is read over (spec 082).
+///
+/// Narrower than [`is_analyze_subject`], and deliberately so. `tasks.md`
+/// changes with every tick and `review.md` with every review, and neither is
+/// a design: counting either would judge every rule again after each of them,
+/// the cost the analysis digest's wider set pays for the gate's sake. Wider
+/// than [`is_review_contract`], which leaves `spec.md` out for the reasons its
+/// comment gives; a verdict about the spec's own text needs it. A scenario is
+/// a markdown file under `scenarios/`, as there.
+#[allow(dead_code)] // read by `rule_verdicts` (spec 082, task 3)
+pub(crate) fn is_design_subject(rel_within_feature: &str) -> bool {
+    let is_md = Path::new(rel_within_feature)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+    matches!(rel_within_feature, "spec.md" | "plan.md" | "data-model.md")
+        || (rel_within_feature.starts_with("scenarios/") && is_md)
+}
+
 /// A scenario or the data model — the artifacts a **review** reads code against,
 /// and the subject set of the review record's digest.
 ///
@@ -490,6 +510,42 @@ mod tests {
         let digest = subject_digest(tmp.path(), is_analyze_subject);
         let paths: Vec<&str> = digest.digests.keys().map(String::as_str).collect();
         assert_eq!(paths, vec!["scenarios/a.md", "spec.md", "tasks.md"]);
+    }
+
+    /// The design subjects are the spec, the plan, the data model and the
+    /// scenarios: a `tasks.md` or `review.md` edit leaves their digest, and
+    /// every design subject's edit moves it (spec 082, AC1).
+    #[test]
+    fn a_tasks_or_review_edit_leaves_the_design_subject_digest() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), "");
+        fs::write(tmp.path().join("plan.md"), "# Plan\n").unwrap();
+        fs::write(tmp.path().join("data-model.md"), "# Data\n").unwrap();
+        fs::write(tmp.path().join("review.md"), "# Review\n").unwrap();
+        let before = subject_digest(tmp.path(), is_design_subject);
+        let paths: Vec<&str> = before.digests.keys().map(String::as_str).collect();
+        assert_eq!(
+            paths,
+            vec!["data-model.md", "plan.md", "scenarios/a.md", "spec.md"]
+        );
+
+        fs::write(tmp.path().join("tasks.md"), "# Tasks\n\n- [x] work\n").unwrap();
+        fs::write(tmp.path().join("review.md"), "# Review\n\nrewritten\n").unwrap();
+        assert_eq!(before, subject_digest(tmp.path(), is_design_subject));
+
+        for edited in ["plan.md", "data-model.md", "scenarios/a.md"] {
+            let original = fs::read_to_string(tmp.path().join(edited)).unwrap();
+            fs::write(tmp.path().join(edited), format!("{original}edit\n")).unwrap();
+            assert_ne!(
+                before.digests,
+                subject_digest(tmp.path(), is_design_subject).digests,
+                "{edited}"
+            );
+            fs::write(tmp.path().join(edited), original).unwrap();
+        }
+        assert!(!is_design_subject("notes.md"));
+        assert!(!is_design_subject("scenarios/a.txt"));
+        assert!(!is_design_subject("analysis.md"));
     }
 
     /// The exclusion the whole comparison rests on, at its new address: the
