@@ -126,7 +126,7 @@ Mutation list: `scripts/mutation/scope-results-bounded.py`; the walker and MCP t
 
 Pi has no seed. Family 32 holds each retired list disjoint from its seed and canonical set. Verify with `scripts/audit/run-all.sh` and the real adopter bootstrap `AGENTS.md` requires for `framework/bootstrap/`: a project holding the entries loses them, and a fresh seed has none.
 
-- [ ] framework/bootstrap/ductus.md — the Claude seed in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-03 by task 7's consumer sweep
+- [x] framework/bootstrap/ductus.md — the Claude seed in §Agent Registry's `settings_template` column (and `framework/bootstrap/govern.md`'s copy) allow `.ductus/bin/ductus compute-review-scope *` and its `.exe` twin, and §Permission Setup says the seed carries that rule because `/{project}:review` re-runs the call through the binary. Task 7 removes that re-run from `framework/commands/review.md` step 1, so no step runs the command and the entries grant what nothing needs; a project that already holds them keeps them, since the seed merge is additive, unless `/{project}:configure`'s retired lists remove them. Found 2026-11-03 by task 7's consumer sweep
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
 
@@ -145,8 +145,8 @@ Before the second item, read 078's `status:`. At `done`, that edit is a factual 
 
 `spec_with_criteria` takes the fenced checkbox's marker and the out-of-section one's as separate arguments, and the test edits each alone. The mutation is a new one in `scripts/mutation/criterion-ticks-outside-the-digest.py`: `section_line_indices` (`runtime/src/primitives/mod.rs`) stops skipping a fenced line inside the section, filtered to `every_other_spec_edit_still_moves_its_digest`. Measured 2026-11-04: it survives the unsplit test, and the split one kills it.
 
-- [ ] Restore the first line of `the_review_record_remains_a_subject`'s doc comment in `runtime/src/primitives/analyze_subjects.rs` ("The exclusion is the record's alone — the *review* record stays a"), which now opens mid-sentence
-- [ ] Split `every_other_spec_edit_still_moves_its_digest`'s two ticks into separate edits, so normalizing a fenced checkbox inside the criteria alone fails it
+- [x] Restore the first line of `the_review_record_remains_a_subject`'s doc comment in `runtime/src/primitives/analyze_subjects.rs` ("The exclusion is the record's alone — the *review* record stays a"), which now opens mid-sentence
+- [x] Split `every_other_spec_edit_still_moves_its_digest`'s two ticks into separate edits, so normalizing a fenced checkbox inside the criteria alone fails it
 
 - **Done when**: the doc comment reads whole, and each tick in the test moves the digest on its own, shown by a mutation that normalizes only the fenced checkbox
 
@@ -156,15 +156,15 @@ Applied 2026-11-12. The doc comment on `the_review_record_remains_a_subject` (`r
 
 Found by 078's review round 3 (2026-11-04); the round's result file is gitignored and the next 078 review clears it, so each item states its edit. Re-check each against the tree before applying it.
 
-- [ ] [0] 066 `data-model.md`'s inline `compute-review-scope` example lists two `modified-since` paths: set its `"modified-since-count": 1,` to `2`
+- [x] [0] 066 `data-model.md`'s inline `compute-review-scope` example lists two `modified-since` paths: set its `"modified-since-count": 1,` to `2`
   - Checked 2026-11-12, no edit: `data-model.md` line 22 already reads `"modified-since-count": 2,` beside the two paths on line 27.
-- [ ] [1] `a_result_past_the_read_size_names_a_file_holding_every_list` (`runtime/src/primitives/compute_review_scope.rs`) asserts `deleted` on a fixture that deletes nothing: build it with `repo_in_progress_with_an_untouched_file()` and `fs::remove_file` its `src/old.rs` before computing, assert `whole.deleted == ["src/old.rs"]`, the inline result's `deleted` equal to it and its `deleted_count` 1; add to `scripts/mutation/review-scope-cells-and-deletions.py`, each filtered to that test, M7 (`deleted_count: scope.deleted.len(),` → `deleted_count: 0,`), M8 (the list file's `"deleted": scope.deleted,` → `"deleted": Vec::<String>::new(),`) and M9 (`deleted: Some(scope.deleted.clone()),` → `deleted: Some(Vec::new()),`)
+- [x] [1] `a_result_past_the_read_size_names_a_file_holding_every_list` (`runtime/src/primitives/compute_review_scope.rs`) asserts `deleted` on a fixture that deletes nothing: build it with `repo_in_progress_with_an_untouched_file()` and `fs::remove_file` its `src/old.rs` before computing, assert `whole.deleted == ["src/old.rs"]`, the inline result's `deleted` equal to it and its `deleted_count` 1; add to `scripts/mutation/review-scope-cells-and-deletions.py`, each filtered to that test, M7 (`deleted_count: scope.deleted.len(),` → `deleted_count: 0,`), M8 (the list file's `"deleted": scope.deleted,` → `"deleted": Vec::<String>::new(),`) and M9 (`deleted: Some(scope.deleted.clone()),` → `deleted: Some(Vec::new()),`)
   - Applied 2026-11-12: the test builds its fixture with `repo_in_progress_with_an_untouched_file()`, removes `src/old.rs`, asserts `whole.deleted == ["src/old.rs"]`, the inline `deleted` equal to it and `deleted_count` 1. M7, M8 and M9 are in `scripts/mutation/review-scope-cells-and-deletions.py`, each filtered to that test, and each is KILLED.
-- [ ] [2] `compute_review_scope.rs`'s module doc defines `scope` as the plain union: its bullet's `commits. Both, because either alone can omit what the review exists to look at.` becomes `commits, less the files deleted since it, which no review can read. Both, because either alone can omit what the review exists to look at.`
+- [x] [2] `compute_review_scope.rs`'s module doc defines `scope` as the plain union: its bullet's `commits. Both, because either alone can omit what the review exists to look at.` becomes `commits, less the files deleted since it, which no review can read. Both, because either alone can omit what the review exists to look at.`
   - Overtaken, checked 2026-11-12, no edit: the module doc of `runtime/src/primitives/compute_review_scope.rs` has no bullet defining `scope`, and the sentence `Both, because either alone can omit what the review exists to look at.` occurs nowhere in `runtime/src` (`grep -rn` finds it only in this task). Spec 079 moved the rule into `schema::descriptions::COMPUTE_REVIEW_SCOPE`, which names the deleted-path exclusion, and the module doc points at the scenarios.
-- [ ] [3] `scenarios/review-scope-union.md`'s edge case "An empty `plan-affected` leaves `scope` equal to `modified-since`" gains "less the paths the window deleted"
+- [x] [3] `scenarios/review-scope-union.md`'s edge case "An empty `plan-affected` leaves `scope` equal to `modified-since`" gains "less the paths the window deleted"
   - Overtaken, checked 2026-11-12, no edit: the edge case now reads "An empty `plan-affected` leaves `scope` drawn from `modified-since` alone" (`specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-union.md`), which no longer says `equal to`, and the scenario's Behavior already defines the scope as "less the paths the window deleted" (line 39).
-- [ ] [4] `framework/commands/review.md`'s Inputs **Scope** bullet: "committed or not — see step 1" becomes "committed or not, less the files since deleted — see step 1"
+- [x] [4] `framework/commands/review.md`'s Inputs **Scope** bullet: "committed or not — see step 1" becomes "committed or not, less the files since deleted — see step 1"
   - Overtaken, checked 2026-11-12, no edit: the **Scope** bullet no longer says `committed or not — see step 1`. It reads "the spec's own change since its window's start, committed or not: `compute-review-scope`'s description states the rule, and what it leaves out is named in the record — see step 1", so it states no rule to correct, and step 1 names each deleted path.
 - [x] Disposition note [5]: 066 `spec.md` line 27 and `framework/reference/implement.md` line 75 still describe the scope as a plain union
 - [x] Disposition note [6]: a window holding only deletions under an empty plan resolves `scope-count` 0, so step 1 sends it to the nothing-to-review-yet report though `deleted-count` is above zero
@@ -175,9 +175,9 @@ Note [5], waived 2026-11-12 as overtaken: neither named line describes a union a
 
 ## 20. Implement scenario: freshness-results-have-a-bounded-size
 
-- [ ] Implement the behavior described in `scenarios/freshness-results-have-a-bounded-size.md`
-- [ ] Bound `RecordFreshness.paths` in every result that carries it by the mechanism task 7 settles, and state the maximum and the list's contents in `data-model.md`
-- [ ] A test shows a result past the bound reaching every path, and fails when the bound is removed
+- [x] Implement the behavior described in `scenarios/freshness-results-have-a-bounded-size.md`
+- [x] Bound `RecordFreshness.paths` in every result that carries it by the mechanism task 7 settles, and state the maximum and the list's contents in `data-model.md`
+- [x] A test shows a result past the bound reaching every path, and fails when the bound is removed
 
 - **Done when**: every result carrying `RecordFreshness.paths` states a maximum, every path stays reachable, and 078's 2026-11-04 review's `BE-PAYLOAD-001` finding on `data-model.md` no longer fires
 
