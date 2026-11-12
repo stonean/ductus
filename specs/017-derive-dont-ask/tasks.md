@@ -468,8 +468,8 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 
 ### 45. Implement scenario: [a-commit-stages-only-its-own-generated-files](scenarios/a-commit-stages-only-its-own-generated-files.md)
 
-- [ ] Implement the behavior described in `scenarios/a-commit-stages-only-its-own-generated-files.md`
-- [ ] Choose the mechanism and record it with its reason in plan.md §Technical Decisions (for example, run the generators over the index's sources, or stage an output only when its sources are staged)
-- [ ] Change `.githooks/pre-commit`, correct spec.md §ductus repo's pre-commit hook's "stages any changes", and test each Behavior and Edge Case line in an adopter-free fixture tree with a second session's unstaged source and output present, each test failing with the behavior removed
+- [x] Implement the behavior described in `scenarios/a-commit-stages-only-its-own-generated-files.md`
+- [x] Choose the mechanism and record it with its reason in plan.md §Technical Decisions (for example, run the generators over the index's sources, or stage an output only when its sources are staged)
+- [x] Change `.githooks/pre-commit`, correct spec.md §ductus repo's pre-commit hook's "stages any changes", and test each Behavior and Edge Case line in an adopter-free fixture tree with a second session's unstaged source and output present, each test failing with the behavior removed
 
 - **Done when**: A commit in a tree holding another session's unstaged generator sources and outputs carries only outputs derived from its own staged sources, leaves the other session's files byte-identical, and still carries a regenerated output its staged sources change; `generators.yml`'s steps pass locally
