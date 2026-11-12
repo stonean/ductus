@@ -757,8 +757,10 @@ mod tests {
         // A broken symlink is a scenario that exists and cannot be opened.
         std::os::unix::fs::symlink(feature.join("gone.md"), feature.join("scenarios/b.md"))
             .unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
         if std::fs::File::open(&plan).is_ok() {
-            return; // running as root: permissions do not bind
+            std::fs::set_permissions(&plan, std::fs::Permissions::from_mode(0o644)).unwrap();
+            panic!("permissions do not bind (running as root?): no file can be made unreadable");
         }
         let result = check(&tmp).unwrap();
         std::fs::set_permissions(&plan, std::fs::Permissions::from_mode(0o644)).unwrap();
@@ -796,9 +798,11 @@ mod tests {
         let listable = std::fs::read_dir(&scenarios).is_ok();
         let result = check(&tmp);
         std::fs::set_permissions(&scenarios, std::fs::Permissions::from_mode(0o755)).unwrap();
-        if listable {
-            return; // running as root
-        }
+        // A test that cannot make its subject must fail, never pass unrun.
+        assert!(
+            !listable,
+            "permissions do not bind (running as root?): no directory can be made unlistable"
+        );
         let result = result.unwrap();
         assert_eq!(result.skipped.len(), 1);
         assert_eq!(result.skipped[0].path, "specs/001-a/scenarios");
