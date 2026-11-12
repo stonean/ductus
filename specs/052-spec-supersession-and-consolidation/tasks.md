@@ -51,7 +51,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. retire-feature screens a feature name by the allowlist with --allow-sequential too
 
-- [ ] With `--allow-sequential`, `retire-feature` still refuses a `feature` that `parse_feature_dir` does not accept, before anything touches the filesystem: on a fixture, `retire-feature --feature . --fold-target 001-x --allow-sequential` deleted every file under `specs/`, the fold target included, since only `validate_feature_argument`'s denylist screened the name (078's review, 2026-11-09; deferred here by the owner)
-- [ ] A test that fails when the refusal is removed
+- [x] With `--allow-sequential`, `retire-feature` still refuses a `feature` that `parse_feature_dir` does not accept, before anything touches the filesystem: on a fixture, `retire-feature --feature . --fold-target 001-x --allow-sequential` deleted every file under `specs/`, the fold target included, since only `validate_feature_argument`'s denylist screened the name (078's review, 2026-11-09; deferred here by the owner)
+- [x] A test that fails when the refusal is removed
 
 - **Done when**: no name that is not a feature directory reaches retire-feature's removal, with or without the flag
