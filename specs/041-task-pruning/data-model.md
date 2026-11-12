@@ -144,24 +144,7 @@ positive integer: the number the next appended task takes. It is a high-water
 mark, as `next-criterion` is for criteria, and keeps a number a prune removed
 from being assigned again.
 
-- `prune-tasks` writes it whenever a reduction removes a task section — either
-  mode — as the larger of the existing counter and one past the highest number
-  present before the removal, so it never lowers one. The highest number is read over both task
-  levels by the digits of a suffixed number (`11a` counts as 11). A reduction
-  that removes nothing writes none. The block is created above the `# …`
-  heading when absent, and an existing block gains or updates only this line.
-- `--reset` keeps the frontmatter block, counter included, before the `# …`
-  heading; the rest of the file is the canonical body as above. A reset that
-  removes a task section writes the counter as any reduction does, so only a
-  file with no task to remove stays without one.
-- `append-task` assigns `max(counter, highest present + 1)`, then advances the
-  counter to the assigned number plus one. It writes the counter only where one
-  exists: a file with none numbers from the highest present plus one and gains
-  none. A counter at or below the highest present is outvoted by it, so it
-  never causes a duplicate.
-- A block that never closes, or a value that is not a positive integer, is
-  `malformed-tasks` from either primitive, writing nothing: reading it as
-  absent would let a number it was written to keep be reissued.
+- The counter's rules are `ductus prune-tasks --help`'s and `ductus append-task --help`'s: when each writes it, how the highest number is read, what an absent block, an existing block and a malformed one do, and what `--reset` keeps. `append-task` writes the counter only where one exists, so a file that was never pruned is written as it always was.
 
 Every other `tasks.md` reader scans for headings and checkboxes, so the block
 is invisible to `read-tasks`, `mark-task`, `check-stuck` and `check-artifacts`.

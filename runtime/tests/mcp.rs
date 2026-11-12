@@ -637,6 +637,47 @@ fn descriptions_hold_the_orphaned_reference_details_067_points_at() {
     assert!(missing.is_empty(), "missing {missing:?}");
 }
 
+/// 041's data model points at `APPEND_TASK` and `PRUNE_TASKS` for the `next-task:` counter's rules (079 task 36).
+#[test]
+fn descriptions_hold_the_next_task_details_041_points_at() {
+    let held = [
+        (
+            descriptions::APPEND_TASK,
+            "advances the counter to the assigned number plus one",
+        ),
+        (
+            descriptions::APPEND_TASK,
+            "the highest present is read over both task levels (`##` and `###`) by its digits (`11a` counts as 11)",
+        ),
+        (
+            descriptions::APPEND_TASK,
+            "or a frontmatter block that never closes, is a malformed-tasks error that writes nothing, unless the call matched an existing task first and returned without reading it",
+        ),
+        (
+            descriptions::PRUNE_TASKS,
+            "the highest number is read over both task levels by its digits (`11a` counts as 11)",
+        ),
+        (
+            descriptions::PRUNE_TASKS,
+            "a reduction that removes nothing writes none",
+        ),
+        (
+            descriptions::PRUNE_TASKS,
+            "the block is created above the file's content when it has none, an existing block gains or updates only the `next-task:` line",
+        ),
+        (
+            descriptions::PRUNE_TASKS,
+            "a block that never closes or a counter that is not a positive integer is a malformed-tasks error that writes nothing",
+        ),
+    ];
+    let missing: Vec<_> = held
+        .iter()
+        .filter(|(description, detail)| !description.contains(detail))
+        .map(|(_, detail)| detail)
+        .collect();
+    assert!(missing.is_empty(), "missing {missing:?}");
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

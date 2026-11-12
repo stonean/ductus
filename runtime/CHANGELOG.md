@@ -191,6 +191,13 @@ its version and date.
 
 ### Changed
 
+- **`append-task`'s and `prune-tasks`' descriptions state the `next-task:`
+  counter's rules (spec 079, task 36).** How the highest number is read (both
+  task levels, by digits), the counter `append-task` advances to, that a
+  reduction removing nothing writes none, where the block is created, that an
+  existing block gains or updates only its own line, and that an unclosed or
+  non-integer counter is an error that writes nothing. Description only: no
+  result changes.
 - **`check-orphaned-references`' description states what counts as a reference
   (spec 079, task 36).** The token-start rule and the `@` import form, which
   prefixes name the project root in which referrer and which do not, and the
