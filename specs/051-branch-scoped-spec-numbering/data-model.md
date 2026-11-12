@@ -105,7 +105,7 @@ Refusals, `allow-sequential` and the already-gone outcome are in `ductus retire-
 
 What invalidation resets and keeps, waivers included, is in `ductus invalidate-review --help`.
 
-It exists because the gate owes a review for code alone (spec 081), so a fold-back, whichever artifacts it routes into the upstream spec, makes none owed and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it says so rather than leaving the gate to infer it.
+It exists because a review is owed when the scope holds code (spec 081), and also when the spec has no review record or one that holds `done` until a review runs (`compute-review-scope`'s `review-owed`), so a fold-back that routes only artifacts into the upstream spec leaves none owed on the diff alone and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it invalidates the record, which owes one, rather than leaving the gate to infer it.
 
 ### `append-task` (extended)
 
