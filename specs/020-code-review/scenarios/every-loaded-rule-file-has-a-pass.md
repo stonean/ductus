@@ -10,19 +10,21 @@ section: "Acceptance Criteria"
 
 ## Behavior
 
-- Every rule file `/{project}:review` loads is applied to the code in scope by a named pass, and `framework/commands/review.md` says which pass applies which file.
+- Every rule file `/{project}:review` loads is applied to the code in scope by a named pass, and `framework/commands/review.md` says which pass applies which file: a `security-*.md` file the security pass, `quality-cross.md` the quality pass, a `performance-*.md` file the efficiency pass, and every other loaded file, a project-authored file with an unrecognized suffix among them, the quality pass.
+- A rule whose Verification is a design-time commitment, checked by `/{project}:analyze` against specs and plans, is applied by its pass only where the code in scope shows what its Statement governs.
 - A rule file's header claim about the pass that enforces it agrees with `review.md`.
-- The runtime's `performReview` extension carries whatever the chosen design hands each pass, and the generated command copies are regenerated.
+- The runtime's `performReview` extension carries each pass the rule files mapped to it, and the generated command copies are regenerated.
 
 ## Edge Cases
 
-- A rule file whose rules are all design-time commitments (checked by `/{project}:analyze` against specs and plans) may still have Statements a pass can check against code; the design says whether review applies them.
-- A project-authored rule file with an unrecognized suffix loads for every stack and needs a pass like any other.
+- A rule file whose rules are all design-time commitments may still have Statements a pass can check against code; its pass applies each only where the code shows the governed behavior, and records nothing for a Statement the code in scope does not reach.
+- A project-authored rule file with an unrecognized suffix loads for every stack and goes to the quality pass, like any file no dimension fits.
+- A run restricted to one pass (`--security`) applies only that pass's files; a loaded file mapped to a pass that did not run is named in the Summary as unapplied, never folded into a clean result.
 
 ## Open Questions
 
-- Which design: (a) the security pass becomes a rules pass that walks every loaded rule file, with the other four passes keeping their dimension heuristics; (b) each rule file is mapped to the pass whose dimension fits it (`security-*.md` to security, `quality-cross.md` to quality, `performance-*.md` to efficiency, and so on), with a rule for files that fit none; or (c) another split?
+*None — all resolved.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Which design gives every loaded rule file a pass?** Each file is mapped to the pass whose dimension fits it — `security-*.md` to security, `quality-cross.md` to quality, `performance-*.md` to efficiency — and every other loaded file, the design-time files and an unrecognized suffix alike, to the quality pass, which applies a design-time Statement only where the code shows it (owner, 2026-11-12). At `ab2ad085` only `framework/reference/review.md` §Security pass named any rule file, so 9 of the 12 loaded files were applied by no pass; `quality-cross.md`'s header already names the quality pass, so the mapping changes no file of spec 036, and 020 alone takes the re-review. Rejected: (a) a single rules pass walking every file, which keeps task 15's yield routing in one pass but rewrites `quality-cross.md`'s header and five Verifications and 036's spec, data model and plan, and makes `--security` mean more than security; and (c) review loading no design-time file, which contradicts this scenario's first Behavior line and changes `discover-rule-files`, 022's surface, and 024's loader.

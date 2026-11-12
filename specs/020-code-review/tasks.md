@@ -110,7 +110,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 14. Every loaded rule file has a pass
 
 - [ ] Implement the behavior described in `scenarios/every-loaded-rule-file-has-a-pass.md`
-- [ ] Resolve the scenario's open question (which design)
+- [x] Resolve the scenario's open question (which design)
 - [ ] framework/commands/review.md names the pass that applies each loaded rule file; generated command copies regenerated
 - [ ] The runtime performReview extension and its payload carry the chosen mapping, with a test
 - [ ] quality-cross.md's header claim about its enforcing pass agrees with review.md
