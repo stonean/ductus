@@ -103,6 +103,10 @@ pub enum PayloadError {
     /// rather than building a request from a default (`CFG-ENV-008`).
     #[error("config-unreadable: {0}")]
     ConfigUnreadable(#[from] crate::primitives::PrimitiveError),
+    /// The command name is outside the slug grammar, so no candidate path is
+    /// built from it (`BE-INPUT-004`).
+    #[error("invalid-command-name: {0}")]
+    InvalidCommandName(String),
 }
 
 /// Machine-readable code emitted in the `error` envelope when payload
@@ -118,6 +122,7 @@ impl PayloadError {
             Self::UnknownExtension { .. } => "unknown-extension",
             Self::ListsFileUnreadable { .. } => "lists-file-unreadable",
             Self::ConfigUnreadable(_) => "config-unreadable",
+            Self::InvalidCommandName(_) => "invalid-command-name",
         }
     }
 }
@@ -1303,6 +1308,8 @@ fn load_constitution_excerpts(
 }
 
 fn locate_command_file(command_name: &str, repo: &Path) -> Result<Option<PathBuf>, PayloadError> {
+    crate::primitives::screen_command_name(command_name)
+        .map_err(PayloadError::InvalidCommandName)?;
     let host = Host::load(repo)?;
     let mut rels = vec![format!("framework/commands/{command_name}.md")];
     // Installed command file — `commands/` (claude-style) or flat
@@ -1847,7 +1854,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1879,7 +1887,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1927,7 +1936,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -1969,7 +1979,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2009,7 +2020,8 @@ mod tests {
             Err(
                 other @ (PayloadError::UnknownExtension { .. }
                 | PayloadError::ListsFileUnreadable { .. }
-                | PayloadError::ConfigUnreadable(_)),
+                | PayloadError::ConfigUnreadable(_)
+                | PayloadError::InvalidCommandName(_)),
             ) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
@@ -2120,7 +2132,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2165,7 +2178,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2209,7 +2223,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2265,7 +2280,8 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
-            | PayloadError::ConfigUnreadable(_)) => {
+            | PayloadError::ConfigUnreadable(_)
+            | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -3465,6 +3481,23 @@ mod tests {
         let ctx = Map::new();
         assert!(
             build_extension_request("classifyClaimz", &ctx, tmp.path(), "consolidate", "").is_err()
+        );
+    }
+
+    #[test]
+    fn a_command_name_outside_the_slug_grammar_reads_no_file() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("framework/commands")).unwrap();
+        fs::write(tmp.path().join("framework/commands/smoke.md"), "# smoke\n").unwrap();
+        // Resolves to an existing file if joined into a path unscreened.
+        for name in ["../commands/smoke", "a/b", "..", "Smoke"] {
+            let err = locate_command_file(name, tmp.path()).unwrap_err();
+            assert_eq!(err.code(), "invalid-command-name", "{name}");
+            assert!(err.to_string().contains(name), "{err}");
+        }
+        assert!(
+            locate_command_file("smoke", tmp.path()).unwrap().is_some(),
+            "a slug still resolves"
         );
     }
 }

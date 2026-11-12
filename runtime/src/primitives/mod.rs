@@ -2609,6 +2609,24 @@ pub(crate) fn is_slug_grammar(s: &str) -> bool {
         })
 }
 
+/// Screen a `ductus exec` command name before any path is built from it: it must match the
+/// slug grammar, so it cannot carry a path separator or `..` into
+/// `framework/commands/{name}.md` or the installed candidates (`BE-INPUT-004`). The error names
+/// the refused name.
+///
+/// # Errors
+///
+/// Returns a message naming `name` when it is outside the slug grammar.
+pub fn screen_command_name(name: &str) -> std::result::Result<(), String> {
+    if is_slug_grammar(name) {
+        Ok(())
+    } else {
+        Err(format!(
+            "command name {name:?} is not a slug (^[a-z0-9]+(?:-[a-z0-9]+)*$); refusing to build a path from it"
+        ))
+    }
+}
+
 /// Per-line skip state shared by the `tasks.md` / spec structural walkers.
 /// Content inside a fenced code block (` ``` `) or an HTML comment
 /// (`<!-- … -->`) is not markdown structure — it must not yield headings,

@@ -693,3 +693,24 @@ fn a_staging_directory_from_mktemp_t_is_accepted_whatever_tmpdir_says() {
         "the archive was not extracted into the staging path"
     );
 }
+
+/// A command name outside the slug grammar is refused before any path is built from it, so
+/// `../commands/smoke` does not reach the `smoke.md` it would resolve to.
+#[test]
+fn exec_refuses_a_command_name_outside_the_slug_grammar() {
+    let tmp = tempfile::tempdir().unwrap();
+    write_procedure_repo(tmp.path(), "smoke", "# smoke\n");
+    for name in ["../commands/smoke", "framework/commands/smoke", ".."] {
+        let output = ductus_command(env!("CARGO_BIN_EXE_ductus"))
+            .args(["exec", name])
+            .current_dir(tmp.path())
+            .output()
+            .expect("binary runs");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(1), "{name}: {stderr}");
+        assert!(stdout.contains("invalid-command-name"), "{name}: {stdout}");
+        assert!(stderr.contains(name), "{name}: {stderr}");
+        assert!(!stdout.contains("not found"), "{name}: reached a lookup");
+    }
+}

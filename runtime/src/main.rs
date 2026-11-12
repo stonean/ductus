@@ -707,20 +707,12 @@ fn has_own_record(repo: &std::path::Path, identity: Option<&ductus::session::Ide
         .is_some_and(|identity| ductus::session::own_path(repo, identity).exists())
 }
 
-fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode {
-    use ductus::host::Host;
-    use ductus::interpreter::{WalkOutcome, Walker};
-    use ductus::parser;
-    use serde_json::Value;
-
-    let host = match Host::load(repo) {
-        Ok(host) => host,
-        Err(err) => {
-            emit_exec_error("config-unreadable", &err.to_string());
-            eprintln!("{err}");
-            return ExitCode::from(1);
-        }
-    };
+/// The files `ductus exec` tries for `command`, in order. The name is already screened.
+fn exec_candidates(
+    command: &str,
+    host: &ductus::host::Host,
+    repo: &std::path::Path,
+) -> Vec<PathBuf> {
     let mut candidates = vec![
         repo.join("framework/commands")
             .join(format!("{command}.md")),
@@ -741,6 +733,29 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         repo.join("framework/bootstrap")
             .join(format!("{command}.md")),
     );
+    candidates
+}
+
+fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode {
+    use ductus::host::Host;
+    use ductus::interpreter::{WalkOutcome, Walker};
+    use ductus::parser;
+    use serde_json::Value;
+
+    if let Err(message) = ductus::primitives::screen_command_name(command) {
+        emit_exec_error("invalid-command-name", &message);
+        eprintln!("ductus exec: {message}");
+        return ExitCode::from(1);
+    }
+    let host = match Host::load(repo) {
+        Ok(host) => host,
+        Err(err) => {
+            emit_exec_error("config-unreadable", &err.to_string());
+            eprintln!("{err}");
+            return ExitCode::from(1);
+        }
+    };
+    let candidates = exec_candidates(command, &host, repo);
     let Some(path) = candidates.iter().find(|p| p.exists()) else {
         let tried = candidates
             .iter()

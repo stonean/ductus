@@ -580,6 +580,11 @@ its version and date.
   root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
+- **`ductus exec` screens its command name.** A name outside the slug grammar
+  (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), such as one holding `/` or `..`, is refused
+  with an `invalid-command-name` error naming it before any candidate path is
+  built, in `exec` and in the `writeCode` payload's command-file lookup.
+
 - **A closed stdout is a quiet exit, not a panic.** A subcommand whose stdout
   reader has gone (`ductus dashboard | true`) exits 141 (`128 + SIGPIPE`),
   distinct from a failure (1) and a panic (101), with no panic message; any
