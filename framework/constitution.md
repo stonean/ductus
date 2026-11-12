@@ -76,7 +76,7 @@ A tool that elides content — truncation, a saved-output pointer, a line cap, a
 
 ### Recommendations
 
-A recommendation is a claim: the agent MUST work it out to its result **before** presenting it, and MUST compute for **every** option the quantity they differ by — steps, files touched, time, cost — since reasoning from an option's shape to its effect is inference. When that quantity cannot be computed yet, the agent MUST say so and say what would settle it, rather than rank anyway. Apply an answer as the chosen option reads; a refinement the sources suggest is asked as its own question first.
+A recommendation is a claim: the agent MUST work it out to its result **before** presenting it, and MUST compute for **every** option the quantity they differ by — steps, files touched, time, cost — since reasoning from an option's shape to its effect is inference. When that quantity cannot be computed yet, the agent MUST say so and say what would settle it, rather than rank anyway. Apply an answer as the chosen option reads; a refinement the sources suggest is asked as its own question first. A reopen the correct path requires is a cost each option states, never a reason to recommend another.
 
 **Decisions go to the owner one at a time.** Present one decision per message — the question, its context, the options, a recommendation — and wait for the answer before the next; never a grouped list, and never while work you started is still reporting. This rule is a default a project MAY replace in its `AGENTS.md` (§governance-precedence).
 
