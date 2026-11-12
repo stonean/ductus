@@ -580,6 +580,13 @@ its version and date.
   root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
+- **`lint-markdown` lints only the paths it is given.** It passes
+  `--no-globs`, so the config's `globs` (`**/*.md` in the shipped config) are no
+  longer appended: a violation elsewhere in the repository is not reported, and
+  no longer blocks `check-review-gate` for a feature. Paths that match no file
+  report `clean: false` with no violations, the gate naming that nothing was
+  examined. Given no paths, the config's globs still apply.
+
 - **`ductus exec` screens its command name.** A name outside the slug grammar
   (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), such as one holding `/` or `..`, is refused
   with an `invalid-command-name` error naming it before any candidate path is

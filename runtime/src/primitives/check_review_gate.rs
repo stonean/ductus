@@ -838,7 +838,11 @@ fn markdown_lint_block(
     if lint_result.clean {
         return Ok(None);
     }
-    let message = if lint_result.violations.is_empty() {
+    let message = if lint_result.violations.is_empty() && lint_result.exit_code == 0 {
+        format!(
+            "blocked: markdownlint-cli2 linted no file in {rel_dir} — nothing was examined, so the lint is not a pass"
+        )
+    } else if lint_result.violations.is_empty() {
         format!(
             "blocked: markdownlint-cli2 exited {} for {rel_dir} — resolve the lint failure before completing",
             lint_result.exit_code
@@ -1975,6 +1979,30 @@ mod tests {
             )
         );
         assert_eq!(result.violations, [] as [MarkdownViolation; 0]);
+    }
+
+    #[test]
+    fn a_lint_that_examined_no_file_blocks_and_says_so() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let result = run_with_lint(&args(), tmp.path(), |_, _| {
+            Ok(lint_markdown::Lint {
+                violations: vec![],
+                clean: false,
+                exit_code: 0,
+            })
+        })
+        .unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::MarkdownLint));
+        assert!(
+            result
+                .message
+                .as_deref()
+                .is_some_and(|m| m.contains("linted no file in specs/007-gate")),
+            "{:?}",
+            result.message
+        );
     }
 
     #[test]

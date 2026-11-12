@@ -187,6 +187,12 @@ pub(crate) fn run_within(args: &LintMarkdownArgs, repo: &Path, timeout: Duration
     if args.fix {
         cmd.arg("--fix");
     }
+    // markdownlint-cli2 appends the config's `globs` to the command line unless told not to, and
+    // the shipped config's `**/*.md` would lint the whole repository whatever was named. Given
+    // paths, lint exactly them; given none, the config's globs are the subject.
+    if !args.paths.is_empty() {
+        cmd.arg("--no-globs");
+    }
     for path in &args.paths {
         cmd.arg(path);
     }
@@ -220,7 +226,10 @@ pub(crate) fn run_within(args: &LintMarkdownArgs, repo: &Path, timeout: Duration
     // error — neither is clean. Deriving solely from `violations.is_empty()`
     // silently passed such runs. Mirrors run-generator's exit-code-derived
     // `drift`.
-    let clean = violations.is_empty() && exit_code == 0;
+    // A run that named paths and linted no file examined nothing, which is not clean.
+    let examined_nothing =
+        !args.paths.is_empty() && stdout.lines().any(|line| line.trim() == "Linting: 0 files");
+    let clean = violations.is_empty() && exit_code == 0 && !examined_nothing;
     Ok(Lint {
         violations,
         clean,
