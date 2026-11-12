@@ -321,7 +321,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 - Cross-artifact references use standard relative markdown links (`[label](../path.md)`), not wiki-links — this keeps PRs reviewable on GitHub and viewers like Quartz/Obsidian still resolve them.
 - Source-of-truth artifacts are markdown. Structured derived views (SQLite caches, JSON indexes, generated graph data, binary artifacts) never become the canonical record: they MUST be gitignored and regenerated on demand by their consumers.
 - Exceptions to text-first source-of-truth require an explicit constitutional amendment with stated rationale.
-- **Write each artifact as short as its required content allows, and no shorter.** Required content is what a gate, a check, or a later reader acting on the artifact needs: every claim with its reason and boundary, its provenance (§grounding), and what is outstanding (§design-principles). Cut the rest: restatement (point at the canonical source, §drift-prevention), how a decision was reached (git keeps it), examples a rule does not need, and hedges. A cut that drops required content is a defect, not a saving. Nothing enforces this beyond `check-artifact-size`'s advisory read-size finding.
+- **Write each artifact as short as its required content allows, and no shorter.** Required content is what a gate, a check, or a later reader acting on the artifact needs: every claim with its reason and boundary, its provenance (§grounding), and what is outstanding (§design-principles). Cut the rest: restatement (point at the canonical source, §drift-prevention), how a decision was reached (git keeps it), examples a rule does not need, and hedges. A cut that drops required content is a defect, not a saving. Nothing enforces this beyond `check-artifact-size`'s advisory read-size finding and the pre-commit hook's refusal of a commit that grows a project file past its limit.
 - **A markdown link in a spec body creates a `dependencies:` edge — cite in prose when you mean a citation.**
 - **Write pipeline state files with the file-writing tool, not shell redirects** — their permissions are scoped to those tools.
 - **Never stage the whole worktree in a project running this pipeline** — it sweeps untracked spec drafts into a commit.
@@ -431,7 +431,6 @@ For every kind of fact described in multiple places, one location is authoritati
 | Frontmatter schema | §text-first-artifacts |
 | Per-agent permission set | `framework/bootstrap/configure/{key}.md` |
 | Constitution section anchors | its `<!-- §<anchor> -->` markers |
-| Command frontmatter (description, argument-hint) | each command's own frontmatter |
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
 | A primitive's behavior | its compiled description (`ductus <name> --help`; `runtime/src/schema/descriptions.rs`) |
 | Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; another prefix: the data-model of the spec that introduced its file, else the file's header |

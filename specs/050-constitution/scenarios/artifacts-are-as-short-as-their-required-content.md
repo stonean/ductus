@@ -12,7 +12,7 @@ The owner asked on 2026-10-28 that everything the pipeline writes into an artifa
 
 - `framework/constitution.md` §text-first-artifacts **Principles** carries this bullet, as the owner approved it on 2026-10-28:
 
-  > **Write each artifact as short as its required content allows, and no shorter.** Required content is what a gate, a check, or a later reader acting on the artifact needs: every claim with its reason and boundary, its provenance (§grounding), and what is outstanding (§design-principles). Cut the rest: restatement (point at the canonical source, §drift-prevention), how a decision was reached (git keeps it), examples a rule does not need, and hedges. A cut that drops required content is a defect, not a saving. Nothing enforces this beyond `check-artifact-size`'s advisory read-size finding.
+  > **Write each artifact as short as its required content allows, and no shorter.** Required content is what a gate, a check, or a later reader acting on the artifact needs: every claim with its reason and boundary, its provenance (§grounding), and what is outstanding (§design-principles). Cut the rest: restatement (point at the canonical source, §drift-prevention), how a decision was reached (git keeps it), examples a rule does not need, and hedges. A cut that drops required content is a defect, not a saving. Nothing enforces this beyond `check-artifact-size`'s advisory read-size finding and the pre-commit hook's refusal of a commit that grows a project file past its limit.
 
 - "Required" is defined by pointing at the rules that already demand content, not by restating them, so it cannot drift from them.
 
