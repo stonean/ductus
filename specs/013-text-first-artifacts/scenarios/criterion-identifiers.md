@@ -106,7 +106,7 @@ The exposure is narrower than "a removed criterion could have its label reused" 
 The fix is to stop deriving the maximum from a set that can shrink:
 
 - The frontmatter carries `next-criterion` — the label the next assignment will use, monotonically non-decreasing.
-- Assignment takes `max(highest label in body, next-criterion)`, then writes the incremented value back. The labelling pass maintains the field, so it is never hand-updated.
+- Assignment takes `max(highest label in body + 1, next-criterion)`, then writes the incremented value back. The labelling pass maintains the field, so it is never hand-updated.
 - Deleting the top criterion lowers the body maximum but not `next-criterion`, so a retired label is never reissued.
 - The audit check is one comparison: `next-criterion` must exceed every label present in the body. A hand-edited value that was lowered is a defect, detectable in the artifact itself.
 

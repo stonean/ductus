@@ -191,6 +191,15 @@ its version and date.
 
 ### Changed
 
+- **The label-assignment rule is stated as the runtime applies it, and
+  `prune-tasks`' description no longer says a reset leaves no counter.**
+  `framework/reference/clarify.md`, `specify.md` and the criterion-label backfill
+  migration gave the next label as `max(highest label in body, next-criterion)`,
+  which would reissue the highest label when the counter is missing or behind
+  the body; `label-criteria` takes `max(highest label in body + 1,
+  next-criterion)`. A reset that removes a task section writes the `next-task:`
+  counter as any prune does. Text only.
+
 - **Primitive descriptions gain the detail specs used to restate, and two stale
   ones are corrected (spec 079 task 36).** `relocate-audit-records`' description
   said it never overwrites an existing artifact; it merges the block into one,

@@ -17,7 +17,7 @@ The runtime already holds every piece this needs in a different shape: `append-t
 A primitive scans a spec's Acceptance Criteria and returns the labels it assigned:
 
 - Criteria already carrying an `AC{n}:` label are left byte-identical — the pass never renumbers, so it is safe to run repeatedly and safe to run on the two specs already labelled by hand.
-- Each unlabelled criterion receives the next label, taken from `max(highest label in body, next-criterion)` and incremented per assignment, in body order.
+- Each unlabelled criterion receives the next label, taken from `max(highest label in body + 1, next-criterion)` and incremented per assignment, in body order.
 - The label is written after the checkbox and before the criterion's text (`- [ ] AC7: …`), leaving the text itself untouched.
 - `next-criterion` is written back to the frontmatter, always greater than every label in the body. It is never lowered, including when the pass runs on a spec whose highest-labelled criterion was deleted.
 - With nothing to assign, the pass is a no-op: no write, no frontmatter churn, and a result that says so rather than reporting a clean write it did not perform.

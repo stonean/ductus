@@ -5,8 +5,8 @@
 //! are left byte-identical, and the spec's `next-criterion` frontmatter
 //! field records the label the next assignment will use.
 //!
-//! Assignment takes `max(highest label in body, next-criterion)` rather
-//! than the body maximum alone. That is the whole retirement mechanism:
+//! Assignment takes `max(highest label in body + 1, next-criterion)` rather
+//! than one past the body maximum alone. That is the whole retirement mechanism:
 //! deleting the highest-numbered criterion lowers the body maximum, and
 //! without the stored counter the next assignment would reissue a retired
 //! label to a different requirement. The counter never decreases, so it

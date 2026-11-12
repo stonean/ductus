@@ -28,7 +28,7 @@ Read `spec.md`. If it does not exist, stop and report: "Spec does not exist. Run
 After the review:
 
 - Update the spec body with resolved questions and any new edge cases or acceptance criteria.
-- **Label the acceptance criteria** (primitive: `label-criteria`) — every criterion added during this clarification gets its stable `AC{n}:` label written between the checkbox and its text, and `next-criterion` is updated in the frontmatter. Existing labels are never renumbered; the next label is `max(highest label in body, next-criterion)`, never `max(body) + 1`, so a criterion deleted earlier never has its label handed to a different requirement (§text-first-artifacts, spec 013).
+- **Label the acceptance criteria** (primitive: `label-criteria`) — every criterion added during this clarification gets its stable `AC{n}:` label written between the checkbox and its text, and `next-criterion` is updated in the frontmatter. Existing labels are never renumbered; the next label is `max(highest label in body + 1, next-criterion)`, never `max(body) + 1` alone, so a criterion deleted earlier never has its label handed to a different requirement (§text-first-artifacts, spec 013).
 - If questions remain that need user input, list them and keep `status` at `draft`.
 - If all open questions are resolved, run the validation gate before proposing the status transition:
   - All open questions are resolved (none remain in the Open Questions section)

@@ -293,7 +293,7 @@ Result:
 }
 ```
 
-`assigned` lists only the criteria this run labelled, with each one's 0-based index in body order; `next-criterion` is the counter as written back, always above every label in the body; `changed` says whether the file was written. Assignment takes **`max(highest label in body, next-criterion)`**, never `max(body) + 1`, so a deleted criterion's label is never reissued. A spec with no frontmatter fence, or a `next-criterion` that is not a positive integer, is refused rather than repaired; an absent or empty Acceptance Criteria section is a no-op that creates no counter. The write is atomic and the pass idempotent (scenario `criterion-label-assignment`).
+`assigned` lists only the criteria this run labelled, with each one's 0-based index in body order; `next-criterion` is the counter as written back, always above every label in the body; `changed` says whether the file was written. Assignment takes **`max(highest label in body + 1, next-criterion)`**, never `max(body) + 1` alone, so a deleted criterion's label is never reissued. A spec with no frontmatter fence, or a `next-criterion` that is not a positive integer, is refused rather than repaired; an absent or empty Acceptance Criteria section is a no-op that creates no counter. The write is atomic and the pass idempotent (scenario `criterion-label-assignment`).
 
 ### `set-status` — update spec frontmatter status field
 

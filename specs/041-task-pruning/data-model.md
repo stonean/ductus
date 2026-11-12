@@ -151,8 +151,9 @@ from being assigned again.
   that removes nothing writes none. The block is created above the `# …`
   heading when absent, and an existing block gains or updates only this line.
 - `--reset` keeps the frontmatter block, counter included, before the `# …`
-  heading; the rest of the file is the canonical body as above. A reset file
-  with no counter has none.
+  heading; the rest of the file is the canonical body as above. A reset that
+  removes a task section writes the counter as any reduction does, so only a
+  file with no task to remove stays without one.
 - `append-task` assigns `max(counter, highest present + 1)`, then advances the
   counter to the assigned number plus one. It writes the counter only where one
   exists: a file with none numbers from the highest present plus one and gains

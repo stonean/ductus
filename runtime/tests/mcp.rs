@@ -370,12 +370,17 @@ fn descriptions_hold_the_detail_specs_point_at() {
         (descriptions::DASHBOARD, "`scenario-open-question-count`"),
         (descriptions::RESOLVE_SESSION, "`identity` is null"),
         (descriptions::RESOLVE_SESSION, "`co-target`"),
+        (
+            descriptions::PRUNE_TASKS,
+            "writes the counter when it removes a task section",
+        ),
     ];
     for (description, detail) in held {
         assert!(description.contains(detail), "missing {detail}");
     }
     assert!(!descriptions::RELOCATE_AUDIT_RECORDS.contains("never overwrites"));
     assert!(!descriptions::CREATE_PLAN_ARTIFACTS.contains("action, template"));
+    assert!(!descriptions::PRUNE_TASKS.contains("so a reset file with no counter yields task 1"));
 }
 
 /// The manifest names each primitive the server does not serve on a

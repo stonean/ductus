@@ -17,7 +17,7 @@ The framework's own corpus was swept when the primitive landed. Without this ent
 
 2. **Run the pass, one spec at a time.** For each spec directory under the configured spec root (`[paths] specs-root`, default `specs`), invoke `label-criteria` against the feature. The primitive:
    - assigns `AC{n}:` between the checkbox and the text of each unlabelled criterion, in body order;
-   - takes each new label from `max(highest label in the body, next-criterion)`, never `max(body) + 1`, so a label retired by a deleted criterion is never handed to a different requirement;
+   - takes each new label from `max(highest label in the body + 1, next-criterion)`, never `max(body) + 1` alone, so a label retired by a deleted criterion is never handed to a different requirement;
    - writes the advanced `next-criterion` into the frontmatter;
    - leaves an already-labelled criterion **byte-identical**.
 
