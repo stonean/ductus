@@ -190,7 +190,7 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 
 ## 22. Implement scenario: a-record-cites-a-removed-rule
 
-- [ ] Resolve the scenario's open question with `/ductus:clarify`, before the release that removes 077's four deprecated rules (0.62.0)
+- [x] Resolve the scenario's open question with `/ductus:clarify`, before the release that removes 077's four deprecated rules (0.62.0)
 - [ ] Implement the behavior described in `scenarios/a-record-cites-a-removed-rule.md`
 - [ ] `check-rule-ids` passes a record's citation of a removed rule and still reports one as a current requirement, each shown by a test that fails without it
 

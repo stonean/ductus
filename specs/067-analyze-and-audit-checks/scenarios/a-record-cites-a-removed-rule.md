@@ -12,17 +12,19 @@ section: "Frontmatter, dependency, anchor and rule checks"
 
 ## Behavior
 
-A citation of a removed rule in an artifact that records its retirement passes `check-rule-ids`, while a citation of a removed rule as a current requirement remains the Blocking unknown-rule finding. How the check tells the two apart is this scenario's open question.
+A spec records the rules whose retirement it records in a `retired-rules:` frontmatter list of rule IDs. `check-rule-ids`, reading a spec, passes a citation of an ID on that spec's list that no loaded rule file defines, and reports it in a distinct `retired` state, never as found and never as missing. A citation of a removed rule in any other artifact, or of an ID the citing spec does not list, remains the Blocking unknown-rule finding.
 
 ## Edge Cases
 
 - **A removed rule cited as a current requirement** stays a Blocking finding, so the removal's sweep stays enforced.
-- **Family 40** (026's scenario `family-40-deprecated-rules-are-removed-on-time`) names every tracked file citing a due rule and leaves each to be re-pointed or classified as a record; the classification it leaves to the remover is the one this check makes.
+- **An ID on a spec's `retired-rules:` list that a loaded rule file still defines** is reported as found, as today: the list exempts nothing until the rule is gone.
+- **A mistyped ID on the list** passes its own spec's citation of the same mistyped ID, and no other spec's; the list is checked only by the citations it exempts.
+- **Family 40** (026's scenario `family-40-deprecated-rules-are-removed-on-time`) names every tracked file citing a due rule and leaves each to be re-pointed or classified as a record; the classification it leaves to the remover is the one this check makes, and the remover records it on the citing spec's `retired-rules:` list.
 
 ## Open Questions
 
-- How does `check-rule-ids` tell a record of a removed rule's retirement from a citation of it as a current requirement (a tombstone heading the removal leaves in the rule file, an exemption for record sections such as Resolved Questions, a deprecation account or a signpost, or another mark), and which artifacts count as records?
+*None — all resolved.*
 
 ## Resolved Questions
 
-*None yet.*
+- **How does `check-rule-ids` tell a record of a removed rule's retirement from a citation of it as a current requirement, and which artifacts count as records?** A spec frontmatter list, `retired-rules: [IDs]`, names the removed rules that spec records the retirement of; a citation of a listed ID in that spec passes and is reported as `retired`, and every other citation of a removed rule stays Blocking (owner, 2026-11-12). The schema gains the optional field in `framework/constitution.md` §text-first-artifacts' spec-files table. Measured at `ab2ad085`: the four rules 077 deprecates are cited on 15 lines in 3 specs, 13 in 077 (one its AC5), and one blockquoted signpost each in 008 and 017, so three lists cover all 15. Rejected: a tombstone heading left in the rule file, which makes the ID known in every context, current requirements included, and contradicts the removal and Family 40's heading parse; exempting blockquotes and Resolved Questions, which covers 3 of the 15; a retirement word on the line, which 4 of the 15 carry no form of; and rewriting the citations, which edits `done` specs 077 and 008, AC5 a criterion, and rewrites a record.
