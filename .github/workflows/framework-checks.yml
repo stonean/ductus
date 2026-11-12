@@ -37,15 +37,19 @@ jobs:
     # gives the sizing.
     timeout-minutes: 15
     steps:
-      # The default depth-1 checkout. Family 19 needed full history until spec
-      # 081 retired it; measured at debcc8cf, every step this job runs passes
-      # in a depth-1 clone and the self-audit's output matches a full clone's
-      # byte for byte. The families that call `dashboard` read only its spec
+      # Full history, for Family 10's check 10d (scripts/audit/migration-coverage.sh):
+      # it orders the registry's entries by the commit that first held each, so
+      # a depth-1 clone cannot run it (it reports a shallow checkout as a
+      # finding, never a pass). Family 19 needed full history until spec 081
+      # retired it; measured at debcc8cf, the other steps this job runs pass in
+      # a depth-1 clone. The families that call `dashboard` read only its spec
       # inventory, through lib.sh's spec_corpus, and never its reopenings and
       # inbox-age fields, which read history.
       # A step whose result comes to depend on history needs `fetch-depth: 0`
       # and a comment naming it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       # Node is the runner image's own, not a download (owner decision,
       # 2026-10-20, 022 task 3). setup-node fetched it with no checksum check,
@@ -224,6 +228,16 @@ jobs:
       # and shells out to scripts/gen-*.sh and .githooks/pre-commit.
       - name: (r) Pre-commit hook stages only its own generated files
         run: bash scripts/tests/test-pre-commit-staging.sh
+
+      # (s) Family 10's check 10d holds the migration registry's sort order
+      # against the order entries were added (spec 027 task 15). Step (h) runs
+      # it over this repository's history, where it passes until an entry
+      # sorts earlier than one added before it, so a check that stopped
+      # comparing would pass there. The test builds fixture repositories with
+      # their own history and shows the check fails on each case it claims to
+      # catch, a shallow clone included.
+      - name: (s) Migration registry sort order against history
+        run: bash scripts/tests/test-migration-coverage.sh
 
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
