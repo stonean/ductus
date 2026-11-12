@@ -14,6 +14,10 @@ Install the standard pipeline commands in `.claude/commands/ductus/`, copied fro
 
 Each command template in `framework/commands/` is copied to `.claude/commands/ductus/` with every occurrence of `{project}` replaced by `ductus`. No other modifications. This ensures this repo dogfoods the exact same commands adopting projects use. If a command template is updated later, the copy is re-derived from the template — by hand as designed here, and by `scripts/gen-claude-commands.sh` since the Trade-offs entry below was reversed. The copy-and-substitute shape survived that reversal; what changed is that a script does it over a directory glob rather than a contributor over a fixed list.
 
+### The per-language `.gitignore` fetch is bounded
+
+`/ductus` fetches each language's patterns from `raw.githubusercontent.com/github/gitignore` with `curl --proto '=https' --tlsv1.2 --connect-timeout {connect-timeout} --max-time {request-timeout}`, HTTPS only at TLS 1.2 or later and bounded as **Source resolution**'s fetches are (`framework/bootstrap/ductus.md`, §Collect Project Inputs' `.gitignore` merge and **Derived paths**). Stated here because this spec owns the merge, and the bound came from 022 task 18's and 061's work.
+
 ### Session file path
 
 Standard commands reference `.ductus/session.toml` for session state.

@@ -9,7 +9,7 @@ Fold a branch-scoped spec's content into the upstream spec it names, then retire
 
 ## Purpose
 
-Pipeline discharge for the branch-scoped directory form (§numbering): the content moves into the upstream spec its `folds-into` names, every inbound pointer moves with it, and the directory is removed.
+Pipeline discharge for the branch-scoped directory form (§numbering): the content moves into the upstream spec its `folds-into` names, every inbound pointer it reads moves with it, and the directory is removed.
 
 **Done first, then fold.** A staging spec reaches `done` like any other, since a pending fold never holds it short of `done` (§spec-lifecycle), and the work is complete once the fold has run. `/ductus:status` reports a spec carrying `folds-into` as pending at every status, and offers this command as the next action once the spec is `done`. Neither status gates the other, so a spec folded before it reaches `done` still folds.
 
