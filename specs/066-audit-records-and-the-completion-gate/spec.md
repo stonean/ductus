@@ -22,7 +22,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 >
 > **Signpost:** [081 — Reviews and checks follow what changed](../081-reviews-and-checks-follow-what-changed/spec.md) retired the gate's review-staleness check, `check-review-freshness` and audit Family 19. A review is owed for code alone, so a changed scenario or data model owes an analysis and no review; `reviewed-digest` now only puts each contract it says changed in the scope of a review that runs.
 >
-> **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added the rule assessments to the analyze record and `write-analysis`: the `rule-verdicts`, `unjudged-rules` and `rule-digest` fields, the `rule-verdicts` and `judged-rules` arguments, `contradictions` in the result, and a count of the rules left unjudged in `rule-assessments-not-checked`. Its data model carries the shapes.
+> **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added the rule assessments to the analyze record and `write-analysis`: the `rule-verdicts`, `unjudged-rules` and `rule-digest` fields, the `rule-verdicts` and `judged-rules` arguments, `contradictions` in the result, and a count of the rules left unjudged in `rule-assessments-not-checked`. The gate also blocks `done` with `unjudged-rules` while the record names any. Its data model carries the shapes.
 
 ## Motivation
 

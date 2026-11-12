@@ -33,6 +33,12 @@ its version and date.
   walker sends no request for a rule whose verdict is current.
   `rule-assessments-not-checked` now also counts each rule left unjudged, on
   the interactive path as under `ductus exec`.
+- **`check-review-gate` blocks `done` while the analysis names an unjudged rule
+  (spec 082).** After `analyze-stale`, a current, passing `analysis.md` that
+  lists any rule in `unjudged-rules` blocks with `blocked-by: unjudged-rules`,
+  naming the rules and sending the operator to `/{project}:analyze`, which
+  judges only them. A record with no `unjudged-rules` field blocks on nothing
+  new.
 - **`check-artifacts` runs `/{project}:analyze`'s Spec integrity and Plan
   consistency checks.** Two new blocking families, `spec-integrity` (no
   Acceptance Criteria section, no criterion from `clarified` on, an empty or

@@ -751,7 +751,9 @@ fn analyze_gate_block(
         // this one says a passing analysis is out of date.
         let freshness =
             crate::primitives::analyze_subjects::analyze_freshness(repo, rel_dir, Some(analyze));
-        return match stale_analyze_block(&freshness, project) {
+        return match stale_analyze_block(&freshness, project)
+            .or_else(|| unjudged_rules_block(analyze, project))
+        {
             Some(blocked) => Err(blocked),
             None => Ok(freshness),
         };
@@ -805,6 +807,31 @@ fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
     } else {
         head
     }
+}
+
+/// Gate check 13, after staleness: `Some(blocked)` when the analysis record names a
+/// loaded rule in `unjudged-rules` (spec 082). An unjudged rule is an obligation
+/// nobody has verified, and the next analysis judges only those rules, since a
+/// current verdict is reused. A record with no such field lists none.
+fn unjudged_rules_block(analyze: &AnalyzeBlock, project: &str) -> Option<Verdict> {
+    if analyze.unjudged_rules.is_empty() {
+        return None;
+    }
+    Some(Verdict {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::UnjudgedRules),
+        message: Some(format!(
+            "blocked: {} loaded rule(s) no analysis has judged: {}",
+            analyze.unjudged_rules.len(),
+            render_paths(&analyze.unjudged_rules)
+        )),
+        guidance: Some(format!(
+            "Run /{project}:analyze, which judges only these rules now that current verdicts are reused."
+        )),
+        violations: vec![],
+        cross_spec_impact: vec![],
+        analyze_stale_paths: None,
+    })
 }
 
 /// The staleness gate check over the `analyze:` record: `Some(blocked)` when
@@ -1808,6 +1835,46 @@ mod tests {
         seed(tmp.path(), ANALYZE_NULL_RUN);
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotAnalyzed));
+    }
+
+    /// Spec 082: a passing, current analysis that names a loaded rule it never
+    /// judged holds `done`, and the block names each rule.
+    #[test]
+    fn an_analysis_naming_unjudged_rules_blocks_and_names_them() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY.replace(
+                "  unexamined: 4\n",
+                "  unexamined: 4\n  unjudged-rules:\n    - TS-MUST-001\n    - TS-MUST-002\n",
+            ),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::UnjudgedRules));
+        let message = result.message.as_deref().unwrap();
+        assert!(message.contains("TS-MUST-001, TS-MUST-002"), "{message}");
+        let guidance = result.guidance.as_deref().unwrap();
+        assert!(guidance.contains("/ductus:analyze"), "{guidance}");
+    }
+
+    /// The other direction: an analysis with no `unjudged-rules` field, one from
+    /// before spec 082 included, or an empty list blocks on nothing here.
+    #[test]
+    fn an_analysis_with_no_unjudged_rules_passes() {
+        for record in [
+            ANALYZE_ADVISORY_ONLY.to_string(),
+            ANALYZE_ADVISORY_ONLY.replace(
+                "  unexamined: 4\n",
+                "  unexamined: 4\n  unjudged-rules: []\n",
+            ),
+        ] {
+            let tmp = tempdir().unwrap();
+            seed(tmp.path(), &record);
+            let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+            assert!(result.passed, "{:?}", result.message);
+            assert_eq!(result.blocked_by, None);
+        }
     }
 
     #[test]

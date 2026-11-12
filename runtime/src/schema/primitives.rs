@@ -6036,6 +6036,13 @@ pub enum ReviewGateBlock {
     /// its own `analyze:` block into every one of them; with that block
     /// excluded, 1 of 54 flags and it is a true positive.
     AnalyzeStale,
+    /// The analysis is current and passing, but its record names a loaded rule in
+    /// `unjudged-rules` (spec 082): a rule no run has judged over these artifacts,
+    /// so an obligation nobody has verified. Ordered after [`Self::AnalyzeStale`]
+    /// because a stale record is re-run before what it lists means anything. Since
+    /// verdicts are reused, the re-run judges only the listed rules. A record with
+    /// no `unjudged-rules` field, written before spec 082, blocks on nothing here.
+    UnjudgedRules,
     /// `review.md` or `analysis.md` carries no `dispositions:` map: the record
     /// was written before findings were dispositioned (spec 058), and its
     /// run's findings may sit in the inbox unrouted. Absence is not zero, so

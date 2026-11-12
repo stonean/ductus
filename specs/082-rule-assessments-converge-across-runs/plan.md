@@ -57,6 +57,10 @@ A citation is `path#Heading`: a design subject of the feature and a heading it c
 
 When this run judges a rule whose prior verdict is current under the three-part rule, `write_analysis::run` compares them. A new `finding` against a prior not-fired or `addressed` is a contradiction. The finding is recorded in its tier as any finding is, and the result gains `contradictions` (rule ID and earlier verdict) and the body a `## Contradictions` section, `*None.*` when empty, so step 22 reports it. It holds nothing and appears in no count (AC3, Resolved Questions). It arises only when a rule is judged although its verdict was current, which needs a host that ignores `judge`, so no flag forces a re-judge here.
 
+### The completion gate holds `done` while a loaded rule is unjudged
+
+An unjudged rule is an obligation nobody has verified, and a spec edit that stales every verdict, followed by a run judging nothing, would otherwise move a prior MUST finding out of `blocking-findings` into `unjudged-rules` with nothing gating it. `check-review-gate` blocks with `unjudged-rules` (`unjudged_rules_block` in `runtime/src/primitives/check_review_gate.rs`) when `analysis.md` names any rule there. The block follows `analyze-stale`, since a stale record is re-run first, and names the rules with guidance to run `/{project}:analyze`, which judges only them while the rest of the verdicts are current. A record with no `unjudged-rules` field, written before this spec, blocks on nothing new; an unreadable one is undeterminable already. 066 owns the gate, so its data model lists the check (owner, 2026-11-12).
+
 ### The constitution pays about 110 bytes
 
 `framework/constitution.md` is 49,616 bytes against `scripts/lint-governing-size.sh`'s 50,000 ceiling (`wc -c`, 2026-11-12, 384 bytes of headroom). The three fields add about 113 bytes to the Analyze record row, leaving about 270. No cut is needed. A fourth field would need one.
@@ -92,6 +96,7 @@ When this run judges a rule whose prior verdict is current under the three-part 
 | `specs/050-constitution/spec.md` | Modify | Back-link signpost |
 | `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` | Modify | Back-link signpost |
 | `specs/066-audit-records-and-the-completion-gate/spec.md` | Modify | Back-link signpost |
+| `runtime/src/primitives/check_review_gate.rs` | Modify | `unjudged_rules_block`, after the staleness check |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
 
 ## Data Model

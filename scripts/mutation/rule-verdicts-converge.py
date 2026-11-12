@@ -6,7 +6,7 @@ the exec walker asks only about a rule whose verdict is not current
 (`split_reused` in `interpreter/mod.rs`).
 
 Each mutation removes the behavior one unit test names, and its filter selects
-that test. AC1 is held by M1 to M3, M7 and M9, AC2 by M5 and M10, AC3 by M6, the stored tier by M16 to M18,
+that test. AC1 is held by M1 to M3, M7 and M9, AC2 by M5 and M10, AC3 by M6, the stored tier by M16 to M18, the gate's hold on unjudged rules by M21 and M22,
 AC4 by `write_analysis::tests::the_rule_fields_read_back_through_the_loader`
 (no mutant: it holds the record's shape, not a behavior one line removes),
 AC5 by M2 and AC6 by M4, each on the interactive and the exec path.
@@ -172,5 +172,19 @@ MUTATIONS = [
         '                && (rule.tier == RuleSeverity::Should) != (*tier == FindingTier::Should)',
         '                && false',
         'write_analysis::tests::a_finding_labelled_in_a_tier_its_rule_cannot_fail_in_is_refused',
+    ),
+    (
+        'M21 the gate ignores a record naming unjudged rules',
+        'src/primitives/check_review_gate.rs',
+        '    if analyze.unjudged_rules.is_empty() {',
+        '    if true || analyze.unjudged_rules.is_empty() {',
+        'primitives::check_review_gate::tests::an_analysis_naming_unjudged_rules_blocks_and_names_them',
+    ),
+    (
+        'M22 the gate blocks on an analysis naming no unjudged rule',
+        'src/primitives/check_review_gate.rs',
+        '    if analyze.unjudged_rules.is_empty() {',
+        '    if false && analyze.unjudged_rules.is_empty() {',
+        'primitives::check_review_gate::tests::an_analysis_with_no_unjudged_rules_passes',
     ),
 ]
