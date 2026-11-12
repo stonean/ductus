@@ -158,6 +158,10 @@ Two classes live in the set, and they call for opposite responses. **Excluded by
 
 `artifact-unreadable` carries one exception to the whole "an unknown is never escalated into a defect" rule: on a spec at `status: done` it is a **blocking finding** rather than a skipped target, so it appears in `blocking-findings` and not here. The rule it breaks is about *other* files — another spec's frontmatter, an upstream service's state — where the defect belongs to someone else. This one names the spec's own artifact in its own directory that its own analysis could not read. The concrete case is Scenario open questions: an unreadable scenario contributes no questions and, as a skip, no finding, so a scenario carrying unresolved questions that will not parse would sail through the gate built to catch exactly that. Below `done` it stays a skipped target — the questions check is advisory there, and an unreadable artifact mid-work is a state to report rather than a gate to fail.
 
+### `rule-verdicts`, `unjudged-rules` and `rule-digest`
+
+A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
+
 ### `blocking`
 
 Derived by the runtime from `hard-fail` and `blocking-findings`, never accepted from the caller — for the same reason `unexamined` is derived from its breakdown: a value a caller can contradict is one that will eventually be contradicted.
