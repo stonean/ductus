@@ -232,3 +232,10 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 - [ ] Advisory, never gating, since it asks for a re-examination rather than proving a defect. Step 15 already owns host judgments (grounding, integrity); add the clause without renumbering steps. Pairs with 050's new task stating the rule in the constitution.
 
 - **Done when**: /{project}:analyze step 15 judges each Resolved Question and each plan Trade-off that rejects or passes over an option, recording one whose stated reason is the reopen or review run that option would start as an advisory finding to re-examine; framework/reference/analyze.md states the check; an exec walk records it unexamined under its reason; and a fixture proves the exec record and that the analyze golden still matches
+
+## 29. check-artifacts reads no file through a link that leaves the project
+
+- [ ] The owner's answer (a), 2026-11-12, re-deciding 022's scenario a-path-argument-resolves-inside-its-base: its recommendation kept 067 closed and left check-artifacts reading through an outward link (validate_feature_contained in runtime/src/primitives/mod.rs, 'without the walk'), a BE-INPUT-004 gap kept only to avoid a reopen.
+- [ ] Keep 067's promise that a linked target is skipped, not fatal: target-unparseable is an existing closed-set reason. Add the case to sibling-symlink-trust-boundary's Edge Cases, and replace the residual in 022's scenario with a pointer here. Remove validate_feature_contained if nothing else calls it once check-artifacts uses the walk (no dead code).
+
+- **Done when**: check-artifacts runs validate_feature_argument's symlink walk, a fixed-name file in the feature directory that links outside the project is recorded as a target-unparseable skip while the run continues, a fixture with such a link proves it and fails with the walk removed, and 067's sibling-symlink-trust-boundary and 022's a-path-argument-resolves-inside-its-base say so
