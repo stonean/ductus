@@ -84,7 +84,6 @@ impl RuleSection {
 /// Each field is length-prefixed, and a Verification's absence is its own
 /// byte, so no two different rule sets hash alike by running a boundary
 /// together. The digest of a file with no rule is the digest of nothing.
-#[allow(dead_code)] // read by `rule_verdicts` (spec 082, task 3)
 pub(crate) fn rules_digest(content: &str) -> String {
     use sha2::{Digest, Sha256};
 

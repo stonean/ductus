@@ -88,6 +88,7 @@ pub mod retarget_sessions;
 pub mod retire_feature;
 pub mod rewrite_spec_links;
 pub(crate) mod rule_sections;
+pub(crate) mod rule_verdicts;
 pub mod run_generator;
 pub mod set_status;
 pub(crate) mod spec_links;

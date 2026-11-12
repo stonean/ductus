@@ -89,7 +89,6 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
 /// than [`is_review_contract`], which leaves `spec.md` out for the reasons its
 /// comment gives; a verdict about the spec's own text needs it. A scenario is
 /// a markdown file under `scenarios/`, as there.
-#[allow(dead_code)] // read by `rule_verdicts` (spec 082, task 3)
 pub(crate) fn is_design_subject(rel_within_feature: &str) -> bool {
     let is_md = Path::new(rel_within_feature)
         .extension()
