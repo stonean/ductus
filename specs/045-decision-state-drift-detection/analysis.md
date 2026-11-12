@@ -1,16 +1,16 @@
 ---
 spec: 045-decision-state-drift-detection
-last-run: 2026-11-11T17:22:42Z
-analyzed-against: aedb476958508e84d243dfa55d91e37e58bd090b
+last-run: 2026-11-12T00:32:34Z
+analyzed-against: ab2ad0853b359dfe50598581bc9302daf093ef2a
 hard-fail: 0
 blocking-findings: 0
 advisory: 3
 unexamined: 17
 analyzed-digest:
-  data-model.md: e57856a8be48ada9fa99c2638b68e72a39f82c48352955c274764dd58a6a19ec
-  plan.md: 3a3bf04801c6b583f3760b4cc4e215bfef112c1d522b603cc5f11308c634f5e2
+  data-model.md: a0eaede24370550bdeeb354b9d1251bcaf0a83109219f58944b2dd066ee69855
+  plan.md: 5ea3131d1c7c0aad7f1ef620a41cd5d111a538ab58ce71a3f4a4a83d7399f85e
   review.md: 81930205c4a39cb4d673aeeb283d6b60b62e42ca1adf83f88010240f8ecba2a6
-  spec.md: b2816eebfb6451fdb1960a8b73e55e72dd082475afa8a0cac2b81402b2a2529a
+  spec.md: 82cad93cbea7f84885222be8beb9a2f8ac03a59ced2de7ff4757f99428b8f854
   tasks.md: 8b46078bdad8d7f1d9d0823451246d232c0be79926c3411bc6b9223d3ce8d8bf
 unexamined-by-reason:
   not-a-live-claim: 8
@@ -18,7 +18,7 @@ unexamined-by-reason:
   ships-to-adopter: 5
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 6
   deferred: 1
   waived: 3
   undispositioned: 0
@@ -51,7 +51,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 17 unexamined target(s). Dispositions: 2 fixed, 1 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 3 advisory; not blocking. 17 unexamined target(s). Dispositions: 6 fixed, 1 deferred, 3 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -69,7 +69,7 @@ decisions:
 
 ## Deferred to other specs
 
-- rule-assessment — BE-INPUT-004: the criterion-path family probes a path taken from spec text with repo.join(candidate).exists() and no `..` screen, so a criterion can make the runtime stat a file outside the project — `specs/045-decision-state-drift-detection/data-model.md` — **deferred** to `specs/067-analyze-and-audit-checks/tasks.md` task 27
+- rule-assessment — BE-INPUT-004: the criterion-path family probes a path taken from spec text with repo.join(candidate).exists() and no `..` screen, so a criterion can make the runtime stat a file outside the project — `specs/045-decision-state-drift-detection/plan.md` — **deferred** to `specs/067-analyze-and-audit-checks/tasks.md` task 27
 
 ## Unexamined targets
 
@@ -79,5 +79,9 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-INPUT-004: the families read files under the directory the feature argument names, and no 045 artifact stated the screen check-artifacts applies to that argument (validate_feature_contained) — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)
-- rule-assessment — BE-PAYLOAD-001: check-artifacts' findings and skipped lists grow with the feature, and no 045 artifact committed to their bound or pointed at 080's — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)
+- grounding — spec.md Motivation: "it explicitly does not read source to confirm the claim is true" describes analyze's grounding step with no citation — `specs/045-decision-state-drift-detection/spec.md` — **fixed** (decided by the rule)
+- grounding — spec.md Motivation: "artifact-vs-artifact consistency is /{project}:analyze's job by design" describes the review/analyze split with no citation — `specs/045-decision-state-drift-detection/spec.md` — **fixed** (decided by the rule)
+- grounding — plan.md §Two families inside check-artifacts: "check-artifacts is already in TOOL_NAMES, PRIMITIVE_NAMES, ..." names registration sites with no line or command, and TOOL_NAMES no longer exists — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)
+- grounding — plan.md §Release path: "analyze-basic.jsonl records 13 lines" and "003-analyze is at status: clarified" carry no command, and the golden holds 17 lines — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)
+- grounding — plan.md §Implementation ownership: "check-artifacts' compiled description names its families and 067's data model records them" gives no path — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)
+- decision-resolution — plan.md still scopes the path family to done specs and counts eighteen criteria, while AC16 covers in-progress and done specs and the spec holds nineteen (§decision-resolution: 067's widening left the plan describing the prior state) — `specs/045-decision-state-drift-detection/plan.md` — **fixed** (decided by the rule)

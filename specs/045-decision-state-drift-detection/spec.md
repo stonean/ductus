@@ -14,11 +14,11 @@ A missing document sends the reader looking. A stale one is trusted and acted on
 
 The framework covers the *document → back-link* case: §drift-prevention's Cross-document references requires that "Changing A includes auditing every back-link to A". The common failure is *decision → dependents*, and three mechanisms each miss it for a different reason.
 
-**The grounding check is a form check, not a truth check.** `/{project}:analyze`'s grounding step verifies that a claim about existing reality carries a citation or an explicit hedge — it explicitly does not read source to confirm the claim is true. A stale assertion that correctly cites its source ("the scenario's open question expects…") passes grounding while being false. Grounding is structurally blind to this class.
+**The grounding check is a form check, not a truth check.** `/{project}:analyze`'s grounding step verifies that a claim about existing reality carries a citation or an explicit hedge — it explicitly does not read source to confirm the claim is true (`framework/commands/analyze.md` step 15, "This is a *form* check", and `framework/reference/analyze.md` §Grounding (advisory)). A stale assertion that correctly cites its source ("the scenario's open question expects…") passes grounding while being false. Grounding is structurally blind to this class.
 
 **§drift-prevention is scoped to documents, not decisions.** Its audit obligation triggers on *editing document A*. When a scenario's questions are resolved, document A *was* edited — but the trigger a contributor recognizes is "a question got resolved", and the obligation is not stated in those terms anywhere.
 
-**`/{project}:review` cannot see it.** It audits code against rules; artifact-vs-artifact consistency is `/{project}:analyze`'s job by design.
+**`/{project}:review` cannot see it.** It audits code against rules; artifact-vs-artifact consistency is `/{project}:analyze`'s job by design (`framework/commands/analyze.md` §Purpose: "Complementary to `/{project}:review`, which audits **code** against rules").
 
 ### Observed case
 
