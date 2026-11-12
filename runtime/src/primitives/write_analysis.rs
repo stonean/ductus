@@ -62,6 +62,7 @@ use crate::schema::primitives::{
     Dispositions, FindingTier, RuleContradiction, RuleVerdict, WriteAnalysisArgs,
     WriteAnalysisResult,
 };
+use crate::schema::severity::RuleSeverity;
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
 /// add to its spec (spec 079).
@@ -537,6 +538,52 @@ struct DerivedRules {
     unreadable_files: u32,
 }
 
+/// Refuse a new verdict that names no assessable loaded rule, a `finding`
+/// with no message, and a `finding` whose tier its rule cannot fail in.
+fn check_new_verdicts(args: &WriteAnalysisArgs, standing: &rule_verdicts::Standing) -> Result<()> {
+    for (id, verdict) in &args.rule_verdicts {
+        if standing.currency(id).is_none() {
+            return Err(invalid(
+                format!("rule-verdicts.{id}"),
+                "names no assessable rule of the loaded rule files",
+            ));
+        }
+        if let RuleVerdict::Finding { message, tier, .. } = verdict {
+            if single_line(message).is_empty() {
+                return Err(invalid(
+                    format!("rule-verdicts.{id}.message"),
+                    "a finding verdict's message is empty",
+                ));
+            }
+            // A finding is counted in its own tier, but a rule whose
+            // Statement carries one keyword can only fail in that tier: a
+            // MUST failure labelled `should` would leave blocking-findings
+            // and let the spec reach `done`. A rule carrying both may fail on
+            // either clause.
+            let rule = standing
+                .rules()
+                .iter()
+                .map(|(rule, _)| rule)
+                .find(|rule| rule.id == *id);
+            if let Some(rule) = rule
+                && !rule.mixed
+                && (rule.tier == RuleSeverity::Should) != (*tier == FindingTier::Should)
+            {
+                let name = |should: bool| if should { "should" } else { "must" };
+                return Err(invalid(
+                    format!("rule-verdicts.{id}.tier"),
+                    &format!(
+                        "the finding's tier is {} but {id}'s Statement carries only {}",
+                        name(*tier == FindingTier::Should),
+                        name(rule.tier == RuleSeverity::Should),
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Derive the record's rule fields (spec 082).
 ///
 /// The universe is every assessable rule of every file in the rule-file
@@ -567,22 +614,7 @@ fn derive_rule_fields(
 ) -> Result<DerivedRules> {
     let universe = rule_verdicts::load_universe(repo)?;
     let standing = rule_verdicts::standing(feature_dir, &universe.files);
-    for (id, verdict) in &args.rule_verdicts {
-        if standing.currency(id).is_none() {
-            return Err(invalid(
-                format!("rule-verdicts.{id}"),
-                "names no assessable rule of the loaded rule files",
-            ));
-        }
-        if let RuleVerdict::Finding { message, .. } = verdict
-            && single_line(message).is_empty()
-        {
-            return Err(invalid(
-                format!("rule-verdicts.{id}.message"),
-                "a finding verdict's message is empty",
-            ));
-        }
-    }
+    check_new_verdicts(args, &standing)?;
     let judged: BTreeSet<&str> = args
         .judged_rules
         .iter()
@@ -3049,6 +3081,50 @@ mod tests {
         let record = written_record(&tmp);
         assert_eq!(record.blocking_findings, 1);
         assert_eq!(record.advisory, 0);
+    }
+
+    /// A finding's stored tier must be one its rule can fail in: a MUST-only
+    /// rule labelled `should` would move a blocking failure to advisory, and a
+    /// SHOULD-only rule labelled `must` the converse, so both are refused at
+    /// write naming the rule and both tiers; a rule carrying both keywords
+    /// accepts either (spec 082).
+    #[test]
+    fn a_finding_labelled_in_a_tier_its_rule_cannot_fail_in_is_refused() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/rules");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("a-cross.md"),
+            "### TS-ONLY-001\n\n> Specs MUST do it.\n\n**Verification:** Look.\n\n\
+             ### TS-SOFT-001\n\n> Specs SHOULD do it.\n\n**Verification:** Look.\n\n\
+             ### TS-BOTH-001\n\n> Lists MUST paginate and SHOULD use cursors.\n\n**Verification:** Look.\n",
+        )
+        .unwrap();
+        let run_with = |id: &str, tier: FindingTier| {
+            // A fresh record each time: a prior finding would be carried forward.
+            let _ = fs::remove_file(tmp.path().join("specs/042-demo/analysis.md"));
+            let mut a = args();
+            a.judged_rules = vec![id.into()];
+            a.blocking_findings = 1;
+            a.advisory = 1;
+            a.rule_verdicts = BTreeMap::from([(id.to_string(), finding_in(tier, "m"))]);
+            run(&a, tmp.path())
+        };
+        for (id, wrong, right) in [
+            ("TS-ONLY-001", FindingTier::Should, FindingTier::Must),
+            ("TS-SOFT-001", FindingTier::Must, FindingTier::Should),
+        ] {
+            let error = run_with(id, wrong).unwrap_err().to_string();
+            assert!(error.contains(id), "{error}");
+            assert!(
+                error.contains("tier is") && error.contains("carries only"),
+                "{error}"
+            );
+            assert!(!analysis_exists(&tmp), "nothing is written on a refusal");
+            run_with(id, right).unwrap();
+        }
+        run_with("TS-BOTH-001", FindingTier::Must).unwrap();
+        run_with("TS-BOTH-001", FindingTier::Should).unwrap();
     }
 
     /// A verdict for a rule no loaded file defines, or a finding with no

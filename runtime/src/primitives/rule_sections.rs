@@ -67,6 +67,12 @@ impl RuleSection {
         should.then_some(RuleSeverity::Should)
     }
 
+    /// Whether the Statement carries both `MUST` and `SHOULD`: MUST-tier by
+    /// [`Self::tier`], and able to fail on either clause (spec 082).
+    pub(crate) fn carries_both_tiers(&self) -> bool {
+        self.tokens().any(|token| token == "MUST") && self.tokens().any(|token| token == "SHOULD")
+    }
+
     /// The Statement's whole tokens, split on every non-alphanumeric
     /// character. Every keyword check reads the Statement through this, so
     /// two checks cannot disagree about what counts as a keyword.

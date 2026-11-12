@@ -159,4 +159,18 @@ MUTATIONS = [
         '                let _ = stored;\n                tally.record_reused(FindingTier::Must);',
         'interpreter::tests::a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in',
     ),
+    (
+        'M19 a finding may be labelled in a tier its single-tier rule cannot fail in',
+        'src/primitives/write_analysis.rs',
+        '                && !rule.mixed\n',
+        '                && rule.mixed\n',
+        'write_analysis::tests::a_finding_labelled_in_a_tier_its_rule_cannot_fail_in_is_refused',
+    ),
+    (
+        'M20 the tier check ignores the rule tier',
+        'src/primitives/write_analysis.rs',
+        '                && (rule.tier == RuleSeverity::Should) != (*tier == FindingTier::Should)',
+        '                && false',
+        'write_analysis::tests::a_finding_labelled_in_a_tier_its_rule_cannot_fail_in_is_refused',
+    ),
 ]

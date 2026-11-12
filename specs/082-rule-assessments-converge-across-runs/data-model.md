@@ -13,7 +13,7 @@ Three fields join the analysis record, whose other fields [066's data model](../
 A verdict is one of two shapes:
 
 - `addressed` — `{verdict: addressed, cite: "<path>#<Heading>"}`. `cite` names a design subject of the feature (`spec.md`, `plan.md`, `data-model.md`, `scenarios/<slug>.md`) and a heading it contains. One that does not resolve is not stored: the rule goes to `unjudged-rules`.
-- `finding` — `{verdict: finding, tier: must|should, at: "<path>#<Heading>", message: "<one line>"}`. `tier` is the tier the finding was counted in, its own severity, which is not always its rule's text tier; a run that reuses the verdict reports and floors it there.
+- `finding` — `{verdict: finding, tier: must|should, at: "<path>#<Heading>", message: "<one line>"}`. `tier` is the tier the finding was counted in, its own severity, which is not always its rule's text tier (`write-analysis` refuses one that differs unless the Statement carries both MUST and SHOULD); a run that reuses the verdict reports and floors it there.
 
 A loaded rule in neither `rule-verdicts` nor `unjudged-rules` did not fire. A rule with no Verification or no RFC 2119 keyword is in none of the fields: it stays counted under `rule-assessments-not-checked` only.
 
@@ -57,7 +57,7 @@ With `rules` and `feature` set, the result gains `verdicts`:
 }
 ```
 
-`reason` is `no-prior-verdicts` or `subjects-changed` when nothing is reusable, then `judge` holds every assessable rule. A rule absent from `reusable` and `judge` is current and did not fire. Both lists follow `bounded_lists::place`'s inline-or-file form.
+`reason` is `no-prior-verdicts`, `subjects-changed` or `record-unreadable` (also a notice) when nothing is reusable, `reusable-count` and `judge-count` are inline in both forms, then `judge` holds every assessable rule. A rule absent from `reusable` and `judge` is current and did not fire. Both lists follow `bounded_lists::place`'s inline-or-file form.
 
 ## `write-analysis` arguments and result
 

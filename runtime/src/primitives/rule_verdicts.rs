@@ -47,6 +47,9 @@ pub(crate) struct AssessableRule {
     pub(crate) id: String,
     /// Its tier, from its Statement's RFC 2119 keyword.
     pub(crate) tier: RuleSeverity,
+    /// Whether its Statement carries both MUST and SHOULD, so a finding of it
+    /// may be counted in either tier.
+    pub(crate) mixed: bool,
 }
 
 /// A rule file a run loaded: its basename, the digest of its rules' text and
@@ -68,6 +71,7 @@ impl LoadedRuleFile {
             .into_iter()
             .filter_map(|section| match (section.tier(), &section.verification) {
                 (Some(tier), Some(_)) => Some(AssessableRule {
+                    mixed: section.carries_both_tiers(),
                     id: section.id,
                     tier,
                 }),
