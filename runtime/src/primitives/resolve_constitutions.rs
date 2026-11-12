@@ -882,6 +882,10 @@ mod tests {
             "{analysis}"
         );
 
+        // `write-review` reads the read size only to bound a stale analysis's
+        // paths (066), so the record `write-analysis` just wrote is set aside:
+        // this call is about the governance view, not that list.
+        fs::remove_file(feature.join("analysis.md")).unwrap();
         crate::primitives::write_review::run(
             &crate::schema::primitives::WriteReviewArgs {
                 feature: "055-x".into(),

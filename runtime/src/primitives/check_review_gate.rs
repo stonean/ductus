@@ -45,15 +45,29 @@ use crate::schema::primitives::{
 /// domain outcome in the result.
 ///
 /// The result is inline while it fits `[artifacts] read-size-bytes`, and past
-/// it carries `violations` and `cross-spec-impact` in the file it names and
-/// only their counts inline (`bounded_lists::place`; spec 080, AC7).
+/// it carries `violations`, `cross-spec-impact` and `analyze-stale-paths` in
+/// the file it names and only their counts inline (`bounded_lists::place`; spec 080, AC7).
 pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateResult> {
-    let verdict = run_with_lint(args, repo, lint_markdown::compute)?;
+    bounded(args, repo, lint_markdown::compute)
+}
+
+/// [`run`] with the lint injected, so a test bounds a verdict without `npx`.
+fn bounded(
+    args: &CheckReviewGateArgs,
+    repo: &Path,
+    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<lint_markdown::Lint>,
+) -> Result<CheckReviewGateResult> {
+    let verdict = run_with_lint(args, repo, lint)?;
     let lists = serde_json::json!({
         "violations": verdict.violations,
         "cross-spec-impact": verdict.cross_spec_impact,
+        "analyze-stale-paths": verdict.analyze_stale_paths.as_deref().unwrap_or_default(),
     });
     let impact = verdict.cross_spec_impact;
+    let stale = verdict
+        .analyze_stale_paths
+        .map(Vec::from)
+        .unwrap_or_default();
     let mut result = CheckReviewGateResult {
         passed: verdict.passed,
         blocked_by: verdict.blocked_by,
@@ -63,6 +77,8 @@ pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateRes
         violations: Some(verdict.violations),
         cross_spec_impact_count: impact.len(),
         cross_spec_impact: (!impact.is_empty()).then_some(impact),
+        analyze_stale_paths_count: stale.len(),
+        analyze_stale_paths: (!stale.is_empty()).then_some(stale),
         form: ListsForm::Inline,
         lists_file: None,
     };
@@ -72,6 +88,7 @@ pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateRes
         result.form = ListsForm::File;
         result.violations = None;
         result.cross_spec_impact = None;
+        result.analyze_stale_paths = None;
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -79,7 +96,8 @@ pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateRes
 
 /// A gate verdict, whole: what `check-review-gate` returns, before its result
 /// is bounded. Each field is [`CheckReviewGateResult`]'s of the same name;
-/// an empty `cross_spec_impact` is the result's absent one.
+/// an empty `cross_spec_impact` or `analyze_stale_paths` is the result's absent
+/// one.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Verdict {
     pub(crate) passed: bool,
@@ -88,6 +106,8 @@ pub(crate) struct Verdict {
     pub(crate) guidance: Option<String>,
     pub(crate) violations: Vec<MarkdownViolation>,
     pub(crate) cross_spec_impact: Vec<CrossSpecImpactEntry>,
+    /// Boxed so the verdict, which many checks return as an `Err`, stays small.
+    pub(crate) analyze_stale_paths: Option<Box<[String]>>,
 }
 
 /// Implementation seam that lets unit tests inject a canned lint outcome
@@ -261,6 +281,7 @@ pub(crate) fn run_with_lint(
         // when it fails would leave "declared and proven" and "never declared"
         // rendering identically.
         cross_spec_impact: cross_spec,
+        analyze_stale_paths: None,
     })
 }
 
@@ -384,6 +405,7 @@ fn review_owed_block(owed_by: &[String], project: &str) -> Verdict {
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }
 }
 
@@ -423,6 +445,7 @@ fn disposition_block(
         guidance: Some(guidance),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     };
 
     if map.is_none() {
@@ -490,6 +513,7 @@ fn must_violations_block(
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }
 }
 
@@ -601,6 +625,7 @@ fn fix_round_block(
             )),
             violations: vec![],
             cross_spec_impact: vec![],
+            analyze_stale_paths: None,
         });
     }
     let not_re_read = review.not_re_read?;
@@ -622,6 +647,7 @@ fn fix_round_block(
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     })
 }
 
@@ -715,6 +741,7 @@ fn analyze_gate_block(
                 guidance: None,
                 violations: vec![],
                 cross_spec_impact: vec![],
+                analyze_stale_paths: None,
             });
         }
     };
@@ -752,6 +779,7 @@ fn analyze_gate_block(
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     })
 }
 
@@ -814,6 +842,7 @@ fn stale_analyze_block(freshness: &RecordFreshness, project: &str) -> Option<Ver
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: Some(paths.clone().into_boxed_slice()),
     })
 }
 
@@ -860,6 +889,7 @@ fn markdown_lint_block(
         guidance: None,
         violations: lint_result.violations,
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }))
 }
 
@@ -878,6 +908,7 @@ fn never_reviewed_block(project: &str) -> Verdict {
         guidance: None,
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }
 }
 
@@ -903,6 +934,7 @@ fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> Verdict {
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }
 }
 
@@ -944,6 +976,7 @@ fn unreadable_record_block(
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }
 }
 
@@ -987,6 +1020,7 @@ fn already_done_block(status: &str, project: &str) -> Option<Verdict> {
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     })
 }
 
@@ -1186,6 +1220,7 @@ fn cross_spec_impact_block(
         // The full per-entry list, discharged rows included: the operator
         // needs to see which half of a partial declaration is already met.
         cross_spec_impact: entries.to_vec(),
+        analyze_stale_paths: None,
     })
 }
 
@@ -1209,6 +1244,7 @@ fn unchecked_task_block(feature_dir: &Path, rel_dir: &str) -> Result<Option<Verd
         ),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }))
 }
 
@@ -1269,6 +1305,7 @@ fn scenario_question_block(
         )),
         violations: vec![],
         cross_spec_impact: vec![],
+        analyze_stale_paths: None,
     }))
 }
 
@@ -3526,6 +3563,54 @@ mod tests {
 
     /// Nothing but text, this spec's own or another's, and the earlier record stands:
     /// the reopening takes one analysis and no review (AC4).
+    /// A stale analysis names every changed artifact: the message shows three
+    /// and counts the rest, and `analyze-stale-paths` holds them all inline, or
+    /// past the read size in the file the result names, its count inline in
+    /// both forms (066 scenario `freshness-results-have-a-bounded-size`).
+    #[test]
+    fn a_stale_analysis_past_the_read_size_names_a_file_holding_every_path() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        fs::create_dir_all(repo.join("specs/007-gate/scenarios")).unwrap();
+        let mut expected: Vec<String> = Vec::new();
+        for n in 0..40 {
+            let rel = format!("specs/007-gate/scenarios/s{n:02}.md");
+            fs::write(repo.join(&rel), "# S\n").unwrap();
+            expected.push(rel);
+        }
+        git_commit_all(repo, "docs(007): scenarios");
+        let read_size = |bytes: u32| {
+            fs::create_dir_all(repo.join(".ductus")).unwrap();
+            fs::write(
+                repo.join(".ductus/config.toml"),
+                format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+            )
+            .unwrap();
+        };
+
+        read_size(1_000_000);
+        let inline = bounded(&args(), repo, clean_lint).unwrap();
+        assert_eq!(inline.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+        assert_eq!(inline.form, ListsForm::Inline);
+        let whole = inline.analyze_stale_paths.clone().unwrap();
+        for path in &expected {
+            assert!(whole.contains(path), "{path} missing from {whole:?}");
+        }
+        assert_eq!(inline.analyze_stale_paths_count, whole.len());
+        assert!(inline.message.as_deref().unwrap().contains("(+"));
+
+        read_size(10);
+        let file = bounded(&args(), repo, clean_lint).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(file.analyze_stale_paths, None);
+        assert_eq!(file.analyze_stale_paths_count, whole.len());
+        let listed: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(repo.join(file.lists_file.unwrap())).unwrap())
+                .unwrap();
+        assert_eq!(listed["analyze-stale-paths"], serde_json::json!(whole));
+    }
+
     #[test]
     fn a_reopening_that_changed_only_text_passes_on_one_analysis() {
         let tmp = tempdir().unwrap();

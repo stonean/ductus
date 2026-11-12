@@ -1634,6 +1634,18 @@ pub struct WriteReviewResult {
     /// `HEAD` has not moved, so a committed-tree comparison would report
     /// `current` at the exact moment it stopped being true.
     pub analyze_freshness: RecordFreshness,
+    /// Entries in `analyze-freshness`' `paths`, in either form; zero unless
+    /// its state is `stale`.
+    #[serde(default)]
+    pub analyze_stale_paths_count: usize,
+    /// Where `analyze-freshness`' `paths` are: in `analyze-freshness`, or past
+    /// `[artifacts] read-size-bytes` in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the list whole, from the project
+    /// root: a JSON object whose `analyze-stale-paths` key is the list.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- write-analysis ----------------------------------------------------------
@@ -5933,8 +5945,16 @@ pub enum RecordFreshness {
         /// The recorded sha the run compared against: `analyzed-against`
         /// for the analyze record, `reviewed-against` for the review record.
         analyzed_against: String,
-        /// Repo-relative paths that changed, sorted; at most three are
-        /// rendered by the callers, with a count for the remainder.
+        /// Repo-relative paths that changed, sorted, and each recorded digest
+        /// key no longer on disk; at most three are rendered by the callers,
+        /// with a count for the remainder.
+        ///
+        /// Absent from a result whose lists went to a file past the read size
+        /// (066 scenario `freshness-results-have-a-bounded-size`): a computed
+        /// `Stale` always holds at least one path, so an empty one is never a
+        /// short complete list, and the result's `analyze-stale-paths-count`
+        /// says how many the file holds.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         paths: Vec<String>,
     },
     /// Freshness could not be determined: the record carries no digest, so
@@ -6011,11 +6031,21 @@ pub struct CheckReviewGateResult {
     pub cross_spec_impact: Option<Vec<CrossSpecImpactEntry>>,
     /// Entries in `cross-spec-impact`, in either form.
     pub cross_spec_impact_count: usize,
-    /// Where `violations` and `cross-spec-impact` are: in this result, or
-    /// past the read size in the file `lists-file` names.
+    /// The artifacts that changed since the passing analysis ran, sorted,
+    /// when `blocked-by` is `analyze-stale`: the list the message shows the
+    /// first three of (066 scenario `freshness-results-have-a-bounded-size`).
+    ///
+    /// Absent when empty, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub analyze_stale_paths: Option<Vec<String>>,
+    /// Entries in `analyze-stale-paths`, in either form.
+    #[serde(default)]
+    pub analyze_stale_paths_count: usize,
+    /// Where `violations`, `cross-spec-impact` and `analyze-stale-paths` are:
+    /// in this result, or past the read size in the file `lists-file` names.
     pub form: ListsForm,
-    /// In the file form, the file holding both lists whole, from the project
-    /// root: a JSON object with their two keys.
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with their keys.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -9077,6 +9107,8 @@ mod tests {
             violations_count: 0,
             cross_spec_impact: None,
             cross_spec_impact_count: 0,
+            analyze_stale_paths: None,
+            analyze_stale_paths_count: 0,
             form: ListsForm::Inline,
             lists_file: None,
         };
@@ -9102,6 +9134,8 @@ mod tests {
             violations_count: 0,
             cross_spec_impact: None,
             cross_spec_impact_count: 0,
+            analyze_stale_paths: None,
+            analyze_stale_paths_count: 0,
             form: ListsForm::Inline,
             lists_file: None,
         };

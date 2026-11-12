@@ -26,8 +26,8 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     ConstitutionOutcome, DecisionOutcome, DecisionRef, DispositionOutcome, Dispositions, FixRound,
-    FixRoundCheck, ReReadOutcome, RecordFreshness, ReviewFinding, ReviewObservation, RoundWaiver,
-    WriteReviewArgs, WriteReviewResult,
+    FixRoundCheck, ListsForm, ReReadOutcome, RecordFreshness, ReviewFinding, ReviewObservation,
+    RoundWaiver, WriteReviewArgs, WriteReviewResult,
 };
 use crate::schema::severity::ReviewSeverity;
 
@@ -620,7 +620,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // consistent answer.
     let analyze_freshness = analyze_freshness_of(&feature_dir, &args.feature, repo)?;
 
-    Ok(WriteReviewResult {
+    let result = WriteReviewResult {
         path: rel_path(&review_path, repo),
         spec_path: rel_path(&spec_path, repo),
         must_violations: must_n,
@@ -634,7 +634,42 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         analyze_freshness,
         examined: args.examined,
         scope,
-    })
+        ..WriteReviewResult::default()
+    };
+    bound_stale_paths(result, repo, &args.feature)
+}
+
+/// Move `analyze-freshness`' `paths` to a file when the result passes the read
+/// size, naming it in `lists-file` and leaving the count inline.
+///
+/// It is the one list in this result that grows with the tree (066 scenario
+/// `freshness-results-have-a-bounded-size`). The record is written already, as
+/// `rewrite-spec-links` writes before it bounds.
+fn bound_stale_paths(
+    mut result: WriteReviewResult,
+    repo: &Path,
+    feature: &str,
+) -> Result<WriteReviewResult> {
+    let stale_paths = match &result.analyze_freshness {
+        RecordFreshness::Stale { paths, .. } => paths.clone(),
+        _ => Vec::new(),
+    };
+    result.analyze_stale_paths_count = stale_paths.len();
+    // Nothing to move reads no setting, so a malformed `read-size-bytes` halts
+    // only a result with a list to bound (`QUAL-DELEG-001`).
+    if stale_paths.is_empty() {
+        return Ok(result);
+    }
+    let lists = serde_json::json!({ "analyze-stale-paths": stale_paths });
+    if let Some(file) = super::bounded_lists::place(repo, "write-review", feature, &result, &lists)?
+    {
+        if let RecordFreshness::Stale { paths, .. } = &mut result.analyze_freshness {
+            paths.clear();
+        }
+        result.form = ListsForm::File;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
 }
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
@@ -2911,6 +2946,70 @@ mod tests {
         );
         // Still not a gate.
         assert_eq!(result.exit_code, 0);
+    }
+
+    /// A stale analysis past the read size moves `analyze-freshness`' `paths`
+    /// to a file, none of it inline and every path in the file, its count
+    /// inline in both forms; within the read size the list stays inline (066
+    /// scenario `freshness-results-have-a-bounded-size`).
+    #[test]
+    fn a_stale_analysis_past_the_read_size_names_a_file_holding_every_path() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/001-x");
+        let subjects = analyze_subjects::subject_digest(&dir, analyze_subjects::is_analyze_subject);
+        let mut fm = String::from("spec: 001-x\nlast-run: 2026-09-06T00:00:00Z\n");
+        fm.push_str("analyzed-against: abc1234\nhard-fail: 0\nblocking-findings: 0\n");
+        fm.push_str("advisory: 0\nunexamined: 0\nanalyzed-digest:\n");
+        for (path, digest) in &subjects.digests {
+            let _ = writeln!(fm, "  {path}: {digest}");
+        }
+        fm.push_str("blocking: false\n");
+        fs::write(
+            dir.join("analysis.md"),
+            format!("---\n{fm}---\n\n# Analysis — 001-x\n"),
+        )
+        .unwrap();
+        fs::create_dir_all(dir.join("scenarios")).unwrap();
+        for n in 0..40 {
+            fs::write(dir.join(format!("scenarios/s{n:02}.md")), "# S\n").unwrap();
+        }
+        let read_size = |bytes: u32| {
+            fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+            fs::write(
+                tmp.path().join(".ductus/config.toml"),
+                format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+            )
+            .unwrap();
+        };
+
+        read_size(1_000_000);
+        let inline = run(&base_args("001-x"), tmp.path()).unwrap();
+        let RecordFreshness::Stale { paths: whole, .. } = &inline.analyze_freshness else {
+            panic!("{:?}", inline.analyze_freshness);
+        };
+        assert!(whole.len() > 40, "{whole:?}");
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.analyze_stale_paths_count, whole.len());
+        assert_eq!(inline.lists_file, None);
+
+        read_size(10);
+        let bounded = run(&base_args("001-x"), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert!(
+            matches!(&bounded.analyze_freshness, RecordFreshness::Stale { paths, .. } if paths.is_empty()),
+            "{:?}",
+            bounded.analyze_freshness
+        );
+        assert_eq!(bounded.analyze_stale_paths_count, whole.len());
+        let listed: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(bounded.lists_file.unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(listed["analyze-stale-paths"], serde_json::json!(whole));
+        // The state still says stale: an emptied list is never a short one.
+        let json = serde_json::to_value(&bounded.analyze_freshness).unwrap();
+        assert_eq!(json["state"], "stale");
+        assert!(json.get("paths").is_none(), "{json}");
     }
 
     #[test]

@@ -28,6 +28,14 @@ The sections moved from 022 keep every argument and result shape and every field
 
 `derive-routing-candidates` offers the lowest-numbered spec whose plan claims a `runtime/` path (`runtime_home` in `runtime/src/primitives/derive_routing_candidates.rs`), which stays 022, so work naming one of these primitives is offered there first. Which of 022, 066 or 067 owns a primitive is the routing decision, stated in `AGENTS.md`'s routing entry. Listing this spec's runtime files below is what scopes its review.
 
+### Freshness paths go to a file past the read size
+
+`RecordFreshness.paths` is the only list in a freshness answer that grows with the tree: `write-review`'s result is otherwise scalars, and `check-review-gate`'s message already shows three paths and a count. Both results use `bounded_lists::place`, the mechanism `scope-results-have-a-bounded-size` settled, with their own list key `analyze-stale-paths` and its `analyze-stale-paths-count` inline in both forms.
+
+- **Past the read size, a `stale` freshness carries no `paths` key.** A computed `stale` always holds a path, so the key is skipped when empty (`skip_serializing_if` on `RecordFreshness::Stale.paths`) and the file form never reads as a short complete list; `state` still says `stale`, and `form`, `lists-file` and the count say where the list is. Rejected: a fixed cap on the list, which hides paths, and a separate field beside an intact `paths`, which would leave the maximum unbounded.
+- **`write-review` bounds its whole result**, `analyze-freshness` being its only list, so its file holds `analyze-stale-paths` alone. It has written `review.md` by then, as `rewrite-spec-links` has written before it bounds. A result with no stale path reads no setting, so a malformed `[artifacts] read-size-bytes` halts `write-review` only when a list is to be bounded, and its constitution resolution stays the unmeasured one it shares with `write-analysis` (055's test sets the analysis record aside before its `write-review` call, since a stale one would otherwise make the call read the malformed size it uses as its lever).
+- **`check-review-gate` carries the list beside its message** (`analyze-stale-paths`, absent when empty and in the file form) and holds it in the same file as `violations` and `cross-spec-impact`.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -42,6 +50,7 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/write_review.rs` | Specify | `write-review` |
 | `runtime/src/primitives/write_analysis.rs` | Specify | `write-analysis` |
 | `runtime/src/primitives/check_review_gate.rs` | Specify | `check-review-gate` |
+| `runtime/src/schema/primitives.rs` | Specify | The result fields `RecordFreshness.paths`' bound adds |
 | `runtime/src/primitives/analyze_subjects.rs` | Specify | The digest and freshness computation both records and the gate share |
 | `runtime/src/primitives/mechanical_sweep.rs` | Specify | The rename exemption freshness applies |
 | `runtime/src/primitives/diff_cross_spec.rs` | Specify | `diff-cross-spec` |

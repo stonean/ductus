@@ -162,6 +162,15 @@ its version and date.
 
 ### Changed
 
+- **`write-review` and `check-review-gate` bound a stale analysis's path list
+  (066).** `write-review`'s `analyze-freshness.paths` and `check-review-gate`'s
+  new `analyze-stale-paths` (the artifacts the message shows three of) are
+  inline while the result fits `[artifacts] read-size-bytes`, and past it move
+  to the file `lists-file` names, under the key `analyze-stale-paths`. Each
+  result gains `analyze-stale-paths-count`, in both forms, and `write-review`
+  gains `form` and `lists-file`; a `stale` freshness whose list moved carries
+  no `paths` key, so it never reads as a short complete list
+  (`BE-PAYLOAD-001`).
 - **Every destination-judging writer refuses the runtime pointer's directory
   (spec 022).** `apply-manifest`, `enforce-manifest`, `merge-managed-block`,
   `append-task`, `create-scenario` and `merge-permissions` refuse a path under
