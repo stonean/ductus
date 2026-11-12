@@ -367,7 +367,7 @@ Result:
 { "drift": false, "stdout": "...", "stderr": "...", "exit-code": 0 }
 ```
 
-A non-zero exit is drift (`drift: true`), as `ductus run-generator --help` states, not an operational error.
+A non-zero exit is drift (the result's `drift: true`; the description states only that a non-zero exit is drift), not an operational error.
 
 ### `lint-markdown` — wrap `npx markdownlint-cli2`
 
@@ -603,7 +603,7 @@ Result:
 { "path": "specs/inbox.md", "removed": true, "remaining-count": 3 }
 ```
 
-The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 9). Removal, the `removed: false` outcome and `remaining-count` are `ductus remove-inbox-item --help`'s. Matching strips the `-` bullet marker and an optional `[ ]`/`[x]` checkbox through the shared bullet grammar, comment/fence-aware as `append-inbox`'s scan is, so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. Embedded newlines in `item` are rejected (single-line rule).
+The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 9). Removal, the `removed: false` outcome and `remaining-count` are `ductus remove-inbox-item --help`'s. Matching strips the `-` bullet marker and an optional `[ ]`/`[x]` checkbox through the shared bullet grammar, comment/fence-aware as `append-inbox`'s scan is, so a `-` line inside an HTML comment is neither counted nor removable. Every run of blank lines in the file is collapsed to one, leading and trailing blanks are trimmed, and the file ends in a single newline. Embedded newlines in `item` are rejected (single-line rule).
 
 ## Extension-point schemas (initial release)
 

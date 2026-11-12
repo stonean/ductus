@@ -14,7 +14,7 @@ section: "The interpreter"
 
 **A denied gate is unchanged.** It ends the walk with a clean `complete` carrying `confirmed: false`, so no later step runs and nothing is written.
 
-**Nothing else moves.** A primitive whose description names an `apply` argument takes it, and one that declares none ignores it. prune.md dispatches `prune-plan` only before its gate, at step 3, so the plan half stays a preview under exec: removing a plan section is the host's judgment, and step 8 is host work the walker does not perform.
+**Nothing else moves.** The binding is unconditional once a gate is confirmed; a primitive takes it when its argument schema declares an `apply` field, and one that declares none ignores it. The walker dispatches `prune-plan` only at prune.md's step 3, before the gate, so under exec the plan half stays a preview. Steps 8 and 9 call `prune-plan` again, with `apply: true` and as a fresh preview, but they are host work the walker does not perform: removing a plan section is the host's judgment.
 
 ## Edge Cases
 
