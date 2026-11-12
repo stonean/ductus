@@ -584,6 +584,15 @@ pub struct DiscoverRuleFilesArgs {
     #[serde(default)]
     #[arg(long = "extra-file")]
     pub extra_files: Vec<String>,
+    /// With `all` and `rules`, the feature whose `analysis.md` the stored rule
+    /// verdicts are read from: the result gains `verdicts`, saying which
+    /// rules to judge and which verdicts a run may reuse (spec 082). Without
+    /// `all` or `rules` nothing is read, since the files listed are review's
+    /// selection, not the rule files an analysis records over, and `verdicts`
+    /// is absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub feature: Option<String>,
 }
 
 /// One rule `discover-rule-files` lists.
@@ -681,10 +690,52 @@ pub struct DiscoverRuleFilesResult {
     /// size in the file `lists-file` names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form: Option<ListsForm>,
-    /// In the file form, the file holding `rule-files` whole, from the
-    /// project root.
+    /// In the file form, the file holding `rule-files`, and with `verdicts`
+    /// its `reusable` and `judge` lists, whole, from the project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
+    /// With `all`, `rules` and `feature`: which stored rule verdicts a run
+    /// may reuse and which rules it must judge (spec 082).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verdicts: Option<RuleVerdictsBlock>,
+}
+
+/// The stored rule verdicts a `discover-rule-files` call with a `feature`
+/// reports (spec 082). A rule in neither list is current and did not fire.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RuleVerdictsBlock {
+    /// Why nothing is reusable, when nothing is: `no-prior-verdicts`,
+    /// `subjects-changed` or `record-unreadable`. Then `judge` holds every
+    /// assessable rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// Entries in `reusable`, in either form.
+    pub reusable_count: usize,
+    /// Entries in `judge`, in either form.
+    pub judge_count: usize,
+    /// Each current verdict that fired, to report again without judging the
+    /// rule. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reusable: Option<Vec<ReusableVerdict>>,
+    /// The IDs of the rules to judge: those with no current verdict, in
+    /// file then heading order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub judge: Option<Vec<String>>,
+}
+
+/// One current fired verdict in [`RuleVerdictsBlock::reusable`].
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReusableVerdict {
+    /// The rule's ID.
+    pub id: String,
+    /// `must` or `should`, from its current Statement.
+    pub tier: String,
+    /// The stored verdict, `verdict` with its `cite`, or its `at` and
+    /// `message`.
+    #[serde(flatten)]
+    pub verdict: RuleVerdict,
 }
 
 // -- process-waivers ---------------------------------------------------------

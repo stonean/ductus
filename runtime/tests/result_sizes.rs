@@ -243,6 +243,13 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
                 json!({"all": true, "rules": true, "verification": true}),
                 Prep::None,
             ),
+            // The stored verdicts: with no record, every assessable rule is
+            // listed to judge, so `judge` grows with the rule library.
+            (
+                "`all`, `rules`, `verification` and `feature`",
+                json!({"all": true, "rules": true, "verification": true, "feature": f}),
+                Prep::None,
+            ),
         ],
         // The corpus is in sync and acyclic, so what grows only with drift or
         // a cycle is measured on a copy that has it (spec 080's task 50).

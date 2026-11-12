@@ -29,12 +29,13 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::primitives::rule_sections::{other_headings, parse_rule_sections};
+use crate::primitives::rule_verdicts::{self, LoadedRuleFile};
 use crate::primitives::{PrimitiveError, Result, flatten_line, read_text};
 use crate::schema::config_keys::{self, UnknownKey};
 use crate::schema::paths;
 use crate::schema::primitives::{
     DiscoverRuleFilesArgs, DiscoverRuleFilesResult, ListsForm, LoadedRule, OtherHeading,
-    RuleFileRules, UnreadableRuleFile,
+    ReusableVerdict, RuleFileRules, RuleVerdictsBlock, UnreadableRuleFile,
 };
 use crate::schema::severity::RuleSeverity;
 
@@ -93,6 +94,8 @@ fn classify(basename: &str) -> Surface {
 /// - With `rules`, [`PrimitiveError::InvalidPath`] for an `extra-files` entry
 ///   leaving the project, and every error `bounded_lists::place` returns: a
 ///   malformed read size, or a list file that cannot be written.
+/// - With `all`, `rules` and `feature`, [`PrimitiveError::FeatureNotFound`] and the
+///   feature-argument refusals of `validate_feature_argument`.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
     for (argument, given) in [
         ("verification", args.verification),
@@ -209,7 +212,11 @@ fn list_rules(
         files.push(extra.clone());
     }
     let mut rule_files = Vec::new();
-    for file in files {
+    // The files a run records its rule verdicts over: the selected ones, which
+    // under `all` is every file in the directory, never the extra files.
+    let mut loaded: Vec<LoadedRuleFile> = Vec::new();
+    let selected = result.selected.len();
+    for (index, file) in files.into_iter().enumerate() {
         let content = match std::fs::read_to_string(repo.join(&file)) {
             Ok(content) => content,
             Err(err) => {
@@ -220,6 +227,11 @@ fn list_rules(
                 continue;
             }
         };
+        if index < selected
+            && let Some(name) = Path::new(&file).file_name().and_then(|name| name.to_str())
+        {
+            loaded.push(LoadedRuleFile::read(name, &content));
+        }
         let rules = parse_rule_sections(&content)
             .into_iter()
             .map(|section| LoadedRule {
@@ -258,7 +270,17 @@ fn list_rules(
     result.rule_files_count = Some(rule_files.len());
     result.rule_files = Some(rule_files);
     result.form = Some(ListsForm::Inline);
-    let lists = serde_json::json!({ "rule-files": &result.rule_files });
+    if args.all
+        && let Some(feature) = &args.feature
+    {
+        let block = verdicts_block(repo, feature, &loaded, &mut result.notices)?;
+        result.verdicts = Some(block);
+    }
+    let mut lists = serde_json::json!({ "rule-files": &result.rule_files });
+    if let Some(block) = &result.verdicts {
+        lists["reusable"] = serde_json::json!(&block.reusable);
+        lists["judge"] = serde_json::json!(&block.judge);
+    }
     if let Some(file) = super::bounded_lists::place(
         repo,
         "discover-rule-files",
@@ -268,9 +290,61 @@ fn list_rules(
     )? {
         result.form = Some(ListsForm::File);
         result.rule_files = None;
+        if let Some(block) = &mut result.verdicts {
+            block.reusable = None;
+            block.judge = None;
+        }
         result.lists_file = Some(file);
     }
     Ok(())
+}
+
+/// The stored rule verdicts for `feature` over `loaded`: which rules to
+/// judge and which fired verdicts to report again (spec 082). A record that
+/// does not parse is named in a notice, so judging every rule is never
+/// mistaken for holding no verdicts.
+fn verdicts_block(
+    repo: &Path,
+    feature: &str,
+    loaded: &[LoadedRuleFile],
+    notices: &mut Vec<String>,
+) -> Result<RuleVerdictsBlock> {
+    let root = paths::Paths::load(repo)?.specs_root;
+    super::validate_feature_argument(repo, &root, feature)?;
+    let feature_dir = repo.join(&root).join(feature);
+    if !feature_dir.is_dir() {
+        return Err(PrimitiveError::FeatureNotFound {
+            root,
+            feature: feature.to_string(),
+        });
+    }
+    let standing = rule_verdicts::standing(&feature_dir, loaded);
+    if let Some(rule_verdicts::NoReuse::RecordUnreadable(reason)) = &standing.no_reuse {
+        notices.push(format!(
+            "{feature}'s analysis.md carries no readable record ({}) — every rule is to be judged",
+            flatten_line(reason)
+        ));
+    }
+    let tier = |tier: RuleSeverity| match tier {
+        RuleSeverity::Must => "must",
+        _ => "should",
+    };
+    let reusable: Vec<ReusableVerdict> = standing
+        .reusable()
+        .map(|(rule, verdict)| ReusableVerdict {
+            id: rule.id.clone(),
+            tier: tier(rule.tier).to_string(),
+            verdict: verdict.clone(),
+        })
+        .collect();
+    let judge: Vec<String> = standing.judge().map(|rule| rule.id.clone()).collect();
+    Ok(RuleVerdictsBlock {
+        reason: standing.no_reuse.as_ref().map(|why| why.code().to_string()),
+        reusable_count: reusable.len(),
+        judge_count: judge.len(),
+        reusable: Some(reusable),
+        judge: Some(judge),
+    })
 }
 
 /// `true` when `surfaces` contains `member`.
@@ -1387,6 +1461,213 @@ mod tests {
             serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
                 .unwrap();
         assert_eq!(lists["rule-files"][0]["rules"][0]["id"], "QUAL-TEST-001");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "discover-rule-files",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
+    }
+
+    // -- stored rule verdicts (spec 082) ----------------------------------
+
+    const VERDICT_RULES: &str = "### TS-RULE-001\n\n> A spec MUST name its owner.\n\n**Verification:** Look for an owner.\n\n\
+        ### TS-RULE-002\n\n> A spec MUST name its constants.\n\n**Verification:** Look for constants.\n\n\
+        ### TS-SHLD-001\n\n> A spec SHOULD name its cursor.\n\n**Verification:** Look for a cursor.\n\n\
+        ### TS-NONE-001\n\n> A note about owners.\n\n**Verification:** None.\n";
+
+    /// A project with one feature, `001-x`, and the rules above.
+    fn verdict_project() -> TempDir {
+        let tmp = setup(&["quality-cross.md"], None);
+        std::fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            VERDICT_RULES,
+        )
+        .unwrap();
+        let feature = tmp.path().join("specs/001-x");
+        std::fs::create_dir_all(&feature).unwrap();
+        std::fs::write(
+            feature.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# X\n\n## Goal\n\nText.\n",
+        )
+        .unwrap();
+        tmp
+    }
+
+    fn with_feature(extra: DiscoverRuleFilesArgs) -> DiscoverRuleFilesArgs {
+        DiscoverRuleFilesArgs {
+            rules: true,
+            all: true,
+            feature: Some("001-x".into()),
+            ..extra
+        }
+    }
+
+    fn record(tmp: &TempDir, judged: &[&str], finding: Option<&str>) {
+        let mut a = crate::schema::primitives::WriteAnalysisArgs {
+            feature: "001-x".into(),
+            analyzed_at: "2026-11-12T00:00:00Z".into(),
+            analyzed_against: "abc".into(),
+            judged_rules: judged.iter().map(|id| (*id).to_string()).collect(),
+            ..crate::schema::primitives::WriteAnalysisArgs::default()
+        };
+        if let Some(id) = finding {
+            a.blocking_findings = 1;
+            a.rule_verdicts = std::collections::BTreeMap::from([(
+                id.to_string(),
+                crate::schema::primitives::RuleVerdict::Finding {
+                    at: "spec.md#Goal".into(),
+                    message: "no owner".into(),
+                },
+            )]);
+        }
+        crate::primitives::write_analysis::run(&a, tmp.path()).unwrap();
+    }
+
+    const ALL_JUDGED: &[&str] = &["TS-RULE-001", "TS-RULE-002", "TS-SHLD-001"];
+
+    /// Spec 082, AC1 on the interactive path: with no record every assessable
+    /// rule is to be judged, and with a record over unchanged subjects none
+    /// is, the current finding coming back to report again, in its tier; an
+    /// edited design subject judges every rule again, an edited `tasks.md`
+    /// none.
+    #[test]
+    fn a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge() {
+        let tmp = verdict_project();
+        let first = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        let block = first.verdicts.unwrap();
+        assert_eq!(block.reason.as_deref(), Some("no-prior-verdicts"));
+        assert_eq!(block.judge.unwrap(), ALL_JUDGED);
+        assert_eq!(block.reusable.unwrap(), []);
+
+        record(&tmp, ALL_JUDGED, Some("TS-RULE-001"));
+        let second = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        let block = second.verdicts.unwrap();
+        assert_eq!(block.reason, None);
+        assert_eq!(block.judge_count, 0);
+        assert_eq!(block.judge.unwrap(), [] as [String; 0]);
+        let reusable = block.reusable.unwrap();
+        assert_eq!(reusable.len(), 1);
+        assert_eq!(reusable[0].id, "TS-RULE-001");
+        assert_eq!(reusable[0].tier, "must");
+        assert_eq!(
+            reusable[0].verdict,
+            crate::schema::primitives::RuleVerdict::Finding {
+                at: "spec.md#Goal".into(),
+                message: "no owner".into()
+            }
+        );
+        assert_eq!(block.reusable_count, 1);
+
+        std::fs::write(tmp.path().join("specs/001-x/tasks.md"), "# T\n\n- [x] a\n").unwrap();
+        let ticked = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        assert_eq!(ticked.verdicts.unwrap().judge_count, 0);
+
+        std::fs::write(tmp.path().join("specs/001-x/plan.md"), "# Plan\n").unwrap();
+        let edited = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        let block = edited.verdicts.unwrap();
+        assert_eq!(block.reason.as_deref(), Some("subjects-changed"));
+        assert_eq!(block.judge.unwrap(), ALL_JUDGED);
+    }
+
+    /// A rule the prior run left unjudged is the only one listed to judge.
+    #[test]
+    fn a_rule_the_prior_run_left_unjudged_is_listed_to_judge() {
+        let tmp = verdict_project();
+        record(&tmp, &["TS-RULE-001", "TS-SHLD-001"], None);
+        let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        assert_eq!(result.verdicts.unwrap().judge.unwrap(), ["TS-RULE-002"]);
+    }
+
+    /// A rule edit judges the file's rules again over an unchanged spec.
+    #[test]
+    fn an_edited_rule_file_is_listed_to_judge_again() {
+        let tmp = verdict_project();
+        record(&tmp, ALL_JUDGED, None);
+        std::fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            VERDICT_RULES.replace("Look for constants.", "Look for named constants."),
+        )
+        .unwrap();
+        let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        assert_eq!(result.verdicts.unwrap().judge.unwrap(), ALL_JUDGED);
+    }
+
+    /// `feature` reads nothing without `all` and `rules`, which select the
+    /// files an analysis records over: the block is absent, not empty, and a
+    /// feature that does not exist is refused.
+    #[test]
+    fn a_feature_without_all_and_rules_adds_no_verdicts_and_a_missing_one_is_refused() {
+        let tmp = verdict_project();
+        for given in [
+            DiscoverRuleFilesArgs {
+                all: false,
+                ..with_feature(args(&[]))
+            },
+            DiscoverRuleFilesArgs {
+                rules: false,
+                ..with_feature(args(&[]))
+            },
+        ] {
+            assert_eq!(run(&given, tmp.path()).unwrap().verdicts, None);
+        }
+        let missing = DiscoverRuleFilesArgs {
+            feature: Some("009-none".into()),
+            ..with_feature(args(&[]))
+        };
+        assert!(matches!(
+            run(&missing, tmp.path()).unwrap_err(),
+            PrimitiveError::FeatureNotFound { .. }
+        ));
+    }
+
+    /// A record that does not parse is named, and every rule is listed to
+    /// judge: it is never read as holding no verdicts.
+    #[test]
+    fn an_unreadable_record_is_named_and_judges_every_rule() {
+        let tmp = verdict_project();
+        std::fs::write(
+            tmp.path().join("specs/001-x/analysis.md"),
+            "---\nlast-run: 2026-11-12T00:00:00Z\nrule-verdicts: [TS-RULE-001]\n---\n",
+        )
+        .unwrap();
+        let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        assert!(
+            result
+                .notices
+                .iter()
+                .any(|notice| notice.contains("carries no readable record")),
+            "{:?}",
+            result.notices
+        );
+        let block = result.verdicts.unwrap();
+        assert_eq!(block.reason.as_deref(), Some("record-unreadable"));
+        assert_eq!(block.judge.unwrap(), ALL_JUDGED);
+    }
+
+    /// Past the read size the lists move to the file the result names, with
+    /// their counts inline, `reusable` and `judge` beside `rule-files`.
+    #[test]
+    fn past_the_read_size_the_verdict_lists_move_to_the_file() {
+        let tmp = verdict_project();
+        record(&tmp, &["TS-RULE-002", "TS-SHLD-001"], None);
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 300\n",
+        )
+        .unwrap();
+        let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        assert_eq!(result.form, Some(ListsForm::File));
+        let block = result.verdicts.clone().unwrap();
+        assert_eq!((block.reusable_count, block.judge_count), (0, 1));
+        assert!(block.reusable.is_none() && block.judge.is_none());
+        let file = result.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(lists["judge"], serde_json::json!(["TS-RULE-001"]));
+        assert_eq!(lists["reusable"], serde_json::json!([]));
+        assert!(lists["rule-files"].is_array());
         crate::primitives::bounded_lists::assert_counts_name_the_file(
             "discover-rule-files",
             &serde_json::to_value(&result).unwrap(),
