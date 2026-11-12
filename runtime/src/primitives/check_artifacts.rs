@@ -1,7 +1,7 @@
 //! `check-artifacts` — `/ductus:analyze`'s residual deterministic check families, for
 //! one feature.
 //!
-//! Owns ten families (spec 067, scenarios analyze-artifact-checks,
+//! Owns the families `schema::descriptions::CHECK_ARTIFACTS` lists (spec 067, scenarios analyze-artifact-checks,
 //! link-adjacent-drift-family, criterion-path-existence-family and
 //! body-path-existence-family; spec 022,
 //! scenarios scenario-open-question-signal and criterion-label-assignment;
