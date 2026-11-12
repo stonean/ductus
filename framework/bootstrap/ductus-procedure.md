@@ -345,6 +345,7 @@ After scaffolding, display:
 - Placeholder substitutions applied, as `apply-manifest` reports them: the total alongside the number of entries that ran substitution (`N substitutions across M files`). Both numbers, never just the total — zero across twenty substituted files is a malformed or incomplete map, while zero across zero is a manifest of pinned and skipped files behaving correctly, and one number cannot tell an operator which they are looking at.
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
 - Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`. When the spec-017 → spec-018 migration ran, append the migration summary line described in §Hook Installation > Migration from spec-017 hook (or the relevant recovery-branch warning if the rename was skipped or failed).
+- Each other selected agent whose stale `ductus.md` the self-update check overwrote and continued past, one line apiece: `{agent}: ductus.md updated from {source-label}; takes effect in its next session` (`ductus.md` §Self-update check)
 - Any fetch failures encountered, and each language whose `.gitignore` patterns were not appended, with its reason (`ductus.md` §Shared Files **.gitignore** step 5)
 - The temp directory this run fetched and extracted into, one line: `temp directory: {tempdir} — left for the OS to sweep` (**File Fetching → Cleanup** in `ductus.md`)
 - Each path under `specs/` this run's migrations made dirty (§Pre-run Migrations), project-relative, one line apiece: `changed by a migration: {path} — commit it with this run's other changes`
@@ -396,7 +397,7 @@ One `{NNN-feature}` group per spec with a finding, each listing every finding fo
 
 This summary hands off to `/{project}:analyze`, which dispositions each gap in the run that finds it.
 
-### First run (no existing `specs/` directory)
+### First run (no earlier adoption found)
 
 ---
 
@@ -422,7 +423,7 @@ Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foa
 
 ---
 
-### Update mode (existing `specs/` directory detected)
+### Update mode (earlier adoption found)
 
 ---
 

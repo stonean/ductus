@@ -49,7 +49,7 @@ The agents to scaffold are chosen at run time: an explicit `--agents=` list, els
 Before scaffolding, verify:
 
 - The current directory **is** an existing git repository. If not, stop and report: "This is not a git repository. Run `git init` first."
-- Whether the spec-root directory (`specs/` by default) already exists. If it does, `ductus` is already adopted and the run is an update: report "Existing {spec-root}/ directory found — running in update mode." and proceed, letting each file's conflict strategy decide what is rewritten.
+- Whether the project was adopted before, decided from a signal only an earlier `ductus` run leaves, never from the spec root's existence: a config file at any tier, the legacy `.governance.toml` included; `{spec-root}/templates/spec.md`; `.ductus/constitution.md` or `.govern/constitution.md`; a `{config_dir}/commands/{govern|ductus|<project>}/` directory; or `.githooks/ductus-pre-commit`. Any one makes the run an update, and none a first adoption. The report names which the run is and the deciding signal — "Found {signal} — running in update mode." or "No earlier adoption found — running as a first adoption." — and the run proceeds, letting each file's conflict strategy decide what is rewritten (scenario `a-first-adoption-with-existing-specs-is-not-an-update`).
 
 A pre-flight phase then resolves the fetch source, acquires and wires the runtime when it is absent, and compares the installed bootstrap with upstream (scenario `ductus-self-update-precheck`), all before the framework archive is fetched.
 
@@ -141,7 +141,7 @@ On a first run the next steps are brownfield-specific, each command written in t
 
 ## Self-Maintenance
 
-The installed bootstrap stays in each agent's command directory after the run, and re-running it is how an adopted project is updated. Each run first compares the installed copy with the upstream bootstrap at the resolved source. A stale copy is replaced and the run stops for a session restart, so it never proceeds on the instructions it has just replaced (scenario `ductus-self-update-precheck`). A project that pins its installed copy keeps it, and is told when upstream has diverged.
+The installed bootstrap stays in each agent's command directory after the run, and re-running it is how an adopted project is updated. Each run first compares the installed copy with the upstream bootstrap at the resolved source. A stale copy is replaced, and the run stops for a session restart only when the running agent's copy was the stale one, so it never proceeds on the instructions it has just replaced; another selected agent's stale copy is replaced, reported and the run continues (scenario `ductus-self-update-precheck`). A project that pins its installed copy keeps it, and is told when upstream has diverged.
 
 ## Edge Cases
 

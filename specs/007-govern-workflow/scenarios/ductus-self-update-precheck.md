@@ -10,7 +10,7 @@ tags: []
 
 `/ductus`'s instructions are loaded into the running session at invocation time. When the upstream bootstrap, `framework/bootstrap/ductus.md`, has changed since the installed copy was written, the running command follows stale logic: its manifest, migration, audit and scaffolding rules are whatever shipped with the installed file, not what the run's source now carries.
 
-Running the pipeline on that logic does the work with the wrong rules. A manifest entry the new bootstrap would skip is written, a migration it handles differently is applied, an audit it tightened runs with the loose rules. Swapping to the new instructions mid-run is not feasible, since a slash command cannot reload its own prompt. So the check runs before any of that work, and when it finds a stale copy it replaces the copy on disk and stops, so the next session loads the current instructions and the re-run completes.
+Running the pipeline on that logic does the work with the wrong rules. A manifest entry the new bootstrap would skip is written, a migration it handles differently is applied, an audit it tightened runs with the loose rules. Swapping to the new instructions mid-run is not feasible, since a slash command cannot reload its own prompt. So the check runs before any of that work, and when it finds the running agent's copy stale it replaces the copy on disk and stops, so the next session loads the current instructions and the re-run completes. Another selected agent's stale copy is not the instructions in use, so it is replaced and reported while the run continues.
 
 ## Behavior
 
@@ -22,17 +22,18 @@ Running the pipeline on that logic does the work with the wrong rules. A manifes
   - **stale** — they differ and the installed copy is not pinned.
   - **pinned-divergent** — they differ and the installed copy is listed in `.ductus/config.toml` `pinned.files`. Continue.
 - For each **stale** agent, the fetched copy is written over the installed file the comparison read, and the write is checked for integrity. Placeholders stay literal, as in every installed copy of the bootstrap.
-- Any stale agent then stops the run at the pre-flight abort, before inputs are collected, so no answer the user types is discarded. The notice names the source and lists the stale agents updated, and asks the user to start a new session and re-run the command they can actually invoke. Every section past the pre-flight phase is skipped.
+- A stale **running agent** (the agent whose session executes the bootstrap) then stops the run at the pre-flight abort, before inputs are collected, so no answer the user types is discarded. The notice names the source and lists the stale agents updated, and asks the user to start a new session and re-run the command they can actually invoke. Every section past the pre-flight phase is skipped.
+- A stale agent that is **not** the running agent never stops the run: its copy is overwritten, the post-scaffolding output reports it among the agents updated, and the run continues. The notice never says the running session uses older instructions when the running copy matched upstream.
 - A **pinned-divergent** agent never stops the run. The post-scaffolding output carries one advisory line for it — `{agent}: ductus.md pinned, upstream has changed` — and only while the pinned copy actually differs from upstream.
 - On the next run in a new session, the freshly written copy is what loads, the check records **current**, and the run proceeds.
 
 ## Edge Cases
 
 - **First-ever run** — no agent has an installed copy, so every agent records **no installed copy** and the run proceeds; scaffolding installs the copy the next run compares against.
-- **Adding an agent on a re-run (`--add-agent`)** — the new agent records **no installed copy**, and an existing agent's copy is still compared. If that copy is stale the run stops, and the new agent's install rides along with the re-run.
+- **Adding an agent on a re-run (`--add-agent`)** — the new agent records **no installed copy**, and an existing agent's copy is still compared. If the running agent's copy is stale the run stops, and the new agent's install rides along with the re-run.
 - **All selected agents pinned, all matching upstream** — every agent records **current**: no advisory, no stop.
 - **All selected agents pinned, at least one divergent** — the divergent ones record **pinned-divergent**. The run proceeds, and the output carries one advisory line per divergent agent.
-- **Mixed results across selected agents** — any single **stale** agent stops the run, and the notice lists every stale agent updated.
+- **Mixed results across selected agents** — a **stale** running agent stops the run, and the notice lists every stale agent updated. When the running agent is **current** and another selected agent is **stale**, that agent's copy is overwritten and reported, and the run completes in one session.
 - **Bootstrap byte-identical across an upstream change** — the comparison is by content, not version, so a release that leaves the bootstrap's bytes alone records **current**.
 - **A stale copy in an agent the run did not select** — not compared, not written, and no stop. It is detected on the next run that selects that agent.
 - **Stale bootstrap on an adopter who has never wired the runtime** — both pre-flight checks contribute writes, and the abort carries one combined notice, so the user restarts once rather than twice.
