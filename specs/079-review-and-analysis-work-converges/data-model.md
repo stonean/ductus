@@ -18,8 +18,8 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
-| `excluded`, `excluded-count` | list of paths, integer | Paths in `modified-since` the scope left out; the list joins the bounded lists |
-| `review-owed` | boolean | False when a review record names a run and holds nothing only a review clears, and the scope and the deletions it attributes to the spec hold no code, as `compute-review-scope`'s description states (narrowed by spec 081, so a scenario or data-model edit owes an analysis alone); true with no such record |
+| `excluded`, `excluded-count` | list of paths, integer | As `ductus compute-review-scope --help` states; the list joins the bounded lists |
+| `review-owed` | boolean | As `ductus compute-review-scope --help` states, narrowed by spec 081 so a scenario or data-model edit owes an analysis alone; true with no review record naming a run |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry on a first review, a path the last record lists as open, a contract its digest says changed and what a fold brings, which need not have changed in the window.
 
@@ -35,17 +35,17 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `fix-rounds[].excluded` | list of paths | The paths `brief-re-read` left out of that round |
 | `observations[].contract-break` | boolean | Takes a gating finding's dispositions and counts in `contract-breaks`; left open, its `path` is required and listed in `open-findings`; waived, the rule's stored waiver must be in `expired-decisions`. A `performReview` pass carries it too |
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
-| `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, listing every file the rule fires at this run that no waiver holds, stamped from `reviewed-at` and `decided-by`. A run's two writes pass it alike: an anchor the earlier write stored applies and is not stored again, and a rule it stored asks nothing of the last write |
+| `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, as `ductus write-review --help` states. A run's two writes pass it alike |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse while the spec's `tasks.md` holds an unchecked box under any heading, on `feature`, by `describe_unchecked`'s test, but for a box under a task the run's own deferral names, which is the work the record holds. A scope that is empty, by `empty-scope`, by an empty `diff-base` or by a window holding nothing but the run's own record, refuses over an earlier record counting a finding, which a run's own earlier write is not, or one it cannot read. A `diff-base` no scope can be derived from refuses the write.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` (by `describe_unchecked`'s test), an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, and a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.
 
 ## `brief-re-read` result and `round.toml`
 
-`paths` holds the round's non-exempt paths, which are all the brief names. `exempt` and `excluded` are new lists, bounded as `paths` is: `exempt` holds the paths the exemption covers, and `excluded` those changed only by a commit another spec claims. A round whose paths are all exempt or excluded is `exempt`.
+`paths`, `exempt` and `excluded` and the round's `kind` are as `ductus brief-re-read --help` states; `exempt` and `excluded` are new lists, bounded as `paths` is.
 
 ## `diff-cross-spec` result
 
-`window-base` replaces `first-commit`: the parent of the commit the spec's reopening started at, or its first spec-directory commit when it has never been `in-progress`. `cross-spec-paths` holds only what commits belonging to the spec changed, plus uncommitted sibling paths. `derive-boundary` keeps its own `first-commit`.
+`window-base` replaces `first-commit`; it and `cross-spec-paths` are as `ductus diff-cross-spec --help` states. `derive-boundary` keeps its own `first-commit`.
 
 ## `measure-reopenings` (new primitive)
 
