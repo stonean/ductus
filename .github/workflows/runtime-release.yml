@@ -115,7 +115,7 @@ jobs:
       # cold cache and dominate the job's wall-clock.
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          tool: cargo-audit@0.22.2
+          tool: cargo-audit@0.23.0
 
       - name: cargo audit
         run: cargo audit

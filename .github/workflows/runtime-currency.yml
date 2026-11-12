@@ -45,7 +45,7 @@ jobs:
       # Prebuilt binary, as runtime.yml's audit job installs it.
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
-          tool: cargo-audit@0.22.2
+          tool: cargo-audit@0.23.0
 
       # The pins check reads each pinned action's tag and latest release from
       # the GitHub API; the token raises the anonymous rate limit.
