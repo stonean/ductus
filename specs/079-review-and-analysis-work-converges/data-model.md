@@ -37,7 +37,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | `observations[].disposition.by-rule` | boolean | Records `decided-by: rule` |
 | `new-waivers` | list of `rule` and `reason` | One `waivers:` entry each, as `ductus write-review --help` states. A run's two writes pass it alike |
 
-`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` (by `describe_unchecked`'s test), an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, and a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.
+`write-analysis` takes `by-rule` on a finding's disposition the same way. Both refuse on an unchecked box in `tasks.md` (by `describe_unchecked`'s test), and `write-review` also on an empty scope (by `empty-scope`, an empty `diff-base` or a window holding only the run's own record) over an earlier record counting a finding, which a run's own earlier write is not, and on a `diff-base` no scope can be derived from, as `ductus write-review --help` and `ductus write-analysis --help` state.
 
 ## `brief-re-read` result and `round.toml`
 
@@ -64,14 +64,7 @@ The lists are bounded as `compute-review-scope`'s are. `dashboard` carries the s
 
 ## `classify-spec-edit` (new primitive)
 
-Arguments: `feature`, and `base` (a ref; default `HEAD`, compared to the working tree).
-
-| Result field | Type | Meaning |
-| --- | --- | --- |
-| `kind` | `none`, `correction`, `mechanical` or `reopens` | `correction` and `mechanical` leave a `done` spec `done`; `none` means nothing but a run's records differs |
-| `reasons` | list of `criterion`, `open-question`, `unchecked-task`, `scenario`, `data-model`, `other-file` | Why it reopens; empty otherwise |
-
-A criterion compares by its text with the `AC{n}:` label and any cross-service reference removed, so labelling or a tick alone stays a correction, and taking a tick back reopens. `other-file` also holds a `spec.md` absent on either side and a deleted `plan.md` or `tasks.md`.
+Arguments, `kind`, `reasons` and how a criterion compares are `ductus classify-spec-edit --help`'s.
 
 ## Constants
 
