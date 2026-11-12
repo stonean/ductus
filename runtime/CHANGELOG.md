@@ -10,6 +10,15 @@ its version and date.
 
 ### Added
 
+- **A spec's departure entries are read and attributed from history by one
+  shared module (spec 073).** `runtime/src/primitives/departures.rs` parses
+  the `departs:` entries under `## Applicable Rules` (HTML comments and fenced
+  code skipped, each structural problem reported with its line, a malformed
+  entry waiving nothing) and attributes each rule to the author email and time
+  of the first commit of the unbroken run ending at `HEAD` in which the spec
+  holds an entry for it, following a renamed spec directory. A shallow or
+  absent repository, an entry not in `HEAD`, or an unreadable revision is
+  `unattributed`. No primitive calls it yet.
 - **`/{project}:analyze` records each loaded rule's verdict and judges a rule
   again only when its subjects changed (spec 082).** `analysis.md` gains
   `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or

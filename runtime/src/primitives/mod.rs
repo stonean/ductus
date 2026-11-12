@@ -40,6 +40,7 @@ pub mod create_plan_artifacts;
 pub mod create_scenario;
 pub mod dashboard;
 pub(crate) mod decisions;
+pub mod departures;
 pub mod derive_boundary;
 pub mod derive_dependencies;
 pub mod derive_references;
