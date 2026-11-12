@@ -191,6 +191,15 @@ its version and date.
 
 ### Changed
 
+- **`resolve-anchor`'s description states how a reference is classified and
+  named (spec 079, task 36).** The kinds are decided in order, first match
+  winning; a line naming one shipped document resolves against that source's
+  and the citing file's headings or a marker; `## Shared Files` of
+  `framework/bootstrap/ductus.md` decides what is shipped, and where it is
+  absent nothing is judged cross-document; how a document and a heading are
+  named; and that prose naming a document without its file stays reported, so
+  an empty `unresolved` with both counts at zero means every `§` resolved.
+  Description only: no result changes.
 - **`check-artifacts`' description states its families' behavior rules (spec
   079, task 36).** `data-model.md` is never required; a spec with no `tasks.md`
   has no scenario mapping to evaluate, and an unreadable `tasks.md` history is

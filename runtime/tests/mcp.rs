@@ -547,6 +547,55 @@ fn descriptions_hold_the_check_artifacts_details_067_points_at() {
     assert!(missing.is_empty(), "missing {missing:?}");
 }
 
+/// 067's data model points at `RESOLVE_ANCHOR` for how a reference is classified and named (079 task 36).
+#[test]
+fn descriptions_hold_the_resolve_anchor_details_067_points_at() {
+    let held = [
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "decided in this order, the first that applies winning",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "begins with a heading of that source or of the citing file or names a marker",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "maps to a readable source, so where that file is absent no reference is judged this way",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "a backticked path, a markdown link target or a bare `name.md`",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "names a file with no sections",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "in the citing file and in a mapped source alike",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "(`§Groundingx` names no `Grounding`)",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "can be neither verified nor excluded and stays reported",
+        ),
+        (
+            descriptions::RESOLVE_ANCHOR,
+            "means every `§` in the file resolved",
+        ),
+    ];
+    let missing: Vec<_> = held
+        .iter()
+        .filter(|(description, detail)| !description.contains(detail))
+        .map(|(_, detail)| detail)
+        .collect();
+    assert!(missing.is_empty(), "missing {missing:?}");
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.
