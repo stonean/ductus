@@ -358,6 +358,32 @@ mod tests {
     }
 
     #[test]
+    fn continuation_lines_of_a_wrapped_clause_are_not_subtasks() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("tasks.md"),
+            "# T\n\n## 1. One\n\n- [ ] Subtask one.\n- **Done when**: first\n  second\n  - [ ] after\n",
+        )
+        .unwrap();
+        let result = run(
+            &MarkTaskArgs {
+                feature: "feat".into(),
+                task_number: "1".into(),
+                subtask_index: 1,
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(!result.previous);
+        let body = fs::read_to_string(dir.join("tasks.md")).unwrap();
+        assert!(body.contains("  - [x] after"), "{body}");
+        assert!(body.contains("- [ ] Subtask one."), "{body}");
+    }
+
+    #[test]
     fn ignores_done_when_lines() {
         let tmp = tempdir().unwrap();
         write_fixture(tmp.path());

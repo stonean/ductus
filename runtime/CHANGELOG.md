@@ -580,6 +580,11 @@ its version and date.
   root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
+- **`read-tasks` returns a wrapped `Done when` clause whole.** The clause is
+  its first line joined, by single spaces, with each following more-indented
+  line that is not a list item, up to a blank line, a heading, a bullet or a
+  less-indented line; it was truncated at the first line. `mark-task`'s
+  subtask indices are unchanged, since a continuation line is no checkbox.
 
 - **The latest-release lookup quotes its URL.** `/ductus`'s Source
   resolution and Pi's `/{project}:configure` put

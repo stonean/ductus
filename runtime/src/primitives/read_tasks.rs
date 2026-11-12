@@ -215,6 +215,28 @@ pub(crate) fn describe_unchecked(content: &str) -> Option<String> {
     ))
 }
 
+/// The count of leading whitespace characters on `line`.
+fn indent_of(line: &str) -> usize {
+    line.len() - line.trim_start().len()
+}
+
+/// Whether `text` (already left-trimmed) opens a list item: a `-`, `*` or `+` bullet, or an
+/// ordered `N.` / `N)` marker, followed by a space or the end of the line.
+fn opens_list_item(text: &str) -> bool {
+    let rest = match text.chars().next() {
+        Some('-' | '*' | '+') => &text[1..],
+        Some(c) if c.is_ascii_digit() => {
+            let digits = text.trim_start_matches(|d: char| d.is_ascii_digit());
+            match digits.strip_prefix(['.', ')']) {
+                Some(after) => after,
+                None => return false,
+            }
+        }
+        _ => return false,
+    };
+    rest.is_empty() || rest.starts_with(' ')
+}
+
 /// The tasks in a `tasks.md`'s text, in file order: one grammar for the working
 /// tree and for a blob at a commit, which `classify-spec-edit` compares.
 pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
@@ -231,12 +253,17 @@ pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
     // task-level is 3, so they don't open a new task here).
     let mut current_phase: Option<String> = None;
     let mut skip = SkipScanner::default();
+    // The indent of the `Done when` line whose clause is still open: the
+    // clause reads on through each following more-indented, non-bullet line
+    // (scenario a-done-when-clause-reads-to-its-end).
+    let mut clause_indent: Option<usize> = None;
 
     for line in content.lines() {
         if skip.skip(line) {
             continue;
         }
         if let Some((level, heading)) = parse_atx_heading(line) {
+            clause_indent = None;
             // Level 1 ends the previous task (and resets phase context for
             // the unusual case of multiple H1s in one file).
             if level == 1 {
@@ -290,6 +317,7 @@ pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
         // `mark-task`'s subtask-exclusion (the read/mark index contract).
         if let Some(done) = parse_done_when(line) {
             task.done_when = Some(done);
+            clause_indent = Some(indent_of(line));
             // Record the clause's checked state only for the checkbox form.
             // That is the one shape whose box is visible to a reader while
             // sitting outside the subtask index space, so it is the only
@@ -298,6 +326,20 @@ pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
             task.done_when_checked =
                 checkbox::parse_checkbox_line(line).map(|(checked, _)| checked);
             continue;
+        }
+        if let Some(open) = clause_indent {
+            if !line.trim().is_empty()
+                && indent_of(line) > open
+                && !opens_list_item(line.trim_start())
+                && let Some(done) = task.done_when.as_mut()
+            {
+                if !done.is_empty() {
+                    done.push(' ');
+                }
+                done.push_str(line.trim());
+                continue;
+            }
+            clause_indent = None;
         }
         // Subtask recognition shares the mark-side checkbox grammar
         // (`checkbox::parse_checkbox_line`) so the subtask indexes
@@ -322,6 +364,21 @@ mod tests {
 
     fn fixture_repo() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")
+    }
+
+    #[test]
+    fn a_wrapped_done_when_clause_reads_whole_and_stops_at_its_end() {
+        let tasks = parse_tasks(
+            "# T\n\n## 1. Wrapped\n\n- [ ] one\n- **Done when**: first\n  second\n    third\n  - [ ] nested\n\n\
+             ## 2. Bulletless\n\n- [ ] a\nDone when: head\n  tail\nless indented\n\n\
+             ## 3. Blank ends\n\n- **Done when**: only\n\n  not part\n\n\
+             ## 4. Comment\n\n- **Done when**: kept\n  <!--\n  hidden\n  -->\n  more\n",
+        );
+        assert_eq!(tasks[0].done_when.as_deref(), Some("first second third"));
+        assert_eq!(tasks[0].subtasks.len(), 2, "a nested bullet is a subtask");
+        assert_eq!(tasks[1].done_when.as_deref(), Some("head tail"));
+        assert_eq!(tasks[2].done_when.as_deref(), Some("only"));
+        assert_eq!(tasks[3].done_when.as_deref(), Some("kept more"));
     }
 
     #[test]
