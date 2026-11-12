@@ -22,12 +22,12 @@ Read at `6158d7df`, the framework had these gaps:
 
 ## Acceptance Criteria
 
-- [ ] AC1: A fixture spec analyzed twice with no edit between the runs records identical rule verdicts. The second run asks the host about no rule whose stored verdict's subjects are unchanged.
-- [ ] AC2: A run that judges fewer rules than were loaded records a non-zero `rule-assessments-not-checked` naming each rule left unjudged, on the interactive path as under `ductus exec`. A run that judges every loaded rule records zero, and a fixture proves both directions.
-- [ ] AC3: A verdict that changes from not firing, or from addressed, to a finding while its subjects are unchanged is recorded as a finding of its rule's tier and also reported as a contradiction naming the earlier verdict; the contradiction alone holds nothing.
-- [ ] AC4: Each new analysis-record field is in the constitution's audit-record table (§text-first-artifacts) and in 066's data model, which the record `write-analysis` writes follows; no analysis template exists to carry it.
-- [ ] AC5: A verdict stored before its rule's Statement or Verification changed is judged again, and a fixture that edits a rule between two runs over an unchanged spec proves it.
-- [ ] AC6: An `addressed` verdict whose citation does not resolve is recorded among the rules left unjudged, never as `addressed`, and a fixture proves it.
+- [x] AC1: A fixture spec analyzed twice with no edit between the runs records identical rule verdicts. The second run asks the host about no rule whose stored verdict's subjects are unchanged.
+- [x] AC2: A run that judges fewer rules than were loaded records a non-zero `rule-assessments-not-checked` naming each rule left unjudged, on the interactive path as under `ductus exec`. A run that judges every loaded rule records zero, and a fixture proves both directions.
+- [x] AC3: A verdict that changes from not firing, or from addressed, to a finding while its subjects are unchanged is recorded as a finding of its rule's tier and also reported as a contradiction naming the earlier verdict; the contradiction alone holds nothing.
+- [x] AC4: Each new analysis-record field is in the constitution's audit-record table (§text-first-artifacts) and in 066's data model, which the record `write-analysis` writes follows; no analysis template exists to carry it.
+- [x] AC5: A verdict stored before its rule's Statement or Verification changed is judged again, and a fixture that edits a rule between two runs over an unchanged spec proves it.
+- [x] AC6: An `addressed` verdict whose citation does not resolve is recorded among the rules left unjudged, never as `addressed`, and a fixture proves it.
 
 ## Edge Cases
 
