@@ -131,7 +131,7 @@ Wherever a command acts on a path under the spec root, substitute the configured
 
 #### Spec requirements
 
-- Every spec has a **Status** (`draft`, `clarified`, `planned`, `in-progress`, `done`), **Acceptance Criteria** (testable conditions defining "done"), **Open Questions** (undecided blockers), and **Dependencies**, and describes behavior and contracts, not implementation
+- Every spec has a **Status**, **Acceptance Criteria** (testable conditions defining "done"), **Open Questions** (undecided blockers), and **Dependencies**, and describes behavior and contracts, not implementation
 - Each criterion carries a permanent `AC{n}:` label after its checkbox, assigned by the runtime's labelling pass, never renumbered or reissued, and used to cite it. **Never hand-write an `AC{n}:` label** — a guess can collide with a retired one
 - A deferred decision (§brownfield-inbox) is resolved *with* its trigger, in Resolved Questions; open questions must be resolved before moving to the plan phase
 - **A spec body must not carry a point-in-time status section**; record decisions in Resolved Questions and obligations in `cross-spec-impact:` or a task
@@ -169,7 +169,7 @@ Operational rules:
 - **A `done` stop never says the request is built.** A command that stops on or shows a `done` spec says "Not built yet: {request}." first if new work is asked for, then qualifies `done` ("`{slug}` is `done` for what it specifies; this request is not part of it.").
 - **Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk.**
 - **Syncing a canonical record on another spec leaves it `done` only as a correction** (`classify-spec-edit`): one in its `spec.md` outside the criteria, `plan.md` or `tasks.md`; one in its data model or a scenario reopens it, and a table synced twice moves to the spec owning the behavior.
-- **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole.
+- **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole; to separate one from edits on disk, set them aside, commit it, then restore them, or transition first.
 
 <!-- §plan-phase -->
 
@@ -187,7 +187,7 @@ Define *how* the feature is built: a plan references its spec, addresses its ope
 
 Break the plan into ordered work items, each derived from the plan, finishable in one working session, and carrying a clear definition of done.
 
-`tasks.md` is an **ephemeral work-tracking artifact**, distinct from the durable `spec.md`, `data-model.md`, scenarios and rules: a task's value is spent once checked, since those, the design record and git history record what was built. `/{project}:prune` may drop done sections; nothing may treat `tasks.md` as a durable index. **Handoff state** — what is owed, in what order — is prose in the pending task it concerns, never a checkbox or a free-standing heading; an ordering constraint goes on the task that must wait.
+`tasks.md` is an **ephemeral work-tracking artifact**, distinct from the durable `spec.md`, `data-model.md`, scenarios and rules: a task's value is spent once checked, since those, the design record and git history record what was built. Nothing may treat `tasks.md` as a durable index. **Handoff state** — what is owed, in what order — is prose in the pending task it concerns, never a checkbox or a free-standing heading; an ordering constraint goes on the task that must wait.
 
 <!-- §readiness-check -->
 
@@ -285,19 +285,18 @@ Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in 
 
 ### Brownfield Inbox
 
-`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. An item is a todo, never a status or handoff note: handoff state is prose in its pending task (§tasks-phase). Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. The brownfield backlog drains toward empty as adoption completes; the file persists while people log todos. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
+`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. An item is a todo, never a status or handoff note (§tasks-phase). Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. The brownfield backlog drains toward empty as adoption completes; the file persists while people log todos. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
 
 #### Finding dispositions
 
 Every finding a pipeline run produces (a `/{project}:review` observation, a `/{project}:analyze` finding live when detection ends, an issue `/{project}:implement` surfaces outside the task in hand) gets at most one disposition; a gating one MUST have one before its spec can reach `done`.
 
 - **Three dispositions.** **Fixed** — a chore, fixed in the run and on disk. **Deferred** — to pipeline work chosen by `.ductus/reference/groom.md` **§Groom decision tree**, reopening a `done` target, to an external work item, or both. **Waived** — not addressed, with its reason, in the run's own record. The inbox is not a disposition. A question is deferred with its trigger.
-- **Detect, decide, re-check, record.** Detection writes nothing, each gating write is confirmed first, and the record is written from a re-check; a host that cannot ask leaves each gating finding undispositioned, and `ductus exec` writes nothing (`.ductus/reference/analyze.md` **§Finding dispositions**).
+- **Detect, decide, re-check, record.** Detection writes nothing, each gating write is confirmed first, and the record is written from a re-check (`.ductus/reference/analyze.md` **§Finding dispositions**).
 - **A review or analysis run creates work only for a gating finding**, and an observation showing the spec's own code breaks its contract counts as one. Any other observation is fixed in the run when mechanical and otherwise waived with its reason, recorded as decided by the rule. Only a gating finding's waiver or deferral reaches the operator, one at a time, and a person's stored decision wins.
 - **In `/{project}:implement`, scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
 - **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
 - **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations and broken contracts are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
-- **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
 
 <!-- §brownfield-process -->
@@ -402,7 +401,7 @@ A capability is runtime-eligible only when **all three** hold:
 2. **Currently mechanical** — already either (a) executed by an LLM following procedural instructions in a slash command body, or (b) implemented as a bash script the framework invokes (pre-commit hooks, generators, CI).
 3. **Specifiable** — the primitive's compiled description can state its rules completely, and it introduces no policy of its own.
 
-**Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails.
+**Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails, since each such parser is a copy of a tested parse that drifts.
 
 #### Acquisition invariant
 
@@ -431,6 +430,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Pipeline command behavior | `framework/commands/*.md` (or `framework/bootstrap/configure/{key}.md`), with its reference in `framework/reference/*.md` |
 | Lifecycle; rules tier; grounding; contributor-knowledge routing | this document: §spec-lifecycle, §rules, §grounding, §drift-prevention |
 | Frontmatter schema | §text-first-artifacts |
+| Per-agent permission set | `framework/bootstrap/configure/{key}.md` |
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
 | A primitive's behavior | its compiled description (`ductus <name> --help`; `runtime/src/schema/descriptions.rs`) |
 | Rule file format and ID conventions | `specs/008-security-rules/data-model.md`; another prefix: the data-model of the spec that introduced its file, else the file's header |
@@ -439,6 +439,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | A plan's design record | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
 | Decision-drift tell lists and grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 | Scenario→task referencing rule | `specs/067-analyze-and-audit-checks/data-model.md` |
+| Spec-root resolution (`[paths] specs-root`) | §spec-phase |
 | Constitution content — what belongs in it, which rules adopters receive | `specs/050-constitution/spec.md` (a spec that changes *behavior* still amends the principle it contradicts) |
 
 ### Cross-document references
@@ -476,7 +477,7 @@ Knowledge that would help another contributor belongs in git, never in an agent'
 ## Pipeline Boundaries
 
 - Never implement without a spec, plan without resolving open questions, skip a phase, or transition a spec's status without explicit user approval — present the work done and wait for the user to confirm
-- Specs and plans are living documents: edit a changed decision in place, but don't backtrack silently — name the back-edge a backward move takes (§spec-lifecycle)
+- Don't backtrack silently: name the back-edge a backward move takes (§spec-lifecycle)
 - Never say a finding will be "recorded" without naming the artifact and section, since each destination gates differently
 - **Report outcomes, not edits.** A chat reply reports which files changed, what checks returned, what was committed, and what the operator must decide — not the diff unless asked, which buries the outcome; commits and records describe changes fully.
 - **End a report with the remaining work, or say there is none.** A reply on finished work is short, and its last line is *No further work identified* or the outstanding items, tagged **Must** (wrong or incomplete until done), **Should** (expected before finishing unless a recorded reason waives it) or **Advisory** (nothing holds on it), each saying where it is recorded or that the decision is the operator's, so the reader need not infer what is left. Listing an item does not dispose of it: each still takes a disposition §design-principles names.
@@ -487,7 +488,7 @@ Knowledge that would help another contributor belongs in git, never in an agent'
 
 **Each agent process holds its own session target**, identified by `DUCTUS_SESSION`, else the agent's session identifier (Claude Code's `CLAUDE_CODE_SESSION_ID`), in gitignored `.ductus/sessions/`; within a process, one target and a pipeline serial within a feature. Every target write also sets the shared default, `.ductus/session.toml`, which an unidentified process uses and an identified one adopts once.
 
-Per-process targets isolate the target only: agents in one tree share files, index and commits, so `git worktree` and platform isolation remain the answer for isolating edits. A push carries every local commit, so name another session's before pushing. Two bounds stay open: processes with no identity share one target, and with two agent CLIs in one tree the runtime reads command files from the agent `/ductus` last recorded. A command that removes a feature's directory leaves no session in this tree pointing at it: `/{project}:fold` re-targets each to the spec its content moved to, and `/{project}:consolidate` clears each, keeping `cli-config-dir`, since its target is a spec nobody chose to work on; a teammate's session in another clone may still name the removed directory.
+Per-process targets isolate the target only: agents in one tree share files, index and commits, so `git worktree` and platform isolation remain the answer for isolating edits. A push carries every local commit, so name another session's before pushing. Two bounds stay open: processes with no identity share one target, and with two agent CLIs in one tree the runtime reads command files from the agent `/ductus` last recorded. A command that removes a feature's directory leaves no session in this tree pointing at it (`/{project}:fold`, `/{project}:consolidate`); a teammate's session in another clone may still name it.
 
 <!-- §cross-spec-impact -->
 
@@ -497,7 +498,7 @@ A change one spec's work finds another spec needs is recorded **in the affected 
 
 #### What the framework enforces, and what it does not
 
-**A declared impact is an obligation that gates `done`**: spec A lists affected specs in `cross-spec-impact:` and cannot reach `done` while one is undischarged. **Discharge is provable, not asserted** — B's back-link to A, not the key's removal. **Nothing detects an impact that was never declared**; that stays the author's and reviewer's judgment. A criterion naming the affected spec remains good practice but ensures nothing.
+**A declared impact is an obligation that gates `done`**: spec A lists affected specs in `cross-spec-impact:` and cannot reach `done` while one is undischarged. **Discharge is provable, not asserted** — B's back-link to A, not the key's removal. **Nothing detects an impact that was never declared**; that stays the author's and reviewer's judgment.
 
 <!-- §numbering -->
 
