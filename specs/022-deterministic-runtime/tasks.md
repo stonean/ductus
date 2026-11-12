@@ -501,13 +501,15 @@ Handoff, 2026-10-29: the work left here starts once spec 071 is `done` (the owne
 
 Question 2, re-measured 2026-11-12 at eee4e2bb and asked that day: should `Bash(curl *)` and `Bash(tar *)` leave the seed, though no grammar narrows them and the archive's fetch and extraction run before the runtime exists. Options: (a) drop both; (b) drop `tar *` only; (c) disclose. The owner answered (a) (2026-11-12); applied in the seed (`ductus.md`, `govern.md`, `install.sh`) and its retired list, `configure/claude.md` and `merge_permissions.rs` (question 3's `curl *`), plan.md's *`curl` and `tar`*, the changelog, and the prose that said the seed covers the fetch (029 AC19 annotated and its scenario, 048, 015, 012's scenario).
 
+Question 4, measured 2026-11-12 at eee4e2bb and asked that day: should Claude's canonical set keep bare `Edit` and `Write`, which approve every unprotected edit, the store and the pointer included. Measured as a proxy over 201 of this repository's session transcripts: 8,591 Edit and Write calls of 63,281 tool calls, about 3.4% outside both the project and the host's scratchpad. Options: (a) keep both and disclose; (b) scope to `Edit(./**)` and drop `Write`; (c) drop both. The owner answered (a) (2026-11-12); applied as plan.md's *Bare `Edit` and `Write`* and its *What this leaves*.
+
 Question 3, measured 2026-11-12 at eee4e2bb and asked that day: of Claude's 23 canonical shell entries, which can run or write anything in a broad form no step needs. Options: (a) drop and retire 13 (12 now, `curl *` with question 2); (a′) the same, keeping `git diff *`, which a review re-read runs as `git diff --relative`; (b) drop only the 4 that run project code; (c) disclose. The owner answered (a) (2026-11-12); applied in `configure/claude.md` steps 2 and 4, `merge_permissions.rs`, the seed's retired list, plan.md's *The canonical set* and the changelog.
 
 - [x] Measure question 1 and write it here
 - [x] The owner answers question 1 (a), (b) or (c); apply the answer
 - [x] Measure question 2 (`curl`, `tar`), write it here, ask, apply
 - [x] Measure question 3 (the canonical sets' unused entries and their removal), write it here, ask, apply
-- [ ] Measure question 4 (bare `Edit` and `Write`), write it here, ask, apply
+- [x] Measure question 4 (bare `Edit` and `Write`), write it here, ask, apply
 
 ## 19. Decide: amend the constitution's "MCP is the seam" for a primitive the server does not serve (task 14 (b))
 
