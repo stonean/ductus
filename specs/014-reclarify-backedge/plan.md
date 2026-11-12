@@ -47,7 +47,7 @@ The Gate subsection in `framework/commands/clarify.md` is replaced. Instead of b
 | `draft` | no | Verify acceptance criteria, advance to `clarified` (existing) |
 | `clarified` / `planned` / `in-progress` | no | Stop with the existing "already `{status}`" message, lightly tightened |
 | `clarified` / `planned` / `in-progress` | yes | Recovery path (below) |
-| `done` | (any) | Stop with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." |
+| `done` | (any) | Stop with the message constitution §spec-lifecycle's *A `done` stop never says the request is built* gives, then "Run `/{project}:amend` to capture this as a scenario instead." (000's scenario `a-done-stop-says-the-request-is-not-built`) |
 
 ### `/clarify` recovery path
 

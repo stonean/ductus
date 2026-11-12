@@ -6,7 +6,7 @@ section: "/amend status mutation"
 
 ## Context
 
-Spec 014 §`/amend` status mutation defines the `done`-spec branch: `/amend` refuses and reports "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." Per [023](../../023-govern-refinement/spec.md) the redirect resolves to `/amend`'s own scenario branch — supplying a scenario-shaped input flips status to `in-progress` via the `done → in-progress` back-edge.
+Spec 014 §`/amend` status mutation defines the `done`-spec branch: `/amend` refuses and reports the message constitution §spec-lifecycle's *A `done` stop never says the request is built* gives, then the redirect to its scenario route (000's scenario `a-done-stop-says-the-request-is-not-built`). Per [023](../../023-govern-refinement/spec.md) the redirect resolves to `/amend`'s own scenario branch — supplying a scenario-shaped input flips status to `in-progress` via the `done → in-progress` back-edge.
 
 That flow is correct when the user is starting from a fresh observation: they have something to add, they describe it, `/amend` classifies it, the scenario file is created, status flips. The gap surfaces when the agent (acting on the user's behalf during conversation) has *already* informally edited the feature directory — adding scenario files under `scenarios/`, appending lines to `spec.md`, or appending tasks to `tasks.md` — and the spec status is the only remaining inconsistency. The work that justifies the re-open exists on disk; the user just needs the status flipped.
 
@@ -31,7 +31,7 @@ Trade-off: the re-open path becomes invisible to users who *don't* go through th
 `/ductus:amend`'s refinement loop gains a precondition check on `done` specs: before requiring classifier input, it inspects the feature directory for uncommitted (or simply present) scenario files that the live `spec.md` / `tasks.md` does not yet reference, and for modified-since-`done` edits to those files. If a delta is found, `/ductus:amend` offers a re-open branch:
 
 - Display: prior status (`done`), files contributing to the delta (newly-present `scenarios/*.md`, modified `spec.md` or `tasks.md` lines), the timestamp of each.
-- Prompt: "Spec is `done` but the feature directory has un-tracked scenario or task edits. Revert status to `in-progress` to reflect the on-disk delta?"
+- Prompt: "Spec is `done` for what it specifies, but the feature directory has un-tracked scenario or task edits. Revert status to `in-progress` to reflect the on-disk delta?"
 - **Confirm:** revert frontmatter `status` to `in-progress`, no new scenario file created, summary names the on-disk delta. The user runs `/ductus:plan` or `/ductus:implement` next.
 - **Decline:** stop with no changes. The spec remains `done` and the on-disk delta is left alone.
 

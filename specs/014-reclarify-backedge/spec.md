@@ -66,7 +66,7 @@ With `/amend` owning the back-edge, `/clarify`'s gate becomes simple:
 | `draft` | no | Verify acceptance criteria; advance to `clarified` (existing) |
 | `clarified` / `planned` / `in-progress` | yes | **Recovery path** — see below |
 | `clarified` / `planned` / `in-progress` | no | Stop with "Spec is already `{status}`. Run `/{project}:plan`/`/{project}:implement` to advance." (existing message, lightly tightened) |
-| `done` | (any) | Stop with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." |
+| `done` | (any) | Stop with the message constitution §spec-lifecycle's *A `done` stop never says the request is built* gives, then "Run `/{project}:amend` to capture this as a scenario instead." (000's scenario `a-done-stop-says-the-request-is-not-built`) |
 
 ### `/clarify` recovery path
 
@@ -128,7 +128,7 @@ Both back-edges then read as command-owned, status-mutating actions triggered by
 - [x] AC8: `framework/commands/clarify.md` Gate branches on the spec's open-question count, not on a flag
 - [x] AC9: On a `draft` spec (with or without open questions), the existing behavior is preserved — walk questions if present, verify ACs, advance to `clarified`
 - [x] AC10: On a `clarified` / `planned` / `in-progress` spec with no open questions, the command stops with the existing "Spec is already `{status}`" message (lightly tightened to mention the next pipeline command)
-- [x] AC11: On a `done` spec (any open-question count), the command stops with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." and exits without mutation
+- [x] AC11: On a `done` spec (any open-question count), the command stops with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." and exits without mutation. **Superseded in part (2026-11-12):** the stop now opens with the message constitution §spec-lifecycle's *A `done` stop never says the request is built* gives, then the same redirect, per 000's scenario `a-done-stop-says-the-request-is-not-built`; it still exits without mutation.
 - [x] AC12: No downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are deleted or rewritten by `/clarify`
 
 ### `/clarify` recovery path
