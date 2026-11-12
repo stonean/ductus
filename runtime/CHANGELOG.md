@@ -191,6 +191,15 @@ its version and date.
 
 ### Changed
 
+- **`check-review-gate`'s description states each check's rule (spec 079, task
+  36).** Only the exact status `done` blocks as `already-done`; the lint is
+  recursive and a lint that linted nothing or exited unattributed blocks; an
+  unchecked box counts outside fences and comments; `not-re-read` is compared
+  with the round-waivers that carry a reason; a change confined to the project's
+  artifacts owes no review; the gate never blocks on `reviewed-digest` or an
+  advisory analyze finding; and an unparseable record blocks as
+  `record-unreadable` or `analyze-record-unreadable`. Description only: no
+  result changes.
 - **`append-task`'s and `prune-tasks`' descriptions state the `next-task:`
   counter's rules (spec 079, task 36).** How the highest number is read (both
   task levels, by digits), the counter `append-task` advances to, that a

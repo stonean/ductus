@@ -678,6 +678,55 @@ fn descriptions_hold_the_next_task_details_041_points_at() {
     assert!(missing.is_empty(), "missing {missing:?}");
 }
 
+/// 066's data model points at `CHECK_REVIEW_GATE` for each check's rule (079 task 36).
+#[test]
+fn descriptions_hold_the_review_gate_details_066_points_at() {
+    let held = [
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "blocked as already-done, never passed, and only for the exact status done: an unrecognized status falls through to the checks",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "recursive over every .md file under it; violations are echoed in `violations`, and a lint that linted no file, or exited non-zero with no violation it could attribute, blocks too",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "under any heading and outside a fence or comment, the message naming the count and the first few",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "`not-re-read` above the count of round-waivers that carry a reason, counted as the record states them",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "so a hand-edited record with fewer waivers blocks whatever its other counts say",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "a waiver with a blank reason waives nothing",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "owing no review (specs 079 and 081)",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "the gate never blocks on reviewed-digest or on an advisory analyze finding",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
+            "blocks as record-unreadable, an analysis.md as analyze-record-unreadable, never as not-reviewed or not-analyzed",
+        ),
+    ];
+    let missing: Vec<_> = held
+        .iter()
+        .filter(|(description, detail)| !description.contains(detail))
+        .map(|(_, detail)| detail)
+        .collect();
+    assert!(missing.is_empty(), "missing {missing:?}");
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.
