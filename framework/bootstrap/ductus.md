@@ -132,6 +132,8 @@ Determine which agents to scaffold using the first matching rule:
 
 2. **Auto-detect (default — routine update path)** — when neither `--agents=` nor `--add-agent` is present, list registry entries whose `config_dir` exists in the project. If at least one is detected, scaffold those silently with no prompt. This is the path that runs on every routine `/ductus` re-run.
 
+   **Dropped hosts' leftover trees (non-gating notice).** Beside this detection, when the project holds `.augment/`, `.agents/`, `.opencode/`, `opencode.json` or `opencode.jsonc` and no registry row's `config_dir` names that path, print one line per path found: "`{path}` belongs to a host `/ductus` no longer supports; it is left alone (the runtime refuses writes there), so remove it by hand if you no longer use it." The notice never prompts, never changes the selected set, never stops the run, and is silent for a path a registry row names or that is absent (scenario `a-dropped-hosts-leftover-tree-is-named` of 012).
+
 3. **Add-agent / first-run prompt** — triggered when `--add-agent` is present, OR when no agent dirs are detected (first run after the curl install). Iterate the registry in row order and ask one yes/no `AskUserQuestion` per agent. Pre-select "Yes" when:
    - the agent's `config_dir` exists in the project, OR
    - this is first run (no detected dirs) AND the agent's `config_dir` is the parent directory of the running `ductus.md` file (i.e., the agent the user just curled into).
