@@ -365,3 +365,9 @@ At `81285165` M24 and M123 are killed by the two tests that commit adds, and M25
 - [ ] Touch runtime/src/primitives/measure_reopenings.rs and write_review.rs (where a carried decision's stamp is written); add a CHANGELOG [Unreleased] entry and update the compiled descriptions.
 
 - **Done when**: measure-reopenings attributes a stored decision to a person only in the record that first holds its key (a carried decision keeps its first record's stamp, or is not counted again), a fixture of two records carrying one person's decision counts it once and fails with the old stamping restored, and AC17 and its Resolved Question state the rule
+
+## 36. Copies of a primitive's behavior in other specs become pointers, not left until next edited
+
+- [ ] The owner's answer (a), 2026-11-12, re-deciding 079's rule that true restatements of primitive behavior wait until their spec is next edited, chosen because a sweep would reopen the specs holding them. Measured first: a read-only pass reads the 39 specs whose data models or scenarios name a primitive and separates copies of the compiled description from requirement statements and mere mentions; the owner sees the list before any edit.
+
+- **Done when**: every data-model or scenario passage the measurement lists as a copy of a primitive's compiled description is replaced by a pointer to it, each done spec so edited takes its back-edge, and 079's spec and plan state that copies are swept rather than left until next edited
