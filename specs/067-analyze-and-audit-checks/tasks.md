@@ -239,3 +239,10 @@ Starts once spec 076's runtime work has landed: registering a primitive edits `r
 - [ ] Keep 067's promise that a linked target is skipped, not fatal: target-unparseable is an existing closed-set reason. Add the case to sibling-symlink-trust-boundary's Edge Cases, and replace the residual in 022's scenario with a pointer here. Remove validate_feature_contained if nothing else calls it once check-artifacts uses the walk (no dead code).
 
 - **Done when**: check-artifacts runs validate_feature_argument's symlink walk, a fixed-name file in the feature directory that links outside the project is recorded as a target-unparseable skip while the run continues, a fixture with such a link proves it and fails with the walk removed, and 067's sibling-symlink-trust-boundary and 022's a-path-argument-resolves-inside-its-base say so
+
+## 30. A path that leaves the project is its own skip reason, not root-absent
+
+- [ ] The owner's answer (a), 2026-11-12, re-deciding task 27: recording an escaping citation as root-absent kept the closed reason set unchanged to avoid reopening 045, but root-absent means a top-level segment the repository lacks and sits in the excluded-by-construction class, so a suspect citation read as benign.
+- [ ] 045's data-model.md lists the set: its edit reopens 045 (done), a cost the owner accepted; 045 then owes an analysis and a review. Add the reason per docs/developing-ductus.md's procedure for a closed-set member, and sweep the compiled CHECK_ARTIFACTS description and the record_skip site's doc comment.
+
+- **Done when**: check-artifacts records a criterion or body path whose lexical resolution leaves the project under a new outside-project reason, outside the excluded-by-construction class, with a test per path family that fails when it is recorded root-absent again; 067's data-model closed set, framework/reference/analyze.md's class text and 045's data-model.md reason table name it
