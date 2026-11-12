@@ -11,19 +11,21 @@ Each primitive "has a CLI subcommand (invokable standalone)" beside its MCP tool
 ## Behavior
 
 - Every argument a primitive's MCP tool accepts can be supplied on its CLI subcommand, so a CLI call can produce any result the MCP call can.
-- A structured argument is supplied as the same JSON the MCP tool takes — from a file or from stdin — and is validated against the same schema, so the two surfaces cannot accept different inputs.
+- A structured argument is supplied through its own `--{name}-json FILE` flag, carrying the same JSON the MCP tool takes for that argument and validated against the same schema, so the two surfaces cannot accept different inputs. The file is read only from a staging directory, as the existing `--*-json` flags of `apply-manifest` and `enforce-manifest` read theirs (`read_cli_json_file` in `runtime/src/primitives/mod.rs`, `BE-INPUT-004`).
 - A primitive whose arguments are all scalar keeps its flags unchanged.
+- A test asserts that every argument each primitive's MCP tool accepts has a CLI form, beside the test that every registry primitive has a subcommand, and fails when an argument is added without one.
 
 ## Edge Cases
 
-- A JSON input and a flag that both set the same argument: refused, naming the argument, rather than one silently winning.
+- A JSON flag and a scalar flag that both set the same argument cannot arise: each structured argument has exactly one flag, and no scalar flag sets it.
+- A `--{name}-json` file outside a staging directory: refused before it is read, naming the path, as the existing flags refuse one.
 - Malformed JSON, or JSON failing the tool's schema: an error naming the field, the same error the MCP surface returns.
 - An empty observations or findings list supplied explicitly: distinct from the argument being absent where the MCP tool distinguishes them.
 
 ## Open Questions
 
-- What is the CLI form of a structured argument: one `--input FILE` (with `-` for stdin) carrying the whole MCP argument object for every primitive, or a per-argument `--{name}-json FILE` flag only on the primitives whose tools take one — and is the set-equality between MCP arguments and CLI flags asserted by a test, the way AC28 asserts registry and subcommand?
+*None — all resolved.*
 
 ## Resolved Questions
 
-*None yet.*
+- **What is the CLI form of a structured argument, and is the set-equality between MCP arguments and CLI flags asserted by a test?** A per-argument `--{name}-json FILE` flag on each primitive whose tool takes a structured argument, staging-bound like the five existing ones, with a test in `runtime/src/main.rs`'s tests asserting every MCP argument has a CLI form (owner, 2026-11-12). Measured at `ab2ad085`: 19 `#[arg(skip)]` fields on 7 argument structs in `runtime/src/schema/primitives.rs`, 5 already covered, so 14 new flags — `write-review` 8, `write-analysis` 3, and `process-waivers`, `process-decisions` and `prune-project` 1 each. Rejected: one `--input FILE|-` per primitive, which overlaps every scalar flag and so needs a conflict rule for each, reads stdin outside the staging bound, and, by replacing the five existing flags, rewrites `framework/bootstrap/ductus.md`'s `apply-manifest` invocation, which needs a real adopter bootstrap.
