@@ -259,18 +259,19 @@ STUB
 #
 # The capability guard probes the binary with `--help` and `--version`; a hung
 # binary must end the commit with a halt rather than hang it (BE-TIMEOUT-001).
-# The watchdog's bound is 10 seconds, so this case waits that long once.
+# The watchdog's bound is 10 seconds, so each shape waits about that long.
+# Three shapes: a binary that hangs itself; a wrapper whose child keeps the
+# output open after the binary is ended (a `[runtime] path` wrapping another
+# command without `exec`), which a probe reading through a pipe waits on; and
+# one that ignores SIGTERM, which only a SIGKILL ends.
 check_hung_runtime_is_bounded() {
-  local fixture out status start elapsed
+  local label="$1" stub="$2" fixture out status start elapsed
   fixture="$(mktemp -d 2>/dev/null)" || fixture=""
   if [ -z "$fixture" ] || ! scaffold "$fixture" specs; then
-    fixture_failed "the hung-runtime fixture" "$fixture"
+    fixture_failed "the hung-runtime fixture ($label)" "$fixture"
     return
   fi
-  cat > "$fixture/.ductus/bin/ductus" <<'STUB'
-#!/usr/bin/env bash
-exec sleep 60
-STUB
+  printf '#!/usr/bin/env bash\n%s\n' "$stub" > "$fixture/.ductus/bin/ductus"
   chmod +x "$fixture/.ductus/bin/ductus"
   start="$(date +%s)"
   out="$(cd "$fixture" && PATH=/usr/bin:/bin bash .githooks/ductus-pre-commit 2>&1)"
@@ -278,8 +279,8 @@ STUB
   elapsed=$(( $(date +%s) - start ))
   if [ "$status" -eq 0 ] || [ "$elapsed" -ge 40 ]; then
     emit "framework/bootstrap/hooks/ductus-pre-commit" \
-      "the hook did not halt within its probe bound over a runtime that hangs (exit $status after ${elapsed}s): ${out:-<no output>}" \
-      "run the capability guard's four probes under the 10-second watchdog"
+      "the hook did not halt within its probe bound over a runtime that hangs ($label; exit $status after ${elapsed}s): ${out:-<no output>}" \
+      "run the capability guard's four probes under the 10-second watchdog, its output in a file, ending a probe that ignores SIGTERM with SIGKILL"
   fi
   rm -rf "$fixture"
 }
@@ -570,7 +571,9 @@ check_refuses_project_file_growth() {
 
 check_halts_without_runtime
 check_too_old_runtime_echo_is_printable
-check_hung_runtime_is_bounded
+check_hung_runtime_is_bounded "it hangs" 'exec sleep 60'
+check_hung_runtime_is_bounded "a child keeps its output open" 'sleep 60'
+check_hung_runtime_is_bounded "it ignores SIGTERM" 'trap "" TERM; sleep 60; sleep 60'
 build_and_run specs      # default root — isolates runtime resolution
 build_and_run features   # configured root (spec 040) — isolates scoping
 # Both directory forms the runtime recognizes, against the shipped hook.

@@ -82,7 +82,10 @@ same reason.
   the host agent's messages in its session, not a log.
   The guard's four probes of the binary, the two `--help` capability reads and
   the two `--version` echoes, run under a 10-second watchdog (`BE-TIMEOUT-001`;
-  macOS has no `timeout`), and one it ends reads as a failed probe. The hook's
+  macOS has no `timeout`), and one it ends reads as a failed probe. A probe
+  writes its output to a file, not the caller's pipe, so a child a wrapper
+  leaves running cannot hold the hook open, and one that ignores SIGTERM is
+  ended with SIGKILL a second later. The hook's
   `derive-*` and `check-corpus-links` calls are not bounded: a fixed bound
   could kill a derive over a large repository that is slow, not hung.
   It asks **capability**, not version — there is no pin for the hook to drift
