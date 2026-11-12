@@ -379,3 +379,10 @@ The routing text, the tree definitions, and the corrections to §Classification 
 - [x] `framework/constitution.md` §spec-lifecycle's operational rule said syncing a canonical record on another spec is a mechanical edit that leaves it `done`, which has not held for a table in a data model or scenario since 079's `classify-spec-edit` (97d6562c): such an edit reopens the spec and stales its review, as 067 task 25's row in 080's data model did (7904cb19). The owner chose to correct the rule to the tooling (2026-11-11): it now says a table in `spec.md` outside the criteria, `plan.md` or `tasks.md` syncs with no back-edge and one in a data model or scenario reopens, and AGENTS.md's line and this plan's survey W24 row say the same
 
 - **Done when**: the constitution, AGENTS.md and this plan state the rule `classify-spec-edit` applies
+
+## 47. A reopen the correct path requires never decides a recommendation
+
+- [ ] The owner's answer (c) to the reopen-avoidance audit, 2026-11-12: recommendations in several sessions rejected or never offered the correct path because it would reopen a done spec (six where the reopen decided it; the audit is summarised in d73b998f's commit and this session's record). Add one sentence to §recommendations: a reopen the correct path requires is a cost each option states, never a reason to recommend another option. AGENTS.md's 'Weigh what an option starts against what it delivers' line then points at it rather than restating it.
+- [ ] Measure the constitution with wc -c before and after; it held 49,616 bytes at 12ab9605, and 082's three record fields will take about 110 bytes of the 384 free, so order this after 082's constitution task or measure the cut both need.
+
+- **Done when**: framework/constitution.md §recommendations states that a reopen the correct path requires is a cost each option states, never a reason to recommend another, within the size ceiling with a measured cut if one is needed, and AGENTS.md's Workflow line points at it
