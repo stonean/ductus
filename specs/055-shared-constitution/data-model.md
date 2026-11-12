@@ -42,7 +42,7 @@ and empty `skipped` — indistinguishable by design (AC1).
 
 ## Primitive result shape
 
-`resolve-constitutions` takes one argument, `unmeasured` (boolean, default `false`; `--unmeasured` on the CLI). Set, the call returns the resolution without measuring: no `[artifacts]` setting is read, and no record carries a size or `threshold`. `/ductus` sets it, since it writes the imports block and uses no size.
+`resolve-constitutions` takes one argument, `unmeasured` (boolean, default `false`; `--unmeasured` on the CLI); what it does, which `/ductus` relies on, is as `ductus resolve-constitutions --help` states.
 
 `resolve-constitutions` returns:
 
@@ -55,10 +55,8 @@ and empty `skipped` — indistinguishable by design (AC1).
 | `threshold` | object | `{bytes, source}`: the read size each `loaded` document was measured against, `[artifacts] read-size-bytes` or the 50,000-byte default (`source` `config` or `default`). Present only when `examined` is above 0 |
 
 The `loaded` / `skipped` split is the `QUAL-CLAIM-001` shape: a caller cannot report a
-clean result over a source in `skipped` without dropping a field it was handed. Empty
-`loaded` **and** empty `skipped` means "no constitutions registered"; empty `loaded`
-with a non-empty `skipped` means "registered and could not be read" — different answers,
-never collapsed.
+clean result over a source in `skipped` without dropping a field it was handed. What empty
+`loaded` and `skipped` mean is as `ductus resolve-constitutions --help` states.
 
 Each `loaded` record also carries its measurement (scenario
 `target-reports-each-constitutions-size`). A `skipped` record carries none of these fields:
