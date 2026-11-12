@@ -19,13 +19,15 @@ Establishes which feature spec all subsequent `/ductus:*` commands operate on. O
 ## Scope Boundaries
 
 - Read `.ductus/constitution.md` once per session, plus each shared-constitution document `resolve-constitutions` reports as `loaded` (spec 055), skipping any already in context because the native rules file imported it — those documents only, never anything else in a registered checkout, and never a registered checkout's own config (registration is not transitive). Also read the targeted feature's `spec.md` frontmatter and open-question count. `read-spec` also returns the feature's scenario open questions (a separate field; it reads `scenarios/*.md` to derive them), which step 9 reports. Read a targeted scenario file directly only when one is specified.
-- Do NOT read plan files, tasks, source code, test files, or unrelated specs' bodies.
+- Do NOT read plan files, source code, test files, or unrelated specs' bodies, and read tasks only through `read-tasks`, for an `in-progress` spec's next action (**Status → next action**). That step also evaluates `check-review-gate`, which writes nothing.
 - Do NOT modify any spec, plan, scenario, or source file. The only files written are the session files: this process's own target under `.ductus/sessions/` when it has a session identity, and the shared default `.ductus/session.toml` (§concurrent-features). Status transitions belong to the pipeline commands (`/ductus:clarify`, `/ductus:plan`, `/ductus:implement`) and to `/ductus:amend` (the documented back-edges: `clarified|planned|in-progress → draft` on a new question, and `done → in-progress` on a new scenario).
 - Reference: §spec-lifecycle, §scenarios, §concurrent-features, §text-first-artifacts.
 
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
+>
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__check-review-gate`
 
 <!-- audit:ignore-promotion -->
 1. Invoke `resolve-session` to resolve this process's target — its own when it has a session identity, otherwise the shared default, the newest of `.ductus/session.toml`, `.govern/session.toml`, or the legacy root `.govern.session.toml` that exists (the parity strict-files frontmatter above names the legacy path, matching the legacy-layout parity fixtures) — and display any notices and unreadable session files it returns. This step runs whatever the argument, so a notice owed to this session — a fold or consolidation that moved its target — is delivered before a write below replaces that target. When it fails because a session file does not parse — this process's own, or the shared default; the error names the file — and an argument was supplied, report that file and continue: the write below replaces it and reports it among the `unreadable` sessions. Without an argument, report the error and stop. Under `ductus exec` a malformed session file halts the walk before this step runs (022's task 12): run the command through the host, or remove the named file. When the invocation has no argument (whitespace or empty), display the resolved target: if there is no target, report no target set; otherwise display the feature name and status, the scenario detail when one is targeted (scenario name, the section field or legacy spec-ref field, and the context summary), and the artifacts list. In either case, then tell the user they can run `/ductus:target {feature}` or `/ductus:target {feature}/{scenario-slug}` to change focus. Then stop — the steps below only apply when an argument is supplied. Treat `0`, `00`, or any other non-whitespace string as a valid feature identifier.
@@ -66,8 +68,10 @@ The scenario-targeted path (step 7) is unchanged: when a scenario is targeted, i
 | draft | any | /ductus:clarify |
 | clarified | 0 | /ductus:plan |
 | planned | 0 | /ductus:implement |
-| in-progress | 0 | /ductus:implement |
+| in-progress | 0 | /ductus:implement while a task has an unchecked box; with none, the step `check-review-gate` names (below) |
 | done | any | complete for what it specifies; run /ductus:amend to record new work |
+
+For an `in-progress` spec with no open question, `read-tasks` decides whether work remains: an unchecked box in any task names `/ductus:implement`. With none (an absent or template-state `tasks.md` included), name the step `/ductus:implement`'s completion gate would name, from the same evaluation: invoke `check-review-gate` and display the next step its blocked `message` and `guidance` name (`/ductus:review` for a missing or stale review record, `/ductus:analyze` for the analysis, `/ductus:target {feature}/<scenario>` then `/ductus:clarify` for a scenario's unresolved question), or on `passed: true`, `/ductus:implement` for the `done` transition. A blocked result of `unchecked-task` (a box under a heading `read-tasks` does not parse) names `/ductus:implement`. Never restate the gate's ordering here. Without the MCP server, stop as every command does.
 
 When the status is clarified, planned, or in-progress AND the open-question count is at least one, the next step is `/ductus:clarify` (recovery). This state usually arises from a manual frontmatter edit; the normal back-edge via `/ductus:amend` keeps status and open-question presence in sync.
 

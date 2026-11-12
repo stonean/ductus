@@ -48,6 +48,10 @@ The message shape is one bullet in the constitution's §spec-lifecycle, which ev
 
 No runtime primitive appends an acceptance criterion, and none is added. The route is a classifier signal plus four steps in `framework/commands/amend.md`: a normalized-whitespace duplicate check by the host (the check the question route's preview already makes), the host appending `- [ ] {text}` to `## Acceptance Criteria` (creating the section in template order when missing), `label-criteria` for the label, and `set-status` for the `done` back-edge. The label, the counter and the status are the primitives' writes; the append is one unlabelled list item, which a primitive would only restate. A `draft` spec is refused, since `/{project}:clarify` owns criteria there (owner, 2026-11-12).
 
+### `/target` names the completion gate's next step from `check-review-gate`
+
+For an `in-progress` spec with no open question, `framework/commands/target.md` calls `read-tasks`: an unchecked box names `/{project}:implement`. With none, it calls `check-review-gate` and displays the step that result's message and guidance name, or `/{project}:implement` on `passed: true` and on an `unchecked-task` block (a box under a heading `read-tasks` does not parse). The gate's ordering is read, never copied, so the two commands cannot disagree. The Status → next action table in `target.md` states the rule.
+
 ## Affected Files
 
 | File | Action | Purpose |
