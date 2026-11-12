@@ -49,6 +49,9 @@ walkdir = "2"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+# Changes the environment in place, safely: this crate forbids `unsafe_code`,
+# which `std::env::set_var` needs. For `fetch-archive`'s startup-capture test.
+temp-env = "0.3.6"
 # Real root certificates, offline, for `fetch-archive`'s root-filtering tests;
 # already in the graph through rustls-platform-verifier.
 webpki-root-certs = "1"

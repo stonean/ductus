@@ -808,6 +808,13 @@ its version and date.
 
 ### Fixed
 
+- **A test now proves `fetch-archive` reads `SSL_CERT_FILE` and `SSL_CERT_DIR`
+  at startup (spec 048 task 30).** Removing `init_proxy_env`'s capture passed
+  every test, since the platform store's fallback reads the same variables at
+  the first fetch. `tests/fetch_archive_cert_env_startup.rs`, compiled only
+  where the verifier reads them, changes `SSL_CERT_FILE` between startup and
+  the fetch and fails without the capture. It adds the `temp-env`
+  dev-dependency, as the crate forbids `unsafe_code`.
 - **A `--*-json` path with a line break in it no longer reaches stderr as
   several lines, and a proxy value with `://` in its credentials is redacted
   whole.** A path refused for lying outside a staging directory, and one whose
