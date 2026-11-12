@@ -596,6 +596,47 @@ fn descriptions_hold_the_resolve_anchor_details_067_points_at() {
     assert!(missing.is_empty(), "missing {missing:?}");
 }
 
+/// 067's data model points at `CHECK_ORPHANED_REFERENCES` for what counts as a reference (079 task 36).
+#[test]
+fn descriptions_hold_the_orphaned_reference_details_067_points_at() {
+    let held = [
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "A reference is a managed root that starts a token",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "an `@` before it counts only at line start or after whitespace",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "`./` in .githooks/pre-commit, or `../` or a leading `/` in the spec root's system.md names the project root",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "any other prefix keeps it from being a reference, as does a `/` after `~` (not `~~`), `}`, `%`, `)` or a quote or backtick closing a variable",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "A candidate holding `*` or `NNN` is a pattern, one with a `..` segment leaves the project",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "names a git object, while a variable, a path or a link label before the colon still marks a working-tree reference",
+        ),
+        (
+            descriptions::CHECK_ORPHANED_REFERENCES,
+            "a path the project declares it ships to adopters, which only a framework checkout has",
+        ),
+    ];
+    let missing: Vec<_> = held
+        .iter()
+        .filter(|(description, detail)| !description.contains(detail))
+        .map(|(_, detail)| detail)
+        .collect();
+    assert!(missing.is_empty(), "missing {missing:?}");
+}
+
 /// The manifest names each primitive the server does not serve on a
 /// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
 /// `CLI_ONLY_PRIMITIVES` exactly.

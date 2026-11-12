@@ -191,6 +191,11 @@ its version and date.
 
 ### Changed
 
+- **`check-orphaned-references`' description states what counts as a reference
+  (spec 079, task 36).** The token-start rule and the `@` import form, which
+  prefixes name the project root in which referrer and which do not, and the
+  patterns, parent-directory paths, git object names and shipped paths that are
+  never reported. Description only: no result changes.
 - **`resolve-anchor`'s description states how a reference is classified and
   named (spec 079, task 36).** The kinds are decided in order, first match
   winning; a line naming one shipped document resolves against that source's
