@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [060-exec-analyze-assesses-each-loaded-rule, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate]
 next-criterion: 7
