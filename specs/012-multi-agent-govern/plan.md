@@ -50,6 +50,8 @@ Each agent's configure source lives at `framework/bootstrap/configure/{key}.md`,
 
 This repository's own `.claude/commands/ductus/configure.md` is generated from `framework/bootstrap/configure/claude.md` by `scripts/gen-claude-commands.sh`.
 
+The configure sources are exempt from constitution §runtime-host-integration's opening pointer ("without the server, stop"), and `scripts/lint-tool-coverage.sh`, which enforces it for `framework/commands/*.md`, leaves them out of its subject (012 task 11, the owner's answer (a), 2026-11-12). `/{project}:configure` is the command that grants the runtime's tools, `mcp__ductus__*` on Claude, so it has to run before they are permitted or connected: Claude's steps 1 and 6 each carry a CLI fallback (`.ductus/bin/ductus merge-permissions …`, `merge-status-hook`), which a "stop" pointer would contradict, and Pi's names no primitive.
+
 ### Agent selection precedence
 
 `/ductus` determines selection in this order, stopping at the first match:
