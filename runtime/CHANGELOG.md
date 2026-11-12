@@ -15,7 +15,7 @@ its version and date.
   Acceptance Criteria section, no criterion from `clarified` on, an empty or
   placeholder criterion, an open question in the body from `clarified` on) and
   `plan-consistency` (when `plan.md` exists: no link to or naming of its spec,
-  no decision, no affected path). The three judged items stay with the host in
+  no decision, an Affected Files section listing nothing outside comments). The three judged items stay with the host in
   step 15, and an exec walk records them unexamined under the new reason
   `integrity-not-checked` (spec 067).
 - **`check-rule-ids` reports a citation of a shipped rule whose file is not

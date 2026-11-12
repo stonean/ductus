@@ -463,21 +463,56 @@ fn check_plan_consistency(
     {
         blocking("the plan's Technical Decisions section states no decision".into());
     }
-    let names_a_path = section_line_indices(&lines, "Affected Files")
-        .into_iter()
-        .any(|i| {
-            let line = without_inline_comments(lines[i]);
-            inline_code_spans(&line).into_iter().any(|span| {
-                let code = &line[span];
-                code.contains('/')
-                    || code
-                        .rsplit_once('.')
-                        .is_some_and(|(_, ext)| !ext.is_empty())
-            })
-        });
-    if !names_a_path {
-        blocking("the plan's Affected Files section names no file path".into());
+    if !lists_a_file(&lines, &section_line_indices(&lines, "Affected Files")) {
+        blocking(
+            "the plan's Affected Files section lists no file: no list item, table row, \
+             code span or path outside comments"
+                .into(),
+        );
     }
+}
+
+/// Whether an Affected Files section, given as its line indices, lists a file
+/// outside comments: a list item or a table body row with text, a code span,
+/// or a word holding a `/`. The section is a planning aid the template calls
+/// non-exhaustive, so this catches only one left empty or holding its
+/// scaffold, never a spelling: an unbackticked `- internal/widget.go` and a
+/// bare `- Makefile` both list a file.
+fn lists_a_file(lines: &[&str], section: &[usize]) -> bool {
+    let mut header_seen = false;
+    section.iter().any(|&i| {
+        let line = without_inline_comments(lines[i]);
+        let trimmed = line.trim();
+        if trimmed.starts_with('|') {
+            let cells: Vec<&str> = trimmed
+                .trim_matches('|')
+                .split('|')
+                .map(str::trim)
+                .collect();
+            let separator = cells
+                .iter()
+                .all(|cell| !cell.is_empty() && cell.chars().all(|c| matches!(c, '-' | ':')));
+            if separator {
+                header_seen = true;
+                return false;
+            }
+            return header_seen && cells.first().is_some_and(|cell| !cell.is_empty());
+        }
+        let item = trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("* "))
+            .or_else(|| {
+                let digits = trimmed.trim_start_matches(|c: char| c.is_ascii_digit());
+                (digits.len() < trimmed.len())
+                    .then(|| digits.strip_prefix(". "))
+                    .flatten()
+            });
+        item.is_some_and(|text| !text.trim().is_empty())
+            || inline_code_spans(&line)
+                .into_iter()
+                .any(|span| !line[span].trim().is_empty())
+            || trimmed.split_whitespace().any(|word| word.contains('/'))
+    })
 }
 
 /// Whether a plan references its spec: a link to its `spec.md`, or the feature
@@ -5778,7 +5813,42 @@ mod tests {
             ## Affected Files\n\nTo be listed.\n";
         let found = integrity("planned", GOOD_BODY, Some(no_path));
         assert_eq!(found.len(), 1, "{found:?}");
-        assert!(found[0].1.contains("names no file path"));
+        assert!(found[0].1.contains("lists no file"));
+        // The template's scaffold, a table inside a comment and a bare
+        // header, lists nothing.
+        let scaffold = no_path.replace(
+            "To be listed.",
+            "<!-- Example:\n\n| File | Action |\n| --- | --- |\n| `src/a` | Create |\n\n-->\n\n\
+             | File | Action | Purpose |\n| --- | --- | --- |",
+        );
+        assert_eq!(integrity("planned", GOOD_BODY, Some(&scaffold)).len(), 1);
+    }
+
+    /// An adopter's plan lists its files in any spelling the template's
+    /// planning aid admits: unbackticked bullets, extensionless root files,
+    /// numbered items, a table of bare paths, or prose naming a path.
+    #[test]
+    fn affected_files_in_any_spelling_list_a_file() {
+        let plan = |files: &str| {
+            format!(
+                "# Plan\n\n[spec](spec.md)\n\n## Technical Decisions\n\nUse X.\n\n\
+                 ## Affected Files\n\n{files}\n"
+            )
+        };
+        for files in [
+            "- internal/widgets/widget.go",
+            "- Makefile\n- Dockerfile",
+            "1. Makefile",
+            "| File | Action |\n| --- | --- |\n| Makefile | Modify |",
+            "Edits internal/widgets/widget.go only.",
+            "`Makefile`",
+        ] {
+            assert_eq!(
+                integrity("planned", GOOD_BODY, Some(&plan(files))),
+                vec![],
+                "{files:?} lists a file"
+            );
+        }
     }
 
     /// The scenario's second edge case: no plan, no plan check.

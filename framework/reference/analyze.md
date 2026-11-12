@@ -32,7 +32,7 @@ The path chooses the row: a `spec.md` takes the spec row, a file under `scenario
 - Affected files section lists specific file paths
 - Plan does not contradict `specs/system.md`
 
-**How each runs.** `check-artifacts` (step 8) runs the family `plan-consistency` when `plan.md` exists, and a spec with no plan skips it: the plan carries no link to its spec's `spec.md` and names neither its feature directory nor its number (a plan written before the template carried the link names its feature in its title), its Technical Decisions section holds nothing outside comments, or its Affected Files section names no file path, each one Blocking finding. Whether a decision carries a rationale and whether the plan contradicts `system.md` are the host's judgments in step 15, each failure a Blocking finding, recorded unexamined under `integrity-not-checked` under `ductus exec`.
+**How each runs.** `check-artifacts` (step 8) runs the family `plan-consistency` when `plan.md` exists, and a spec with no plan skips it: the plan carries no link to its spec's `spec.md` and names neither its feature directory nor its number (a plan written before the template carried the link names its feature in its title), its Technical Decisions section holds nothing outside comments, or its Affected Files section lists no file outside comments (no list item, table body row, code span or word holding a `/`, since the section is a planning aid the template calls non-exhaustive), each one Blocking finding. Whether a decision carries a rationale and whether the plan contradicts `system.md` are the host's judgments in step 15, each failure a Blocking finding, recorded unexamined under `integrity-not-checked` under `ductus exec`.
 
 ## Plan record (advisory)
 
