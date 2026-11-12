@@ -30,16 +30,17 @@ use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
 /// Steps 13–15 — cross-service references, `## Applicable Rules` citations,
 /// and the host's reading of the spec and plan, which judges grounding and the
 /// three checks of §Spec integrity and §Plan consistency a primitive cannot
-/// make — by the reason each is recorded under (step 15 under two). They are detection
+/// make, and the reasons recorded for decisions — by the reason each is recorded under (step 15 under three). They are detection
 /// the procedure leaves to the host, and the walker no-ops host prose, so an
 /// exec run examines none of them. Each is recorded once, on every run: whether
 /// a step would have applied to this spec is itself something the walk never
 /// looked at.
-const HOST_DETECTION: [&str; 4] = [
+const HOST_DETECTION: [&str; 5] = [
     "references-not-checked",
     "applicable-rules-not-checked",
     "grounding-not-checked",
     "integrity-not-checked",
+    "decision-reasons-not-checked",
 ];
 
 /// The running tier counts of one exec analyze walk.
@@ -312,10 +313,35 @@ mod tests {
     fn host_detection() -> Value {
         json!([
             ["applicable-rules-not-checked", 1],
+            ["decision-reasons-not-checked", 1],
             ["grounding-not-checked", 1],
             ["integrity-not-checked", 1],
             ["references-not-checked", 1]
         ])
+    }
+
+    #[test]
+    fn a_walk_records_the_decision_reasons_check_unexamined_once() {
+        // Step 15's judgment of the reasons behind recorded decisions is host
+        // prose the walker no-ops, so an exec run says it did not examine
+        // them, in the class that is a real gap (reference Unexamined
+        // targets), however many findings the detection steps tally.
+        let mut tally = AnalyzeTally::new();
+        let mut context = Map::new();
+        context.insert("frontmatter".into(), json!({ "status": "planned" }));
+        tally.record_primitive(
+            "validate-frontmatter",
+            &json!({ "findings": [{ "severity": "blocking" }] }),
+            &context,
+        );
+        let reasons = bound(&tally)["unexamined-by-reason"].clone();
+        let recorded = reasons
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry[0] == "decision-reasons-not-checked")
+            .collect::<Vec<_>>();
+        assert_eq!(recorded, vec![&json!(["decision-reasons-not-checked", 1])]);
     }
 
     #[test]
@@ -396,6 +422,7 @@ mod tests {
             bindings["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
@@ -521,6 +548,7 @@ mod tests {
             bindings["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
@@ -565,6 +593,7 @@ mod tests {
             bindings["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
@@ -595,6 +624,7 @@ mod tests {
                 ["anchor-target-unjudgeable", 3],
                 ["anchor-target-unreadable", 1],
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1]
@@ -624,6 +654,7 @@ mod tests {
             bindings["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
@@ -703,6 +734,7 @@ mod tests {
             bound(&tally)["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
@@ -726,6 +758,7 @@ mod tests {
             bindings["unexamined-by-reason"],
             json!([
                 ["applicable-rules-not-checked", 1],
+                ["decision-reasons-not-checked", 1],
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],

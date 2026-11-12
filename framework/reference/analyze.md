@@ -72,6 +72,14 @@ Suggested fix per finding: ground the claim (read the code, query the dev databa
 
 **Severity:** advisory in v1 — grounding is a semantic judgment with false-positive risk, and a noisy gate erodes trust. **Promotion criterion:** promote to blocking when a single `/{project}:analyze --all` run reports 5 or more ungrounded claims across the repo on two consecutive runs.
 
+## Decision reasons (advisory)
+
+Step 15 reads each Resolved Question in the spec and each Trade-off in `plan.md` that rejects or passes over an option. A decision whose stated reason is the work the option would start (a `done` spec it would reopen, a review run it would owe, a re-analysis) is an **Advisory** finding, because a process cost is not a result: the option's own result is what the decision gives up. A reopen or review run named as one cost beside a correctness, safety or simplicity reason is not a finding; one that is the reason is. This is a judgment, never a match on the word "reopen".
+
+Suggested fix per finding: state the result the rejected option would have delivered and the result the chosen one gives up, then decide again; a decision kept with that stated clears the finding at the next run.
+
+**Severity:** advisory, never gating: it asks for a re-examination and proves no defect.
+
 ## Scenario consistency (advisory)
 
 - Every scenario file has Context and Behavior sections, which the host judges (its frontmatter is under Frontmatter schema above)
@@ -119,7 +127,7 @@ The checks above read *targets* that may be unreadable: a link resolving to a fi
 
 They are not silent either. The `check-artifacts` result carries a `skipped` list of `{family, reason, path}` records. Render them in the **Informational** tier. `clean` means only no findings, so the assurance lives in the pair (`QUAL-CLAIM-001`): clean with nothing skipped is verified-clean, clean with something skipped is partially examined.
 
-**The reasons form a closed set in two classes, and they call for opposite responses.** *Excluded by construction* — `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed`, `gitignored`, `status-gated`, `anchor-target-unjudgeable` — are targets a check decided not to examine; they recur on every run and the exclusion is correct. *Could not be read* — `target-missing`, `target-unparseable`, `no-readable-state`, `outside-project`, `artifact-unreadable`, `referrer-unreadable`, `anchor-target-unreadable`, `rule-citations-not-checked`, `rule-not-installed`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked`, `integrity-not-checked` — are real gaps in what the run saw. Step 18 reads the split: only the second class sets `restricted`, so a stored decision is retained when its finding's source may have gone unseen, and pruned when the finding genuinely stopped firing. A reason added later is classified here, once.
+**The reasons form a closed set in two classes, and they call for opposite responses.** *Excluded by construction* — `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed`, `gitignored`, `status-gated`, `anchor-target-unjudgeable` — are targets a check decided not to examine; they recur on every run and the exclusion is correct. *Could not be read* — `target-missing`, `target-unparseable`, `no-readable-state`, `outside-project`, `artifact-unreadable`, `referrer-unreadable`, `anchor-target-unreadable`, `rule-citations-not-checked`, `rule-not-installed`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked`, `integrity-not-checked`, `decision-reasons-not-checked` — are real gaps in what the run saw. Step 18 reads the split: only the second class sets `restricted`, so a stored decision is retained when its finding's source may have gone unseen, and pruned when the finding genuinely stopped firing. A reason added later is classified here, once.
 
 Every reason from `referrer-unreadable` on in the second class comes from outside `check-artifacts`, as does `anchor-target-unjudgeable`, the one exclusion by construction that does. `artifact-unreadable` has a second source too: step 17 records it for a subject the size check could not measure.
 
@@ -130,7 +138,7 @@ Every reason from `referrer-unreadable` on in the second class comes from outsid
 - `rule-not-installed` counts the spec's citations of a rule the framework ships whose file the project never installed, as under a `[rules] surfaces` that leaves the surface out (`check-rule-ids`' `not-installed`): informational, never missing, and unexamined because no rule text was loaded to assess the spec against. An ID no shipped file defines stays missing.
 - `rule-assessments-not-checked` counts the loaded rules steps 11 and 12 did not ask about — a rule with no Verification, or whose Statement carries no MUST or SHOULD keyword and so has no tier to be asked in. Under `ductus exec` it also counts a step once when the walk loaded no rule at all, or when the step's prose names no MUST or SHOULD tier: that step examined nothing, and the record says so.
 - `rule-file-unreadable` counts the rule files steps 11 and 12 could not read, whose rules could not even be counted. A host that cannot read a rule file, or finds a rule it cannot place in either tier, records it under the same reason the walker would.
-- `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked` and `integrity-not-checked` are steps 13–15, which `ductus exec` no-ops as host prose, so an exec run records each once whether or not the step would have applied; step 15 is the reading of the spec and plan for both grounding and the three judged items of the Spec integrity and Plan consistency sections above, and so owns two reasons. A host that runs those steps never records them.
+- `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked`, `integrity-not-checked` and `decision-reasons-not-checked` are steps 13–15, which `ductus exec` no-ops as host prose, so an exec run records each once whether or not the step would have applied; step 15 is the reading of the spec and plan for grounding, the three judged items of the Spec integrity and Plan consistency sections above, and the decision reasons of the section above, and so owns three reasons. A host that runs those steps never records them.
 
 ## Unresolved shared constitutions (informational)
 

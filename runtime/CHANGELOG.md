@@ -168,6 +168,12 @@ its version and date.
   first write and was counted again as the carrying run's, overstating
   `decisions-by-person` (22 of the 30 person-stamped decisions in five measured
   runs were carried). The compiled description says so (spec 079, AC17).
+- **`/{project}:analyze` step 15 flags a decision rejected for the reopen or
+  review run it would start.** A Resolved Question or plan Trade-off whose
+  stated reason is that process cost is an advisory finding to re-examine,
+  never gating. An exec walk records the host judgment unexamined under the
+  new reason `decision-reasons-not-checked`, in the *could not be read*
+  class, once per run like step 15's other two (spec 067).
 - **A path citation that leaves the project is skipped as `outside-project`,
   no longer `root-absent`.** The two path families resolve a candidate
   lexically and record one that leaves the project without probing it, as
