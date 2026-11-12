@@ -10,8 +10,8 @@ section: "The completion gate"
 
 ## Behavior
 
-- **The gating-finding check reads the gating counts, never the map's `undispositioned`.** `check_review_gate::disposition_block` sums the review record's `must-violations` and `should-violations` and the analysis's `hard-fail` and `blocking-findings`, and blocks on any record whose sum is above zero with `blocked: {N} outstanding gating finding(s) — {file}: {n}, …`. Its guidance names fixing each one, waiving a review violation with its rationale, or deferring it to pipeline work on another spec, and the message names each deferral that releases nothing with its work (spec 076).
-- **In practice it is where a SHOULD neither waived nor released by its deferral binds.** A MUST sets the review record's `blocking`, and a hard-fail or blocking finding sets the analysis's, so each of those blocks at an earlier check; only `should-violations` has no earlier one.
+- **The gating-finding check reads the gating counts, never the map's `undispositioned`.** `check_review_gate::disposition_block` sums the review record's `must-violations` and `should-violations` and the analysis's `hard-fail` and `blocking-findings`, and blocks on any record whose sum is above zero with `blocked: {N} outstanding gating finding(s) — {file}: {n}, …`. Its guidance names fixing each one, waiving a review violation with its rationale, or deferring it to pipeline work on another spec, and the message names each deferral that holds the finding, per `check-review-gate`'s description (spec 076).
+- **Which finding binds here is in `ductus check-review-gate --help`.** A MUST sets the review record's `blocking`, and a hard-fail or blocking finding sets the analysis's, so each of those blocks at an earlier check; only `should-violations` has no earlier one.
 - **The block keeps its wire name.** `blocked-by` stays `undispositioned-findings`, so a host matching on it keeps working.
 - **Every other check is unchanged**, the map-less record's `record-predates-dispositions` included: the map is still written, and its absence still blocks an `in-progress` spec.
 

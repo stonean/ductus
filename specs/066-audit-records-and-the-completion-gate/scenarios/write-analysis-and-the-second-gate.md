@@ -34,7 +34,7 @@ The primitive keeps its name though it now gates on both commands. Renaming is s
 
 **Analyze-state drift** is judged by `/{project}:analyze` from the record it writes, not by the `check-artifacts` family it began as: read during detection, that family judged the record the run was about to replace, so its finding could never clear (058's `analyze-state-drift-judges-the-record-it-writes`). The new record always carries `last-run`, so the check reports a `done` spec whose new record is blocking. It mirrors `review-state-drift` on that gating state and deliberately not on the advisory count, where its sibling *does* check `should-violations`. That asymmetry is stated in both the check and the block's own documentation, because a reader who notices it will otherwise read it as an omission.
 
-> **Signpost:** `read-spec`'s result carries neither audit record since [080](../../080-deterministic-runtime-efficiency/spec.md) bounded it, so a consumer reads `analysis.md` itself, whose absence is the never-run state.
+> **Signpost:** since [080](../../080-deterministic-runtime-efficiency/spec.md), `read-spec` omits both audit records (see `ductus read-spec --help`); `analysis.md`'s absence is the never-run state.
 
 ## Edge Cases
 

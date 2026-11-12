@@ -69,9 +69,8 @@ this window has not been committed yet, so the window starts at `HEAD` and
 status, and a spec that is absent at `HEAD`. This one rule covers both ways a
 spec enters `in-progress`: `/{project}:amend` reopening a `done` spec, and
 `/{project}:implement` starting a `planned` one. In every other case the base
-resolves from history, as `compute-review-scope` states: the parent of the newest
-committed transition or a later finished review's commit, or empty when there is no
-transition. `find_in_progress_commit` is unchanged, because
+resolves from history, as `compute-review-scope`'s description states.
+`find_in_progress_commit` is unchanged, because
 `check-stuck` shares it.
 
 **The two halves do different jobs.** The first is the correctness fix. Any
