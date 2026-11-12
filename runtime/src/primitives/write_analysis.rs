@@ -51,14 +51,14 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::primitives::decisions;
-use crate::primitives::write_review::yaml_string;
+use crate::primitives::write_review::{yaml_quoted, yaml_string};
 use crate::primitives::{
     PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
-    Dispositions, WriteAnalysisArgs, WriteAnalysisResult,
+    Dispositions, RuleVerdict, WriteAnalysisArgs, WriteAnalysisResult,
 };
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
@@ -242,6 +242,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // same state on disk. That is the byte-identical failure `write-analysis`
     // was built to end, one level out. The refusals are the ones above: a spec
     // or a prior record this run cannot read.
+    let rule_fields = RuleFields::default();
     let report = render_analysis(
         args,
         &Derived {
@@ -252,6 +253,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         },
         &by_reason,
         &subjects,
+        &rule_fields,
         &merged,
     );
     write_atomic(&analysis_path, &report)?;
@@ -488,6 +490,16 @@ pub(crate) fn finding_key_of(family: &str, message: &str) -> String {
     format!("{} — {}", single_line(family), single_line(message))
 }
 
+/// The three rule-assessment fields the record carries beside the counts
+/// (spec 082): each fired rule's verdict, each assessable rule left unjudged,
+/// and the digest of each loaded rule file.
+#[derive(Default)]
+struct RuleFields {
+    verdicts: BTreeMap<String, RuleVerdict>,
+    unjudged: Vec<String>,
+    digest: BTreeMap<String, String>,
+}
+
 /// The counts this call derived, rendered into the record.
 struct Derived {
     blocking: bool,
@@ -547,6 +559,7 @@ fn render_analysis(
     derived: &Derived,
     by_reason: &BTreeMap<String, u32>,
     subjects: &crate::primitives::analyze_subjects::SubjectDigest,
+    rules: &RuleFields,
     decisions_list: &[decisions::RawDecision],
 ) -> String {
     let (blocking, unexamined, counts) =
@@ -593,6 +606,7 @@ fn render_analysis(
             let _ = writeln!(out, "  {}: {count}", yaml_string(reason));
         }
     }
+    render_rule_fields(&mut out, rules);
     let _ = writeln!(out, "blocking: {blocking}");
     decisions::render_dispositions(&mut out, counts);
     decisions::render(&mut out, decisions_list);
@@ -646,6 +660,41 @@ fn render_analysis(
     let fixed: Vec<&AnalysisFinding> = args.findings.iter().filter(|f| !f.live).collect();
     let _ = write!(out, "## Fixed in this run\n\n{}\n", render_list(&fixed));
     out
+}
+
+/// The rule-assessment fields, each omitted when empty. A verdict is a flow
+/// mapping whose text values are always double-quoted, since a plain scalar
+/// that block context accepts would end at a `,` or `}` here (spec 082).
+fn render_rule_fields(out: &mut String, rules: &RuleFields) {
+    if !rules.digest.is_empty() {
+        out.push_str("rule-digest:\n");
+        for (file, digest) in &rules.digest {
+            let _ = writeln!(out, "  {}: {digest}", yaml_string(&single_line(file)));
+        }
+    }
+    if !rules.verdicts.is_empty() {
+        out.push_str("rule-verdicts:\n");
+        for (id, verdict) in &rules.verdicts {
+            let flow = match verdict {
+                RuleVerdict::Addressed { cite } => format!(
+                    "{{verdict: addressed, cite: {}}}",
+                    yaml_quoted(&single_line(cite))
+                ),
+                RuleVerdict::Finding { at, message } => format!(
+                    "{{verdict: finding, at: {}, message: {}}}",
+                    yaml_quoted(&single_line(at)),
+                    yaml_quoted(&single_line(message))
+                ),
+            };
+            let _ = writeln!(out, "  {}: {flow}", yaml_string(&single_line(id)));
+        }
+    }
+    if !rules.unjudged.is_empty() {
+        out.push_str("unjudged-rules:\n");
+        for id in &rules.unjudged {
+            let _ = writeln!(out, "  - {}", yaml_string(&single_line(id)));
+        }
+    }
 }
 
 /// A tier's section: its live findings, less those `released` to another
@@ -2259,5 +2308,129 @@ mod tests {
         a.findings = vec![deferred];
         let err = run(&a, tmp.path()).unwrap_err();
         assert!(err.to_string().contains("by-rule"), "{err}");
+    }
+
+    fn rendered_with(rules: &RuleFields) -> String {
+        render_analysis(
+            &args(),
+            &Derived {
+                blocking: false,
+                unexamined: 0,
+                dispositions: Dispositions::default(),
+                gating: Gating {
+                    hard_fail: 0,
+                    blocking_findings: 0,
+                    released: Vec::new(),
+                    holding: Vec::new(),
+                },
+            },
+            &BTreeMap::new(),
+            &crate::primitives::analyze_subjects::SubjectDigest::default(),
+            rules,
+            &[],
+        )
+    }
+
+    /// Spec 082, AC4: the three fields a record carries read back through the
+    /// record's own loader, text values holding the characters a flow mapping
+    /// ends on included, and an empty field is omitted.
+    #[test]
+    fn the_rule_fields_read_back_through_the_loader() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let hostile = "one, two} three: four # five \"six\" \u{e9}\u{2028}seven";
+        let rules = RuleFields {
+            verdicts: BTreeMap::from([
+                (
+                    "BE-LOG-002".to_string(),
+                    RuleVerdict::Addressed {
+                        cite: "plan.md#Observability, and}".into(),
+                    },
+                ),
+                (
+                    "QUAL-CLAIM-001".to_string(),
+                    RuleVerdict::Finding {
+                        at: "spec.md#Acceptance Criteria".into(),
+                        message: hostile.into(),
+                    },
+                ),
+                // Plain in block context, but ends a flow mapping value.
+                (
+                    "CFG-CONST-001".to_string(),
+                    RuleVerdict::Finding {
+                        at: "plan.md#Constants, and more".into(),
+                        message: "two parts, one} rule".into(),
+                    },
+                ),
+            ]),
+            unjudged: vec!["BE-AUTHN-004".into(), "BE-AUTHN-005".into()],
+            digest: BTreeMap::from([("quality-cross.md".to_string(), "ab".repeat(32))]),
+        };
+        let dir = tmp.path().join("specs/042-demo");
+        fs::write(dir.join("analysis.md"), rendered_with(&rules)).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_analyze_record(&dir)
+        else {
+            panic!("the record did not load");
+        };
+        assert_eq!(record.rule_digest, rules.digest);
+        assert_eq!(record.unjudged_rules, rules.unjudged);
+        assert_eq!(record.rule_verdicts.len(), 3);
+        assert_eq!(
+            record.rule_verdicts["CFG-CONST-001"],
+            rules.verdicts["CFG-CONST-001"]
+        );
+        assert_eq!(
+            record.rule_verdicts["BE-LOG-002"],
+            rules.verdicts["BE-LOG-002"]
+        );
+        match &record.rule_verdicts["QUAL-CLAIM-001"] {
+            RuleVerdict::Finding { at, message } => {
+                assert_eq!(at, "spec.md#Acceptance Criteria");
+                // A Unicode line break flattens to a space, as every scalar does.
+                assert_eq!(message, &single_line(hostile));
+            }
+            other @ RuleVerdict::Addressed { .. } => panic!("{other:?}"),
+        }
+
+        fs::write(
+            dir.join("analysis.md"),
+            rendered_with(&RuleFields::default()),
+        )
+        .unwrap();
+        let report = analysis_md(&tmp);
+        for key in ["rule-verdicts", "unjudged-rules", "rule-digest"] {
+            assert!(
+                !report.contains(key),
+                "{key} is omitted when empty: {report}"
+            );
+        }
+    }
+
+    /// Spec 082, Edge Cases: a verdict map or list that does not parse makes
+    /// the record unreadable, never an empty verdict set.
+    #[test]
+    fn a_rule_field_that_does_not_parse_makes_the_record_unreadable() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/042-demo");
+        for bad in [
+            "rule-verdicts: [BE-LOG-002]\n",
+            "rule-verdicts:\n  BE-LOG-002: {verdict: maybe}\n",
+            "rule-verdicts:\n  BE-LOG-002: {verdict: addressed}\n",
+            "unjudged-rules: {BE-LOG-002: x}\n",
+            "rule-digest: [quality-cross.md]\n",
+        ] {
+            fs::write(
+                dir.join("analysis.md"),
+                format!("---\nspec: 042-demo\nlast-run: 2026-09-05T18:00:00Z\n{bad}---\n"),
+            )
+            .unwrap();
+            assert!(
+                matches!(
+                    crate::primitives::load_analyze_record(&dir),
+                    crate::primitives::RecordLoad::Unreadable(_)
+                ),
+                "{bad}"
+            );
+        }
     }
 }

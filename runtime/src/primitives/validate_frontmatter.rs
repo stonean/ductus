@@ -663,6 +663,43 @@ mod tests {
         }
     }
 
+    /// A rule verdict map, unjudged list or digest map that does not parse is
+    /// a hard fail naming the record, never an analysis that judged nothing
+    /// (spec 082).
+    #[test]
+    fn a_malformed_rule_verdict_map_is_a_hard_fail() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("spec.md");
+        std::fs::write(&path, "---\nstatus: draft\ndependencies: []\n---\n\n# X\n").unwrap();
+        std::fs::write(
+            tmp.path().join("analysis.md"),
+            "---\nlast-run: 2026-09-25T00:00:00Z\nrule-verdicts:\n  BE-LOG-002: {verdict: maybe}\n---\n",
+        )
+        .unwrap();
+        let result = run(
+            &ValidateFrontmatterArgs {
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let found = result
+            .findings
+            .iter()
+            .find(|f| f.field == "analysis.md")
+            .unwrap_or_else(|| panic!("no finding: {:?}", result.findings));
+        assert_eq!(found.severity, AnalyzeSeverity::HardFail);
+        assert!(
+            found.message.contains("carries no readable record"),
+            "{}",
+            found.message
+        );
+    }
+
     /// A `decisions:` list that will not parse is named, never read as empty —
     /// and an absent list is no finding at all.
     #[test]

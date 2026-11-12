@@ -356,6 +356,33 @@ pub struct DecisionRef {
     pub by_rule: bool,
 }
 
+/// One fired rule's verdict, as `analysis.md`'s `rule-verdicts` stores it and
+/// `write-analysis` takes it (spec 082).
+///
+/// A rule that did not fire has no verdict: its absence from the map, with its
+/// file's `rule-digest` current, is the record of it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "verdict", rename_all = "kebab-case")]
+pub enum RuleVerdict {
+    /// The rule's trigger fires and the spec already addresses it. `cite`
+    /// names the design subject and heading that does, as `<path>#<Heading>`,
+    /// so a later run can test the judgment; `write-analysis` checks that it
+    /// resolves.
+    Addressed {
+        /// `<path>#<Heading>` within the feature directory.
+        cite: String,
+    },
+    /// The rule's trigger fires and the spec does not meet it. The rule's tier
+    /// is not stored: it follows from the rule text the file's digest covers.
+    Finding {
+        /// `<path>#<Heading>`, where the finding applies.
+        at: String,
+        /// One line saying what is wrong, reported again by a run that reuses
+        /// the verdict.
+        message: String,
+    },
+}
+
 /// The analyze record, parsed from `analysis.md`'s frontmatter — the durable
 /// record that `/ductus:analyze` ran, and what it found.
 ///
@@ -401,6 +428,26 @@ pub struct AnalyzeBlock {
     /// disk says what those runs examined. It clears on the next analyze.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub analyzed_digest: std::collections::BTreeMap<String, String>,
+    /// Each loaded rule that fired, with its verdict (spec 082). A loaded rule
+    /// in neither this map nor [`Self::unjudged_rules`] did not fire. Absent
+    /// when none fired.
+    ///
+    /// A map that does not parse makes the record unreadable, never an empty
+    /// one: a run that read it as holding no verdicts would judge every rule
+    /// again without saying so.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub rule_verdicts: BTreeMap<String, RuleVerdict>,
+    /// Each assessable loaded rule the run neither judged nor reused (spec
+    /// 082), counted in `rule-assessments-not-checked`. Absent when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unjudged_rules: Vec<String>,
+    /// Each loaded rule file's basename and a digest of its rules' IDs,
+    /// Statements and Verifications (spec 082). A stored verdict is current
+    /// only while its file's digest matches. Empty means no rule file was
+    /// loaded or the record predates the field, which yields no reusable
+    /// verdict.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub rule_digest: BTreeMap<String, String>,
     /// Subjects that exist but could not be read when the digest was taken.
     ///
     /// Recorded rather than digested as empty, so a record cannot claim to

@@ -2164,20 +2164,28 @@ fn render_extra_field(block: &mut String, indent: &str, key: &str, value: &serde
 /// YAML's double-quoted `\u` escape reads back the same character.
 pub(crate) fn yaml_string(value: &str) -> String {
     if needs_quote(value) || !reads_back_identically(value) {
-        let quoted = serde_json::to_string(value).unwrap_or_else(|_| format!("\"{value}\""));
-        quoted
-            .chars()
-            .fold(String::with_capacity(quoted.len()), |mut out, c| {
-                if super::is_line_hazard(c) {
-                    let _ = write!(out, "\\u{:04x}", u32::from(c));
-                } else {
-                    out.push(c);
-                }
-                out
-            })
+        yaml_quoted(value)
     } else {
         value.to_string()
     }
+}
+
+/// `value` as a YAML double-quoted scalar, whatever it holds: the form for a
+/// value written inside a flow collection, where a plain scalar that
+/// [`yaml_string`] leaves bare in block context would end at a `,` or `}`.
+/// Every control character and Unicode line break is escaped, as there.
+pub(crate) fn yaml_quoted(value: &str) -> String {
+    let quoted = serde_json::to_string(value).unwrap_or_else(|_| format!("\"{value}\""));
+    quoted
+        .chars()
+        .fold(String::with_capacity(quoted.len()), |mut out, c| {
+            if super::is_line_hazard(c) {
+                let _ = write!(out, "\\u{:04x}", u32::from(c));
+            } else {
+                out.push(c);
+            }
+            out
+        })
 }
 
 /// Whether the plain scalar `value` reads back, through the same YAML reader
