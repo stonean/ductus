@@ -58,4 +58,25 @@ MUTATIONS = [
         '',
         'compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),
+    (
+        'M7 the result counts no deleted path',
+        'src/primitives/compute_review_scope.rs',
+        '        deleted_count: scope.deleted.len(),',
+        '        deleted_count: 0,',
+        'compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
+    ),
+    (
+        'M8 the list file names no deleted path',
+        'src/primitives/compute_review_scope.rs',
+        '        "deleted": scope.deleted,',
+        '        "deleted": Vec::<String>::new(),',
+        'compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
+    ),
+    (
+        'M9 the inline result lists no deleted path',
+        'src/primitives/compute_review_scope.rs',
+        '        deleted: Some(scope.deleted.clone()),',
+        '        deleted: Some(Vec::new()),',
+        'compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
+    ),
 ]

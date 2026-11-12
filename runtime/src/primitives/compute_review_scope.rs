@@ -1648,13 +1648,17 @@ mod tests {
     /// joins no later scope (066 scenario `scope-results-have-a-bounded-size`).
     #[test]
     fn a_result_past_the_read_size_names_a_file_holding_every_list() {
-        let (tmp, _) = repo_with_progress();
+        let (tmp, _, _) = repo_in_progress_with_an_untouched_file();
+        fs::remove_file(tmp.path().join("src/old.rs")).unwrap();
         read_size(&tmp, 1_000_000);
         let whole = compute(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(whole.deleted, ["src/old.rs"]);
         let inline = run(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(inline.form, ListsForm::Inline);
         assert_eq!(inline.scope.as_deref(), Some(whole.scope.as_slice()));
         assert_eq!(inline.scope_count, whole.scope.len());
+        assert_eq!(inline.deleted.as_deref(), Some(whole.deleted.as_slice()));
+        assert_eq!(inline.deleted_count, 1);
         assert_eq!(inline.lists_file, None);
 
         read_size(&tmp, 10);
