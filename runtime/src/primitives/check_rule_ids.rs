@@ -9,8 +9,8 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::primitives::rule_sections::heading_id_regex;
-use crate::primitives::{Result, contained_path, parse_atx_heading, read_text};
+use crate::primitives::rule_sections::{heading_id_regex, section_label_lines};
+use crate::primitives::{Result, contained_path, read_text};
 use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitation};
 
 /// Execute the `check-rule-ids` primitive.
@@ -104,39 +104,13 @@ fn citation_regex() -> &'static Regex {
     })
 }
 
-/// Detect the canonical deprecation label `**DEPRECATED in {version}:**`
-/// (per `specs/008-security-rules/data-model.md` and constitution §rules)
-/// inside the rule's own section: from the ID's defining heading (whose
-/// match starts at `heading_start`) to the next heading of the same or
-/// higher level (fewer or equal `#`s). Deeper headings are subsections of
-/// the rule and stay in scope. The predecessor scanned a fixed 256-byte
-/// window after ANY occurrence of the ID anywhere in the file, so a live
-/// rule adjacent to a deprecated neighbor false-flagged. Matching the
-/// bold-uppercase `**DEPRECATED` token avoids false positives from prose
-/// mentions of "deprecated" (lowercase, unbolded) such as a rule's own
-/// rationale.
-///
-/// Slicing only happens at regex match offsets and line boundaries — all
-/// guaranteed char boundaries — preserving the earlier fix for windows
-/// that landed mid-UTF-8-character in em-dash-dense rule files.
+/// Whether the rule whose heading starts at `heading_start` carries the
+/// canonical deprecation label `**DEPRECATED in {version}:**` (per
+/// `specs/008-security-rules/data-model.md` and constitution §rules) in its own
+/// section: [`section_label_lines`], which `read-deprecation-labels` reads
+/// too.
 fn section_is_deprecated(content: &str, heading_start: usize) -> bool {
-    let mut lines = content[heading_start..].lines();
-    let Some(heading_line) = lines.next() else {
-        return false;
-    };
-    let heading_level = parse_atx_heading(heading_line).map_or(4, |(level, _)| level);
-    for line in lines {
-        if let Some((level, _)) = parse_atx_heading(line)
-            && level <= heading_level
-        {
-            // Same-or-higher-level heading: the rule's section ended.
-            return false;
-        }
-        if line.contains("**DEPRECATED") {
-            return true;
-        }
-    }
-    false
+    !section_label_lines(content, heading_start).is_empty()
 }
 
 #[cfg(test)]

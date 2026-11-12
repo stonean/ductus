@@ -70,6 +70,7 @@ pub mod process_waivers;
 pub mod prune_plan;
 pub mod prune_project;
 pub mod prune_tasks;
+pub mod read_deprecation_labels;
 pub mod read_re_read;
 pub mod read_section;
 pub mod read_spec;

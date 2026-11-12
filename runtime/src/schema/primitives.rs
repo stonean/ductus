@@ -3067,6 +3067,78 @@ pub struct CheckRuleIdsResult {
     pub examined: usize,
 }
 
+// -- read-deprecation-labels -------------------------------------------------
+
+/// Args for `read-deprecation-labels`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadDeprecationLabelsArgs {
+    /// Repo-relative paths to the rule files whose deprecation labels are
+    /// read. Repeatable; an empty list reads nothing, and `examined` says so.
+    #[arg(long = "rule-file")]
+    pub rule_files: Vec<String>,
+}
+
+/// A rule in whose section a label is not the first one.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LabelFollows {
+    /// The rule ID whose section holds an earlier label.
+    pub rule: String,
+    /// The 1-based line of that earlier label.
+    pub first_line: usize,
+}
+
+/// Why a label is malformed, and the fix the audit family states for it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MalformedLabel {
+    /// What is wrong with the label, naming the rules it labels.
+    pub reason: String,
+    /// How to write it, citing the Deprecated field's form.
+    pub fix: String,
+}
+
+/// One line containing `**DEPRECATED`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeprecationLabel {
+    /// The rule file, as given.
+    pub file: String,
+    /// The 1-based line.
+    pub line: usize,
+    /// The rules this line labels: those whose section it is the first label
+    /// in, as `check-rule-ids` reads a rule deprecated.
+    pub rules: Vec<String>,
+    /// The rules in whose section it follows another label.
+    pub follows: Vec<LabelFollows>,
+    /// The deprecating version, when the label is in the form and the version
+    /// is MAJOR.MINOR.PATCH.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deprecated_in: Option<String>,
+    /// The removal target, named once as `removed in MAJOR.MINOR.PATCH`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub removal_target: Option<String>,
+    /// Present when `rules` is non-empty and the label is not well formed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub malformed: Option<MalformedLabel>,
+}
+
+/// Result for `read-deprecation-labels`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadDeprecationLabelsResult {
+    /// One entry per line containing `**DEPRECATED`, file by file in the order
+    /// given, by line.
+    pub labels: Vec<DeprecationLabel>,
+    /// Rule files that could not be read (including one that is not UTF-8),
+    /// never counted in `examined`.
+    pub unreadable: Vec<String>,
+    /// How many rule files were read: the denominator `labels` is asserted
+    /// against.
+    pub examined: usize,
+}
+
 // -- check-promotion-coverage ------------------------------------------------
 
 /// Args for `check-promotion-coverage`.

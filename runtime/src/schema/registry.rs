@@ -49,6 +49,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "resolve-anchor",
     "traverse-deps",
     "check-rule-ids",
+    "read-deprecation-labels",
     "run-generator",
     "lint-markdown",
     "gate-confirm",

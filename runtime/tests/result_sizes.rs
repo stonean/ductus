@@ -165,6 +165,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         "check-rule-ids" => {
             call(json!({"path": spec, "rule-files": ["specs/rules/quality-cross.md"]}))
         }
+        "read-deprecation-labels" => call(json!({"rule-files": ["specs/rules/quality-cross.md"]})),
         "check-stuck" => call(json!({"feature": f, "threshold": 3})),
         "create-feature" => call(json!({"title": "A new corpus feature"})),
         "create-scenario" => call(

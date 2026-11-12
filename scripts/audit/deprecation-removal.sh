@@ -13,34 +13,26 @@
 # 077, task 8).
 #
 # Subject: every tracked framework/rules/*.md, not descending into a
-# subdirectory, as the runtime's rule discovery does not. A rule is deprecated
-# as the runtime's check-rule-ids decides it (`section_is_deprecated`,
-# runtime/src/primitives/check_rule_ids.rs): its section runs from its
-# `##`-`####` ID heading to the next heading at its level or above, so a
-# deeper heading, another rule's included, leaves it open, and the first line
-# in it containing `**DEPRECATED` is its label. The parse splits lines,
-# trims whitespace and reads heading levels as the runtime does, and fenced
-# blocks are not special-cased, since that parse does not special-case them.
-# Each label must open its line as `**DEPRECATED in X.Y.Z:**`, and its
-# paragraph, which ends at a blank line, a heading, a block quote, a
-# `**Field:**` line, a list item or a fence, must name the target once as
-# `removed in X.Y.Z`, in any case (specs/008-security-rules/data-model.md,
-# the Deprecated field). Only a `removed in` followed by something that
-# starts like a version is a target, so "removed in favour of" is prose:
+# subdirectory, as the runtime's rule discovery does not. The labels are read
+# by the runtime's `read-deprecation-labels`, which shares `check-rule-ids`'
+# reader (spec 067, scenario deprecation-labels-are-read-by-the-runtime): this
+# script keeps the comparison with `version` and the list of files citing a
+# due rule, and renders the primitive's JSON through python. A label is read
+# as the primitive's description states: its rule's section, a label opening
+# its line as `**DEPRECATED in X.Y.Z:**`, and one target named once as
+# `removed in X.Y.Z` in its paragraph (specs/008-security-rules/data-model.md,
+# the Deprecated field):
 #
 #   40a  a malformed label: one outside a rule section, a second in one
 #        section, one not opening its line or not in the form, a version that
 #        is not MAJOR.MINOR.PATCH, or no target or more than one
 #   40b  a target at or below `version`, naming every tracked file citing the ID
 #
-# This re-reads what the runtime already parses. A primitive returning each
-# label will replace the parse below, and this script will become its entry
-# point (spec 067, scenario deprecation-labels-are-read-by-the-runtime).
-#
 # No label at all is not a finding: nothing is deprecated, so there is nothing
 # to compare. A missing, unreadable or malformed `version`, a git that cannot
 # list the tracked files, no tracked rule file, a tracked rule file that cannot
-# be read or is not UTF-8, and a parse that cannot run are findings, since
+# be read or is not UTF-8, and a read that cannot run (no runtime, no python3, a
+# primitive that fails) are findings, since
 # each leaves a comparison unmade. A file that cannot be read or decoded is not
 # counted as examined, and the other files' labels are still compared. Every
 # run ends with a coverage line on stderr.
@@ -113,194 +105,92 @@ if [ "${#readable[@]}" -eq 0 ]; then
   exit "$drift"
 fi
 
-# parse_labels VERSION FILE... — one record per line, fields joined by the
-# ASCII unit separator:
-#   U  file                                   a rule file that is not UTF-8
+# render_labels JSON — one record per finding, fields joined by the ASCII
+# unit separator, from the primitive's result:
+#   U  file                                   a rule file that could not be read
 #   M  location  message  fix                 a malformed label (40a)
-#   D  file  line  id  deprecated-in  target  a target at or below VERSION (40b)
+#   L  file  line  rules  deprecated-in  target
+#                                             a label naming a target, for the
+#                                             comparison with version (40b)
 #   C  found  compared                        the counts, last
 # A function, not `$(python3 - <<EOF ...)`: bash 3.2 misparses a heredoc
 # inside a command substitution. `-I` keeps the repository root off
 # sys.path, so no file there shadows the standard library.
-parse_labels() {
-  python3 -I - "$@" << 'PY'
-import re
+render_labels() {
+  python3 -I - "$1" << 'PY'
+import json
 import sys
 
-current = tuple(int(p) for p in sys.argv[1].split("."))
 SEP = "\x1f"
-# Rust's char::is_whitespace, which str.isspace() and Python's \s do not
-# match: both also take U+001C to U+001F.
-WS = ("\t\n\x0b\x0c\r \x85\xa0       "
-      "         　")
-# The runtime's heading_id_regex, run over the whole file as it is: a match
-# opens at a line start, and its whitespace may run onto the next line.
-RULE = re.compile(r"^#{2,4}[%s]+([A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4})\b" % re.escape(WS), re.MULTILINE)
-LABEL = re.compile(r"\*\*DEPRECATED in ([^:*]*):\*\*")
-FIELD = re.compile(r"\*\*[^*]+:\*\*")
-# A line that opens a list item or a fence, either of which ends a paragraph.
-BLOCK = re.compile(r"(?:[-*+]|1[.)])(?:[ \t]|$)|```|~~~")
-TARGET = re.compile(r"\bremoved\s+in\s+`?(v?[0-9][0-9A-Za-z.+-]*)", re.IGNORECASE)
-SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 FORM = "specs/008-security-rules/data-model.md, the Deprecated field"
-found = 0
+result = json.loads(sys.argv[1])
+for name in result["unreadable"]:
+    print(SEP.join(("U", name)))
 compared = 0
-
-
-def rust_lines(text):
-    # str::lines: split at each \n, dropping one \r before it, with no empty
-    # last line. A lone \r, a form feed or U+2028 does not split a line.
-    parts = text.split("\n")
-    last = parts.pop()
-    lines = [p[:-1] if p.endswith("\r") else p for p in parts]
-    if last:
-        lines.append(last)
-    return lines
-
-
-def atx(line):
-    # The runtime's parse_atx_heading: leading whitespace trimmed, one to six
-    # hashes, then a space or the end of the line.
-    text = line.lstrip(WS)
-    level = 0
-    while level < len(text) and level < 6 and text[level] == "#":
-        level += 1
-    if level == 0:
-        return None
-    after = text[level:]
-    if after and not after.startswith(" "):
-        return None
-    return level
-
-
-def version(text):
-    return tuple(int(p) for p in text.split("."))
-
-
-def possessive(rules):
-    return " and ".join(rules) + "'s"
-
-
-for name in sys.argv[2:]:
-    # A file the runtime's read_text cannot decode is one it cannot read:
-    # reported and not examined, and the other files are still read.
-    try:
-        with open(name, encoding="utf-8", newline="") as handle:
-            text = handle.read()
-    except UnicodeDecodeError:
-        print(SEP.join(("U", name)))
+for label in result["labels"]:
+    where = "%s:%d" % (label["file"], label["line"])
+    for earlier in label["follows"]:
+        print(SEP.join((
+            "M", where,
+            "a second deprecation label in %s's section, after the one at line %d" % (earlier["rule"], earlier["first-line"]),
+            "keep one label, directly under the heading (%s)" % FORM)))
+    if not label["rules"]:
+        if not label["follows"]:
+            print(SEP.join((
+                "M", where, "a deprecation label outside any rule section, so it deprecates no rule",
+                "move the label directly under its rule's heading (%s)" % FORM)))
         continue
-    lines = rust_lines(text)
-    records = []
-
-    def report(index, *fields):
-        records.append((index, fields))
-
-    def where(index):
-        return "%s:%d" % (name, index + 1)
-
-    headings = []
-    offset = 0
-    index = 0
-    for match in RULE.finditer(text):
-        index += text.count("\n", offset, match.start())
-        offset = match.start()
-        headings.append((index, match.group(1)))
-
-    marked = [i for i, line in enumerate(lines) if "**DEPRECATED" in line]
-    found += len(marked)
-    covered = set()
-    owners = {}
-    for start, rule in headings:
-        # section_is_deprecated: a heading the runtime cannot read the level
-        # of (a tab after the hashes) is taken as level 4.
-        level = atx(lines[start]) or 4
-        in_section = []
-        for i in range(start + 1, len(lines)):
-            hashes = atx(lines[i])
-            if hashes is not None and hashes <= level:
-                break
-            if "**DEPRECATED" in lines[i]:
-                in_section.append(i)
-        covered.update(in_section)
-        if not in_section:
-            continue
-        owners.setdefault(in_section[0], []).append(rule)
-        for extra in in_section[1:]:
-            report(extra, "M", where(extra),
-                   "a second deprecation label in %s's section, after the one at line %d" % (rule, in_section[0] + 1),
-                   "keep one label, directly under the heading (%s)" % FORM)
-
-    # A rule's own heading line is not in its section, so a label there is
-    # outside it, as check-rule-ids reads it.
-    for i in marked:
-        if i in covered:
-            continue
-        report(i, "M", where(i), "a deprecation label outside any rule section, so it deprecates no rule",
-               "move the label directly under its rule's heading (%s)" % FORM)
-
-    for i, rules in owners.items():
-        who = possessive(rules)
-        line = lines[i]
-        opening = LABEL.match(line)
-        if not opening:
-            if line.startswith("**DEPRECATED"):
-                report(i, "M", where(i), "%s deprecation label is not in the form **DEPRECATED in X.Y.Z:**" % who,
-                       "write the label as **DEPRECATED in X.Y.Z:**, naming the deprecating release (%s)" % FORM)
-            else:
-                report(i, "M", where(i), "%s deprecation label does not open its line" % who,
-                       "start the line with the label, outside any blockquote or indent (%s)" % FORM)
-            continue
-        deprecated_in = opening.group(1).strip("`")
-        if not SEMVER.fullmatch(deprecated_in):
-            report(i, "M", where(i), "%s label reads DEPRECATED in %s, which is not MAJOR.MINOR.PATCH" % (who, deprecated_in),
-                   "name the deprecating release as MAJOR.MINOR.PATCH (%s)" % FORM)
-            continue
-        paragraph = [line]
-        for following in lines[i + 1:]:
-            trimmed = following.strip(WS)
-            if (not trimmed or atx(following) is not None
-                    or trimmed.startswith(">") or FIELD.match(trimmed)
-                    or BLOCK.match(trimmed)):
-                break
-            paragraph.append(following)
-        targets = [t.rstrip(".") for t in TARGET.findall(" ".join(paragraph))]
-        if not targets:
-            report(i, "M", where(i), "%s label names no removal target, so nothing holds a release to removing it" % who,
-                   "add removed in X.Y.Z to the label (%s)" % FORM)
-            continue
-        if len(set(targets)) == 1 and len(targets) > 1:
-            report(i, "M", where(i), "%s label names its removal target %s more than once" % (who, targets[0]),
-                   "name the target once, as removed in X.Y.Z (%s)" % FORM)
-            continue
-        if len(targets) > 1:
-            report(i, "M", where(i), "%s label names more than one removal target (%s)" % (who, ", ".join(targets)),
-                   "name the target once, as removed in X.Y.Z (%s)" % FORM)
-            continue
-        if not SEMVER.fullmatch(targets[0]):
-            report(i, "M", where(i), "%s removal target %s is not MAJOR.MINOR.PATCH" % (who, targets[0]),
-                   "name the target as removed in X.Y.Z (%s)" % FORM)
-            continue
-        compared += 1
-        if version(targets[0]) <= current:
-            for rule in rules:
-                report(i, "D", name, i + 1, rule, deprecated_in, targets[0])
-
-    for _, fields in sorted(records, key=lambda record: record[0]):
-        print(SEP.join(str(f) for f in fields))
-
-print(SEP.join(("C", str(found), str(compared))))
+    bad = label.get("malformed")
+    if bad:
+        print(SEP.join(("M", where, bad["reason"], bad["fix"])))
+        continue
+    compared += 1
+    print(SEP.join(("L", label["file"], str(label["line"]), " ".join(label["rules"]),
+                    label["deprecated-in"], label["removal-target"])))
+print(SEP.join(("C", str(len(result["labels"])), str(compared))))
 PY
 }
 
+# at_or_below A B — A is not above B, both MAJOR.MINOR.PATCH, compared
+# numerically.
+at_or_below() {
+  local a1 a2 a3 b1 b2 b3
+  IFS=. read -r a1 a2 a3 << EOF_A
+$1
+EOF_A
+  IFS=. read -r b1 b2 b3 << EOF_B
+$2
+EOF_B
+  [ "$a1" -ne "$b1" ] && { [ "$a1" -lt "$b1" ]; return; }
+  [ "$a2" -ne "$b2" ] && { [ "$a2" -lt "$b2" ]; return; }
+  [ "$a3" -le "$b3" ]
+}
+
+bin="$(ductus_bin)"
+if [ -z "$bin" ]; then
+  emit "scripts/audit/deprecation-removal.sh" "the ductus runtime is not reachable, so no deprecation label was read" \
+    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
+  coverage "nothing compared: the runtime is not reachable"
+  exit "$drift"
+fi
 if ! command -v python3 > /dev/null 2>&1; then
   emit "scripts/audit/deprecation-removal.sh" "python3 is not on PATH, so no deprecation label was read" \
-    "install python3, which this family's parse needs"
+    "install python3, which this family renders the primitive's result with"
   coverage "nothing compared: python3 is missing"
   exit "$drift"
 fi
 
-if ! records=$(parse_labels "$current" "${readable[@]}"); then
+rule_args=()
+for f in "${readable[@]}"; do
+  rule_args+=(--rule-file "$f")
+done
+if ! result=$("$bin" read-deprecation-labels "${rule_args[@]}" 2> /dev/null); then
+  emit "scripts/audit/deprecation-removal.sh" "$bin read-deprecation-labels exited non-zero, so no deprecation label was compared" \
+    "run $bin read-deprecation-labels directly and read its error"
+  coverage "nothing compared: read-deprecation-labels failed"
+  exit "$drift"
+fi
+if ! records=$(render_labels "$result"); then
   emit "scripts/audit/deprecation-removal.sh" "the label parse exited non-zero, so no deprecation label was compared" \
     "run the family directly and read the python error on stderr"
   coverage "nothing compared: the label parse failed"
@@ -315,16 +205,21 @@ while IFS="$sep" read -r kind a b c d e; do
   case "$kind" in
     U)
       emit "$a" "not UTF-8, so its deprecation labels were not examined" \
-        "re-save $a as UTF-8, which the runtime's check-rule-ids reads"
+        "re-save $a as UTF-8, which the runtime reads"
       undecodable=$((undecodable + 1))
       ;;
     M) emit "$a" "$b" "$c" ;;
-    D)
-      cites=$(git -c core.quotePath=false grep -l -w -F -- "$c" 2> /dev/null)
-      cite_count=$(printf '%s\n' "$cites" | grep -c .)
-      cite_list=$(printf '%s\n' "$cites" | grep . | tr '\n' ' ' | sed 's/ $//')
-      emit "$a:$b" "$c is deprecated in $d and removed in $e, and version is $current, but the rule is still in $a" \
-        "remove $c from $a, and re-point or classify each of the $cite_count tracked file(s) citing it ($cite_list); a decision record, a changelog entry or an audit record keeps the old ID"
+    L)
+      # a: file  b: line  c: rules  d: deprecated-in  e: target
+      if at_or_below "$e" "$current"; then
+        for rule_id in $c; do
+          cites=$(git -c core.quotePath=false grep -l -w -F -- "$rule_id" 2> /dev/null)
+          cite_count=$(printf '%s\n' "$cites" | grep -c .)
+          cite_list=$(printf '%s\n' "$cites" | grep . | tr '\n' ' ' | sed 's/ $//')
+          emit "$a:$b" "$rule_id is deprecated in $d and removed in $e, and version is $current, but the rule is still in $a" \
+            "remove $rule_id from $a, and re-point or classify each of the $cite_count tracked file(s) citing it ($cite_list); a decision record, a changelog entry or an audit record keeps the old ID"
+        done
+      fi
       ;;
     C)
       found="$a"

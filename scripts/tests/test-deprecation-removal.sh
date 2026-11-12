@@ -57,7 +57,8 @@
 #   T. a rule file that is not UTF-8 is reported and not examined, its label
 #      not compared and the other files' labels still compared; a parse that
 #      cannot run fails: no python3 on PATH, a python3 that fails, and one that
-#      prints nothing; and a module at the repository root does not shadow the
+#      prints nothing, and no runtime reachable or one whose primitive fails;
+#      and a module at the repository root does not shadow the
 #      parse's standard library
 #   U. a rule file in a subdirectory of framework/rules/, or one not
 #      tracked, is not read
@@ -90,6 +91,15 @@ skip() { printf '  SKIP  %s\n' "$1"; skipped=$((skipped + 1)); }
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# The family reads every label through the runtime's read-deprecation-labels,
+# so each fixture is given the runtime this checkout holds (the tier
+# lib.sh's ductus_bin tries first). A checkout without one cannot run the test.
+RUNTIME="$REPO_ROOT/runtime/target/release/ductus"
+if [ ! -x "$RUNTIME" ]; then
+  echo "build the runtime first: (cd runtime && cargo build --release)" >&2
+  exit 1
+fi
+
 # make_tree NAME VERSION RULE-BODY [SECOND-RULE-BODY] — a fixture repository
 # holding the family, its lib, a `version` file (omitted when VERSION is
 # empty), up to two rule files (the first omitted when RULE-BODY is empty)
@@ -102,6 +112,9 @@ make_tree() {
   if [ -n "$3" ]; then printf '%s\n' "$3" > "$dir/framework/rules/fixture-backend.md"; fi
   if [ -n "${4:-}" ]; then printf '%s\n' "$4" > "$dir/framework/rules/fixture-cross.md"; fi
   printf '# 001\n\nCites `BE-AUTH-009`.\n' > "$dir/specs/001-x/spec.md"
+  mkdir -p "$dir/.ductus/bin"
+  ln -s "$RUNTIME" "$dir/.ductus/bin/ductus"
+  printf '.ductus/bin/\n' > "$dir/.gitignore"
   git -C "$dir" init -q
   git -C "$dir" add -A
   echo "$dir"
@@ -509,6 +522,18 @@ chmod +x "$failing_python/python3"
 run_family "$(make_tree failing-python 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")" "$failing_python"
 expect "a python3 that fails" 1 'the label parse exited non-zero'
 counted 'nothing compared: the label parse failed'
+d="$(make_tree no-runtime 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
+rm "$d/.ductus/bin/ductus"
+run_family "$d" "$no_python"
+expect "no runtime reachable" 1 'the ductus runtime is not reachable'
+counted 'nothing compared: the runtime is not reachable'
+d="$(make_tree failing-runtime 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
+rm "$d/.ductus/bin/ductus"
+printf '#!/bin/sh\nexit 1\n' > "$d/.ductus/bin/ductus"
+chmod +x "$d/.ductus/bin/ductus"
+run_family "$d"
+expect "a runtime whose primitive fails" 1 'read-deprecation-labels exited non-zero'
+counted 'nothing compared: read-deprecation-labels failed'
 d="$(make_tree shadowing-module 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
 printf 'raise SystemExit(0)\n' > "$d/re.py"
 git -C "$d" add -A

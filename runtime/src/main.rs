@@ -23,12 +23,12 @@ use ductus::schema::primitives::{
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
     MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs,
+    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
+    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
+    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -118,6 +118,8 @@ enum Command {
     TraverseDeps(TraverseDepsArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_RULE_IDS), long_about = descriptions::CHECK_RULE_IDS)]
     CheckRuleIds(CheckRuleIdsArgs),
+    #[command(about = descriptions::summary(descriptions::READ_DEPRECATION_LABELS), long_about = descriptions::READ_DEPRECATION_LABELS)]
+    ReadDeprecationLabels(ReadDeprecationLabelsArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_PROMOTION_COVERAGE), long_about = descriptions::CHECK_PROMOTION_COVERAGE)]
     CheckPromotionCoverage(CheckPromotionCoverageArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_STUCK), long_about = descriptions::CHECK_STUCK)]
@@ -1029,6 +1031,9 @@ fn main() -> ExitCode {
         ),
         Command::TraverseDeps(args) => emit_result(primitives::traverse_deps::run(&args, &repo)),
         Command::CheckRuleIds(args) => emit_result(primitives::check_rule_ids::run(&args, &repo)),
+        Command::ReadDeprecationLabels(args) => {
+            emit_result(primitives::read_deprecation_labels::run(&args, &repo))
+        }
         Command::CheckPromotionCoverage(args) => {
             emit_result(primitives::check_promotion_coverage::run(&args, &repo))
         }

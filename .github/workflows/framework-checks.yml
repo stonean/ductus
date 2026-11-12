@@ -206,8 +206,9 @@ jobs:
       # (spec 026, scenario family-40-deprecated-rules-are-removed-on-time).
       # Step (h) runs it over the tree, where it reports nothing until a
       # removal target is reached, so a comparison that stopped comparing
-      # would pass there for releases. The test builds fixture trees and shows
-      # the family fails on each case it claims to catch.
+      # would pass there for releases. The test builds fixture trees, each given
+      # the runtime built above, and shows the family fails on each case it
+      # claims to catch.
       - name: (p) Deprecated rules are removed on time
         run: bash scripts/tests/test-deprecation-removal.sh
 

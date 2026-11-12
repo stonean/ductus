@@ -48,6 +48,7 @@ resolve-references
 resolve-constitutions
 traverse-deps
 check-rule-ids
+read-deprecation-labels
 check-promotion-coverage
 lint-markdown
 gate-confirm

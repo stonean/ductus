@@ -460,6 +460,19 @@ impl GovRuntimeServer {
     }
 
     #[tool(
+        name = "read-deprecation-labels",
+        description = descriptions::READ_DEPRECATION_LABELS
+    )]
+    async fn read_deprecation_labels(
+        &self,
+        params: Parameters<crate::schema::primitives::ReadDeprecationLabelsArgs>,
+    ) -> Result<Json<crate::schema::primitives::ReadDeprecationLabelsResult>, String> {
+        primitives::read_deprecation_labels::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
         name = "check-promotion-coverage",
         description = descriptions::CHECK_PROMOTION_COVERAGE
     )]

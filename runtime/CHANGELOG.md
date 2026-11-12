@@ -56,6 +56,15 @@ its version and date.
   `malformed-tasks` and writes nothing. Reset and keep-pending prunes that
   remove a section now write the frontmatter block, so such a prune's output
   begins with `---`.
+- **`read-deprecation-labels` returns the deprecation labels of rule files.**
+  One entry for each line containing `**DEPRECATED`: the rules it labels, the
+  rules in whose section it follows an earlier label, and its deprecating
+  version and removal target or the reason it is malformed; a file that cannot
+  be read is `unreadable`, not counted in `examined`. It shares
+  `check-rule-ids`' label reader, so the two cannot disagree, and
+  `scripts/audit/deprecation-removal.sh` (Family 40) calls it in place of its
+  own parse (spec 067).
+
 - **`check-artifact-size` measures the four project files.** `--project-files`
   (`project-files` over MCP) adds `AGENTS.md` and the spec root's `system.md`,
   `events.md` and `errors.md` to the check, against the same

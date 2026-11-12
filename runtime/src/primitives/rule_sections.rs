@@ -143,6 +143,39 @@ pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
         .collect()
 }
 
+/// The lines of the rule section whose heading [`heading_id_regex`] matched at
+/// `heading_start` that carry the deprecation label token `**DEPRECATED`, as
+/// 0-based indices into `content.lines()`, in order.
+///
+/// The one label reader: `check-rule-ids` calls a rule deprecated when this is
+/// non-empty, and `read-deprecation-labels` lists these lines, so the two
+/// cannot disagree. The section runs from the heading to the next heading of
+/// the same or higher level (a heading whose level cannot be read counts as
+/// level 4); deeper headings, another rule's included, stay inside it. The
+/// bold-uppercase token avoids a prose mention of "deprecated". Slicing only
+/// happens at regex match offsets and line boundaries, so it cannot land
+/// inside a multi-byte character.
+pub(crate) fn section_label_lines(content: &str, heading_start: usize) -> Vec<usize> {
+    let first = content[..heading_start].matches('\n').count();
+    let mut lines = content[heading_start..].lines().enumerate();
+    let Some((_, heading_line)) = lines.next() else {
+        return Vec::new();
+    };
+    let heading_level = parse_atx_heading(heading_line).map_or(4, |(level, _)| level);
+    let mut found = Vec::new();
+    for (offset, line) in lines {
+        if let Some((level, _)) = parse_atx_heading(line)
+            && level <= heading_level
+        {
+            break;
+        }
+        if line.contains("**DEPRECATED") {
+            found.push(first + offset);
+        }
+    }
+    found
+}
+
 /// Every rule section in `content`, in heading order.
 ///
 /// A section opens at a heading [`heading_id_regex`] matches and runs to the
