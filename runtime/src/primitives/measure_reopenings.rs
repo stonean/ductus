@@ -1460,6 +1460,50 @@ mod tests {
         );
     }
 
+    /// A key another spec's record holds, decided again with another
+    /// outcome, is a new decision: the carrying run counts it as its own
+    /// (spec 079 task 35's limit, the Resolved Question on what counts).
+    #[test]
+    fn a_carried_key_decided_again_with_another_outcome_counts_as_new() {
+        let fixture = Fixture::new();
+        let waived = |key: &str, at: &str| {
+            format!(
+                "  - key: {key}\n    outcome: waived\n    reason: r\n    decided-at: {at}\n    decided-by: owner@example.com\n"
+            )
+        };
+        let deferred = |key: &str, at: &str| {
+            format!(
+                "  - key: {key}\n    outcome: deferred\n    reason: r\n    work-item: EXT-1\n    decided-at: {at}\n    decided-by: owner@example.com\n"
+            )
+        };
+        let (first, second) = ("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+        let other = |file: &str, body: &str| {
+            write(&fixture.root.join("specs").join("013-b").join(file), body);
+            commit_all(&fixture.repository, "work(013): step");
+        };
+        let flip = |status: &str| other("spec.md", &spec(status).replace("012", "013"));
+        flip("in-progress");
+        let began = format!("decisions:\n{}", waived("shared", first));
+        other(
+            "review.md",
+            &review(first, &began).replace(FEATURE, "013-b"),
+        );
+        flip("done");
+
+        fixture.status("in-progress");
+        let remade = format!("decisions:\n{}", deferred("shared", second));
+        fixture.commit("review.md", &review(second, &remade));
+        fixture.status("done");
+
+        let measurement = fixture.measure();
+        let by_person: Vec<(&str, usize)> = measurement
+            .reopenings
+            .iter()
+            .map(|r| (r.feature.as_str(), r.decisions_by_person))
+            .collect();
+        assert_eq!(by_person, [(FEATURE, 1), ("013-b", 1)], "{measurement:?}");
+    }
+
     #[test]
     fn no_closed_reopening_is_nothing_to_compare() {
         let fixture = Fixture::new();
