@@ -123,7 +123,7 @@ Per Q2 (twin constitutions collapsed) and Q7 (spec-deps derivation), three new g
 
 ### ductus repo's pre-commit hook
 
-`.githooks/pre-commit` orchestrates the generators. Installed via `git config core.hooksPath .githooks`, run by `scripts/install-hooks.sh`. Runs them unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong. As delivered here it ran four shell generators; it now runs three (`gen-configure-mcp`, `gen-claude-commands`, `gen-help-tables`) plus the two frontmatter derivations as runtime primitives, and halts when the runtime is unreachable rather than skipping them.
+`.githooks/pre-commit` orchestrates the generators. Installed via `git config core.hooksPath .githooks`, run by `scripts/install-hooks.sh`. Runs them unconditionally on every commit, over a scratch copy of the commit's index rather than the working tree, and stages only what that commit may carry: a file the commit already stages, or a generated output when the commit stages a generator source. Another session's unstaged sources, outputs and hunks are neither staged nor overwritten — trades a fraction of a second per commit for generation that has no gate logic to get wrong. As delivered here it ran four shell generators; it now runs three (`gen-configure-mcp`, `gen-claude-commands`, `gen-help-tables`) plus the two frontmatter derivations as runtime primitives, and halts when the runtime is unreachable rather than skipping them.
 
 ### Adopter projects' pre-commit hook
 

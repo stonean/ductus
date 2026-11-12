@@ -1,10 +1,29 @@
 #!/usr/bin/env bash
 # ductus repo pre-commit hook.
 #
-# Runs all generators unconditionally so the committed tree always has
-# up-to-date generated artifacts, and stages their outputs. Per-spec staging is
-# scoped to the git index (only specs already part of the commit), so untracked
-# in-progress drafts are never swept in (spec 017 / tracked-specs-not-worktree).
+# Runs all generators on the COMMIT's staged sources, so the committed tree
+# always has up-to-date generated artifacts. This repository runs several agent
+# sessions in one tree, so the working tree holds other sessions' unstaged
+# sources, outputs and hunks; the hook therefore never generates from, stages,
+# or overwrites any of it (spec 017 / a-commit-stages-only-its-own-generated-files).
+#
+# How: a scratch repository under a temp dir borrows this repository's objects
+# and takes a copy of the commit's index (GIT_INDEX_FILE when `git commit -a`
+# or a path list made a temporary one), and checks the staged blobs out. Every
+# generator, derivation, labelling pass and markdown fix below runs there, never
+# on the working tree. A file the scratch run changed is written to the real
+# index as a blob, if the commit may carry it:
+#   - the commit already stages it (a spec, a markdown file, a hand-staged
+#     output); or
+#   - the commit stages a generator source (anything under framework/, or
+#     scripts/gen-*) and the file is a generated output: the six paths the
+#     generators write.
+# Any other change is dropped, so a commit staging no generator source stages no
+# generated file, and an unstaged spec's derived frontmatter is not swept in
+# (spec 017 / tracked-specs-not-worktree). The working-tree copy of a written
+# file is updated only when it equals the blob that was staged when the hook
+# started, so another session's unstaged edit stays byte-identical, and a file
+# staged in part keeps its unstaged hunks out of the commit.
 #
 # The runtime is resolved first, since gen-claude-commands.sh builds the Claude
 # copies with its apply-manifest and is passed it as DUCTUS_BIN (spec 080). An
@@ -37,17 +56,17 @@
 # nothing wrong is committed, while a stale derived index is committed wrong
 # data.
 #
+# Next it normalizes staged markdown with `markdownlint-cli2 --fix`, so a
+# WYSIWYG editor's table padding and emphasis rewriting do not fail the lint CI
+# runs on push. Swallowed on failure — markdownlint is advisory here and a
+# missing npx must not block a commit.
+#
 # When staged files include anything under runtime/, this hook additionally
 # runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
 # -- -D warnings`, and `cargo test` against the runtime crate. Skip the
 # cargo checks for a single commit with DUCTUS_SKIP_RUNTIME_CHECKS=1.
 #
-# Next it normalizes staged markdown with `markdownlint-cli2 --fix` and
-# re-stages it, so a WYSIWYG editor's table padding and emphasis rewriting do
-# not fail the lint CI runs on push. Swallowed on failure — markdownlint is
-# advisory here and a missing npx must not block a commit.
-#
-# After every write above has landed and been staged, it runs
+# After every write above has landed, it runs
 # `ductus check-corpus-links`, which reports every relative
 # markdown link under the spec root that resolves to nothing and exits non-zero
 # on one (spec 067 / adopter-corpus-link-integrity). Corpus-wide rather than
@@ -69,9 +88,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 # Was anything staged when this hook STARTED? The empty-commit guard below
-# needs the answer, and it can only be had here — every generator that runs
-# between this line and that check re-stages files, so by then the two states
-# the guard must tell apart look identical.
+# needs the answer, and it can only be had here — the scratch run between this
+# line and that check rewrites the index, so by then the two states the guard
+# must tell apart look identical.
 staged_at_entry=0
 git diff --cached --quiet || staged_at_entry=1
 
@@ -82,7 +101,7 @@ git diff --cached --quiet || staged_at_entry=1
 # under test.
 ductus_bin=""
 if [ -x runtime/target/release/ductus ]; then
-  ductus_bin="runtime/target/release/ductus"
+  ductus_bin="$ROOT/runtime/target/release/ductus"
 elif command -v ductus > /dev/null; then
   ductus_bin="ductus"
 fi
@@ -95,24 +114,6 @@ if [ -z "$ductus_bin" ]; then
   exit 1
 fi
 
-scripts/gen-configure-mcp.sh
-DUCTUS_BIN="$ductus_bin" scripts/gen-claude-commands.sh > /dev/null
-scripts/gen-help-tables.sh
-
-"$ductus_bin" derive-dependencies --write > /dev/null
-"$ductus_bin" derive-references --write > /dev/null
-
-# Stage any generator-produced changes to their known output paths.
-git add framework/bootstrap/configure/claude.md
-git add .claude/commands/ductus/ 2>/dev/null || true
-git add .pi/prompts/ .pi/extensions/ 2>/dev/null || true
-git add .ductus/reference/ 2>/dev/null || true
-git add framework/commands/help.md
-# Re-stage only spec files already part of this commit, so the derived
-# `dependencies:` / `references:` rewrites are captured without sweeping in
-# untracked `/specify` drafts or unstaged edits to other tracked specs
-# (spec 017 / tracked-specs-not-worktree).
-#
 # The spec root is matched by shape — any single leading segment, then
 # `NNN-slug/spec.md` — so the hook has no configured value to get wrong. This
 # repo uses the default `specs`, which is exactly why a hardcoded path went
@@ -133,18 +134,145 @@ git add framework/commands/help.md
 # `1000-thousandth` and `1234.1-staged`. It does not reach this file, which is a
 # separate one, so this copy is held by a reader — keep the two alternations
 # identical when either changes.
-staged_specs="$(git diff --cached --name-only \
+staged_names="$(git diff --cached --name-only)"
+staged_specs="$(printf '%s\n' "$staged_names" \
   | { grep -E "^[^/]+/(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
+staged_md="$(git diff --cached --name-only --diff-filter=ACM \
+  | { grep -E '\.md$' || true; })"
 
-# Acceptance-criterion labelling (spec 013), swallowed per the header note.
-if [ -n "$staged_specs" ]; then
-  printf '%s\n' "$staged_specs" | while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    "$ductus_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
-      > /dev/null 2>&1 || true
-    git add "$f"
-  done
+# Does the commit stage a generator source? Everything the three generators read
+# is under framework/ or is one of their own scripts.
+generator_source_staged=0
+if printf '%s\n' "$staged_names" | grep -qE '^(framework/|scripts/gen-)'; then
+  generator_source_staged=1
 fi
+
+# The paths the generators write, one pattern per line (ERE).
+generated_outputs='^framework/bootstrap/configure/claude\.md$
+^\.claude/commands/ductus/
+^\.pi/prompts/
+^\.pi/extensions/
+^\.ductus/reference/
+^framework/commands/help\.md$'
+
+# The markdown normalizer: this repo's own install when present (the checkout
+# the scratch tree lacks), else npx.
+if [ -x "$ROOT/node_modules/.bin/markdownlint-cli2" ]; then
+  mdlint=("$ROOT/node_modules/.bin/markdownlint-cli2")
+else
+  mdlint=(npx markdownlint-cli2)
+fi
+
+# A scratch repository: its own .git (so the runtime's repository discovery
+# finds a project root), this repository's objects through alternates, and a
+# copy of the index this commit will use.
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/ductus-pre-commit.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+
+real_objects="$(cd "$(git rev-parse --git-path objects)" && pwd -P)"
+real_index="${GIT_INDEX_FILE:-$(git rev-parse --git-path index)}"
+orig_tree="$(git write-tree)"
+head_sha="$(git rev-parse --verify -q HEAD || true)"
+
+# Every git command and primitive aimed at the scratch repository runs with
+# git's own exported variables cleared: git sets GIT_DIR (absolute in a linked
+# worktree) for a hook, and either it or GIT_INDEX_FILE would aim them back at
+# the real repository.
+(
+  unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR \
+    GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+  git init -q "$scratch"
+  printf '%s\n' "$real_objects" > "$scratch/.git/objects/info/alternates"
+  if [ -n "$head_sha" ]; then
+    git -C "$scratch" update-ref --no-deref HEAD "$head_sha"
+  fi
+  cp "$real_index" "$scratch/.git/index"
+  git -C "$scratch" checkout-index -a -f -u
+  cd "$scratch"
+
+  scripts/gen-configure-mcp.sh
+  DUCTUS_BIN="$ductus_bin" scripts/gen-claude-commands.sh > /dev/null
+  scripts/gen-help-tables.sh
+
+  "$ductus_bin" derive-dependencies --write > /dev/null
+  "$ductus_bin" derive-references --write > /dev/null
+
+  # Acceptance-criterion labelling (spec 013), swallowed per the header note.
+  if [ -n "$staged_specs" ]; then
+    printf '%s\n' "$staged_specs" | while IFS= read -r f; do
+      [ -f "$f" ] || continue
+      "$ductus_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
+        > /dev/null 2>&1 || true
+    done
+  fi
+
+  # Normalize markdown: what the commit stages, and what the generators changed
+  # (their outputs are markdown the commit may carry). A WYSIWYG editor
+  # rewrites a document's source on save — Typora re-pads every table cell and
+  # rewrites *emphasis* as _emphasis_ — and this repo pins MD060 to "compact"
+  # (constitution §markdown-standards); CI runs `npx markdownlint-cli2` on
+  # push, so a document edited in Typora would fail a lint nobody violated on
+  # purpose. `--fix` repairs exactly this class. It runs on the staged text, so
+  # a file staged in part is fixed and re-staged without its unstaged hunks.
+  #
+  # Deliberately NOT in the shipped adopter hook: markdownlint is an npx dev
+  # dependency of this repo, and an adopter's commit must not depend on a Node
+  # toolchain they never asked for.
+  #
+  # Swallowed on failure, and the reason is blast radius: markdownlint is
+  # advisory here — CI is the gate that actually blocks — so a missing npx
+  # must not stop a commit.
+  git add -A > /dev/null
+  to_fix="$({ printf '%s\n' "$staged_md"
+    git diff --cached --name-only --diff-filter=ACM "$orig_tree" \
+      | { grep -E '\.md$' || true; }; } | sort -u | { grep -v '^$' || true; })"
+  if [ -n "$to_fix" ]; then
+    printf '%s\n' "$to_fix" | xargs "${mdlint[@]}" --fix > /dev/null 2>&1 || true
+  fi
+  git add -A > /dev/null
+  git diff --cached --raw --no-abbrev -z --no-renames "$orig_tree" > "$scratch/changes.raw"
+)
+
+# Write what the commit may carry into the real index. A change is :oldmode
+# newmode oldsha newsha status NUL path NUL.
+while IFS= read -r -d '' meta && IFS= read -r -d '' rel; do
+  read -r _ newmode oldsha _ change <<< "${meta#:}"
+
+  carry=0
+  if printf '%s\n' "$staged_names" | grep -Fxq -- "$rel"; then
+    carry=1
+  elif [ "$generator_source_staged" = 1 ] \
+       && printf '%s\n' "$rel" | grep -qE "$generated_outputs"; then
+    carry=1
+  fi
+  [ "$carry" = 1 ] || continue
+
+  work="$ROOT/$rel"
+  if [ "$change" = "D" ]; then
+    git update-index --force-remove -- "$rel"
+    # Leave the working-tree file alone unless it is the staged blob itself.
+    if [ -f "$work" ] && [ "$(git hash-object -- "$work")" = "$oldsha" ]; then
+      rm -f "$work"
+    fi
+    continue
+  fi
+
+  # The scratch repository's blob lives in its own object store; write it to
+  # this one.
+  blob="$(git hash-object -w -- "$scratch/$rel")"
+  git update-index --add --cacheinfo "$newmode,$blob,$rel"
+
+  # The working-tree copy follows only when it is exactly what was staged (or
+  # absent, for a new file): anything else is another session's edit.
+  if [ "$change" = "A" ]; then
+    if [ ! -e "$work" ]; then
+      mkdir -p "$(dirname "$work")"
+      cp "$scratch/$rel" "$work"
+    fi
+  elif [ -f "$work" ] && [ "$(git hash-object -- "$work")" = "$oldsha" ]; then
+    cp "$scratch/$rel" "$work"
+  fi
+done < "$scratch/changes.raw"
 
 # Runtime crate verification — only when staged changes touch runtime/.
 if [[ "${DUCTUS_SKIP_RUNTIME_CHECKS:-0}" != "1" ]] \
@@ -190,38 +318,6 @@ if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] \
   echo "  Re-stage the files and retry. For an intentional empty commit," >&2
   echo "  re-run with DUCTUS_ALLOW_EMPTY=1." >&2
   exit 1
-fi
-
-# Normalize staged markdown, then re-stage it.
-#
-# A WYSIWYG editor rewrites a document's source on save — Typora re-pads every
-# table cell and rewrites *emphasis* as _emphasis_ — and this repo pins
-# MD060 to "compact" (constitution §markdown-standards). The two fight on every
-# edit, and the loser was CI: framework-checks runs `npx markdownlint-cli2` on
-# push, so a document edited in Typora fails a lint nobody violated on purpose.
-#
-# `--fix` repairs exactly this class, so the hook repairs it rather than asking
-# a contributor to remember a command or to abandon their editor. It runs over
-# the *staged* files only, so it never rewrites a document this commit does not
-# touch, and it re-stages what it changed the same way the derivations above do.
-#
-# Deliberately NOT in the shipped adopter hook: markdownlint is an npx dev
-# dependency of this repo, and an adopter's commit must not depend on a Node
-# toolchain they never asked for. This is a ductus-repo convenience, not a
-# framework rule.
-staged_md="$(git diff --cached --name-only --diff-filter=ACM \
-  | { grep -E '\.md$' || true; })"
-
-if [ -n "$staged_md" ]; then
-  # Swallowed on failure, and the reason is blast radius: markdownlint is
-  # advisory here — CI is the gate that actually blocks — so a missing npx
-  # must not stop a commit. A formatting nit reaching CI is recoverable; a
-  # contributor unable to commit is not.
-  printf '%s\n' "$staged_md" | xargs npx markdownlint-cli2 --fix > /dev/null 2>&1 || true
-  printf '%s\n' "$staged_md" | while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    git add "$f"
-  done
 fi
 
 # Dangling spec-to-spec pointers, checked after every write above has

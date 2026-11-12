@@ -41,7 +41,11 @@ ductus repo's `.githooks/pre-commit` orchestrates the generators and derivations
 
 Hook installation via `scripts/install-hooks.sh` (sets `git config core.hooksPath .githooks`). Idempotent — safe to run repeatedly.
 
-Generators run unconditionally on every commit (no file-change gating). Trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong.
+Generators run unconditionally on every commit (no file-change gating). Trades a fraction of a second per commit for generation that has no gate logic to get wrong.
+
+**Generation runs on the commit's index, not the working tree** (scenario `a-commit-stages-only-its-own-generated-files`). The hook builds a scratch repository under a temp dir: its own `git init`, this repository's object store through `objects/info/alternates`, a copy of the index the commit uses (`GIT_INDEX_FILE` when `commit -a` or a path list made a temporary one), and `checkout-index` of the staged blobs. The generators, both derivations, `label-criteria` and `markdownlint-cli2 --fix` run there with git's exported `GIT_*` variables cleared. Each file the run changed is written to the real index as a blob (`git hash-object -w`, `update-index --cacheinfo`) when the commit may carry it: the commit already stages the path, or it stages a path under `framework/` or `scripts/gen-` and the path is one of the six generator outputs. Any other change is dropped. The working-tree copy of a written file follows only when it equals the blob staged at entry, so another session's edit stays byte-identical and a partly staged markdown file keeps its unstaged hunks. `scripts/tests/test-pre-commit-staging.sh` holds each case, and each fails under a mutation that removes its behavior.
+
+Alternatives considered. A scratch `git worktree add --detach --no-checkout`: rejected for an independent scratch repository, because `worktree add` fails on an unborn `HEAD` (the first commit of a repository) and a killed hook leaves a registered worktree in `.git/worktrees`, where a temp dir with its own `.git` leaves nothing behind but the directory the exit trap removes. Staging an output only when its sources are staged, using the working-tree run: rejected, since the working-tree run reads another session's unstaged sources, so the staged output would still be derived from them.
 
 ### Adopter hook surface and `/ductus` integration
 
@@ -167,7 +171,7 @@ Both workflows reference their actions by full commit SHA with the release tag i
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.githooks/pre-commit` | Create | ductus repo's hook — runs the generators and derivations, stages outputs |
+| `.githooks/pre-commit` | Create | ductus repo's hook — runs the generators and derivations on the commit's index, stages only what the commit may carry |
 | `framework/bootstrap/hooks/pre-commit` | Create | Adopter-shipped hook stub; calls `framework/bootstrap/hooks/ductus-pre-commit`, which runs the derivations and carries the `# managed-by: ductus` sentinel |
 
 ### New rule file

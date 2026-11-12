@@ -216,6 +216,15 @@ jobs:
       - name: (q) Host namespace resolution halts on an unparseable config
         run: bash scripts/tests/test-host-namespace-parity.sh
 
+      # (r) The repository's pre-commit hook generates from the commit's index,
+      # so another session's unstaged work in the same tree is not committed
+      # or overwritten (spec 017, a-commit-stages-only-its-own-generated-files).
+      # The test builds fixture repositories carrying the hook and the
+      # generators, and drives the runtime built above, so it needs that build
+      # and shells out to scripts/gen-*.sh and .githooks/pre-commit.
+      - name: (r) Pre-commit hook stages only its own generated files
+        run: bash scripts/tests/test-pre-commit-staging.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
