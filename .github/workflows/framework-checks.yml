@@ -75,6 +75,17 @@ jobs:
       - name: Verify the lint tooling's registry signatures
         run: npm audit signatures
 
+      # BE-DEPS-001: a dependency with a known high or critical vulnerability
+      # is updated, replaced, or has a documented exception. npm's own
+      # --audit-level fails this step on any high or critical advisory in the
+      # installed tree, so a new one fails a run instead of waiting for someone
+      # to read a log (022 task 13, the owner's answer (c), 2026-11-12).
+      # package.json's overrides entry moves markdownlint-cli2 0.24.0's
+      # markdownlint from 0.42.0 to 0.42.1, whose re2js 2.9.1 fixes
+      # GHSA-gg6h-894w-4m9c; 022's plan, Provenance, says when it goes.
+      - name: The lint tooling carries no high or critical advisory
+        run: npm audit --audit-level=high
+
       # The two frontmatter derivations are runtime primitives since spec
       # 067's adopter-generator-promotion, so this step needs the binary and
       # the toolchain block below has to precede it. Step (f) reuses the same

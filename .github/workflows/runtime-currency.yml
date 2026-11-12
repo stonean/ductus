@@ -4,7 +4,9 @@ name: runtime-currency
 # dependencies' major versions, its pinned toolchain, its advisories, and the
 # CI pins the lockfile does not cover (actions and installed tools). The
 # logic lives in scripts/check-runtime-currency.sh, the project's own command
-# for it, so a contributor runs exactly what this job runs.
+# for it, so a contributor runs exactly what this job runs. A last step audits
+# the npm lint tooling's lockfile, as framework-checks.yml does on each push,
+# since a new advisory is published without a push (022 task 13).
 #
 # Scheduled rather than on push, because what it reports changes when
 # upstream publishes, not when this repository commits. The four rustls
@@ -51,3 +53,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./scripts/check-runtime-currency.sh
+
+      # BE-DEPS-001 between pushes: the same gate as framework-checks.yml's,
+      # read from package-lock.json alone, so nothing is installed. It runs
+      # whatever the step above returned, so one red check never hides the
+      # other. Node and npm are the runner image's own.
+      - name: The lint tooling carries no high or critical advisory
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=high --package-lock-only

@@ -1760,7 +1760,7 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
 }
 
 /// [`validate_contained`] for a path or glob a tool expands itself, as
-/// `lint-markdown` hands its paths to markdownlint-cli2 0.23.2, which
+/// `lint-markdown` hands its paths to markdownlint-cli2 0.24.0, which
 /// rewrites an argument before globby 16 and fast-glob 3 expand it (spec 022
 /// task 9). The check judges the forms it can model and refuses the rest:
 ///

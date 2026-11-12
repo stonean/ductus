@@ -310,8 +310,10 @@ Re-verified 2026-10-22 with npm 11.17.0 in scratch copies of `package.json` and 
 
 Routed here 2026-10-22 by 021's analysis: `BE-DEPS-007` ("Any spec or plan covering dependency management or CI configuration SHOULD commit to an automated scan on dependency changes") fires on 021's plan, which describes `framework-checks.yml`, and nothing scans the npm set (`package.json`, `package-lock.json`) for vulnerabilities; `framework-checks.yml` runs only `npm audit signatures`, and its `pull_request` paths omit both files. Option (a) and (b) both add the scan; whichever is applied answers this route too.
 
+Re-measured 2026-11-12 with npm 12.2.1, auditing lockfiles: the braces advisory no longer appears; 0.23.2 carries 3 high (markdown-it twice, smol-toml); 0.24.0, still the latest, carries one, `GHSA-gg6h-894w-4m9c` (re2js 2.8.6, through the markdownlint 0.42.0 it pins); and 0.24.0 with an `overrides` entry moving markdownlint to 0.42.1 (re2js 2.9.1) carries none, lints the 855 files with 0 issues, and passes `npm audit --audit-level=high`, which fails without the override. That added option (c): bump, override, and gate on npm's own `--audit-level=high`, with no exception list. The owner answered (c) (2026-11-12); applied in `package.json`, `package-lock.json`, `framework-checks.yml`, `runtime-currency.yml`, plan.md's *The npm lint tooling's advisories*, and `validate_glob_contained`'s doc.
+
 - [x] Measure what (a)'s filter needs and write the measured question here
-- [ ] The owner answers (a) or (b); apply the answer
+- [x] The owner answers (a) or (b); apply the answer
 
 ## 14. Decide: `run-generator` runs any project file, so two auto-approved tools run any command (blocking)
 
