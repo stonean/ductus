@@ -1091,8 +1091,39 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            appended.task_number, 1,
+            appended.task_number, "1",
             "append-task on a reset file must number from 1"
         );
+    }
+
+    /// The adopter's `tasks.md` (spec 041, scenario
+    /// `a-suffixed-task-number-is-a-task`): a task hand-inserted between
+    /// two others as `11a`, under a phase, each section fully ticked.
+    const SUFFIXED_SPENT: &str = "# T\n\nTasks derived from the [plan](plan.md). Complete in order.\n\n## Phase 1\n\n### 11. Spent task\n\n- [x] a\n- **Done when**: done.\n\n### 11a. Spent task with a suffixed number\n\n- [x] b\n- **Done when**: done.\n";
+
+    /// Both spent sections leave and their phase follows, so no `###` is
+    /// stranded directly under the `#` title (MD001).
+    #[test]
+    fn suffixed_task_spent_leaves_with_its_phase() {
+        let (_tmp, repo) = write_repo(SUFFIXED_SPENT, None);
+        let result = run(&args(false, false, true), &repo).unwrap();
+        assert_eq!(result.removed_count, 2);
+        assert_eq!(result.kept_count, 0);
+        let written = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(!written.contains("###"), "{written}");
+        assert!(!written.contains("Phase 1"), "{written}");
+    }
+
+    #[test]
+    fn suffixed_task_pending_stays_with_its_phase() {
+        let tasks = SUFFIXED_SPENT.replace("- [x] b", "- [ ] b");
+        let (_tmp, repo) = write_repo(&tasks, None);
+        let result = run(&args(false, false, true), &repo).unwrap();
+        assert_eq!(result.removed_count, 1);
+        assert_eq!(result.kept_count, 1);
+        let written = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(written.contains("### 11a. Spent task with a suffixed number"));
+        assert!(written.contains("## Phase 1"));
+        assert!(!written.contains("### 11. Spent task"));
     }
 }

@@ -635,4 +635,28 @@ mod tests {
             describe_unchecked("- [ ] c3 still open\n").as_deref()
         );
     }
+
+    /// The adopter's `tasks.md` (spec 041, scenario
+    /// `a-suffixed-task-number-is-a-task`): a task hand-inserted between
+    /// two others as `11a`, under a phase, each section fully ticked.
+    const SUFFIXED_SPENT: &str = "# T\n\nTasks derived from the [plan](plan.md). Complete in order.\n\n## Phase 1\n\n### 11. Spent task\n\n- [x] a\n- **Done when**: done.\n\n### 11a. Spent task with a suffixed number\n\n- [x] b\n- **Done when**: done.\n";
+
+    #[test]
+    fn suffixed_task_is_listed_by_read_tasks() {
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = SUFFIXED_SPENT.replace("- [x] b", "- [ ] b");
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+        let result = compute(
+            &ReadTasksArgs {
+                feature: "feat".into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let numbers: Vec<&str> = result.tasks.iter().map(|t| t.number.as_str()).collect();
+        assert_eq!(numbers, vec!["11", "11a"]);
+        assert!(!result.tasks[1].subtasks[0].checked, "the pending 11a box");
+    }
 }

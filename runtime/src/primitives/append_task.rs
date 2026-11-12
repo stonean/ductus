@@ -9,9 +9,9 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::primitives::{
-    PhaseRange, PrimitiveError, Result, TasksStructure, detect_tasks_structure, iter_phase_ranges,
-    iter_task_numbers_at_levels, parse_atx_heading, read_text, rel_path, split_frontmatter,
-    strip_bullet_marker, validate_slug, write_atomic,
+    PhaseRange, PrimitiveError, Result, TaskNumber, TasksStructure, detect_tasks_structure,
+    iter_phase_ranges, iter_task_numbers_at_levels, parse_atx_heading, read_text, rel_path,
+    split_frontmatter, strip_bullet_marker, validate_slug, write_atomic,
 };
 use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 
@@ -104,7 +104,7 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         && let Some(existing_number) = task_number_referencing_scenario(&existing, slug)
     {
         return Ok(AppendTaskResult {
-            task_number: existing_number,
+            task_number: existing_number.to_string(),
             path: rel_path(&tasks_path, repo),
             created: created_now,
             appended: false,
@@ -119,7 +119,7 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
             pending_task_matching(&existing, args.title.trim(), &task_items(args))
     {
         return Ok(AppendTaskResult {
-            task_number: existing_number,
+            task_number: existing_number.to_string(),
             path: rel_path(&tasks_path, repo),
             created: created_now,
             appended: false,
@@ -142,7 +142,7 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     write_atomic(&tasks_path, &new_content)?;
 
     Ok(AppendTaskResult {
-        task_number: next_number,
+        task_number: next_number.to_string(),
         path: rel_path(&tasks_path, repo),
         created: created_now,
         appended: true,
@@ -159,12 +159,12 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
 ///
 /// Walks both heading levels because `tasks.md` is flat (`## N.`) or phased
 /// (`### N.`) and a pointer is equally findable in either.
-fn task_number_referencing_scenario(existing: &str, slug: &str) -> Option<u32> {
-    use crate::primitives::{SkipScanner, parse_atx_heading};
+fn task_number_referencing_scenario(existing: &str, slug: &str) -> Option<TaskNumber> {
+    use crate::primitives::{SkipScanner, parse_atx_heading, split_numbered_heading};
 
     let needle = format!("`scenarios/{slug}.md`");
     let mut skip = SkipScanner::default();
-    let mut current: Option<u32> = None;
+    let mut current: Option<TaskNumber> = None;
     for line in existing.lines() {
         // The same fence- and comment-aware scanner the numbering walk uses,
         // so the `## 1.` examples inside the template's guidance comment are
@@ -174,10 +174,8 @@ fn task_number_referencing_scenario(existing: &str, slug: &str) -> Option<u32> {
         }
         if let Some((level, text)) = parse_atx_heading(line) {
             if level == 2 || level == 3 {
-                current = text
-                    .find('.')
-                    .and_then(|dot| text.get(..dot))
-                    .and_then(|num| num.parse::<u32>().ok());
+                current =
+                    split_numbered_heading(&text).and_then(|(number, _)| TaskNumber::parse(number));
             }
             continue;
         }
@@ -206,7 +204,7 @@ fn task_number_referencing_scenario(existing: &str, slug: &str) -> Option<u32> {
 /// [`crate::primitives::checkbox::parse_checkbox_line`] — so a task one of
 /// them sees is the task this one sees. Fence- and comment-aware, as the
 /// numbering walk is.
-fn pending_task_matching(existing: &str, title: &str, items: &[String]) -> Option<u32> {
+fn pending_task_matching(existing: &str, title: &str, items: &[String]) -> Option<TaskNumber> {
     use crate::primitives::{
         SkipScanner, TasksStructure, checkbox, detect_tasks_structure, parse_atx_heading,
         split_numbered_heading,
@@ -214,7 +212,7 @@ fn pending_task_matching(existing: &str, title: &str, items: &[String]) -> Optio
 
     /// A task section being walked.
     struct Section {
-        number: u32,
+        number: TaskNumber,
         titled: bool,
         /// Its checkbox items, as `(checked, text)`.
         items: Vec<(bool, String)>,
@@ -254,7 +252,7 @@ fn pending_task_matching(existing: &str, title: &str, items: &[String]) -> Optio
                 .then(|| split_numbered_heading(&heading))
                 .flatten()
                 .and_then(|(number, rest)| {
-                    number.parse::<u32>().ok().map(|number| Section {
+                    TaskNumber::parse(number).map(|number| Section {
                         number,
                         titled: rest == wanted,
                         items: Vec::new(),
@@ -286,6 +284,7 @@ fn validate_single_line(argument: &str, value: &str) -> Result<()> {
 /// alongside a new `### 2.` phased task produces `next = 3`, not `next = 2`.
 fn next_task_number(content: &str) -> u32 {
     iter_task_numbers_at_levels(content, &[2, 3])
+        .map(TaskNumber::digits)
         .max()
         .unwrap_or(0)
         + 1
@@ -649,7 +648,7 @@ mod tests {
         let result = run(&retry, tmp.path()).unwrap();
 
         assert!(result.appended, "`retry` must not match `retry-budget`");
-        assert_eq!(result.task_number, 2);
+        assert_eq!(result.task_number, "2");
     }
 
     /// Without a slug there is no pointer to key on, so two custom bodies
@@ -666,7 +665,7 @@ mod tests {
         assert!(run(&a, tmp.path()).unwrap().appended);
         let second = run(&a, tmp.path()).unwrap();
         assert!(second.appended);
-        assert_eq!(second.task_number, 2);
+        assert_eq!(second.task_number, "2");
     }
 
     fn disposition_args(title: &str) -> AppendTaskArgs {
@@ -704,11 +703,11 @@ mod tests {
         let mut second = first.clone();
         second.body = Some(vec!["src/b.rs — leaks a handle".into()]);
 
-        assert_eq!(run(&first, tmp.path()).unwrap().task_number, 1);
+        assert_eq!(run(&first, tmp.path()).unwrap().task_number, "1");
         let other = run(&second, tmp.path()).unwrap();
         assert!(other.appended, "a second finding sharing the summary");
-        assert_eq!(other.task_number, 2);
-        for (again, number) in [(&second, 2), (&first, 1)] {
+        assert_eq!(other.task_number, "2");
+        for (again, number) in [(&second, "2"), (&first, "1")] {
             let rerun = run(again, tmp.path()).unwrap();
             assert!(!rerun.appended);
             assert_eq!(rerun.task_number, number);
@@ -732,7 +731,7 @@ mod tests {
         )
         .unwrap();
         assert!(result.appended, "the finding surfacing again is new work");
-        assert_eq!(result.task_number, 2);
+        assert_eq!(result.task_number, "2");
     }
 
     /// The renderer writes the title verbatim and the heading parser trims a
@@ -771,7 +770,7 @@ mod tests {
         )
         .unwrap();
         assert!(!result.appended, "the pending section is the same task");
-        assert_eq!(result.task_number, 7);
+        assert_eq!(result.task_number, "7");
     }
 
     #[test]
@@ -823,7 +822,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(result.task_number, 2);
+        assert_eq!(result.task_number, "2");
         assert!(!result.created);
         let body = fs::read_to_string(&tasks_path).unwrap();
         assert!(body.contains("## 1. First"));
@@ -873,7 +872,7 @@ mod tests {
         )
         .unwrap();
         let result = run(&args("specs/042-foo", "Fourth", "done."), tmp.path()).unwrap();
-        assert_eq!(result.task_number, 4);
+        assert_eq!(result.task_number, "4");
     }
 
     #[test]
@@ -885,7 +884,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(result.task_number, 1);
+        assert_eq!(result.task_number, "1");
         assert!(result.created);
         let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
         assert!(body.starts_with("# 042 — Foo Tasks"));
@@ -1061,7 +1060,7 @@ mod tests {
         )
         .unwrap();
         let result = run(&args("specs/042-foo", "Second", "done."), tmp.path()).unwrap();
-        assert_eq!(result.task_number, 2);
+        assert_eq!(result.task_number, "2");
     }
 
     #[test]
@@ -1248,7 +1247,7 @@ mod tests {
         a.slug = Some("ship-it".into());
         a.parent_heading = Some("Phase B — Implementation".into());
         let result = run(&a, tmp.path()).unwrap();
-        assert_eq!(result.task_number, 3);
+        assert_eq!(result.task_number, "3");
         let body = fs::read_to_string(&tasks_path).unwrap();
         // New task uses ### N. (phased convention), not ## N. Match line
         // starts to avoid the `### 3. Ship` heading being a substring hit
@@ -1285,7 +1284,7 @@ mod tests {
         a.slug = Some("follow-on".into());
         a.parent_heading = None;
         let result = run(&a, tmp.path()).unwrap();
-        assert_eq!(result.task_number, 3);
+        assert_eq!(result.task_number, "3");
         let body = fs::read_to_string(&tasks_path).unwrap();
         // Default phase letter is C (next after A and B).
         assert!(
@@ -1317,7 +1316,7 @@ mod tests {
         a.slug = Some("second-follow-on".into());
         a.parent_heading = None;
         let result = run(&a, tmp.path()).unwrap();
-        assert_eq!(result.task_number, 4);
+        assert_eq!(result.task_number, "4");
         let body = fs::read_to_string(&tasks_path).unwrap();
         // Single Phase C header, two tasks under it.
         assert_eq!(
@@ -1401,7 +1400,7 @@ mod tests {
         a.parent_heading = Some("Phase A — New work".into());
         let result = run(&a, tmp.path()).unwrap();
         // Max across ## 1. and ### 2. is 2, so next is 3.
-        assert_eq!(result.task_number, 3);
+        assert_eq!(result.task_number, "3");
         let body = fs::read_to_string(&tasks_path).unwrap();
         assert!(body.contains("### 3. Third task"));
         assert!(body.contains("## 1. Legacy flat task"));
@@ -1418,7 +1417,7 @@ mod tests {
         let mut a = args("specs/042-foo", "Second", "done.");
         a.parent_heading = Some("Phase A — does not matter".into());
         let result = run(&a, tmp.path()).unwrap();
-        assert_eq!(result.task_number, 2);
+        assert_eq!(result.task_number, "2");
         let body = fs::read_to_string(&tasks_path).unwrap();
         assert!(body.contains("## 2. Second"));
         assert!(!body.contains("### 2. Second"));
@@ -1439,5 +1438,51 @@ mod tests {
                 "{path}: {err:?}"
             );
         }
+    }
+
+    fn write_tasks(tmp: &Path, body: &str) {
+        make_feature_with_spec(tmp, "specs/042-foo", "042 — Foo");
+        fs::write(tmp.join("specs/042-foo/tasks.md"), body).unwrap();
+    }
+
+    const SUFFIXED: &str = "# T\n\n## Phase 1\n\n### 10. Ten\n\n- [x] a\n- **Done when**: done.\n\n### 11a. Inserted\n\nSee `scenarios/inserted.md`.\n\n- [ ] b\n- **Done when**: done.\n";
+
+    /// A suffixed number's digits count: with `11a` the highest, the next
+    /// task is `12`, and no suffix is ever written.
+    #[test]
+    fn suffixed_task_is_counted_by_its_digits_when_numbering() {
+        let tmp = tempdir().unwrap();
+        write_tasks(tmp.path(), SUFFIXED);
+        let mut a = args("specs/042-foo", "Next", "done.");
+        a.parent_heading = Some("Phase 1".into());
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(result.appended);
+        assert_eq!(result.task_number, "12");
+    }
+
+    /// The slug guard names the existing task by its own number: `11a`, not
+    /// `11`, which is another task.
+    #[test]
+    fn suffixed_task_is_reported_whole_by_the_slug_guard() {
+        let tmp = tempdir().unwrap();
+        write_tasks(tmp.path(), SUFFIXED);
+        let mut a = args("specs/042-foo", "Inserted", "done.");
+        a.slug = Some("inserted".into());
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(!result.appended);
+        assert_eq!(result.task_number, "11a");
+    }
+
+    #[test]
+    fn suffixed_task_is_reported_whole_by_the_title_guard() {
+        let tmp = tempdir().unwrap();
+        write_tasks(tmp.path(), SUFFIXED);
+        let mut a = args("specs/042-foo", "Inserted", "done.");
+        a.slug = None;
+        a.body = Some(vec!["b".into()]);
+        a.dedup_title = true;
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(!result.appended);
+        assert_eq!(result.task_number, "11a");
     }
 }

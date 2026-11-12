@@ -366,9 +366,9 @@ fn check_completeness(
 /// tasks exist)": numbered headings strictly increasing in declaration
 /// order, and every task section carries a `Done when` clause.
 fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], tasks_path: &str) {
-    let mut prev: Option<u32> = None;
+    let mut prev: Option<super::TaskNumber> = None;
     for task in tasks {
-        if let Ok(number) = task.number.parse::<u32>() {
+        if let Some(number) = super::TaskNumber::parse(&task.number) {
             if let Some(previous) = prev
                 && number <= previous
             {
@@ -5340,6 +5340,44 @@ mod tests {
                 .any(|s| s.family == "criterion-labels"),
             "{:?}",
             result.skipped
+        );
+    }
+
+    fn numbering_findings(tasks: &str) -> Vec<String> {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(tmp.path(), "specs/042-demo/tasks.md", tasks);
+        run(&args(), tmp.path())
+            .unwrap()
+            .findings
+            .into_iter()
+            .filter(|f| f.message.contains("strictly increasing"))
+            .map(|f| f.message)
+            .collect()
+    }
+
+    fn task(number: &str) -> String {
+        format!("## {number}. T\n\n- [ ] a\n\n- **Done when**: done.\n\n")
+    }
+
+    #[test]
+    fn suffixed_task_numbering_in_order_is_clean() {
+        let tasks = format!("# T\n\n{}{}{}", task("11"), task("11a"), task("12"));
+        assert_eq!(numbering_findings(&tasks), Vec::<String>::new());
+    }
+
+    #[test]
+    fn suffixed_task_numbering_out_of_order_is_reported() {
+        let ahead = format!("# T\n\n{}{}", task("11a"), task("11"));
+        assert_eq!(
+            numbering_findings(&ahead),
+            vec!["task numbering is not strictly increasing: task 11 follows task 11a"]
+        );
+        let twice = format!("# T\n\n{}{}", task("11a"), task("11a"));
+        assert_eq!(
+            numbering_findings(&twice),
+            vec!["task numbering is not strictly increasing: task 11a follows task 11a"]
         );
     }
 }

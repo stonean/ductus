@@ -160,26 +160,12 @@ fn locate_task_range(
     start.map(|s| s..lines.len())
 }
 
+/// The task number a heading carries, read through the one grammar
+/// `read-tasks`, `prune-tasks` and `append-task` share. A prose heading like
+/// `## 3 quick wins` is not a task and must not match, or `mark-task
+/// --task-number 3` would flip checkboxes inside it.
 fn heading_task_number(heading: &str) -> Option<String> {
-    let mut digits = String::new();
-    let mut rest = "";
-    for (idx, ch) in heading.char_indices() {
-        if ch.is_ascii_digit() {
-            digits.push(ch);
-            continue;
-        }
-        rest = &heading[idx..];
-        break;
-    }
-    // Require the trailing `.` that marks a real task heading (`## N. Title`),
-    // matching the number grammar in `read-tasks`/`append-task`/`prune-tasks`.
-    // A prose heading like `## 3 quick wins` is not a task and must not match,
-    // or `mark-task --task-number 3` would flip checkboxes inside it.
-    if digits.is_empty() || !rest.starts_with('.') {
-        None
-    } else {
-        Some(digits)
-    }
+    super::split_numbered_heading(heading).map(|(number, _)| number.to_string())
 }
 
 fn collect_checkbox_line_indices(
@@ -802,5 +788,34 @@ mod tests {
 
         let after = fs::read_to_string(&tasks_path).unwrap();
         assert_eq!(original, after);
+    }
+
+    #[test]
+    fn suffixed_task_is_addressed_by_its_suffixed_number() {
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = "# feat\n\n## Phase 1\n\n### 11. Spent\n\n- [ ] a\n- **Done when**: done.\n\n### 11a. Inserted\n\n- [ ] b\n- **Done when**: done.\n";
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+        run(
+            &MarkTaskArgs {
+                feature: "feat".into(),
+                task_number: "11a".into(),
+                subtask_index: 0,
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let after = fs::read_to_string(feature_dir.join("tasks.md")).unwrap();
+        assert!(after.contains("- [x] b"), "{after}");
+        assert!(after.contains("- [ ] a"), "11 is untouched: {after}");
+    }
+
+    #[test]
+    fn suffixed_heading_number_needs_its_dot() {
+        assert_eq!(heading_task_number("11a. Task"), Some("11a".into()));
+        assert_eq!(heading_task_number("3a quick wins"), None);
+        assert_eq!(heading_task_number("11ab. Task"), None);
     }
 }

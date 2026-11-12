@@ -2986,17 +2986,17 @@ fn opens_list_item(trimmed: &str) -> bool {
         && matches!(trimmed.as_bytes().get(digits + 1), None | Some(b' '))
 }
 
-/// Walk `content` line by line, yielding the numeric prefix of every ATX
-/// heading at any of the given `levels` whose text begins with `N.`. Skips
-/// headings inside fenced code blocks and HTML comments. Used by `tasks.md`
-/// primitives to
+/// Walk `content` line by line, yielding the [`TaskNumber`] of every ATX
+/// heading at any of the given `levels` that [`split_numbered_heading`]
+/// reads as a task heading. Skips headings inside fenced code blocks and
+/// HTML comments. Used by `tasks.md` primitives to
 /// compute the next task number in both flat (`## N.`) and phased
 /// (`### N.` under `## Phase X`) structures — passing `&[2, 3]` produces
 /// the union across both shapes.
 pub(crate) fn iter_task_numbers_at_levels<'a>(
     content: &'a str,
     levels: &'a [u8],
-) -> impl Iterator<Item = u32> + 'a {
+) -> impl Iterator<Item = TaskNumber> + 'a {
     let mut skip = SkipScanner::default();
     content.lines().filter_map(move |line| {
         if skip.skip(line) {
@@ -3006,13 +3006,55 @@ pub(crate) fn iter_task_numbers_at_levels<'a>(
         if !levels.contains(&level) {
             return None;
         }
-        let dot = text.find('.')?;
-        let num_part = &text[..dot];
-        if num_part.is_empty() {
+        TaskNumber::parse(split_numbered_heading(&text)?.0)
+    })
+}
+
+/// A task number: decimal digits and at most one lowercase letter, as
+/// [`split_numbered_heading`] reads it (`11`, `11a`). Orders by its digits,
+/// then its suffix — `11` before `11a` before `12` — which is what
+/// `check-artifacts`' numbering check and `append-task`'s next number read.
+/// A person hand-inserts a suffixed number between two others rather than
+/// renumber; no primitive writes one (spec 041, scenario
+/// `a-suffixed-task-number-is-a-task`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct TaskNumber {
+    digits: u32,
+    suffix: Option<char>,
+}
+
+impl TaskNumber {
+    /// Parse the number half of a [`split_numbered_heading`] split. `None`
+    /// when it is not digits plus at most one lowercase letter, or when its
+    /// digits overflow `u32`.
+    pub(crate) fn parse(number: &str) -> Option<Self> {
+        let end = number
+            .bytes()
+            .position(|b| !b.is_ascii_digit())
+            .unwrap_or(number.len());
+        let digits = number[..end].parse::<u32>().ok()?;
+        let mut rest = number[end..].chars();
+        let suffix = rest.next();
+        if rest.next().is_some() || suffix.is_some_and(|c| !c.is_ascii_lowercase()) {
             return None;
         }
-        num_part.parse::<u32>().ok()
-    })
+        Some(Self { digits, suffix })
+    }
+
+    /// The number's digits, without its suffix.
+    pub(crate) fn digits(self) -> u32 {
+        self.digits
+    }
+}
+
+impl std::fmt::Display for TaskNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.digits)?;
+        match self.suffix {
+            Some(c) => write!(f, "{c}"),
+            None => Ok(()),
+        }
+    }
 }
 
 /// Phased vs flat structure of a `tasks.md` file.
@@ -3103,24 +3145,32 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
     phases
 }
 
-/// Split a numbered task heading (`"12. Title"`) into its number and title,
-/// both borrowed from `heading`. `None` when the heading does not open with
-/// the `N.` grammar every tasks-file parser shares — decimal digits followed
-/// by a literal dot. A prose heading like `## 3 quick wins` is deliberately
-/// not a task, so it must not parse as one.
+/// Split a numbered task heading (`"12. Title"`, `"11a. Title"`) into its
+/// number and title, both borrowed from `heading`. `None` when the heading
+/// does not open with the grammar every tasks-file parser shares — decimal
+/// digits, at most one lowercase letter, then a literal dot. A prose heading
+/// like `## 3 quick wins` or `## 3a quick wins` is deliberately not a task,
+/// and neither is `11ab.` or `11A.`.
 ///
-/// This is the single home for the grammar: `read-tasks`, `prune-tasks`, and
-/// the phase scanner below all read the same tasks file, so a divergence here
-/// would let one primitive see a task another does not.
+/// This is the single home for the grammar: `read-tasks`, `prune-tasks`,
+/// `mark-task`, `append-task`, and the phase scanner below all read the same
+/// tasks file, so a divergence here would let one primitive see a task
+/// another does not. The number's order is [`TaskNumber`]'s.
 pub(crate) fn split_numbered_heading(heading: &str) -> Option<(&str, &str)> {
-    let end = heading
+    let digits = heading
         .bytes()
         .position(|b| !b.is_ascii_digit())
         .unwrap_or(heading.len());
-    if end == 0 {
+    if digits == 0 {
         return None;
     }
-    let (number, after) = heading.split_at(end);
+    let suffix = usize::from(
+        heading
+            .as_bytes()
+            .get(digits)
+            .is_some_and(u8::is_ascii_lowercase),
+    );
+    let (number, after) = heading.split_at(digits + suffix);
     Some((number, after.strip_prefix('.')?.trim_start()))
 }
 
@@ -4255,6 +4305,42 @@ mod tests {
         ] {
             assert_eq!(path_without_lines(path), file, "{path}");
         }
+    }
+
+    #[test]
+    fn suffixed_task_number_grammar_is_digits_and_one_lowercase_letter() {
+        assert_eq!(
+            split_numbered_heading("11a. Spent task"),
+            Some(("11a", "Spent task"))
+        );
+        assert_eq!(split_numbered_heading("11. Task"), Some(("11", "Task")));
+        // More than one letter, a capital, or no dot is no task.
+        assert_eq!(split_numbered_heading("11ab. Task"), None);
+        assert_eq!(split_numbered_heading("11A. Task"), None);
+        assert_eq!(split_numbered_heading("3a quick wins"), None);
+        assert_eq!(split_numbered_heading("a. Task"), None);
+    }
+
+    #[test]
+    fn suffixed_task_numbers_order_by_digits_then_suffix() {
+        let parse = |n: &str| TaskNumber::parse(n).unwrap();
+        assert!(parse("11") < parse("11a"));
+        assert!(parse("11a") < parse("11b"));
+        assert!(parse("11a") < parse("12"));
+        assert!(parse("2") < parse("10"));
+        assert_eq!(parse("11a").to_string(), "11a");
+        assert_eq!(parse("11a").digits(), 11);
+        assert_eq!(TaskNumber::parse("11ab"), None);
+        assert_eq!(TaskNumber::parse("11A"), None);
+    }
+
+    #[test]
+    fn suffixed_task_numbers_are_yielded_by_the_numbering_walk() {
+        let content = "# T\n\n## Phase 1\n\n### 10. A\n\n### 11a. B\n";
+        let nums: Vec<String> = iter_task_numbers_at_levels(content, &[2, 3])
+            .map(|n| n.to_string())
+            .collect();
+        assert_eq!(nums, vec!["10", "11a"]);
     }
 
     #[test]
@@ -5434,7 +5520,9 @@ mod tests {
     #[test]
     fn iter_numbered_headings_extracts_atx2_numbers() {
         let content = "# Title\n\n## 1. First\n\n## 2. Second\n\n## 3. Third\n\nNot a heading.\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(nums, vec![1, 2, 3]);
     }
 
@@ -5442,21 +5530,27 @@ mod tests {
     fn iter_numbered_headings_skips_non_atx2() {
         let content =
             "# 99. Not counted\n\n## 1. Counted\n\n### 2. Not counted (level 3)\n\n## 2. Counted\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(nums, vec![1, 2]);
     }
 
     #[test]
     fn iter_numbered_headings_skips_fenced_blocks() {
         let content = "## 1. Real\n\n```text\n## 99. Fake\n```\n\n## 2. Real\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(nums, vec![1, 2]);
     }
 
     #[test]
     fn iter_numbered_headings_handles_non_numeric_headings() {
         let content = "## Setup\n\n## 1. First\n\n## 7. Seventh\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(nums, vec![1, 7]);
     }
 
@@ -5737,7 +5831,9 @@ mod tests {
         // headings; they must not be counted as tasks or flip structure
         // detection.
         let content = "# T\n\nIntro.\n\n<!-- Example:\n## 1. Not a task\n\n- [ ] not a subtask\n### 2. Also not\n-->\n\n## 1. Real task\n\n- [ ] real\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2, 3]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2, 3])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(
             nums,
             vec![1],
@@ -5755,7 +5851,9 @@ mod tests {
 
         // An inline self-closing comment on a heading line does not hide it.
         let inline = "## 3. Real <!-- note -->\n\n- [ ] x\n";
-        let inline_nums: Vec<u32> = iter_task_numbers_at_levels(inline, &[2, 3]).collect();
+        let inline_nums: Vec<u32> = iter_task_numbers_at_levels(inline, &[2, 3])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(inline_nums, vec![3]);
     }
 
@@ -5766,7 +5864,9 @@ mod tests {
         // open a skip region and hide the next task heading — the exact bug
         // task 67's done-when hit.
         let content = "## 1. First\n\n- **Done when**: handles a backticked `<!--` in prose.\n\n## 2. Second\n\n- [ ] x\n";
-        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2]).collect();
+        let nums: Vec<u32> = iter_task_numbers_at_levels(content, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(
             nums,
             vec![1, 2],
@@ -5775,12 +5875,16 @@ mod tests {
 
         // Balanced backticked delimiters on one line are inert too.
         let balanced = "## 1. First\n\nMentions `<!--` and `-->` in code font.\n\n## 2. Second\n";
-        let bnums: Vec<u32> = iter_task_numbers_at_levels(balanced, &[2]).collect();
+        let bnums: Vec<u32> = iter_task_numbers_at_levels(balanced, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(bnums, vec![1, 2]);
 
         // A genuine (unbackticked) comment still hides its contents.
         let real = "## 1. First\n\n<!-- comment\n## 9. hidden\n-->\n\n## 2. Second\n";
-        let rnums: Vec<u32> = iter_task_numbers_at_levels(real, &[2]).collect();
+        let rnums: Vec<u32> = iter_task_numbers_at_levels(real, &[2])
+            .map(TaskNumber::digits)
+            .collect();
         assert_eq!(rnums, vec![1, 2], "the real comment still hides `## 9.`");
     }
 

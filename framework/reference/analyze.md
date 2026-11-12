@@ -56,7 +56,7 @@ The size check never escalates an unreadable subject: on a `done` spec, **Scenar
 
 - Tasks reference the plan
 - Each task has a "done when" condition
-- Tasks are numbered and ordered
+- Tasks are numbered in strictly increasing order: digits and at most one lowercase letter before the dot (`11`, `11a`), ordered by digits then suffix (`11` < `11a` < `12`)
 
 ## Grounding (advisory)
 

@@ -68,6 +68,22 @@ its version and date.
 
 ### Changed
 
+- **BREAKING: `append-task`'s `task-number` is a string, and a suffixed task
+  number is a task.** The result field was an integer and is now a string,
+  since a dedup guard may match a task a person hand-inserted as `11a`, and
+  reporting `11` would name another task. That is a breaking change to the
+  wire under `BE-COMPAT-001`, made within major version zero; a caller that
+  read the field as an integer reads it as a string, which `mark-task`'s
+  `task-number` already is. A task number is now decimal digits and at most
+  one lowercase letter before the dot (`11`, `11a`; `11ab.` and `11A.` are
+  not), read by one grammar, `split_numbered_heading`, and ordered by digits,
+  then suffix (`11` before `11a` before `12`). `read-tasks` lists a suffixed
+  task, `mark-task` addresses it as `11a`, `prune-tasks` removes a spent one
+  with its phase instead of stranding the `###` heading under the title
+  (MD001) and keeps a pending one, `check-artifacts` compares numbering in
+  that order rather than skipping a suffixed number, and `append-task` numbers
+  past the highest digits and never writes a suffix.
+
 - **BREAKING: a review is owed for code, and an analysis for the project's artifacts.**
   `compute-review-scope` owes a review only for a path outside the spec root,
   `.ductus/`, `AGENTS.md` and `CLAUDE.md`, so an edit to a spec's scenarios

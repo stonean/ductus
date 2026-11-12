@@ -3824,7 +3824,10 @@ pub struct AppendTaskArgs {
 pub struct AppendTaskResult {
     /// Number of the task: the one just appended (`max(existing) + 1`), or,
     /// when `appended` is `false`, the existing task a dedup guard matched.
-    pub task_number: u32,
+    /// A string, since the matched task may carry a hand-inserted suffix
+    /// (`11a`) that an integer would drop and so name another task; the one
+    /// just appended is digits only, numbered past the highest digits.
+    pub task_number: String,
     /// Repo-relative path of the tasks file written.
     pub path: String,
     /// Whether `tasks.md` was created by this invocation. `false` when an
