@@ -191,6 +191,32 @@ its version and date.
 
 ### Changed
 
+- **`write-analysis`'s `contradictions` is bounded to the read size, and a
+  caller's bare `unexamined` total is never lost (spec 082).** The result gains
+  `form`, `contradictions-count` (inline in both forms) and `lists-file`: past
+  `[artifacts] read-size-bytes` `contradictions` is absent and the file holds
+  it, and an empty list stays absent inline. A read size that does not parse
+  now fails the call, after the record is written. An `unexamined` total with
+  no `unexamined-by-reason` is recorded under the new reason `unclassified`
+  before the derived reasons join it, so `unexamined` is always the sum of the
+  breakdown (a bare 5 with two unjudged rules records 7), and the body no
+  longer renders a total with no breakdown.
+- **`ductus exec` counts a single-tier rule's finding in the rule's own tier
+  (spec 082).** The walker honored the host's `finding.severity` over the
+  asked tier, so a host labelling a MUST-only rule's failure `should` (or a
+  SHOULD-only rule's `must`) was refused by `write-analysis` and the walk
+  aborted with no `analysis.md`. The host's label is now honored only when the
+  rule's Statement carries both MUST and SHOULD; otherwise the finding counts
+  and is stored in the rule's tier, so a label cannot move a MUST failure to
+  advisory.
+- **A stored verdict is current only while the loaded rule-file set is the one
+  it was judged under (spec 082).** When a rule file is added or removed since
+  the prior record's `rule-digest`, no verdict is reusable, `judge` holds every
+  assessable rule and `discover-rule-files`' `verdicts.reason` is the new value
+  `rule-files-changed`; a file whose content alone changed keeps the per-file
+  rule. The gate's `unjudged-rules` block now says the record's
+  `unjudged-rules` holds every name, the message showing three.
+
 - **The label-assignment rule is stated as the runtime applies it, and
   `prune-tasks`' description no longer says a reset leaves no counter.**
   `framework/reference/clarify.md`, `specify.md` and the criterion-label backfill

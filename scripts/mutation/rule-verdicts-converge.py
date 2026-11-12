@@ -6,10 +6,19 @@ the exec walker asks only about a rule whose verdict is not current
 (`split_reused` in `interpreter/mod.rs`).
 
 Each mutation removes the behavior one unit test names, and its filter selects
-that test. AC1 is held by M1 to M3, M7 and M9, AC2 by M5 and M10, AC3 by M6, the stored tier by M16 to M18, the gate's hold on unjudged rules by M21 and M22,
-AC4 by `write_analysis::tests::the_rule_fields_read_back_through_the_loader`
-(no mutant: it holds the record's shape, not a behavior one line removes),
-AC5 by M2 and AC6 by M4, each on the interactive and the exec path.
+that test. By behavior: what makes a verdict current is held by M1 to M3 and
+M27 (AC1 by M1 to M3, M7 and M9; the rule-file set a record was judged under
+by M27; AC5 by M2); the derived unjudged list by M5 and M10 (AC2); the
+contradiction note by M6 (AC3); the addressed citation by M4 (AC6, on the
+interactive and the exec path); carrying a verdict forward by M7; the tier
+count floor by M8; the walker's reuse by M9 and M13; the interactive list by
+M11 and M12; the tally's addressed-by and judged set by M14 and M15; the
+stored tier by M16 to M18; the refusal of a tier a single-tier rule cannot
+fail in by M19 and M20; the gate's hold on unjudged rules by M21 and M22; the
+bounded `contradictions` result by M23 and M24; a caller's bare `unexamined`
+total by M25; and a single-tier rule's finding counted in its own tier by M26.
+AC4 is held by `write_analysis::tests::the_rule_fields_read_back_through_the_loader`
+(no mutant: it holds the record's shape, not a behavior one line removes).
 
 Run with `python3 scripts/mutation/run.py
 scripts/mutation/rule-verdicts-converge.py [ID ...]`; see run.py for the
@@ -186,5 +195,41 @@ MUTATIONS = [
         '    if analyze.unjudged_rules.is_empty() {',
         '    if false && analyze.unjudged_rules.is_empty() {',
         'primitives::check_review_gate::tests::an_analysis_with_no_unjudged_rules_passes',
+    ),
+    # -- the bounded result, the bare total, the exec tier, the rule-file set --
+    (
+        'M23 contradictions stay inline past the read size',
+        'src/primitives/write_analysis.rs',
+        '        result.contradictions = Vec::new();\n',
+        '        let _ = &result.contradictions;\n',
+        'write_analysis::tests::contradictions_past_the_read_size_are_in_a_file',
+    ),
+    (
+        'M24 the contradictions count is not set',
+        'src/primitives/write_analysis.rs',
+        '    result.contradictions_count = result.contradictions.len();\n',
+        '',
+        'write_analysis::tests::contradictions_within_the_read_size_are_inline_with_their_count write_analysis::tests::contradictions_past_the_read_size_are_in_a_file',
+    ),
+    (
+        'M25 a bare unexamined total is dropped when no breakdown is supplied',
+        'src/primitives/write_analysis.rs',
+        '    if by_reason.is_empty() && args.unexamined > 0 {',
+        '    if false && by_reason.is_empty() && args.unexamined > 0 {',
+        'write_analysis::tests::a_bare_total_is_recorded_as_unclassified write_analysis::tests::a_bare_total_survives_a_derived_reason_beside_it',
+    ),
+    (
+        'M26 a single-tier rule takes the host label as its finding tier',
+        'src/interpreter/analyze_tally.rs',
+        'Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) if mixed => tier,',
+        'Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) => tier,',
+        'analyze_tally::tests::a_single_tier_rule_counts_in_its_own_tier_and_a_mixed_rule_keeps_the_label interpreter::tests::an_exec_walk_counts_a_single_tier_rules_finding_in_the_rules_own_tier',
+    ),
+    (
+        'M27 a verdict stays reusable after a rule file is added or removed',
+        'src/primitives/rule_verdicts.rs',
+        '    if loaded_now != judged_under {',
+        '    if false && loaded_now != judged_under {',
+        'rule_verdicts::tests::a_changed_rule_file_set_makes_no_verdict_reusable rule_verdicts::tests::an_unjudged_or_newly_loaded_rule_is_judged rule_verdicts::tests::a_removed_rule_s_verdict_is_dropped',
     ),
 ]

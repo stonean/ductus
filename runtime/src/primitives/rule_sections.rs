@@ -70,15 +70,29 @@ impl RuleSection {
     /// Whether the Statement carries both `MUST` and `SHOULD`: MUST-tier by
     /// [`Self::tier`], and able to fail on either clause (spec 082).
     pub(crate) fn carries_both_tiers(&self) -> bool {
-        self.tokens().any(|token| token == "MUST") && self.tokens().any(|token| token == "SHOULD")
+        statement_carries_both_tiers(&self.statement)
     }
 
-    /// The Statement's whole tokens, split on every non-alphanumeric
-    /// character. Every keyword check reads the Statement through this, so
-    /// two checks cannot disagree about what counts as a keyword.
+    /// The Statement's whole tokens, see [`statement_tokens`].
     fn tokens(&self) -> impl Iterator<Item = &str> {
-        self.statement.split(|c: char| !c.is_ascii_alphanumeric())
+        statement_tokens(&self.statement)
     }
+}
+
+/// Whether a Statement carries both `MUST` and `SHOULD`: the one reading of
+/// "a rule that can fail in either tier", shared by [`RuleSection`], which
+/// the record's refusal of a mislabelled finding uses, and the exec walker,
+/// which counts a finding in the rule's own tier unless this holds.
+pub(crate) fn statement_carries_both_tiers(statement: &str) -> bool {
+    statement_tokens(statement).any(|token| token == "MUST")
+        && statement_tokens(statement).any(|token| token == "SHOULD")
+}
+
+/// A Statement's whole tokens, split on every non-alphanumeric character.
+/// Every keyword check reads the Statement through this, so two checks cannot
+/// disagree about what counts as a keyword.
+fn statement_tokens(statement: &str) -> impl Iterator<Item = &str> {
+    statement.split(|c: char| !c.is_ascii_alphanumeric())
 }
 
 /// A digest of what a rule file asks of a spec: each rule's ID, Statement

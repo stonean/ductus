@@ -12,14 +12,17 @@
 //! [`analyze_subjects::freshness_of`](crate::primitives::analyze_subjects)
 //! is for the completion gate and `/{project}:review`'s `analyze` row.
 //!
-//! A stored verdict is current while three things match (the plan's
-//! *A stored verdict is current while three things match*):
+//! A stored verdict is current while four things match (the plan's
+//! *A stored verdict is current while four things match*):
 //!
 //! 1. the design subjects, `spec.md`, `plan.md`, `data-model.md` and each
 //!    scenario, digest as the record's `analyzed-digest` entries for them say;
-//! 2. the rule file the rule lives in digests as the record's `rule-digest`
+//! 2. the set of rule files loaded now is the set the record's `rule-digest`
+//!    names, so a file added or removed makes no verdict reusable
+//!    (`BE-CACHE-002`);
+//! 3. the rule file the rule lives in digests as the record's `rule-digest`
 //!    entry for it says (a Statement or Verification edit moves it);
-//! 3. the rule was judged: the record's `unjudged-rules` does not list it.
+//! 4. the rule was judged: the record's `unjudged-rules` does not list it.
 //!
 //! A rule that did not fire has no verdict to be current, so a current rule is
 //! one of three things, [`Currency`]: not fired, fired (with its verdict), or
@@ -128,6 +131,11 @@ pub(crate) enum NoReuse {
     /// A design subject changed, was added or was removed, or one could not
     /// be read.
     SubjectsChanged,
+    /// The rule files loaded now are not the set the record's `rule-digest`
+    /// names: a file added or removed. A verdict is current only for the set
+    /// it was judged under (`BE-CACHE-002`), so none is reusable; a file whose
+    /// content alone changed keeps the per-file rule.
+    RuleFilesChanged,
     /// The record does not parse. Distinct from holding no verdicts: the
     /// run judges every rule, and says why.
     RecordUnreadable(String),
@@ -139,6 +147,7 @@ impl NoReuse {
         match self {
             Self::NoPriorVerdicts => "no-prior-verdicts",
             Self::SubjectsChanged => "subjects-changed",
+            Self::RuleFilesChanged => "rule-files-changed",
             Self::RecordUnreadable(_) => "record-unreadable",
         }
     }
@@ -222,6 +231,13 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
     }
     if !design_subjects_match(feature_dir, &prior) {
         return unreusable(rules, NoReuse::SubjectsChanged);
+    }
+    let loaded_now: std::collections::BTreeSet<&str> =
+        files.iter().map(|file| file.name.as_str()).collect();
+    let judged_under: std::collections::BTreeSet<&str> =
+        prior.rule_digest.keys().map(String::as_str).collect();
+    if loaded_now != judged_under {
+        return unreusable(rules, NoReuse::RuleFilesChanged);
     }
     // A rule is current when its own file is, so a rule defined in two files
     // is current only when both are.
@@ -523,10 +539,43 @@ mod tests {
         ));
         record(tmp.path(), &before, "");
         let standing = standing(tmp.path(), &after);
+        assert_eq!(standing.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(
             standing.judge().map(|r| r.id.as_str()).collect::<Vec<_>>(),
-            ["TS-NEW-001"]
+            ["TS-MUST-001", "TS-MUST-002", "TS-SHOULD-001", "TS-NEW-001"],
+            "a file added since the record makes no verdict reusable"
         );
+    }
+
+    /// A verdict is current only for the rule-file set it was judged under:
+    /// a file added or removed makes none reusable, and the unchanged set
+    /// still reuses (`BE-CACHE-002`).
+    #[test]
+    fn a_changed_rule_file_set_makes_no_verdict_reusable() {
+        let tmp = feature();
+        let before = files(MUST_RULES, SHOULD_RULES);
+        record(tmp.path(), &before, ONE_FIRED);
+
+        let same = standing(tmp.path(), &before);
+        assert_eq!(same.no_reuse, None);
+        assert_eq!(same.reusable().count(), 1);
+        assert_eq!(same.judge().count(), 0);
+
+        let mut added = before.clone();
+        added.push(LoadedRuleFile::read("c-cross.md", "No rules here.\n"));
+        let added = standing(tmp.path(), &added);
+        assert_eq!(added.no_reuse, Some(NoReuse::RuleFilesChanged));
+        assert_eq!(
+            added.no_reuse.as_ref().unwrap().code(),
+            "rule-files-changed"
+        );
+        assert_eq!(added.reusable().count(), 0);
+        assert!(all_stale(&added));
+
+        let removed = standing(tmp.path(), &before[..1]);
+        assert_eq!(removed.no_reuse, Some(NoReuse::RuleFilesChanged));
+        assert_eq!(removed.reusable().count(), 0);
+        assert!(all_stale(&removed));
     }
 
     /// A stored verdict naming a rule no loaded file defines is dropped: it
@@ -538,6 +587,7 @@ mod tests {
         record(tmp.path(), &before, ONE_FIRED);
         let only_should = vec![before[1].clone()];
         let standing = standing(tmp.path(), &only_should);
+        assert_eq!(standing.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(standing.currency("TS-MUST-001"), None);
         assert_eq!(standing.reusable().count(), 0);
         assert_eq!(standing.rules().len(), 1);

@@ -866,7 +866,10 @@ mod tests {
         .unwrap();
         assert!(measured_in(&dir).is_err(), "the measured entry halts here");
 
-        crate::primitives::write_analysis::run(
+        // The record is written, then its result is bounded to the read size,
+        // which does not parse here and halts the bounding, as it halts every
+        // bounded result.
+        let halted = crate::primitives::write_analysis::run(
             &crate::schema::primitives::WriteAnalysisArgs {
                 feature: "055-x".into(),
                 analyzed_at: "2026-10-29T00:00:00Z".into(),
@@ -874,8 +877,11 @@ mod tests {
                 ..Default::default()
             },
             dir.path(),
-        )
-        .unwrap();
+        );
+        assert!(
+            matches!(halted, Err(PrimitiveError::InvalidReadSize { .. })),
+            "{halted:?}"
+        );
         let analysis = fs::read_to_string(feature.join("analysis.md")).unwrap();
         assert!(
             !analysis.contains("constitution-registry-unreadable"),

@@ -697,9 +697,10 @@ fn passing_notices(
     }
 }
 
-/// Gate checks 11, 12 and 13 — the analyze record in `analysis.md`: a completed analysis,
-/// whose findings do not hold the spec out of `done`, still describing the
-/// current artifacts.
+/// Gate checks 11, 12 and 13 — the analyze record in `analysis.md`: a completed analysis
+/// (11), whose findings do not hold the spec out of `done` (12), still describing the
+/// current artifacts and naming no rule it left unjudged (13, which holds both
+/// `analyze-stale` and then `unjudged-rules`, as 066's data model numbers them).
 ///
 /// Ordered after every `review:` check because the pipeline is
 /// `review → analyze → done`. A spec whose review is missing or failing has
@@ -748,7 +749,7 @@ fn analyze_gate_block(
 
     if !analyze.blocking {
         // Check 13 last: it is the weakest of the three claims. The others say the analysis is missing or failing;
-        // this one says a passing analysis is out of date.
+        // this one says a passing analysis is out of date, or left a rule unjudged.
         let freshness =
             crate::primitives::analyze_subjects::analyze_freshness(repo, rel_dir, Some(analyze));
         return match stale_analyze_block(&freshness, project)
@@ -813,6 +814,9 @@ fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
 /// loaded rule in `unjudged-rules` (spec 082). An unjudged rule is an obligation
 /// nobody has verified, and the next analysis judges only those rules, since a
 /// current verdict is reused. A record with no such field lists none.
+///
+/// The message shows at most three names (`render_paths`); the guidance says
+/// where the rest are.
 fn unjudged_rules_block(analyze: &AnalyzeBlock, project: &str) -> Option<Verdict> {
     if analyze.unjudged_rules.is_empty() {
         return None;
@@ -826,7 +830,9 @@ fn unjudged_rules_block(analyze: &AnalyzeBlock, project: &str) -> Option<Verdict
             render_paths(&analyze.unjudged_rules)
         )),
         guidance: Some(format!(
-            "Run /{project}:analyze, which judges only these rules now that current verdicts are reused."
+            "Run /{project}:analyze, which judges only these rules now that current verdicts are reused. \
+             The record's `unjudged-rules` in {} holds every one, the message shows at most three.",
+            crate::primitives::ANALYSIS_RECORD_FILE
         )),
         violations: vec![],
         cross_spec_impact: vec![],
@@ -1856,6 +1862,10 @@ mod tests {
         assert!(message.contains("TS-MUST-001, TS-MUST-002"), "{message}");
         let guidance = result.guidance.as_deref().unwrap();
         assert!(guidance.contains("/ductus:analyze"), "{guidance}");
+        assert!(
+            guidance.contains("`unjudged-rules` in analysis.md holds every one"),
+            "the block names where the full list is: {guidance}"
+        );
     }
 
     /// The other direction: an analysis with no `unjudged-rules` field, one from
@@ -2425,7 +2435,7 @@ mod tests {
         assert!(!guidance.contains("no reviewed-digest"), "{guidance}");
     }
 
-    // --- gate check 13: analyze staleness -----------------------------------
+    // --- gate check 13: analyze staleness (and unjudged rules, below) -----------------------------------
     //
     // The *comparison* is tested in `crate::primitives::analyze_subjects` —
     // subject-set membership, the `analyze:`-block exclusion, deleted and

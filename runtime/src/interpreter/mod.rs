@@ -568,6 +568,8 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         }
         for rule in asked {
             let asked_tier = rule.severity;
+            let mixed =
+                crate::primitives::rule_sections::statement_carries_both_tiers(&rule.statement);
             let seeded = serde_json::to_value(&rule).map_err(std::io::Error::other)?;
             self.context
                 .insert(payload::ASSESSED_RULE_KEY.into(), seeded);
@@ -583,7 +585,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 Err(outcome) => return Ok(Some(outcome)),
             };
             if let Some(tally) = &mut self.analyze_tally {
-                tally.record_assessment(&rule.id, asked_tier, &response);
+                tally.record_assessment(&rule.id, asked_tier, mixed, &response);
             }
             self.accept_response(number, ASSESS_SPEC_QUALITY, response)?;
         }
@@ -2287,6 +2289,46 @@ mod tests {
         );
         assert!(
             analysis.contains("  rule-file-unreadable: 1\n"),
+            "{analysis}"
+        );
+    }
+
+    /// A single-tier rule's failure counts in the rule's own tier, whatever the
+    /// host labels it: a MUST-only rule labelled `should` is blocking, a
+    /// SHOULD-only rule labelled `must` is advisory, and the walk still writes
+    /// its record instead of aborting on `write-analysis`' refusal of a tier
+    /// the rule cannot fail in (`TS-BOTH-001`, carrying both, keeps its label).
+    #[test]
+    fn an_exec_walk_counts_a_single_tier_rules_finding_in_the_rules_own_tier() {
+        let repo = analyze_repo(Some(EVERY_KIND_OF_RULE));
+        let procedure = analyze_procedure(vec![assess_tier(11, "MUST"), assess_tier(12, "SHOULD")]);
+        let responses = [
+            llm_response(1, &failed_with("should", "TS-MUST-001")),
+            llm_response(2, &failed_with("should", "TS-BOTH-001")),
+            llm_response(3, &failed_with("must", "TS-SHOULD-001")),
+        ]
+        .concat();
+        let (outcome, _) = walk_analyze(
+            &procedure,
+            repo.path(),
+            Some(&["framework/rules/quality-cross.md"]),
+            &responses,
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let analysis =
+            std::fs::read_to_string(repo.path().join("specs/001-x/analysis.md")).unwrap();
+        assert!(analysis.contains("\nblocking-findings: 1\n"), "{analysis}");
+        assert!(analysis.contains("\nadvisory: 2\n"), "{analysis}");
+        assert!(
+            analysis.contains("TS-MUST-001: {verdict: finding, tier: must"),
+            "{analysis}"
+        );
+        assert!(
+            analysis.contains("TS-SHOULD-001: {verdict: finding, tier: should"),
+            "{analysis}"
+        );
+        assert!(
+            analysis.contains("TS-BOTH-001: {verdict: finding, tier: should"),
             "{analysis}"
         );
     }

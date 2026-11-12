@@ -382,8 +382,10 @@ pub enum RuleVerdict {
         /// `<path>#<Heading>` within the feature directory.
         cite: String,
     },
-    /// The rule's trigger fires and the spec does not meet it. The rule's tier
-    /// is not stored: it follows from the rule text the file's digest covers.
+    /// The rule's trigger fires and the spec does not meet it. The tier the
+    /// finding was counted in is stored, as `tier`, and it is the one a later
+    /// run reports and floors it in, not the tier the rule's current text
+    /// states.
     Finding {
         /// The tier the finding was counted in: `must` is a Blocking finding
         /// and `should` an Advisory one. It is the finding's own severity, as
@@ -543,7 +545,8 @@ pub struct AnalyzeBlock {
     ///   rules steps 11 and 12 did not ask about — no Verification, or no
     ///   RFC 2119 keyword to take a tier from — and, on the exec path, a
     ///   step that loaded no rule or named no tier), `rule-file-unreadable`
-    ///   (rule files those steps could not read), and
+    ///   (rule files those steps could not read), `unclassified` (a total the
+    ///   caller passed with no breakdown, spec 082), and
     ///   `references-not-checked`, `applicable-rules-not-checked`,
     ///   `grounding-not-checked`, `integrity-not-checked`,
     ///   `decision-reasons-not-checked` (the host detection an exec walk never
@@ -717,13 +720,16 @@ pub struct DiscoverRuleFilesResult {
 }
 
 /// The stored rule verdicts a `discover-rule-files` call with a `feature`
-/// reports (spec 082). A rule in neither list is current and did not fire.
+/// reports (spec 082). A rule in neither list is current and did not fire,
+/// unless its file could not be read: those rules are unknown, and their
+/// files are named in the result's `unreadable`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RuleVerdictsBlock {
     /// Why nothing is reusable, when nothing is: `no-prior-verdicts`,
-    /// `subjects-changed` or `record-unreadable`. Then `judge` holds every
-    /// assessable rule.
+    /// `subjects-changed`, `rule-files-changed` (the rule files loaded are not
+    /// the set the record's `rule-digest` names) or `record-unreadable`. Then
+    /// `judge` holds every assessable rule.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     /// Entries in `reusable`, in either form.
@@ -746,8 +752,9 @@ pub struct RuleVerdictsBlock {
 pub struct ReusableVerdict {
     /// The rule's ID.
     pub id: String,
-    /// The stored verdict: `verdict` with its `cite`, or its `tier`, `at`
-    /// and `message`.
+    /// The stored verdict: `verdict` with its `cite` (`addressed`), or with its
+    /// `tier`, `at` and `message` (`finding`); `tier` is carried only by a
+    /// `finding`.
     #[serde(flatten)]
     pub verdict: RuleVerdict,
 }
@@ -1916,7 +1923,8 @@ pub struct WriteAnalysisArgs {
     pub decided_by_json: Option<String>,
     /// This run's newly judged fired rules, each with its verdict, keyed by
     /// rule ID (spec 082): `addressed` with a `cite` naming the design
-    /// subject and heading that addresses it, or `finding` with its `at` and
+    /// subject and heading that addresses it, or `finding` with its `tier`
+    /// (required: `must` or `should`, the tier it was counted in), `at` and
     /// `message`. A rule judged and not fired has no entry. Each key must name
     /// an assessable loaded rule. An `addressed` verdict whose `cite` does not
     /// resolve is not stored: the rule is recorded among those left unjudged.
@@ -1987,8 +1995,22 @@ pub struct WriteAnalysisResult {
     /// the same design subjects and rule text, was not fired or addressed
     /// (spec 082). Advisory: it holds nothing, and its finding counts in its
     /// own tier as any finding does.
+    ///
+    /// Absent when there are none, and past `[artifacts] read-size-bytes`
+    /// absent with the list in the file `lists-file` names (`BE-PAYLOAD-001`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub contradictions: Vec<RuleContradiction>,
+    /// Entries in `contradictions`, in either form.
+    #[serde(default)]
+    pub contradictions_count: usize,
+    /// Where `contradictions` is: in this result, or, past the read size, in
+    /// the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding `contradictions` whole, from the
+    /// project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// The `dispositions:` map actually written.
     pub dispositions: Dispositions,
 }

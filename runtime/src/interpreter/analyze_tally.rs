@@ -24,6 +24,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
+use crate::primitives::write_analysis::{
+    REASON_RULE_ASSESSMENTS_NOT_CHECKED, REASON_RULE_FILE_UNREADABLE,
+};
 use crate::schema::primitives::{FindingTier, RuleVerdict};
 use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
@@ -212,8 +215,9 @@ impl AnalyzeTally {
     /// A rule whose trigger does not fire is answered `passed: true` and
     /// counts in no tier.
     ///
-    /// The tier is the finding's own when it names MUST or SHOULD, and
-    /// otherwise `asked`, the tier of the rule the walker asked about, which
+    /// The tier is the finding's own when it names MUST or SHOULD and `mixed`
+    /// holds (the rule's Statement carries both MUST and SHOULD), otherwise
+    /// `asked`, the tier of the rule the walker asked about, which
     /// its Statement states (spec 060): a failure the host reported without a
     /// finding, or with a finding naming `info` or the empty tier, still
     /// failed, and dropping it would record the rule as passed. The finding's
@@ -225,7 +229,13 @@ impl AnalyzeTally {
     /// `addressed-by` is `addressed` with that citation, a plain pass is a rule
     /// that did not fire and leaves no verdict, and a failure is a `finding`
     /// at the section its finding names.
-    pub(crate) fn record_assessment(&mut self, rule: &str, asked: RuleSeverity, response: &Value) {
+    pub(crate) fn record_assessment(
+        &mut self,
+        rule: &str,
+        asked: RuleSeverity,
+        mixed: bool,
+        response: &Value,
+    ) {
         self.judged.insert(rule.to_string());
         if response.get("passed") == Some(&Value::Bool(true)) {
             let cited = response
@@ -244,10 +254,13 @@ impl AnalyzeTally {
             return;
         }
         // The tier the finding is counted in: its own severity when it names
-        // MUST or SHOULD, else the asked rule's (spec 060), stored on the
-        // verdict so a later run reports and floors it in that tier.
+        // MUST or SHOULD and the rule's Statement carries both, else the asked
+        // rule's (spec 060), stored on the verdict so a later run reports and
+        // floors it in that tier. A single-tier rule can fail only in its own
+        // tier: a label cannot move a MUST failure to advisory, and
+        // `write-analysis` refuses a finding in a tier its rule cannot fail in.
         let tier = match rule_tier(response, "/finding/severity") {
-            Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) => tier,
+            Some(tier @ (RuleSeverity::Must | RuleSeverity::Should)) if mixed => tier,
             _ => asked,
         };
         let counted = match tier {
@@ -298,8 +311,8 @@ impl AnalyzeTally {
     /// Verification or no RFC 2119 keyword under
     /// `rule-assessments-not-checked`.
     pub(crate) fn record_rule_set(&mut self, unreadable_files: u32, unassessable: u32) {
-        self.record_unexamined("rule-file-unreadable", unreadable_files);
-        self.record_unexamined("rule-assessments-not-checked", unassessable);
+        self.record_unexamined(REASON_RULE_FILE_UNREADABLE, unreadable_files);
+        self.record_unexamined(REASON_RULE_ASSESSMENTS_NOT_CHECKED, unassessable);
     }
 
     /// Record an assessment step that asked the host about no rule because it
@@ -307,7 +320,7 @@ impl AnalyzeTally {
     /// names no MUST or SHOULD tier to select rules by. Either way the step
     /// examined nothing, and its record must not read as clean.
     pub(crate) fn record_step_asking_nothing(&mut self) {
-        self.record_unexamined("rule-assessments-not-checked", 1);
+        self.record_unexamined(REASON_RULE_ASSESSMENTS_NOT_CHECKED, 1);
     }
 
     /// Bind the tally as `write-analysis`' tier arguments, over any the context
@@ -475,16 +488,19 @@ mod tests {
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": false, "finding": { "severity": "must" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
+            true,
             &json!({ "passed": false, "finding": { "severity": "should" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": true }),
         );
 
@@ -752,20 +768,46 @@ mod tests {
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
+            true,
             &json!({ "passed": false, "finding": { "severity": "MUST" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": false, "finding": { "severity": "Should" } }),
         );
         let failed = json!({ "passed": false });
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, true, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, true, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, true, &failed);
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 2);
         assert_eq!(bindings["advisory"], 2);
+    }
+
+    /// A single-tier rule (`mixed` false) counts a finding in the rule's own
+    /// tier whatever the host labelled it; a mixed rule keeps the host's label.
+    #[test]
+    fn a_single_tier_rule_counts_in_its_own_tier_and_a_mixed_rule_keeps_the_label() {
+        let mut tally = AnalyzeTally::new();
+        let should = json!({ "passed": false, "finding": { "severity": "should" } });
+        let must = json!({ "passed": false, "finding": { "severity": "must" } });
+        tally.record_assessment("TS-MUST-001", RuleSeverity::Must, false, &should);
+        tally.record_assessment("TS-SHOULD-001", RuleSeverity::Should, false, &must);
+        let bindings = bound(&tally);
+        assert_eq!(bindings["blocking-findings"], 1);
+        assert_eq!(bindings["advisory"], 1);
+        assert_eq!(
+            tally.verdicts["TS-MUST-001"],
+            RuleVerdict::Finding {
+                tier: FindingTier::Must,
+                at: "spec.md".into(),
+                message: "the host reported the rule failed and gave no finding".into(),
+            }
+        );
+        tally.record_assessment("TS-BOTH-001", RuleSeverity::Must, true, &should);
+        assert_eq!(bound(&tally)["advisory"], 2);
     }
 
     /// A failure whose finding names no analyze tier — `info`, or the empty
@@ -778,11 +820,13 @@ mod tests {
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": false, "finding": { "severity": "info" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
+            true,
             &json!({ "passed": false, "finding": { "severity": "" } }),
         );
         let bindings = bound(&tally);
@@ -799,11 +843,13 @@ mod tests {
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": true }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
+            true,
             &json!({ "passed": true }),
         );
         let bindings = bound(&tally);
@@ -863,20 +909,28 @@ mod tests {
     #[test]
     fn each_assessment_leaves_its_verdict_and_judges_its_rule() {
         let mut tally = AnalyzeTally::new();
-        tally.record_assessment("TS-A-001", RuleSeverity::Must, &json!({ "passed": true }));
+        tally.record_assessment(
+            "TS-A-001",
+            RuleSeverity::Must,
+            true,
+            &json!({ "passed": true }),
+        );
         tally.record_assessment(
             "TS-A-002",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": true, "addressed-by": " plan.md#Observability " }),
         );
         tally.record_assessment(
             "TS-A-003",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": true, "addressed-by": "  " }),
         );
         tally.record_assessment(
             "TS-A-004",
             RuleSeverity::Must,
+            true,
             &json!({ "passed": false, "finding": {
                 "severity": "must", "rule-id": "TS-A-004",
                 "location": { "section": "Goal", "line": 3 }, "message": "no owner" } }),
@@ -884,6 +938,7 @@ mod tests {
         tally.record_assessment(
             "TS-A-005",
             RuleSeverity::Should,
+            true,
             &json!({ "passed": false }),
         );
         let bindings = bound(&tally);

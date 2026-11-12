@@ -59,10 +59,26 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
-    Dispositions, FindingTier, RuleContradiction, RuleVerdict, WriteAnalysisArgs,
+    Dispositions, FindingTier, ListsForm, RuleContradiction, RuleVerdict, WriteAnalysisArgs,
     WriteAnalysisResult,
 };
 use crate::schema::severity::RuleSeverity;
+
+/// The `unexamined-by-reason` key for each assessable rule left unjudged,
+/// written by this primitive from the loaded rule files and by the exec
+/// walker's tally for a rule or step it could not bring to an assessment
+/// (`CFG-CONST-001`: one definition for a key two modules write).
+pub(crate) const REASON_RULE_ASSESSMENTS_NOT_CHECKED: &str = "rule-assessments-not-checked";
+
+/// The key for each rule file the runtime could not read, written here and by
+/// the exec walker's tally.
+pub(crate) const REASON_RULE_FILE_UNREADABLE: &str = "rule-file-unreadable";
+
+/// The key a caller's bare `unexamined` total is recorded under when it names
+/// no breakdown, so the total stays the breakdown's sum (066's data model:
+/// the total and its parts cannot disagree) and one host input writes one
+/// record shape.
+pub(crate) const REASON_UNCLASSIFIED: &str = "unclassified";
 
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
 /// add to its spec (spec 079).
@@ -166,6 +182,10 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // frontmatter does not parse, or never closes, is refused: its
     // `decisions:` list cannot be read, and writing over it would drop
     // decisions nobody can see (spec 058).
+    // A prior record whose frontmatter parses but whose rule fields alone do
+    // not is not refused: `rule_verdicts::standing` reads it as
+    // `record-unreadable`, so every rule is judged and the record is
+    // overwritten (spec 082).
     let analysis_path = feature_dir.join(crate::primitives::ANALYSIS_RECORD_FILE);
     let replaced = analysis_path.is_file();
     let mut merged = decisions::merge(
@@ -180,7 +200,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // The breakdown is the authority when supplied: a total a caller can
     // contradict is a total that will eventually be contradicted, which is
     // the same reason `blocking` is derived rather than accepted.
-    let by_reason: BTreeMap<String, u32> =
+    let mut by_reason: BTreeMap<String, u32> =
         args.unexamined_by_reason
             .iter()
             .fold(BTreeMap::new(), |mut acc, (reason, count)| {
@@ -189,14 +209,107 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
                 *acc.entry(single_line(reason)).or_default() += *count;
                 acc
             });
+    // A bare total names no breakdown, so it is recorded under its own
+    // reason, before any derived entry joins it: `unexamined` is then always
+    // the breakdown's sum, and a total a caller supplied is never dropped
+    // when a derived reason appears beside it (`QUAL-CLAIM-001`).
+    if by_reason.is_empty() && args.unexamined > 0 {
+        by_reason.insert(REASON_UNCLASSIFIED.to_string(), args.unexamined);
+    }
+    count_constitution_gaps(&mut by_reason, repo);
+    // The rule assessments, derived from the loaded rule files, the prior
+    // record and what the host judged, for the same reason: a caller that had
+    // to name the rules it left unjudged could leave out the ones it skipped
+    // (spec 082, AC2, `QUAL-CLAIM-001`). Both counts land in the breakdown,
+    // so the total cannot contradict the list.
+    let rules = derive_rule_fields(args, repo, &feature_dir)?;
+    count_rule_gaps(&mut by_reason, &rules);
+    let by_reason = by_reason;
+
+    let unexamined: u32 = by_reason.values().copied().sum();
+    // The digest of what this run examined, taken here rather than accepted
+    // as an argument. `/{project}:analyze` is read-only, so the subjects are
+    // byte-identical to the ones its passes read moments ago — and deriving it
+    // means no caller can record a digest it did not take, the same discipline
+    // that derives `blocking` and sums `unexamined` from its breakdown. It
+    // also guarantees this digest and the one the gate recomputes come from
+    // one function, which is what makes the two surfaces agree.
+    let subjects = crate::primitives::analyze_subjects::subject_digest(
+        &feature_dir,
+        crate::primitives::analyze_subjects::is_analyze_subject,
+    );
+    // The artifact is written on every run it is not refused — clean,
+    // empty-scope, blocking alike. A later gate reads its absence as "never
+    // analyzed" (spec 057 AC5), so a run that declined to write because it had
+    // nothing to report would make "no analysis" and "a clean analysis" the
+    // same state on disk. That is the byte-identical failure `write-analysis`
+    // was built to end, one level out. The refusals are the ones above: a spec
+    // or a prior record whose frontmatter this run cannot read, or a rule directory
+    // it cannot list.
+    let report = render_analysis(
+        args,
+        &Derived {
+            blocking,
+            unexamined,
+            dispositions,
+            gating,
+        },
+        &by_reason,
+        &subjects,
+        &rules.fields,
+        &merged,
+    );
+    // The record is written first: its absence is what a later gate reads as
+    // "never analyzed", so a read size that does not parse, which halts the
+    // bounding below as it halts every bounded result, must not suppress it.
+    write_atomic(&analysis_path, &report)?;
+    bounded(
+        repo,
+        &args.feature,
+        WriteAnalysisResult {
+            spec_path: rel_path(&spec_path, repo),
+            blocking,
+            unexamined,
+            replaced,
+            contradictions: rules.fields.contradictions,
+            dispositions,
+            ..WriteAnalysisResult::default()
+        },
+    )
+}
+
+/// Bound `result` to one read (`BE-PAYLOAD-001`): `contradictions` inline
+/// while the result fits `[artifacts] read-size-bytes`, and past it in the
+/// file `lists-file` names, with `contradictions-count` inline in both forms,
+/// as `read-re-read` bounds its findings. An empty list stays absent inline,
+/// as before the bound, so a result with none reads as it always did.
+fn bounded(
+    repo: &Path,
+    feature: &str,
+    mut result: WriteAnalysisResult,
+) -> Result<WriteAnalysisResult> {
+    result.contradictions_count = result.contradictions.len();
+    let lists = serde_json::json!({ "contradictions": &result.contradictions });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "write-analysis", feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.contradictions = Vec::new();
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Add the shared constitutions this run could not read to the unexamined
+/// breakdown.
+fn count_constitution_gaps(by_reason: &mut BTreeMap<String, u32>, repo: &Path) {
     // A registered shared constitution this run could not read is an unexamined
     // *input* to the analysis, not an unexamined target, but it lands in the same
     // breakdown because it makes the same claim false: that everything bearing on
     // the verdict was looked at. Derived here rather than accepted as an argument,
-    // for the reason the comment above gives — a caller that had to supply it
+    // for the reason `run`'s breakdown comment gives — a caller that had to supply it
     // could omit it, and `QUAL-CLAIM-001` exists precisely to stop a clean result
     // standing in for an unexamined one (spec 055, AC8).
-    let mut by_reason = by_reason;
     // Deliberately NOT `?`. This primitive's contract is that it writes a
     // record on every run whose config parses, because the record's
     // *absence* is what a later gate reads as "never analyzed" — so a
@@ -220,61 +333,6 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
                 .or_default() += 1;
         }
     }
-    // The rule assessments, derived from the loaded rule files, the prior
-    // record and what the host judged, for the same reason: a caller that had
-    // to name the rules it left unjudged could leave out the ones it skipped
-    // (spec 082, AC2, `QUAL-CLAIM-001`). Both counts land in the breakdown,
-    // so the total cannot contradict the list.
-    let rules = derive_rule_fields(args, repo, &feature_dir)?;
-    count_rule_gaps(&mut by_reason, &rules);
-    let by_reason = by_reason;
-
-    let unexamined = if by_reason.is_empty() {
-        args.unexamined
-    } else {
-        by_reason.values().copied().sum()
-    };
-    // The digest of what this run examined, taken here rather than accepted
-    // as an argument. `/{project}:analyze` is read-only, so the subjects are
-    // byte-identical to the ones its passes read moments ago — and deriving it
-    // means no caller can record a digest it did not take, the same discipline
-    // that derives `blocking` and sums `unexamined` from its breakdown. It
-    // also guarantees this digest and the one the gate recomputes come from
-    // one function, which is what makes the two surfaces agree.
-    let subjects = crate::primitives::analyze_subjects::subject_digest(
-        &feature_dir,
-        crate::primitives::analyze_subjects::is_analyze_subject,
-    );
-    // The artifact is written on every run it is not refused — clean,
-    // empty-scope, blocking alike. A later gate reads its absence as "never
-    // analyzed" (spec 057 AC5), so a run that declined to write because it had
-    // nothing to report would make "no analysis" and "a clean analysis" the
-    // same state on disk. That is the byte-identical failure `write-analysis`
-    // was built to end, one level out. The refusals are the ones above: a spec
-    // or a prior record this run cannot read.
-    let report = render_analysis(
-        args,
-        &Derived {
-            blocking,
-            unexamined,
-            dispositions,
-            gating,
-        },
-        &by_reason,
-        &subjects,
-        &rules.fields,
-        &merged,
-    );
-    write_atomic(&analysis_path, &report)?;
-
-    Ok(WriteAnalysisResult {
-        spec_path: rel_path(&spec_path, repo),
-        blocking,
-        unexamined,
-        replaced,
-        contradictions: rules.fields.contradictions,
-        dispositions,
-    })
 }
 
 /// A validation failure naming the offending argument.
@@ -520,12 +578,12 @@ struct RuleFields {
 fn count_rule_gaps(by_reason: &mut BTreeMap<String, u32>, rules: &DerivedRules) {
     if !rules.fields.unjudged.is_empty() {
         *by_reason
-            .entry("rule-assessments-not-checked".to_string())
+            .entry(REASON_RULE_ASSESSMENTS_NOT_CHECKED.to_string())
             .or_default() += u32::try_from(rules.fields.unjudged.len()).unwrap_or(u32::MAX);
     }
     if rules.unreadable_files > 0 {
         let counted = by_reason
-            .entry("rule-file-unreadable".to_string())
+            .entry(REASON_RULE_FILE_UNREADABLE.to_string())
             .or_default();
         *counted = (*counted).max(rules.unreadable_files);
     }
@@ -601,12 +659,19 @@ fn check_new_verdicts(args: &WriteAnalysisArgs, standing: &rule_verdicts::Standi
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidArgument`] when a verdict names a rule no loaded
-/// file defines as assessable, when a `finding` verdict has no message, or
-/// when a tier's supplied count is below the number of `finding` verdicts of
-/// its rules: each stands for at least one live finding, and a count under
-/// that would drop a MUST failure from `blocking-findings`. The rule's tier is
-/// read from the current rule text. Reused findings are the host's to count,
-/// and the exec tally does.
+/// file defines as assessable, when a `finding` verdict has no message, when a
+/// `finding`'s `tier` is one its rule's current Statement cannot fail in (a
+/// rule carrying both MUST and SHOULD can fail in either), or when a tier's
+/// supplied count is below the number of `finding` verdicts the record holds
+/// in that tier: each stands for at least one live finding, and a count under
+/// that would drop a MUST failure from `blocking-findings`. That floor reads
+/// the tier each verdict stored, the one the finding was counted in, not the
+/// rule's current text. Reused findings are the host's to count, and the exec
+/// tally does. Also the errors of [`rule_verdicts::load_universe`]: a project
+/// config that does not parse, and a rule directory that cannot be listed,
+/// which writes no record. A prior record whose rule fields alone do not
+/// parse is no error: it reads as `record-unreadable`, every rule is judged,
+/// and the record is overwritten.
 fn derive_rule_fields(
     args: &WriteAnalysisArgs,
     repo: &Path,
@@ -660,9 +725,10 @@ fn derive_rule_fields(
             None => {}
         }
     }
-    // The tier a finding was counted in is the one it floors: a rule carrying
-    // MUST and SHOULD can fail on its SHOULD clause alone, which counts
-    // advisory whatever its Statement's tier says.
+    // The tier a finding was counted in, which its verdict stored, is the one
+    // it floors, not the rule's current text tier: a rule carrying MUST and
+    // SHOULD can fail on its SHOULD clause alone, which counts advisory
+    // whatever its Statement's tier says.
     let mut owed = [0u32; 2];
     for verdict in fields.verdicts.values() {
         if let RuleVerdict::Finding { tier, .. } = verdict {
@@ -840,7 +906,7 @@ fn render_analysis(
         "## Deferred to other specs\n\n{}\n",
         render_list(&released)
     );
-    out.push_str(&render_rule_sections(unexamined, by_reason, rules));
+    out.push_str(&render_rule_sections(by_reason, rules));
     let fixed: Vec<&AnalysisFinding> = args.findings.iter().filter(|f| !f.live).collect();
     let _ = write!(out, "## Fixed in this run\n\n{}\n", render_list(&fixed));
     out
@@ -848,12 +914,8 @@ fn render_analysis(
 
 /// The `## Contradictions` and `## Unexamined targets` sections: the second
 /// names each rule left unjudged beside the breakdown that counts them.
-fn render_rule_sections(
-    unexamined: u32,
-    by_reason: &BTreeMap<String, u32>,
-    rules: &RuleFields,
-) -> String {
-    let mut unexamined_section = render_unexamined(unexamined, by_reason);
+fn render_rule_sections(by_reason: &BTreeMap<String, u32>, rules: &RuleFields) -> String {
+    let mut unexamined_section = render_unexamined(by_reason);
     if !rules.unjudged.is_empty() {
         let _ = write!(
             unexamined_section,
@@ -1009,15 +1071,14 @@ fn plain(text: &str) -> String {
 
 /// The unexamined breakdown, or `*None — every target was examined.*`
 ///
-/// Zero with no breakdown is stated explicitly rather than left blank: a clean
+/// An empty breakdown is stated explicitly rather than left blank: a clean
 /// run with nothing skipped and a clean run with something skipped are two
 /// results, and an empty section would read as the first while meaning either.
-fn render_unexamined(unexamined: u32, by_reason: &BTreeMap<String, u32>) -> String {
-    if unexamined == 0 && by_reason.is_empty() {
-        return "*None — every target was examined.*".to_string();
-    }
+/// A nonzero total always has a breakdown (a bare one is recorded under
+/// `unclassified`), so no "total with no breakdown" state is rendered.
+fn render_unexamined(by_reason: &BTreeMap<String, u32>) -> String {
     if by_reason.is_empty() {
-        return format!("{unexamined} target(s) unexamined; no breakdown recorded.");
+        return "*None — every target was examined.*".to_string();
     }
     by_reason
         .iter()
@@ -1849,20 +1910,66 @@ mod tests {
 
     /// A fully-examined run carries no map rather than a map of zeroes.
     #[test]
-    fn an_empty_breakdown_omits_the_map_and_keeps_the_supplied_total() {
+    fn a_fully_examined_run_omits_the_map() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.unexamined, 0);
+        let spec = analysis_md(&tmp);
+        assert!(spec.contains("unexamined: 0"));
+        assert!(!spec.contains("unexamined-by-reason"));
+        assert!(
+            spec.contains("*None — every target was examined.*"),
+            "{spec}"
+        );
+    }
+
+    /// A caller's bare total is recorded under `unclassified`, so `unexamined`
+    /// stays the breakdown's sum and the total is never lost (`QUAL-CLAIM-001`).
+    #[test]
+    fn a_bare_total_is_recorded_as_unclassified() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
         let result = run(
             &WriteAnalysisArgs {
-                unexamined: 3,
+                unexamined: 5,
                 ..args()
             },
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(result.unexamined, 3);
-        let spec = analysis_md(&tmp);
-        assert!(spec.contains("unexamined: 3"));
-        assert!(!spec.contains("unexamined-by-reason"));
+        assert_eq!(result.unexamined, 5);
+        let record = written_record(&tmp);
+        assert_eq!(record.unexamined, 5);
+        assert_eq!(
+            record.unexamined_by_reason,
+            BTreeMap::from([("unclassified".to_string(), 5)])
+        );
+        assert!(analysis_md(&tmp).contains("- unclassified: 5"));
+    }
+
+    /// With derived entries beside it, the bare total is still recorded: 5
+    /// bare plus 2 unjudged rules is 7, in two reasons.
+    #[test]
+    fn a_bare_total_survives_a_derived_reason_beside_it() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        let result = run(
+            &WriteAnalysisArgs {
+                unexamined: 5,
+                ..args()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unexamined, 7);
+        let record = written_record(&tmp);
+        assert_eq!(record.unexamined, 7);
+        assert_eq!(
+            record.unexamined_by_reason,
+            BTreeMap::from([
+                ("rule-assessments-not-checked".to_string(), 2),
+                ("unclassified".to_string(), 5),
+            ])
+        );
     }
 
     /// The `QUAL-CLAIM-001` field: a clean run that could not examine
@@ -2885,6 +2992,79 @@ mod tests {
         third.blocking_findings = 3;
         let result = run(&third, tmp.path()).unwrap();
         assert_eq!(result.contradictions.len(), 0);
+    }
+
+    /// Two contradictions: rule 1 was quiet, rule 2 was addressed, and both
+    /// are judged a finding over the same subjects (`BE-PAYLOAD-001`).
+    fn contradicting_run(tmp: &TempDir) -> WriteAnalysisArgs {
+        with_rules(tmp, 2, 0);
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 0);
+        first.rule_verdicts =
+            BTreeMap::from([("TS-RULE-002".to_string(), addressed("spec.md#Behavior"))]);
+        run(&first, tmp.path()).unwrap();
+        let mut second = args();
+        second.blocking_findings = 2;
+        second.judged_rules = rule_ids(2, 0);
+        second.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), finding_verdict("was quiet")),
+            ("TS-RULE-002".to_string(), finding_verdict("was addressed")),
+        ]);
+        second
+    }
+
+    /// `contradictions` is inline while the result fits the read size, with
+    /// its count, and absent with the count zero when there are none.
+    #[test]
+    fn contradictions_within_the_read_size_are_inline_with_their_count() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let second = contradicting_run(&tmp);
+        let result = run(&second, tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.contradictions.len(), 2);
+        assert_eq!(result.contradictions_count, 2);
+        assert_eq!(result.lists_file, None);
+
+        // Rerun with nothing new judged: the verdicts carry, none contradicts.
+        let mut again = args();
+        again.blocking_findings = 2;
+        let quiet = run(&again, tmp.path()).unwrap();
+        assert_eq!(
+            (
+                quiet.form,
+                quiet.contradictions_count,
+                quiet.contradictions.len()
+            ),
+            (ListsForm::Inline, 0, 0)
+        );
+        let json = serde_json::to_value(&quiet).unwrap();
+        assert!(json.get("contradictions").is_none(), "{json}");
+    }
+
+    /// Past `[artifacts] read-size-bytes` the list is in the file `lists-file`
+    /// names, whole, with its count inline; the record is written all the same.
+    #[test]
+    fn contradictions_past_the_read_size_are_in_a_file() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let second = contradicting_run(&tmp);
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let result = run(&second, tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert_eq!(result.contradictions_count, 2);
+        assert_eq!(result.contradictions.len(), 0);
+        let file = result
+            .lists_file
+            .expect("a file-form result names its file");
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(lists["contradictions"].as_array().unwrap().len(), 2);
+        assert_eq!(lists["contradictions"][1]["earlier"], "addressed");
+        assert_eq!(written_record(&tmp).blocking_findings, 2);
     }
 
     /// A rule given a verdict is judged by that alone, listed or not.
