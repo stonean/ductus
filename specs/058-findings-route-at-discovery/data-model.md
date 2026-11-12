@@ -211,7 +211,7 @@ findings sharing a summary apart. A spent section never matches.
 | --- | --- | --- |
 | `feature` | string | Feature directory under the spec root. |
 | `record` | `review` \| `analysis` | Which record's `decisions:` to read. |
-| `fired` | list of strings | This run's finding keys (MCP only, as `process-waivers`' `fired` is). |
+| `fired` | list of strings | This run's finding keys; on the CLI, `--fired-json FILE` from a staging directory, as `process-waivers`' `fired` is (022 task 24). |
 | `restricted` | bool | The run did not evaluate every source: a review pass did not run, or an analysis could not read a target it meant to examine or could not resolve a registered shared constitution. |
 | `since` | string, optional | A review's `--since`. On the review record a decision whose key names a file still on disk that this window's scope does not hold is retained (079). |
 
