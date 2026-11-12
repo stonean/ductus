@@ -660,9 +660,14 @@ last_applied = "rule-files-relocate"
 # primitive result that grows with the corpus, which moves its lists to a
 # file past it (specs 066, 078 and 080), and by /{project}:status's view,
 # which cuts each of its blocks past it and, on the model path, names a file
-# holding the whole view (spec 080). The size, in bytes, above
+# holding the whole view (spec 080); also by /{project}:analyze's measure of
+# the four project files and by the pre-commit hook's refusal to grow one
+# already over it (specs 063, 075). The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
-# scenario) may not be read in one call by an agent's file reader; each
+# scenario) may not be read in one call by an agent's file reader; the four
+# project files (AGENTS.md, and system.md, events.md and errors.md under the
+# spec root) are held to it too, AGENTS.md among them though it loads in every
+# session rather than through a file read. Each
 # command warns on every artifact over it and names the fixes. A whole number
 # of bytes, at least 1; unset means 50000. Raise it for a host with a larger
 # read cap, lower it for a smaller one or for token-dense artifacts. Any other
