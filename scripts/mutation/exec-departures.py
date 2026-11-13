@@ -1,8 +1,8 @@
 """Mutation list for `ductus exec` analyze counting a departure entry's
 findings (spec 073, task 10): `AnalyzeTally` counts `check-departures`' findings
-in the tier each carries, in its `tier` field, and its `unexamined` entries by
-reason. Each mutation removes one of those, so a kill shows its own test holds
-it.
+in the tier each carries, in its `tier` field, and counts none of its
+`unexamined` entries, which step 4's and step 5's records already hold (task
+11). Each mutation breaks one of those, so a kill shows its own test holds it.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/exec-departures.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -19,8 +19,8 @@ MUTATIONS = [
     (
         'M1 a Blocking departure finding is not counted',
         'src/interpreter/analyze_tally.rs',
-        'Some(AnalyzeSeverity::Blocking) => self.blocking += 1,\n                        Some(AnalyzeSeverity::Advisory) => self.advisory += 1,\n                        _ => {}\n                    }\n                }\n                for skipped in items("unexamined") {',
-        'Some(AnalyzeSeverity::Blocking) => {}\n                        Some(AnalyzeSeverity::Advisory) => self.advisory += 1,\n                        _ => {}\n                    }\n                }\n                for skipped in items("unexamined") {',
+        'Some(AnalyzeSeverity::Blocking) => self.blocking += 1,\n                        Some(AnalyzeSeverity::Advisory) => self.advisory += 1,\n                        _ => {}\n                    }\n                }\n            }\n            // Step 6',
+        'Some(AnalyzeSeverity::Blocking) => {}\n                        Some(AnalyzeSeverity::Advisory) => self.advisory += 1,\n                        _ => {}\n                    }\n                }\n            }\n            // Step 6',
         'an_exec_walk_counts_a_malformed_departure_entry_as_blocking each_step_counts_in_the_tier_it_assigns',
     ),
     (
@@ -31,10 +31,10 @@ MUTATIONS = [
         'an_exec_walk_counts_a_malformed_departure_entry_as_blocking each_step_counts_in_the_tier_it_assigns',
     ),
     (
-        'M3 an unjudged departure rule or citation is not recorded unexamined',
+        'M3 a departure result\'s unexamined entries are recorded again',
         'src/interpreter/analyze_tally.rs',
-        'for skipped in items("unexamined") {\n                    if let Some(reason) = skipped.get("reason").and_then(Value::as_str) {\n                        self.record_unexamined(reason, 1);\n                    }\n                }\n            }\n            // Step 6',
-        'for skipped in items("unexamined") {\n                    let _ = skipped;\n                }\n            }\n            // Step 6',
+        '                        _ => {}\n                    }\n                }\n            }\n            // Step 6: drift',
+        '                        _ => {}\n                    }\n                }\n                for skipped in items("unexamined") {\n                    if let Some(reason) = skipped.get("reason").and_then(Value::as_str) {\n                        self.record_unexamined(reason, 1);\n                    }\n                }\n            }\n            // Step 6: drift',
         'each_step_counts_in_the_tier_it_assigns',
     ),
     (

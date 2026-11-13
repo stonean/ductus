@@ -3418,8 +3418,8 @@ pub struct DepartureFinding {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DepartureUnexamined {
-    /// `rule-not-installed`, `anchor-target-unjudgeable` or
-    /// `anchor-target-unreadable`.
+    /// `rule-not-installed`, `rule-citations-not-checked` (no rule file was
+    /// loaded), `anchor-target-unjudgeable` or `anchor-target-unreadable`.
     pub reason: String,
     /// The 1-based line of the `departs:` item for a rule, of the `cited:`
     /// text for a citation.

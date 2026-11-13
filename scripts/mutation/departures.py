@@ -306,4 +306,18 @@ MUTATIONS = [
         'if false {',
         'a_thematic_break_or_setext_underline',
     ),
+    (
+        'M43 an entry\'s rule is judged unknown with no rule file loaded',
+        'src/primitives/check_departures.rs',
+        '        if self.examined == 0 {\n            return State::NotChecked;\n        }\n',
+        '',
+        'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
+    ),
+    (
+        'M44 a retired or shipped rule keeps its own state with no rule file loaded',
+        'src/primitives/check_departures.rs',
+        'if self.examined == 0 {',
+        'if self.examined == 0 && !self.citations.contains_key(rule) {',
+        'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
+    ),
 ]

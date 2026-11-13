@@ -156,9 +156,12 @@ impl AnalyzeTally {
                 self.advisory += count("deprecated");
             }
             // Step 5.1: a departure entry's finding in the tier it carries (a
-            // `tier` field, not the `severity` the other families name), and
-            // each rule or citation it could not judge unexamined under its
-            // own reason, never a pass (spec 073).
+            // `tier` field, not the `severity` the other families name). Its
+            // `unexamined` entries are not counted: each is a target step 5
+            // (`rule-not-installed`, `rule-citations-not-checked`, which
+            // count every citation in the spec, an entry's rule included) or
+            // step 4 (`anchor-target-*`, over every `§` in the spec) already
+            // recorded, and a target counts once (spec 073).
             "check-departures" => {
                 for finding in items("findings") {
                     match finding
@@ -169,11 +172,6 @@ impl AnalyzeTally {
                         Some(AnalyzeSeverity::Blocking) => self.blocking += 1,
                         Some(AnalyzeSeverity::Advisory) => self.advisory += 1,
                         _ => {}
-                    }
-                }
-                for skipped in items("unexamined") {
-                    if let Some(reason) = skipped.get("reason").and_then(Value::as_str) {
-                        self.record_unexamined(reason, 1);
                     }
                 }
             }
@@ -466,6 +464,21 @@ mod tests {
         assert_eq!(recorded, vec![&json!(["decision-reasons-not-checked", 1])]);
     }
 
+    /// A `check-departures` result: a Blocking and an Advisory finding and one
+    /// `unexamined` entry of every reason, which steps 4 and 5 count.
+    fn departure_result() -> Value {
+        let reasons = [
+            "rule-not-installed",
+            "rule-citations-not-checked",
+            "anchor-target-unjudgeable",
+            "anchor-target-unreadable",
+        ];
+        json!({
+            "findings": [{ "tier": "blocking" }, { "tier": "advisory" }],
+            "unexamined": reasons.map(|reason| json!({ "reason": reason }))
+        })
+    }
+
     #[test]
     fn each_step_counts_in_the_tier_it_assigns() {
         let mut tally = AnalyzeTally::new();
@@ -522,14 +535,7 @@ mod tests {
             &json!({ "unfolded": [{}] }),
             &context,
         );
-        tally.record_primitive(
-            "check-departures",
-            &json!({
-                "findings": [{ "tier": "blocking" }, { "tier": "advisory" }],
-                "unexamined": [{ "reason": "rule-not-installed" }]
-            }),
-            &context,
-        );
+        tally.record_primitive("check-departures", &departure_result(), &context);
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
@@ -558,7 +564,9 @@ mod tests {
         // artifact finding + a departure finding + a MUST assessment.
         assert_eq!(bindings["blocking-findings"], 8);
         // anchors 2 + deprecated 1 + drift 1 + lint 1 + artifact 1 + orphan 1
-        // + unfolded 1 + a departure finding + a SHOULD assessment.
+        // + unfolded 1 + a departure finding + a SHOULD assessment. The
+        // departure result's four `unexamined` entries are step 4's and
+        // step 5's, counted there, so none joins the reasons below.
         assert_eq!(bindings["advisory"], 10);
         assert_eq!(
             bindings["unexamined-by-reason"],
@@ -568,8 +576,7 @@ mod tests {
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
-                ["root-absent", 2],
-                ["rule-not-installed", 1]
+                ["root-absent", 2]
             ])
         );
     }

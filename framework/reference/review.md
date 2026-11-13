@@ -486,19 +486,16 @@ not expire the waiver. Each path of a list applies, expires and is retained on
 its own, and is matched literally: a pattern such as `src/**/*.ts` names a path
 that does not exist and expires as one.
 
-**A departure the spec states needs no `--waive`.** A well-formed departure entry
-under the spec's `## Applicable Rules`, of any tier, a SHOULD's included, is a
-decision the spec already holds, so `write-review` stores one waiver for its rule
-from it, listing every file the rule fires at that no waiver holds, with the
-entry's reason and the `waived-by` and `waived-at` of the commit that introduced
-it (`unattributed`, and the run's own time, when history cannot say). The waiver
-carries `departure: true`, which lets `process-waivers` expire it, with its usual
-notice, once the spec no longer holds an entry for the rule. A hand `--waive` for
-the same rule and file stays the first claim, a rule firing nowhere stores
-nothing, and a malformed entry, or a rule a second entry names, derives no waiver:
-the result's `malformed-departures` names each as `spec.md line N: what is wrong`,
-which the review step reports. A departure is bounded by the spec's own scope: it waives only the files this review's scope holds. The grammar and
-its findings are `check-departures`' (see `ductus check-departures --help`).
+**A departure the spec states needs no `--waive`.** A well-formed departure
+entry under the spec's `## Applicable Rules`, of any tier, a SHOULD's included,
+is a decision the spec already holds: `write-review` stores one waiver for its
+rule from it, over the files in this review's scope only, and `process-waivers`
+expires it once the spec no longer holds the entry. A hand `--waive` for the
+same rule and file stays the first claim. A malformed entry, or a rule a second
+entry names, derives no waiver, and the result's `malformed-departures` names
+each: the review step reports them. The derivation, the waiver's fields and the
+entry's grammar are `write-review`'s and `check-departures`' (`ductus
+write-review --help`, `ductus check-departures --help`).
 
 ## Per-run waiver processing
 

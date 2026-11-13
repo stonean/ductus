@@ -48,8 +48,8 @@ rule-verdicts:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `entries` | list of `{rule, tier, reason, cited, decided-by, decided-at, line}` | Every well-formed entry; `tier` is the rule's, absent when the rule is not loaded |
-| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: a missing `reason`, an unknown or retired rule, a rule two entries name (Blocking); a deprecated rule, an unresolvable `cited:` (Advisory) |
-| `unexamined` | list of `{reason, line}` | A citation that could not be judged (`anchor-target-unjudgeable`, `anchor-target-unreadable`) or a rule not installed (`rule-not-installed`); never a pass |
+| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: a missing `reason`, an unknown or retired rule (only when a rule file is loaded), a rule two entries name (Blocking); a deprecated rule, an unresolvable `cited:` (Advisory) |
+| `unexamined` | list of `{reason, line}` | A citation that could not be judged (`anchor-target-unjudgeable`, `anchor-target-unreadable`), a rule not installed (`rule-not-installed`), or, with no rule file loaded, every entry's rule (`rule-citations-not-checked`, with no unknown, retired or deprecated finding); never a pass. Each repeats a target step 4 or step 5 records, so a caller counts it once |
 
 ## Review waiver marker
 

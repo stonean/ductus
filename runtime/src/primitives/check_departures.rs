@@ -6,7 +6,9 @@
 //! deprecated, not installed) is `check-rule-ids`' reading of the rule files
 //! `discover-rule-files` loads under `all`, as `/{project}:analyze` loads them;
 //! a `cited:` is judged by `resolve-anchor` against the constitution's
-//! markers. This module adds only the tiers.
+//! markers. This module adds only the tiers. With no rule file loaded
+//! nothing is known of a rule, so none is unknown, retired or deprecated:
+//! each entry's rule is unexamined as `rule-citations-not-checked`.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -78,38 +80,13 @@ pub fn run(args: &CheckDeparturesArgs, repo: &Path) -> Result<CheckDeparturesRes
     let attribution = departures::attribute(repo, &spec_rel, &names);
     let mut entries = Vec::new();
     for entry in &parsed.entries {
-        let state = rules.state(&entry.rule);
-        match state {
-            State::Unknown => found.push(finding(
-                AnalyzeSeverity::Blocking,
-                entry.line,
-                format!(
-                    "the entry departs from `{}`, which no loaded rule file defines",
-                    entry.rule
-                ),
-            )),
-            State::Retired => found.push(finding(
-                AnalyzeSeverity::Blocking,
-                entry.line,
-                format!(
-                    "the entry departs from `{}`, a rule this spec's `retired-rules:` lists as removed",
-                    entry.rule
-                ),
-            )),
-            State::Deprecated => found.push(finding(
-                AnalyzeSeverity::Advisory,
-                entry.line,
-                format!(
-                    "the entry departs from `{}`, a deprecated rule: re-point or remove it",
-                    entry.rule
-                ),
-            )),
-            State::NotInstalled => unexamined.push(DepartureUnexamined {
-                reason: "rule-not-installed".into(),
-                line: to_line(entry.line),
-            }),
-            State::Defined => {}
-        }
+        judge_rule(
+            &rules.state(&entry.rule),
+            entry,
+            &mut found,
+            &mut unexamined,
+            &finding,
+        );
         let (decided_by, decided_at) = match attribution.get(&entry.rule) {
             Some(Attribution::Attributed {
                 decided_by,
@@ -137,6 +114,52 @@ pub fn run(args: &CheckDeparturesArgs, repo: &Path) -> Result<CheckDeparturesRes
         &finding,
     )?;
     Ok(finish(entries, found, unexamined))
+}
+
+/// Raise the finding, or record the unexamined target, a rule's state calls
+/// for.
+fn judge_rule(
+    state: &State,
+    entry: &Entry,
+    found: &mut Vec<(usize, DepartureFinding)>,
+    unexamined: &mut Vec<DepartureUnexamined>,
+    finding: &impl Fn(AnalyzeSeverity, usize, String) -> (usize, DepartureFinding),
+) {
+    match state {
+        State::Unknown => found.push(finding(
+            AnalyzeSeverity::Blocking,
+            entry.line,
+            format!(
+                "the entry departs from `{}`, which no loaded rule file defines",
+                entry.rule
+            ),
+        )),
+        State::Retired => found.push(finding(
+            AnalyzeSeverity::Blocking,
+            entry.line,
+            format!(
+                "the entry departs from `{}`, a rule this spec's `retired-rules:` lists as removed",
+                entry.rule
+            ),
+        )),
+        State::Deprecated => found.push(finding(
+            AnalyzeSeverity::Advisory,
+            entry.line,
+            format!(
+                "the entry departs from `{}`, a deprecated rule: re-point or remove it",
+                entry.rule
+            ),
+        )),
+        State::NotInstalled => unexamined.push(DepartureUnexamined {
+            reason: "rule-not-installed".into(),
+            line: to_line(entry.line),
+        }),
+        State::NotChecked => unexamined.push(DepartureUnexamined {
+            reason: "rule-citations-not-checked".into(),
+            line: to_line(entry.line),
+        }),
+        State::Defined => {}
+    }
 }
 
 fn finish(
@@ -245,6 +268,9 @@ fn judge_citations(
 
 /// What a rule ID is, as `check-rule-ids` reads it against the loaded files.
 enum State {
+    /// No rule file was loaded, so nothing was checked against: the rule's
+    /// state is unknown, never a finding (`check-rule-ids`' `examined: 0`).
+    NotChecked,
     Defined,
     Deprecated,
     Retired,
@@ -254,6 +280,8 @@ enum State {
 
 /// The loaded rule files' reading of each ID a spec's entries name.
 struct RuleFacts {
+    /// How many rule files were read; `0` means every state below is blind.
+    examined: usize,
     citations: HashMap<String, RuleCitation>,
     tiers: HashMap<String, FindingTier>,
 }
@@ -293,6 +321,7 @@ impl RuleFacts {
             repo,
         )?;
         Ok(Self {
+            examined: checked.examined,
             citations: checked
                 .citations
                 .into_iter()
@@ -303,6 +332,9 @@ impl RuleFacts {
     }
 
     fn state(&self, rule: &str) -> State {
+        if self.examined == 0 {
+            return State::NotChecked;
+        }
         match self.citations.get(rule) {
             Some(c) if c.retired => State::Retired,
             Some(c) if c.not_installed => State::NotInstalled,
@@ -594,6 +626,42 @@ mod tests {
         assert_eq!(result.findings.len(), 2, "{:?}", result.findings);
         assert!(result.findings[0].message.starts_with("line 10:"));
         assert!(result.findings[1].message.starts_with("line 12:"));
+    }
+
+    /// `check-rule-ids` examines 0 files, so step 5 raises nothing and records
+    /// the citations `rule-citations-not-checked`; an entry's rule is judged
+    /// the same way, whatever its ID (unknown, listed retired, shipped), and a
+    /// structural problem is still raised.
+    #[test]
+    fn with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding() {
+        let tmp = project(
+            "retired-rules:\n  - DM-GONE-001\n",
+            "- departs: `DM-NONE-999`\n  - reason: r\n- departs: `DM-GONE-001`\n  - reason: r\n- departs: `BE-API-001`\n  - reason: r\n- departs: `DM-MUST-001`\n  - cited: §shared-exceptions\n",
+        );
+        std::fs::remove_file(tmp.path().join("specs/rules/demo-cross.md")).unwrap();
+        let result = check(&tmp);
+        // Only the entry with no `reason:` is a finding.
+        assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
+        assert!(result.findings[0].message.contains("no `reason:`"));
+        assert_eq!(
+            result.unexamined,
+            vec![
+                DepartureUnexamined {
+                    reason: "rule-citations-not-checked".into(),
+                    line: 12,
+                },
+                DepartureUnexamined {
+                    reason: "rule-citations-not-checked".into(),
+                    line: 14,
+                },
+                DepartureUnexamined {
+                    reason: "rule-citations-not-checked".into(),
+                    line: 16,
+                },
+            ]
+        );
+        assert_eq!(result.entries.len(), 3);
+        assert!(result.entries.iter().all(|e| e.tier.is_none()));
     }
 
     #[test]

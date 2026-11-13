@@ -21,8 +21,9 @@ its version and date.
   shapes are in `specs/073-decided-rule-departures-are-recorded/data-model.md`.
 - **`ductus exec` analyze counts a departure entry's findings (spec 073).**
   Step 5.1 of `/analyze` dispatches `check-departures`, and `AnalyzeTally`
-  counts its findings in the tier each carries (its `tier` field) and its
-  `unexamined` rules and citations by reason, so a malformed departure entry
+  counts its findings in the tier each carries (its `tier` field), and none of
+  its `unexamined` entries, which steps 4 and 5 already record once for the
+  whole spec, so a malformed departure entry
   is a Blocking finding in `blocking-findings`, and so in the record's
   `blocking`, instead of being dropped. The walker no longer binds the
   context's `unexamined` list to `write-analysis`' `unexamined` count, which
@@ -274,6 +275,14 @@ its version and date.
 
 ### Changed
 
+- **`check-departures` raises no rule-state finding when no rule file is loaded
+  (spec 073).** With `check-rule-ids` examining 0 files, step 5 records each
+  citation `rule-citations-not-checked` and raises nothing; `check-departures`
+  now does the same for each entry's rule, instead of a Blocking "no loaded
+  rule file defines" finding per entry. Structural findings are still raised.
+  Step 14 skips a departure entry's rule, and the `check-departures` section
+  of the analyze reference and the review reference's waiver paragraph point at
+  the compiled descriptions instead of restating them.
 - **`check-review-gate`'s and `check-artifacts`' descriptions restore what
   triggers a block and two family rules (spec 079, task 36).** The gate says
   what makes each of `not-reviewed`, `must-violations`, `not-analyzed` and
