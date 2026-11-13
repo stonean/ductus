@@ -47,9 +47,14 @@ rule-verdicts:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
+| `form` | `inline` or `file` | Where the three lists are: `file` past `[artifacts] read-size-bytes` |
+| `entries-count`, `findings-count`, `unexamined-count` | integers | Each list's length, inline in both forms, so a zero is an empty list and never an absent one |
+| `lists-file` | path | In the file form, the file under `.ductus/results/check-departures/{feature}/` holding `entries`, `findings` and `unexamined` whole |
 | `entries` | list of `{rule, tier, reason, cited, decided-by, decided-at, line}` | Every well-formed entry; `tier` is the rule's, absent when the rule is not loaded |
 | `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: no rule ID, no or an empty `reason:`, a second rule ID, another or a repeated child key, an unknown or retired rule (with no rule file loaded, only a token that is not, whole, shaped like a rule ID, which is unknown), a rule two entries name (Blocking); a deprecated rule, a `cited:` that is not exactly one `§` reference (Advisory); an unresolved reference is step 4's |
 | `unexamined` | list of `{reason, line}` | A citation that could not be judged (`anchor-target-unjudgeable`, `anchor-target-unreadable`), a rule not installed (`rule-not-installed`), or, with no rule file loaded, every entry's rule (`rule-citations-not-checked`, with no unknown, retired or deprecated finding); never a pass. Each repeats a target step 4 or step 5 records, so a caller counts it once; a token that is no rule-ID shape is still an unknown-rule finding, as step 5 records no citation for it |
+
+**Size** (BE-PAYLOAD-001). The three lists grow with a spec's entries, so the result is bounded as `process-decisions`' is (066's data model, its **Size**): while it fits `[artifacts] read-size-bytes` it is inline, and past it `form` is `"file"` and none of the lists is inline. The file form's own size is 192 bytes of compact JSON plus the feature directory's name and each count digit past the first (measured on the built binary: 197 bytes for `001-x`, each count one digit). Consumers read the lists from `lists-file` in the file form: step 5.1 of `framework/commands/analyze.md` and, under `ductus exec`, the walker, which restores them before `AnalyzeTally` reads the result.
 
 ## Review waiver marker
 

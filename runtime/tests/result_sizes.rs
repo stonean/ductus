@@ -70,7 +70,16 @@ enum Prep {
     /// The chain closed into one cycle: spec 1 links the last spec, so the
     /// cycle runs through every spec.
     Cycle,
+    /// The subject spec holding [`DEPARTURE_ENTRIES`] well-formed departure
+    /// entries under `## Applicable Rules`, the corpus subject holding none:
+    /// `check-departures`' lists grow with a spec's entries, and a corpus that
+    /// has none measures an empty result (BE-PAYLOAD-001).
+    Departures,
 }
+
+/// How many departure entries [`Prep::Departures`] writes: enough that the
+/// result's three lists pass the default read size of 50,000 bytes.
+const DEPARTURE_ENTRIES: usize = 300;
 
 /// The read size the growth columns are measured at: past any result here, so
 /// no bounded result moves its lists, and growth is a fact about what each
@@ -258,6 +267,11 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             ("every spec drifted", json!({}), Prep::Drift),
             ("a cycle through every spec", json!({}), Prep::Cycle),
         ],
+        "check-departures" => vec![(
+            "the subject holding entries past the read size",
+            json!({"feature": f}),
+            Prep::Departures,
+        )],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),
@@ -386,6 +400,7 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         Prep::HelpCopy => install_help_copy(copy.path()),
         Prep::Drift => drift_every_spec(copy.path()),
         Prep::Cycle => close_the_chain(copy.path()),
+        Prep::Departures => write_departure_entries(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -438,6 +453,22 @@ fn drift_every_spec(root: &Path) {
         assert!(text.contains(&from), "{} declares {from}", path.display());
         std::fs::write(&path, text.replace(&from, "dependencies: []")).unwrap();
     }
+}
+
+/// Append [`DEPARTURE_ENTRIES`] well-formed departure entries to the subject
+/// spec, each departing from a rule no loaded file defines, so each is also a
+/// finding.
+fn write_departure_entries(root: &Path) {
+    let path = root.join("specs").join(SUBJECT).join("spec.md");
+    let mut text = std::fs::read_to_string(&path).unwrap();
+    text.push_str("\n## Applicable Rules\n\n");
+    for i in 0..DEPARTURE_ENTRIES {
+        let _ = writeln!(
+            text,
+            "- departs: `CORPUS-DEPART-{i:03}`\n  - reason: the corpus entry {i} departs from its rule"
+        );
+    }
+    std::fs::write(&path, text).unwrap();
 }
 
 /// Link spec 1 to the last spec, in its body and its frontmatter alike, so

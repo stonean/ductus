@@ -2390,6 +2390,41 @@ mod tests {
         assert!(record.contains("\nblocking-findings: 1\n"), "{record}");
     }
 
+    /// BE-PAYLOAD-001 under `ductus exec`: with `[artifacts] read-size-bytes`
+    /// small, `check-departures` returns its lists in a file, the walker
+    /// restores them before the tally reads the result, and the malformed
+    /// entry is still a Blocking finding. An unrestored file form reads as
+    /// no findings, which looks clean.
+    #[test]
+    fn an_exec_walk_counts_a_departure_finding_held_in_the_file_form() {
+        let repo = analyze_repo(None);
+        std::fs::write(
+            repo.path().join("specs/001-x/spec.md"),
+            "---\nstatus: clarified\ndependencies: []\n---\n\n# x\n\n## Applicable Rules\n\n- departs: `BE-AUTHN-001`\n  - cited: §rules\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![5, 1]),
+            name: "check-departures".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+        let held = std::fs::read_dir(repo.path().join(".ductus/results/check-departures/001-x"))
+            .expect("the file form wrote its list file")
+            .count();
+        assert_eq!(held, 1);
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nblocking-findings: 1\n"), "{record}");
+    }
+
     /// The record's rule fields, as text: what two runs must agree on.
     fn rule_lines(analysis: &str) -> Vec<&str> {
         let front = analysis.split("\n---\n").next().unwrap_or_default();

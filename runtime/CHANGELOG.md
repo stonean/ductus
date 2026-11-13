@@ -71,7 +71,10 @@ its version and date.
   finding. Step 14 skips a well-formed departure entry's rule, and the analyze
   reference and the review reference's waiver paragraph point at the compiled
   descriptions instead of restating them. The tool needs an allow entry
-  (`mcp__ductus__check-departures`), which `/{project}:configure` writes.
+  (`mcp__ductus__check-departures`), which `/{project}:configure` writes. Its
+  three lists are bounded (BE-PAYLOAD-001): past `[artifacts] read-size-bytes`
+  `form` is `file`, the lists move whole to the file `lists-file` names, and
+  each list's count stays inline in both forms.
 - **`write-review` waives the rule of each departure entry, and
   `process-waivers` expires the waiver when the entry is gone (spec 073).**
   Each well-formed entry under `## Applicable Rules`, of any tier, becomes a

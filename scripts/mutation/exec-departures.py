@@ -44,4 +44,11 @@ MUTATIONS = [
         'bindings.remove("findings");',
         'an_exec_walk_counts_a_malformed_departure_entry_as_blocking',
     ),
+    (
+        'M5 the walker does not restore check-departures\' file form before the tally reads it',
+        'src/interpreter/payload.rs',
+        '    if map.get("form").and_then(Value::as_str) != Some("file") {\n        return Ok(Vec::new());\n    }\n    let file = map',
+        '    if map.get("form").and_then(Value::as_str) != Some("file") || primitive == "check-departures" {\n        return Ok(Vec::new());\n    }\n    let file = map',
+        'an_exec_walk_counts_a_departure_finding_held_in_the_file_form',
+    ),
 ]

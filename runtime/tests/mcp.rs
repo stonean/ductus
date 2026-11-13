@@ -1559,6 +1559,49 @@ async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list
     }
 }
 
+/// `check-departures` past the read size over MCP: the entries, findings and
+/// unexamined lists reach the host through the file `lists-file` names, with
+/// `form` and each count inline (BE-PAYLOAD-001).
+#[tokio::test]
+async fn a_departures_result_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    let entries = (0..6)
+        .map(|i| format!("- departs: `DM-NONE-00{i}`\n  - reason: because\n"))
+        .collect::<Vec<_>>()
+        .concat();
+    fs::write(
+        dir.join("spec.md"),
+        format!(
+            "---\nstatus: draft\ndependencies: []\n---\n\n# x\n\n## Applicable Rules\n\n{entries}"
+        ),
+    )
+    .unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        format!("[artifacts]\nread-size-bytes = {SMALL_READ_SIZE}\n"),
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "check-departures", json!({"feature": "001-x"})).await;
+    let obj = structured_object(&result);
+    assert_eq!(obj["form"], "file");
+    for key in ["entries", "findings", "unexamined"] {
+        assert!(obj.get(key).is_none(), "{key}");
+    }
+    let lists = lists_in_file(&tmp, obj, &["entries", "findings", "unexamined"]);
+    assert_eq!(obj["entries-count"], 6);
+    assert_eq!(lists["entries"].as_array().unwrap().len(), 6);
+    // No rule file is loaded, so each entry's rule is unexamined, no finding.
+    assert_eq!(obj["findings-count"], 0);
+    assert_eq!(lists["findings"], json!([]));
+    assert_eq!(obj["unexamined-count"], 6);
+    assert_eq!(lists["unexamined"].as_array().unwrap().len(), 6);
+}
+
 /// Vendor a `markdownlint-cli2` that reports three violations and exits 1, so
 /// a lint, and the review gate's lint check, return a list to move.
 fn vendor_a_violating_markdownlint(root: &Path) {

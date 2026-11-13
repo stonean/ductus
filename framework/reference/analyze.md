@@ -291,7 +291,7 @@ The rule-citation audit runs in both directions:
 
 A spec states that it deliberately departs from a rule as an entry under its `## Applicable Rules` heading (spec 073). `check-departures` (step 5.1) is the canonical statement of the grammar, the findings, the unexamined reasons and the attribution of `decided-by` and `decided-at` to git history (`ductus check-departures --help`), and `write-analysis` of the `waived` verdict (`ductus write-analysis --help`). The host:
 
-- Renders each finding in the tier it carries. A malformed entry waives nothing, so its rule is judged as any other.
+- Renders each finding in the tier it carries, reading the lists from `lists-file` when `form` is `file`. A malformed entry waives nothing, so its rule is judged as any other.
 - Records none of the `unexamined` entries: each repeats a target step 4 or step 5 records over the whole spec, and a target is recorded once.
 - Waives, at step 11 or 12, the rule of each listed entry whose trigger fires, never a finding or `addressed`: on the interactive path the host passes `{verdict: waived}` in `write-analysis`' `rule-verdicts`; under `ductus exec` it answers as for any rule (`passed: false`, or `passed: true` with `addressed-by`) and the walker records `waived` itself (`specs/022-deterministic-runtime/data-model.md` §`assessSpecQuality`). A waived rule is neither a finding nor a pass and counts into no tier; the record's `## Waived rules` section and the step 22 report list it apart from the findings, so a run that waived a MUST rule never reads as one that satisfied it. A departure decides a rule, not a finding, so the refusal of a waiver on a blocking finding stands.
 

@@ -22,7 +22,8 @@ use crate::primitives::{PrimitiveError, Result, check_rule_ids, read_text, resol
 use crate::schema::paths::{self, Paths};
 use crate::schema::primitives::{
     CheckDeparturesArgs, CheckDeparturesResult, CheckRuleIdsArgs, DepartureEntry, DepartureFinding,
-    DepartureUnexamined, DiscoverRuleFilesArgs, FindingTier, ResolveAnchorArgs, RuleCitation,
+    DepartureUnexamined, DiscoverRuleFilesArgs, FindingTier, ListsForm, ResolveAnchorArgs,
+    RuleCitation,
 };
 use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 
@@ -38,8 +39,59 @@ const FAMILY: &str = "departure-entries";
 /// [`PrimitiveError::Io`] when `spec.md` or a rule file cannot be read; and
 /// the errors of `discover-rule-files`, `check-rule-ids` and `resolve-anchor`
 /// (a malformed config or `[constitutions.*]` registry), which halt the run
-/// rather than read as an empty answer.
+/// rather than read as an empty answer; and those `bounded_lists::place`
+/// returns for a malformed read size or a list file that cannot be written.
 pub fn run(args: &CheckDeparturesArgs, repo: &Path) -> Result<CheckDeparturesResult> {
+    let (entries, findings, unexamined) = compute(args, repo)?;
+    bounded(repo, &args.feature, entries, findings, unexamined)
+}
+
+/// Bound the result to one read (BE-PAYLOAD-001, as `read-spec` bounds its
+/// lists): inline while it fits `[artifacts] read-size-bytes`, and past it
+/// with `entries`, `findings` and `unexamined` in the file `lists-file`
+/// names. The counts and `form` stay inline in both forms.
+fn bounded(
+    repo: &Path,
+    feature: &str,
+    entries: Vec<DepartureEntry>,
+    findings: Vec<DepartureFinding>,
+    unexamined: Vec<DepartureUnexamined>,
+) -> Result<CheckDeparturesResult> {
+    let lists = serde_json::json!({
+        "entries": entries,
+        "findings": findings,
+        "unexamined": unexamined,
+    });
+    let mut result = CheckDeparturesResult {
+        form: ListsForm::Inline,
+        entries_count: entries.len(),
+        entries: Some(entries),
+        findings_count: findings.len(),
+        findings: Some(findings),
+        unexamined_count: unexamined.len(),
+        unexamined: Some(unexamined),
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-departures", feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.entries = None;
+        result.findings = None;
+        result.unexamined = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// The lists, whole, before they are bounded.
+type Lists = (
+    Vec<DepartureEntry>,
+    Vec<DepartureFinding>,
+    Vec<DepartureUnexamined>,
+);
+
+fn compute(args: &CheckDeparturesArgs, repo: &Path) -> Result<Lists> {
     let root = Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     if !repo.join(&root).join(&args.feature).is_dir() {
@@ -164,14 +216,14 @@ fn finish(
     entries: Vec<DepartureEntry>,
     mut found: Vec<(usize, DepartureFinding)>,
     mut unexamined: Vec<DepartureUnexamined>,
-) -> CheckDeparturesResult {
+) -> Lists {
     found.sort_by_key(|(line, _)| *line);
     unexamined.sort_by_key(|item| item.line);
-    CheckDeparturesResult {
+    (
         entries,
-        findings: found.into_iter().map(|(_, finding)| finding).collect(),
+        found.into_iter().map(|(_, finding)| finding).collect(),
         unexamined,
-    }
+    )
 }
 
 fn to_line(line: usize) -> u32 {
@@ -360,17 +412,31 @@ mod tests {
         tmp
     }
 
-    fn check(tmp: &tempfile::TempDir) -> CheckDeparturesResult {
-        run(
+    /// A result's three lists, whole.
+    struct Whole {
+        entries: Vec<DepartureEntry>,
+        findings: Vec<DepartureFinding>,
+        unexamined: Vec<DepartureUnexamined>,
+    }
+
+    /// The result of `run` in the inline form, which every fixture here fits.
+    fn check(tmp: &tempfile::TempDir) -> Whole {
+        let result = run(
             &CheckDeparturesArgs {
                 feature: FEATURE.into(),
             },
             tmp.path(),
         )
-        .unwrap()
+        .unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        Whole {
+            entries: result.entries.unwrap(),
+            findings: result.findings.unwrap(),
+            unexamined: result.unexamined.unwrap(),
+        }
     }
 
-    fn tiers(result: &CheckDeparturesResult) -> Vec<(AnalyzeSeverity, &str)> {
+    fn tiers(result: &Whole) -> Vec<(AnalyzeSeverity, &str)> {
         result
             .findings
             .iter()
@@ -797,6 +863,71 @@ mod tests {
         assert_eq!(
             result.entries[0].decided_at.as_deref(),
             Some("2021-01-01T00:00:00Z")
+        );
+    }
+
+    fn read_size(tmp: &tempfile::TempDir, bytes: u64) {
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            &format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        );
+    }
+
+    /// BE-PAYLOAD-001: the result is inline while it fits the read size; past
+    /// it the three lists move whole to the file `lists-file` names, with
+    /// `form` and each count inline in both forms.
+    #[test]
+    fn a_result_past_the_read_size_names_a_file_holding_every_list() {
+        // One entry with no `reason:` (a finding), and three entries whose
+        // rule is unexamined: every list is non-empty.
+        let tmp = project(
+            "",
+            "- departs: `DM-NONE-999`\n  - reason: r\n- departs: `BE-API-001`\n  - reason: r\n- departs: `DM-MUST-001`\n  - cited: §shared-exceptions\n",
+        );
+        std::fs::remove_file(tmp.path().join("specs/rules/demo-cross.md")).unwrap();
+        let call = CheckDeparturesArgs {
+            feature: FEATURE.into(),
+        };
+        read_size(&tmp, 1_000_000);
+        let whole = compute(&call, tmp.path()).unwrap();
+        assert_eq!(
+            (whole.0.len(), whole.1.len(), whole.2.len()),
+            (2, 1, 2),
+            "{whole:?}"
+        );
+        let inline = run(&call, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.lists_file, None);
+        assert_eq!(inline.entries.as_ref(), Some(&whole.0));
+        assert_eq!(inline.findings.as_ref(), Some(&whole.1));
+        assert_eq!(inline.unexamined.as_ref(), Some(&whole.2));
+
+        read_size(&tmp, 10);
+        let bounded = run(&call, tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (&bounded.entries, &bounded.findings, &bounded.unexamined),
+            (&None, &None, &None)
+        );
+        assert_eq!(
+            (
+                bounded.entries_count,
+                bounded.findings_count,
+                bounded.unexamined_count
+            ),
+            (2, 1, 2)
+        );
+        let file = bounded.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(lists["entries"], serde_json::to_value(&whole.0).unwrap());
+        assert_eq!(lists["findings"], serde_json::to_value(&whole.1).unwrap());
+        assert_eq!(lists["unexamined"], serde_json::to_value(&whole.2).unwrap());
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-departures",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
         );
     }
 

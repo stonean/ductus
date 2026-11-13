@@ -3435,12 +3435,29 @@ pub struct DepartureUnexamined {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckDeparturesResult {
-    /// Every well-formed entry, in document order.
-    pub entries: Vec<DepartureEntry>,
-    /// Findings of family `departure-entries`.
-    pub findings: Vec<DepartureFinding>,
-    /// Rules and citations not judged; never a pass.
-    pub unexamined: Vec<DepartureUnexamined>,
+    /// Where `entries`, `findings` and `unexamined` are: in this result, or,
+    /// past the read size, in the file `lists-file` names (BE-PAYLOAD-001).
+    pub form: ListsForm,
+    /// Every well-formed entry, in document order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entries: Option<Vec<DepartureEntry>>,
+    /// Entries in `entries`, in either form.
+    pub entries_count: usize,
+    /// Findings of family `departure-entries`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<DepartureFinding>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
+    /// Rules and citations not judged; never a pass. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unexamined: Option<Vec<DepartureUnexamined>>,
+    /// Entries in `unexamined`, in either form.
+    pub unexamined_count: usize,
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with `entries`, `findings` and
+    /// `unexamined`, pretty-printed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- read-deprecation-labels -------------------------------------------------
@@ -9688,6 +9705,55 @@ mod tests {
         assert_eq!(
             v["lists-file"],
             ".ductus/results/process-decisions/001-x/a.json"
+        );
+        for key in lists {
+            assert!(v.get(key).is_none(), "{key}");
+        }
+        assert_eq!(round_trip(&file), file);
+    }
+
+    #[test]
+    fn check_departures_result_round_trips_in_both_forms() {
+        use super::{CheckDeparturesResult, DepartureUnexamined, ListsForm};
+        let counts = ["entries-count", "findings-count", "unexamined-count"];
+        let lists = ["entries", "findings", "unexamined"];
+        let inline = CheckDeparturesResult {
+            form: ListsForm::Inline,
+            entries: Some(Vec::new()),
+            entries_count: 0,
+            findings: Some(Vec::new()),
+            findings_count: 0,
+            unexamined: Some(vec![DepartureUnexamined {
+                reason: "rule-not-installed".into(),
+                line: 3,
+            }]),
+            unexamined_count: 1,
+            lists_file: None,
+        };
+        let v = serde_json::to_value(&inline).unwrap();
+        assert_eq!(v["form"], "inline");
+        for key in counts.iter().chain(&lists) {
+            assert!(v.get(*key).is_some(), "{key}");
+        }
+        assert!(v.get("lists-file").is_none());
+        assert_eq!(round_trip(&inline), inline);
+
+        let file = CheckDeparturesResult {
+            form: ListsForm::File,
+            entries: None,
+            entries_count: 2,
+            findings: None,
+            findings_count: 1,
+            unexamined: None,
+            unexamined_count: 1,
+            lists_file: Some(".ductus/results/check-departures/001-x/a.json".into()),
+        };
+        let v = serde_json::to_value(&file).unwrap();
+        assert_eq!(v["form"], "file");
+        assert_eq!(v["entries-count"], 2);
+        assert_eq!(
+            v["lists-file"],
+            ".ductus/results/check-departures/001-x/a.json"
         );
         for key in lists {
             assert!(v.get(key).is_none(), "{key}");

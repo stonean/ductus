@@ -193,8 +193,9 @@ fn check_departures_resolves_configured_root() {
         repo,
     )
     .unwrap();
-    assert_eq!(result.entries.len(), 1);
-    assert_eq!(result.entries[0].rule, "BE-API-001");
+    let entries = result.entries.as_deref().expect("an inline result");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].rule, "BE-API-001");
 }
 
 #[test]
