@@ -3281,6 +3281,81 @@ pub struct CheckRuleIdsResult {
     pub examined: usize,
 }
 
+// -- check-departures --------------------------------------------------------
+
+/// Args for `check-departures`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckDeparturesArgs {
+    /// Feature directory name.
+    #[arg(long)]
+    pub feature: String,
+}
+
+/// One well-formed departure entry (spec 073).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DepartureEntry {
+    /// The rule the spec departs from.
+    pub rule: String,
+    /// The rule's tier, from its Statement. Absent when no loaded rule file
+    /// defines the rule, and for a rule whose Statement carries no tier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<FindingTier>,
+    /// The entry's `reason:`, never empty.
+    pub reason: String,
+    /// The entry's `cited:` text. Absent when the entry has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cited: Option<String>,
+    /// The author email of the commit that introduced the entry, or
+    /// `unattributed`.
+    pub decided_by: String,
+    /// That commit's author time, RFC 3339 UTC to the second with `Z`. Absent
+    /// when `decided-by` is `unattributed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decided_at: Option<String>,
+    /// The 1-based line of the entry's `departs:` item.
+    pub line: u32,
+}
+
+/// One finding of family `departure-entries`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DepartureFinding {
+    /// Always `departure-entries`.
+    pub family: String,
+    /// `blocking` or `advisory`.
+    pub tier: AnalyzeSeverity,
+    /// What is wrong, naming the line.
+    pub message: String,
+    /// The spec the entry is in, from the project root.
+    pub path: String,
+}
+
+/// An entry's rule or citation this primitive did not judge.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DepartureUnexamined {
+    /// `rule-not-installed`, `anchor-target-unjudgeable` or
+    /// `anchor-target-unreadable`.
+    pub reason: String,
+    /// The 1-based line of the `departs:` item for a rule, of the `cited:`
+    /// text for a citation.
+    pub line: u32,
+}
+
+/// Result for `check-departures`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckDeparturesResult {
+    /// Every well-formed entry, in document order.
+    pub entries: Vec<DepartureEntry>,
+    /// Findings of family `departure-entries`.
+    pub findings: Vec<DepartureFinding>,
+    /// Rules and citations not judged; never a pass.
+    pub unexamined: Vec<DepartureUnexamined>,
+}
+
 // -- read-deprecation-labels -------------------------------------------------
 
 /// Args for `read-deprecation-labels`.

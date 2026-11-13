@@ -74,22 +74,22 @@ use crate::schema::extensions::{
 use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
-    CheckOrphanedReferencesArgs, CheckPrescriptionsArgs, CheckPromotionCoverageArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
-    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
-    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, FindingTier,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
-    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
-    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
+    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
+    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
+    FetchArchiveArgs, FindingTier, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
+    MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
+    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs,
+    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
+    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
+    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
+    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs,
+    SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -1213,6 +1213,7 @@ fn dispatch_primitive(
         }
         "traverse-deps" => call!(TraverseDepsArgs, traverse_deps),
         "check-rule-ids" => call!(CheckRuleIdsArgs, check_rule_ids),
+        "check-departures" => call!(CheckDeparturesArgs, check_departures),
         "read-deprecation-labels" => call!(ReadDeprecationLabelsArgs, read_deprecation_labels),
         "check-promotion-coverage" => {
             call!(CheckPromotionCoverageArgs, check_promotion_coverage)
@@ -3576,6 +3577,7 @@ mod tests {
                 serde_json::json!({"feature": feature}),
             ),
             ("check-artifacts", serde_json::json!({"feature": feature})),
+            ("check-departures", serde_json::json!({"feature": feature})),
             ("check-review-gate", serde_json::json!({"feature": feature})),
             (
                 "check-stuck",
@@ -3680,7 +3682,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 32);
+        assert_eq!(cases.len(), 33);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(

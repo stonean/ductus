@@ -24,6 +24,7 @@ pub mod check_artifact_size;
 pub mod check_artifacts;
 pub mod check_command_flags;
 pub mod check_corpus_links;
+pub mod check_departures;
 pub mod check_orphaned_references;
 pub mod check_prescriptions;
 pub mod check_promotion_coverage;

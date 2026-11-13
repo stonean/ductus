@@ -13,7 +13,7 @@ use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
-    CheckCorpusLinksArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
+    CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
     CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
     CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
@@ -116,6 +116,8 @@ enum Command {
     ResolveConstitutions(ResolveConstitutionsArgs),
     #[command(about = descriptions::summary(descriptions::TRAVERSE_DEPS), long_about = descriptions::TRAVERSE_DEPS)]
     TraverseDeps(TraverseDepsArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_DEPARTURES), long_about = descriptions::CHECK_DEPARTURES)]
+    CheckDepartures(CheckDeparturesArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_RULE_IDS), long_about = descriptions::CHECK_RULE_IDS)]
     CheckRuleIds(CheckRuleIdsArgs),
     #[command(about = descriptions::summary(descriptions::READ_DEPRECATION_LABELS), long_about = descriptions::READ_DEPRECATION_LABELS)]
@@ -1018,6 +1020,9 @@ fn main() -> ExitCode {
             primitives::resolve_constitutions::run_measured(&args, &repo),
         ),
         Command::TraverseDeps(args) => emit_result(primitives::traverse_deps::run(&args, &repo)),
+        Command::CheckDepartures(args) => {
+            emit_result(primitives::check_departures::run(&args, &repo))
+        }
         Command::CheckRuleIds(args) => emit_result(primitives::check_rule_ids::run(&args, &repo)),
         Command::ReadDeprecationLabels(args) => {
             emit_result(primitives::read_deprecation_labels::run(&args, &repo))

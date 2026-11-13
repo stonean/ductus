@@ -18,7 +18,21 @@ its version and date.
   of the first commit of the unbroken run ending at `HEAD` in which the spec
   holds an entry for it, following a renamed spec directory. A shallow or
   absent repository, an entry not in `HEAD`, or an unreadable revision is
-  `unattributed`. No primitive calls it yet.
+  `unattributed`. `check-departures` is its first caller.
+- **`check-departures` lists a spec's decided rule departures and checks them
+  (spec 073).** Given a `feature`, it returns each well-formed entry (`rule`,
+  its `tier`, `reason`, `cited`, `decided-by`, `decided-at`, `line`),
+  `findings` of family `departure-entries`, and `unexamined`. Blocking: an
+  entry missing a required field or malformed (a second rule ID, another or a
+  repeated child key), a rule no loaded rule file defines or the spec lists in
+  `retired-rules:`, and a rule two entries name. Advisory: a deprecated rule
+  and a `cited:` that is not exactly one `§anchor` reference or whose
+  anchor `resolve-anchor` judges unresolved. A rule the project never installed
+  (`rule-not-installed`) and a citation that cannot be judged
+  (`anchor-target-unjudgeable`, `anchor-target-unreadable`) are `unexamined`,
+  never a pass. The rule's state is `check-rule-ids`' reading of every rule
+  file in the rules directory. The tool needs an allow entry
+  (`mcp__ductus__check-departures`), which `/{project}:configure` writes.
 - **`/{project}:analyze` records each loaded rule's verdict and judges a rule
   again only when its subjects changed (spec 082).** `analysis.md` gains
   `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or

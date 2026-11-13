@@ -18,6 +18,7 @@ use std::fs;
 use std::path::Path;
 
 use ductus::primitives;
+use ductus::schema::primitives::CheckDeparturesArgs;
 use ductus::schema::primitives::{
     AppendInboxArgs, CheckArtifactsArgs, CreateFeatureArgs, DashboardArgs, MarkCriterionArgs,
     MarkTaskArgs, ReadSpecArgs, ReadTasksArgs, ResolveFeatureArgs, ResolveFeatureOutcome,
@@ -173,6 +174,27 @@ fn traverse_deps_resolves_configured_root() {
     assert!(dependencies[0].exists, "dep found under governance/");
     assert!(dependencies[0].compatible);
     assert!(result.compatible);
+}
+
+#[test]
+fn check_departures_resolves_configured_root() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    seed(repo);
+    write(
+        &repo.join("governance/001-demo/spec.md"),
+        "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\n## Applicable Rules\n\n- departs: `BE-API-001`\n  - reason: r\n",
+    );
+    // The decoy under `specs/` holds no entry; only the configured root's does.
+    let result = primitives::check_departures::run(
+        &CheckDeparturesArgs {
+            feature: "001-demo".into(),
+        },
+        repo,
+    )
+    .unwrap();
+    assert_eq!(result.entries.len(), 1);
+    assert_eq!(result.entries[0].rule, "BE-API-001");
 }
 
 #[test]

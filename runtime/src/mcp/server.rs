@@ -44,14 +44,15 @@ use crate::schema::primitives::{
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
-    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckPrescriptionsArgs,
-    CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
-    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
-    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs,
-    ClassifySpecEditResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
-    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
-    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    CheckDeparturesArgs, CheckDeparturesResult, CheckOrphanedReferencesArgs,
+    CheckOrphanedReferencesResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
+    CheckPromotionCoverageArgs, CheckPromotionCoverageResult, CheckReviewGateArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
+    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs, ClassifySpecEditResult,
+    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
+    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
+    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
     DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
@@ -442,6 +443,19 @@ impl GovRuntimeServer {
         params: Parameters<TraverseDepsArgs>,
     ) -> Result<Json<TraverseDepsResult>, String> {
         primitives::traverse_deps::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-departures",
+        description = descriptions::CHECK_DEPARTURES
+    )]
+    async fn check_departures(
+        &self,
+        params: Parameters<CheckDeparturesArgs>,
+    ) -> Result<Json<CheckDeparturesResult>, String> {
+        primitives::check_departures::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

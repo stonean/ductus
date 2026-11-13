@@ -83,6 +83,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__resolve-constitutions`
    - `mcp__ductus__traverse-deps`
    - `mcp__ductus__check-rule-ids`
+   - `mcp__ductus__check-departures`
    - `mcp__ductus__read-deprecation-labels`
    - `mcp__ductus__check-promotion-coverage`
    - `mcp__ductus__lint-markdown`

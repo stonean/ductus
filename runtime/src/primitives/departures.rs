@@ -39,6 +39,9 @@ pub struct Entry {
     /// The `§anchor` reference that decided the departure in advance. A
     /// `cited:` child with no text is absent, as the author named none.
     pub cited: Option<String>,
+    /// The 1-based first and last lines of the `cited:` child, a wrapped
+    /// citation's continuation lines included; absent with `cited`.
+    pub cited_lines: Option<(usize, usize)>,
     /// The 1-based line of the `departs:` item.
     pub line: usize,
 }
@@ -90,6 +93,7 @@ struct Open {
     rule: Option<String>,
     reason: Option<String>,
     cited: Option<String>,
+    cited_lines: Option<(usize, usize)>,
     /// The key of the child the next continuation line extends.
     last_key: Option<String>,
     problems: Vec<Problem>,
@@ -198,6 +202,7 @@ fn start_entry(indent: usize, line: usize, rest: &str) -> Open {
         rule: ids.first().map(|id| (*id).to_string()),
         reason: None,
         cited: None,
+        cited_lines: None,
         last_key: None,
         problems,
     }
@@ -220,6 +225,11 @@ fn read_child(entry: &mut Open, line: usize, item: Option<&str>, text: &str) {
                 value.push(' ');
             }
             value.push_str(text);
+            if key == "cited"
+                && let Some(lines) = entry.cited_lines.as_mut()
+            {
+                lines.1 = line;
+            }
         }
         return;
     };
@@ -246,6 +256,9 @@ fn read_child(entry: &mut Open, line: usize, item: Option<&str>, text: &str) {
         return;
     }
     *slot = Some(value.trim().to_string());
+    if key == "cited" {
+        entry.cited_lines = Some((line, line));
+    }
     entry.last_key = Some(key.to_string());
 }
 
@@ -280,6 +293,12 @@ fn finish(open: Option<Open>, parsed: &mut Parsed) {
     parsed.entries.push(Entry {
         rule,
         reason,
+        cited_lines: entry.cited_lines.filter(|_| {
+            entry
+                .cited
+                .as_deref()
+                .is_some_and(|cited| !cited.is_empty())
+        }),
         cited: entry.cited.filter(|cited| !cited.is_empty()),
         line: entry.line,
     });
@@ -496,9 +515,24 @@ mod tests {
                 rule: "BE-X-001".into(),
                 reason: "the field is removed".into(),
                 cited: Some("§shared-exceptions".into()),
+                cited_lines: Some((7, 7)),
                 line: 5,
             }]
         );
+    }
+
+    #[test]
+    fn a_wrapped_citation_spans_its_continuation_lines() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: r\n  - cited: see the\n    §shared-exceptions\n",
+        ));
+        assert_eq!(
+            parsed.entries[0].cited.as_deref(),
+            Some("see the §shared-exceptions")
+        );
+        assert_eq!(parsed.entries[0].cited_lines, Some((7, 8)));
+        let none = parse(&spec_with("- departs: `A-1`\n  - reason: r\n  - cited:\n"));
+        assert_eq!(none.entries[0].cited_lines, None);
     }
 
     #[test]
