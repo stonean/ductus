@@ -493,8 +493,8 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // The denominator `examined` is a claim against — see `resolve_scope`.
     let (scope, excluded) = resolve_scope(args, repo)?;
     refuse_an_empty_scope_over_a_finding(args, &feature_dir, scope)?;
-    let (new_waivers, new_anchors) =
-        new_waiver_entries(args, &surviving_waivers(&feature_dir, args)?)?;
+    let (new_waivers, new_anchors, malformed_departures) =
+        run_waivers(args, repo, &root, &feature_dir)?;
     let settled = settled(args, new_anchors, &feature_dir)?;
     let args = settled.as_ref();
     an_open_break_names_its_file(args)?;
@@ -634,6 +634,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         analyze_freshness,
         examined: args.examined,
         scope,
+        malformed_departures,
         ..WriteReviewResult::default()
     };
     bound_stale_paths(result, repo, &args.feature)
@@ -1778,6 +1779,7 @@ fn render_skipped(skipped: &[String]) -> String {
 fn new_waiver_entries(
     args: &WriteReviewArgs,
     surviving: &[RawWaiverFull],
+    departures: &Departures,
 ) -> Result<(
     Vec<RawWaiverFull>,
     Vec<crate::schema::primitives::WaiverRef>,
@@ -1842,7 +1844,174 @@ fn new_waiver_entries(
             });
         }
     }
+    departure_waiver_entries(args, surviving, departures, &mut entries, &mut anchors);
     Ok((entries, anchors))
+}
+
+/// This run's new waivers, their anchors, and the malformed departure entries named.
+///
+/// # Errors
+///
+/// As [`new_waiver_entries`] and [`read_departures`].
+fn run_waivers(
+    args: &WriteReviewArgs,
+    repo: &Path,
+    root: &str,
+    feature_dir: &Path,
+) -> Result<(
+    Vec<RawWaiverFull>,
+    Vec<crate::schema::primitives::WaiverRef>,
+    Vec<String>,
+)> {
+    let departures = read_departures(repo, root, &args.feature)?;
+    let (entries, anchors) =
+        new_waiver_entries(args, &surviving_waivers(feature_dir, args)?, &departures)?;
+    Ok((entries, anchors, departures.malformed))
+}
+
+/// The spec's departure entries as this run reads them (spec 073).
+#[derive(Default)]
+struct Departures {
+    /// Each rule's first well-formed entry; a rule two entries name is derived once.
+    entries: Vec<crate::primitives::departures::Entry>,
+    /// Each malformed entry, or rule named twice, as `line N: what is wrong`.
+    malformed: Vec<String>,
+    /// The spec's path from the project root, for the history read.
+    spec_rel: String,
+    /// The project root the history is read from.
+    project: std::path::PathBuf,
+}
+
+/// Whether a waiver in `waivers` already holds `rule` at `file`.
+fn holds(waivers: &[RawWaiverFull], rule: &str, file: &str) -> bool {
+    waivers.iter().any(|waiver| {
+        waiver.rule.as_deref() == Some(rule)
+            && waiver
+                .file
+                .as_ref()
+                .is_some_and(|paths| paths.as_slice().iter().any(|path| path == file))
+    })
+}
+
+/// Read `spec.md`'s departure entries. A spec holding none, or none readable as an
+/// entry, derives no waiver; the malformed ones are named in the result.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when `spec.md` cannot be read, which `run` has already
+/// found to exist.
+fn read_departures(repo: &Path, root: &str, feature: &str) -> Result<Departures> {
+    use crate::primitives::departures::{ProblemKind, parse};
+    let spec_rel = format!("{root}/{feature}/spec.md");
+    let parsed = parse(&read_text(&repo.join(&spec_rel))?);
+    let malformed = parsed
+        .problems
+        .iter()
+        .map(|problem| {
+            let what = match &problem.kind {
+                ProblemKind::MissingRule => "no backticked rule ID".to_string(),
+                ProblemKind::SecondRule => "names more than one rule ID".to_string(),
+                ProblemKind::MissingReason => "no `reason:`".to_string(),
+                ProblemKind::EmptyReason => "an empty `reason:`".to_string(),
+                ProblemKind::UnknownKey(key) => format!("an unknown key `{key}`"),
+                ProblemKind::DuplicateKey(key) => format!("`{key}:` given twice"),
+                ProblemKind::DuplicateRule(rule) => {
+                    format!("`{rule}` is named by an earlier entry, which alone is derived")
+                }
+            };
+            format!("spec.md line {}: {what}", problem.line)
+        })
+        .collect();
+    let mut seen = std::collections::BTreeSet::new();
+    let entries = parsed
+        .entries
+        .into_iter()
+        .filter(|entry| seen.insert(entry.rule.clone()))
+        .collect();
+    Ok(Departures {
+        entries,
+        malformed,
+        spec_rel,
+        project: repo.to_path_buf(),
+    })
+}
+
+/// The second source of new waivers: each well-formed departure entry, of any tier,
+/// stored for the files its rule fires at that no waiver holds, hand `--waive` first.
+/// A rule firing nowhere stores nothing and refuses nothing, since an entry is the
+/// spec's standing decision rather than a request of this run. The waiver carries the
+/// entry's attribution, or `unattributed` and the run's time when history cannot say,
+/// and `departure: true`, which `process-waivers` expires when the entry is gone.
+fn departure_waiver_entries(
+    args: &WriteReviewArgs,
+    surviving: &[RawWaiverFull],
+    departures: &Departures,
+    entries: &mut Vec<RawWaiverFull>,
+    anchors: &mut Vec<crate::schema::primitives::WaiverRef>,
+) {
+    use crate::primitives::departures::{Attribution, attribute};
+    // Every file the rule fires at is anchored, so a second write of the run, which finds
+    // the waiver already stored, still counts its findings waived; only a file no waiver
+    // holds is stored.
+    let mut firing_by_rule: Vec<(&crate::primitives::departures::Entry, Vec<String>)> = Vec::new();
+    for entry in &departures.entries {
+        let firing: std::collections::BTreeSet<&str> = args
+            .findings
+            .iter()
+            .filter(|finding| {
+                finding.rule == entry.rule
+                    && waiver_reason(finding, &args.applied_waivers).is_none()
+            })
+            .map(|finding| finding.file.as_str())
+            .collect();
+        anchors.extend(
+            firing
+                .iter()
+                .map(|file| crate::schema::primitives::WaiverRef {
+                    rule: entry.rule.clone(),
+                    file: (*file).to_string(),
+                    reason: entry.reason.clone(),
+                }),
+        );
+        let fresh: Vec<String> = firing
+            .into_iter()
+            .filter(|file| {
+                !holds(surviving, &entry.rule, file) && !holds(entries, &entry.rule, file)
+            })
+            .map(str::to_string)
+            .collect();
+        if !fresh.is_empty() {
+            firing_by_rule.push((entry, fresh));
+        }
+    }
+    if firing_by_rule.is_empty() {
+        return;
+    }
+    let rules: Vec<String> = firing_by_rule
+        .iter()
+        .map(|(entry, _)| entry.rule.clone())
+        .collect();
+    let attributed = attribute(&departures.project, &departures.spec_rel, &rules);
+    for (entry, fresh) in firing_by_rule {
+        let (by, at) = match attributed.get(&entry.rule) {
+            Some(Attribution::Attributed {
+                decided_by,
+                decided_at,
+            }) => (decided_by.clone(), decided_at.clone()),
+            _ => ("unattributed".to_string(), args.reviewed_at.clone()),
+        };
+        entries.push(RawWaiverFull {
+            rule: Some(entry.rule.clone()),
+            file: Some(WaiverPaths::of(fresh)),
+            reason: Some(entry.reason.clone()),
+            waived_at: Some(at),
+            waived_by: Some(by),
+            extra: std::collections::BTreeMap::from([(
+                "departure".to_string(),
+                serde_norway::Value::Bool(true),
+            )]),
+        });
+    }
 }
 
 /// The arguments as this run records them: each new waiver's anchors applied, so its
@@ -5804,3 +5973,6 @@ mod tests {
         assert_eq!(fs::read_to_string(&path).unwrap(), damaged);
     }
 }
+
+#[cfg(test)]
+mod departure_waivers;

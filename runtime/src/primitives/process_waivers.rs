@@ -25,6 +25,12 @@
 //!   entries; only the first claim applies, and the same entry's other paths
 //!   are still classified.
 //!
+//! A waiver `write-review` derived from a spec's departure entry carries
+//! `departure: true`. It is expired whatever the run's restrictions when the spec's
+//! `## Applicable Rules` holds no well-formed entry for its rule, so a removed entry
+//! stops waiving at once (spec 073); a waiver with the marker and an entry is classified
+//! as any other.
+//!
 //! The anchor is the `(rule, file)` pair only — line numbers are not part of
 //! it, so code moving within a file does not expire a waiver. Read-only:
 //! frontmatter mutation belongs to `write-review`.
@@ -40,7 +46,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::compute_review_scope::RunScope;
-use crate::primitives::{PrimitiveError, Result, WaiverPaths};
+use crate::primitives::{PrimitiveError, Result, WaiverPaths, departures};
 use crate::schema::paths;
 use crate::schema::primitives::{ProcessWaiversArgs, ProcessWaiversResult, WaiverRef};
 
@@ -100,6 +106,9 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
     let mut retained: Vec<WaiverRef> = Vec::new();
     let mut notices: Vec<String> = Vec::new();
     let mut seen: Vec<(String, String)> = Vec::new();
+    // Read only when a waiver carries the marker, so a record with none depends on nothing
+    // else. The first marked waiver reads the spec, which this function has found to exist.
+    let mut entry_rules: Option<Vec<String>> = None;
 
     for (index, waiver) in waivers.iter().enumerate() {
         if let Some(field) = first_missing_field(waiver) {
@@ -132,6 +141,18 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
                 continue;
             }
             seen.push((rule.clone(), file.clone()));
+
+            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {
+                notices.push(format!(
+                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"
+                ));
+                expired.push(WaiverRef {
+                    rule: rule.clone(),
+                    file: file.clone(),
+                    reason: reason.clone(),
+                });
+                continue;
+            }
 
             let file_exists = repo.join(file).exists();
             let rule_fires = args
@@ -176,6 +197,36 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
     })
 }
 
+/// Whether `waiver` carries the departure marker and the spec's `## Applicable Rules`
+/// holds no well-formed entry for `rule`. `entry_rules` caches the entries' rules, read
+/// from the spec at `spec_path` by the first marked waiver, so a record with no marker
+/// reads nothing else.
+fn departure_gone(
+    waiver: &RawWaiver,
+    rule: &str,
+    spec_path: &Path,
+    entry_rules: &mut Option<Vec<String>>,
+) -> Result<bool> {
+    if waiver.departure != Some(true) {
+        return Ok(false);
+    }
+    if entry_rules.is_none() {
+        let content = super::read_text(spec_path)?;
+        *entry_rules = Some(
+            departures::parse(&content)
+                .entries
+                .into_iter()
+                .map(|entry| entry.rule)
+                .collect(),
+        );
+    }
+    Ok(!entry_rules
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .any(|held| held == rule))
+}
+
 /// Return the first required field that is absent or empty, or `None` when the
 /// waiver is well-formed.
 ///
@@ -211,6 +262,9 @@ struct RawWaiver {
     waived_at: Option<String>,
     #[serde(default, rename = "waived-by")]
     waived_by: Option<String>,
+    /// Set by `write-review` on a waiver derived from a departure entry.
+    #[serde(default)]
+    departure: Option<bool>,
 }
 
 #[cfg(test)]

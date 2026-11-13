@@ -1768,6 +1768,11 @@ pub struct WriteReviewResult {
     /// root: a JSON object whose `analyze-stale-paths` key is the list.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
+    /// Each departure entry in the spec's `## Applicable Rules` that derived no
+    /// waiver because it is malformed, or names a rule an earlier entry names, as
+    /// `spec.md line N: what is wrong` (spec 073). Absent when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub malformed_departures: Vec<String>,
 }
 
 // -- write-analysis ----------------------------------------------------------

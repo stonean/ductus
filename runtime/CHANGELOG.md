@@ -18,7 +18,8 @@ its version and date.
   of the first commit of the unbroken run ending at `HEAD` in which the spec
   holds an entry for it, following a renamed spec directory. A shallow or
   absent repository, an entry not in `HEAD`, or an unreadable revision is
-  `unattributed`. `check-departures` is its first caller.
+  `unattributed`. `check-departures`, `write-review` and `process-waivers`
+  call it.
 - **`check-departures` lists a spec's decided rule departures and checks them
   (spec 073).** Given a `feature`, it returns each well-formed entry (`rule`,
   its `tier`, `reason`, `cited`, `decided-by`, `decided-at`, `line`),
@@ -34,6 +35,19 @@ its version and date.
   never a pass. The rule's state is `check-rule-ids`' reading of every rule
   file in the rules directory. The tool needs an allow entry
   (`mcp__ductus__check-departures`), which `/{project}:configure` writes.
+- **`write-review` waives the rule of each departure entry, and
+  `process-waivers` expires the waiver when the entry is gone (spec 073).**
+  Each well-formed entry under `## Applicable Rules`, of any tier, becomes a
+  `waivers:` entry for its rule at every file the rule fires at that no waiver
+  holds, carrying `departure: true`, the entry's reason, and `waived-by` and
+  `waived-at` from the commit that introduced it (`unattributed` and the
+  run's own time when history cannot say). A rule firing nowhere stores
+  nothing, a hand `--waive` on the same rule and file stays the first claim,
+  and a SHOULD departure leaves `should-violations` at 0. A malformed entry,
+  or a rule a second entry names, derives no waiver and is listed in the
+  result's `malformed-departures`. `process-waivers` expires a marked waiver
+  whose rule has no well-formed entry, on any run, restricted included, with
+  its `waiver expired:` notice.
 - **`/{project}:analyze` records each loaded rule's verdict and judges a rule
   again only when its subjects changed (spec 082).** `analysis.md` gains
   `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or
