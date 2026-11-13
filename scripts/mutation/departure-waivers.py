@@ -114,4 +114,11 @@ MUTATIONS = [
         ['departure: Option<serde_norway::Value>,', 'if waiver.departure != Some(serde_norway::Value::Bool(true)) {'],
         'departure_waivers::a_non_boolean_marker',
     ),
+    (
+        'M15 a malformed entry is named without its line',
+        'src/primitives/write_review.rs',
+        'format!("spec.md line {}: {what}", problem.line)',
+        'format!("spec.md line {}: {what}", 0)',
+        'departure_waivers::a_malformed_entry_waives_nothing',
+    ),
 ]

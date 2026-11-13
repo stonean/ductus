@@ -246,8 +246,8 @@ MUTATIONS = [
     (
         'M34 a blockquote does not end the reason',
         'src/primitives/departures.rs',
-        "if line.starts_with('>') {",
-        'if false {',
+        "if line.starts_with('>') || thematic_break(line) {",
+        'if thematic_break(line) {',
         'an_ordered_item_or_a_blockquote',
     ),
     (
@@ -263,5 +263,47 @@ MUTATIONS = [
         '&& entry.last_key.is_some()',
         '&& true',
         'an_unindented_line_before_any_child',
+    ),
+    (
+        'M37 only the first line of a wrapped citation is searched for its reference',
+        'src/primitives/check_departures.rs',
+        '(first..=last).contains(&(reference.line as usize))',
+        '(first..=first).contains(&(reference.line as usize))',
+        'a_reference_on_a_wrapped_citations_continuation_line',
+    ),
+    (
+        'M38 an ordered marker may have ten to twelve digits',
+        'src/primitives/departures.rs',
+        '(1..=9).contains(&digits)',
+        '(1..=12).contains(&digits)',
+        'an_ordered_marker_takes_one_to_nine_digits',
+    ),
+    (
+        'M39 an ordered marker may have no digits',
+        'src/primitives/departures.rs',
+        '(1..=9).contains(&digits)',
+        '(0..=9).contains(&digits)',
+        'an_ordered_marker_takes_one_to_nine_digits',
+    ),
+    (
+        'M40 a thematic break does not end the reason',
+        'src/primitives/departures.rs',
+        "if line.starts_with('>') || thematic_break(line) {",
+        "if line.starts_with('>') {",
+        'a_thematic_break_or_setext_underline',
+    ),
+    (
+        'M41 two marks make a thematic break',
+        'src/primitives/departures.rs',
+        'count >= 3',
+        'count >= 2',
+        'a_thematic_break_or_setext_underline',
+    ),
+    (
+        'M42 mixed marks make a thematic break',
+        'src/primitives/departures.rs',
+        'if c != first {',
+        'if false {',
+        'a_thematic_break_or_setext_underline',
     ),
 ]

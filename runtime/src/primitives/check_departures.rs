@@ -537,6 +537,23 @@ mod tests {
     }
 
     #[test]
+    fn a_reference_on_a_wrapped_citations_continuation_line_is_judged() {
+        let good = check(&project(
+            "",
+            "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: see the\n    §shared-exceptions\n",
+        ));
+        assert_eq!(good.findings, vec![], "{:?}", good.findings);
+        assert_eq!(good.unexamined, vec![]);
+        let bad = check(&project(
+            "",
+            "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: see the\n    §no-such-anchor\n",
+        ));
+        assert_eq!(bad.findings.len(), 1, "{:?}", bad.findings);
+        assert!(bad.findings[0].message.starts_with("line 13:"));
+        assert!(bad.findings[0].message.contains("no-such-anchor"));
+    }
+
+    #[test]
     fn only_the_cited_lines_are_judged_for_references() {
         // A stray `§` in the reason, and one on the line after the entry,
         // are no citation: neither is judged.

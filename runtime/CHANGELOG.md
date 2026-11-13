@@ -26,7 +26,8 @@ its version and date.
   shared module (spec 073).** `runtime/src/primitives/departures.rs` parses
   the `departs:` entries under `## Applicable Rules` (HTML comments and fenced
   code skipped, each structural problem reported with its line, a malformed
-  entry waiving nothing) and attributes each rule to the author email and time
+  entry waiving nothing, a wrapped reason ending at a thematic break as
+  CommonMark renders it) and attributes each rule to the author email and time
   of the first commit of the unbroken run ending at `HEAD` in which the spec
   holds an entry for it, following a renamed spec directory. A shallow or
   absent repository, an entry not in `HEAD`, or an unreadable revision is

@@ -360,8 +360,10 @@ fn a_malformed_entry_waives_nothing_and_the_run_names_it() {
     assert_eq!(written.must_violations, 1, "{written:?}");
     assert!(written.blocking);
     assert_eq!(written.malformed_departures.len(), 1, "{written:?}");
-    assert!(
-        written.malformed_departures[0].contains("no `reason:`"),
+    // The entry sits on line 10 of the fixture spec.
+    assert_eq!(
+        written.malformed_departures,
+        ["spec.md line 10: no `reason:`"],
         "{written:?}"
     );
     assert!(waivers(tmp.path()).is_empty(), "no waiver stored");

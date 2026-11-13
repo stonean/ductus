@@ -152,11 +152,12 @@ pub fn parse(content: &str) -> Parsed {
 }
 
 /// Whether `line`, trimmed at the start, opens a block that ends a paragraph in
-/// `CommonMark` without a blank line: a blockquote, or an ordered list item
+/// `CommonMark` without a blank line: a blockquote, a thematic break (three or
+/// more `-`, `*` or `_`, spaces allowed between), or an ordered list item
 /// (one to nine digits, then `.` or `)`, then a space or the line's end).
 /// A bullet marker is [`list_item`]'s.
 fn opens_block(line: &str) -> bool {
-    if line.starts_with('>') {
+    if line.starts_with('>') || thematic_break(line) {
         return true;
     }
     let digits = line.chars().take_while(char::is_ascii_digit).count();
@@ -164,6 +165,24 @@ fn opens_block(line: &str) -> bool {
         && line[digits..]
             .strip_prefix(['.', ')'])
             .is_some_and(|rest| rest.is_empty() || rest.starts_with(' '))
+}
+
+/// Whether `line` is a thematic break: three or more of one of `-`, `*`, `_`,
+/// with nothing else but spaces and tabs. A `---` directly under a paragraph
+/// line is a setext underline in `CommonMark`, which also ends the paragraph.
+fn thematic_break(line: &str) -> bool {
+    let mut marks = line.chars().filter(|c| !matches!(c, ' ' | '\t'));
+    let Some(first) = marks.next().filter(|c| matches!(c, '-' | '*' | '_')) else {
+        return false;
+    };
+    let mut count = 1;
+    for c in marks {
+        if c != first {
+            return false;
+        }
+        count += 1;
+    }
+    count >= 3
 }
 
 /// The text of a list item after its marker, or `None` for any other line.
@@ -592,6 +611,43 @@ mod tests {
         }
         // Not openers: a number with no marker, or a marker with no space.
         for text in ["2021 was", "1.5 times", "10 items"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{text}\n"
+            )));
+            assert_eq!(parsed.entries[0].reason, format!("r {text}"), "{text}");
+        }
+    }
+
+    #[test]
+    fn an_ordered_marker_takes_one_to_nine_digits() {
+        // Nine digits open a block; ten digits and none do not.
+        for opener in ["1. x", "123456789. x", "123456789) x"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{opener}\n"
+            )));
+            assert_eq!(parsed.entries[0].reason, "r", "{opener}");
+        }
+        for text in ["1234567890. x", ". x", ") x"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{text}\n"
+            )));
+            assert_eq!(parsed.entries[0].reason, format!("r {text}"), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_thematic_break_or_setext_underline_directly_after_the_reason_ends_it() {
+        // CommonMark ends the paragraph at `***` or `___`, and `---` under a
+        // paragraph line is its setext underline, not more of its text.
+        for rule in ["---", "***", "___", "- - -", "* * *", "-----"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{rule}\n"
+            )));
+            assert_eq!(parsed.problems, vec![]);
+            assert_eq!(parsed.entries[0].reason, "r", "{rule}");
+        }
+        // Not breaks: two marks, mixed marks, or text after them.
+        for text in ["--", "-*-", "--- x", "**bold**"] {
             let parsed = parse(&spec_with(&format!(
                 "- departs: `A-1`\n  - reason: r\n{text}\n"
             )));
