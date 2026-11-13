@@ -136,8 +136,8 @@ Task 11 of `079-review-and-analysis-work-converges` did this work (owner, 2026-1
 
 ## 17. Review's passes run in a fresh subagent
 
-- [ ] `framework/commands/review.md` step 3 and `framework/reference/review.md` §Passes in a subagent: a host that can start a subagent runs steps 3 to 7 in one fresh subagent and continues with only what it returns, checked before use; a host that cannot runs them itself (owner, 2026-11-13: the rule files and in-scope files the passes read were re-read by every later call of the session)
-- [ ] The parity goldens re-blessed only where step 3's prose moved, each diff read
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry, shared with 060's task
+- [x] `framework/commands/review.md` step 3 and `framework/reference/review.md` §Passes in a subagent: a host that can start a subagent runs steps 3 to 7 in one fresh subagent and continues with only what it returns, checked before use; a host that cannot runs them itself (owner, 2026-11-13: the rule files and in-scope files the passes read were re-read by every later call of the session)
+- [x] The parity goldens re-blessed only where step 3's prose moved, each diff read
+- [x] `runtime/CHANGELOG.md` `[Unreleased]` entry, shared with 060's task
 
 - **Done when**: the new criterion holds against the tree: step 3 and the reference section say who runs the passes, what the subagent is briefed with and returns, and how the host checks it; the generated command copies are in sync; and the whole `cargo test` passes

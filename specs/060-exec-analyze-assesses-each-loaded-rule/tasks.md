@@ -106,8 +106,8 @@ Operator-approved (2026-09-27, with the `cross-spec-impact:` declaration): this 
 
 ## 13. Analyze's rule judging runs in a fresh subagent
 
-- [ ] `framework/commands/analyze.md` steps 11 and 12 and `framework/reference/analyze.md` §Rule judging in a subagent: a host that can start a subagent judges the rules in one fresh subagent and continues with only the verdicts and coverage it returns, checked before use, a rule left unanswered or read short recorded under `unjudged-rules`; a host that cannot judges them itself (owner, 2026-11-13)
-- [ ] The parity goldens re-blessed only where steps 11 and 12 moved, each diff read, and the exec walker's tier still read from the first tier word of each step
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry, shared with 020's task
+- [x] `framework/commands/analyze.md` steps 11 and 12 and `framework/reference/analyze.md` §Rule judging in a subagent: a host that can start a subagent judges the rules in one fresh subagent and continues with only the verdicts and coverage it returns, checked before use, a rule left unanswered or read short recorded under `unjudged-rules`; a host that cannot judges them itself (owner, 2026-11-13)
+- [x] The parity goldens re-blessed only where steps 11 and 12 moved, each diff read, and the exec walker's tier still read from the first tier word of each step
+- [x] `runtime/CHANGELOG.md` `[Unreleased]` entry, shared with 020's task
 
 - **Done when**: the new criterion holds against the tree: steps 11 and 12 and the reference section say who judges the rules, what the subagent is briefed with and returns, and how the host checks it; the generated command copies are in sync; and the whole `cargo test` passes
