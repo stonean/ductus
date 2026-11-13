@@ -133,8 +133,8 @@ MUTATIONS = [
     (
         'M13 the section lists a SHOULD rule before a MUST rule',
         'src/primitives/write_analysis.rs',
-        'waived.sort_by_key(|rule| rule.tier != Some(FindingTier::Must));',
-        'waived.sort_by_key(|rule| rule.tier == Some(FindingTier::Must));',
+        ['(a.tier != FindingTier::Must, &a.rule)', '(b.tier != FindingTier::Must, &b.rule)'],
+        ['(a.tier == FindingTier::Must, &a.rule)', '(b.tier == FindingTier::Must, &b.rule)'],
         'waived_rules_list_must_first_then_the_rest_each_in_id_order',
     ),
     (
@@ -178,5 +178,26 @@ MUTATIONS = [
         '"- {} ({tier}) — {} — decided by {}",',
         '"- {} ({tier}) — {} — by {}",',
         'an_unattributed_waiver_renders_without_a_time',
+    ),
+    (
+        'M24 the email is rendered bare, outside a code span',
+        'src/primitives/write_analysis.rs',
+        '                code_span(&rule.decided_by)\n',
+        '                single_line(&rule.decided_by)\n',
+        'a_record_holding_an_attributed_waiver_passes_the_project_markdown_lint',
+    ),
+    (
+        'M25 a record with no waived rule gains a blank line',
+        'src/primitives/write_analysis.rs',
+        '        return String::new();\n    }\n    let lines: Vec<String> = waived',
+        '        return "\\n".to_string();\n    }\n    let lines: Vec<String> = waived',
+        'a_waived_rule_and_a_satisfied_one_differ_in_the_record_and_the_result',
+    ),
+    (
+        'M26 a reason is trimmed of a leading list marker',
+        'src/primitives/write_analysis.rs',
+        '                single_line(&rule.reason),\n',
+        '                plain(&rule.reason),\n',
+        'a_reason_is_rendered_verbatim_whatever_it_starts_with',
     ),
 ]

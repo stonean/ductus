@@ -12,9 +12,10 @@ its version and date.
 
 - **`write-analysis` lists the rules a record holds as `waived` apart from
   the rest (spec 073).** The body gains a `## Waived rules` section, absent
-  when no rule is waived, with one line per rule (`- RULE (MUST) — reason —
-  decided by EMAIL at TIME — cited §anchor`, the time absent when
-  unattributed, the citation absent when the entry has none), MUST-tier rules
+  when no rule is waived, with one line per rule (``- RULE (MUST) — reason — decided by `EMAIL` at
+  `TIME` — cited `§anchor` ``; the email, time and citation are in code spans so
+  the committed record passes `MD034`, the time is absent when unattributed and
+  the citation when the entry has none), MUST-tier rules
   first and then every other, each in rule-ID order. The result gains `waived`
   (rule, tier, reason, decided-by, decided-at, cited, in the same order) and
   `waived-count`, bounded as `contradictions` is: inline within

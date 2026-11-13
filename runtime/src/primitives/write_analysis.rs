@@ -806,36 +806,35 @@ fn derive_rule_fields(
 }
 
 /// The `waived` verdicts of `verdicts` with their rules' tiers, the MUST-tier
-/// first and every other after, each group in rule-ID order (`verdicts` is
-/// keyed by ID), so the order is the same on every run (spec 073).
+/// first and every other after, each group in rule-ID order, so the order is
+/// the same on every run (spec 073). Walks the loaded rules, so every entry
+/// has a tier by construction: a verdict is only ever held for a loaded
+/// assessable rule (a supplied one is refused otherwise, a carried one is
+/// read from the standing), and an assessable rule is MUST or SHOULD.
 fn waived_rules(
     standing: &rule_verdicts::Standing,
     verdicts: &BTreeMap<String, RuleVerdict>,
 ) -> Vec<WaivedRule> {
-    let mut waived: Vec<WaivedRule> = verdicts
+    let mut waived: Vec<WaivedRule> = standing
+        .rules()
         .iter()
-        .filter_map(|(id, verdict)| {
-            let RuleVerdict::Waived {
+        .filter_map(|(rule, _)| {
+            let Some(RuleVerdict::Waived {
                 reason,
                 decided_by,
                 decided_at,
                 cited,
-            } = verdict
+            }) = verdicts.get(&rule.id)
             else {
                 return None;
             };
-            let tier = standing
-                .rules()
-                .iter()
-                .find(|(rule, _)| rule.id == *id)
-                .and_then(|(rule, _)| match rule.tier {
-                    RuleSeverity::Must => Some(FindingTier::Must),
-                    RuleSeverity::Should => Some(FindingTier::Should),
-                    RuleSeverity::Info | RuleSeverity::Unspecified => None,
-                });
             Some(WaivedRule {
-                rule: id.clone(),
-                tier,
+                rule: rule.id.clone(),
+                tier: if rule.tier == RuleSeverity::Should {
+                    FindingTier::Should
+                } else {
+                    FindingTier::Must
+                },
                 reason: reason.clone(),
                 decided_by: decided_by.clone(),
                 decided_at: decided_at.clone(),
@@ -843,7 +842,9 @@ fn waived_rules(
             })
         })
         .collect();
-    waived.sort_by_key(|rule| rule.tier != Some(FindingTier::Must));
+    waived.sort_by(|a, b| {
+        (a.tier != FindingTier::Must, &a.rule).cmp(&(b.tier != FindingTier::Must, &b.rule))
+    });
     waived
 }
 
@@ -1030,9 +1031,13 @@ fn render_rule_sections(by_reason: &BTreeMap<String, u32>, rules: &RuleFields) -
 
 /// The `## Waived rules` section, MUST-tier first then every other, each in
 /// rule-ID order (spec 073): one line per rule naming it, its tier, the
-/// entry's reason, who decided it and when (`unattributed` and no time when
-/// history cannot say) and the citation when the entry has one. Empty when no
-/// rule is waived, so a record with none reads as it did before.
+/// entry's reason verbatim (it comes from a spec line, flattened to one line
+/// and nothing more), who decided it and when (`unattributed` and no time
+/// when history cannot say) and the citation when the entry has one. What
+/// comes from outside the spec, the commit's email, the time and the
+/// citation, is in a code span, so a bare email never fails a markdown lint
+/// of the committed record (`MD034`). Empty when no rule is waived, so a
+/// record with none reads as it did before.
 fn render_waived(waived: &[WaivedRule]) -> String {
     if waived.is_empty() {
         return String::new();
@@ -1041,26 +1046,31 @@ fn render_waived(waived: &[WaivedRule]) -> String {
         .iter()
         .map(|rule| {
             let tier = match rule.tier {
-                Some(FindingTier::Must) => "MUST",
-                Some(FindingTier::Should) => "SHOULD",
-                None => "untiered",
+                FindingTier::Must => "MUST",
+                FindingTier::Should => "SHOULD",
             };
             let mut line = format!(
                 "- {} ({tier}) — {} — decided by {}",
-                plain(&rule.rule),
-                plain(&rule.reason),
-                plain(&rule.decided_by)
+                single_line(&rule.rule),
+                single_line(&rule.reason),
+                code_span(&rule.decided_by)
             );
             if let Some(at) = &rule.decided_at {
-                let _ = write!(line, " at {}", plain(at));
+                let _ = write!(line, " at {}", code_span(at));
             }
             if let Some(cite) = &rule.cited {
-                let _ = write!(line, " — cited {}", plain(cite));
+                let _ = write!(line, " — cited {}", code_span(cite));
             }
             line
         })
         .collect();
     format!("## Waived rules\n\n{}\n\n", lines.join("\n"))
+}
+
+/// `text` on one line in a code span; a backtick in it becomes `'`, so the
+/// span cannot end early.
+fn code_span(text: &str) -> String {
+    format!("`{}`", single_line(text).replace('`', "'"))
 }
 
 /// Each rule whose verdict turned from quiet or addressed to a finding over
@@ -3925,18 +3935,26 @@ mod tests {
 
         assert_eq!(waived_record.rule_verdicts.len(), 1);
         assert_eq!(satisfied_record.rule_verdicts.len(), 0);
-        assert!(waived_body.contains("## Waived rules\n\n- TS-RULE-001 (MUST) — removed rather than versioned — decided by test@example.com at "), "{waived_body}");
+        assert!(waived_body.contains("## Waived rules\n\n- TS-RULE-001 (MUST) — removed rather than versioned — decided by `test@example.com` at `"), "{waived_body}");
         assert!(
-            waived_body.contains(" — cited §shared-exceptions\n"),
+            waived_body.contains("` — cited `§shared-exceptions`\n"),
             "{waived_body}"
         );
         assert!(!satisfied_body.contains("Waived rules"), "{satisfied_body}");
+        // With nothing waived the findings, contradictions and unexamined
+        // sections follow one another exactly as they did before the section.
+        assert!(
+            satisfied_body.contains(
+                "## Deferred to other specs\n\n*None.*\n\n## Contradictions\n\n*None.*\n\n## Unexamined targets\n\n"
+            ),
+            "{satisfied_body}"
+        );
         assert_eq!(waived_result.waived.len(), 1);
         assert_eq!(waived_result.waived_count, 1);
         let only = &waived_result.waived[0];
         assert_eq!(
             (only.rule.as_str(), only.tier, only.decided_by.as_str()),
-            ("TS-RULE-001", Some(FindingTier::Must), "test@example.com")
+            ("TS-RULE-001", FindingTier::Must, "test@example.com")
         );
         assert_eq!(satisfied_result.waived, Vec::new());
         assert_eq!(satisfied_result.waived_count, 0);
@@ -3962,7 +3980,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["TS-RULE-001", "TS-RULE-003", "TS-SHLD-001"]
         );
-        assert_eq!(result.waived[2].tier, Some(FindingTier::Should));
+        assert_eq!(result.waived[2].tier, FindingTier::Should);
         let body = analysis_md(&tmp);
         let lines: Vec<&str> = body
             .lines()
@@ -3972,7 +3990,8 @@ mod tests {
             .collect();
         assert_eq!(lines.len(), 3, "{body}");
         assert!(
-            lines[0].starts_with("- TS-RULE-001 (MUST) — first — decided by test@example.com at "),
+            lines[0]
+                .starts_with("- TS-RULE-001 (MUST) — first — decided by `test@example.com` at `"),
             "{body}"
         );
         assert!(!lines[0].contains("cited"), "{body}");
@@ -3980,7 +3999,10 @@ mod tests {
             lines[1].starts_with("- TS-RULE-003 (MUST) — third — decided by "),
             "{body}"
         );
-        assert!(lines[1].ends_with(" — cited §shared-exceptions"), "{body}");
+        assert!(
+            lines[1].ends_with(" — cited `§shared-exceptions`"),
+            "{body}"
+        );
         assert!(
             lines[2].starts_with("- TS-SHLD-001 (SHOULD) — soft — decided by "),
             "{body}"
@@ -3996,7 +4018,7 @@ mod tests {
         run(&waived_args(), tmp.path()).unwrap();
         let body = analysis_md(&tmp);
         assert!(
-            body.contains("- TS-RULE-001 (MUST) — removed rather than versioned — decided by unattributed — cited §shared-exceptions\n"),
+            body.contains("- TS-RULE-001 (MUST) — removed rather than versioned — decided by `unattributed` — cited `§shared-exceptions`\n"),
             "{body}"
         );
     }
@@ -4049,5 +4071,63 @@ mod tests {
         assert_eq!(lists["waived"][0]["rule"], "TS-RULE-001");
         assert_eq!(lists["waived"][2]["tier"], "should");
         assert!(analysis_md(&tmp).contains("## Waived rules"));
+    }
+
+    /// A reason is rendered as the spec wrote it: one that starts like a list
+    /// item or a checkbox is not trimmed.
+    #[test]
+    fn a_reason_is_rendered_verbatim_whatever_it_starts_with() {
+        for reason in ["- keeps its dash", "[ ] keeps its box", "[x] and this one"] {
+            let (tmp, _repository) = departing_repo(true);
+            set_spec_tail(
+                &tmp,
+                &format!(
+                    "\n## Applicable Rules\n\n- departs: `TS-RULE-001`\n  - reason: {reason}\n"
+                ),
+            );
+            let repository = git2::Repository::open(tmp.path()).unwrap();
+            crate::primitives::git_fixture::commit_all(&repository, "again");
+            run(&waived_args(), tmp.path()).unwrap();
+            let body = analysis_md(&tmp);
+            assert!(
+                body.contains(&format!("- TS-RULE-001 (MUST) — {reason} — decided by `")),
+                "{body}"
+            );
+        }
+    }
+
+    /// The committed record must pass the project's markdown lint
+    /// (§markdown-standards), and an email from git is a bare address to it
+    /// (`MD034`): a record the runtime wrote, holding an attributed waiver
+    /// with a citation, is linted by the real `markdownlint-cli2` through
+    /// `lint-markdown` under the project's own config. A missing install
+    /// fails loudly, as `tests/lint_markdown_scope.rs` does.
+    #[test]
+    fn a_record_holding_an_attributed_waiver_passes_the_project_markdown_lint() {
+        let (tmp, _repository) = three_departures();
+        run(&all_waived_args(), tmp.path()).unwrap();
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let modules = root.join("node_modules");
+        assert!(
+            modules.join(".bin").exists(),
+            "run `npm ci` at the checkout root: this test needs the real markdownlint"
+        );
+        fs::copy(
+            root.join(".markdownlint-cli2.jsonc"),
+            tmp.path().join(".markdownlint-cli2.jsonc"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&modules, tmp.path().join("node_modules")).unwrap();
+        let body = analysis_md(&tmp);
+        assert!(body.contains("`test@example.com`"), "{body}");
+        let lint = crate::primitives::lint_markdown::run(
+            &crate::schema::primitives::LintMarkdownArgs {
+                paths: vec!["specs/042-demo/analysis.md".to_string()],
+                fix: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(lint.clean, "{:?}\n{body}", lint.violations);
     }
 }

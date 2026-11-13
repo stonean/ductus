@@ -2081,10 +2081,9 @@ pub struct WriteAnalysisResult {
 pub struct WaivedRule {
     /// The rule's ID.
     pub rule: String,
-    /// The rule's tier, from its Statement. Absent for a rule whose Statement
-    /// carries no tier.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tier: Option<FindingTier>,
+    /// The rule's tier, from its Statement: an assessable rule is MUST or
+    /// SHOULD.
+    pub tier: FindingTier,
     /// The entry's `reason:`.
     pub reason: String,
     /// The author email of the commit that introduced the entry, or
