@@ -200,4 +200,18 @@ MUTATIONS = [
         '                plain(&rule.reason),\n',
         'a_reason_is_rendered_verbatim_whatever_it_starts_with',
     ),
+    (
+        'M27 the section breaks a tier tie by heading order, not rule ID',
+        'src/primitives/write_analysis.rs',
+        '(a.tier != FindingTier::Must, &a.rule).cmp(&(b.tier != FindingTier::Must, &b.rule))',
+        '(a.tier != FindingTier::Must).cmp(&(b.tier != FindingTier::Must))',
+        'waived_rules_are_ordered_by_id_whatever_the_heading_order',
+    ),
+    (
+        'M28 a backtick in a citation ends its code span',
+        'src/primitives/write_analysis.rs',
+        ".replace('`', \"'\")",
+        '',
+        'a_backtick_in_a_citation_renders_inside_one_code_span',
+    ),
 ]

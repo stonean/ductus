@@ -4117,7 +4117,10 @@ mod tests {
             tmp.path().join(".markdownlint-cli2.jsonc"),
         )
         .unwrap();
+        #[cfg(unix)]
         std::os::unix::fs::symlink(&modules, tmp.path().join("node_modules")).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(&modules, tmp.path().join("node_modules")).unwrap();
         let body = analysis_md(&tmp);
         assert!(body.contains("`test@example.com`"), "{body}");
         let lint = crate::primitives::lint_markdown::run(
@@ -4129,5 +4132,86 @@ mod tests {
         )
         .unwrap();
         assert!(lint.clean, "{:?}\n{body}", lint.violations);
+    }
+
+    /// The order is MUST-tier first and then by rule ID, whatever order the
+    /// rule files list the rules in: headings out of ID order in each file,
+    /// and a MUST rule in a later file with an ID that sorts first.
+    #[test]
+    fn waived_rules_are_ordered_by_id_whatever_the_heading_order() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/rules");
+        fs::create_dir_all(&dir).unwrap();
+        let rule = |id: &str, keyword: &str| {
+            format!("### {id}\n\n> Specs {keyword} do it.\n\n**Verification:** Check.\n\n")
+        };
+        fs::write(
+            dir.join("a-cross.md"),
+            rule("TS-RULE-002", "MUST") + &rule("TS-RULE-001", "MUST"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("b-cross.md"),
+            rule("TS-SHLD-002", "SHOULD") + &rule("TS-SHLD-001", "SHOULD"),
+        )
+        .unwrap();
+        fs::write(dir.join("c-cross.md"), rule("TS-AAAA-001", "MUST")).unwrap();
+        let ids = [
+            "TS-SHLD-002",
+            "TS-RULE-002",
+            "TS-AAAA-001",
+            "TS-SHLD-001",
+            "TS-RULE-001",
+        ];
+        let entries = ids.iter().fold(String::new(), |mut out, id| {
+            let _ = write!(out, "- departs: `{id}`\n  - reason: r\n");
+            out
+        });
+        set_spec_tail(&tmp, &format!("\n## Applicable Rules\n\n{entries}"));
+        let mut a = args();
+        a.judged_rules = ids.iter().map(|id| (*id).to_string()).collect();
+        a.rule_verdicts = ids
+            .iter()
+            .map(|id| ((*id).to_string(), RuleVerdict::bare_waived()))
+            .collect();
+        let result = run(&a, tmp.path()).unwrap();
+        let expected = [
+            "TS-AAAA-001",
+            "TS-RULE-001",
+            "TS-RULE-002",
+            "TS-SHLD-001",
+            "TS-SHLD-002",
+        ];
+        assert_eq!(
+            result
+                .waived
+                .iter()
+                .map(|w| w.rule.as_str())
+                .collect::<Vec<_>>(),
+            expected
+        );
+        let body = analysis_md(&tmp);
+        let listed: Vec<&str> = body
+            .lines()
+            .skip_while(|l| *l != "## Waived rules")
+            .skip(2)
+            .take_while(|l| l.starts_with("- "))
+            .map(|l| l[2..].split(' ').next().unwrap())
+            .collect();
+        assert_eq!(listed, expected, "{body}");
+    }
+
+    /// A backtick in a citation cannot end its code span early: it renders
+    /// as an apostrophe.
+    #[test]
+    fn a_backtick_in_a_citation_renders_inside_one_code_span() {
+        let (tmp, _repository) = departing_repo(true);
+        set_spec_tail(
+            &tmp,
+            "\n## Applicable Rules\n\n- departs: `TS-RULE-001`\n  - reason: r\n  - cited: §a`b\n",
+        );
+        run(&waived_args(), tmp.path()).unwrap();
+        let body = analysis_md(&tmp);
+        assert!(body.contains(" — cited `§a'b`\n"), "{body}");
     }
 }
