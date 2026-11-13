@@ -32,11 +32,13 @@ As planned, `/ductus` read it from the extracted archive — the same download t
 
 A self-audit family asserts the three files agree, and the release workflow refuses a tag that names another version before anything is published (`scripts/check-release-tag.sh`, spec AC15). Those two checks are what make the single-number invariant real rather than a convention someone remembers.
 
-### The pointer: symlink attempted, copy on failure
+### The pointer: symlink attempted, copy on failure, compared on every run
 
-`.ductus/bin/ductus` must resolve to the store without elevated privileges on any supported platform. Rather than branching on OS, `/ductus` attempts a symlink and falls back to a copy when creation fails. Windows without developer mode lands on the copy whenever creation fails, since [Microsoft's `CreateSymbolicLinkW` reference](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw) says an unelevated process may create a symlink by passing `SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE`, which works once Developer Mode is enabled; Windows *with* it, and every Unix platform, gets the symlink.
+`.ductus/bin/ductus` must hold the resolved binary's bytes without elevated privileges on any supported platform. Rather than branching on OS, `/ductus` attempts `ln -sf`, falls back to `cp` when that exits non-zero, and on every run compares the pointer's SHA-256 with the resolved binary's, re-making a pointer that is missing, dangling or differs. The comparison is what makes the design independent of what `ln -sf` does on a platform. On Linux and macOS it makes a symlink, which follows the store. Under Git Bash on Windows, with `MSYS` unset, it exits 0 and writes a regular file, with Developer Mode on and the shell elevated, so the copy is reached without a failure and goes stale when the store is replaced. A copy that equals the store is left alone. `MSYS=winsymlinks:native` would make a real symlink and is not spelled.
 
-One code path, self-adapting, and no platform detection to keep in sync with the target-triple table. The cost is that a Windows copy consumes disk per project — accepted, since the store's primary win is one *download* per machine, and the fallback is invisible to every other surface.
+A `cp` over a pointer a running server holds fails on Linux and Windows, so the fallback moves the pointer aside, copies, and removes the moved-aside file. Measurements, with their method (the script, runs, jobs, image and `MSYS` state) are 048's §Edge Cases; the behavior and its edge cases are `scenarios/pointer-follows-the-store.md`'s.
+
+One code path, self-adapting, and no platform detection to keep in sync with the target-triple table. The cost is that a Windows copy consumes disk per project and a digest comparison runs each time — accepted, since the store's primary win is one *download* per machine, and both digest tools are already seeded.
 
 ### The version probe executes the binary
 
@@ -102,7 +104,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 
 **One version per machine.** The store holds a single binary, so two projects pinned to different versions cannot both be correct simultaneously; whichever ran `/ductus` last wins until the other runs it. Rejected alternatives: a versioned store (`ductus-{version}`), which fixes coexistence at the cost of a store-layout change, an adopter migration and a pruning policy; and per-project binaries. Accepted because it is strictly better than the `PATH` behavior it replaces — ductus owns the path and every run corrects it — and because it is the only shape uniform across every agent.
 
-**A gitignored artifact the repo cannot verify.** The pointer is per-contributor and outside version control, so nothing in CI proves an adopter's pointer is correct. Mitigated by making it cheap to repair: a missing or dangling pointer is the expected state of any un-bootstrapped checkout, and `/ductus` recreates it without ceremony.
+**A gitignored artifact the repo cannot verify.** The pointer is per-contributor and outside version control, so nothing in CI proves an adopter's pointer is correct. Mitigated by making it cheap to repair: a missing or dangling pointer is the expected state of any un-bootstrapped checkout, and every `/ductus` run compares the pointer with the resolved binary and re-makes it without ceremony when it differs.
 
 **Adoption is now gated on a download.** Firewalled, air-gapped, and unpublished-platform adopters move from *degraded* to *blocked* until they use the `[runtime]` supplied-binary key. This is the deliberate cost of the requirement; the mitigation is that the halt names the store path and the release URL, so the recovery is discoverable at the moment it is needed rather than in documentation the reader has not opened.
 
