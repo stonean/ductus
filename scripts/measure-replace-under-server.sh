@@ -346,7 +346,7 @@ for variant in cp-only rm-then-cp; do
   if [ "$variant" = cp-only ]; then
     measure "pointer-symlink-$variant" "$pointer" "$cp_cmd"
   else
-    measure "pointer-symlink-$variant" "$pointer" "if [ -L $pointer ]; then rm -f $pointer; fi && $cp_cmd"
+    measure "pointer-symlink-$variant" "$pointer" "if ls -ld $pointer | grep -q '^l'; then rm -f $pointer; fi && $cp_cmd"
   fi
   case "$(digest "$decoy")" in
     "$d_new") echo "  decoy (the link's target) holds: new" ;;
