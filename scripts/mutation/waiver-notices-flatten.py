@@ -32,15 +32,15 @@ MUTATIONS = [
     (
         'M3 the expired notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
-        '"waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"',
-        '"waiver expired: rule {rule} at {file} ({reason})"',
+        '                notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));\n                expired.push(anchor);',
+        '                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));\n                expired.push(anchor);',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
     (
         'M4 classification carries the flattened rule instead of the stored one',
         'src/primitives/process_waivers.rs',
-        '                rule: rule.clone(),',
-        '                rule: shown_rule.clone(),',
+        '            let anchor = WaiverRef {\n                rule: rule.clone(),',
+        '            let anchor = WaiverRef {\n                rule: shown_rule.clone(),',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
 ]

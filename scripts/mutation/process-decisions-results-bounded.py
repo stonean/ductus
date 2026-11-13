@@ -52,7 +52,7 @@ MUTATIONS = [
     (
         'M5 the list file drops the notices the host emits',
         'src/primitives/process_decisions.rs',
-        '        "notices": &classified.notices,\n',
+        '        "notices": &notices,\n',
         '        "notices": Vec::<String>::new(),\n',
         'process_decisions::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),

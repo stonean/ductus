@@ -231,9 +231,9 @@ MUTATIONS = [
     # -- check-rule-ids: the line-scoped section scan ---------------------
     (
         'M29 the deprecation scan is cut to a 256-byte window again',
-        'src/primitives/check_rule_ids.rs',
-        '    let mut lines = content[heading_start..].lines();',
-        '    let mut lines = content[heading_start..(heading_start + 256).min(content.len())].lines();',
+        'src/primitives/rule_sections.rs',
+        '    let mut lines = content[heading_start..].lines().enumerate();',
+        '    let mut lines = content[heading_start..(heading_start + 256).min(content.len())].lines().enumerate();',
         'check_rule_ids::tests::multibyte_rule_sections_are_scanned_line_by_line',
     ),
     # -- check-corpus-links: the reference sources are checked ------------

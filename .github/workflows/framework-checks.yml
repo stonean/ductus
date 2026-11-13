@@ -265,6 +265,29 @@ jobs:
       - name: (t) Departure attribution reads history
         run: bash scripts/tests/test-departure-attribution.sh
 
+      # (u) Every mutation list's anchors still match the code (QUAL-TEST-001).
+      # A mutation whose anchor no longer occurs exactly once cannot run, so
+      # the proof it stood for stops silently: 21 anchors in six lists went
+      # stale that way, found only by hand (spec 073 task 15). `run.py
+      # --check` validates anchors without running cargo. The step fails on
+      # the first list that fails it, and when it finds no list at all, rather
+      # than passing over nothing.
+      - name: (u) Mutation-list anchors match the code
+        run: |
+          checked=0
+          for list in scripts/mutation/*.py; do
+            if [ "$(basename "$list")" = run.py ]; then
+              continue
+            fi
+            python3 scripts/mutation/run.py --check "$list"
+            checked=$((checked + 1))
+          done
+          if [ "$checked" -eq 0 ]; then
+            echo "no mutation list found under scripts/mutation/" >&2
+            exit 1
+          fi
+          echo "$checked mutation lists checked"
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

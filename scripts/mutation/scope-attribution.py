@@ -190,15 +190,15 @@ MUTATIONS = [
     (
         'M26 every commit counts whole, as the old union did',
         'src/primitives/compute_review_scope.rs',
-        '        if claims.claimants.is_empty() {\n            window.own.extend(claims.paths);',
-        '        if claims.claimants.len() < 99 {\n            window.own.extend(claims.paths);',
+        '        if claims.claimants.is_empty() {\n            // A commit naming no spec',
+        '        if claims.claimants.len() < 99 {\n            // A commit naming no spec',
         'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant',
     ),
     (
         'M27 a commit no spec claims is left out',
         'src/primitives/compute_review_scope.rs',
-        '        if claims.claimants.is_empty() {\n            window.own.extend(claims.paths);',
-        '        if claims.claimants.len() > 99 {\n            window.own.extend(claims.paths);',
+        '        if claims.claimants.is_empty() {\n            // A commit naming no spec',
+        '        if claims.claimants.len() > 99 {\n            // A commit naming no spec',
         'compute_review_scope::tests::an_unclaimed_commit_counts_whole_in_every_window',
     ),
     (
@@ -414,8 +414,8 @@ MUTATIONS = [
     (
         'M61 the denominator ignores the scope rule',
         'src/primitives/write_review.rs',
-        '        u32::try_from(read.count()).unwrap_or(u32::MAX),\n',
-        '        u32::try_from(read.count() + result.excluded.len()).unwrap_or(u32::MAX),\n',
+        '        u32::try_from(entries.len()).unwrap_or(u32::MAX),\n        result.excluded,',
+        '        u32::try_from(entries.len() + result.excluded.len()).unwrap_or(u32::MAX),\n        result.excluded,',
         'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
     ),
     (
@@ -1219,15 +1219,15 @@ MUTATIONS = [
     (
         'M179 a file the run read reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known { read, plan } => (!read.contains(path)\n                && !plan.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())',
         'Self::Known { .. } => (repo.join(path).symlink_metadata().is_ok())',
         'process_decisions::tests::a_silent_decision_on_a_file_the_run_read_expires',
     ),
     (
         'M180 a file gone from disk reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known { read, plan } => (!read.contains(path)\n                && !plan.names(path)\n                && repo.join(path).symlink_metadata().is_ok())',
-        'Self::Known { read, plan } => (!read.contains(path) && !plan.names(path))',
+        'Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { .. } => (!self.holds(path))',
         'process_decisions::tests::a_silent_decision_on_a_file_gone_from_disk_expires',
     ),
     (
@@ -1429,15 +1429,15 @@ MUTATIONS = [
     (
         'M209 a new waiver is not stored',
         'src/primitives/write_review.rs',
-        '    surviving.extend(new_waivers);\n',
+        '    surviving.extend(waivers.entries);\n',
         '',
         'write_review::tests::a_new_waiver_is_stored_and_the_next_run_applies_it',
     ),
     (
         "M210 a new waiver's findings still count",
         'src/primitives/write_review.rs',
-        '    args.applied_waivers.extend(new_anchors);\n',
-        '    let _ = new_anchors;\n',
+        '    args.applied_waivers.extend(waivers.anchors.iter().cloned());\n',
+        '',
         'write_review::tests::a_new_waiver_is_stored_and_the_next_run_applies_it',
     ),
     (
@@ -1499,8 +1499,8 @@ MUTATIONS = [
     (
         "M219 a run's own record counts in its denominator, and keeps a window from being empty",
         'src/primitives/write_review.rs',
-        '.filter(|path| **path != own_record);',
-        '.filter(|_| true);',
+        '.filter(|path| *path != own_record)',
+        '.filter(|_| true)',
         'write_review::tests::a_runs_own_record_is_not_in_its_denominator write_review::tests::an_uncommitted_record_keeps_no_window_from_being_empty',
     ),
     (
@@ -1569,8 +1569,8 @@ MUTATIONS = [
     (
         'M231 a waiver held already leaves its finding counted',
         'src/primitives/write_review.rs',
-        '            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {',
-        '            firing\n                .iter()\n                .filter(|file| !held(file))\n                .map(|file| crate::schema::primitives::WaiverRef {',
+        '        anchors.extend(\n            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
+        '        anchors.extend(\n            firing\n                .iter()\n                .filter(|file| !held(file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
         'write_review::tests::a_new_waiver_through_both_writes_is_stored_once',
     ),
     (
@@ -1646,8 +1646,8 @@ MUTATIONS = [
     (
         'M242 a scope pattern does not hold the file it matches',
         'src/primitives/compute_review_scope.rs',
-        '                && !plan.names(path)\n',
-        '                && !plan.literal.contains(path)\n',
+        'Self::Known { read, plan } => read.contains(path) || plan.names(path),',
+        'Self::Known { read, plan } => read.contains(path) || plan.literal.contains(path),',
         'compute_review_scope::tests::a_file_under_a_scope_pattern_reads_as_read',
     ),
     (
@@ -1794,7 +1794,7 @@ MUTATIONS = [
     (
         'M266 an empty base is derived, and refuses',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n        return Ok((0, BTreeMap::new()));\n    }\n',
+        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeMap::new()));\n    }\n',
         '',
         'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
@@ -1823,8 +1823,8 @@ MUTATIONS = [
     (
         'M270 the empty-scope flag decides the denominator',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n        return Ok((0, BTreeMap::new()));\n',
-        '    if args.diff_base.is_empty() || args.empty_scope {\n        return Ok((0, BTreeMap::new()));\n',
+        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;',
+        '    if args.diff_base.is_empty() || args.empty_scope {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;',
         'write_review::tests::empty_scope_does_not_suppress_the_derived_denominator',
     ),
     (

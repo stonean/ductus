@@ -149,9 +149,10 @@ The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decisi
 
 ## 15. Disposition out-of-spec finding: 21 mutation anchors in six lists no longer match the code
 
-- [ ] scripts/mutation/scope-attribution.py — M26, M27, M61, M179, M180, M209, M210, M219, M242, M266 and M270 match nothing, and M231 matches twice (`compute_review_scope.rs`, `write_review.rs`); stale already at 992476e7, found by task 14's implementer running `run.py --check` over every list
-- [ ] scripts/mutation/reopen-measure.py — M51, M52, M80 and M101 match nothing in `measure_reopenings.rs`
-- [ ] scripts/mutation/waiver-notices-flatten.py — M3 and M4 each match twice in `process_waivers.rs`
-- [ ] scripts/mutation/owner-reviews-067.py — M29 matches nothing in `check_rule_ids.rs`; scripts/mutation/process-decisions-results-bounded.py — M5 matches nothing in `process_decisions.rs`; scripts/mutation/reviews-follow-what-changed.py — M14 matches nothing in `compute_review_scope.rs`
+- [x] scripts/mutation/scope-attribution.py — M26, M27, M61, M179, M180, M209, M210, M219, M242, M266 and M270 match nothing, and M231 matches twice (`compute_review_scope.rs`, `write_review.rs`); stale already at 992476e7, found by task 14's implementer running `run.py --check` over every list — fixed: each re-anchored to the code as it stands (M231 lengthened to match once), all 12 killed
+- [x] scripts/mutation/reopen-measure.py — M51, M52, M80 and M101 match nothing in `measure_reopenings.rs` — fixed: re-anchored to `observe()` and its call in the walk, all 4 killed
+- [x] scripts/mutation/waiver-notices-flatten.py — M3 and M4 each match twice in `process_waivers.rs` — fixed: each lengthened to match once, both killed
+- [x] scripts/mutation/owner-reviews-067.py — M29 matches nothing in `check_rule_ids.rs`; scripts/mutation/process-decisions-results-bounded.py — M5 matches nothing in `process_decisions.rs`; scripts/mutation/reviews-follow-what-changed.py — M14 matches nothing in `compute_review_scope.rs` — fixed: M29 re-anchored in `rule_sections.rs`, where the scan moved, M5 and M14 re-anchored, all 3 killed
+- [x] .github/workflows/framework-checks.yml — nothing ran `run.py --check` over the lists, so the 21 went stale unseen (§design-principles) — fixed: step (u) checks every list's anchors on each push, proven to pass on the tree, to fail on a stale anchor and to fail when it finds no list; `actionlint` clean
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

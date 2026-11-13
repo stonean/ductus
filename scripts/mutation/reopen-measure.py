@@ -348,15 +348,15 @@ MUTATIONS = [
     (
         "M51 a run's two writes are two runs",
         'src/primitives/measure_reopenings.rs',
-        'RecordState::Run(run) if !runs.iter().any(|r| r.stamp == run.stamp) => {',
-        'RecordState::Run(run) => {',
+        'RecordState::Run(run) => match runs.iter_mut().find(|r| r.stamp == run.stamp) {',
+        'RecordState::Run(run) => match runs.iter_mut().find(|_| false) {',
         'measure_reopenings::tests::a_runs_two_writes_are_one_run_judged_by_the_last',
     ),
     (
         'M52 a run is judged by its first write',
         'src/primitives/measure_reopenings.rs',
-        'RecordState::Run(run) if !runs.iter().any(|r| r.stamp == run.stamp) => {\n                    runs.push(run.clone());',
-        'RecordState::Run(run) => {\n                    if let Some(earlier) = runs.iter_mut().find(|r| r.stamp == run.stamp) {\n                        *earlier = run.clone();\n                    } else {\n                        runs.push(run.clone());\n                    }',
+        'Some(seen) => seen.first_write = Some(commit),',
+        'Some(seen) => {\n                        *seen = Run {\n                            first_write: Some(commit),\n                            ..run.clone()\n                        }\n                    }',
         'measure_reopenings::tests::a_runs_two_writes_are_one_run_judged_by_the_last',
     ),
     (
@@ -551,7 +551,7 @@ MUTATIONS = [
     (
         'M80 records are not read inside a pass',
         'src/primitives/measure_reopenings.rs',
-        'pass.observe(&history.records_of(*directory)?);',
+        'pass.observe(&history.records_of(*directory)?, commit.id());',
         'let _ = pass;',
         'measure_reopenings::tests::one_review_and_one_analysis_are_within_the_bound',
     ),
@@ -677,8 +677,8 @@ MUTATIONS = [
     (
         "M101 a run's first write carrying the mark excuses the next run",
         'src/primitives/measure_reopenings.rs',
-        '                RecordState::Run(run) if !runs.iter().any(|r| r.stamp == run.stamp) => {\n                    runs.push(run.clone());\n                }\n',
-        '                RecordState::Run(run) => {\n                    if let Some(known) = runs.iter_mut().find(|r| r.stamp == run.stamp) {\n                        known.gating = known.gating || run.gating;\n                    } else {\n                        runs.push(run.clone());\n                    }\n                }\n',
+        'Some(seen) => seen.first_write = Some(commit),',
+        'Some(seen) => {\n                        seen.first_write = Some(commit);\n                        seen.gating = seen.gating || run.gating;\n                    }',
         'measure_reopenings::tests::a_run_whose_last_write_cleared_the_mark_left_nothing',
     ),
     (
