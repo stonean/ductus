@@ -112,3 +112,12 @@ The gate reads a back-link only in a target's `spec.md` or `scenarios/`, so 022,
 - [x] `framework/reference/analyze.md` says `check-departures` (step 5); its dispatch is step 5.1
 
 - **Done when**: each item is fixed with a fixture its mutant turns red where it is code, an independent verifier has read the commit, and the whole `cargo test` passes
+
+## 12. Bound `check-departures`' result (BE-PAYLOAD-001, deferred by 073's analysis)
+
+- [ ] `check-departures`' `entries`, `findings` and `unexamined` go through `bounded_lists::place` as the other list-returning primitives' lists do: `form` and each list's `-count` inline in both forms, and past `[artifacts] read-size-bytes` a `lists-file` holding the three whole; `CHECK_DEPARTURES`, 073's `data-model.md` §check-departures result and `plan.md`'s `check-departures` section commit to the bound
+- [ ] Every consumer reads the file form: step 5.1 of `framework/commands/analyze.md` (as the other steps read a `lists-file`), `AnalyzeTally`'s `check-departures` arm under `ductus exec`, and any other caller the change finds
+- [ ] `runtime/tests/result_sizes.rs` measures `check-departures` on a spec whose entries pass the read size, with a test and a mutant that fail when the bound is removed
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the bound folded into `check-departures`' Added entry
+
+- **Done when**: `check-departures` returns its lists in the inline-or-file form past the read size, proven by a test its mutant turns red; `ductus exec` analyze reads the file form; the whole `cargo test` passes; and 073's next analysis records BE-PAYLOAD-001 addressed
