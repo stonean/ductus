@@ -10,6 +10,15 @@ its version and date.
 
 ### Added
 
+- **A spec's decided rule departures are recorded, not lost (spec 073).** A
+  `departs:` entry under `## Applicable Rules` states once that the spec
+  deliberately does not satisfy a rule of any tier. Analyze records the rule
+  `waived` with the entry's reason and attribution and raises no finding for
+  it, and review derives a departure waiver from the same entry, so neither
+  command reads the decision twice. The entries below carry the pieces:
+  `departures.rs`, `check-departures`, the review waivers and `process-waivers`
+  expiry, and the `waived` verdict with its `## Waived rules` section. The
+  shapes are in `specs/073-decided-rule-departures-are-recorded/data-model.md`.
 - **`ductus exec` analyze counts a departure entry's findings (spec 073).**
   Step 5.1 of `/analyze` dispatches `check-departures`, and `AnalyzeTally`
   counts its findings in the tier each carries (its `tier` field) and its

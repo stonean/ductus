@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [060-exec-analyze-assesses-each-loaded-rule, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate]
 next-criterion: 7
@@ -8,6 +8,8 @@ next-criterion: 7
 # 082 — Rule assessments converge across runs
 
 `/{project}:analyze` records a verdict for each loaded rule it assesses, against the subjects it judged. A later run re-judges a rule only when its subjects changed. A record that judged fewer rules than were loaded says so on every path, not only under `ductus exec`.
+
+> **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) adds a third verdict shape, `waived`, to the rule-verdict map for a rule the spec's departure entry names; the data model carries it.
 
 ## Motivation
 

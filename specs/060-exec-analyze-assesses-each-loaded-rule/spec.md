@@ -10,6 +10,8 @@ next-criterion: 10
 A `ductus exec` `/{project}:analyze` assesses each rule in the tier the rule carries and counts each verdict once, and its record names every loaded rule it neither asked the host about nor reused a current verdict for (spec 082).
 
 > **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) changed the walk this spec defines. Steps 11 and 12 ask only about a rule whose stored verdict is not current, the response carries an optional `addressed-by`, and `write-analysis` derives the rules left unjudged itself, counting them in `rule-assessments-not-checked` beside the rules the walker could not ask about.
+>
+> **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) changed what the walk records for a rule the spec's departure entry names: any fired answer is recorded `waived`, a plain pass nothing.
 
 ## Motivation
 

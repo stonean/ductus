@@ -20,6 +20,8 @@ For each waiver in the review record's `waivers` list at the start of every `/du
 4. **Rule no longer fires at the anchored path** (offending code was fixed or moved away from that file) → the waiver is dropped from the list on the next write of `review.md`. There is nothing to waive at that location. A run whose scope does not hold the file did not read it, so it retains the waiver instead (079's AC24).
 5. **The same rule fires at a *different* file in scope** → the waiver does NOT extend to the new location. A waiver is a per-location decision. If the violation at the new file is also intentional, the operator records a separate `--waive` for that file.
 
+   **Exception: a departure waiver.** A waiver `write-review` derives from a spec's departure entry (`departure: true`) is not anchored to a file: the entry is the spec's decision, so it covers the rule at every file in the spec's own review scope, and expires when its entry is gone ([073 — Decided rule departures are recorded](../../073-decided-rule-departures-are-recorded/spec.md)).
+
 When step 2 or step 4 applies and the same rule still fires *anywhere in scope* (including the same file when the rule's anchor was lost via path rename), the underlying finding re-counts toward `must-violations` and the record's `blocking` flips back to `true` if it was previously `false`. The spec returns to the blocking state until the violation is fixed, a fresh waiver is recorded, or a deferral releases the violation (spec 076).
 
 Every drop emits a one-line notice on stdout so the operator notices the lost coverage: `waiver expired: rule {rule-id} at {file} ({reason})`. Silent expiry would let waivers quietly evaporate — the notice is the point.

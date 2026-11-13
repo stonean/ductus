@@ -28,6 +28,8 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > **Signpost:** [041](../041-task-pruning/spec.md) changed the task-heading grammar this spec's parser owns. `split_numbered_heading`, the one home of that grammar, reads digits and at most one lowercase letter before the dot (`11`, `11a`), and a `TaskNumber` orders them by digits, then suffix. `read-tasks`, `prune-tasks`, `mark-task` and `append-task` read a suffixed task through it, `check-artifacts` compares numbering by that order, and `append-task`'s `task-number` result is a string.
 >
 > **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) changed surfaces this spec owns. `assessSpecQuality`'s response carries an optional `addressed-by`, the walker skips a rule whose stored verdict is current, and `discover-rule-files` takes `feature`, under which, with `all` and `rules`, it returns a `verdicts` block.
+>
+> **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added a third rule verdict, `waived`, for a rule the spec departs from: the exec walker records it for any fired answer on such a rule, and the `assessSpecQuality` section of the data model states the answer.
 
 ## Motivation
 
