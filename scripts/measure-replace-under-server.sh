@@ -3,14 +3,19 @@
 # `ductus mcp` server runs from them, replacing each the way
 # framework/bootstrap/ductus.md does: the store by tempfile + rename (Runtime
 # acquisition, step 6), the pointer by `ln -sf` and then the `cp` fallback
-# (Pointer materialization, steps 2-3). Spec 048, task 29.
+# (Pointer materialization, steps 3-5). Spec 048, tasks 29 and 31.
 #
 # It prints the environment, then one line per case: the command, its exit
 # status and stderr, whether the server was still running afterwards and two
 # seconds later, whether the destination is a symlink, and whether it now holds
 # the new content. It also measures whether a pointer `ln -sf` made follows the
 # store when the store is replaced, and on Windows the elevation, Developer
-# Mode, and `ln -sf` with MSYS asking for native symlinks.
+# Mode, and `ln -sf` with MSYS asking for native symlinks. Last it measures the
+# bootstrap's own repair sequence (Pointer materialization, steps 2-5): the
+# digest comparison spelled per platform (`shasum -a 256`, `sha256sum`,
+# `certutil -hashfile`), a stale pointer re-made by `ln -sf` with a server
+# running from it, and the move-aside sequence with and without a leftover
+# `.old`.
 # It fails only when it cannot establish what it measures (a server not running
 # just before its replacement, a control replacement with no server that
 # fails, an existing store it would overwrite), never on a measured outcome.
@@ -53,6 +58,18 @@ digest() {
   fi
 }
 
+# The digest the bootstrap's Pointer materialization spells for this platform,
+# first digest only; empty when the tool cannot compute one.
+bootstrap_digest() {
+  case "$(uname -s)" in
+    Darwin) shasum -a 256 "$1" 2> /dev/null | cut -d' ' -f1 ;;
+    MINGW* | MSYS* | CYGWIN*)
+      certutil -hashfile "$(cygpath -w "$1")" SHA256 2> /dev/null | sed -n 2p | tr -d ' \r' | tr 'A-F' 'a-f'
+      ;;
+    *) sha256sum "$1" 2> /dev/null | cut -d' ' -f1 ;;
+  esac
+}
+
 # A is what each server runs; B is what replaces it, A plus one byte, so the
 # destination's digest says which one it holds.
 old="$work/old$ext"
@@ -64,6 +81,11 @@ d_old="$(digest "$old")"
 d_new="$(digest "$new")"
 if [ -z "$d_old" ] || [ "$d_old" = "$d_new" ]; then
   echo "harness: could not make two distinct binaries" >&2
+  exit 1
+fi
+
+if [ -z "$(bootstrap_digest "$old")" ]; then
+  echo "harness: the bootstrap's digest tool computed nothing for $old" >&2
   exit 1
 fi
 
@@ -136,6 +158,30 @@ measure() {
   last_rc=$rc
 }
 
+# compare_row <case>: what the bootstrap's comparison (Pointer materialization,
+# step 2) concludes about the pointer and the store, spelled as the bootstrap
+# spells it. A digest that cannot be computed reads as differing.
+compare_row() {
+  local name="$1" dp ds verdict held=other link=no
+  dp="$(bootstrap_digest "$pointer")"
+  ds="$(bootstrap_digest "$store")"
+  if [ -z "$dp" ] || [ -z "$ds" ]; then
+    verdict="differs (a digest could not be computed)"
+  elif [ "$dp" = "$ds" ]; then
+    verdict=equal
+  else
+    verdict=differs
+  fi
+  if [ -L "$pointer" ]; then link=yes; fi
+  case "$(digest "$pointer")" in
+    "$d_new") held=new ;;
+    "$d_old") held=old ;;
+    "") held=absent ;;
+  esac
+  printf '%s | compare pointer and store digests | %s | pointer holds: %s | symlink: %s\n' \
+    "$name" "$verdict" "$held" "$link"
+}
+
 require_ok() {
   if [ "$last_rc" -ne 0 ]; then
     echo "harness: control $1 failed with no server running" >&2
@@ -148,7 +194,7 @@ store_cmd="cp '$new' ~/.ductus/bin/ductus$ext.tmp && mv -f ~/.ductus/bin/ductus$
 ln_cmd="ln -sf ~/.ductus/bin/ductus$ext $pointer"
 cp_cmd="cp ~/.ductus/bin/ductus$ext $pointer"
 store_aside_cmd="mv -f ~/.ductus/bin/ductus$ext ~/.ductus/bin/ductus$ext.old && $store_cmd"
-pointer_aside_cmd="mv -f $pointer $pointer.old && $cp_cmd"
+pointer_aside_cmd="rm -f $pointer.old && mv -f $pointer $pointer.old && $cp_cmd"
 
 echo "--- store: tempfile + rename"
 cp "$old" "$store"
@@ -213,6 +259,16 @@ cp "$old" "$pointer"
 start_server "$pointer" pointer-aside
 measure pointer-running-moved-aside "$pointer" "$pointer_aside_cmd"
 measure pointer-running-remove-moved-aside "$pointer.old" "rm -f $pointer.old"
+compare_row pointer-after-moved-aside-compare
+stop_server
+
+rm -f "$pointer" "$pointer.old"
+cp "$old" "$pointer"
+printf 'left by an interrupted run' > "$pointer.old"
+start_server "$pointer" pointer-aside-leftover
+measure pointer-running-moved-aside-leftover-old "$pointer" "$pointer_aside_cmd"
+measure pointer-running-remove-moved-aside-leftover-old "$pointer.old" "rm -f $pointer.old"
+compare_row pointer-after-moved-aside-leftover-old-compare
 stop_server
 
 if $native; then
@@ -255,5 +311,27 @@ if $native; then
   measure pointer-materialized-ln-nativestrict "$pointer" "MSYS=winsymlinks:nativestrict $ln_cmd"
   measure pointer-after-store-replaced-nativestrict "$pointer" "$store_cmd"
 fi
+
+# The bootstrap's own repair (Pointer materialization, steps 2-3): compare the
+# pointer with the store, and re-make a pointer that differs with `ln -sf`
+# while a server runs from it. The store holds the new binary throughout.
+echo "--- the bootstrap's repair: compare, then re-make"
+cp "$new" "$store"
+rm -f "$pointer" "$pointer.old"
+cp "$old" "$pointer"
+compare_row pointer-stale-copy-compare
+cp "$new" "$pointer"
+compare_row pointer-current-copy-compare
+rm -f "$pointer"
+compare_row pointer-missing-compare
+# A dangling link: made only where `ln -s` makes a link at all.
+ln -s "$work/nowhere" "$pointer" 2> /dev/null
+compare_row pointer-dangling-compare
+rm -f "$pointer"
+cp "$old" "$pointer"
+start_server "$pointer" repair-ln
+measure pointer-stale-running-repair-ln "$pointer" "$ln_cmd"
+compare_row pointer-after-repair-ln-compare
+stop_server
 
 echo "--- done"

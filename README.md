@@ -166,7 +166,7 @@ The `ductus` runtime is the deterministic execution layer the pipeline runs on. 
 | | |
 | --- | --- |
 | The store | `~/.ductus/bin/ductus` — one binary per machine, written only by `/ductus` |
-| The pointer | `.ductus/bin/ductus` — per project, gitignored, resolves to the store |
+| The pointer | `.ductus/bin/ductus` — per project, gitignored, holds the store's binary: a symlink to it, or on Windows a copy that every `/ductus` run compares with the store and re-makes when it differs |
 
 The pointer is what lets a committed MCP config work for the whole team: `.mcp.json` is shared, so a machine-specific absolute path in it would break every other contributor and every CI checkout. A repo-relative pointer resolves for all of them.
 

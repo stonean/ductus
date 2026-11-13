@@ -367,7 +367,7 @@ Three variants:
 
 - **The registration was already in place**, so State B wrote no wiring: never say it was wired in this run. Say the work above is complete and every primitive ran through the CLI at `{pointer-path}`, that `ductus` is registered for this project but its server is not live in this session, and that the operator should approve the project's MCP server if their agent asks (on Pi, trust the project) and check that it starts, then start a new session.
 - **The wiring was skipped** because the agent's MCP file is not valid JSON: acquisition still happened and the pointer exists, so the work above still completed by CLI. Say the registration was skipped and name the file, rather than promising a tool surface that will not appear.
-- **State A, live but stale**: the set holds the acquisition alone. Say the work above is complete, that the runtime was updated to `{version}`, and that a new session restarts the server on it.
+- **State A, live but stale, or its pointer re-made**: the set holds the acquisition, the pointer's repair, or both, and nothing else. Say the work above is complete, that the runtime was updated to `{version}` or that the project's `{pointer-path}` was brought up to date with it (whichever the set holds), and that a new session restarts the server on it.
 
 Nothing is emitted when a State A run leaves the set empty — a current, live runtime has no restart to announce, and a line saying so would be noise on every run.
 

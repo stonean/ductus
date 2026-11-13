@@ -68,8 +68,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 # Resolve the runtime the way /ductus registers it: the repo-relative pointer
-# `.ductus/bin/ductus`, which every run materializes and which resolves to the
-# ductus-owned store (or to a project's own `[runtime] path`). PATH is a
+# `.ductus/bin/ductus`, which every run compares with the resolved binary and
+# re-makes when it differs: a symlink to the ductus-owned store (or to a
+# project's own `[runtime] path`), or on Windows a copy of it. PATH is a
 # fallback for a hand-installed binary only. Since spec 048 moved the runtime
 # into the store, /ductus never puts `ductus` on PATH — so a PATH-only guard
 # would be false for every adopter.

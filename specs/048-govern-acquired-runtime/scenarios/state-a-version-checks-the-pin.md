@@ -48,8 +48,9 @@ the check costs a version comparison and nothing new.
 
 Four outcomes:
 
-- **Reports `{pin}`** — proceed exactly as before: nothing added to the
-  pending-restart set, no message. This is the routine path and it is unchanged.
+- **Reports `{pin}`** — the store is current. Check the pointer (below); when
+  it is current nothing is added to the pending-restart set and there is no
+  message. This is the routine path.
 - **A project-supplied `[runtime] path` does not execute** — it does not exist,
   will not run, or its probe expired: halt as Branch 1 step 4 does, naming the
   path. Acquiring over it would discard the project's stated choice unsaid.
@@ -61,6 +62,12 @@ Four outcomes:
   `framework/bootstrap/ductus.md` §Runtime acquisition Branch 2, then run the
   rest of the session through `{pointer-path} <primitive>` rather than the MCP
   tools, and carry the acquisition to the **Closing restart**.
+
+Every outcome that continues then checks the pointer against the resolved
+binary and re-makes it when it is missing, dangling or differs; that check, and
+what a re-made pointer adds to the session, are
+[pointer-follows-the-store](pointer-follows-the-store.md)'s. The probe above
+reads the store's version, which says nothing about a pointer that is a copy.
 
 That last clause is the non-obvious one. Re-acquiring does **not** refresh the
 running MCP server: it was spawned once at session start and holds the old

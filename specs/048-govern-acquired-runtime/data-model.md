@@ -56,7 +56,7 @@ Behavior when set:
 | Path | Scope | Committed | Description |
 | --- | --- | --- | --- |
 | `~/.ductus/bin/ductus` | machine | no (outside any repo) | The store. One binary per machine, executable bit set, written only by `/ductus`. `ductus.exe` on Windows. |
-| `.ductus/bin/ductus` | project | no (gitignored) | The pointer. Symlink where creation succeeds, copy otherwise. Named by every `project-committed` MCP config. |
+| `.ductus/bin/ductus` | project | no (gitignored) | The pointer. A symlink where `ln -sf` makes one, a copy otherwise (Git Bash on Windows writes the copy itself); every run compares its digest with the resolved binary's and re-makes it when it differs (scenario `pointer-follows-the-store`). Named by every `project-committed` MCP config. |
 
 The `.gitignore` block gains `.ductus/bin/`, joining the anchored `/.ductus/session.toml` line that already establishes per-path ignores under a committed `.ductus/` directory ([042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md)).
 
