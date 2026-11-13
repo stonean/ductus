@@ -1006,8 +1006,9 @@ fn render_analysis(
     out
 }
 
-/// The `## Contradictions` and `## Unexamined targets` sections: the second
-/// names each rule left unjudged beside the breakdown that counts them.
+/// The `## Waived rules` section when a rule is waived, then `## Contradictions` and
+/// `## Unexamined targets`: the last names each rule left unjudged beside the
+/// breakdown that counts them.
 fn render_rule_sections(by_reason: &BTreeMap<String, u32>, rules: &RuleFields) -> String {
     let mut unexamined_section = render_unexamined(by_reason);
     if !rules.unjudged.is_empty() {

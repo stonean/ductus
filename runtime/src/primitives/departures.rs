@@ -67,6 +67,34 @@ pub enum ProblemKind {
     DuplicateRule(String),
 }
 
+impl ProblemKind {
+    /// What is wrong, as every consumer says it: `check-departures` in its findings and
+    /// `write-review` in its `malformed-departures`.
+    #[must_use]
+    pub fn message(&self) -> String {
+        match self {
+            Self::MissingRule => {
+                "the `departs:` item names no backticked rule ID, so the entry waives nothing"
+                    .into()
+            }
+            Self::SecondRule => {
+                "the `departs:` item names more than one rule, so the entry waives nothing".into()
+            }
+            Self::MissingReason => "the entry has no `reason:`, so it waives nothing".into(),
+            Self::EmptyReason => "the entry's `reason:` is empty, so it waives nothing".into(),
+            Self::UnknownKey(key) => format!(
+                "the entry has a `{key}:` child, which the grammar does not allow (`reason:` and `cited:` only), so it waives nothing"
+            ),
+            Self::DuplicateKey(key) => {
+                format!("the entry gives `{key}:` twice, so it waives nothing")
+            }
+            Self::DuplicateRule(rule) => {
+                format!("an earlier entry already departs from `{rule}`; a rule has one departure")
+            }
+        }
+    }
+}
+
 /// A structural problem and the line it is reported at.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Problem {
@@ -186,6 +214,8 @@ fn thematic_break(line: &str) -> bool {
 }
 
 /// The text of a list item after its marker, or `None` for any other line.
+// Not `bullet_text`: that reads `- ` and checkbox items only, and the entry grammar
+// takes `*` and `+` markers as `CommonMark` does.
 fn list_item(line: &str) -> Option<&str> {
     let trimmed = line.trim_start();
     ["- ", "* ", "+ "]
@@ -340,6 +370,24 @@ pub enum Attribution {
     Unattributed,
 }
 
+/// The `decided-by` of a departure no history attributes.
+pub const UNATTRIBUTED: &str = "unattributed";
+
+impl Attribution {
+    /// The `decided-by` and `decided-at` a record carries: the commit's author and time,
+    /// or [`UNATTRIBUTED`] and no time. The one mapping every consumer shares.
+    #[must_use]
+    pub fn decided(&self) -> (String, Option<String>) {
+        match self {
+            Self::Attributed {
+                decided_by,
+                decided_at,
+            } => (decided_by.clone(), Some(decided_at.clone())),
+            Self::Unattributed => (UNATTRIBUTED.to_string(), None),
+        }
+    }
+}
+
 /// Attribute each of `rules`, as named by entries in the spec at `spec_rel`
 /// (a `/`-separated path from `project_root`), from the project's git history.
 ///
@@ -390,10 +438,7 @@ fn introducing_commits(
     let mut cache: Option<(git2::Oid, BTreeSet<String>)> = None;
     loop {
         let Ok(held) = rules_at(repository, &commit, &git_path, &mut cache) else {
-            for rule in &open {
-                introduced.remove(*rule);
-            }
-            return introduced;
+            return forget_open(introduced, &open);
         };
         open.retain(|rule| {
             let present = held.contains(*rule);
@@ -402,17 +447,33 @@ fn introducing_commits(
             }
             present
         });
-        if open.is_empty() {
+        if open.is_empty() || commit.parent_count() == 0 {
             return introduced;
         }
-        let Ok(parent) = commit.parent(0) else {
-            return introduced;
+        // A history that cannot be walked further does not say where the run began.
+        let Ok((parent, earlier)) = commit.parent(0).and_then(|parent| {
+            let earlier = moved_from(repository, &parent, &commit, &git_path)?;
+            Ok((parent, earlier))
+        }) else {
+            return forget_open(introduced, &open);
         };
-        if let Some(earlier) = moved_from(repository, &parent, &commit, &git_path) {
+        if let Some(earlier) = earlier {
             git_path = earlier;
         }
         commit = parent;
     }
+}
+
+/// `introduced` without the rules whose run was still open when history could not be
+/// read: each is unattributed, never given the newest commit that held it.
+fn forget_open(
+    mut introduced: BTreeMap<String, git2::Oid>,
+    open: &BTreeSet<&String>,
+) -> BTreeMap<String, git2::Oid> {
+    for rule in open {
+        introduced.remove(*rule);
+    }
+    introduced
 }
 
 /// The rule IDs the spec at `git_path` names in `commit`'s tree: none when the
@@ -447,22 +508,23 @@ fn rules_at(
 /// Where `git_path`, which `commit` holds and `parent` does not, was in
 /// `parent`: the old path of a rename the diff detects, else `None`. The one
 /// delta whose new path is `git_path` is the file's add, or its rename once
-/// similarity detection has paired it with a delete.
+/// similarity detection has paired it with a delete. A revision or diff that
+/// cannot be read is an error, never "not moved".
 fn moved_from(
     repository: &git2::Repository,
     parent: &git2::Commit<'_>,
     commit: &git2::Commit<'_>,
     git_path: &str,
-) -> Option<String> {
-    let parent_tree = parent.tree().ok()?;
-    if parent_tree.get_path(Path::new(git_path)).is_ok() {
-        return None;
+) -> Result<Option<String>, git2::Error> {
+    let parent_tree = parent.tree()?;
+    match parent_tree.get_path(Path::new(git_path)) {
+        Ok(_) => return Ok(None),
+        Err(err) if err.code() == git2::ErrorCode::NotFound => {}
+        Err(err) => return Err(err),
     }
-    let mut diff = repository
-        .diff_tree_to_tree(Some(&parent_tree), Some(&commit.tree().ok()?), None)
-        .ok()?;
-    diff.find_similar(None).ok()?;
-    let old = diff
+    let mut diff = repository.diff_tree_to_tree(Some(&parent_tree), Some(&commit.tree()?), None)?;
+    diff.find_similar(None)?;
+    let Some(old) = diff
         .deltas()
         .find(|delta| {
             delta
@@ -471,11 +533,14 @@ fn moved_from(
                 .is_some_and(|new| new == Path::new(git_path))
         })
         .and_then(|delta| delta.old_file().path())
-        .map(|old| old.to_string_lossy().replace('\\', "/"))?;
+        .map(|old| old.to_string_lossy().replace('\\', "/"))
+    else {
+        return Ok(None);
+    };
     // Similarity detection pairs any deleted file with a similar added one, so
     // a rename is followed only within one spec: the same feature directory
     // identity, which a number never reissued makes the same spec.
-    (spec_form(&old).is_some() && spec_form(&old) == spec_form(git_path)).then_some(old)
+    Ok((spec_form(&old).is_some() && spec_form(&old) == spec_form(git_path)).then_some(old))
 }
 
 /// The feature a spec file's directory names, by the corpus's one membership
@@ -1182,6 +1247,39 @@ mod tests {
         let head = repository.head().unwrap().target().unwrap();
         std::fs::write(tmp.path().join(".git/shallow"), format!("{head}\n")).unwrap();
         assert!(Repository::open(tmp.path()).unwrap().is_shallow());
+        assert_eq!(who("A-1", tmp.path(), SPEC), Attribution::Unattributed);
+    }
+
+    /// A history whose parent commit cannot be read does not say where the run began: it
+    /// is unattributed, never given the newest commit that held the entry.
+    #[test]
+    fn a_missing_parent_commit_leaves_the_run_unattributed() {
+        let (tmp, repository) = repository();
+        write(&tmp.path().join(SPEC), &spec_with(&entry("A-1")));
+        commit_as(&repository, "alice@example.com", T1);
+        write(
+            &tmp.path().join(SPEC),
+            &spec_with(&format!("{}\n", entry("A-1"))),
+        );
+        commit_as(&repository, "bob@example.com", T1 + DAY);
+        assert_eq!(
+            who("A-1", tmp.path(), SPEC),
+            by("alice@example.com", "2021-01-01T00:00:00Z")
+        );
+        let parent = repository
+            .head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .parent_id(0)
+            .unwrap()
+            .to_string();
+        let loose = tmp
+            .path()
+            .join(".git/objects")
+            .join(&parent[..2])
+            .join(&parent[2..]);
+        std::fs::remove_file(loose).unwrap();
         assert_eq!(who("A-1", tmp.path(), SPEC), Attribution::Unattributed);
     }
 

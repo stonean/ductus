@@ -62,9 +62,9 @@ MUTATIONS = [
     ),
     (
         'M7 an unattributed waiver carries a time',
-        'src/primitives/rule_verdicts.rs',
-        '_ => ("unattributed".to_owned(), None),',
-        '_ => ("unattributed".to_owned(), Some("1970-01-01T00:00:00Z".to_owned())),',
+        'src/primitives/departures.rs',
+        'Self::Unattributed => (UNATTRIBUTED.to_string(), None),',
+        'Self::Unattributed => (UNATTRIBUTED.to_string(), Some("1970-01-01T00:00:00Z".to_string())),',
         'a_commit_after_an_unattributed_run_attributes_the_next_write',
     ),
     (
@@ -126,8 +126,8 @@ MUTATIONS = [
     (
         'M23 a waiver below the repository root is not attributed',
         'src/primitives/rule_verdicts.rs',
-        'departures::attribute(repo, spec_rel, &waived);',
-        'departures::attribute(repo, &format!("../{spec_rel}"), &waived);',
+        'departures::attribute(repo, spec_rel, &rules);',
+        'departures::attribute(repo, &format!("../{spec_rel}"), &rules);',
         'a_waiver_in_a_project_below_the_repository_root_is_attributed',
     ),
     (

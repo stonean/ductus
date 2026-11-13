@@ -7,13 +7,15 @@
 //! `discover-rule-files` loads under `all`, as `/{project}:analyze` loads them;
 //! a `cited:` is judged by `resolve-anchor` against the constitution's
 //! markers. This module adds only the tiers. With no rule file loaded
-//! nothing is known of a rule, so none is unknown, retired or deprecated:
-//! each entry's rule is unexamined as `rule-citations-not-checked`.
+//! nothing is known of a rule, so a token that is, whole, shaped like a rule
+//! ID (`check_rule_ids::is_a_rule_id`) is none of unknown, retired or
+//! deprecated: its entry's rule is unexamined as `rule-citations-not-checked`.
+//! A token shaped like no rule ID is unknown whether or not a file is loaded.
 
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::primitives::departures::{self, Attribution, Entry, ProblemKind};
+use crate::primitives::departures::{self, Attribution, Entry};
 use crate::primitives::discover_rule_files;
 use crate::primitives::rule_sections::parse_rule_sections;
 use crate::primitives::{PrimitiveError, Result, check_rule_ids, read_text, resolve_anchor};
@@ -68,7 +70,7 @@ pub fn run(args: &CheckDeparturesArgs, repo: &Path) -> Result<CheckDeparturesRes
         found.push(finding(
             AnalyzeSeverity::Blocking,
             problem.line,
-            problem_message(&problem.kind),
+            problem.kind.message(),
         ));
     }
     if parsed.entries.is_empty() {
@@ -87,13 +89,9 @@ pub fn run(args: &CheckDeparturesArgs, repo: &Path) -> Result<CheckDeparturesRes
             &mut unexamined,
             &finding,
         );
-        let (decided_by, decided_at) = match attribution.get(&entry.rule) {
-            Some(Attribution::Attributed {
-                decided_by,
-                decided_at,
-            }) => (decided_by.clone(), Some(decided_at.clone())),
-            _ => ("unattributed".to_owned(), None),
-        };
+        let (decided_by, decided_at) = attribution
+            .get(&entry.rule)
+            .map_or_else(|| Attribution::Unattributed.decided(), Attribution::decided);
         entries.push(DepartureEntry {
             rule: entry.rule.clone(),
             tier: rules.tier(&entry.rule),
@@ -151,11 +149,11 @@ fn judge_rule(
             ),
         )),
         State::NotInstalled => unexamined.push(DepartureUnexamined {
-            reason: "rule-not-installed".into(),
+            reason: check_rule_ids::NOT_INSTALLED.into(),
             line: to_line(entry.line),
         }),
         State::NotChecked => unexamined.push(DepartureUnexamined {
-            reason: "rule-citations-not-checked".into(),
+            reason: check_rule_ids::CITATIONS_NOT_CHECKED.into(),
             line: to_line(entry.line),
         }),
         State::Defined => {}
@@ -178,28 +176,6 @@ fn finish(
 
 fn to_line(line: usize) -> u32 {
     u32::try_from(line).unwrap_or(u32::MAX)
-}
-
-fn problem_message(kind: &ProblemKind) -> String {
-    match kind {
-        ProblemKind::MissingRule => {
-            "the `departs:` item names no backticked rule ID, so the entry waives nothing".into()
-        }
-        ProblemKind::SecondRule => {
-            "the `departs:` item names more than one rule, so the entry waives nothing".into()
-        }
-        ProblemKind::MissingReason => "the entry has no `reason:`, so it waives nothing".into(),
-        ProblemKind::EmptyReason => "the entry's `reason:` is empty, so it waives nothing".into(),
-        ProblemKind::UnknownKey(key) => format!(
-            "the entry has a `{key}:` child, which the grammar does not allow (`reason:` and `cited:` only), so it waives nothing"
-        ),
-        ProblemKind::DuplicateKey(key) => {
-            format!("the entry gives `{key}:` twice, so it waives nothing")
-        }
-        ProblemKind::DuplicateRule(rule) => {
-            format!("an earlier entry already departs from `{rule}`; a rule has one departure")
-        }
-    }
 }
 
 /// Judge each `cited:` through `resolve-anchor` against the constitution's
@@ -329,7 +305,7 @@ impl RuleFacts {
     }
 
     fn state(&self, rule: &str) -> State {
-        if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {
+        if self.examined == 0 && check_rule_ids::is_a_rule_id(rule) {
             return State::NotChecked;
         }
         match self.citations.get(rule) {
@@ -672,6 +648,32 @@ mod tests {
         let result = check(&tmp);
         assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
         assert_eq!(result.findings[0].tier, AnalyzeSeverity::Blocking);
+        assert!(result.findings[0].message.starts_with("line 10:"));
+        assert!(
+            result.findings[0]
+                .message
+                .contains("no loaded rule file defines")
+        );
+        assert_eq!(
+            result.unexamined,
+            vec![DepartureUnexamined {
+                reason: "rule-citations-not-checked".into(),
+                line: 12,
+            }]
+        );
+    }
+
+    /// Text around a rule-shaped substring is no rule ID, so it is unknown with no rule
+    /// file loaded, as it is with one, where it matches no rule.
+    #[test]
+    fn with_no_rule_file_loaded_text_around_a_rule_id_is_not_a_rule_id() {
+        let tmp = project(
+            "",
+            "- departs: `see DM-MUST-001 here`\n  - reason: r\n- departs: `DM-MUST-001`\n  - reason: r\n",
+        );
+        std::fs::remove_file(tmp.path().join("specs/rules/demo-cross.md")).unwrap();
+        let result = check(&tmp);
+        assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
         assert!(result.findings[0].message.starts_with("line 10:"));
         assert!(
             result.findings[0]

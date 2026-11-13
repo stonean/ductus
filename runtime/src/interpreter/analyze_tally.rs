@@ -24,6 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
+use crate::primitives::check_rule_ids;
 use crate::primitives::write_analysis::{
     REASON_RULE_ASSESSMENTS_NOT_CHECKED, REASON_RULE_FILE_UNREADABLE,
 };
@@ -149,9 +150,12 @@ impl AnalyzeTally {
                     // and not missing, but its text was not available to
                     // judge the spec against: unexamined, never clean (spec
                     // 033 scenario `an-out-of-surface-citation-resolves`).
-                    self.record_unexamined("rule-not-installed", count("not-installed"));
+                    self.record_unexamined(check_rule_ids::NOT_INSTALLED, count("not-installed"));
                 } else {
-                    self.record_unexamined("rule-citations-not-checked", count("citations"));
+                    self.record_unexamined(
+                        check_rule_ids::CITATIONS_NOT_CHECKED,
+                        count("citations"),
+                    );
                 }
                 self.advisory += count("deprecated");
             }

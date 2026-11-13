@@ -64,7 +64,13 @@ its version and date.
   (`rule-not-installed`) and a citation that cannot be judged
   (`anchor-target-unjudgeable`, `anchor-target-unreadable`) are `unexamined`,
   never a pass. The rule's state is `check-rule-ids`' reading of every rule
-  file in the rules directory. The tool needs an allow entry
+  file in the rules directory. With none loaded (`check-rule-ids` examining 0
+  files) it records each entry whose rule token is, whole, shaped like a rule ID
+  `rule-citations-not-checked` and raises no rule-state finding, as step 5 does
+  for its citations; a token shaped like no rule ID stays an unknown-rule
+  finding. Step 14 skips a well-formed departure entry's rule, and the analyze
+  reference and the review reference's waiver paragraph point at the compiled
+  descriptions instead of restating them. The tool needs an allow entry
   (`mcp__ductus__check-departures`), which `/{project}:configure` writes.
 - **`write-review` waives the rule of each departure entry, and
   `process-waivers` expires the waiver when the entry is gone (spec 073).**
@@ -275,16 +281,20 @@ its version and date.
 
 ### Changed
 
-- **`check-departures` raises no rule-state finding when no rule file is loaded
-  (spec 073).** With `check-rule-ids` examining 0 files, step 5 records each
-  citation `rule-citations-not-checked` and raises nothing; `check-departures`
-  now does the same for each entry's rule, instead of a Blocking "no loaded
-  rule file defines" finding per entry. Structural findings are still raised.
-  A token shaped like no rule ID stays an unknown-rule finding then, and a
-  `cited:` reference that does not resolve is no `check-departures` finding,
-  since step 4 reports it once. Step 14 skips a departure entry's rule, and the `check-departures` section
-  of the analyze reference and the review reference's waiver paragraph point at
-  the compiled descriptions instead of restating them.
+- **`write-review`'s departure waivers are bounded by the review scope,
+  follow their entry, and yield no deferral (spec 073, review round 1).** An
+  entry waives its rule only at files the run's resolved scope holds (a scope
+  entry, or a file the plan names), so a finding outside it stays counted, and
+  a run with an empty `diff-base` derives none. Every write refreshes a stored
+  departure waiver's `reason`, `waived-by` and `waived-at` from its entry, the
+  stored `waived-at` kept while the entry is still `unattributed`. The entry
+  decides over a deferral of its violations: a new `--defer` of one is refused
+  naming the rule and the entry's `spec.md` line, and a stored one is
+  superseded, pruned from `decisions:` and named in the result's new
+  `superseded-deferrals`. A parent commit or rename diff that cannot be read
+  makes the attribution `unattributed`, where it was the newest commit that
+  held the entry.
+
 - **`check-review-gate`'s and `check-artifacts`' descriptions restore what
   triggers a block and two family rules (spec 079, task 36).** The gate says
   what makes each of `not-reviewed`, `must-violations`, `not-analyzed` and

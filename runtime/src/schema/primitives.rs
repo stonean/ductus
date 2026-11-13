@@ -1814,6 +1814,11 @@ pub struct WriteReviewResult {
     /// `spec.md line N: what is wrong` (spec 073). Absent when there are none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub malformed_departures: Vec<String>,
+    /// Each stored deferral of a violation a departure entry decides, which this run did
+    /// not store again and pruned from `decisions:`, as a sentence naming the finding and
+    /// the entry's `spec.md` line (spec 073). Absent when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub superseded_deferrals: Vec<String>,
 }
 
 // -- write-analysis ----------------------------------------------------------

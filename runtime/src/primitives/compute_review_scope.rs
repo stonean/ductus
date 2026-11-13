@@ -499,16 +499,23 @@ impl RunScope {
         })
     }
 
+    /// Whether the run's scope holds `path`: a scope entry, or a file the plan names.
+    /// A scope that could not be resolved holds nothing.
+    pub(crate) fn holds(&self, path: &str) -> bool {
+        match self {
+            Self::Unreadable => false,
+            Self::Known { read, plan } => read.contains(path) || plan.names(path),
+        }
+    }
+
     /// Why this run says nothing about a finding at `path`, when it says nothing. A
     /// file gone from disk has nothing left to fire on, so its finding is over whatever
     /// the scope holds.
     pub(crate) fn why_unread(&self, path: &str, repo: &Path) -> Option<String> {
         match self {
             Self::Unreadable => Some("this run's scope could not be read".to_string()),
-            Self::Known { read, plan } => (!read.contains(path)
-                && !plan.names(path)
-                && repo.join(path).symlink_metadata().is_ok())
-            .then(|| format!("this run did not read `{path}`")),
+            Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())
+                .then(|| format!("this run did not read `{path}`")),
         }
     }
 }

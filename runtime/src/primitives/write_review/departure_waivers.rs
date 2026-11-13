@@ -67,7 +67,9 @@ fn spec_with(entries: &str) -> String {
 const MUST_ENTRY: &str = "- departs: `BE-COMPAT-001`\n  - reason: the credential field is removed rather than versioned\n";
 const SHOULD_ENTRY: &str = "- departs: `BE-LOG-002`\n  - reason: the hot path logs nothing\n";
 
-/// A repository holding the spec with `entries` and three source files, committed.
+/// A repository whose one commit holds the spec with `entries`, and three source files
+/// the run's window then holds: written after it, so each is changed since the commit
+/// [`seed`] names.
 fn fixture(dir: &Path, entries: &str) -> Repository {
     let repository = Repository::init(dir).unwrap();
     write(
@@ -75,11 +77,22 @@ fn fixture(dir: &Path, entries: &str) -> Repository {
         &format!("specs/{FEATURE}/spec.md"),
         &spec_with(entries),
     );
+    // Committed with the spec, so the window does not hold it: the one file outside it.
+    write(dir, "src/out.rs", "fn f() {}\n");
+    commit(&repository, "seed");
     for file in ["a", "b", "c"] {
         write(dir, &format!("src/{file}.rs"), "fn f() {}\n");
     }
-    commit(&repository, "seed");
     repository
+}
+
+/// The sha of the repository's first commit, the `diff-base` every run takes.
+fn seed(dir: &Path) -> String {
+    let repository = Repository::open(dir).unwrap();
+    let mut walk = repository.revwalk().unwrap();
+    walk.set_sorting(git2::Sort::REVERSE).unwrap();
+    walk.push_head().unwrap();
+    walk.next().unwrap().unwrap().to_string()
 }
 
 fn finding(rule: &str, severity: &str, file: &str) -> Value {
@@ -115,7 +128,7 @@ fn run_review(
         "feature": FEATURE,
         "reviewed-at": reviewed_at,
         "reviewed-against": "abc1234",
-        "diff-base": "",
+        "diff-base": seed(dir),
         "empty-scope": false,
         "findings": findings,
         "applied-waivers": classified.applied,
@@ -363,7 +376,7 @@ fn a_malformed_entry_waives_nothing_and_the_run_names_it() {
     // The entry sits on line 10 of the fixture spec.
     assert_eq!(
         written.malformed_departures,
-        ["spec.md line 10: no `reason:`"],
+        ["spec.md line 10: the entry has no `reason:`, so it waives nothing"],
         "{written:?}"
     );
     assert!(waivers(tmp.path()).is_empty(), "no waiver stored");
@@ -372,8 +385,11 @@ fn a_malformed_entry_waives_nothing_and_the_run_names_it() {
 #[test]
 fn an_unattributed_entry_stores_unattributed_and_the_runs_time() {
     let tmp = tempfile::tempdir().unwrap();
-    // No repository: history cannot say who decided it.
+    // The spec is not committed: history cannot say who decided it.
     let dir = tmp.path();
+    let repository = Repository::init(dir).unwrap();
+    write(dir, "README.md", "seed\n");
+    commit(&repository, "seed");
     write(
         dir,
         &format!("specs/{FEATURE}/spec.md"),
@@ -390,18 +406,173 @@ fn an_unattributed_entry_stores_unattributed_and_the_runs_time() {
     let (classified, written) = run_review(dir, &findings, T2, &json!({}));
     assert!(classified.notices.is_empty(), "{:?}", classified.notices);
     assert_eq!(written.must_violations, 0);
+    // And the time it was first stored stays, so the record does not change run to run.
+    assert_eq!(waivers(dir)[0]["waived-at"], T1);
+}
+
+#[test]
+fn a_waiver_stored_unattributed_follows_its_entry_once_the_entry_is_committed() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    let repository = Repository::init(dir).unwrap();
+    write(dir, "README.md", "seed\n");
+    commit(&repository, "seed");
+    write(
+        dir,
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(MUST_ENTRY),
+    );
+    write(dir, "src/a.rs", "fn f() {}\n");
+    let findings = [finding(MUST_RULE, "must", "src/a.rs")];
+    run_review(dir, &findings, T1, &json!({}));
+    assert_eq!(waivers(dir)[0]["waived-by"], "unattributed");
+
+    commit(&repository, "decide it");
+    run_review(dir, &findings, T2, &json!({}));
+    let stored = waivers(dir);
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(stored[0]["waived-by"], "decider@example.com");
+    assert_eq!(stored[0]["waived-at"], "2023-11-14T22:13:20Z");
+}
+
+#[test]
+fn an_edited_reason_reaches_the_stored_waiver_and_the_report() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), MUST_ENTRY);
+    let findings = [finding(MUST_RULE, "must", "src/a.rs")];
+    run_review(tmp.path(), &findings, T1, &json!({}));
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(
+            "- departs: `BE-COMPAT-001`\n  - reason: the field is versioned in a later spec\n",
+        ),
+    );
+    commit(&repository, "reword the reason");
+    let (classified, written) = run_review(tmp.path(), &findings, T2, &json!({}));
+    assert_eq!(classified.applied.len(), 1, "{classified:?}");
+    assert_eq!(written.must_violations, 0, "{written:?}");
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(
+        stored[0]["reason"],
+        "the field is versioned in a later spec"
+    );
+    // The entry's introducing commit is unchanged by an edit.
+    assert_eq!(stored[0]["waived-by"], "decider@example.com");
+    let report = review_md(tmp.path());
+    assert!(report.contains("the field is versioned in a later spec"));
+    assert!(
+        !report.contains("removed rather than versioned"),
+        "{report}"
+    );
+}
+
+#[test]
+fn a_violation_outside_the_review_scope_is_not_waived_and_still_counts() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    // `src/out.rs` is committed with the spec, before the window the run takes.
+    let findings = [
+        finding(MUST_RULE, "must", "src/a.rs"),
+        finding(MUST_RULE, "must", "src/out.rs"),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(written.must_violations, 1, "{written:?}");
+    assert!(written.blocking);
+    assert_eq!(written.waived, 1);
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(files_of(&stored[0]), ["src/a.rs"]);
+}
+
+/// A finding deferred to an external work item, as a person's deferral records it.
+fn deferred(rule: &str, file: &str, key: Option<&str>) -> Value {
+    let mut found = finding(rule, "must", file);
+    found["disposition"] = json!({"outcome": "deferred", "work-item": "JIRA-1"});
+    if let Some(key) = key {
+        found["decision-key"] = json!(key);
+    }
+    found
+}
+
+#[test]
+fn a_new_deferral_of_a_violation_an_entry_decides_is_refused_naming_the_entry() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    let findings = [deferred(MUST_RULE, "src/a.rs", None)];
+    let args: WriteReviewArgs = serde_json::from_value(json!({
+        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": "abc1234",
+        "diff-base": seed(tmp.path()), "empty-scope": false, "findings": findings,
+        "decided-by": "person@example.com",
+    }))
+    .unwrap();
+    let err = write_review::run(&args, tmp.path())
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("BE-COMPAT-001"), "{err}");
+    assert!(err.contains("src/a.rs"), "{err}");
+    assert!(err.contains("spec.md line 10"), "{err}");
+    assert!(err.contains("remove the entry first"), "{err}");
+    assert!(
+        !tmp.path()
+            .join(format!("specs/{FEATURE}/review.md"))
+            .exists()
+    );
+}
+
+#[test]
+fn a_stored_deferral_of_a_violation_an_entry_decides_is_superseded_not_stored_again() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), "");
+    let key = format!("rule {MUST_RULE} at src/a.rs");
+    // The deferral is stored while the spec holds no entry.
+    let (_, written) = run_review(
+        tmp.path(),
+        &[deferred(MUST_RULE, "src/a.rs", None)],
+        T1,
+        &json!({"decided-by": "person@example.com"}),
+    );
+    assert!(written.superseded_deferrals.is_empty(), "{written:?}");
+    assert!(review_md(tmp.path()).contains(&key));
+
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(MUST_ENTRY),
+    );
+    commit(&repository, "decide it");
+    // The run matched it to its stored decision, as a host does.
+    let findings = [deferred(MUST_RULE, "src/a.rs", Some(&key))];
+    for at in [T2, "2026-11-12T12:00:00Z"] {
+        let (_, written) = run_review(
+            tmp.path(),
+            &findings,
+            at,
+            &json!({"decided-by": "person@example.com"}),
+        );
+        assert_eq!(written.must_violations, 0, "{written:?}");
+        assert_eq!(written.waived, 1, "{written:?}");
+        assert_eq!(written.superseded_deferrals.len(), 1, "{written:?}");
+        assert!(written.superseded_deferrals[0].contains("spec.md line 10"));
+        let report = review_md(tmp.path());
+        assert!(!report.contains("decisions:"), "pruned: {report}");
+        assert_eq!(waivers(tmp.path()).len(), 1);
+    }
 }
 
 #[test]
 fn a_marked_waiver_with_an_entry_is_classified_as_any_other() {
     let tmp = tempfile::tempdir().unwrap();
-    fixture(tmp.path(), MUST_ENTRY);
+    let repository = fixture(tmp.path(), MUST_ENTRY);
     run_review(
         tmp.path(),
         &[finding(MUST_RULE, "must", "src/a.rs")],
         T1,
         &json!({}),
     );
+    // Committed, the files leave the window.
+    commit(&repository, "the work");
     // The rule no longer fires and the run's scope did not read the file: the ordinary
     // retention applies to a marked waiver whose rule still has its entry.
     let (classified, _) = run_review(tmp.path(), &[], T2, &json!({}));
@@ -454,7 +625,7 @@ fn a_run_writing_its_record_twice_counts_the_stored_departure_waived_both_times(
     let findings = [finding(MUST_RULE, "must", "src/a.rs")];
     let args: WriteReviewArgs = serde_json::from_value(json!({
         "feature": FEATURE, "reviewed-at": T1, "reviewed-against": "abc1234",
-        "diff-base": "", "empty-scope": false, "findings": findings,
+        "diff-base": seed(tmp.path()), "empty-scope": false, "findings": findings,
     }))
     .unwrap();
     // One set of arguments, as a review's two writes carry: the second finds the waiver

@@ -113,7 +113,7 @@ MUTATIONS = [
     (
         'M14 introduced: the walk stops at HEAD, attributing the newest commit',
         'src/primitives/departures.rs',
-        'if open.is_empty() {',
+        'if open.is_empty() || commit.parent_count() == 0 {',
         'if true {',
         'an_entry_is_attributed_to_the_commit_that_introduced_it an_edit_after_the_commit',
     ),
@@ -176,8 +176,8 @@ MUTATIONS = [
     (
         'M23 the walk follows the last parent of a merge, entering the side branch',
         'src/primitives/departures.rs',
-        'let Ok(parent) = commit.parent(0) else {',
-        'let Ok(parent) = commit.parent(commit.parent_count().saturating_sub(1)) else {',
+        'let Ok((parent, earlier)) = commit.parent(0).and_then(|parent| {',
+        'let Ok((parent, earlier)) = commit.parent(commit.parent_count().saturating_sub(1)).and_then(|parent| {',
         'a_side_branchs_commit',
     ),
     (
@@ -309,15 +309,15 @@ MUTATIONS = [
     (
         'M43 an entry\'s rule is judged unknown with no rule file loaded',
         'src/primitives/check_departures.rs',
-        '        if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {\n            return State::NotChecked;\n        }\n',
+        '        if self.examined == 0 && check_rule_ids::is_a_rule_id(rule) {\n            return State::NotChecked;\n        }\n',
         '',
         'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
     ),
     (
         'M44 a retired or shipped rule keeps its own state with no rule file loaded',
         'src/primitives/check_departures.rs',
-        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {',
-        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) && !self.citations.contains_key(rule) {',
+        'if self.examined == 0 && check_rule_ids::is_a_rule_id(rule) {',
+        'if self.examined == 0 && check_rule_ids::is_a_rule_id(rule) && !self.citations.contains_key(rule) {',
         'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
     ),
     (
@@ -330,8 +330,29 @@ MUTATIONS = [
     (
         'M46 a token no rule ID can be is unexamined with no rule file loaded',
         'src/primitives/check_departures.rs',
-        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {',
+        'if self.examined == 0 && check_rule_ids::is_a_rule_id(rule) {',
         'if self.examined == 0 {',
         'with_no_rule_file_loaded_a_token_that_cannot_be_a_rule_id_is_still_unknown',
+    ),
+    (
+        'M47 a history whose parent cannot be read attributes the newest commit that held the entry',
+        'src/primitives/departures.rs',
+        '        }) else {\n            return forget_open(introduced, &open);\n        };\n        if let Some(earlier) = earlier {',
+        '        }) else {\n            return introduced;\n        };\n        if let Some(earlier) = earlier {',
+        'a_missing_parent_commit_leaves_the_run_unattributed',
+    ),
+    (
+        'M48 text around a rule-shaped substring reads as a rule ID',
+        'src/primitives/check_rule_ids.rs',
+        '.is_some_and(|found| found.start() == 0 && found.end() == token.len())',
+        '.is_some()',
+        'with_no_rule_file_loaded_text_around_a_rule_id_is_not_a_rule_id',
+    ),
+    (
+        'M49 step 4 stops reporting a reference on a departure entry\'s cited: line',
+        'src/primitives/resolve_anchor.rs',
+        'if is_within_marker_comment(line, whole) {',
+        'if is_within_marker_comment(line, whole) || line.trim_start().starts_with(\"- cited:\") {',
+        'a_cited_reference_of_a_departure_entry_that_resolves_to_nothing_is_reported_at_its_line',
     ),
 ]

@@ -48,7 +48,7 @@ rule-verdicts:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `entries` | list of `{rule, tier, reason, cited, decided-by, decided-at, line}` | Every well-formed entry; `tier` is the rule's, absent when the rule is not loaded |
-| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: a missing `reason`, an unknown or retired rule (with no rule file loaded, only a token shaped like no rule ID, which is unknown), a rule two entries name (Blocking); a deprecated rule, a `cited:` that is not exactly one `§` reference (Advisory); an unresolved reference is step 4's |
+| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: no rule ID, no or an empty `reason:`, a second rule ID, another or a repeated child key, an unknown or retired rule (with no rule file loaded, only a token that is not, whole, shaped like a rule ID, which is unknown), a rule two entries name (Blocking); a deprecated rule, a `cited:` that is not exactly one `§` reference (Advisory); an unresolved reference is step 4's |
 | `unexamined` | list of `{reason, line}` | A citation that could not be judged (`anchor-target-unjudgeable`, `anchor-target-unreadable`), a rule not installed (`rule-not-installed`), or, with no rule file loaded, every entry's rule (`rule-citations-not-checked`, with no unknown, retired or deprecated finding); never a pass. Each repeats a target step 4 or step 5 records, so a caller counts it once; a token that is no rule-ID shape is still an unknown-rule finding, as step 5 records no citation for it |
 
 ## Review waiver marker
@@ -60,3 +60,5 @@ A waiver `write-review` derives from an entry is an ordinary `waivers:` entry (`
 | `departure` | `true`; `process-waivers` expires the waiver when its rule has no entry |
 | `waived-by` | the entry's `decided-by`, `unattributed` included |
 | `waived-at` | the entry's `decided-at`; the run's own time when `unattributed` |
+
+Every write refreshes a stored departure waiver's `reason`, `waived-by` and `waived-at` from its entry, except that while the entry is `unattributed` the stored `waived-at` (the run time it was first stored) is kept. A departure waiver covers only files in the run's review scope. The entry decides over a deferral of its violations: a new deferral is refused, a stored one is superseded and named in `write-review`'s `superseded-deferrals`.

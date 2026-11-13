@@ -55,7 +55,7 @@ When a **MUST** violation is intentional, record a waiver rather than silencing 
 
 The waiver is anchored to the `(rule, file)` pair, so code moving within a file keeps it while a rename or a fix expires it and the finding re-blocks — a waiver cannot quietly outlive the thing it excused. When the rule fires in several files, one waiver lists them all, and each listed path still expires on its own. The schema is open, so an organization can require its own fields (a second approver, say) and `ductus` preserves them. See [specs/020-code-review/data-model.md](../specs/020-code-review/data-model.md).
 
-A spec that departs from a rule on purpose states it once, as a `departs:` entry under its `## Applicable Rules`, instead of waiving it file by file: `/review` waives that rule at every file in the spec's scope with no `--waive`, and `/analyze` records the rule `waived`, never as a finding. The grammar is in the spec template's Applicable Rules comment.
+A spec that departs from a rule on purpose states it once, as a `departs:` entry under its `## Applicable Rules`, instead of waiving it file by file: `/review` waives that rule at every file in the spec's scope where it fires, with no `--waive`, and `/analyze` records the rule `waived`, never as a finding. The grammar is in the spec template's Applicable Rules comment.
 
 A waiver says the violation stands, with its reason. When it will be fixed later, defer it instead, naming the work that will fix it:
 

@@ -384,28 +384,25 @@ pub(crate) fn fill_waived(
     entries: &BTreeMap<String, departures::Entry>,
     verdicts: &mut BTreeMap<String, RuleVerdict>,
 ) {
-    let waived: Vec<String> = verdicts
+    // A `waived` verdict is filled from its entry, so one with no entry is not a
+    // candidate: `write-analysis` records a carried one whose entry is gone unjudged
+    // before it gets here.
+    let waived: Vec<(String, &departures::Entry)> = verdicts
         .iter()
         .filter(|(_, verdict)| matches!(verdict, RuleVerdict::Waived { .. }))
-        .map(|(rule, _)| rule.clone())
+        .filter_map(|(rule, _)| entries.get(rule).map(|entry| (rule.clone(), entry)))
         .collect();
     if waived.is_empty() {
         return;
     }
     #[cfg(test)]
     HISTORY_READS.with(|reads| reads.set(reads.get() + 1));
-    let attribution = departures::attribute(repo, spec_rel, &waived);
-    for rule in waived {
-        let Some(entry) = entries.get(&rule) else {
-            continue;
-        };
-        let (decided_by, decided_at) = match attribution.get(&rule) {
-            Some(Attribution::Attributed {
-                decided_by,
-                decided_at,
-            }) => (decided_by.clone(), Some(decided_at.clone())),
-            _ => ("unattributed".to_owned(), None),
-        };
+    let rules: Vec<String> = waived.iter().map(|(rule, _)| rule.clone()).collect();
+    let attribution = departures::attribute(repo, spec_rel, &rules);
+    for (rule, entry) in waived {
+        let (decided_by, decided_at) = attribution
+            .get(&rule)
+            .map_or_else(|| Attribution::Unattributed.decided(), Attribution::decided);
         verdicts.insert(
             rule,
             RuleVerdict::Waived {

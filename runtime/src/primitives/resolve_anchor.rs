@@ -1010,6 +1010,28 @@ mod tests {
         .unwrap()
     }
 
+    /// `check-departures` raises no finding for a `cited:` reference that does not resolve,
+    /// since this primitive reports it over the whole spec (spec 073, AC1): the report is
+    /// what delivers that criterion, so it is pinned on the entry's own `cited:` line.
+    #[test]
+    fn a_cited_reference_of_a_departure_entry_that_resolves_to_nothing_is_reported_at_its_line() {
+        let r = classify(
+            "# Spec\n\n## Applicable Rules\n\n- departs: `BE-X-001`\n  - reason: r\n  - cited: §no-such-anchor\n",
+        );
+        assert_eq!(r.unresolved, ["no-such-anchor".to_string()]);
+        let cited = r
+            .references
+            .iter()
+            .find(|x| x.anchor == "no-such-anchor")
+            .unwrap();
+        assert_eq!(cited.line, 7);
+        assert!(!cited.resolved);
+        let held = classify(
+            "## Applicable Rules\n\n- departs: `BE-X-001`\n  - reason: r\n  - cited: §known\n",
+        );
+        assert_eq!(held.unresolved, [] as [String; 0]);
+    }
+
     /// The dominant real shape, and the one an "immediately preceding"
     /// rule misses: a table row naming the file once and then citing several
     /// of its sections. Every reference on the line is qualified, not just

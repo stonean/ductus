@@ -490,11 +490,12 @@ that does not exist and expires as one.
 entry under the spec's `## Applicable Rules`, of any tier, a SHOULD's included,
 is a decision the spec already holds: `write-review` stores one waiver for its
 rule from it, over the files in this review's scope only, and `process-waivers`
-expires it once the spec no longer holds the entry. A hand `--waive` for the
-same rule and file stays the first claim. A malformed entry, or a rule a second
-entry names, derives no waiver, and the result's `malformed-departures` names
-each: the review step reports them. The derivation, the waiver's fields and the
-entry's grammar are `write-review`'s and `check-departures`' (`ductus
+expires it once the spec no longer holds the entry. The review step reads the
+result's `malformed-departures`, which names each entry that derives nothing. The
+entry decides over a deferral of its violations: `write-review` refuses a new
+`--defer` of one, naming the entry's `spec.md` line, and a stored deferral is
+superseded, named in `superseded-deferrals`. The derivation, the waiver's fields
+and the entry's grammar are `write-review`'s and `check-departures`' (`ductus
 write-review --help`, `ductus check-departures --help`).
 
 ## Per-run waiver processing
@@ -589,7 +590,8 @@ fires, the primitive reports it **lapsed**: the host drops it with the expired d
 a fix, a waiver, or a new deferral. A new `--defer` naming other work than a
 standing deferral replaces it as a new decision. A finding holds one disposition
 across runs through step 11's drop lists, and `write-review` refuses one that
-carries both.
+carries both. A departure entry decides over a deferral of its rule's violations
+(**§Waivers**).
 
 ## Auto-fix scope
 

@@ -13,6 +13,12 @@ use crate::primitives::rule_sections::{heading_id_regex, section_label_lines};
 use crate::primitives::{Result, contained_path, read_text, split_frontmatter};
 use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitation};
 
+/// The unexamined reason of a citation of a rule whose file was never installed.
+pub const NOT_INSTALLED: &str = "rule-not-installed";
+
+/// The unexamined reason of a citation checked against no rule file.
+pub const CITATIONS_NOT_CHECKED: &str = "rule-citations-not-checked";
+
 /// Execute the `check-rule-ids` primitive.
 ///
 /// # Errors
@@ -199,11 +205,14 @@ fn citation_regex() -> &'static Regex {
     })
 }
 
-/// Whether `text` holds a token this primitive reads as a rule-ID citation,
-/// so `check-departures` judges what step 5 sees by the one grammar.
+/// Whether `token` is, whole, a token this primitive reads as a rule-ID citation,
+/// so `check-departures` judges what step 5 sees by the one grammar. Text around a
+/// rule-shaped substring (`see DM-MUST-001 here`) is no rule ID.
 #[must_use]
-pub fn cites_a_rule_id(text: &str) -> bool {
-    citation_regex().is_match(text)
+pub fn is_a_rule_id(token: &str) -> bool {
+    citation_regex()
+        .find(token)
+        .is_some_and(|found| found.start() == 0 && found.end() == token.len())
 }
 
 /// Whether the rule whose heading starts at `heading_start` carries the
