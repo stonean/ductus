@@ -1,17 +1,17 @@
 ---
 spec: 073-decided-rule-departures-are-recorded
-last-run: 2026-11-13T18:42:18Z
-analyzed-against: b7ee0b26dbd997cbce030aa8ecd78a19c9c3cde3
+last-run: 2026-11-13T19:42:09Z
+analyzed-against: 27599ce1b75260ed970ae6b4fcb2e019ef480ad6
 hard-fail: 0
-blocking-findings: 1
+blocking-findings: 0
 advisory: 3
 unexamined: 2
 analyzed-digest:
-  data-model.md: 65d2a75b18511e7879ced65bf4b30d5ec2991607da5ee997a6e34aa8bfa4bad5
-  plan.md: 0c3bf17f895cda402a89b2c18e438b423a347ce01c1bc7b49071e752d2c2dc6f
-  review.md: dca202747c726fea49d68a3cf3436acc81b4f6c0a73e2047e46323d6cadbda27
+  data-model.md: cc819aa341154309c3bf65ffb9ab3541b4bc938a8b70a51ff3baebe85e2b076f
+  plan.md: c6c51e942fb759db29360cbb61fa12bab8d61c9ddde4c98782ab0db27b531ee3
+  review.md: 4e859d79dae26e42931a05a0e60cd603ae83406f9bcf7e950b48877ca6bf2a52
   spec.md: 126fc9ed63cbb53f9c2d7a989c7ee187ca4c36fdd40ddad08d6edbd800b2c48c
-  tasks.md: 89a2703566e090daf578044d7aecec44a23c4ddf5810ba972b1763adfa16af1c
+  tasks.md: c9c330ac5b7c5706a892dd5431abbef8e95f32a5337853bb3064d38c75f288b5
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
@@ -28,27 +28,20 @@ rule-digest:
   security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#`waived` rule verdict"}
+  BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#Departure entry"}
   BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#The test that reads history runs in the job that has it", message: "the plan adds a framework-checks.yml step, CI configuration, and does not commit to an automated scan on dependency changes"}
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Departure entry"}
   BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Departure entry"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Departure entry"}
-  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "plan.md#Review: `write-review` derives the waivers, `process-waivers` expires them", message: "process-waivers' applied, expired, retained and notices lists are returned unbounded, and 073's departure entries fan out into per-file anchors (and expiry notices) that grow them, yet the plan commits no size bound for them"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Review: `write-review` derives the waivers, `process-waivers` expires them"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#One reader, one attribution rule, four consumers"}
-blocking: true
+blocking: false
 dispositions:
   fixed: 0
-  deferred: 1
+  deferred: 0
   waived: 3
   undispositioned: 0
 decisions:
-  - key: "rule-assessment — BE-PAYLOAD-001: process-waivers' applied, expired, retained and notices lists are returned unbounded, and 073's departure entries fan out into per-file anchors (and expiry notices) that grow them, yet the plan commits no size bound for them"
-    outcome: deferred
-    target: specs/073-decided-rule-departures-are-recorded/tasks.md
-    task: "14"
-    gating: true
-    decided-at: 2026-11-13T18:42:18Z
-    decided-by: andy@stone.dev
   - key: "rule-assessment — BE-DEPS-007: the plan adds a framework-checks.yml step, CI configuration, and does not commit to an automated scan on dependency changes"
     outcome: waived
     reason: The step runs a repository script and alters no dependency set; runtime.yml's cargo audit job already scans every change to the runtime's manifest and lockfile, as 081's plan records. 017's and 072's analyses waived this rule on the same kind of CI addition.
@@ -70,7 +63,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 1 blocking, 3 advisory; blocking. 2 unexamined target(s). Dispositions: 0 fixed, 1 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 3 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 3 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -78,13 +71,13 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — BE-PAYLOAD-001: process-waivers' applied, expired, retained and notices lists are returned unbounded, and 073's departure entries fan out into per-file anchors (and expiry notices) that grow them, yet the plan commits no size bound for them — `specs/073-decided-rule-departures-are-recorded/plan.md` — **deferred** to `specs/073-decided-rule-departures-are-recorded/tasks.md` task 14
+*None.*
 
 ## Advisory findings
 
 - rule-assessment — BE-DEPS-007: the plan adds a framework-checks.yml step, CI configuration, and does not commit to an automated scan on dependency changes — `specs/073-decided-rule-departures-are-recorded/plan.md` — **waived**: The step runs a repository script and alters no dependency set; runtime.yml's cargo audit job already scans every change to the runtime's manifest and lockfile, as 081's plan records. 017's and 072's analyses waived this rule on the same kind of CI addition. (decided by the rule)
-- grounding — plan.md Technical Decisions ('One reader, one attribution rule'): states how CommonMark renders lazy continuation, setext underlines and ordered-item openers, with no citation to the CommonMark specification — `specs/073-decided-rule-departures-are-recorded/plan.md` — **waived**: The sentences define the entry parser's own contract (what it joins and where a child ends), which is prescriptive; CommonMark is named as the model it follows, and task 9 pins each choice with a test and mutant, so the behavior does not rest on the recollection. (decided by the rule)
-- grounding — spec.md Motivation: the adopter's two MUST departures (compatibility and idempotency) and its shared constitution's three advance decisions are stated as fact with no citation or assumption marker — `specs/073-decided-rule-departures-are-recorded/spec.md` — **waived**: The source is an adopter report from a tree nobody here can open (AGENTS.md: an adopter's tree is out of reach, and no project is named); the requirement stands on the first Motivation paragraph's dated, cited reading of the code, not on this account. (decided by the rule)
+- grounding — plan.md 'One reader, one attribution rule': states how CommonMark renders a lazy continuation line, a setext underline (`---`) and an indented opener as fact, with no cited source (no spec link, command or named standard section) — `specs/073-decided-rule-departures-are-recorded/plan.md` — **waived**: The sentences define the entry parser's own contract (what it joins and where a child ends), which is prescriptive; CommonMark is named as the model it follows, and task 9 pins each choice with a test and mutant, so the behavior does not rest on the recollection. (decided by the rule)
+- grounding — spec.md Motivation, second paragraph: states an adopter's spec listed two MUST rules as departures and recorded blocking-findings 0, and that its shared constitution decided three MUST departures in advance, with no citation or assumption marker (the first paragraph carries 'verified 2026-10-26 at HEAD c0952038') — `specs/073-decided-rule-departures-are-recorded/spec.md` — **waived**: The source is an adopter report from a tree nobody here can open (AGENTS.md: an adopter's tree is out of reach, and no project is named); the requirement stands on the first Motivation paragraph's dated, cited reading of the code, not on this account. (decided by the rule)
 
 ## Deferred to other specs
 
