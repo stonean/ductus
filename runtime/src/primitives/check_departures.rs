@@ -878,7 +878,7 @@ mod tests {
     /// `form` and each count inline in both forms.
     #[test]
     fn a_result_past_the_read_size_names_a_file_holding_every_list() {
-        // One entry with no `reason:` (a finding), and three entries whose
+        // One entry with no `reason:` (a finding), and two entries whose
         // rule is unexamined: every list is non-empty.
         let tmp = project(
             "",

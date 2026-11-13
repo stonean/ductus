@@ -92,6 +92,7 @@ The runtime and the reference prose are agent-neutral, and the command sources a
 | `runtime/src/primitives/write_review/departure_waivers.rs`, `scripts/mutation/departure-waivers.py` | Create | The review fixtures (AC5, AC8) and a mutant per behavior of the marker |
 | `runtime/CHANGELOG.md` | Modify | `[Unreleased]` entry |
 | `scripts/mutation/departures.py` | Create | A mutant per refusal and per attribution state |
+| `runtime/tests/mcp.rs`, `runtime/tests/specs_root_override.rs`, `scripts/mutation/departures-bounded.py`, `scripts/mutation/exec-departures.py` | Modify, Create | The bound's MCP and specs-root fixtures, and its mutants and the exec walker's (BE-PAYLOAD-001) |
 | `scripts/tests/test-departure-attribution.sh`, `.github/workflows/framework-checks.yml` | Create, Modify | AC7 over real history, a depth-1 clone included |
 | `framework/runtime-tools.txt`, `framework/bootstrap/configure/claude.md` | Modify | Tool name; generated allow entry |
 | `framework/commands/analyze.md`, `framework/commands/review.md` | Modify | The `check-departures` step; steps 11, 12 and 22; the review waiver step |
