@@ -22,7 +22,9 @@ use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
 use crate::primitives::resolve_anchor::{heading_lines, section_range};
-use crate::primitives::{ProjectRepository, SkipScanner, without_inline_comments};
+use crate::primitives::{
+    FeatureForm, ProjectRepository, SkipScanner, parse_feature_dir, without_inline_comments,
+};
 
 /// The heading a spec's departure entries sit under.
 const SECTION: &str = "Applicable Rules";
@@ -103,19 +105,35 @@ pub fn parse(content: &str) -> Parsed {
     };
     let mut skip = SkipScanner::default();
     let mut open: Option<Open> = None;
+    // Whether the previous line ended a paragraph: blank, skipped, or the
+    // heading. A line that follows text directly can continue it lazily.
+    let mut loose = true;
     for (index, raw) in lines.iter().enumerate() {
         if skip.skip(raw) || !range.contains(&index) || index == range.start {
+            loose = true;
             continue;
         }
         let text = without_inline_comments(raw);
         if text.trim().is_empty() {
+            loose = true;
             continue;
         }
+        let after_break = std::mem::replace(&mut loose, false);
         let indent = text.len() - text.trim_start().len();
         let item = list_item(&text);
         if let Some(entry) = open.as_mut() {
             if indent > entry.indent {
                 read_child(entry, index + 1, item, text.trim());
+                continue;
+            }
+            // CommonMark's lazy continuation: unindented text directly after a
+            // child's text is still that child's paragraph.
+            if item.is_none()
+                && !after_break
+                && !text.trim_start().starts_with('#')
+                && entry.last_key.is_some()
+            {
+                read_child(entry, index + 1, None, text.trim());
                 continue;
             }
             finish(open.take(), &mut parsed);
@@ -373,7 +391,9 @@ fn rules_at(
 }
 
 /// Where `git_path`, which `commit` holds and `parent` does not, was in
-/// `parent`: the old path of a rename the diff detects, else `None`.
+/// `parent`: the old path of a rename the diff detects, else `None`. The one
+/// delta whose new path is `git_path` is the file's add, or its rename once
+/// similarity detection has paired it with a delete.
 fn moved_from(
     repository: &git2::Repository,
     parent: &git2::Commit<'_>,
@@ -388,16 +408,30 @@ fn moved_from(
         .diff_tree_to_tree(Some(&parent_tree), Some(&commit.tree().ok()?), None)
         .ok()?;
     diff.find_similar(None).ok()?;
-    diff.deltas()
+    let old = diff
+        .deltas()
         .find(|delta| {
-            delta.status() == git2::Delta::Renamed
-                && delta
-                    .new_file()
-                    .path()
-                    .is_some_and(|new| new == Path::new(git_path))
+            delta
+                .new_file()
+                .path()
+                .is_some_and(|new| new == Path::new(git_path))
         })
         .and_then(|delta| delta.old_file().path())
-        .map(|old| old.to_string_lossy().replace('\\', "/"))
+        .map(|old| old.to_string_lossy().replace('\\', "/"))?;
+    // Similarity detection pairs any deleted file with a similar added one, so
+    // a rename is followed only within one spec: the same feature directory
+    // identity, which a number never reissued makes the same spec.
+    (spec_form(&old).is_some() && spec_form(&old) == spec_form(git_path)).then_some(old)
+}
+
+/// The feature a spec file's directory names, by the corpus's one membership
+/// rule.
+fn spec_form(git_path: &str) -> Option<FeatureForm> {
+    Path::new(git_path)
+        .parent()?
+        .file_name()?
+        .to_str()
+        .and_then(parse_feature_dir)
 }
 
 /// The attribution a commit gives: its author's email and time, or `None`
@@ -466,6 +500,40 @@ mod tests {
         let parsed = parse(&spec_with("- departs: `A-1`\n  - reason: r\n  - cited:\n"));
         assert_eq!(parsed.problems, vec![]);
         assert_eq!(parsed.entries[0].cited, None);
+    }
+
+    #[test]
+    fn star_and_plus_list_markers_open_entries_and_children() {
+        let parsed = parse(&spec_with(
+            "* departs: `A-1`\n  + reason: r\n  - cited: §x\n+ departs: `B-1`\n  * reason: s\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(
+            parsed
+                .entries
+                .iter()
+                .map(|e| (e.rule.as_str(), e.reason.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("A-1", "r"), ("B-1", "s")]
+        );
+    }
+
+    #[test]
+    fn an_unindented_line_after_the_reason_continues_it_as_commonmark_renders() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: first half\nsecond half\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(parsed.entries[0].reason, "first half second half");
+    }
+
+    #[test]
+    fn an_unindented_paragraph_after_a_blank_line_is_not_part_of_the_reason() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: r\n\nunrelated prose\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(parsed.entries[0].reason, "r");
     }
 
     #[test]
@@ -621,6 +689,41 @@ mod tests {
             .unwrap()
     }
 
+    /// Commit the work tree with explicit signatures and parents; `HEAD`
+    /// moves only when `advance` is set.
+    fn commit_with(
+        repository: &Repository,
+        author: &Signature<'_>,
+        committer: &Signature<'_>,
+        parents: &[git2::Oid],
+        advance: bool,
+    ) -> git2::Oid {
+        let mut index = repository.index().unwrap();
+        index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
+        index.update_all(["*"], None).unwrap();
+        index.write().unwrap();
+        let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+        let parents: Vec<git2::Commit> = parents
+            .iter()
+            .map(|oid| repository.find_commit(*oid).unwrap())
+            .collect();
+        let parents: Vec<&git2::Commit> = parents.iter().collect();
+        repository
+            .commit(
+                advance.then_some("HEAD"),
+                author,
+                committer,
+                "c",
+                &tree,
+                &parents,
+            )
+            .unwrap()
+    }
+
+    fn sig(email: &str, time: i64, offset_minutes: i32) -> Signature<'static> {
+        Signature::new("N", email, &Time::new(time, offset_minutes)).unwrap()
+    }
+
     fn who(rule: &str, project: &Path, spec_rel: &str) -> Attribution {
         attribute(project, spec_rel, &[rule.to_string()])
             .remove(rule)
@@ -703,6 +806,107 @@ mod tests {
         let both = attribute(tmp.path(), SPEC, &["A-1".into(), "B-1".into()]);
         assert_eq!(both["A-1"], by("alice@example.com", "2021-01-01T00:00:00Z"));
         assert_eq!(both["B-1"], by("bob@example.com", "2021-01-02T00:00:00Z"));
+    }
+
+    #[test]
+    fn a_side_branchs_commit_is_no_part_of_the_first_parent_run() {
+        let (tmp, repository) = repository();
+        let spec = tmp.path().join(SPEC);
+        write(&spec, &spec_with(""));
+        let base = commit_as(&repository, "zed@example.com", T1);
+        // The entry is introduced on a side branch...
+        write(&spec, &spec_with(&entry("A-1")));
+        let side = commit_with(
+            &repository,
+            &sig("alice@example.com", T1 + DAY, 0),
+            &sig("alice@example.com", T1 + DAY, 0),
+            &[base],
+            false,
+        );
+        // ...while the first-parent line carries on without it...
+        write(&spec, &spec_with(""));
+        write(&tmp.path().join("other.txt"), "x");
+        let main = commit_with(
+            &repository,
+            &sig("bob@example.com", T1 + 2 * DAY, 0),
+            &sig("bob@example.com", T1 + 2 * DAY, 0),
+            &[base],
+            true,
+        );
+        // ...and a merge by another author brings the entry in.
+        write(&spec, &spec_with(&entry("A-1")));
+        commit_with(
+            &repository,
+            &sig("carol@example.com", T1 + 3 * DAY, 0),
+            &sig("carol@example.com", T1 + 3 * DAY, 0),
+            &[main, side],
+            true,
+        );
+        assert_eq!(
+            who("A-1", tmp.path(), SPEC),
+            by("carol@example.com", "2021-01-04T00:00:00Z")
+        );
+    }
+
+    #[test]
+    fn the_author_and_the_utc_instant_are_recorded_not_the_committer_or_the_offset() {
+        let (tmp, repository) = repository();
+        write(&tmp.path().join(SPEC), &spec_with(&entry("A-1")));
+        // Authored 2021-01-01T00:00:00Z at +05:30 (local 05:30); committed by
+        // someone else a day later at another offset.
+        commit_with(
+            &repository,
+            &sig("alice@example.com", T1, 330),
+            &sig("dan@example.com", T1 + DAY, -120),
+            &[],
+            true,
+        );
+        assert_eq!(
+            who("A-1", tmp.path(), SPEC),
+            by("alice@example.com", "2021-01-01T00:00:00Z")
+        );
+    }
+
+    #[test]
+    fn two_renames_in_one_commit_are_each_followed_to_their_own_spec() {
+        let (tmp, repository) = repository();
+        let a = format!("{}  - cited: §a\n", entry("A-1"));
+        let b = format!("{}  - cited: §b\n", entry("B-1"));
+        write(&tmp.path().join("specs/001-a/spec.md"), &spec_with(&a));
+        write(&tmp.path().join("specs/002-b/spec.md"), &spec_with(&b));
+        commit_as(&repository, "alice@example.com", T1);
+        std::fs::remove_dir_all(tmp.path().join("specs/001-a")).unwrap();
+        std::fs::remove_dir_all(tmp.path().join("specs/002-b")).unwrap();
+        write(&tmp.path().join("specs/001-a2/spec.md"), &spec_with(&a));
+        write(&tmp.path().join("specs/002-b2/spec.md"), &spec_with(&b));
+        commit_as(&repository, "bob@example.com", T1 + DAY);
+        assert_eq!(
+            who("A-1", tmp.path(), "specs/001-a2/spec.md"),
+            by("alice@example.com", "2021-01-01T00:00:00Z")
+        );
+        assert_eq!(
+            who("B-1", tmp.path(), "specs/002-b2/spec.md"),
+            by("alice@example.com", "2021-01-01T00:00:00Z")
+        );
+    }
+
+    #[test]
+    fn a_similar_file_of_another_spec_is_not_followed() {
+        let (tmp, repository) = repository();
+        write(
+            &tmp.path().join("specs/002-other/spec.md"),
+            &spec_with(&entry("A-1")),
+        );
+        commit_as(&repository, "alice@example.com", T1);
+        // Spec 002 is deleted and 001 added with the same text, which
+        // similarity detection pairs; they are two specs, so the add stands.
+        std::fs::remove_dir_all(tmp.path().join("specs/002-other")).unwrap();
+        write(&tmp.path().join(SPEC), &spec_with(&entry("A-1")));
+        commit_as(&repository, "bob@example.com", T1 + DAY);
+        assert_eq!(
+            who("A-1", tmp.path(), SPEC),
+            by("bob@example.com", "2021-01-02T00:00:00Z")
+        );
     }
 
     #[test]
