@@ -197,8 +197,9 @@ jobs:
       # One archive format on every platform. Windows published `.zip` until
       # spec 048; `.tar.gz` everywhere means acquisition extracts with `tar`
       # on every platform, so `unzip` never enters any agent's permission
-      # grammar. Windows 10+ ships bsdtar as `tar`, and `tar` is already
-      # granted in all four bootstrap seeds.
+      # grammar. Windows 10+ ships bsdtar as `tar`. Two agents remain:
+      # Claude's seed grants no `tar` (022 task 18), so extraction prompts
+      # once in Manual mode, and Pi has no permission gate.
       #
       # `shell: bash` on Windows is Git Bash, which supplies tar and shasum —
       # so this is one step rather than a per-OS pair. The archived binary

@@ -39,16 +39,15 @@ version*, and its primitives resolve paths against the directory layout of the
 release that shipped them — a pre-`.ductus/` binary resolves `.govern/` and then
 the legacy root, neither of which a converged project has.
 
-How that goes wrong differs by state, which is why the rule is stated once for
-both rather than twice:
+One adopter shape reaches it today, and the rule binds for the whole run:
 
 - **State B** — the resolvers are wrong *by construction*, because this run is
   what migrates the layout. A write lands in the pre-migration location and
   reports success.
-- **State A** — the layout already moved, so the retired resolver falls through
-  to a path the project no longer has, and the silent default that follows is
-  the same failure the shipped `config_path_of` had before it gained a
-  `.ductus/` tier.
+
+No State A shape is known to reach it: it needed the retired key to survive in a
+home config this run does not rewrite, which only the agents since removed kept
+there. The rule still binds in State A, so a shape that arises later is covered.
 
 ## Edge Cases
 

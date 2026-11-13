@@ -48,7 +48,8 @@ the check costs a version comparison and nothing new.
 
 Four outcomes:
 
-- **Reports `{pin}`** — the store is current. Check the pointer (below); when
+- **Reports `{pin}`** — the resolved binary, the store or the configured
+  `[runtime] path`, is current. Check the pointer (below); when
   it is current nothing is added to the pending-restart set and there is no
   message. This is the routine path.
 - **A project-supplied `[runtime] path` does not execute** — it does not exist,
@@ -87,8 +88,10 @@ same reason.
   characters, so the binary's own output cannot write an escape sequence or a
   second line to the terminal (`BE-INPUT-011`); the bootstrap's own halts are
   the host agent's messages in its session, not a log.
-  The guard's four probes of the binary, the two `--help` capability reads and
-  the two `--version` echoes, run under a 10-second watchdog (`BE-TIMEOUT-001`;
+  The guard's four `--help` probes of the binary (three in the loop over
+  `derive-dependencies`, `derive-references` and `check-corpus-links`, and
+  `check-artifact-size --help`), and the one `--version` echo it makes on the
+  halt path only, run under a 10-second watchdog (`BE-TIMEOUT-001`;
   macOS has no `timeout`), and one it ends reads as a failed probe. A probe
   writes its output to a file, not the caller's pipe, so a child a wrapper
   leaves running cannot hold the hook open, and one that ignores SIGTERM is

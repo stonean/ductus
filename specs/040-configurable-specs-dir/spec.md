@@ -6,7 +6,7 @@ next-criterion: 14
 
 # 040 — Configurable spec-root directory name
 
-The top-level directory that holds all ductus artifacts is hardcoded to `specs`. This feature adds a single operator-set `.ductus/config.toml` setting for that directory's name, chosen at initial configuration, defaulting to `specs` so existing projects are unaffected. Every command and the optional runtime resolve the spec root from the setting instead of a hardcoded literal.
+The top-level directory that holds all ductus artifacts is hardcoded to `specs`. This feature adds a single operator-set `.ductus/config.toml` setting for that directory's name, chosen at initial configuration, defaulting to `specs` so existing projects are unaffected. Every command and the runtime resolve the spec root from the setting instead of a hardcoded literal.
 
 ## Motivation
 

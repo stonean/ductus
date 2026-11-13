@@ -626,7 +626,7 @@ fn allowlist(parsed: &std::result::Result<Vec<String>, String>) -> Result<Vec<St
 
 /// The proxy variables as this process's environment held them at startup —
 /// the fields hyper-util's matcher reads on every client build when reqwest's
-/// system proxy is left on (hyper-util 0.1.20, `client/proxy/matcher.rs`,
+/// system proxy is left on (hyper-util 0.1.21, `client/proxy/matcher.rs`,
 /// `Builder::from_env`), captured once here instead. An empty string is
 /// unset, as it is there. Deliberately without `Debug`: a proxy URL can
 /// carry credentials, which hyper-util's own `Debug` output omits.
@@ -836,7 +836,7 @@ fn apply_proxies(
 /// `SSL_CERT_DIR` on every client build. On Linux and other non-Apple Unix,
 /// `rustls-platform-verifier` loads the system store through
 /// `rustls_native_certs::load_native_certs` in its constructor
-/// (rustls-platform-verifier 0.7.0, `verification/others.rs`). Apple
+/// (rustls-platform-verifier 0.7.1, `verification/others.rs`). Apple
 /// platforms and Windows verify through the operating system and read no
 /// certificate variable, so they keep the platform verifier.
 const VERIFIER_READS_CERT_ENV: bool = cfg!(all(

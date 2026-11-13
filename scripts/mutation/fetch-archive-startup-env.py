@@ -28,10 +28,9 @@ code a mutation anchors on changes, update the anchor in the same change
   M12 a `--*-json` file that is not valid JSON is named on one line.
 
 No mutation is an expected survivor. Deleting the certificate half of
-`init_proxy_env` is not listed: it changes no observable behavior, because the
-platform store's loader reads the same two variables itself and finds what the
-capture would have, so the capture's value is `CFG-ENV-001`'s, and M7 holds its
-logic. Nor is dropping `main`'s `init_proxy_env` call: this runner runs library
+`init_proxy_env` is not listed: this runner runs library tests only, and
+`runtime/tests/fetch_archive_cert_env_startup.rs`, an integration test (Linux
+only, proven red in a Linux container), kills it. Nor is dropping `main`'s `init_proxy_env` call: this runner runs library
 tests only, and `runtime/tests/fetch_archive_startup_env.rs` kills it, proven by
 hand (2026-11-12).
 """

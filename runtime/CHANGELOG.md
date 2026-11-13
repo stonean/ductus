@@ -985,6 +985,13 @@ its version and date.
 
 ### Fixed
 
+- **The bootstrap's acquisition names both digests on a mismatch, and its
+  framework archive fetch is HTTPS-only and bounded (spec 048).** A checksum
+  mismatch halts with a reason naming the expected digest (the sidecar's) and
+  the computed one. The framework archive `curl` takes the same
+  `--proto '=https' --tlsv1.2` and connect and total time bounds as the
+  runtime downloads. The digest comparisons, against the sidecar and of the
+  pointer with the resolved binary, ignore case.
 - **A test now proves `fetch-archive` reads `SSL_CERT_FILE` and `SSL_CERT_DIR`
   at startup (spec 048 task 30).** Removing `init_proxy_env`'s capture passed
   every test, since the platform store's fallback reads the same variables at

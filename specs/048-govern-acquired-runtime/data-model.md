@@ -38,7 +38,7 @@ path = "runtime/target/release/ductus"
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. It has no base directory to be held to, by design: it names a binary the project chose to execute. When set, `/ductus` performs no download and resolves the pointer to this path. |
+| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. It has no base directory to be held to, by design: it names a binary the project chose to execute. When set, `/ductus` performs no download and the pointer holds this binary's bytes: a symlink to it on Linux and macOS, a copy on Windows. |
 
 A key in `[runtime]` other than `path` is reported by name in `/ductus`'s summary and the run continues, as for every section it reads (`framework/bootstrap/ductus.md` §Project Configuration, **Unknown keys**; 019's scenario `an-unknown-config-key-is-named`, `CFG-ENV-012`).
 
@@ -47,7 +47,7 @@ Absent (the normal case) means `/ductus` acquires the pinned version into the st
 Behavior when set:
 
 - No download is attempted, and no store write occurs.
-- The pointer resolves to the configured path.
+- The pointer holds the configured binary's bytes: a symlink to it on Linux and macOS, a copy on Windows.
 - The binary's reported version is compared against the pin, and a mismatch **warns** rather than halts — a project naming a path has stated deliberately which binary it wants, and a development build is expected to run ahead of the last release.
 - A path that does not exist, or will not execute, **halts** naming the configured path. Never a silent fall-through to downloading, which would discard the project's stated choice without saying so.
 
@@ -74,7 +74,7 @@ Published under `https://github.com/stonean/ductus/releases/download/ductus-v{ve
 
 The complete set the release workflow asserts before publishing carries more than these five: the SBOM (`ductus.cdx.json` plus its `.sha256` sidecar) and, since [061](../061-updates-track-the-latest-release-tag/spec.md), the installer `install.sh`, staged from a checkout at the tag. The installer has no sidecar: it is fetched over HTTPS and piped to `sh`, and a post-release job compares the published copy byte for byte with the tag's.
 
-Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and `tar` is already granted in Claude's seed, so `unzip` never enters the permission surface.
+Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so extraction prompts once in Manual mode, and Pi has no permission gate.
 
 ## Detection states
 
@@ -89,16 +89,16 @@ State B originally aborted in pre-flight. The scenario `state-b-continues-in-ses
 
 ## Acquisition command set
 
-Each step, and the permission grammar entry it needs. `curl`, `tar`, `chmod`, `ls`, and `mktemp` are already seeded; the rest are added by this feature.
+Each step, and the permission grammar entry it needs. Claude's seed (`framework/bootstrap/ductus.md` §Permission Setup, the `claude` row) grants today: the three digest tools; `mkdir` as the exact `mkdir -p ~/.ductus/bin/` and `mkdir -p .ductus/bin`; `chmod` as the exact `chmod +x ~/.ductus/bin/ductus` command, its `.exe` twin and the githooks one; and the store probe, exact. It grants no `curl` and no `tar`, retired by 022 task 18, so each prompts once in Manual mode, and no pointer command beyond `mkdir -p .ductus/bin`, by design (022 task 18 question 1a). Pi has no permission gate.
 
 | Step | Command | Seeded today |
 | --- | --- | --- |
-| fetch archive + sidecar | `curl` | yes |
-| verify digest | `shasum -a 256` (macOS) / `sha256sum` (Linux) / `certutil -hashfile` (Windows) | **no** |
-| create the store directory | `mkdir` | **no** |
-| extract | `tar` | yes |
-| set the executable bit | `chmod` | yes |
+| fetch archive + sidecar | `curl` | **no** (prompts once) |
+| verify digest | `shasum -a 256` (macOS) / `sha256sum` (Linux) / `certutil -hashfile` (Windows) | yes |
+| create the store directory | `mkdir` | exact `mkdir -p ~/.ductus/bin/` only |
+| extract | `tar` | **no** (prompts once) |
+| set the executable bit | `chmod` | exact `chmod +x` store command and its `.exe` twin only |
 | materialize the pointer | `ln` (falling back to `cp`) | **no** |
-| probe the version | executing the store path | **no** |
+| probe the version | executing the store path | exact `--version` probe only |
 
 The verification entry is the one that matters most. Leaving it unseeded does not add a safety check — it places a permission prompt at the one gate that must never be waved through, and a prompt that appears on every bootstrap trains the reflex to approve it. The gate that protects the adopter is the digest comparison itself, which halts before anything is written, and it is stronger unattended than dependent on a dialog read during setup.

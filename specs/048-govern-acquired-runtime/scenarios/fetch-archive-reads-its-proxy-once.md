@@ -20,7 +20,7 @@ section: "Acquisition"
 - An adopter behind a corporate proxy must still be able to fetch. Turning proxies off (`.no_proxy()`) would stop the per-fetch reads and restore the pin, but it would break acquisition for them.
 - With `REQUEST_METHOD` set (a CGI environment), the matcher ignores every proxy variable. A captured configuration has to keep that guard.
 - A proxy value that does not parse, or names a scheme other than `http` or `https` (`socks5`, which this build cannot speak, among them), refuses every fetch with an error naming the variable, its credentials shown as `***`; a primitive that never fetches is unaffected. Until 048's 2026-10-29 analysis a value that did not parse was skipped as the matcher skips it, so that scheme's fetches went direct past the operator's proxy, which `CFG-ENV-008` forbids, and a `socks5` value was applied and failed at connect, naming the scheme rather than the variable; the owner chose the refusal for both, as 022 refuses a malformed `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` entry.
-- A process that never captured the proxy variables, such as an in-process test, fetches with proxies off and reads nothing from the environment.
+- A process that never captured the proxy variables, such as an in-process test, fetches with proxies off and reads no proxy variable. On Linux and other non-Apple Unix, where it loads the system store at its first fetch, the store's loader still reads `SSL_CERT_FILE` and `SSL_CERT_DIR` from the environment, since nothing captured them.
 - On Linux and other non-Apple Unix, a system store that yields no certificate fails the fetch with an error saying so, as the platform verifier does, rather than failing every handshake. A process that never fetches never loads the store.
 
 ## Open Questions

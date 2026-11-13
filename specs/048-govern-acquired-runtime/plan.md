@@ -18,7 +18,7 @@ The ordering constraint that shapes everything else: **acquisition cannot use th
 
 The runtime exposes `fetch-archive` (checksum-verified download) and `extract-archive` (traversal-safe expansion), both 022's (its plan states each guarantee), and both are exactly what acquisition needs. Neither can be used: the pre-flight phase that acquires the binary runs when the binary is, by definition, absent.
 
-So acquisition is a shell sequence in `ductus.md`'s markdown procedure — `curl`, a checksum tool, `tar`, `mkdir`, `chmod`, the pointer command — and the security properties `fetch-archive` provides in code are restated as procedure steps that the four agent permission seeds pre-authorize. This is the one place in the framework where a security-relevant sequence has no primitive backing it, and it is worth naming rather than discovering later.
+So acquisition is a shell sequence in `ductus.md`'s markdown procedure — `curl`, a checksum tool, `tar`, `mkdir`, `chmod`, the pointer command — and the security properties `fetch-archive` provides in code are restated as procedure steps that Claude's permission seed pre-authorizes in part (see `data-model.md` §Acquisition command set) and Pi, which has no permission gate, needs none. This is the one place in the framework where a security-relevant sequence has no primitive backing it, and it is worth naming rather than discovering later.
 
 **What each command interpolates** (`BE-INPUT-003`). A host's shell tool takes a command line, so no argument vector is available, and what keeps an operand from changing a command's structure is what the operand can hold. `{pin}` is one line of `MAJOR.MINOR.PATCH` in ASCII digits or the run halts (Source resolution step 5); `{triple}` comes from the closed table in Runtime acquisition step 3; `{tempdir}` is `mktemp`'s output, which Branch 2's steps interpolate unquoted, so a `TMPDIR` holding whitespace is unsupported; `${DUCTUS_REPO:-…}` is expanded by the shell inside double quotes, and an expansion is never re-parsed as shell syntax; the store and pointer paths are the fixed derived paths. The one operand from configuration, the `[runtime] path`, names a binary the project chose to execute, so a value that altered the command would grant nothing the key does not.
 
@@ -97,7 +97,12 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | `AGENTS.md` | Modify | Replace the stale-binary gotcha with the `[runtime]` key workflow |
 | `runtime/src/primitives/fetch_archive.rs` | Modify | Proxy variables applied from the startup capture; Linux roots loaded once; the proxy trust boundary stated (task 18) |
 | `runtime/src/main.rs` | Modify | Capture the proxy variables at startup (task 18) |
-| `runtime/Cargo.toml`, `runtime/Cargo.lock` | Modify | `rustls` and `rustls-native-certs` as direct dependencies, `webpki-root-certs` for tests (task 18). They and this plan's workflow changes come under the supply-chain commitments 022's plan states in its sections *Dependency pinning, provenance, and upgrades* and *`runtime.yml` CI workflow* (`BE-DEPS-001` to `004`, `006` and `007`) |
+| `runtime/src/primitives/mod.rs` | Modify | The `--*-json` path shown on one line and held to a staging directory (task 30) |
+| `runtime/tests/fetch_archive_startup_env.rs` | Create | The startup capture of the proxy variables, one test per named mutation (task 30) |
+| `runtime/tests/fetch_archive_cert_env_startup.rs` | Create | The certificate variables are read at startup, proved where the verifier reads them (task 30) |
+| `framework/bootstrap/hooks/ductus-pre-commit` | Modify | The guard's probes bounded by a watchdog; the printable, bounded version echo (task 30) |
+| `scripts/measure-replace-under-server.sh` | Create | The CI measurement of replacing the store and the pointer under a running server (tasks 29, 31) |
+| `runtime/Cargo.toml`, `runtime/Cargo.lock` | Modify | `rustls` and `rustls-native-certs` as direct dependencies, `webpki-root-certs` for tests (task 18), and `temp-env` as a dev-dependency (task 30). They and this plan's workflow changes come under the supply-chain commitments 022's plan states in its sections *Dependency pinning, provenance, and upgrades* and *`runtime.yml` CI workflow* (`BE-DEPS-001` to `004`, `006` and `007`) |
 | `docs/runtime.md` | Modify | The environment-variable inventory: when each variable is read, and the proxy trust boundary (task 18) |
 
 ## Trade-offs

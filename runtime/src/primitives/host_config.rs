@@ -1831,70 +1831,68 @@ mod tests {
     #[test]
     fn a_block_refuses_the_rows_that_name_no_command() {
         let (dir, sub, file) = (".pi", "extensions", "ductus.ts");
-        {
-            let tmp = tempfile::tempdir().unwrap();
-            let tree = tmp.path();
-            git2::Repository::init(tree).unwrap();
-            let link = |target: &str, at: &str| {
-                std::os::unix::fs::symlink(tree.join(target), tree.join(at)).unwrap();
-            };
-            for d in ["specs", "shared", "elsewhere", "sub", "n"] {
-                std::fs::create_dir_all(tree.join(d)).unwrap();
-            }
-            std::fs::create_dir_all(tree.join("elsewhere").join(sub)).unwrap();
-            std::fs::create_dir_all(tree.join(dir).join(sub)).unwrap();
-            std::fs::create_dir_all(tree.join("n").join(dir).join(sub)).unwrap();
-            std::fs::write(tree.join("shared/f"), "x\n").unwrap();
-            link("elsewhere", &format!("sub/{dir}"));
-            link("shared/f", &format!("{dir}/{sub}/{file}"));
-            link(&format!("{dir}/{sub}"), "root_alias");
-            link("shared/f", &format!("n/{dir}/{sub}/{file}"));
-            link(&format!("n/{dir}/{sub}"), "nested_alias");
-            let below = tree.join("specs");
-            for rel in [
-                format!("sub/{dir}/{sub}/{file}"),
-                format!("root_alias/{file}"),
-                format!("nested_alias/{file}"),
-            ] {
-                assert!(
-                    check_no_destination(tree, &tree.join(&rel), &rel).is_err(),
-                    "{rel}"
-                );
-                let dest = below.join("..").join(&rel);
-                assert!(
-                    check_no_destination(&below, &dest, &rel).is_err(),
-                    "{rel} from below"
-                );
-            }
-
-            let tmp = tempfile::tempdir().unwrap();
-            let bare = tmp.path();
-            std::fs::create_dir_all(bare.join(dir)).unwrap();
-            std::fs::create_dir_all(bare.join("elsewhere")).unwrap();
-            std::fs::create_dir_all(bare.join("shared")).unwrap();
-            std::fs::write(bare.join("shared/f"), "x\n").unwrap();
-            std::os::unix::fs::symlink(bare.join("elsewhere"), bare.join(dir).join(sub)).unwrap();
-            let inside = bare.join(dir);
-            let given = inside.join(sub).join(file);
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        let link = |target: &str, at: &str| {
+            std::os::unix::fs::symlink(tree.join(target), tree.join(at)).unwrap();
+        };
+        for d in ["specs", "shared", "elsewhere", "sub", "n"] {
+            std::fs::create_dir_all(tree.join(d)).unwrap();
+        }
+        std::fs::create_dir_all(tree.join("elsewhere").join(sub)).unwrap();
+        std::fs::create_dir_all(tree.join(dir).join(sub)).unwrap();
+        std::fs::create_dir_all(tree.join("n").join(dir).join(sub)).unwrap();
+        std::fs::write(tree.join("shared/f"), "x\n").unwrap();
+        link("elsewhere", &format!("sub/{dir}"));
+        link("shared/f", &format!("{dir}/{sub}/{file}"));
+        link(&format!("{dir}/{sub}"), "root_alias");
+        link("shared/f", &format!("n/{dir}/{sub}/{file}"));
+        link(&format!("n/{dir}/{sub}"), "nested_alias");
+        let below = tree.join("specs");
+        for rel in [
+            format!("sub/{dir}/{sub}/{file}"),
+            format!("root_alias/{file}"),
+            format!("nested_alias/{file}"),
+        ] {
             assert!(
-                check_no_destination(&inside, &given, file).is_err(),
-                "{dir} as given"
+                check_no_destination(tree, &tree.join(&rel), &rel).is_err(),
+                "{rel}"
             );
-            let tmp = tempfile::tempdir().unwrap();
-            let bare = tmp.path();
-            std::fs::create_dir_all(bare.join(dir).join(sub)).unwrap();
-            std::fs::create_dir_all(bare.join("shared")).unwrap();
-            std::fs::write(bare.join("shared/f"), "x\n").unwrap();
-            std::os::unix::fs::symlink(bare.join("shared/f"), bare.join(dir).join(sub).join(file))
-                .unwrap();
-            std::os::unix::fs::symlink(bare.join(dir).join(sub), bare.join("alias")).unwrap();
-            let inside = bare.join(dir);
-            let landing = inside.join("../alias").join(file);
+            let dest = below.join("..").join(&rel);
             assert!(
-                check_no_destination(&inside, &landing, file).is_err(),
-                "{dir} landing"
+                check_no_destination(&below, &dest, &rel).is_err(),
+                "{rel} from below"
             );
         }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let bare = tmp.path();
+        std::fs::create_dir_all(bare.join(dir)).unwrap();
+        std::fs::create_dir_all(bare.join("elsewhere")).unwrap();
+        std::fs::create_dir_all(bare.join("shared")).unwrap();
+        std::fs::write(bare.join("shared/f"), "x\n").unwrap();
+        std::os::unix::fs::symlink(bare.join("elsewhere"), bare.join(dir).join(sub)).unwrap();
+        let inside = bare.join(dir);
+        let given = inside.join(sub).join(file);
+        assert!(
+            check_no_destination(&inside, &given, file).is_err(),
+            "{dir} as given"
+        );
+        let tmp = tempfile::tempdir().unwrap();
+        let bare = tmp.path();
+        std::fs::create_dir_all(bare.join(dir).join(sub)).unwrap();
+        std::fs::create_dir_all(bare.join("shared")).unwrap();
+        std::fs::write(bare.join("shared/f"), "x\n").unwrap();
+        std::os::unix::fs::symlink(bare.join("shared/f"), bare.join(dir).join(sub).join(file))
+            .unwrap();
+        std::os::unix::fs::symlink(bare.join(dir).join(sub), bare.join("alias")).unwrap();
+        let inside = bare.join(dir);
+        let landing = inside.join("../alias").join(file);
+        assert!(
+            check_no_destination(&inside, &landing, file).is_err(),
+            "{dir} landing"
+        );
     }
 
     /// The worktree exception's own judgment of the names below a worktree

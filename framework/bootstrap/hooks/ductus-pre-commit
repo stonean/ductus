@@ -122,14 +122,21 @@ fi
 # primitive this hook grows. Probing capability rather than parsing a version
 # means there is no pin for the hook to get out of sync with.
 #
-# The guard's four probes of the binary (the two `--help` capability reads and
-# the two `--version` echoes) run bounded, so a binary that hangs cannot hang
-# the commit (BE-TIMEOUT-001). `timeout` is not on macOS, so `probe` is a
-# portable watchdog: 10 seconds, the bound `/ductus` puts on its own
-# `--version` probes (`{probe-timeout}`). A probe it ended returns 124, which
-# the caller reads as a failed probe. The `derive-*` and `check-corpus-links`
-# calls below stay unbounded on purpose: a fixed bound could kill a derive over
-# a large repository, which is slow and not hung.
+# The guard's four `--help` probes of the binary (the three in the loop below
+# over `derive-dependencies`, `derive-references` and `check-corpus-links`, and
+# `check-artifact-size --help`) run bounded, and so does the one `--version`
+# echo `installed_version` makes, on the halt path only, so a binary that hangs
+# cannot hang the commit (BE-TIMEOUT-001). `timeout` is not on macOS, so `probe`
+# is a portable watchdog bounded by `probe_timeout`. A probe it ended returns 124, which
+# the caller reads as a failed probe. The `derive-*`, `check-corpus-links` and
+# `check-artifact-size` calls below stay unbounded on purpose: a fixed bound
+# could kill one over a large repository, which is slow and not hung.
+
+# The bound on a probe, in seconds: the one `/ductus` puts on its own
+# `--version` probes (`{probe-timeout}`).
+probe_timeout=10
+# The grace, in seconds, between SIGTERM and SIGKILL for a probe that ignores it.
+probe_kill_grace=1
 probe() {
   local pid watcher rc=0 out
   # The probe writes to a file, never the caller's pipe, so a child it leaves
@@ -137,8 +144,8 @@ probe() {
   out="$(mktemp "${TMPDIR:-/tmp}/ductus-probe.XXXXXX")" || return 1
   "$@" > "$out" &
   pid=$!
-  # SIGTERM at the bound, then SIGKILL a second later for one that ignores it.
-  ( sleep 10; kill -TERM "$pid" 2> /dev/null; sleep 1; kill -KILL "$pid" 2> /dev/null ) > /dev/null 2>&1 &
+  # SIGTERM at the bound, then SIGKILL after the grace for one that ignores it.
+  ( sleep "$probe_timeout"; kill -TERM "$pid" 2> /dev/null; sleep "$probe_kill_grace"; kill -KILL "$pid" 2> /dev/null ) > /dev/null 2>&1 &
   watcher=$!
   wait "$pid" || rc=$?
   kill "$watcher" 2> /dev/null || true
