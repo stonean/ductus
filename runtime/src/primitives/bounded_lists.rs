@@ -112,6 +112,28 @@ pub(crate) fn place(
     if u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes {
         return Ok(None);
     }
+    write(repo, primitive, feature, lists).map(Some)
+}
+
+/// Write `lists` whole to its file under the results directory, whatever the
+/// result's size, and return the file's path from the project root: what
+/// [`place`] does past the read size, for a primitive that moves a list the
+/// host never acts on out of a result that fits (`process-decisions`'
+/// retained decisions).
+///
+/// # Errors
+///
+/// As [`place`], but for the read size, which this never reads.
+pub(crate) fn write(
+    repo: &Path,
+    primitive: &str,
+    feature: &str,
+    lists: &impl Serialize,
+) -> Result<String> {
+    let serialize_error = |source| PrimitiveError::Json {
+        path: repo.join(RESULTS_DIR),
+        source,
+    };
     let mut body = serde_json::to_string_pretty(lists).map_err(serialize_error)?;
     body.push('\n');
     let name = format!("{}.json", super::hex(&Sha256::digest(body.as_bytes())));
@@ -125,7 +147,7 @@ pub(crate) fn place(
     })?;
     prune_stale(&dir, &name, SystemTime::now());
     write_atomic(&dir.join(&name), &body)?;
-    Ok(Some(format!("{dir_rel}/{name}")))
+    Ok(format!("{dir_rel}/{name}"))
 }
 
 /// Remove the `.json` files in `dir`, other than `keep`, last modified more

@@ -219,8 +219,8 @@ findings sharing a summary apart. A spent section never matches.
 | --- | --- | --- |
 | `matched` | list of decision refs | Key, outcome, and a deferral's work or a waiver's reason. A deferral whose work is complete is listed in `lapsed` instead (076). |
 | `expired` | list of decision refs | Passed to the writer as `expired-decisions`. |
-| `retained` | list of decision refs | Re-rendered unchanged. |
-| `notices` | list of strings | Malformed, duplicate, expired, and retained entries, each named, and 076's lapsed deferrals and unreadable deferral targets. |
+| `retained` | list of decision refs | Re-rendered unchanged; inline only when empty, and otherwise in the file `lists-file` names (066 task 22). |
+| `notices` | list of strings | Malformed, duplicate and expired entries, each named, 076's lapsed deferrals and unreadable deferral targets, and one line per reason a decision was retained; each retained decision's own line is in the file's `retained-notices`. |
 | `form`, `lists-file`, each list's `-count` | | The bound 066's data model states (`process-decisions`, **Size**): past the read size the lists move to the file `lists-file` names, and each count stays inline. |
 
 [076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) adds the `lapsed` result field and a decision ref's `task` and `work-item`.

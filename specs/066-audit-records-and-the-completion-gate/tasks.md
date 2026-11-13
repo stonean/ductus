@@ -189,3 +189,12 @@ Implemented 2026-11-12. Two results carry the list: `write-review`'s `analyze-fr
 - [x] A parity-test case in `runtime/tests/mechanical_sweep_parity.rs` feeds the script an unrecognised state and fails when that branch is removed — waived: spec 081 removed the script and the parity suite's Family 19 half
 
 - **Done when**: an unrecognised state is counted as not answered with a finding, and a test fails without it
+
+## 22. `process-decisions` keeps retained decisions out of the inline result
+
+- [ ] `process-decisions` returns `retained-count` inline and writes the `retained` entries, with one notice line per retained decision, to the file `lists-file` names whenever any decision is retained; the inline `notices` carry one summary line per retain reason, the scope that could not be read on its own line, and every other notice as before (owner, 2026-11-13: the host acts on nothing retained, and in one session the retained entries and their notices were 131K of the 136K characters the primitive returned)
+- [ ] `PROCESS_DECISIONS`, the result's doc comments, this spec's `data-model.md` **Size** and 058's `data-model.md` result rows state the shape
+- [ ] Unit tests: retained decisions reach the file and not the inline result, each reason class gets its own summary line, and a run that retains nothing writes no file; a mutation list whose mutants each turn one red (`QUAL-TEST-001`)
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry
+
+- **Done when**: a run that retains decisions returns none of them, and none of their per-decision notices, inline; the file `lists-file` names holds each whole; a test its mutant turns red proves each; and the whole `cargo test` passes

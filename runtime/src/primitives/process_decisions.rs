@@ -33,7 +33,11 @@
 //! their counts inline (`bounded_lists::place`; 066 scenario
 //! `process-decisions-results-have-a-bounded-size`). The host drops each
 //! `expired` and `lapsed` decision and asks again about each lapsed finding,
-//! so no form may read as a short complete list.
+//! so no form may read as a short complete list. A retained decision asks
+//! nothing of the host, so it is never inline: whenever one is retained, the
+//! file holds the `retained` list and each one's own notice
+//! (`retained-notices`), and `notices` carries one line per reason instead
+//! (066 task 22).
 //!
 //! Read-only but for that list file: frontmatter mutation belongs to
 //! `write-review` and `write-analysis`.
@@ -55,6 +59,8 @@ use crate::schema::primitives::{
 /// Execute the `process-decisions` primitive: [`compute`], returned inline
 /// while it fits `[artifacts] read-size-bytes`, and past it with its lists in
 /// the file it names and only their counts inline (`bounded_lists::place`).
+/// Retained decisions and their own notices are in that file in either form,
+/// written whenever one is retained, and `notices` summarizes them.
 ///
 /// # Errors
 ///
@@ -62,25 +68,50 @@ use crate::schema::primitives::{
 /// for a malformed read size or a list file that cannot be written.
 pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
     let classified = compute(args, repo)?;
+    // The host acts on no retained decision: it neither asks about one nor
+    // passes one to the writer. So each, with its own notice, goes to the list
+    // file, and the result carries their count and one line per reason (066
+    // task 22), since in one session they were 131K of the 136K characters
+    // this primitive returned, and every later call re-read them.
+    let retained_at: Vec<usize> = classified.retained_why.iter().map(|&(_, at)| at).collect();
+    let (retained_notices, notices): (Vec<_>, Vec<_>) = classified
+        .notices
+        .into_iter()
+        .enumerate()
+        .partition(|(index, _)| retained_at.binary_search(index).is_ok());
+    let retained_notices: Vec<String> = retained_notices.into_iter().map(|(_, n)| n).collect();
+    let mut notices: Vec<String> = notices.into_iter().map(|(_, n)| n).collect();
+    for class in Retained::ALL {
+        let count = classified
+            .retained_why
+            .iter()
+            .filter(|&&(why, _)| why == class)
+            .count();
+        if count > 0 {
+            notices.push(class.summary(count));
+        }
+    }
     let lists = serde_json::json!({
         "matched": &classified.matched,
         "expired": &classified.expired,
         "retained": &classified.retained,
         "lapsed": &classified.lapsed,
-        "notices": &classified.notices,
+        "notices": &notices,
+        "retained-notices": &retained_notices,
     });
+    let any_retained = !classified.retained.is_empty();
     let mut result = ProcessDecisionsResult {
         form: ListsForm::Inline,
         matched_count: classified.matched.len(),
         expired_count: classified.expired.len(),
         retained_count: classified.retained.len(),
         lapsed_count: classified.lapsed.len(),
-        notices_count: classified.notices.len(),
+        notices_count: notices.len(),
         matched: Some(classified.matched),
         expired: Some(classified.expired),
-        retained: Some(classified.retained),
+        retained: (!any_retained).then(Vec::new),
         lapsed: Some(classified.lapsed),
-        notices: Some(classified.notices),
+        notices: Some(notices),
         lists_file: None,
     };
     if let Some(file) =
@@ -93,6 +124,13 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         result.lapsed = None;
         result.notices = None;
         result.lists_file = Some(file);
+    } else if any_retained {
+        result.lists_file = Some(super::bounded_lists::write(
+            repo,
+            "process-decisions",
+            &args.feature,
+            &lists,
+        )?);
     }
     Ok(result)
 }
@@ -109,8 +147,61 @@ pub(crate) struct Classified {
     pub(crate) retained: Vec<DecisionRef>,
     /// See [`ProcessDecisionsResult::lapsed`].
     pub(crate) lapsed: Vec<DecisionRef>,
-    /// See [`ProcessDecisionsResult::notices`].
+    /// See [`ProcessDecisionsResult::notices`]. Holds each retained
+    /// decision's own notice, which [`run`] moves to the list file.
     pub(crate) notices: Vec<String>,
+    /// For each `retained` entry, in order, why it was retained and the index
+    /// of its notice in `notices`.
+    pub(crate) retained_why: Vec<(Retained, usize)>,
+}
+
+impl Classified {
+    /// Keep `decision`, which did not fire, with its own notice saying `why`,
+    /// and record its class and that notice's index for [`run`].
+    fn retain(&mut self, class: Retained, why: &str, decision: DecisionRef) {
+        self.retained_why.push((class, self.notices.len()));
+        self.notices.push(format!(
+            "decision retained: {} — {why} ({})",
+            flatten_line(&decision.key),
+            describe(&decision)
+        ));
+        self.retained.push(decision);
+    }
+}
+
+/// Why a stored decision that did not fire was kept: the classes [`run`]
+/// summarizes in one notice line each.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Retained {
+    /// The run could not read its window's scope, a check that could not run,
+    /// so its line stands apart from the others.
+    ScopeUnreadable,
+    /// The run was restricted: it did not evaluate every source.
+    NotEvaluated,
+    /// The run's scope does not hold the file the review key names.
+    NotRead,
+}
+
+impl Retained {
+    /// Every class, in the order [`run`] reports them.
+    const ALL: [Self; 3] = [Self::ScopeUnreadable, Self::NotEvaluated, Self::NotRead];
+
+    /// The summary line for `count` decisions of this class.
+    fn summary(self, count: usize) -> String {
+        let (noun, each) = if count == 1 {
+            ("decision", "it is")
+        } else {
+            ("decisions", "each is")
+        };
+        let why = match self {
+            Self::ScopeUnreadable => "this run's scope could not be read",
+            Self::NotEvaluated => "this run did not evaluate every source",
+            Self::NotRead => "this run did not read the file its key names",
+        };
+        format!(
+            "{count} {noun} retained — {why}; {each} in the `retained` list, with its notice in `retained-notices`, of the file `lists-file` names"
+        )
+    }
 }
 
 /// Classify the record's stored decisions against `args.fired`, every list
@@ -208,11 +299,11 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
             }
             result.matched.push(decision);
         } else if args.restricted {
-            result.notices.push(format!(
-                "decision retained: {key} — its source was not evaluated this run ({})",
-                describe(&decision)
-            ));
-            result.retained.push(decision);
+            result.retain(
+                Retained::NotEvaluated,
+                "its source was not evaluated this run",
+                decision,
+            );
         } else if let Some(why) = decisions::key_anchor(&key)
             .filter(|_| args.record == DecisionRecord::Review)
             .and_then(|path| {
@@ -221,11 +312,12 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
                     .why_unread(path, repo)
             })
         {
-            result.notices.push(format!(
-                "decision retained: {key} — {why} ({})",
-                describe(&decision)
-            ));
-            result.retained.push(decision);
+            let class = if matches!(scope.get(), Some(RunScope::Unreadable)) {
+                Retained::ScopeUnreadable
+            } else {
+                Retained::NotRead
+            };
+            result.retain(class, &why, decision);
         } else {
             result.notices.push(format!(
                 "decision expired: {key} — the finding no longer fires ({})",
@@ -855,6 +947,40 @@ mod tests {
         );
     }
 
+    /// The counts a result carries in either form, in list order.
+    fn counts(result: &ProcessDecisionsResult) -> (usize, usize, usize, usize, usize) {
+        (
+            result.matched_count,
+            result.expired_count,
+            result.retained_count,
+            result.lapsed_count,
+            result.notices_count,
+        )
+    }
+
+    /// The lists the file `file` names holds, from under this primitive's
+    /// results directory for 001-x.
+    fn lists_in(tmp: &tempfile::TempDir, file: &str) -> serde_json::Value {
+        assert!(
+            file.starts_with(".ductus/results/process-decisions/001-x/"),
+            "{file}"
+        );
+        serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap()
+    }
+
+    /// `whole`'s notices as `run` returns them, each retained decision's own
+    /// line moved to the second list and `summary` appended to the first.
+    fn split_notices(whole: &Classified, summary: Option<&str>) -> (Vec<String>, Vec<String>) {
+        let (own, mut rest): (Vec<String>, Vec<String>) = whole
+            .notices
+            .iter()
+            .cloned()
+            .partition(|n| n.starts_with("decision retained:"));
+        assert_eq!(own.len(), whole.retained.len());
+        rest.extend(summary.map(str::to_string));
+        (rest, own)
+    }
+
     /// A result that fits is inline, with its counts. Past `[artifacts]
     /// read-size-bytes` every list moves whole to the file the result names,
     /// none of them inline, and the counts still say how many — so the
@@ -893,9 +1019,19 @@ mod tests {
                 if restricted { (0, 2) } else { (2, 0) },
                 "{whole:?}"
             );
+            // A restricted run retains the two silent decisions, so they and
+            // their notices are in the file in either form (066 task 22).
+            let (notices, retained_notices) = split_notices(
+                &whole,
+                restricted.then_some(
+                    "2 decisions retained — this run did not evaluate every source; each is in \
+                     the `retained` list, with its notice in `retained-notices`, of the file \
+                     `lists-file` names",
+                ),
+            );
             let inline = run(&call, tmp.path()).unwrap();
             assert_eq!(inline.form, ListsForm::Inline);
-            assert_eq!(inline.lists_file, None);
+            assert_eq!(inline.lists_file.is_some(), restricted, "{inline:?}");
             assert_eq!(
                 (
                     &inline.matched,
@@ -907,9 +1043,9 @@ mod tests {
                 (
                     &Some(whole.matched.clone()),
                     &Some(whole.expired.clone()),
-                    &Some(whole.retained.clone()),
+                    &(!restricted).then(Vec::new),
                     &Some(whole.lapsed.clone()),
-                    &Some(whole.notices.clone())
+                    &Some(notices.clone())
                 )
             );
 
@@ -926,42 +1062,102 @@ mod tests {
                 ),
                 (&None, &None, &None, &None, &None)
             );
-            for result in [&inline, &bounded] {
-                assert_eq!(
-                    (
-                        result.matched_count,
-                        result.expired_count,
-                        result.retained_count,
-                        result.lapsed_count,
-                        result.notices_count
-                    ),
-                    (
-                        whole.matched.len(),
-                        whole.expired.len(),
-                        whole.retained.len(),
-                        whole.lapsed.len(),
-                        whole.notices.len()
-                    )
-                );
+            let want = (
+                whole.matched.len(),
+                whole.expired.len(),
+                whole.retained.len(),
+                whole.lapsed.len(),
+                notices.len(),
+            );
+            assert_eq!((counts(&inline), counts(&bounded)), (want, want));
+            let expected = serde_json::json!({
+                "matched": whole.matched,
+                "expired": whole.expired,
+                "retained": whole.retained,
+                "lapsed": whole.lapsed,
+                "notices": notices,
+                "retained-notices": retained_notices,
+            });
+            for file in [&inline.lists_file, &bounded.lists_file]
+                .into_iter()
+                .flatten()
+            {
+                assert_eq!(lists_in(&tmp, file), expected);
             }
-            let file = bounded.lists_file.unwrap();
-            assert!(
-                file.starts_with(".ductus/results/process-decisions/001-x/"),
-                "{file}"
-            );
-            let lists: serde_json::Value =
-                serde_json::from_str(&std::fs::read_to_string(tmp.path().join(file)).unwrap())
-                    .unwrap();
-            assert_eq!(
-                lists,
-                serde_json::json!({
-                    "matched": whole.matched,
-                    "expired": whole.expired,
-                    "retained": whole.retained,
-                    "lapsed": whole.lapsed,
-                    "notices": whole.notices,
-                })
-            );
         }
+    }
+
+    /// A decision retained on a file the run did not read is in the file the
+    /// result names, with its own notice, and the result carries its count
+    /// and one line saying why, however small the result (066 task 22).
+    #[test]
+    fn retained_decisions_reach_the_file_and_not_the_result() {
+        let tmp = windowed(&["bug: a finding — `src/old.rs:3`"]);
+        let call = args(DecisionRecord::Review, &[], false);
+        let result = run(&call, tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!((result.retained_count, &result.retained), (1, &None));
+        assert_eq!(
+            result.notices,
+            Some(vec![
+                "1 decision retained — this run did not read the file its key names; it is in \
+                 the `retained` list, with its notice in `retained-notices`, of the file \
+                 `lists-file` names"
+                    .to_string()
+            ])
+        );
+        assert_eq!(result.notices_count, 1);
+        let lists = lists_in(&tmp, &result.lists_file.expect("a lists file"));
+        assert_eq!(
+            lists["retained"][0]["key"],
+            "bug: a finding — `src/old.rs:3`"
+        );
+        let own = lists["retained-notices"].as_array().unwrap();
+        assert_eq!(own.len(), 1);
+        assert!(
+            own[0]
+                .as_str()
+                .unwrap()
+                .contains("this run did not read `src/old.rs`"),
+            "{own:?}"
+        );
+    }
+
+    /// A scope that could not be read is a check that could not run, so its
+    /// summary line is its own, never the not-read line.
+    #[test]
+    fn a_scope_that_cannot_be_read_has_its_own_summary_line() {
+        let tmp = repo_with(
+            REVIEW_RECORD_FILE,
+            &waived("bug: a finding — `src/absent.rs`"),
+        );
+        let result = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices,
+            Some(vec![
+                "1 decision retained — this run's scope could not be read; it is in the \
+                 `retained` list, with its notice in `retained-notices`, of the file \
+                 `lists-file` names"
+                    .to_string()
+            ])
+        );
+    }
+
+    /// A run that retains nothing writes no file and keeps an empty list
+    /// inline.
+    #[test]
+    fn a_run_that_retains_nothing_writes_no_file() {
+        let tmp = windowed(&["bug: a finding — `src/new.rs`"]);
+        let result = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(result.expired_count, 1);
+        assert_eq!(
+            (&result.retained, &result.lists_file),
+            (&Some(Vec::new()), &None)
+        );
+        assert!(
+            !tmp.path()
+                .join(".ductus/results/process-decisions")
+                .exists()
+        );
     }
 }

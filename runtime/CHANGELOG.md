@@ -286,6 +286,15 @@ its version and date.
 
 ### Changed
 
+- **`process-decisions` keeps retained decisions out of its inline result
+  (spec 066, task 22).** A retained decision asks nothing of the host, yet
+  each came back inline with a notice of its own, and in one session they
+  were 131K of the 136K characters the primitive returned, which every later
+  call re-read. Whenever a decision is retained, the `retained` list and each
+  one's own notice (`retained-notices`) are in the file `lists-file` names,
+  in either form, `retained-count` stays inline, and `notices` carries one
+  line per reason instead, a scope that could not be read on its own line.
+
 - **`write-review`'s departure waivers are bounded by the review scope,
   follow their entry, and yield no deferral (spec 073, review round 1).** An
   entry waives its rule only at files the run's resolved scope holds (a scope

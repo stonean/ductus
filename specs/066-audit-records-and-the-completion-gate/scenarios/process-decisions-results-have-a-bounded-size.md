@@ -15,7 +15,7 @@ section: "The review record"
 
 ## Edge Cases
 
-- **A record whose decisions fit.** The result is returned whole, as now.
+- **A record whose decisions fit.** The result is returned inline, but for any retained decision: the caller acts on none, so whenever one is retained the `retained` list and each one's own notice are in the file `lists-file` names, and `notices` carries one line per reason instead (task 22).
 
 ## Open Questions
 

@@ -994,7 +994,8 @@ pub struct ProcessDecisionsResult {
     pub matched_count: usize,
     /// Entries in `expired`, in either form.
     pub expired_count: usize,
-    /// Entries in `retained`, in either form.
+    /// Entries in `retained`, in either form, and so in the file's
+    /// `retained-notices`.
     pub retained_count: usize,
     /// Entries in `lapsed`, in either form.
     pub lapsed_count: usize,
@@ -1012,8 +1013,11 @@ pub struct ProcessDecisionsResult {
     /// file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expired: Option<Vec<DecisionRef>>,
-    /// Stored decisions whose key did not fire on a restricted run — neither
-    /// matched nor expired, so the writer keeps them. Absent in the file form.
+    /// Stored decisions whose key did not fire on a restricted run, or on a
+    /// file the run's scope does not hold — neither matched nor expired, so
+    /// the writer keeps them and the host does nothing with them. Inline only
+    /// when empty: whenever one is retained, they are in the file `lists-file`
+    /// names, in either form (066 task 22).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retained: Option<Vec<DecisionRef>>,
     /// Stored deferrals whose key fired although the pipeline work they name
@@ -1023,15 +1027,19 @@ pub struct ProcessDecisionsResult {
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lapsed: Option<Vec<DecisionRef>>,
-    /// Ordered notice lines: `decision expired: …`, `decision retained: …`,
-    /// `deferral lapsed: …`, `deferral target unreadable: …`, `malformed
-    /// decision …`, and `duplicate decision: …`, in entry order. Absent in the
-    /// file form.
+    /// Ordered notice lines: `decision expired: …`, `deferral lapsed: …`,
+    /// `deferral target unreadable: …`, `malformed decision …`, and
+    /// `duplicate decision: …`, in entry order, then one `N decisions
+    /// retained — …` line for each reason a decision was retained (the scope
+    /// could not be read, the source was not evaluated, the file was not
+    /// read), each retained decision's own `decision retained: …` line being
+    /// in the file's `retained-notices`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notices: Option<Vec<String>>,
-    /// In the file form, the file holding the lists whole, from the project
-    /// root: a JSON object with `matched`, `expired`, `retained`, `lapsed` and
-    /// `notices`, pretty-printed.
+    /// The file holding the lists whole, from the project root, in the file
+    /// form and whenever a decision is retained: a JSON object with
+    /// `matched`, `expired`, `retained`, `lapsed`, `notices` and
+    /// `retained-notices`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
