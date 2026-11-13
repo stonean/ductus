@@ -203,8 +203,9 @@ fn problem_message(kind: &ProblemKind) -> String {
 }
 
 /// Judge each `cited:` through `resolve-anchor` against the constitution's
-/// markers. A reference it cannot judge is recorded unexamined, never passed
-/// or reported broken.
+/// markers: it must hold exactly one `§` reference. A reference it cannot
+/// judge is recorded unexamined, never passed. An unresolved one is no
+/// finding here: step 4 reports it over the whole spec, once.
 fn judge_citations(
     repo: &Path,
     spec_rel: &str,
@@ -254,12 +255,6 @@ fn judge_citations(
                     reason: reason.clone(),
                     line: reference.line,
                 });
-            } else if !reference.resolved {
-                found.push(finding(
-                    AnalyzeSeverity::Advisory,
-                    reference.line as usize,
-                    format!("`cited:` §{} does not resolve", reference.anchor),
-                ));
             }
         }
     }
@@ -270,6 +265,8 @@ fn judge_citations(
 enum State {
     /// No rule file was loaded, so nothing was checked against: the rule's
     /// state is unknown, never a finding (`check-rule-ids`' `examined: 0`).
+    /// Only a token `check-rule-ids` reads as a citation: any other cannot be
+    /// a rule ID, so no rule file is needed to judge it unknown.
     NotChecked,
     Defined,
     Deprecated,
@@ -332,7 +329,7 @@ impl RuleFacts {
     }
 
     fn state(&self, rule: &str) -> State {
-        if self.examined == 0 {
+        if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {
             return State::NotChecked;
         }
         match self.citations.get(rule) {
@@ -529,14 +526,14 @@ mod tests {
     }
 
     #[test]
-    fn a_citation_that_does_not_resolve_is_advisory_and_one_that_does_is_not() {
+    fn a_citation_without_exactly_one_reference_is_advisory_and_an_unresolved_one_is_step_4s() {
         let bad = check(&project(
             "",
             "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: §no-such-anchor\n",
         ));
-        assert_eq!(bad.findings.len(), 1, "{:?}", bad.findings);
-        assert_eq!(bad.findings[0].tier, AnalyzeSeverity::Advisory);
-        assert!(bad.findings[0].message.contains("no-such-anchor"));
+        // `resolve-anchor` (step 4) reports the unresolved reference over the
+        // whole spec, so it is counted there and not again here.
+        assert_eq!(bad.findings, vec![], "{:?}", bad.findings);
         assert_eq!(bad.unexamined, vec![]);
         let none = check(&project(
             "",
@@ -580,9 +577,7 @@ mod tests {
             "",
             "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: see the\n    §no-such-anchor\n",
         ));
-        assert_eq!(bad.findings.len(), 1, "{:?}", bad.findings);
-        assert!(bad.findings[0].message.starts_with("line 13:"));
-        assert!(bad.findings[0].message.contains("no-such-anchor"));
+        assert_eq!(bad.findings, vec![], "{:?}", bad.findings);
     }
 
     #[test]
@@ -662,6 +657,34 @@ mod tests {
         );
         assert_eq!(result.entries.len(), 3);
         assert!(result.entries.iter().all(|e| e.tier.is_none()));
+    }
+
+    /// A token step 5 reads as no citation (it is not shaped like a rule ID)
+    /// leaves no record there, so with no rule file loaded it is still a
+    /// Blocking finding here, where a rule-shaped one is unexamined.
+    #[test]
+    fn with_no_rule_file_loaded_a_token_that_cannot_be_a_rule_id_is_still_unknown() {
+        let tmp = project(
+            "",
+            "- departs: `not-a-rule`\n  - reason: r\n- departs: `DM-NONE-999`\n  - reason: r\n",
+        );
+        std::fs::remove_file(tmp.path().join("specs/rules/demo-cross.md")).unwrap();
+        let result = check(&tmp);
+        assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
+        assert_eq!(result.findings[0].tier, AnalyzeSeverity::Blocking);
+        assert!(result.findings[0].message.starts_with("line 10:"));
+        assert!(
+            result.findings[0]
+                .message
+                .contains("no loaded rule file defines")
+        );
+        assert_eq!(
+            result.unexamined,
+            vec![DepartureUnexamined {
+                reason: "rule-citations-not-checked".into(),
+                line: 12,
+            }]
+        );
     }
 
     #[test]

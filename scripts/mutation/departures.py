@@ -309,15 +309,29 @@ MUTATIONS = [
     (
         'M43 an entry\'s rule is judged unknown with no rule file loaded',
         'src/primitives/check_departures.rs',
-        '        if self.examined == 0 {\n            return State::NotChecked;\n        }\n',
+        '        if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {\n            return State::NotChecked;\n        }\n',
         '',
         'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
     ),
     (
         'M44 a retired or shipped rule keeps its own state with no rule file loaded',
         'src/primitives/check_departures.rs',
-        'if self.examined == 0 {',
-        'if self.examined == 0 && !self.citations.contains_key(rule) {',
+        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {',
+        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) && !self.citations.contains_key(rule) {',
         'with_no_rule_file_loaded_an_entrys_rule_is_unexamined_never_a_finding',
+    ),
+    (
+        'M45 an unresolved citation is also reported here, after step 4 reports it',
+        'src/primitives/check_departures.rs',
+        '                    line: reference.line,\n                });\n            }\n        }\n    }\n    Ok(())',
+        '                    line: reference.line,\n                });\n            } else if !reference.resolved {\n                found.push(finding(\n                    AnalyzeSeverity::Advisory,\n                    reference.line as usize,\n                    format!("`cited:` §{} does not resolve", reference.anchor),\n                ));\n            }\n        }\n    }\n    Ok(())',
+        'a_citation_without_exactly_one_reference_is_advisory_and_an_unresolved_one_is_step_4s a_reference_on_a_wrapped_citations_continuation_line_is_judged',
+    ),
+    (
+        'M46 a token no rule ID can be is unexamined with no rule file loaded',
+        'src/primitives/check_departures.rs',
+        'if self.examined == 0 && check_rule_ids::cites_a_rule_id(rule) {',
+        'if self.examined == 0 {',
+        'with_no_rule_file_loaded_a_token_that_cannot_be_a_rule_id_is_still_unknown',
     ),
 ]

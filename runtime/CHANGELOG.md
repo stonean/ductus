@@ -59,8 +59,8 @@ its version and date.
   repeated child key), a rule no loaded rule file defines (unknown, or retired when the spec's
   `retired-rules:` lists it too), and a rule two entries name, which leaves
   both entries listed, each attributed, the second reported. Advisory: a deprecated rule
-  and a `cited:` that is not exactly one `§anchor` reference or whose
-  anchor `resolve-anchor` judges unresolved. A rule the project never installed
+  and a `cited:` that is not exactly one `§anchor` reference (an unresolved
+  reference is step 4's finding, reported once). A rule the project never installed
   (`rule-not-installed`) and a citation that cannot be judged
   (`anchor-target-unjudgeable`, `anchor-target-unreadable`) are `unexamined`,
   never a pass. The rule's state is `check-rule-ids`' reading of every rule
@@ -280,7 +280,9 @@ its version and date.
   citation `rule-citations-not-checked` and raises nothing; `check-departures`
   now does the same for each entry's rule, instead of a Blocking "no loaded
   rule file defines" finding per entry. Structural findings are still raised.
-  Step 14 skips a departure entry's rule, and the `check-departures` section
+  A token shaped like no rule ID stays an unknown-rule finding then, and a
+  `cited:` reference that does not resolve is no `check-departures` finding,
+  since step 4 reports it once. Step 14 skips a departure entry's rule, and the `check-departures` section
   of the analyze reference and the review reference's waiver paragraph point at
   the compiled descriptions instead of restating them.
 - **`check-review-gate`'s and `check-artifacts`' descriptions restore what

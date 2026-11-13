@@ -199,6 +199,13 @@ fn citation_regex() -> &'static Regex {
     })
 }
 
+/// Whether `text` holds a token this primitive reads as a rule-ID citation,
+/// so `check-departures` judges what step 5 sees by the one grammar.
+#[must_use]
+pub fn cites_a_rule_id(text: &str) -> bool {
+    citation_regex().is_match(text)
+}
+
 /// Whether the rule whose heading starts at `heading_start` carries the
 /// canonical deprecation label `**DEPRECATED in {version}:**` (per
 /// `specs/008-security-rules/data-model.md` and constitution §rules) in its own
