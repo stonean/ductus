@@ -6,8 +6,11 @@
 # (Pointer materialization, steps 2-3). Spec 048, task 29.
 #
 # It prints the environment, then one line per case: the command, its exit
-# status and stderr, whether the server was still running afterwards, whether
-# the destination is a symlink, and whether it now holds the new content.
+# status and stderr, whether the server was still running afterwards and two
+# seconds later, whether the destination is a symlink, and whether it now holds
+# the new content. It also measures whether a pointer `ln -sf` made follows the
+# store when the store is replaced, and on Windows the elevation, Developer
+# Mode, and `ln -sf` with MSYS asking for native symlinks.
 # It fails only when it cannot establish what it measures (a server not running
 # just before its replacement, a control replacement with no server that
 # fails, an existing store it would overwrite), never on a measured outcome.
@@ -108,7 +111,7 @@ last_rc=0
 # the project root, and prints what it did. The server, when one runs, must be
 # alive just before the command.
 measure() {
-  local name="$1" dest="$2" cmd="$3" rc err alive="-" link=no held=other
+  local name="$1" dest="$2" cmd="$3" rc err alive="-" later="-" link=no held=other
   if [ -n "$srv" ] && ! kill -0 "$srv" 2> /dev/null; then
     echo "harness: $name: the server is not running before the replacement" >&2
     exit 1
@@ -117,6 +120,10 @@ measure() {
   rc=$?
   if [ -n "$srv" ]; then
     if kill -0 "$srv" 2> /dev/null; then alive=yes; else alive=no; fi
+    # Again after a pause: a process whose image changed under it may die
+    # only when it next pages code in.
+    sleep 2
+    if kill -0 "$srv" 2> /dev/null; then later=yes; else later=no; fi
   fi
   if [ -L "$dest" ]; then link=yes; fi
   case "$(digest "$dest")" in
@@ -124,8 +131,8 @@ measure() {
     "$d_old") held=old ;;
     "") held=absent ;;
   esac
-  printf '%s | %s | exit %s | stderr: %s | server alive after: %s | symlink: %s | holds: %s\n' \
-    "$name" "$cmd" "$rc" "${err:-<none>}" "$alive" "$link" "$held"
+  printf '%s | %s | exit %s | stderr: %s | server alive after: %s, 2s later: %s | symlink: %s | holds: %s\n' \
+    "$name" "$cmd" "$rc" "${err:-<none>}" "$alive" "$later" "$link" "$held"
   last_rc=$rc
 }
 
@@ -151,6 +158,7 @@ require_ok store-control
 cp "$old" "$store"
 start_server "$store" store
 measure store-running "$store" "$store_cmd"
+echo "store directory: $(ls -A "$store_dir" | tr '\n' ' ')"
 stop_server
 rm -f "$store.tmp"
 
@@ -158,6 +166,7 @@ cp "$old" "$store"
 start_server "$store" store-aside
 measure store-running-moved-aside "$store" "$store_aside_cmd"
 measure store-running-remove-moved-aside "$store.old" "rm -f ~/.ductus/bin/ductus$ext.old"
+echo "store directory: $(ls -A "$store_dir" | tr '\n' ' ')"
 stop_server
 rm -f "$store.tmp" "$store.old"
 
@@ -214,6 +223,37 @@ if $native; then
   start_server "$pointer" pointer-ps
   measure pointer-running-powershell "$pointer" "$ps_cp_cmd"
   stop_server
+fi
+
+# Whether the pointer follows the store: materialized by the bootstrap's
+# `ln -sf`, then the store replaced as acquisition replaces it. A symlink holds
+# the new binary afterwards; a regular file holding the store's bytes keeps the
+# old one.
+echo "--- pointer after the store is replaced"
+rm -f "$pointer" "$pointer.old"
+cp "$old" "$store"
+measure pointer-materialized-ln "$pointer" "$ln_cmd"
+measure pointer-after-store-replaced "$pointer" "$store_cmd"
+
+if $native; then
+  echo "--- Windows: elevation, Developer Mode, and ln -sf asked for native symlinks"
+  if net session > /dev/null 2>&1; then echo "elevated: yes"; else echo "elevated: no"; fi
+  echo "developer mode: $(MSYS2_ARG_CONV_EXCL='*' reg query 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' /v AllowDevelopmentWithoutDevLicense 2>&1 | tr -s '\r\n ' ' ')"
+  cp "$new" "$store"
+  for mode in native nativestrict; do
+    rm -f "$pointer"
+    cp "$old" "$pointer"
+    measure "pointer-control-ln-$mode" "$pointer" "MSYS=winsymlinks:$mode $ln_cmd"
+    rm -f "$pointer"
+    cp "$old" "$pointer"
+    start_server "$pointer" "pointer-ln-$mode"
+    measure "pointer-running-ln-$mode" "$pointer" "MSYS=winsymlinks:$mode $ln_cmd"
+    stop_server
+  done
+  rm -f "$pointer"
+  cp "$old" "$store"
+  measure pointer-materialized-ln-nativestrict "$pointer" "MSYS=winsymlinks:nativestrict $ln_cmd"
+  measure pointer-after-store-replaced-nativestrict "$pointer" "$store_cmd"
 fi
 
 echo "--- done"
