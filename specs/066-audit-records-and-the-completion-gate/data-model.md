@@ -147,8 +147,8 @@ Result:
 
 ```json
 { "spec-path": "specs/042-widget/spec.md", "blocking": false, "unexamined": 105, "replaced": true,
-  "contradictions": [{ "rule": "BE-LOG-002", "earlier": "not-fired" }],
-  "waived": [{ "rule": "BE-COMPAT-001", "tier": "must", "reason": "...", "decided-by": "dev@example.com" }], "waived-count": 1,
+  "contradictions": [{ "rule": "BE-LOG-002", "earlier": "not-fired" }], "contradictions-count": 1, "form": "inline",
+  "waived": [{ "rule": "BE-COMPAT-001", "tier": "must", "reason": "...", "decided-by": "dev@example.com", "decided-at": "2026-11-12T18:04:11Z", "cited": "..." }], "waived-count": 1,
   "dispositions": { "fixed": 0, "deferred": 0, "waived": 1, "undispositioned": 7 } }
 ```
 

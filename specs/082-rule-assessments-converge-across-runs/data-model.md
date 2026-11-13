@@ -69,4 +69,4 @@ With `all`, `rules` and `feature` set, the result gains `verdicts`:
 
 ## `assessSpecQuality` response
 
-An optional `addressed-by` (`"<path>#<Heading>"`) beside `passed` and `finding`: with `passed: true` it makes the verdict `addressed`, and without it a `passed: true` is not fired. For a rule the spec departs from, any fired answer (`passed: false`, or `passed: true` with `addressed-by`) is recorded `waived`, and a plain pass is recorded as nothing ([073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md)).
+An optional `addressed-by` (`"<path>#<Heading>"`) beside `passed` and `finding`: with `passed: true` it makes the verdict `addressed`, and without it a `passed: true` is not fired. What the walk records for a rule the spec departs from is stated with the response in [022's data model](../022-deterministic-runtime/data-model.md) (spec 073).
