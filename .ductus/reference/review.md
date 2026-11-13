@@ -518,7 +518,12 @@ findings (see **Run review passes**) and before counting them or writing the
 record, step 8 classifies each anchor — each path an entry lists, under its rule —
 against those findings. A waiver can only be judged against findings that exist,
 so an empty scope leaves the waivers untouched, and a dimension-restricted run
-retains those anchored to skipped dimensions rather than expiring them.
+retains those anchored to skipped dimensions rather than expiring them. The
+result's `applied`, `expired`, `retained` and `notices` lists, which grow with the
+waivers a spec holds, go to the host inline; past the read size (`form` is `file`)
+they are absent and held whole in `lists-file`, under their own names, each `-count`
+inline in both forms, and the host reads `applied` and `expired` from there to pass
+to `write-review`.
 
 1. **Apply** when the file exists at the anchored path AND the rule still
    fires there. The finding appears under **Waived findings** with the waiver's

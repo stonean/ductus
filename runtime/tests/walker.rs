@@ -702,6 +702,112 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
     );
 }
 
+/// `process-waivers` past `[artifacts] read-size-bytes` returns its lists in a file
+/// (spec 073, BE-PAYLOAD-001), and `write-review` reads them by the `applied` and
+/// `expired` aliases from the walker context. The walker puts the moved lists back when
+/// the result arrives (`restore_lists`), so an applied waiver still excludes its finding
+/// and an expired anchor is still dropped from the record, as with the inline form.
+#[test]
+fn file_form_process_waivers_reaches_write_review_whole() {
+    let tmp = tempfile::tempdir().unwrap();
+    let spec_dir = tmp.path().join("specs/001-x");
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(
+        spec_dir.join("spec.md"),
+        "---\nstatus: in-progress\ndependencies: []\n---\n\n# X\n",
+    )
+    .unwrap();
+    // One waiver that still applies, and one anchored at a file that is gone.
+    let entry = |file: &str, reason: &str| {
+        format!(
+            "  - rule: SEC-BE-001\n    file: {file}\n    reason: \"{reason}\"\n    \
+             waived-at: 2026-07-07T00:00:00Z\n    waived-by: test@example.com\n"
+        )
+    };
+    std::fs::write(
+        spec_dir.join("review.md"),
+        format!(
+            "---\nspec: 001-x\nlast-run: 2026-07-07T00:00:00Z\nblocking: false\nwaivers:\n{}{}---\n\n# Review — 001-x\n",
+            entry("src/a.rs", "Internal-only path behind mTLS"),
+            entry("src/gone.rs", "File since deleted"),
+        ),
+    )
+    .unwrap();
+    std::fs::create_dir_all(tmp.path().join("src")).unwrap();
+    std::fs::write(tmp.path().join("src/a.rs"), "fn a() {}\n").unwrap();
+    // A read size no result fits in, so the process-waivers result is the file form.
+    std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    std::fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        "[artifacts]\nread-size-bytes = 10\n",
+    )
+    .unwrap();
+    // A run whose scope cannot be read retains every waiver, so the tree is a repository.
+    let repo = Repository::init(tmp.path()).unwrap();
+    commit_all(&repo, "feat: the waivers");
+
+    let step = |number: u32, name: &str| Step::Primitive {
+        number: StepNumber(vec![number]),
+        name: name.into(),
+        prose: String::new(),
+        location: loc(),
+    };
+    let procedure = Procedure {
+        command: "review".into(),
+        steps: vec![step(1, "process-waivers"), step(2, "write-review")],
+    };
+    let mut context = Map::new();
+    context.insert("feature".into(), Value::String("001-x".into()));
+    context.insert(
+        "reviewed-at".into(),
+        Value::String("2026-07-07T00:00:00Z".into()),
+    );
+    context.insert("reviewed-against".into(), Value::String("headsha0".into()));
+    context.insert("diff-base".into(), Value::String(String::new()));
+    context.insert(
+        "fired".into(),
+        serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs" }]),
+    );
+    context.insert(
+        "findings".into(),
+        serde_json::json!([{
+            "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs",
+            "line-range": "1", "confidence": "high"
+        }]),
+    );
+
+    let mut reader = Cursor::new(String::new());
+    let mut writer: Vec<u8> = Vec::new();
+    let mut walker = Walker::new(
+        &procedure,
+        tmp.path().to_path_buf(),
+        context,
+        &mut reader,
+        &mut writer,
+    )
+    .unwrap();
+    assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+
+    // The result was the file form: its lists went to a file the walker read back.
+    let listed = std::fs::read_dir(tmp.path().join(".ductus/results/process-waivers/001-x"))
+        .expect("process-waivers wrote its list file")
+        .count();
+    assert_eq!(listed, 1);
+    let review = std::fs::read_to_string(spec_dir.join("review.md")).unwrap();
+    assert!(
+        review.contains("must-violations: 0"),
+        "the applied waiver reached write-review:\n{review}"
+    );
+    assert!(
+        review.contains("Internal-only path behind mTLS"),
+        "the applied waiver's reason was rendered:\n{review}"
+    );
+    assert!(
+        !review.contains("src/gone.rs"),
+        "the expired anchor was dropped from the record:\n{review}"
+    );
+}
+
 /// Gate convention, primitive shape: a `gate-confirm` primitive step IS a
 /// blocking gate by virtue of the primitive — no "ask the user to
 /// approve" phrase required (prune.md step 6's shape). Denial is a clean

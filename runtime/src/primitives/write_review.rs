@@ -4389,7 +4389,7 @@ mod tests {
             fs::create_dir_all(file.parent().unwrap()).unwrap();
             fs::write(file, "x\n").unwrap();
         }
-        let next = crate::primitives::process_waivers::run(
+        let next = crate::primitives::process_waivers::compute(
             &crate::schema::primitives::ProcessWaiversArgs {
                 feature: "001-x".into(),
                 fired: vec![

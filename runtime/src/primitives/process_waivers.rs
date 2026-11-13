@@ -35,6 +35,12 @@
 //! it, so code moving within a file does not expire a waiver. Read-only:
 //! frontmatter mutation belongs to `write-review`.
 //!
+//! The four lists grow with a spec's waivers, and a departure entry adds one per rule and
+//! in-scope file, so [`run`] bounds them as `process-decisions` does (`bounded_lists::place`;
+//! spec 073, BE-PAYLOAD-001): inline while the result fits `[artifacts] read-size-bytes`, and
+//! past it in the file `lists-file` names, with each list's count inline in both forms. A
+//! result with nothing in any list reads no setting.
+//!
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`;
 //! the per-path anchors by
@@ -46,15 +52,75 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::compute_review_scope::RunScope;
-use crate::primitives::{PrimitiveError, Result, WaiverPaths, departures};
+use crate::primitives::{PrimitiveError, Result, WaiverPaths, bounded_lists, departures};
 use crate::schema::paths;
-use crate::schema::primitives::{ProcessWaiversArgs, ProcessWaiversResult, WaiverRef};
+use crate::schema::primitives::{ListsForm, ProcessWaiversArgs, ProcessWaiversResult, WaiverRef};
+
+/// What [`compute`] classifies, whole: the four lists of [`ProcessWaiversResult`] before
+/// [`run`] decides where they go.
+#[derive(Debug)]
+pub(crate) struct Classified {
+    pub(crate) applied: Vec<WaiverRef>,
+    pub(crate) expired: Vec<WaiverRef>,
+    pub(crate) retained: Vec<WaiverRef>,
+    pub(crate) notices: Vec<String>,
+}
 
 /// Required waiver fields, checked in this order; the first missing/empty one
 /// names the `malformed …` diagnostic.
 const REQUIRED_FIELDS: &[&str] = &["rule", "file", "reason", "waived-at", "waived-by"];
 
-/// Execute the `process-waivers` primitive.
+/// Execute the `process-waivers` primitive: [`compute`], returned with its lists inline while
+/// the result fits `[artifacts] read-size-bytes`, and past it with the lists in the file
+/// `lists-file` names and only their counts inline (`bounded_lists::place`). A result with
+/// every list empty is inline and reads no setting, so a malformed `read-size-bytes` halts
+/// only a result with a list to bound (`QUAL-DELEG-001`).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns for a malformed
+/// read size or a list file that cannot be written.
+pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResult> {
+    let classified = compute(args, repo)?;
+    let lists = serde_json::json!({
+        "applied": &classified.applied,
+        "expired": &classified.expired,
+        "retained": &classified.retained,
+        "notices": &classified.notices,
+    });
+    let nothing = classified.applied.is_empty()
+        && classified.expired.is_empty()
+        && classified.retained.is_empty()
+        && classified.notices.is_empty();
+    let mut result = ProcessWaiversResult {
+        form: ListsForm::Inline,
+        applied_count: classified.applied.len(),
+        expired_count: classified.expired.len(),
+        retained_count: classified.retained.len(),
+        notices_count: classified.notices.len(),
+        applied: Some(classified.applied),
+        expired: Some(classified.expired),
+        retained: Some(classified.retained),
+        notices: Some(classified.notices),
+        lists_file: None,
+    };
+    if nothing {
+        return Ok(result);
+    }
+    if let Some(file) =
+        bounded_lists::place(repo, "process-waivers", &args.feature, &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.applied = None;
+        result.expired = None;
+        result.retained = None;
+        result.notices = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Classify the recorded waivers, whole.
 ///
 /// # Errors
 ///
@@ -67,7 +133,7 @@ const REQUIRED_FIELDS: &[&str] = &["rule", "file", "reason", "waived-at", "waive
 /// when its frontmatter or `waivers:` list fails to parse, or
 /// [`PrimitiveError::Io`] on read failure. An absent `review.md`, or one that
 /// opens no frontmatter block, records no waivers.
-pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResult> {
+pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classified> {
     let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let spec_path = repo
@@ -189,7 +255,7 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
         }
     }
 
-    Ok(ProcessWaiversResult {
+    Ok(Classified {
         applied,
         expired,
         retained,
@@ -274,6 +340,11 @@ mod tests {
     use super::*;
     use crate::schema::primitives::FiredFinding;
     use tempfile::TempDir;
+
+    /// The classification, whole: these tests read the lists as the host reads them inline.
+    fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classified> {
+        compute(args, repo)
+    }
 
     /// Write `specs/{feature}/review.md` with the given waivers YAML
     /// (already indented under `waivers:`), and touch each path in
@@ -807,5 +878,136 @@ mod tests {
         );
         let err = run(&args("001-x", &[("SEC-BE-014", "src/a.ts")]), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Yaml { .. }), "{err}");
+    }
+
+    // -- the bound on the result (073, BE-PAYLOAD-001) ------------------------
+
+    fn read_size(repo: &Path, value: &str) {
+        std::fs::create_dir_all(repo.join(".ductus")).unwrap();
+        std::fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {value}\n"),
+        )
+        .unwrap();
+    }
+
+    /// Past `[artifacts] read-size-bytes` the four lists leave the result for the one file
+    /// `lists-file` names, each count stays inline in both forms, and a result exactly at the
+    /// size fits. A result with every list empty reads no setting.
+    #[test]
+    fn the_lists_past_the_read_size_name_a_file_holding_them_whole() {
+        let tmp = setup(
+            "001-x",
+            &list_waiver(&["src/a.ts", "src/b.ts", "src/gone.ts"]),
+            &["src/a.ts", "src/b.ts"],
+        );
+        let firing = args("001-x", &[("SEC-BE-014", "src/a.ts")]);
+
+        read_size(tmp.path(), "1000000");
+        let inline = super::run(&firing, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline, "{inline:?}");
+        assert_eq!(inline.lists_file, None);
+        assert_eq!(inline.applied.as_ref().unwrap().len(), 1);
+        assert_eq!(inline.expired.as_ref().unwrap().len(), 2);
+        assert_eq!(inline.retained, Some(Vec::new()));
+        assert_eq!(inline.notices.as_ref().unwrap().len(), 2);
+        assert_eq!(
+            (
+                inline.applied_count,
+                inline.expired_count,
+                inline.retained_count,
+                inline.notices_count
+            ),
+            (1, 2, 0, 2)
+        );
+
+        // The bound is on the whole result: at its compact size it fits, a byte under it
+        // does not.
+        let at = serde_json::to_vec(&inline).unwrap().len();
+        read_size(tmp.path(), &at.to_string());
+        let fits = super::run(&firing, tmp.path()).unwrap();
+        assert_eq!(fits.form, ListsForm::Inline, "{fits:?}");
+        read_size(tmp.path(), &(at - 1).to_string());
+        let past = super::run(&firing, tmp.path()).unwrap();
+        assert_eq!(past.form, ListsForm::File, "{past:?}");
+
+        read_size(tmp.path(), "10");
+        let file = super::run(&firing, tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File, "{file:?}");
+        assert!(file.applied.is_none() && file.expired.is_none(), "{file:?}");
+        assert!(
+            file.retained.is_none() && file.notices.is_none(),
+            "{file:?}"
+        );
+        assert_eq!((file.applied_count, file.expired_count), (1, 2));
+        assert_eq!((file.retained_count, file.notices_count), (0, 2));
+        let listed: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            file.lists_file
+                .as_deref()
+                .unwrap()
+                .starts_with(".ductus/results/process-waivers/001-x/"),
+        );
+        assert_eq!(listed["applied"], serde_json::json!(inline.applied));
+        assert_eq!(listed["expired"], serde_json::json!(inline.expired));
+        assert_eq!(listed["retained"], serde_json::json!([]));
+        assert_eq!(listed["notices"], serde_json::json!(inline.notices));
+        let wire = serde_json::to_value(&file).unwrap();
+        for list in ["applied", "expired", "retained", "notices"] {
+            assert!(wire.get(list).is_none(), "{list} stays in the file: {wire}");
+        }
+        bounded_lists::assert_counts_name_the_file("process-waivers", &wire, &listed);
+
+        // A retained anchor, on a dimension-restricted run, moves with the rest and is in
+        // the file whole.
+        read_size(tmp.path(), "10");
+        let held = super::run(
+            &restricted_args("001-x", &[("SEC-BE-014", "src/a.ts")], &["security"]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(held.form, ListsForm::File, "{held:?}");
+        assert_eq!((held.applied_count, held.retained_count), (1, 2));
+        let held_lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(held.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(held_lists["retained"].as_array().unwrap().len(), 2);
+        assert_eq!(held_lists["expired"], serde_json::json!([]));
+
+        // Each list alone is enough to move: a result of one applied anchor and no notice,
+        // and one of a notice and no anchor (a malformed waiver).
+        read_size(tmp.path(), "10");
+        let only_applied = setup("003-z", &list_waiver(&["src/a.ts"]), &["src/a.ts"]);
+        read_size(only_applied.path(), "10");
+        let moved = super::run(
+            &args("003-z", &[("SEC-BE-014", "src/a.ts")]),
+            only_applied.path(),
+        )
+        .unwrap();
+        assert_eq!(moved.form, ListsForm::File, "{moved:?}");
+        assert_eq!((moved.applied_count, moved.notices_count), (1, 0));
+        let malformed = "    - rule: SEC-BE-014\n      file: src/a.ts\n      waived-at: 2026-05-10T14:40:00Z\n      waived-by: dev@example.com\n";
+        let only_notice = setup("004-w", malformed, &["src/a.ts"]);
+        read_size(only_notice.path(), "10");
+        let moved = super::run(&args("004-w", &[]), only_notice.path()).unwrap();
+        assert_eq!(moved.form, ListsForm::File, "{moved:?}");
+        assert_eq!((moved.applied_count, moved.notices_count), (0, 1));
+
+        // Nothing to move reads no setting: a malformed read size does not halt it, and a
+        // result with a list to bound does.
+        read_size(tmp.path(), "\"big\"");
+        let empty = setup("002-y", "", &[]);
+        read_size(empty.path(), "\"big\"");
+        let none = super::run(&args("002-y", &[]), empty.path()).unwrap();
+        assert_eq!(none.form, ListsForm::Inline);
+        let err = super::run(&firing, tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err}"
+        );
     }
 }

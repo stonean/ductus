@@ -13,10 +13,10 @@ use std::path::Path;
 use git2::{IndexAddOption, Repository, Signature, Time};
 use serde_json::{Value, json};
 
-use crate::primitives::{process_waivers, write_review};
+use crate::primitives::process_waivers::{self, Classified};
+use crate::primitives::write_review;
 use crate::schema::primitives::{
-    FiredFinding, ListsForm, ProcessWaiversArgs, ProcessWaiversResult, WriteReviewArgs,
-    WriteReviewResult,
+    FiredFinding, ListsForm, ProcessWaiversArgs, WriteReviewArgs, WriteReviewResult,
 };
 
 const FEATURE: &str = "001-widget";
@@ -108,7 +108,7 @@ fn run_review(
     findings: &[Value],
     reviewed_at: &str,
     extra: &Value,
-) -> (ProcessWaiversResult, WriteReviewResult) {
+) -> (Classified, WriteReviewResult) {
     let fired = findings
         .iter()
         .map(|finding| FiredFinding {
@@ -116,7 +116,7 @@ fn run_review(
             file: finding["file"].as_str().unwrap().to_string(),
         })
         .collect();
-    let classified = process_waivers::run(
+    let classified = process_waivers::compute(
         &ProcessWaiversArgs {
             feature: FEATURE.to_string(),
             fired,
@@ -279,7 +279,7 @@ fn a_removed_entry_expires_on_a_dimension_restricted_run_too() {
         &spec_with(""),
     );
     commit(&repository, "drop the departure");
-    let classified = process_waivers::run(
+    let classified = process_waivers::compute(
         &ProcessWaiversArgs {
             feature: FEATURE.to_string(),
             fired: Vec::new(),
@@ -762,8 +762,8 @@ fn seed_waiver(dir: &Path, extra: &str) {
     .unwrap();
 }
 
-fn classify(dir: &Path) -> crate::primitives::Result<ProcessWaiversResult> {
-    process_waivers::run(
+fn classify(dir: &Path) -> crate::primitives::Result<Classified> {
+    process_waivers::compute(
         &ProcessWaiversArgs {
             feature: FEATURE.to_string(),
             fired: vec![FiredFinding {

@@ -913,22 +913,50 @@ pub struct ProcessWaiversArgs {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessWaiversResult {
+    /// Where the lists are: in this result, or, past `[artifacts]
+    /// read-size-bytes`, in the file `lists-file` names (spec 073,
+    /// BE-PAYLOAD-001).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// Entries in `applied`, in either form.
+    #[serde(default)]
+    pub applied_count: usize,
+    /// Entries in `expired`, in either form.
+    #[serde(default)]
+    pub expired_count: usize,
+    /// Entries in `retained`, in either form.
+    #[serde(default)]
+    pub retained_count: usize,
+    /// Entries in `notices`, in either form.
+    #[serde(default)]
+    pub notices_count: usize,
     /// Anchors that apply this run (the file exists and the rule still fires
     /// there). One per `(rule, file)` pair, so a waiver listing several paths
-    /// contributes one per path.
-    pub applied: Vec<WaiverRef>,
+    /// contributes one per path. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied: Option<Vec<WaiverRef>>,
     /// Anchors that expired this run (the file is gone or the rule no longer
     /// fires there); `write-review` drops each one's path on the next write,
     /// and a waiver with its last path. Always empty on a dimension-restricted
-    /// run (see `skipped-passes`).
-    pub expired: Vec<WaiverRef>,
+    /// run (see `skipped-passes`). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expired: Option<Vec<WaiverRef>>,
     /// Anchors left untouched this run because it was dimension-restricted and
     /// they did not fire against the passes that ran — neither applied nor
     /// expired, so `write-review` keeps them in `review.md`'s frontmatter.
-    pub retained: Vec<WaiverRef>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retained: Option<Vec<WaiverRef>>,
     /// Ordered notice lines: `waiver expired: …`, `waiver retained: …`,
-    /// `malformed waiver …`, and `duplicate waiver: …`, in entry order.
-    pub notices: Vec<String>,
+    /// `malformed waiver …`, and `duplicate waiver: …`, in entry order. Absent
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notices: Option<Vec<String>>,
+    /// In the file form, the file holding the four lists whole, from the
+    /// project root: a JSON object with `applied`, `expired`, `retained` and
+    /// `notices`, pretty-printed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- process-decisions -------------------------------------------------------

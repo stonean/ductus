@@ -1289,6 +1289,60 @@ async fn process_waivers_applies_via_mcp() {
     );
 }
 
+/// `process-waivers` past the read size over MCP: its four lists reach the host through
+/// the file `lists-file` names, with each count inline in both forms (BE-PAYLOAD-001).
+#[tokio::test]
+async fn process_waivers_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("spec.md"),
+        "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("review.md"),
+        "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  \
+         - rule: SEC-BE-014\n    file: src/x.ts\n    reason: internal-only endpoint behind mTLS\n    \
+         waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n---\n\n# Review — 001-x\n",
+    )
+    .unwrap();
+    fs::create_dir_all(tmp.path().join("src")).unwrap();
+    fs::write(tmp.path().join("src/x.ts"), "code\n").unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        "[artifacts]\nread-size-bytes = 10\n",
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(
+        &client,
+        "process-waivers",
+        json!({
+            "feature": "001-x",
+            "fired": [{"rule": "SEC-BE-014", "file": "src/x.ts"}],
+        }),
+    )
+    .await;
+    let obj = structured_object(&result);
+    assert_eq!(obj["form"], "file");
+    assert_eq!(obj["applied-count"], 1);
+    assert_eq!(obj["expired-count"], 0);
+    for list in ["applied", "expired", "retained", "notices"] {
+        assert!(obj.get(list).is_none(), "{list} is in the file");
+    }
+    let listed: Value = serde_json::from_str(
+        &fs::read_to_string(tmp.path().join(obj["lists-file"].as_str().unwrap())).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(listed["applied"][0]["rule"], "SEC-BE-014");
+    assert_eq!(listed["applied"][0]["file"], "src/x.ts");
+    assert_eq!(listed["expired"], json!([]));
+}
+
 /// `process-decisions` answers over MCP with the kebab-case wire names the
 /// commands read: `record`, `fired`, `restricted` in, and `matched` /
 /// `lapsed` / `expired` / `retained` / `notices` out, each decision carrying

@@ -56,6 +56,18 @@ rule-verdicts:
 
 **Size** (BE-PAYLOAD-001). The three lists grow with a spec's entries, so the result is bounded as `process-decisions`' is (066's data model, its **Size**): while it fits `[artifacts] read-size-bytes` it is inline, and past it `form` is `"file"` and none of the lists is inline. The file form's own size is 192 bytes of compact JSON plus the feature directory's name and each count digit past the first (measured on the built binary: 197 bytes of compact JSON for `001-x`, 198 as the CLI prints it with its trailing newline, each count one digit). Consumers read the lists from `lists-file` in the file form: step 5.1 of `framework/commands/analyze.md` and, under `ductus exec`, the walker, which restores them before `AnalyzeTally` reads the result.
 
+## `process-waivers` result
+
+`process-waivers` is 020's and 022's primitive; 073's departure waivers grow its lists by one anchor per rule and in-scope file, so its result is bounded as `process-decisions`' is.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `form` | `inline` or `file` | Where the four lists are: `file` past `[artifacts] read-size-bytes` |
+| `applied-count`, `expired-count`, `retained-count`, `notices-count` | integers | Each list's length, inline in both forms |
+| `lists-file` | path | In the file form, the file under `.ductus/results/process-waivers/{feature}/` holding `applied`, `expired`, `retained` and `notices` whole, each key present even when empty |
+
+**Size** (BE-PAYLOAD-001). While the result fits `[artifacts] read-size-bytes` the four lists are inline, an empty one as `[]`; past it `form` is `"file"` and none is inline, so a count above zero with no list is a moved list, never a short one. A result with all four lists empty is inline and reads no setting, so a malformed read size halts only a result with a list to bound (`QUAL-DELEG-001`). The file form's own size is 211 bytes of compact JSON (212 with the CLI's trailing newline) plus the feature directory's name and each count digit past the first, measured on the dev build over a repository holding one applied waiver (`ductus process-waivers --feature 001-x`, `read-size-bytes = 10`, feature `001-x`, each count one digit). Consumers read the lists from `lists-file` in the file form: steps 8 and 11 of `framework/commands/review.md`, and under `ductus exec` the walker, which restores them (`restore_lists`) before `write-review` binds its `applied-waivers` and `expired-waivers` from the context's `applied` and `expired` keys.
+
 ## Review waiver marker
 
 A waiver `write-review` derives from an entry is an ordinary `waivers:` entry (`framework/reference/review.md` §Waivers) with one open-schema field:

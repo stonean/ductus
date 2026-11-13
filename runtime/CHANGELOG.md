@@ -100,7 +100,14 @@ its version and date.
   past `[artifacts] read-size-bytes` to the result's `lists-file`, beside
   `analyze-stale-paths`, each with a count inline. `process-waivers` expires
   a marked waiver whose rule has no well-formed entry, on any run, restricted included, with
-  its `waiver expired:` notice.
+  its `waiver expired:` notice. Its `applied`, `expired`, `retained` and `notices`
+  grow with the departure waivers, so they are bounded (BE-PAYLOAD-001) as
+  `process-decisions`' lists are: past `[artifacts] read-size-bytes` `form` is
+  `file`, the four lists move whole to the file `lists-file` names, and each
+  list's count (`applied-count`, `expired-count`, `retained-count`,
+  `notices-count`) stays inline in both forms. A result with all four empty
+  reads no setting. Under `ductus exec` the walker restores the lists before
+  `write-review` reads `applied` and `expired`.
 - **A rule verdict can be `waived` (spec 073).** `write-analysis` accepts the
   bare `{verdict: waived}` in `rule-verdicts` for a rule whose trigger fires
   and whose spec holds a well-formed departure entry, and fills `reason`,

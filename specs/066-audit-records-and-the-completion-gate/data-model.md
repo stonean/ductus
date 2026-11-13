@@ -66,6 +66,11 @@ Result:
 
 ```json
 {
+  "form": "inline",
+  "applied-count": 1,
+  "expired-count": 0,
+  "retained-count": 0,
+  "notices-count": 0,
   "applied": [{ "rule": "BE-INPUT-001", "file": "src/api.rs", "reason": "validated upstream" }],
   "expired": [],
   "retained": [],
@@ -74,6 +79,8 @@ Result:
 ```
 
 Reads the `waivers` list in `review.md`'s frontmatter and classifies each `(rule, file)` anchor against the passes' findings — a waiver listing several paths contributes one anchor per path (scenario `process-waivers-file-lists`). **applied**: the file exists and the rule still fires there. **expired**: it does not, and `write-review` drops that path on the next write, and the waiver with its last path. **retained**: it did not fire, but the run was dimension-restricted (`skipped-passes` non-empty) or nothing read the file (`process-waivers`' description says when), so it is left untouched — a partial run never prunes. `notices` carries the `waiver expired` / `waiver retained` / `malformed waiver` / `duplicate waiver` lines in entry order, each stored value printed flattened to one line (scenario `process-waivers-notices-flatten-stored-text`). On the CLI `fired` is `--fired-json FILE`, as the primitive's description states.
+
+**Size** ([073](../073-decided-rule-departures-are-recorded/data-model.md), task 14). The result is bounded as `process-decisions`' is: `form` and the four counts are inline in both forms, and past `[artifacts] read-size-bytes` none of the four lists is inline and `lists-file` names a file under `.ductus/results/process-waivers/{feature}/` holding all four whole. 073's data model states the rest.
 
 ## `process-decisions` — classify stored decisions before dispositions
 
