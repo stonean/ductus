@@ -48,7 +48,7 @@ rule-verdicts:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `entries` | list of `{rule, tier, reason, cited, decided-by, decided-at, line}` | Every well-formed entry; `tier` is the rule's, absent when the rule is not loaded |
-| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: a missing `reason`, an unknown or retired rule (only when a rule file is loaded), a rule two entries name (Blocking); a deprecated rule, a `cited:` that is not exactly one `§` reference (Advisory); an unresolved reference is step 4's |
+| `findings` | list of `{family, tier, message, path}` | Family `departure-entries`: a missing `reason`, an unknown or retired rule (with no rule file loaded, only a token shaped like no rule ID, which is unknown), a rule two entries name (Blocking); a deprecated rule, a `cited:` that is not exactly one `§` reference (Advisory); an unresolved reference is step 4's |
 | `unexamined` | list of `{reason, line}` | A citation that could not be judged (`anchor-target-unjudgeable`, `anchor-target-unreadable`), a rule not installed (`rule-not-installed`), or, with no rule file loaded, every entry's rule (`rule-citations-not-checked`, with no unknown, retired or deprecated finding); never a pass. Each repeats a target step 4 or step 5 records, so a caller counts it once; a token that is no rule-ID shape is still an unknown-rule finding, as step 5 records no citation for it |
 
 ## Review waiver marker
