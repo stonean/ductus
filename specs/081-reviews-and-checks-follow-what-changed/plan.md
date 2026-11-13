@@ -30,6 +30,12 @@ A single function in `runtime/src/primitives/mod.rs`, `is_project_artifact(path,
 
 Anything else goes to `excluded` under the claimants' names, as now. A commit naming no spec stays 079's because the pipeline prescribes no subject convention. An adopter's code commit usually names none, and plans are not exhaustive, so narrowing it would leave unplanned code unreviewed (spec, Resolved Questions). Uncommitted work stays in scope. Fix rounds and `diff-cross-spec` read `CommitClaims` but not `attribute_window`, so they are unchanged.
 
+### Credit for a read
+
+A commit with no claimant, one whose subject names no spec and that touches no spec directory, is in every open spec's window, so every review whose window holds it has its paths in scope. `attribute_window` gives such a path to this spec only when no review record committed in the window credits it. A record credits a path when its window, `diff-base` to `reviewed-against`, holds the commit (the commit is `reviewed-against` or its ancestor, and neither `diff-base` nor an ancestor of it), and the record states `unread` without the path, no skipped pass, no budget stop and no open fix-round loop. A credited path goes to `window.others` under the reading spec's name, so `split_changes` lists it in `excluded`, `paths_owing_a_review` sees no code, and the gate follows with no change of its own. A path some other commit in the window gives this spec stays, since the credit covers one commit's change, not the file.
+
+Records are read from the commits in `base..HEAD` that change a spec's `review.md`, one parse per such commit. A record written before the reading commit lies outside that walk, and could not hold a commit after it anyway. A record with no `unread` credits nothing: before this change no record said which entries it read, and an absent claim is not *read everything*. `unread` lists scope entries as `compute-review-scope` returns them; `write-review` resolves the scope it already derives for `scope` and refuses an entry outside it. A record's scope can omit a path another record credited, so a credit can rest on a record that did not open the file itself; it still rests on a read, since the first credit in that chain did.
+
 ### The gate
 
 `check-review-gate` loses check 6, `review is stale` (`stale_review_block`), and `ReviewGateBlock::ReviewStale`. It also loses the review half of `passing_notices`, the notice that a record with no `reviewed-digest` could not be compared. The analyze half's freshness check (`AnalyzeStale`) and every other check are unchanged. Losing a variant narrows the `blocked-by` value set, which 066's data model documents. Both primitives' lists keep the bound every result has: past `[artifacts] read-size-bytes` (spec 063's key) each moves to the file `lists-file` names (spec 080), as their descriptions state (`BE-PAYLOAD-001`).
@@ -79,16 +85,20 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 | --- | --- | --- |
 | `runtime/src/primitives/mod.rs` | Modify | `is_project_artifact` |
 | `runtime/src/primitives/commit_attribution.rs` | Modify | `CommitClaims::named` |
-| `runtime/src/primitives/compute_review_scope.rs` | Modify | Owed rule, attribution, tests |
+| `runtime/src/primitives/compute_review_scope.rs` | Modify | Owed rule, attribution, the credit for a read, tests |
+| `runtime/src/primitives/write_review.rs` | Modify | `unread`: resolve, refuse, render, tests |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Remove check 6 and its notice, tests |
 | `runtime/src/primitives/check_review_freshness.rs` | Delete | Retired primitive |
 | `runtime/src/primitives/analyze_subjects.rs` | Modify | Doc comments naming the retired callers |
-| `runtime/src/schema/registry.rs`, `runtime/src/schema/primitives.rs`, `runtime/src/schema/descriptions.rs` | Modify | Unregister, describe |
+| `runtime/src/schema/registry.rs`, `runtime/src/schema/primitives.rs`, `runtime/src/schema/descriptions.rs` | Modify | Unregister, describe; `unread` on `ReviewBlock` and `WriteReviewArgs` |
 | `runtime/src/mcp/server.rs`, `runtime/src/interpreter/mod.rs`, `runtime/src/main.rs` | Modify | Unregister |
 | `runtime/tests/result_sizes.rs`, `runtime/tests/*.rs`, `runtime/tests/golden/*` | Modify | Cases, fixtures, goldens |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
 | `framework/runtime-tools.txt`, `framework/bootstrap/configure/claude.md` | Modify | Tool list, retired allow entry, regenerated block |
-| `framework/constitution.md` | Modify | Division and check selection |
+| `framework/constitution.md` | Modify | Division and check selection; `unread` in the review record's table |
+| `framework/commands/review.md` | Modify | Step 11 passes `unread` |
+| `scripts/mutation/review-read-credit.py` | Create | Mutants for the credit and `unread` |
+| `specs/020-code-review/data-model.md` | Modify | The `unread` row |
 | `framework/reference/review.md`, `framework/reference/implement.md`, `framework/reference/fold.md`, `framework/reference/audit.md` | Modify | Prose |
 | `scripts/audit/review-freshness.sh`, `scripts/mutation/family-19-calls-the-runtime.py` | Delete | Retired family |
 | `scripts/audit/run-all.sh`, `scripts/audit/README.md` | Modify | Unregister Family 19 |
@@ -117,5 +127,6 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 - **026.** Its criteria and scenarios describe Family 19; it is `in-progress`.
 - **047.** Scenario `analyze-record-freshness` stated the review staleness check in the present tense; scenario `analyze-run-durability`'s Family 19 row is a past-tense record and stays. It is `done`, so the edit reopens it, and it owes an analysis.
 - **050.** It owns the constitution's content and gains the back-link.
+- **020.** Its data model's record table gains the `unread` row, back-linking here; it is `in-progress`.
 
 Each affected spec links back here, which discharges 081's `cross-spec-impact:`, and 047 joins that list.

@@ -68,3 +68,21 @@ The miss path ran on `debcc8cf` (`generators` run 43108731491: the reuse step sk
 - [x] 050: a back-link for the constitution's division and check-selection rule.
 
 - **Done when**: each of 079, 066, 026, 047 and 050 links back to 081, and `check-review-gate` reports 081's `cross-spec-impact:` discharged.
+
+## 8. A review states what it read, and a read is credited once (AC10, AC12–AC14)
+
+- [ ] `ReviewBlock` and `WriteReviewArgs` gain `unread`; `write-review` resolves the scope it derives for `scope`, refuses an entry outside it, and writes `unread:` whenever the run states it, an empty list included (owner, 2026-11-13)
+- [ ] `compute-review-scope`: the credit for a read in `attribute_window`, from the records committed in `base..HEAD`, as plan.md's "Credit for a read" states
+- [ ] Unit tests for every direction AC14 names and for `write-review`'s refusal, and `scripts/mutation/review-read-credit.py`, each mutant killed (`QUAL-TEST-001`)
+- [ ] `COMPUTE_REVIEW_SCOPE` and `WRITE_REVIEW` state the credit and `unread`
+
+- **Done when**: AC10, AC12's runtime half, AC13 and AC14 hold against the tree, each condition proven by a fixture its mutant turns red, and the whole `cargo test` passes
+
+## 9. The governing text and the review command state `unread` and the credit (AC11, AC12)
+
+- [ ] `framework/commands/review.md` step 11 passes `unread`, and `framework/reference/review.md` §Window and coverage states the credit
+- [ ] `framework/constitution.md`'s review-record table lists `unread` within its 50,000-byte ceiling
+- [ ] 066's and 020's data models list `unread`, back-linking 081
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry
+
+- **Done when**: AC11 and AC12 hold against the tree, `scripts/lint-governing-size.sh` exits 0, and the self-audit passes
