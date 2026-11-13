@@ -64,19 +64,32 @@ Blocked on task 2.
 
 Blocked on tasks 2 to 5, so the prose lands with the behavior. Run `scripts/gen-claude-commands.sh` before invoking an edited command. The verifiers of tasks 4 and 5 named three more places the prose must reach. First, the review step reports `write-review`'s `malformed-departures`. Second, analyze step 22 reports `waived` and `waived-count`, and reads `waived` from the `lists-file` past the read size, as it reads `contradictions`. Third, the body skeleton in `docs/analyze.md` gains `## Waived rules`, and gains `## Contradictions`, which 082 never added.
 
-- [ ] `framework/commands/analyze.md`: a step invoking `check-departures`; steps 11 and 12 answer `{verdict: waived}` for a listed rule whose trigger fires; step 22 reports `waived` before the passed rules
-- [ ] `framework/commands/review.md` and `framework/reference/review.md` §Waivers: a departure needs no `--waive`
-- [ ] `framework/reference/analyze.md`: a `Departure entries (blocking)` section and the `rule-verdicts` bullet of §Record fields; `docs/analyze.md`'s row
-- [ ] `framework/templates/spec/spec.md`: the grammar inside the Applicable Rules comment; `scripts/audit/template-alignment.sh` judges the new heading
-- [ ] `framework/constitution.md`: the plan's bullet added and its two sentences cut; `scripts/lint-governing-size.sh` exits 0
-- [ ] Prose-claim sweep: grep `framework/`, `docs/` and `specs/` for claims that a rule verdict is only `addressed` or `finding` and that analyze has no waiver, and correct each
-- [ ] Re-bless the `analyze-basic` and `review-basic` goldens if their transcripts move, reading each diff
+- [x] `framework/commands/analyze.md`: a step invoking `check-departures`; steps 11 and 12 answer `{verdict: waived}` for a listed rule whose trigger fires; step 22 reports `waived` before the passed rules
+- [x] `framework/commands/review.md` and `framework/reference/review.md` §Waivers: a departure needs no `--waive`
+- [x] `framework/reference/analyze.md`: a `Departure entries (blocking)` section and the `rule-verdicts` bullet of §Record fields; `docs/analyze.md`'s row
+- [x] `framework/templates/spec/spec.md`: the grammar inside the Applicable Rules comment; `scripts/audit/template-alignment.sh` judges the new heading
+- [x] `framework/constitution.md`: the plan's bullet added and its two sentences cut; `scripts/lint-governing-size.sh` exits 0
+- [x] Prose-claim sweep: grep `framework/`, `docs/` and `specs/` for claims that a rule verdict is only `addressed` or `finding` and that analyze has no waiver, and correct each
+- [x] Re-bless the `analyze-basic` and `review-basic` goldens if their transcripts move, reading each diff
 
 - **Done when**: `scripts/audit/run-all.sh` and `scripts/tests/test-gen-claude-commands.sh` pass, the constitution is within its ceiling, and the sweep's greps return only intended text.
 
 ## 8. Discharge the declared impacts
 
 Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-spec-edit`, so record the reopen with `set-status` (`done` to `in-progress`) with the owner's approval, and leave its return to `done` to its own analysis.
+
+The owner approved 082's reopen on 2026-11-13. Every box is implemented, but none is on `main` yet. The local branch `land-073e` holds them as two commits:
+
+- `782b9382`: the boxes, with 082's `set-status` to `in-progress`, cherry-picked from `impl-073-t8`'s `10647a38` with its `runtime/CHANGELOG.md` conflict resolved;
+- `a84ebc18`: one `Why split from …` Resolved Questions entry each in 073's and 082's `spec.md`. Task 8's signposts made each pair link both ways, so `scripts/audit/run-all.sh` Family 7 (`sibling-coupling.sh`) flags them without these entries.
+
+The gate reads a back-link only in a target's `spec.md` or `scenarios/`, so 022, 066 and 082 also carry a `spec.md` signpost. Owed, in order:
+
+1. Cherry-pick both commits onto `main`, comparing `git patch-id --stable`.
+2. Have an independent verifier read them.
+3. Run the full gate.
+4. Tick the boxes.
+5. Analyze 082, which owes an analysis for its data-model edit and returns to `done` through `check-review-gate` and the owner.
 
 - [ ] `specs/082-rule-assessments-converge-across-runs/data-model.md`: the third verdict shape and its handling, back-linking 073
 - [ ] `specs/066-audit-records-and-the-completion-gate/data-model.md`: the `rule-verdicts` description, back-linking 073
@@ -97,8 +110,18 @@ Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-sp
 
 ## 10. The exec walker runs check-departures and counts its findings
 
-- [ ] `framework/commands/analyze.md`: `check-departures` as a backticked nested sub-step of step 5 (5.1), since a step dispatches one primitive and the parser makes a nested ordered list a sub-step; task 7 left it unbackticked prose, which `ductus exec` never dispatches (task 7's implementer, 2026-11-13)
-- [ ] `AnalyzeTally` (`runtime/src/interpreter/analyze_tally.rs`): count `check-departures`' findings by tier and its `unexamined` targets as the other check families' are; today its `_ => {}` arm drops them, so under `ductus exec` a malformed entry never reaches `blocking-findings`
-- [ ] A fixture where `ductus exec` analyze on a spec with a malformed departure entry records it as a blocking finding, with a mutant for the tally arm; re-bless `analyze-basic` only with its diff read
+- [x] `framework/commands/analyze.md`: `check-departures` as a backticked nested sub-step of step 5 (5.1), since a step dispatches one primitive and the parser makes a nested ordered list a sub-step; task 7 left it unbackticked prose, which `ductus exec` never dispatches (task 7's implementer, 2026-11-13)
+- [x] `AnalyzeTally` (`runtime/src/interpreter/analyze_tally.rs`): count `check-departures`' findings by tier and its `unexamined` targets as the other check families' are; today its `_ => {}` arm drops them, so under `ductus exec` a malformed entry never reaches `blocking-findings`
+- [x] A fixture where `ductus exec` analyze on a spec with a malformed departure entry records it as a blocking finding, with a mutant for the tally arm; re-bless `analyze-basic` only with its diff read
 
 - **Done when**: under `ductus exec` a malformed departure entry is a blocking finding in `analysis.md`, proven by a fixture its mutant turns red, and the whole `cargo test` passes
+
+## 11. The tasks 7 and 10 verifier's findings
+
+- [ ] SHOULD (§design-principles): with no rule file loaded (`check-rule-ids` examines 0, step 5 records `rule-citations-not-checked` and raises nothing), `check-departures` still returns a Blocking "no loaded rule file defines" finding per entry, which step 5.1 and `AnalyzeTally` count. Make `check-departures` raise no unknown, retired or deprecated finding then and record each entry's rule `unexamined` as `rule-citations-not-checked` (structural findings still raised); update `CHECK_DEPARTURES`, `data-model.md` §check-departures result's closed reason set, and plan.md's "Finding tiers"; fixture and mutant
+- [ ] Count each unexamined target once: `check-departures`' `rule-not-installed` duplicates step 5's not-installed and its `anchor-target-*` the step that judges every `§` in the spec (confirm it covers `cited:` lines). The tally must not record those again, step 5.1's prose must tell the host not to, `exec-departures.py` M3 (which asserts they are recorded) becomes a pin of the de-duplication, and plan.md states the method
+- [ ] Step 14 collects every rule ID under `## Applicable Rules`, so a departure entry whose rule does not fire draws "citation does not fire … remove the citation", contradicting spec.md's Edge Case that the entry stays the record of the decision: skip departure entries there (and in any runtime code that implements the collection)
+- [ ] §drift-prevention, a pointer not a copy: `framework/reference/analyze.md` §Departure entries (blocking) restates `CHECK_DEPARTURES`' findings and reasons, step 11 restates `WRITE_ANALYSIS`' fill and refusals, `framework/reference/review.md` §Waivers restates `WRITE_REVIEW`: cut each to what the host does plus a pointer at the compiled description
+- [ ] `framework/reference/analyze.md` says `check-departures` (step 5); its dispatch is step 5.1
+
+- **Done when**: each item is fixed with a fixture its mutant turns red where it is code, an independent verifier has read the commit, and the whole `cargo test` passes
