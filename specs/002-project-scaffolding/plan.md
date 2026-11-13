@@ -6,7 +6,7 @@ title: "002-project-scaffolding — plan"
 
 ## Overview
 
-Create three new template files in the existing `framework/templates/project/` directory: `project-readme.md`, `gitignore`, and `claude-md.md`. They are project-level files for adopting projects. `/ductus` installs two of them (`framework/bootstrap/ductus.md`, Shared files with conflict handling): it merges the `.gitignore` template as a managed `# ductus` block and copies `CLAUDE.md` when one is absent. Nothing installs the README template since 003 retired `/ductus:init`, which copied it, on 2026-09-15; whether `/ductus` creates `README.md` from it or the template is retired is 003's task 6. The README template uses `{project}` placeholders.
+Create three new template files in the existing `framework/templates/project/` directory: `project-readme.md`, `gitignore`, and `claude-md.md`. They are project-level files for adopting projects. `/ductus` installs two of them (`framework/bootstrap/ductus.md`, Shared files with conflict handling): it merges the `.gitignore` template as a managed `# ductus` block and copies `CLAUDE.md` when one is absent. Nothing installed the README template once 003 retired `/ductus:init`, which copied it, on 2026-09-15, so 003's task 6 deleted it on 2026-11-12.
 
 ## Technical Decisions
 
@@ -33,7 +33,7 @@ The template is deliberately minimal: two imports, `@.ductus/constitution.md` th
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/templates/project/project-readme.md` | Create | Project README with quick start, getting started, docs, feature table, pipeline, slash commands |
+| `framework/templates/project/project-readme.md` | Create, then deleted by 003 task 6 | Project README with quick start, getting started, docs, feature table, pipeline, slash commands; retired 2026-11-12, since nothing installed it |
 | `framework/templates/project/gitignore` | Create | Minimal .gitignore for secrets, claude settings, IDE, OS files |
 | `framework/templates/project/claude-md.md` | Create | CLAUDE.md importing `@.ductus/constitution.md` and `@AGENTS.md`, with the shared-constitution managed block |
 | `framework/migrations.toml` | Modify | `claude-md-import-syntax` registry entry |
