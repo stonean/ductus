@@ -237,3 +237,9 @@ Handoff state, 2026-10-30. The review record is written (`0af1f01a`: three re-re
 - [x] NOTE: `apply_proxies`' doc cites reqwest 0.13.4 while Cargo.lock locks 0.13.5 (the claim holds); `native_certs` loads each path separately, losing rustls-native-certs' cross-path de-duplication (duplicates are harmless; the doc says "as rustls-native-certs reads them"); the `--*-json` flags' `--help` text omits the staging bound. Recommended: correct the docs and the help text — chore: fix
 
 - **Done when**: The owner has dispositioned every item; each fixed one is fixed, each deferred one written to its target, each waived one recorded with its reason in review.md's next record; and an independent re-read of the fix round reports no MUST or SHOULD
+
+### 31. The pointer follows the store on every platform
+
+- [ ] Implement the behavior described in `scenarios/pointer-follows-the-store.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
