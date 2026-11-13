@@ -131,6 +131,7 @@ pub fn parse(content: &str) -> Parsed {
             if item.is_none()
                 && !after_break
                 && !text.trim_start().starts_with('#')
+                && !opens_block(text.trim_start())
                 && entry.last_key.is_some()
             {
                 read_child(entry, index + 1, None, text.trim());
@@ -144,6 +145,21 @@ pub fn parse(content: &str) -> Parsed {
     }
     finish(open, &mut parsed);
     parsed
+}
+
+/// Whether `line`, trimmed at the start, opens a block that ends a paragraph in
+/// `CommonMark` without a blank line: a blockquote, or an ordered list item
+/// (one to nine digits, then `.` or `)`, then a space or the line's end).
+/// A bullet marker is [`list_item`]'s.
+fn opens_block(line: &str) -> bool {
+    if line.starts_with('>') {
+        return true;
+    }
+    let digits = line.chars().take_while(char::is_ascii_digit).count();
+    (1..=9).contains(&digits)
+        && line[digits..]
+            .strip_prefix(['.', ')'])
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(' '))
 }
 
 /// The text of a list item after its marker, or `None` for any other line.
@@ -525,6 +541,48 @@ mod tests {
         ));
         assert_eq!(parsed.problems, vec![]);
         assert_eq!(parsed.entries[0].reason, "first half second half");
+    }
+
+    #[test]
+    fn an_ordered_item_or_a_blockquote_ends_the_reason_a_lazy_line_continues() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: r\ncontinued\n1. next\n> quote\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(parsed.entries[0].reason, "r continued");
+        for opener in ["1. next", "12) next", "3.", "> quote", ">quote"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{opener}\n"
+            )));
+            assert_eq!(parsed.entries[0].reason, "r", "{opener}");
+        }
+        // Not openers: a number with no marker, or a marker with no space.
+        for text in ["2021 was", "1.5 times", "10 items"] {
+            let parsed = parse(&spec_with(&format!(
+                "- departs: `A-1`\n  - reason: r\n{text}\n"
+            )));
+            assert_eq!(parsed.entries[0].reason, format!("r {text}"), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_subheading_directly_after_the_reason_is_not_swallowed() {
+        let parsed = parse(&spec_with("- departs: `A-1`\n  - reason: r\n### Sub\n"));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(parsed.entries[0].reason, "r");
+    }
+
+    #[test]
+    fn an_unindented_line_before_any_child_ends_the_entry() {
+        let parsed = parse(&spec_with("- departs: `A-1`\nprose\n  - reason: r\n"));
+        assert_eq!(parsed.entries, vec![]);
+        assert_eq!(
+            parsed.problems,
+            vec![Problem {
+                line: 5,
+                kind: ProblemKind::MissingReason
+            }]
+        );
     }
 
     #[test]
@@ -992,6 +1050,34 @@ mod tests {
             who("A-1", &project, SPEC),
             by("alice@example.com", "2021-01-02T00:00:00Z")
         );
+    }
+
+    /// The measurement `plan.md` Trade-offs records: `attribute` over a
+    /// repository of 5,000 first-parent commits with the entry present from the
+    /// first. Run: `cargo test --release --lib -- --ignored --nocapture
+    /// attribution_over_5000_first_parent_commits`.
+    #[test]
+    #[ignore = "a measurement, run by hand"]
+    fn attribution_over_5000_first_parent_commits() {
+        for rewritten in [false, true] {
+            let (tmp, repository) = repository();
+            for i in 0..5000 {
+                let revision = if rewritten { i } else { 0 };
+                write(
+                    &tmp.path().join(SPEC),
+                    &format!("{}revision {revision}\n", spec_with(&entry("A-1"))),
+                );
+                write(&tmp.path().join("other.txt"), &i.to_string());
+                commit_as(&repository, "alice@example.com", T1);
+            }
+            let started = std::time::Instant::now();
+            let result = who("A-1", tmp.path(), SPEC);
+            println!(
+                "rewritten={rewritten} commits=5000 elapsed={:?}",
+                started.elapsed()
+            );
+            assert_eq!(result, by("alice@example.com", "2021-01-01T00:00:00Z"));
+        }
     }
 
     #[test]
