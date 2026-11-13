@@ -376,7 +376,8 @@ fn hydrate_write_review(args: &mut WriteReviewArgs) -> Result<(), String> {
         "fix-rounds-json",
         args.fix_rounds_json.as_ref(),
         &mut args.fix_rounds,
-    )
+    )?;
+    hydrate_field("unread-json", args.unread_json.as_ref(), &mut args.unread)
 }
 
 /// Fill `write-analysis`' structured arguments from their `--*-json` paths.

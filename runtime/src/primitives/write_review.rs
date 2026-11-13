@@ -12,7 +12,7 @@
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` and
 //! `specs/058-findings-route-at-discovery/spec.md`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::Path;
 
@@ -819,12 +819,14 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// reports as `examined-nothing`.
 ///
 /// The paths the scope left out come with it, each with the specs that claimed
-/// it, so the record names what it did not read.
+/// it, so the record names what it did not read. An `unread` entry the scope
+/// does not hold is refused here, where the entries are.
 fn resolve_scope(
     args: &WriteReviewArgs,
     repo: &Path,
 ) -> Result<(u32, BTreeMap<String, Vec<String>>)> {
     if args.diff_base.is_empty() {
+        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
         return Ok((0, BTreeMap::new()));
     }
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
@@ -845,11 +847,44 @@ fn resolve_scope(
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
     let own_record = own_record_path(args, repo)?;
-    let read = result.scope.iter().filter(|path| **path != own_record);
+    let entries: BTreeSet<String> = result
+        .scope
+        .into_iter()
+        .filter(|path| *path != own_record)
+        .collect();
+    refuse_unread_outside_the_scope(args, &entries)?;
     Ok((
-        u32::try_from(read.count()).unwrap_or(u32::MAX),
+        u32::try_from(entries.len()).unwrap_or(u32::MAX),
         result.excluded,
     ))
+}
+
+/// Refuse an `unread` entry the run's scope does not hold: another spec's review
+/// takes every entry the list does not name as read (spec 081), so a mistyped
+/// entry would leave the path it meant unnamed, and credited.
+fn refuse_unread_outside_the_scope(
+    args: &WriteReviewArgs,
+    entries: &BTreeSet<String>,
+) -> Result<()> {
+    let outside: Vec<&str> = args
+        .unread
+        .iter()
+        .flatten()
+        .filter(|entry| !entries.contains(*entry))
+        .map(String::as_str)
+        .collect();
+    if outside.is_empty() {
+        return Ok(());
+    }
+    Err(PrimitiveError::InvalidArgument {
+        primitive: "write-review".into(),
+        argument: "unread".into(),
+        reason: format!(
+            "{} is not in the run's scope; list only the scope entries compute-review-scope \
+             returned that the passes did not read",
+            outside.join(", ")
+        ),
+    })
 }
 
 /// The spec's analyze-record freshness.
@@ -1322,6 +1357,23 @@ struct Record<'a> {
     open_findings: &'a [String],
 }
 
+/// The `unread` list, absent when the run stated nothing and `[]` when its
+/// passes read every scope entry (spec 081).
+fn render_unread(fm: &mut String, unread: Option<&Vec<String>>) {
+    match unread {
+        None => {}
+        Some(unread) if unread.is_empty() => {
+            let _ = writeln!(fm, "unread: []");
+        }
+        Some(unread) => {
+            let _ = writeln!(fm, "unread:");
+            for path in unread {
+                let _ = writeln!(fm, "  - {}", yaml_string(path));
+            }
+        }
+    }
+}
+
 /// The `open-findings` list, absent when the record leaves nothing open.
 fn render_open_findings(fm: &mut String, open_findings: &[String]) {
     if !open_findings.is_empty() {
@@ -1373,6 +1425,7 @@ fn render_report(
         let _ = writeln!(fm, "examined: {examined}");
     }
     let _ = writeln!(fm, "scope: {scope}");
+    render_unread(&mut fm, args.unread.as_ref());
     let _ = writeln!(fm, "excluded: {}", record.excluded.len());
     let _ = writeln!(
         fm,
@@ -2776,6 +2829,51 @@ mod tests {
             report.contains("1 path(s) only another spec's commits changed"),
             "{report}"
         );
+    }
+
+    /// The record's `unread`, as a reader parses it.
+    fn unread_of(tmp: &TempDir) -> Option<Vec<String>> {
+        let report = review_md(tmp, "001-x");
+        let (frontmatter, _) =
+            crate::primitives::split_frontmatter(&report, std::path::Path::new("review.md"))
+                .unwrap();
+        serde_norway::from_str::<crate::schema::primitives::ReviewBlock>(frontmatter)
+            .unwrap()
+            .unread
+    }
+
+    /// What the run states it did not read lands in the record: `[]` for a whole
+    /// read, each entry otherwise, and nothing when it states nothing, which credits
+    /// no other spec's window (spec 081, AC12).
+    #[test]
+    fn unread_is_written_whenever_the_run_states_it() {
+        for unread in [None, Some(vec![]), Some(vec!["src/mine.rs".to_string()])] {
+            let tmp = tempdir().unwrap();
+            let parent = repo_with_another_specs_commit(&tmp);
+            let mut args = base_args("001-x");
+            args.diff_base = parent;
+            args.unread = unread.clone();
+            run(&args, tmp.path()).unwrap();
+            assert_eq!(unread_of(&tmp), unread);
+        }
+    }
+
+    /// An entry the run's scope does not hold is refused before anything is
+    /// written, since every entry the list leaves out reads as read.
+    #[test]
+    fn an_unread_entry_outside_the_scope_is_refused() {
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        args.unread = Some(vec!["src/mine.rs".to_string(), "src/other.rs".to_string()]);
+        let err = run(&args, tmp.path()).unwrap_err().to_string();
+        assert!(
+            err.contains("src/other.rs is not in the run's scope"),
+            "{err}"
+        );
+        assert!(!err.contains("src/mine.rs"), "{err}");
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
     }
 
     #[test]

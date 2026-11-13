@@ -358,7 +358,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 
 | Fields: type, required in bold |
 | --- |
-| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `excluded`, `contract-breaks`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; `fix-rounds-open`: boolean; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `open-findings`, `reviewed-unreadable`, `waivers`, `round-waivers`, `decisions`: list |
+| **`spec`**: string; **`last-run`**: ISO-8601 UTC, nullable; `reviewed-against`, `diff-base`: sha; **`must-violations`**, **`should-violations`**, **`low-confidence`**: integer; `dispositions`: map of counts; `examined`, `scope`, `excluded`, `contract-breaks`, `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`: integer; `reviewed-digest`: map of path → sha256; `fix-rounds-open`: boolean; **`blocking`**, `budget-stop`: boolean, derived; `skipped-passes`, `open-findings`, `reviewed-unreadable`, `unread`, `waivers`, `round-waivers`, `decisions`: list |
 
 ##### Analyze record — `analysis.md`
 

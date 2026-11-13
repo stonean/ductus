@@ -112,6 +112,13 @@ pub struct ReviewBlock {
     /// what `examined` is a claim against.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<u32>,
+    /// The scope entries the recorded run's passes did not read (spec 081),
+    /// empty when they read every entry. `None` on a record whose run stated
+    /// nothing, every record from before the field among them: it credits no
+    /// other window with a read, since an unstated claim is not *read
+    /// everything*.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unread: Option<Vec<String>>,
     /// Feature slug the record belongs to.
     ///
     /// The four fields below existed on only one side of the pre-relocation
@@ -1726,6 +1733,22 @@ pub struct WriteReviewArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub examined: Option<u32>,
+    /// The scope entries the run's passes did not read, as
+    /// `compute-review-scope` lists them (spec 081): an empty list when they
+    /// read every entry. Written to the record's `unread` whenever stated, so a
+    /// later review of another spec takes each entry not listed as read, and
+    /// `None` writes none, since a run that stated nothing did not say it read
+    /// everything. An entry the run's scope does not hold is refused. On the
+    /// CLI, `--unread-json FILE`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(skip)]
+    pub unread: Option<Vec<String>>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `unread` argument as the MCP tool takes it (spec 022). `#[serde(skip)]`
+    /// keeps it out of the MCP schema, as `expired-decisions-json` is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub unread_json: Option<String>,
     /// The run's fix rounds, in order, one entry per round with a non-empty
     /// scope (spec 078). `write-review` derives every loop field in the record
     /// from this list and accepts no count. `None` writes none of them, since

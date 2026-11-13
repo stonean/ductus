@@ -10,6 +10,17 @@ its version and date.
 
 ### Added
 
+- **A review states what it read, and a read is credited once (spec 081).**
+  `write-review` records `unread`, the scope entries the passes did not
+  read, whenever the run states it (`[]` for a whole read), and refuses an
+  entry outside the run's scope; on the CLI, `--unread-json FILE`. A commit
+  naming no spec and touching no spec directory, in every open spec's window,
+  no longer owes each of them a review: `compute-review-scope` credits each
+  of its paths once a review record committed in the window states it read
+  the path (its window holds the commit; no skipped pass, budget stop or open
+  fix-round loop), listing it in `excluded` under the reading spec. A record
+  with no `unread`, every one written before this change, credits nothing.
+
 - **A spec's decided rule departures are recorded, not lost (spec 073).** A
   `departs:` entry under `## Applicable Rules` states once that the spec
   deliberately does not satisfy a rule of any tier. Analyze records the rule
