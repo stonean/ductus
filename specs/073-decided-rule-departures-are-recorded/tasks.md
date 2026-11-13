@@ -134,3 +134,15 @@ The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decisi
 - [x] `runtime/CHANGELOG.md` `[Unreleased]`: the bound folded into the entry that added the two lists
 
 - **Done when**: `write-review` returns `malformed-departures` and `superseded-deferrals` in the inline-or-file form past the read size, proven by a test its mutant turns red; the whole `cargo test` passes; and 073's next analysis records BE-PAYLOAD-001 addressed
+
+## 14. Bound `process-waivers`' result (BE-PAYLOAD-001, deferred by 073's analysis)
+
+The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decision, `gating: true`), over a deferral to 020, the owner of `process-waivers`. The analysis after the review at `b7ee0b26` found that `process-waivers`' four lists carry no bound, while every sibling list 073 touches is bounded, and 073's departure waivers add one anchor per rule and in-scope file. Owed after this task, in order: `/ductus:review` of its commit; `/ductus:analyze`, which judges all 310 rules again, since `plan.md` and `data-model.md` change; `check-review-gate`; and the owner's approval for `done`, put with the design call the owner has not yet approved: a departure entry decides over a deferral of its rule (`plan.md`'s section on how `write-review` derives the waivers).
+
+- [ ] `process-waivers`' `applied`, `expired`, `retained` and `notices` go through `bounded_lists::place`, as `process-decisions`' lists do: `form` and each list's `-count` inline in both forms, and past `[artifacts] read-size-bytes` a `lists-file` holding them whole; `PROCESS_WAIVERS`, 073's `plan.md` (its section on how `write-review` derives the waivers and `process-waivers` expires them) and `data-model.md` commit to the bound, replacing the plan's sentence that the lists are unbounded
+- [ ] Every consumer reads the file form: step 8 of `framework/commands/review.md` and `framework/reference/review.md` §Per-run waiver processing, the host passing `applied` and `expired` on to `write-review`, and any other caller the change finds
+- [ ] A unit test and a mutant that fail when the bound is removed, as task 13's `scripts/mutation/review-departures-bounded.py` does for `write-review`
+- [ ] Where 020's artifacts describe `process-waivers`' result, they state the bound, back-linking 073
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the bound folded into the entry for `process-waivers`' departure expiry
+
+- **Done when**: `process-waivers` returns its lists in the inline-or-file form past the read size, proven by a test its mutant turns red; `/ductus:review`'s step 8 reads the file form; the whole `cargo test` passes; and 073's next analysis records BE-PAYLOAD-001 addressed
