@@ -41,7 +41,7 @@ rule-verdicts:
     cited: §shared-compatibility-exceptions
 ```
 
-`decided-at` is absent when `decided-by` is `unattributed`, and `cited` when the entry has none. The host supplies only `verdict: waived`; `write-analysis` fills the rest from the entry on every write.
+`decided-at` is absent when `decided-by` is `unattributed`, and `cited` when the entry has none. On the interactive path the host supplies only `verdict: waived`, and under `ductus exec` the walker records it from an ordinary answer; `write-analysis` fills the rest from the entry on every write.
 
 ## `check-departures` result
 
