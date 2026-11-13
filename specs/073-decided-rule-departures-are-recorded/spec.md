@@ -40,14 +40,14 @@ A departure is stated once, in the spec, as a structured entry under `## Applica
 
 ## Acceptance Criteria
 
-- [ ] AC1: A spec can state a departure as a structured entry under `## Applicable Rules` naming a rule ID of any tier and the reason, and optionally the governing document that decided it, and `/{project}:analyze` reports as a finding an entry missing a required field, naming an unknown or deprecated rule ID, naming a rule another entry already names, or citing a governing document `resolve-anchor` cannot resolve.
-- [ ] AC2: `/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in 082's rule-verdict map, with the entry's reason, its derived `decided-by` and `decided-at`, and its citation; the rule is assessed as waived and produces no finding, so it never counts toward `blocking-findings`.
-- [ ] AC3: `analysis.md` and the analyze report list waived rules apart from passing ones, so a run in which a MUST rule was waived is distinguishable from one in which it was satisfied.
-- [ ] AC4: A waiver carries forward when `analysis.md` is regenerated while its rule still fires, and is pruned from the record when the rule no longer fires.
-- [ ] AC5: `/{project}:review` honors the same departure entries at every file in the spec's review scope, writing each file's anchor into `review.md`'s `waivers:`, so a departure decided once in the spec needs no second `--waive`.
-- [ ] AC6: The constitution's Finding dispositions rule, and the analysis-record row 082 adds, describe the analyze waiver, in the same change as the behavior.
-- [ ] AC7: An entry's `decided-by` and `decided-at` are the author and date of the commit that introduced it; an entry history cannot attribute (not yet committed, or a shallow checkout) is recorded `decided-by: unattributed`, and a fixture proves both, its test run in a job with a full-depth checkout.
-- [ ] AC8: A departure entry naming a SHOULD rule waives it at review as one naming a MUST does, and a fixture proves it.
+- [x] AC1: A spec can state a departure as a structured entry under `## Applicable Rules` naming a rule ID of any tier and the reason, and optionally the governing document that decided it, and `/{project}:analyze` reports as a finding an entry missing a required field, naming an unknown or deprecated rule ID, naming a rule another entry already names, or citing a governing document `resolve-anchor` cannot resolve.
+- [x] AC2: `/{project}:analyze` records each departure whose rule's trigger fires as a `waived` verdict in 082's rule-verdict map, with the entry's reason, its derived `decided-by` and `decided-at`, and its citation; the rule is assessed as waived and produces no finding, so it never counts toward `blocking-findings`.
+- [x] AC3: `analysis.md` and the analyze report list waived rules apart from passing ones, so a run in which a MUST rule was waived is distinguishable from one in which it was satisfied.
+- [x] AC4: A waiver carries forward when `analysis.md` is regenerated while its rule still fires, and is pruned from the record when the rule no longer fires.
+- [x] AC5: `/{project}:review` honors the same departure entries at every file in the spec's review scope, writing each file's anchor into `review.md`'s `waivers:`, so a departure decided once in the spec needs no second `--waive`.
+- [x] AC6: The constitution's Finding dispositions rule, and the analysis-record row 082 adds, describe the analyze waiver, in the same change as the behavior.
+- [x] AC7: An entry's `decided-by` and `decided-at` are the author and date of the commit that introduced it; an entry history cannot attribute (not yet committed, or a shallow checkout) is recorded `decided-by: unattributed`, and a fixture proves both, its test run in a job with a full-depth checkout.
+- [x] AC8: A departure entry naming a SHOULD rule waives it at review as one naming a MUST does, and a fixture proves it.
 
 ## Open Questions
 
