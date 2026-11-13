@@ -86,4 +86,11 @@ MUTATIONS = [
         '    {\n        return Ok(result);',
         'departure_waivers::the_departure_lists_past_the_read_size',
     ),
+    (
+        'M10 the bound measures the lists alone, not the whole result',
+        'src/primitives/write_review.rs',
+        '"write-review", feature, &result, &lists)?',
+        '"write-review", feature, &lists, &lists)?',
+        'departure_waivers::the_departure_lists_past_the_read_size',
+    ),
 ]

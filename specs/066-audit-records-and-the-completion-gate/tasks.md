@@ -181,7 +181,7 @@ Note [5], waived 2026-11-12 as overtaken: neither named line describes a union a
 
 - **Done when**: every result carrying `RecordFreshness.paths` states a maximum, every path stays reachable, and 078's 2026-11-04 review's `BE-PAYLOAD-001` finding on `data-model.md` no longer fires
 
-Implemented 2026-11-12. Two results carry the list: `write-review`'s `analyze-freshness` (`bound_stale_paths`, `runtime/src/primitives/write_review.rs`) and `check-review-gate`'s `analyze-stale-paths` (`bounded`, `runtime/src/primitives/check_review_gate.rs`), each through `bounded_lists::place` with its count inline in both forms; `data-model.md` states the maximum (`[artifacts] read-size-bytes`) and the contents beside each shape, and `plan.md` records the mechanism. `a_stale_analysis_past_the_read_size_names_a_file_holding_every_path` exists in both files, and `scripts/mutation/freshness-results-have-a-bounded-size.py` M1 to M9 are KILLED.
+Implemented 2026-11-12. Two results carry the list: `write-review`'s `analyze-freshness` (`bound_lists`, `runtime/src/primitives/write_review.rs`) and `check-review-gate`'s `analyze-stale-paths` (`bounded`, `runtime/src/primitives/check_review_gate.rs`), each through `bounded_lists::place` with its count inline in both forms; `data-model.md` states the maximum (`[artifacts] read-size-bytes`) and the contents beside each shape, and `plan.md` records the mechanism. `a_stale_analysis_past_the_read_size_names_a_file_holding_every_path` exists in both files, and `scripts/mutation/freshness-results-have-a-bounded-size.py` M1 to M9 are KILLED.
 
 ## 21. Family 19 reports a freshness state it does not recognise
 

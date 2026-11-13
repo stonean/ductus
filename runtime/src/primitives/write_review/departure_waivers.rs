@@ -604,6 +604,16 @@ fn the_departure_lists_past_the_read_size_name_a_file_holding_both_whole() {
     assert_eq!(inline.malformed_departures_count, 1);
     assert_eq!(inline.superseded_deferrals_count, 1);
 
+    // The bound is on the whole result: at its compact size it fits, a byte
+    // under it does not.
+    let at = u64::try_from(serde_json::to_vec(&inline).unwrap().len()).unwrap();
+    read_size(at);
+    let (_, fits) = run_review(tmp.path(), &findings, T2, &extra);
+    assert_eq!(fits.form, ListsForm::Inline, "{fits:?}");
+    read_size(at - 1);
+    let (_, past) = run_review(tmp.path(), &findings, T2, &extra);
+    assert_eq!(past.form, ListsForm::File, "{past:?}");
+
     read_size(10);
     let (_, file) = run_review(tmp.path(), &findings, T2, &extra);
     assert_eq!(file.form, ListsForm::File, "{file:?}");

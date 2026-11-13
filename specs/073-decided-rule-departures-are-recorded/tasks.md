@@ -115,7 +115,7 @@ The gate reads a back-link only in a target's `spec.md` or `scenarios/`, so 022,
 
 ## 12. Bound `check-departures`' result (BE-PAYLOAD-001, deferred by 073's analysis)
 
-The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decision, `gating: true`). Implemented in `8b89ec50`, which an independent verifier read with no MUST or SHOULD. Owed, in order: `/ductus:review`, whose window starts at `review.md`'s run (`743079d9`) and so holds only this task's changes; `/ductus:analyze`, which judges all 310 rules again, since `plan.md` and `data-model.md` changed; `check-review-gate`; and the owner's approval for `done`.
+The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decision, `gating: true`). Implemented in `8b89ec50`, which an independent verifier read with no MUST or SHOULD.
 
 - [x] `check-departures`' `entries`, `findings` and `unexamined` go through `bounded_lists::place` as the other list-returning primitives' lists do: `form` and each list's `-count` inline in both forms, and past `[artifacts] read-size-bytes` a `lists-file` holding the three whole; `CHECK_DEPARTURES`, 073's `data-model.md` §check-departures result and `plan.md`'s `check-departures` section commit to the bound
 - [x] Every consumer reads the file form: step 5.1 of `framework/commands/analyze.md` (as the other steps read a `lists-file`), `AnalyzeTally`'s `check-departures` arm under `ductus exec`, and any other caller the change finds

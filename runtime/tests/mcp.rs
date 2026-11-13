@@ -1437,6 +1437,7 @@ fn over_the_read_size(n: usize) -> tempfile::TempDir {
 fn lists_in_file(
     tmp: &tempfile::TempDir,
     obj: &serde_json::Map<String, Value>,
+    read_size: usize,
     inline_keys: &[&str],
 ) -> Value {
     assert_eq!(obj["form"], "file", "the result stayed inline: {obj:?}");
@@ -1444,7 +1445,7 @@ fn lists_in_file(
         assert!(obj.get(*key).is_none(), "`{key}` was inline: {obj:?}");
     }
     let size = serde_json::to_vec(obj).unwrap().len();
-    assert!(size <= SMALL_READ_SIZE, "{size} bytes: {obj:?}");
+    assert!(size <= read_size, "{size} bytes: {obj:?}");
     let file = obj["lists-file"].as_str().expect("a lists-file path");
     serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap()
 }
@@ -1458,7 +1459,12 @@ async fn a_scope_past_the_read_size_reaches_the_host_through_its_list_file_via_m
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(&client, "compute-review-scope", json!({"feature": "001-x"})).await;
     let obj = structured_object(&result);
-    let lists = lists_in_file(&tmp, obj, &["scope", "modified-since", "plan-affected"]);
+    let lists = lists_in_file(
+        &tmp,
+        obj,
+        SMALL_READ_SIZE,
+        &["scope", "modified-since", "plan-affected"],
+    );
     let scope = lists["scope"].as_array().unwrap();
     assert_eq!(obj["scope-count"], scope.len());
     assert_eq!(
@@ -1480,7 +1486,7 @@ async fn a_cross_spec_surface_past_the_read_size_reaches_the_host_through_its_li
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(&client, "diff-cross-spec", json!({"feature": "001-x"})).await;
     let obj = structured_object(&result);
-    let lists = lists_in_file(&tmp, obj, &["cross-spec-paths"]);
+    let lists = lists_in_file(&tmp, obj, SMALL_READ_SIZE, &["cross-spec-paths"]);
     // `002-y/spec.md` is in 001-x's first commit, so it is not a change.
     let mut expected: Vec<String> = (0..12)
         .map(|i| format!("specs/002-y/scenarios/s{i}.md"))
@@ -1538,6 +1544,7 @@ async fn a_decisions_result_past_the_read_size_reaches_the_host_through_its_list
     let lists = lists_in_file(
         &tmp,
         obj,
+        SMALL_READ_SIZE,
         &["matched", "expired", "retained", "lapsed", "notices"],
     );
     let expired: Vec<&str> = lists["expired"]
@@ -1592,7 +1599,12 @@ async fn a_departures_result_past_the_read_size_reaches_the_host_through_its_lis
     for key in ["entries", "findings", "unexamined"] {
         assert!(obj.get(key).is_none(), "{key}");
     }
-    let lists = lists_in_file(&tmp, obj, &["entries", "findings", "unexamined"]);
+    let lists = lists_in_file(
+        &tmp,
+        obj,
+        SMALL_READ_SIZE,
+        &["entries", "findings", "unexamined"],
+    );
     assert_eq!(obj["entries-count"], 6);
     assert_eq!(lists["entries"].as_array().unwrap().len(), 6);
     // No rule file is loaded, so each entry's rule is unexamined, no finding.
@@ -2018,15 +2030,12 @@ async fn a_review_result_past_the_read_size_reaches_the_host_through_its_list_fi
     )
     .await;
     let obj = structured_object(&result);
-    assert_eq!(obj["form"], "file", "{obj:?}");
-    for key in ["malformed-departures", "superseded-deferrals"] {
-        assert!(obj.get(key).is_none(), "`{key}` was inline: {obj:?}");
-    }
-    let size = serde_json::to_vec(obj).unwrap().len();
-    assert!(size <= REVIEW_READ_SIZE, "{size} bytes: {obj:?}");
-    let file = obj["lists-file"].as_str().expect("a lists-file path");
-    let lists: Value =
-        serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+    let lists = lists_in_file(
+        &tmp,
+        obj,
+        REVIEW_READ_SIZE,
+        &["malformed-departures", "superseded-deferrals"],
+    );
     assert_eq!(obj["malformed-departures-count"], 12);
     assert_eq!(lists["malformed-departures"].as_array().unwrap().len(), 12);
     assert_eq!(obj["superseded-deferrals-count"], 0);
