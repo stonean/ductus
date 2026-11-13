@@ -240,6 +240,6 @@ Handoff state, 2026-10-30. The review record is written (`0af1f01a`: three re-re
 
 ### 31. The pointer follows the store on every platform
 
-- [ ] Implement the behavior described in `scenarios/pointer-follows-the-store.md`
+- [x] Implement the behavior described in `scenarios/pointer-follows-the-store.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
