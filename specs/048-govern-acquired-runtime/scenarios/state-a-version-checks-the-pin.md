@@ -69,7 +69,7 @@ what a re-made pointer adds to the session, are
 [pointer-follows-the-store](pointer-follows-the-store.md)'s. The probe above
 reads the store's version, which says nothing about a pointer that is a copy.
 
-That last clause is the non-obvious one. Re-acquiring does **not** refresh the
+The clause that sends the rest of the session through the CLI is the non-obvious one. Re-acquiring does **not** refresh the
 running MCP server: it was spawned once at session start and holds the old
 binary regardless of what is now in the store. Continuing to call its tools
 would run the stale code the check just diagnosed. Switching to the freshly

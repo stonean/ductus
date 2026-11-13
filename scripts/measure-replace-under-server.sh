@@ -334,4 +334,25 @@ measure pointer-stale-running-repair-ln "$pointer" "$ln_cmd"
 compare_row pointer-after-repair-ln-compare
 stop_server
 
+# `cp` onto a pointer that is a differing symlink writes into the link's
+# target; the bootstrap removes the link first. The decoy stands for the store
+# or a `[runtime] path` binary the link points at, and must stay unchanged.
+echo "--- cp onto a symlink pointer: the target, and the bootstrap's rm -f first"
+decoy="$work/decoy$ext"
+for variant in cp-only rm-then-cp; do
+  rm -f "$pointer"
+  cp "$old" "$decoy"
+  ln -s "$decoy" "$pointer" 2> /dev/null
+  if [ "$variant" = cp-only ]; then
+    measure "pointer-symlink-$variant" "$pointer" "$cp_cmd"
+  else
+    measure "pointer-symlink-$variant" "$pointer" "if [ -L $pointer ]; then rm -f $pointer; fi && $cp_cmd"
+  fi
+  case "$(digest "$decoy")" in
+    "$d_new") echo "  decoy (the link's target) holds: new" ;;
+    "$d_old") echo "  decoy (the link's target) holds: old" ;;
+    *) echo "  decoy (the link's target) holds: other" ;;
+  esac
+done
+
 echo "--- done"

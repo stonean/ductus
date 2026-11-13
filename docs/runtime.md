@@ -4,7 +4,7 @@ The deep reference for the deterministic execution layer. The README's [The runt
 
 ## Supplying your own binary
 
-Set `[runtime] path` in `.ductus/config.toml` and `/ductus` downloads nothing, resolving the pointer to the binary you name:
+Set `[runtime] path` in `.ductus/config.toml` and `/ductus` downloads nothing, and the pointer holds the binary you name (a symlink to it, or a copy it keeps current):
 
 ```toml
 [runtime]
