@@ -30,7 +30,7 @@ MUTATIONS = [
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
     (
-        'M3 the expired notice prints the stored values raw',
+        'M3 the final expired notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
         '                notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));\n                expired.push(anchor);',
         '                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));\n                expired.push(anchor);',
@@ -42,5 +42,12 @@ MUTATIONS = [
         '            let anchor = WaiverRef {\n                rule: rule.clone(),',
         '            let anchor = WaiverRef {\n                rule: shown_rule.clone(),',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
+    ),
+    (
+        'M5 the departure-expiry notice prints the stored values raw',
+        'src/primitives/process_waivers.rs',
+        '            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {\n                notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));',
+        '            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {\n                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
+        'process_waivers::tests::the_departure_expiry_notice_flattens_stored_text',
     ),
 ]

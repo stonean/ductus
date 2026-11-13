@@ -850,6 +850,35 @@ mod tests {
         }
     }
 
+    /// The notice for a departure waiver whose spec holds no entry for its rule prints
+    /// the stored rule, file and reason flattened to one line, as the other notices do:
+    /// an escape planted in each field reaches no notice, and the anchor keeps the stored
+    /// text (066 scenario `process-waivers-notices-flatten-stored-text`).
+    #[test]
+    fn the_departure_expiry_notice_flattens_stored_text() {
+        let planted = "    - rule: \"R\\x1b[2J1\"\n      file: \"src/gone\\x85.ts\"\n      reason: \"why\\u2028so\\tthen\"\n      departure: true\n      waived-at: 2026-05-10T14:40:00Z\n      waived-by: dev@example.com\n";
+        let tmp = setup("001-x", planted, &["src/gone\u{85}.ts"]);
+        let result = run(
+            &args("001-x", &[("R\u{1b}[2J1", "src/gone\u{85}.ts")]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.notices,
+            ["waiver expired: rule R [2J1 at src/gone .ts (why so\tthen)"]
+        );
+        assert!(result.applied.is_empty(), "{result:?}");
+        let anchor = &result.expired[0];
+        assert_eq!(
+            (
+                anchor.rule.as_str(),
+                anchor.file.as_str(),
+                anchor.reason.as_str()
+            ),
+            ("R\u{1b}[2J1", "src/gone\u{85}.ts", "why\u{2028}so\tthen")
+        );
+    }
+
     #[test]
     fn an_empty_list_or_a_blank_path_is_a_missing_file() {
         for file in ["[]", "\n        - src/a.ts\n        - \"\""] {
@@ -980,7 +1009,6 @@ mod tests {
 
         // Each list alone is enough to move: a result of one applied anchor and no notice,
         // and one of a notice and no anchor (a malformed waiver).
-        read_size(tmp.path(), "10");
         let only_applied = setup("003-z", &list_waiver(&["src/a.ts"]), &["src/a.ts"]);
         read_size(only_applied.path(), "10");
         let moved = super::run(

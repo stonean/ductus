@@ -103,7 +103,7 @@ The runtime and the reference prose are agent-neutral, and the command sources a
 | `framework/constitution.md` | Modify | One bullet added, two restated sentences cut |
 | `specs/073-decided-rule-departures-are-recorded/data-model.md` | Create | Entry grammar, `waived` shape, `check-departures` result, the review marker |
 | `specs/082-rule-assessments-converge-across-runs/data-model.md` | Modify | The third verdict shape (reopens 082) |
-| `specs/066-audit-records-and-the-completion-gate/data-model.md`, `specs/020-code-review/scenarios/waiver-expiry.md`, `specs/022-deterministic-runtime/data-model.md` | Modify | The `rule-verdicts` description; the exception sentence; the `assessSpecQuality` answer |
+| `specs/066-audit-records-and-the-completion-gate/data-model.md`, `specs/020-code-review/scenarios/waiver-expiry.md`, `specs/020-code-review/plan.md`, `specs/022-deterministic-runtime/data-model.md` | Modify | The `rule-verdicts` description and the `process-waivers` result's bound; the exception sentence; the `assessSpecQuality` answer |
 | `specs/050-constitution/spec.md`, `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md`, `specs/067-analyze-and-audit-checks/spec.md` | Modify | Signposts back-linking 073 |
 
 ## Data Model
