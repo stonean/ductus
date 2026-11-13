@@ -803,6 +803,9 @@ struct ReadRecord {
     spec: String,
     /// The commits in `diff-base..reviewed-against`.
     window: HashSet<Oid>,
+    /// The record's `unread` entries as the paths they are, since a scope entry may be
+    /// a changed path holding `{`, which as a pattern would not name itself.
+    literal: BTreeSet<String>,
     /// The record's `unread`, matched as plan entries are, so an entry that is a
     /// pattern covers every path it matches, never fewer.
     unread: PlanEntries,
@@ -810,9 +813,9 @@ struct ReadRecord {
 
 impl ReadRecord {
     /// Whether the record read `path` as `commit` changed it: its window holds the
-    /// commit and its `unread` does not name the path.
+    /// commit and its `unread` does not name the path, as itself or as a pattern.
     fn read(&self, commit: Oid, path: &str) -> bool {
-        self.window.contains(&commit) && !self.unread.names(path)
+        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)
     }
 }
 
@@ -866,6 +869,7 @@ fn read_records(
             records.push(ReadRecord {
                 spec: spec.to_string(),
                 window,
+                literal: unread.iter().cloned().collect(),
                 unread: PlanEntries::new(&unread),
             });
         }
@@ -3853,6 +3857,16 @@ mod tests {
         extra: &str,
         window: fn(&str, &str) -> (String, String),
     ) -> tempfile::TempDir {
+        read_by_y_at(files, extra, window, "2026-11-02T00:00:00Z")
+    }
+
+    /// [`read_by_y`], its record's `last-run` being `last_run`.
+    fn read_by_y_at(
+        files: &[&str],
+        extra: &str,
+        window: fn(&str, &str) -> (String, String),
+        last_run: &str,
+    ) -> tempfile::TempDir {
         let (tmp, repo, _) = two_specs(&[], &[]);
         let before = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         for file in files {
@@ -3863,7 +3877,7 @@ mod tests {
         write(
             &tmp.path().join("specs/002-y/review.md"),
             &format!(
-                "---\nspec: 002-y\nlast-run: 2026-11-02T00:00:00Z\nreviewed-against: {against}\n\
+                "---\nspec: 002-y\nlast-run: {last_run}\nreviewed-against: {against}\n\
                  diff-base: {base}\nmust-violations: 0\nblocking: false\n{DISPOSITIONS}{extra}---\n\n# Review\n"
             ),
         );
@@ -3928,6 +3942,41 @@ mod tests {
         });
         let scope = x(&tmp);
         assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// A record's window starts after its `diff-base`, so a commit that is its base
+    /// was read by the review before it, never by this one (spec 081, AC13).
+    #[test]
+    fn a_record_whose_diff_base_is_the_commit_credits_nothing() {
+        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", |_, chore| {
+            (chore.to_string(), chore.to_string())
+        });
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// A record whose `last-run` is null names no run, so it read nothing.
+    #[test]
+    fn a_record_that_names_no_run_credits_nothing() {
+        let tmp = read_by_y_at(&["src/x.rs"], "unread: []\n", holding_the_chore, "null");
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
+        assert!(scope.review_owed);
+    }
+
+    /// An `unread` entry is the path it names even when it holds a pattern character:
+    /// `src/{a}.rs` named unread stays in scope (spec 081, AC14).
+    #[test]
+    fn a_path_named_unread_that_holds_a_brace_stays_in_scope() {
+        let tmp = read_by_y(
+            &["src/{a}.rs"],
+            "unread:\n  - src/{a}.rs\n",
+            holding_the_chore,
+        );
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/{a}.rs"), "{:?}", scope.scope);
         assert!(scope.review_owed);
     }
 

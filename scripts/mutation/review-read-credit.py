@@ -28,15 +28,15 @@ MUTATIONS = [
     (
         'M2 a path the record names unread is credited',
         'src/primitives/compute_review_scope.rs',
-        '        self.window.contains(&commit) && !self.unread.names(path)\n',
+        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
         '        self.window.contains(&commit)\n',
         'compute_review_scope::tests::a_record_credits_each_path_it_did_not_name_unread',
     ),
     (
         'M3 a record credits a commit its window does not hold',
         'src/primitives/compute_review_scope.rs',
-        '        self.window.contains(&commit) && !self.unread.names(path)\n',
-        '        !self.unread.names(path)\n',
+        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
+        '        !self.literal.contains(path) && !self.unread.names(path)\n',
         'compute_review_scope::tests::a_record_whose_window_does_not_hold_the_commit_credits_nothing',
     ),
     (
@@ -87,5 +87,33 @@ MUTATIONS = [
         '    render_unread(&mut fm, args.unread.as_ref());\n',
         '',
         'write_review::tests::unread_is_written_whenever_the_run_states_it',
+    ),
+    (
+        'M11 an unread entry holding a pattern character is matched only as a pattern',
+        'src/primitives/compute_review_scope.rs',
+        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
+        '        self.window.contains(&commit) && !self.unread.names(path)\n',
+        'compute_review_scope::tests::a_path_named_unread_that_holds_a_brace_stays_in_scope',
+    ),
+    (
+        "M12 a record's window takes in its diff-base",
+        'src/primitives/compute_review_scope.rs',
+        '    walk.hide(base).ok()?;\n',
+        '    let _ = base;\n',
+        'compute_review_scope::tests::a_record_whose_diff_base_is_the_commit_credits_nothing',
+    ),
+    (
+        'M13 a record that names no run credits',
+        'src/primitives/compute_review_scope.rs',
+        '            let complete = record.last_run.is_some()\n                && record.skipped_passes.is_empty()\n',
+        '            let complete = record.skipped_passes.is_empty()\n',
+        'compute_review_scope::tests::a_record_that_names_no_run_credits_nothing',
+    ),
+    (
+        'M14 a refused unread entry is echoed raw',
+        'src/primitives/write_review.rs',
+        '        .map(|entry| crate::primitives::flatten_line(entry))\n',
+        '        .map(|entry| entry.to_string())\n',
+        'write_review::tests::an_unread_entry_outside_the_scope_is_refused',
     ),
 ]

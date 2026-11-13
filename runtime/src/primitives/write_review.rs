@@ -866,12 +866,14 @@ fn refuse_unread_outside_the_scope(
     args: &WriteReviewArgs,
     entries: &BTreeSet<String>,
 ) -> Result<()> {
-    let outside: Vec<&str> = args
+    // Each entry is the caller's text, so it is flattened before the one-line reason
+    // carries it to a terminal or a tool error.
+    let outside: Vec<String> = args
         .unread
         .iter()
         .flatten()
         .filter(|entry| !entries.contains(*entry))
-        .map(String::as_str)
+        .map(|entry| crate::primitives::flatten_line(entry))
         .collect();
     if outside.is_empty() {
         return Ok(());
@@ -2866,13 +2868,17 @@ mod tests {
         let parent = repo_with_another_specs_commit(&tmp);
         let mut args = base_args("001-x");
         args.diff_base = parent;
-        args.unread = Some(vec!["src/mine.rs".to_string(), "src/other.rs".to_string()]);
+        args.unread = Some(vec![
+            "src/mine.rs".to_string(),
+            "src/other.rs".to_string(),
+            "src/a\nforged: line\u{1b}[31m".to_string(),
+        ]);
         let err = run(&args, tmp.path()).unwrap_err().to_string();
-        assert!(
-            err.contains("src/other.rs is not in the run's scope"),
-            "{err}"
-        );
+        assert!(err.contains("src/other.rs"), "{err}");
+        assert!(err.contains("is not in the run's scope"), "{err}");
         assert!(!err.contains("src/mine.rs"), "{err}");
+        // A refused entry is the caller's text, carried on one line.
+        assert!(!err.contains(['\n', '\u{1b}']), "{err:?}");
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
     }
 

@@ -1,14 +1,24 @@
 ---
 spec: 081-reviews-and-checks-follow-what-changed
-last-run: 2026-11-11T22:36:19Z
-reviewed-against: 07522e25de26b58a1933ff90b27eaa40094b54fc
-diff-base: fa4b0dd28735bcede13a868542e7e3f903b28fe9
+last-run: 2026-11-13T17:39:15Z
+reviewed-against: 992476e7f6f31e3f989956330a6f601be0a7265d
+diff-base: c433ad7893579b8b6e2a01cebac4c9b9cf9720e0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 46
-scope: 59
-excluded: 21
+examined: 9
+scope: 18
+unread:
+  - .claude/commands/ductus/review.md
+  - .ductus/reference/review.md
+  - .pi/prompts/ductus-review.md
+  - framework/reference/review.md
+  - runtime/CHANGELOG.md
+  - runtime/src/primitives/write_review.rs
+  - runtime/src/schema/primitives.rs
+  - runtime/tests/golden/review-basic.jsonl
+  - specs/inbox.md
+excluded: 3
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -19,17 +29,76 @@ budget-stop: false
 reviewed-digest: {}
 blocking: false
 dispositions:
-  fixed: 12
+  fixed: 2
   deferred: 0
-  waived: 0
+  waived: 10
   undispositioned: 0
+decisions:
+  - key: "other — on a run with an empty `diff-base` (a spec never `in-progress`), `write-review` refuses every non-empty `unread` as outside the scope, though `compute-review-scope` returns the plan entries as that scope (`scope: [src/a.rs]`, fixture repo3): the message tells the host to list only entries compute returned, and the entry is one. `resolve_scope` returns `BTreeSet::new()` for the empty base before any scope is derived, while its own doc says that scope still holds a first review's plan entries. AC12 refuses \"an entry the run's scope does not hold\"; this one is held. — `runtime/src/primitives/write_review.rs:828-831`"
+    outcome: waived
+    reason: "No contract break: an empty diff-base records scope 0 (spec 079; resolve_scope's doc says so), so the run's scope holds no entry and AC12's refusal applies as written; such a record credits nothing, since the credit needs its diff-base to be a commit; and framework/reference/review.md §Window and coverage tells the host to pass the current commit as the base. Only the refusal's wording, which points at compute-review-scope's list, misleads here."
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: "other — a credit survives the revert of the record that granted it: `read_records` reads each record from the commit that wrote it, and a later commit deleting that review.md does not withdraw the credit, although `last_review_commit` treats a record reverted away as no earlier review ('what the reverted run read has no standing'). Driven: fixtures-A/f3 (record committed, then `git rm` of it) still answers `scope: []`, `review-owed: false` for the chore path. AC13 asks only for a record 'committed in the window', which the reverted record was, so the contract holds; the inconsistency is with 079's revert rule. — `runtime/src/primitives/compute_review_scope.rs:827-874`"
+    outcome: waived
+    reason: "Observation about the pipeline's own machinery in framework work, and AC13's own text ('a review record committed in the window') is met: the run did read the path. Closing it needs a decision (should a revert withdraw a read?) that a spec owner makes, not a mechanical fix; deferring it would not be fed back by any gate."
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: "other — a credited path that the window deleted is not listed in `excluded`: `split_changes` skips deleted paths, so the credit shows only as `review-owed: false` and the path stays in `deleted`. AC13 says a credited path 'is listed in `excluded` under the spec whose review read it'. Driven: fixtures-A/f8 (chore deletes src/old.rs, record `unread: []`) answers `excluded: [specs/002-y/review.md]`, `deleted: [src/old.rs]`, `review-owed: false`; f9 (record names it unread) answers `review-owed: true`. The same holds for another spec's deleted path under 079, so the behavior is the existing one. — `runtime/src/primitives/compute_review_scope.rs:351-377`"
+    outcome: waived
+    reason: A deletion has nothing to read and was never listed in `excluded` under 079 either; the gate's answer (no review owed) is the one AC13 asks for, so only the sentence's reach is loose. Observation about the pipeline's machinery, not a break of what the criterion protects.
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: "other — `invalidate-review` keeps `unread` on an invalidated record (its 24-entry SCALARS list does not name it), so a record reading `last-run: null` still states what the run it disowns read; confirmed on fixture (`unread:\\n  - src/mine.rs` survives beside `last-run: null`). `read_records` requires `last_run.is_some()`, so no credit follows. — `runtime/src/primitives/invalidate_review.rs:117-142`"
+    outcome: waived
+    reason: a pipeline-machinery observation outside 081's plan files; the credit's `last-run` guard makes the kept field inert, and 066 owns the invalidation surface
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: other — `unread` accepts duplicate entries and writes each (`[src/mine.rs, src/mine.rs]` rendered twice); `compute-review-scope` reads the list as a set, so nothing differs. — `runtime/src/primitives/write_review.rs:1360-1375`
+    outcome: waived
+    reason: harmless to every reader; deduplicating adds a requirement the spec does not state
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: other — no test pins `--unread-json` hydration (`hydrate_write_review`) or that a run's two writes carry one `unread`; both hold on the built binary (loop-open write then final write each render the same list), as the sibling `--*-json` flags are equally unpinned. — `runtime/src/main.rs:380`
+    outcome: waived
+    reason: verified by driving the built binary; the sibling write-review flags have no hydration test either, so a pin here is a new test surface, not a fix to 081's code
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: "other — write-review records `unread: []` beside `examined: 1` and `scope: 4` (driven on a fixture): the two self-reported claims contradict each other, and the record then credits every path of another spec's commit in its window as read. Nothing compares `examined` plus the length of `unread` with `scope`. AC12 asks for the in-scope refusal only, and the `examined` doc already says nothing proves the passes ran, so this is the same self-report the pipeline has always taken. — `runtime/src/primitives/write_review.rs:496-497`"
+    outcome: waived
+    reason: "an observation about the pipeline's own machinery made while reviewing framework work: AC12 requires the scope-membership refusal and a run that states nothing writing nothing, both of which hold, and `examined` is documented as a caller's unverified claim (write_review.rs and WriteReviewArgs::examined); a consistency refusal would be a new requirement on 081, not a breach of its contract, and does not make this review's own result wrong."
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: other — render_unread repeats render_open_findings' block-list loop (`key:` then `  - {yaml_string}` per entry). A shared helper would serve both, but the two differ in the empty case (`[]` against omitted), and it would edit 079's renderer for a three-line loop. — `runtime/src/primitives/write_review.rs:1360-1384`
+    outcome: waived
+    reason: "an observation about the pipeline's own machinery that adds no requirement: two three-line loops whose empty cases differ, and extracting one touches spec 079's render_open_findings for no behavior change."
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: other — The credit's conditions (a record committed in the window, its window holding the commit, no skipped pass, budget stop or open fix-round loop, no unread means no credit) are restated in COMPUTE_REVIEW_SCOPE, framework/reference/review.md, the 020 and 066 data models, the CHANGELOG entry and the plan. Constitution drift-prevention prefers a pointer to the canonical source (the primitive's compiled description) over copies, and each copy can drift. The copies agree today (checked against read_records in compute_review_scope.rs). — `specs/066-audit-records-and-the-completion-gate/data-model.md:123`
+    outcome: waived
+    reason: Task 9 of 081 and AC11/AC12 require the reference and both data models to state unread and the credit; the copies match the code now. Pipeline-machinery observation on framework work, waived rather than deferred per AGENTS.md Workflow.
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
+  - key: other — AGENTS.md's runtime-currency Workflow bullet says a code commit naming no spec 'owes every open spec a review (spec 081; ...)'; after task 8 that holds only until a committed complete review credits its paths. — `AGENTS.md:Workflow (runtime-currency bullet)`
+    outcome: waived
+    reason: The sentence explains why a currency fix names 022; it is true at commit time and for every window no record credits, so it contradicts nothing the credit changes.
+    decided-at: 2026-11-13T17:38:07Z
+    decided-by: rule
 ---
 
 # Review — 081-reviews-and-checks-follow-what-changed
 
 ## Summary
 
-Five-pass review of 081's first reopening over `fa4b0dd2..07522e25` plus this run's fixes (base-source `reopen`). Scope 59 entries, examined 46. **Read:** the window's whole diff for every changed path outside the spec directories (the 33688944 landing and 2496b7c4's workflows), with surrounding source wherever a claim needed it; `scripts/mutation/reviews-follow-what-changed.py` whole; 081's criteria, plan and tasks; the doc blocks of `analyze_subjects.rs`, `classify_spec_edit.rs` and `invalidate_review.rs` a sweep by meaning reached; `framework/commands/review.md` and `prune.md` at the lines that sweep hit; the window's changes under `runtime/tests/*.rs` (`mechanical_sweep_parity.rs`, `result_sizes.rs`), the pattern's other files unchanged and unread; and the re-bless diff of `runtime/tests/golden/review-basic.jsonl`, which moves only its fixture repo's `diff-base` sha, the field the parity test names, after the review command's text changed. **Not read (13):** the nine generated mirrors under `.claude/commands/ductus/`, `.ductus/reference/` and `.pi/prompts/`, generated from sources read above, `scripts/gen-claude-commands.sh --check` in sync; the `runtime/tests/golden/*` pattern's other goldens, unchanged in the window and grepped for the retired names with no hit, the grep proven on `runtime/CHANGELOG.md`; and the directories of 026, 050 and 066, whose changed files are those specs' own under 081's attribution and go to their analyses, 066's data-model gate list checked against `ReviewGateBlock` only. **Driven on real state:** `compute-review-scope` reports `review-owed: false` for 079 and 047, which the artifacts-only debcc8cf reopened, and leaves 2496b7c4's workflows, a commit naming 081 alone, out of both windows; `check-review-gate` on 038 blocks on `analyze-stale` alone. The AC2, AC8, AC9 and AC10 fixture tests were read, not mutated again; `run.py --check` finds all 277 anchors of the two mutation lists valid. **One MUST, fixed in the run:** `BE-COMPAT-001`, since the plan did not classify the retired tool, the narrowed `blocked-by` set and `review-owed`'s changed answer as breaking; its Technical Decisions now do, shipping with the 0.60.0 minor bump, and `runtime/CHANGELOG.md` marks both entries breaking. **Observations: 12, all fixed by the rule**, one a broken contract: `framework/reference/review.md` still said a scenario or data-model correction stales a review, against AC4. The rest are present-tense claims of the retired review staleness check that task 4's sweep missed, in the review and prune commands, `docs/analyze.md`, six runtime files' doc comments and the workflows' depth comment, and the plan's 047 rows. Over the fixed tree, markdownlint, actionlint, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, the touched modules' unit tests and the parity suite pass.
+Window c433ad78..HEAD (base-source reopen), 18 scope entries. Every commit in it names a spec, so this record's unread credits nothing in another window. The passes ran in four agents divided by behavior: the credit, write-review's unread, the shipped text, and a second pass applying to write-review's change the eight rule files its first agent had not read. All nine loaded rule files were read whole and applied to each examined entry's change.
+Examined 9, each read whole: framework/commands/review.md, framework/constitution.md, runtime/src/main.rs, runtime/src/primitives/compute_review_scope.rs, runtime/src/schema/descriptions.rs, scripts/mutation/review-read-credit.py, and 081's spec.md, plan.md and tasks.md.
+Unread 9, named in unread: the three generated mirrors (.claude/commands/ductus/review.md, .pi/prompts/ductus-review.md, .ductus/reference/review.md), not opened, their sources read and scripts/gen-claude-commands.sh re-run with the tree left unchanged; framework/reference/review.md, its window change in §Window and coverage read in the diff and checked against the code; runtime/CHANGELOG.md, lines 1-40, which hold 081's entry; runtime/src/primitives/write_review.rs, lines 1-4100 (every non-test function, the window's changes and its new tests), the later test code unread; runtime/src/schema/primitives.rs, the window's diff and ReviewBlock's fields; runtime/tests/golden/review-basic.jsonl, read whole but against quality-cross.md alone; specs/inbox.md, an uncommitted /log entry another session made during the run, after the passes ended.
+Fixed in the run, before this record:
+
+- a SHOULD, QUAL-TEST-001 at compute_review_scope.rs: no test failed with the credit window's start (walk.hide(base)) or the last-run guard removed. Two tests now pin them, with mutants M12 and M13.
+- the broken contract under Observations, pinned by a test and M11.
+- the raw echo, pinned by M14.
+All 14 mutants of scripts/mutation/review-read-credit.py were killed.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
@@ -55,18 +124,18 @@ Five-pass review of 081's first reopening over `fa4b0dd2..07522e25` plus this ru
 
 ## Observations
 
-- bug: §Run review passes said a scenario or data model's correction stales this review, which AC4 says the file no longer says — `framework/reference/review.md:96` (breaks the spec's contract) — **fixed** (decided by the rule)
-- bug: step 1 described review-owed: false as a reopening that changed no code, scenario or data model, where a scenario or data-model edit owes no review — `framework/commands/review.md:119` — **fixed** (decided by the rule)
-- bug: step 10 said the review record stays valid because plan.md and tasks.md are not durable contracts, implying a scenario or data-model edit would stale it — `framework/commands/prune.md:68` — **fixed** (decided by the rule)
-- bug: the freshness section said the review record's reviewed-digest works identically to the analysis record's at the gate, a check spec 081 retired — `docs/analyze.md:224` — **fixed** (decided by the rule)
-- bug: is_review_contract's, is_analyze_subject's and exempt_renames's docs and a test comment said a digested review.md or spec.md would stale every review, named the gate's durable contracts and the deleted stale_review_block, and cited the deleted review-freshness.sh, the doc edit the plan lists for this file — `runtime/src/primitives/analyze_subjects.rs` — **fixed** (decided by the rule)
-- bug: render_paths's doc named the retired review-staleness block as one of its two messages, and a test comment sent a contributor to a review that would go stale — `runtime/src/primitives/check_review_gate.rs:761` — **fixed** (decided by the rule)
-- bug: the module doc said the gate's review staleness uses mechanical_sweep's index, which only the analysis record's freshness now does — `runtime/src/primitives/classify_spec_edit.rs:17` — **fixed** (decided by the rule)
-- bug: the module doc described the gate as diffing a spec's durable contracts between reviewed-against and HEAD, a check spec 081 retired — `runtime/src/primitives/invalidate_review.rs:4` — **fixed** (decided by the rule)
-- bug: a test comment said an unreadable sweep index leaves the review stale, where it leaves the record stale — `runtime/src/primitives/mechanical_sweep.rs:572` — **fixed** (decided by the rule)
-- bug: reviewed_digest's doc said counting review.md would stale every review the instant it was recorded — `runtime/src/schema/primitives.rs:57` — **fixed** (decided by the rule)
-- convention: the depth-1 checkout comment named Families 7 and 8 as dashboard's callers and omitted Family 37, in framework-checks.yml and runtime-release.yml alike — `.github/workflows/framework-checks.yml:43` — **fixed** (decided by the rule)
-- bug: the plan's Affected Files and Cross-spec impact named 047's analyze-run-durability scenario as edited, where debcc8cf edited analyze-record-freshness and 047's spec — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- bug — a path a record lists in `unread` is credited as read when the path holds `{`, so a changed file such as `src/{a}.rs` named unread by a complete record leaves every other spec's scope and owes no review there. `read_records` parses `unread` with `PlanEntries::new`, which reads every entry as a possible pattern (`entry_pattern` turns `{a}` into `(?:a)`), so the literal `src/{a}.rs` no longer matches itself. `unread` holds scope entries, which are literal paths (plan.md: 'lists scope entries as compute-review-scope returns them'), and `RunScope` and its test `a_changed_path_holding_a_brace_names_only_itself` already keep a changed path literal for this reason (QUAL-DELEG-001). AC14 requires a path the record lists in `unread` to stay in scope. Driven on the built binary: fixtures-A/f1 (record `unread: [src/{a}.rs]`, chore adds `src/{a}.rs`) answers `scope: []`, `review-owed: false`, `excluded` holding `src/{a}.rs`; the same fixture with `src/x.rs` (f7 and the unit test) keeps the path. A path holding `*` or `?` is unaffected (the pattern still matches the literal), and an unmatched `{` compiles to nothing and is kept literal; only a balanced `{...}` loses itself. Plan entries that are patterns stay patterns, which is the intent of the PlanEntries choice. — `runtime/src/primitives/compute_review_scope.rs:799-870` (breaks the spec's contract) — **fixed** (decided by the rule)
+- convention — refuse_unread_outside_the_scope echoes each refused `unread` entry raw into the error text. A caller entry holding a newline or an ESC sequence reaches the terminal or the MCP tool-error text unflattened, where InvalidArgument.reason is documented as one line and the sibling code passes caller strings through flatten_line (write_review.rs lines 236, 1759, 1809; load_cli_json's own messages). Driven on a fixture with the built binary: an entry `src/a<LF>forged: line<ESC>[31mred` printed two lines, the second `forged: line^[[31mred is not in the run's scope`. No loaded rule maps to it: BE-INPUT-011 governs a log emitter, and this is error text of a local stdio process, so BE-ERR-002 and BE-INPUT-006 do not fire here either. — `runtime/src/primitives/write_review.rs:865-889` — **fixed** (decided by the rule)
+- other — on a run with an empty `diff-base` (a spec never `in-progress`), `write-review` refuses every non-empty `unread` as outside the scope, though `compute-review-scope` returns the plan entries as that scope (`scope: [src/a.rs]`, fixture repo3): the message tells the host to list only entries compute returned, and the entry is one. `resolve_scope` returns `BTreeSet::new()` for the empty base before any scope is derived, while its own doc says that scope still holds a first review's plan entries. AC12 refuses "an entry the run's scope does not hold"; this one is held. — `runtime/src/primitives/write_review.rs:828-831` — **waived**: No contract break: an empty diff-base records scope 0 (spec 079; resolve_scope's doc says so), so the run's scope holds no entry and AC12's refusal applies as written; such a record credits nothing, since the credit needs its diff-base to be a commit; and framework/reference/review.md §Window and coverage tells the host to pass the current commit as the base. Only the refusal's wording, which points at compute-review-scope's list, misleads here. (decided by the rule)
+- other — a credit survives the revert of the record that granted it: `read_records` reads each record from the commit that wrote it, and a later commit deleting that review.md does not withdraw the credit, although `last_review_commit` treats a record reverted away as no earlier review ('what the reverted run read has no standing'). Driven: fixtures-A/f3 (record committed, then `git rm` of it) still answers `scope: []`, `review-owed: false` for the chore path. AC13 asks only for a record 'committed in the window', which the reverted record was, so the contract holds; the inconsistency is with 079's revert rule. — `runtime/src/primitives/compute_review_scope.rs:827-874` — **waived**: Observation about the pipeline's own machinery in framework work, and AC13's own text ('a review record committed in the window') is met: the run did read the path. Closing it needs a decision (should a revert withdraw a read?) that a spec owner makes, not a mechanical fix; deferring it would not be fed back by any gate. (decided by the rule)
+- other — a credited path that the window deleted is not listed in `excluded`: `split_changes` skips deleted paths, so the credit shows only as `review-owed: false` and the path stays in `deleted`. AC13 says a credited path 'is listed in `excluded` under the spec whose review read it'. Driven: fixtures-A/f8 (chore deletes src/old.rs, record `unread: []`) answers `excluded: [specs/002-y/review.md]`, `deleted: [src/old.rs]`, `review-owed: false`; f9 (record names it unread) answers `review-owed: true`. The same holds for another spec's deleted path under 079, so the behavior is the existing one. — `runtime/src/primitives/compute_review_scope.rs:351-377` — **waived**: A deletion has nothing to read and was never listed in `excluded` under 079 either; the gate's answer (no review owed) is the one AC13 asks for, so only the sentence's reach is loose. Observation about the pipeline's machinery, not a break of what the criterion protects. (decided by the rule)
+- other — `invalidate-review` keeps `unread` on an invalidated record (its 24-entry SCALARS list does not name it), so a record reading `last-run: null` still states what the run it disowns read; confirmed on fixture (`unread:\n  - src/mine.rs` survives beside `last-run: null`). `read_records` requires `last_run.is_some()`, so no credit follows. — `runtime/src/primitives/invalidate_review.rs:117-142` — **waived**: a pipeline-machinery observation outside 081's plan files; the credit's `last-run` guard makes the kept field inert, and 066 owns the invalidation surface (decided by the rule)
+- other — `unread` accepts duplicate entries and writes each (`[src/mine.rs, src/mine.rs]` rendered twice); `compute-review-scope` reads the list as a set, so nothing differs. — `runtime/src/primitives/write_review.rs:1360-1375` — **waived**: harmless to every reader; deduplicating adds a requirement the spec does not state (decided by the rule)
+- other — no test pins `--unread-json` hydration (`hydrate_write_review`) or that a run's two writes carry one `unread`; both hold on the built binary (loop-open write then final write each render the same list), as the sibling `--*-json` flags are equally unpinned. — `runtime/src/main.rs:380` — **waived**: verified by driving the built binary; the sibling write-review flags have no hydration test either, so a pin here is a new test surface, not a fix to 081's code (decided by the rule)
+- other — write-review records `unread: []` beside `examined: 1` and `scope: 4` (driven on a fixture): the two self-reported claims contradict each other, and the record then credits every path of another spec's commit in its window as read. Nothing compares `examined` plus the length of `unread` with `scope`. AC12 asks for the in-scope refusal only, and the `examined` doc already says nothing proves the passes ran, so this is the same self-report the pipeline has always taken. — `runtime/src/primitives/write_review.rs:496-497` — **waived**: an observation about the pipeline's own machinery made while reviewing framework work: AC12 requires the scope-membership refusal and a run that states nothing writing nothing, both of which hold, and `examined` is documented as a caller's unverified claim (write_review.rs and WriteReviewArgs::examined); a consistency refusal would be a new requirement on 081, not a breach of its contract, and does not make this review's own result wrong. (decided by the rule)
+- other — render_unread repeats render_open_findings' block-list loop (`key:` then `- {yaml_string}` per entry). A shared helper would serve both, but the two differ in the empty case (`[]` against omitted), and it would edit 079's renderer for a three-line loop. — `runtime/src/primitives/write_review.rs:1360-1384` — **waived**: an observation about the pipeline's own machinery that adds no requirement: two three-line loops whose empty cases differ, and extracting one touches spec 079's render_open_findings for no behavior change. (decided by the rule)
+- other — The credit's conditions (a record committed in the window, its window holding the commit, no skipped pass, budget stop or open fix-round loop, no unread means no credit) are restated in COMPUTE_REVIEW_SCOPE, framework/reference/review.md, the 020 and 066 data models, the CHANGELOG entry and the plan. Constitution drift-prevention prefers a pointer to the canonical source (the primitive's compiled description) over copies, and each copy can drift. The copies agree today (checked against read_records in compute_review_scope.rs). — `specs/066-audit-records-and-the-completion-gate/data-model.md:123` — **waived**: Task 9 of 081 and AC11/AC12 require the reference and both data models to state unread and the credit; the copies match the code now. Pipeline-machinery observation on framework work, waived rather than deferred per AGENTS.md Workflow. (decided by the rule)
+- other — AGENTS.md's runtime-currency Workflow bullet says a code commit naming no spec 'owes every open spec a review (spec 081; ...)'; after task 8 that holds only until a committed complete review credits its paths. — `AGENTS.md:Workflow (runtime-currency bullet)` — **waived**: The sentence explains why a currency fix names 022; it is true at commit time and for every window no record credits, so it contradicts nothing the credit changes. (decided by the rule)
 
 ## Skipped passes
 
@@ -74,27 +143,9 @@ Five-pass review of 081's first reopening over `fa4b0dd2..07522e25` plus this ru
 
 ## Excluded from scope
 
-- `specs/026-framework-self-audit/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/041-task-pruning/scenarios/a-plan-edit-does-not-reopen-a-done-spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/047-analyze-findings-durability/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/050-constitution/plan.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/050-constitution/scenarios/a-review-may-precede-its-commit.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/050-constitution/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/063-oversized-artifacts-warn-with-a-fix/plan.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/a-multi-number-renumber-is-one-rewrite.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/a-renamed-file-contributes-its-rewrites.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/freshness-results-have-a-bounded-size.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/review-staleness-on-done-specs.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/the-committed-tree-horizon.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/scenarios/the-promotion-coverage-line.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/spec.md` — 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
+- `specs/020-code-review/data-model.md` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `specs/020-code-review/spec.md` — 020-code-review
+- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 020-code-review, 066-audit-records-and-the-completion-gate
 
 ## Unexamined governance
 
