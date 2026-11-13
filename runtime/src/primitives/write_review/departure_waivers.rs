@@ -10,7 +10,7 @@
 use std::fs;
 use std::path::Path;
 
-use git2::{IndexAddOption, Repository, Signature};
+use git2::{IndexAddOption, Repository, Signature, Time};
 use serde_json::{Value, json};
 
 use crate::primitives::{process_waivers, write_review};
@@ -19,6 +19,8 @@ use crate::schema::primitives::{
 };
 
 const FEATURE: &str = "001-widget";
+/// 2023-11-14T22:13:20Z, the author time every fixture commit carries.
+const COMMIT_SECONDS: i64 = 1_700_000_000;
 const MUST_RULE: &str = "BE-COMPAT-001";
 const SHOULD_RULE: &str = "BE-LOG-002";
 
@@ -33,7 +35,12 @@ fn commit(repository: &Repository, message: &str) {
     index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
     index.write().unwrap();
     let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
-    let signature = Signature::now("Decider", "decider@example.com").unwrap();
+    let signature = Signature::new(
+        "Decider",
+        "decider@example.com",
+        &Time::new(COMMIT_SECONDS, 0),
+    )
+    .unwrap();
     let parent = repository
         .head()
         .ok()
@@ -176,14 +183,7 @@ fn a_must_departure_waives_the_rule_at_both_files_and_writes_each_anchor() {
         "the credential field is removed rather than versioned"
     );
     assert_eq!(stored[0]["waived-by"], "decider@example.com");
-    assert!(
-        stored[0]["waived-at"].as_str().unwrap().ends_with('Z'),
-        "{stored:?}"
-    );
-    assert_ne!(
-        stored[0]["waived-at"], T1,
-        "the commit's time, not the run's"
-    );
+    assert_eq!(stored[0]["waived-at"], "2023-11-14T22:13:20Z");
 }
 
 #[test]
@@ -462,4 +462,91 @@ fn a_run_writing_its_record_twice_counts_the_stored_departure_waived_both_times(
     assert_eq!(first.must_violations, 0, "{first:?}");
     assert_eq!(second.must_violations, 0, "{second:?}");
     assert_eq!(waivers(tmp.path()).len(), 1);
+}
+
+/// A record seeded with one waiver, whose `extra` lines (indented four spaces) follow it.
+fn seed_waiver(dir: &Path, extra: &str) {
+    fs::write(
+        dir.join(format!("specs/{FEATURE}/review.md")),
+        format!(
+            "---\nspec: 001-widget\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: {MUST_RULE}\n    file: src/a.rs\n    reason: kept\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n{extra}---\n\n# Review\n"
+        ),
+    )
+    .unwrap();
+}
+
+fn classify(dir: &Path) -> crate::primitives::Result<ProcessWaiversResult> {
+    process_waivers::run(
+        &ProcessWaiversArgs {
+            feature: FEATURE.to_string(),
+            fired: vec![FiredFinding {
+                rule: MUST_RULE.to_string(),
+                file: "src/a.rs".to_string(),
+            }],
+            ..ProcessWaiversArgs::default()
+        },
+        dir,
+    )
+}
+
+#[test]
+fn a_spec_that_cannot_be_read_is_not_read_while_no_waiver_is_marked() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    seed_waiver(tmp.path(), "");
+    fs::write(
+        tmp.path().join(format!("specs/{FEATURE}/spec.md")),
+        [0xff, 0xfe, 0xfd],
+    )
+    .unwrap();
+    let classified = classify(tmp.path()).unwrap();
+    assert_eq!(classified.applied.len(), 1, "{classified:?}");
+    // A marked waiver does read it, and the failure is the read's.
+    seed_waiver(tmp.path(), "    departure: true\n");
+    assert!(classify(tmp.path()).is_err());
+}
+
+#[test]
+fn a_hand_written_marker_is_expired_without_an_entry_and_ordinary_with_one() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), MUST_ENTRY);
+    seed_waiver(tmp.path(), "    departure: true\n");
+    let classified = classify(tmp.path()).unwrap();
+    assert_eq!(classified.applied.len(), 1, "{classified:?}");
+    assert!(classified.expired.is_empty(), "{classified:?}");
+
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(""),
+    );
+    commit(&repository, "drop the departure");
+    let classified = classify(tmp.path()).unwrap();
+    assert_eq!(classified.expired.len(), 1, "{classified:?}");
+    assert_eq!(
+        classified.notices,
+        ["waiver expired: rule BE-COMPAT-001 at src/a.rs (kept)"]
+    );
+}
+
+#[test]
+fn a_non_boolean_marker_fails_the_call_naming_the_field() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    seed_waiver(tmp.path(), "    departure: maybe\n");
+    let err = classify(tmp.path()).unwrap_err().to_string();
+    assert!(err.contains("departure"), "{err}");
+}
+
+#[test]
+fn an_entry_whose_rule_fires_nowhere_stores_nothing_and_refuses_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    let findings = [finding("OTHER-1", "must", "src/a.rs")];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(written.must_violations, 1, "{written:?}");
+    assert_eq!(written.waived, 0);
+    assert!(written.malformed_departures.is_empty(), "{written:?}");
+    assert!(waivers(tmp.path()).is_empty(), "no waiver stored");
+    assert!(!review_md(tmp.path()).contains("waivers:"));
 }

@@ -86,4 +86,32 @@ MUTATIONS = [
         'firing\n                .iter()\n                .filter(|file| !holds(surviving, &entry.rule, file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    reason: entry.reason.clone(),',
         'departure_waivers::a_run_writing',
     ),
+    (
+        'M11 the spec is read although no waiver carries the marker',
+        'src/primitives/process_waivers.rs',
+        '    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
+        '    let _ = super::read_text(spec_path)?;\n    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
+        'departure_waivers::a_spec_that_cannot_be_read',
+    ),
+    (
+        'M12 an entry waives a finding of any rule',
+        'src/primitives/write_review.rs',
+        'finding.rule == entry.rule\n                    && waiver_reason',
+        'true\n                    && waiver_reason',
+        'departure_waivers::an_entry_whose_rule_fires_nowhere',
+    ),
+    (
+        'M13 a derived waiver stores a fixed time for the decision',
+        'src/primitives/write_review.rs',
+        '}) => (decided_by.clone(), decided_at.clone()),',
+        '}) => (decided_by.clone(), String::from("2026-01-01T00:00:00Z")),',
+        'departure_waivers::a_must_departure',
+    ),
+    (
+        'M14 a non-boolean departure value is accepted and ignored',
+        'src/primitives/process_waivers.rs',
+        ['departure: Option<bool>,', 'if waiver.departure != Some(true) {'],
+        ['departure: Option<serde_norway::Value>,', 'if waiver.departure != Some(serde_norway::Value::Bool(true)) {'],
+        'departure_waivers::a_non_boolean_marker',
+    ),
 ]

@@ -493,8 +493,10 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // The denominator `examined` is a claim against — see `resolve_scope`.
     let (scope, excluded) = resolve_scope(args, repo)?;
     refuse_an_empty_scope_over_a_finding(args, &feature_dir, scope)?;
+    // Read once: the departure entries and the frontmatter check below both use it.
+    let spec_content = read_text(&spec_path)?;
     let (new_waivers, new_anchors, malformed_departures) =
-        run_waivers(args, repo, &root, &feature_dir)?;
+        run_waivers(args, repo, &root, &feature_dir, &spec_content)?;
     let settled = settled(args, new_anchors, &feature_dir)?;
     let args = settled.as_ref();
     an_open_break_names_its_file(args)?;
@@ -539,7 +541,6 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // Read the spec and resolve the surviving waivers BEFORE either render:
     // the report now carries the full record, waivers included, so both homes
     // are rendered from one computation rather than two.
-    let spec_content = read_text(&spec_path)?;
     // Validate the spec's frontmatter before anything is written.
     //
     // This parse used to happen as a by-product of reading waivers out of the
@@ -1852,18 +1853,19 @@ fn new_waiver_entries(
 ///
 /// # Errors
 ///
-/// As [`new_waiver_entries`] and [`read_departures`].
+/// As [`new_waiver_entries`].
 fn run_waivers(
     args: &WriteReviewArgs,
     repo: &Path,
     root: &str,
     feature_dir: &Path,
+    spec_content: &str,
 ) -> Result<(
     Vec<RawWaiverFull>,
     Vec<crate::schema::primitives::WaiverRef>,
     Vec<String>,
 )> {
-    let departures = read_departures(repo, root, &args.feature)?;
+    let departures = read_departures(repo, root, &args.feature, spec_content);
     let (entries, anchors) =
         new_waiver_entries(args, &surviving_waivers(feature_dir, args)?, &departures)?;
     Ok((entries, anchors, departures.malformed))
@@ -1893,17 +1895,13 @@ fn holds(waivers: &[RawWaiverFull], rule: &str, file: &str) -> bool {
     })
 }
 
-/// Read `spec.md`'s departure entries. A spec holding none, or none readable as an
-/// entry, derives no waiver; the malformed ones are named in the result.
-///
-/// # Errors
-///
-/// [`PrimitiveError::Io`] when `spec.md` cannot be read, which `run` has already
-/// found to exist.
-fn read_departures(repo: &Path, root: &str, feature: &str) -> Result<Departures> {
+/// Read the departure entries of `content`, the text of `spec.md`. A spec holding none,
+/// or none readable as an entry, derives no waiver; the malformed ones are named in the
+/// result.
+fn read_departures(repo: &Path, root: &str, feature: &str, content: &str) -> Departures {
     use crate::primitives::departures::{ProblemKind, parse};
     let spec_rel = format!("{root}/{feature}/spec.md");
-    let parsed = parse(&read_text(&repo.join(&spec_rel))?);
+    let parsed = parse(content);
     let malformed = parsed
         .problems
         .iter()
@@ -1928,12 +1926,12 @@ fn read_departures(repo: &Path, root: &str, feature: &str) -> Result<Departures>
         .into_iter()
         .filter(|entry| seen.insert(entry.rule.clone()))
         .collect();
-    Ok(Departures {
+    Departures {
         entries,
         malformed,
         spec_rel,
         project: repo.to_path_buf(),
-    })
+    }
 }
 
 /// The second source of new waivers: each well-formed departure entry, of any tier,
