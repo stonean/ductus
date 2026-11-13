@@ -1,17 +1,17 @@
 ---
 spec: 073-decided-rule-departures-are-recorded
-last-run: 2026-11-13T13:14:57Z
-analyzed-against: ab7224f2be5b12d80a8f37cb90195aefef4f8d84
+last-run: 2026-11-13T14:44:54Z
+analyzed-against: fe977b6a5db26f86ca967d83054ee25f0c1b375f
 hard-fail: 0
 blocking-findings: 1
 advisory: 0
 unexamined: 2
 analyzed-digest:
-  data-model.md: 25f122304411ed5b272c4b8aaef2d71ea19858cec8fd63e70f8d026d40840ee9
-  plan.md: 698b777166b3c54ad65c8cd4bda22fbba38f00b9dd67d5de2d9b09cffe77e1a5
-  review.md: e13456341090a2578d57db3887c066e7dd491103ddddded6884f93d420a416c9
+  data-model.md: 8434e82adf1b4b244412bd9e542cfaaee558fb0c08727e8d8d58dea0269470e1
+  plan.md: e55851ef7096c391b0fd7023fbd5894def18cc00fcee93eee6bccfca6520b116
+  review.md: f862705e9eef876b74ce23da9c411aeee593243eaaef56b48cdf1bcb4e8bdfe2
   spec.md: 126fc9ed63cbb53f9c2d7a989c7ee187ca4c36fdd40ddad08d6edbd800b2c48c
-  tasks.md: 5c53d95bd0f834969cad443568521e7b24abf2d5fece9cc1ee6af3a47c38e29e
+  tasks.md: eced89d157aa9d5211daa8f5c0916aadee36550de3425be4926af660540cd23b
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
@@ -32,21 +32,21 @@ rule-verdicts:
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Departure entry"}
   BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Departure entry"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Departure entry"}
-  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "plan.md#`check-departures` is a new primitive, owned by this spec", message: "check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form"}
+  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "plan.md#Review: `write-review` derives the waivers, `process-waivers` expires them", message: "write-review returns malformed-departures and superseded-deferrals with no committed size bound or lists-file form, where its analyze-stale-paths list is bounded through bounded_lists::place past the read size"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#One reader, one attribution rule, four consumers"}
 blocking: true
 dispositions:
-  fixed: 4
+  fixed: 0
   deferred: 1
   waived: 0
   undispositioned: 0
 decisions:
-  - key: "rule-assessment — BE-PAYLOAD-001: check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form, where every other list-returning primitive is bounded through bounded_lists::place past the read size"
+  - key: "rule-assessment — BE-PAYLOAD-001: write-review returns malformed-departures and superseded-deferrals with no committed size bound or lists-file form, where its analyze-stale-paths list is bounded through bounded_lists::place past the read size"
     outcome: deferred
     target: specs/073-decided-rule-departures-are-recorded/tasks.md
-    task: "12"
+    task: "13"
     gating: true
-    decided-at: 2026-11-13T13:14:57Z
+    decided-at: 2026-11-13T14:44:54Z
     decided-by: andy@stone.dev
 ---
 
@@ -54,7 +54,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 1 blocking, 0 advisory; blocking. 2 unexamined target(s). Dispositions: 4 fixed, 1 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 1 blocking, 0 advisory; blocking. 2 unexamined target(s). Dispositions: 0 fixed, 1 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -62,7 +62,7 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — BE-PAYLOAD-001: check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form, where every other list-returning primitive is bounded through bounded_lists::place past the read size — `specs/073-decided-rule-departures-are-recorded/plan.md` — **deferred** to `specs/073-decided-rule-departures-are-recorded/tasks.md` task 12
+- rule-assessment — BE-PAYLOAD-001: write-review returns malformed-departures and superseded-deferrals with no committed size bound or lists-file form, where its analyze-stale-paths list is bounded through bounded_lists::place past the read size — `specs/073-decided-rule-departures-are-recorded/plan.md` — **deferred** to `specs/073-decided-rule-departures-are-recorded/tasks.md` task 13
 
 ## Advisory findings
 
@@ -82,7 +82,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — plan.md Finding tiers names check_rule_ids' predicate cites_a_rule_id, renamed is_a_rule_id and matched against the whole token by the review's round 1 — `specs/073-decided-rule-departures-are-recorded/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md says step 22 reports waived rules before the passed rules, a list step 22 no longer names — `specs/073-decided-rule-departures-are-recorded/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md says the constitution's rule-verdicts row needs no edit, where the review's round 1 named the three verdicts there (49,969 bytes) — `specs/073-decided-rule-departures-are-recorded/plan.md` — **fixed** (decided by the rule)
-- grounding — data-model.md says the host supplies the bare waived verdict, where under ductus exec the walker records it from an ordinary answer — `specs/073-decided-rule-departures-are-recorded/data-model.md` — **fixed** (decided by the rule)
+*None.*

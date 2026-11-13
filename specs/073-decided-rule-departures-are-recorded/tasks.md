@@ -123,3 +123,14 @@ The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decisi
 - [x] `runtime/CHANGELOG.md` `[Unreleased]`: the bound folded into `check-departures`' Added entry
 
 - **Done when**: `check-departures` returns its lists in the inline-or-file form past the read size, proven by a test its mutant turns red; `ductus exec` analyze reads the file form; the whole `cargo test` passes; and 073's next analysis records BE-PAYLOAD-001 addressed
+
+## 13. Bound `write-review`'s departure lists (BE-PAYLOAD-001, deferred by 073's analysis)
+
+The owner deferred the finding here on 2026-11-13 (`analysis.md`'s stored decision, `gating: true`). 073's re-analysis after task 12 found `check-departures` bounded, but these two lists, which 073's design added to `WriteReviewResult`, are plain lists with no bound while the same result bounds `analyze-stale-paths`. Owed, in order, once the boxes land: an independent verifier of the commit; the full gate and the whole `cargo test`; ticking the boxes; `/ductus:review`, whose window starts at `review.md`'s run (`53c88c30`); `/ductus:analyze`, which judges all 310 rules again, since `plan.md` and `data-model.md` change; `check-review-gate`; and the owner's approval for `done`.
+
+- [ ] `write-review`'s `malformed-departures` and `superseded-deferrals` go through `bounded_lists::place` with `analyze-stale-paths`: each list's `-count` inline in both forms, and past `[artifacts] read-size-bytes` the lists in the one file `lists-file` names; `WRITE_REVIEW`, 073's `data-model.md` and `plan.md`'s review section commit to the bound
+- [ ] Every consumer reads the file form: step 11 of `framework/commands/review.md`, which reports `malformed-departures` beside the record, `framework/reference/review.md` §Waivers, and any other caller the change finds
+- [ ] A unit test and a mutant that fail when the bound is removed, as task 12's `departures-bounded.py` does for `check-departures`
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the bound folded into the entry that added the two lists
+
+- **Done when**: `write-review` returns `malformed-departures` and `superseded-deferrals` in the inline-or-file form past the read size, proven by a test its mutant turns red; the whole `cargo test` passes; and 073's next analysis records BE-PAYLOAD-001 addressed
