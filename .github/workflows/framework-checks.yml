@@ -37,12 +37,15 @@ jobs:
     # gives the sizing.
     timeout-minutes: 15
     steps:
-      # Full history, for Family 10's check 10d (scripts/audit/migration-coverage.sh):
-      # it orders the registry's entries by the commit that first held each, so
-      # a depth-1 clone cannot run it (it reports a shallow checkout as a
-      # finding, never a pass). Family 19 needed full history until spec 081
-      # retired it; measured at debcc8cf, the other steps this job runs pass in
-      # a depth-1 clone. The families that call `dashboard` read only its spec
+      # Full history, for two steps. Family 10's check 10d
+      # (scripts/audit/migration-coverage.sh) orders the registry's entries by
+      # the commit that first held each, so a depth-1 clone cannot run it (it
+      # reports a shallow checkout as a finding, never a pass). Step (t)
+      # (scripts/tests/test-departure-attribution.sh, spec 073) refuses to run
+      # in a shallow checkout. Family 19 needed full history until spec 081
+      # retired it; measured at debcc8cf, the steps this job then ran, other
+      # than 10d, passed in a depth-1 clone; step (t) was added after that
+      # measurement. The families that call `dashboard` read only its spec
       # inventory, through lib.sh's spec_corpus, and never its reopenings and
       # inbox-age fields, which read history.
       # A step whose result comes to depend on history needs `fetch-depth: 0`
