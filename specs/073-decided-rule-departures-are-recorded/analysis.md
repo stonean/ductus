@@ -1,7 +1,7 @@
 ---
 spec: 073-decided-rule-departures-are-recorded
-last-run: 2026-11-13T19:42:09Z
-analyzed-against: 27599ce1b75260ed970ae6b4fcb2e019ef480ad6
+last-run: 2026-11-13T20:03:20Z
+analyzed-against: 7667bd370b03e719c18afb9425e5cec4d8a7c080
 hard-fail: 0
 blocking-findings: 0
 advisory: 3
@@ -11,7 +11,7 @@ analyzed-digest:
   plan.md: c6c51e942fb759db29360cbb61fa12bab8d61c9ddde4c98782ab0db27b531ee3
   review.md: 4e859d79dae26e42931a05a0e60cd603ae83406f9bcf7e950b48877ca6bf2a52
   spec.md: 126fc9ed63cbb53f9c2d7a989c7ee187ca4c36fdd40ddad08d6edbd800b2c48c
-  tasks.md: c9c330ac5b7c5706a892dd5431abbef8e95f32a5337853bb3064d38c75f288b5
+  tasks.md: db6f8922786b66843bd50a06318ae26a15116d32b1dd91a80077f1d7080972e0
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
