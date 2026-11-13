@@ -1136,8 +1136,14 @@ fn dispatch_primitive(
     // to other primitives (`validate-frontmatter`, `check-artifacts`,
     // `check-orphaned-references`), whose entries are not analyze findings and
     // would fail to bind, so it never reaches this primitive.
+    //
+    // The same holds for `unexamined`: `write-analysis` takes the count of
+    // unexamined targets, which the walker records through its
+    // `unexamined-by-reason` tally, and `check-departures` (spec 073) reports
+    // its own list under that key, which would fail to bind as the count.
     if name == "write-analysis" {
         bindings.remove("findings");
+        bindings.remove("unexamined");
     }
     // Exec-path binding for the spec-reading primitives `/analyze` dispatches
     // against "the spec path": a session target's `path` is the spec
@@ -2352,6 +2358,36 @@ mod tests {
 
     fn analysis_text(repo: &Path) -> String {
         std::fs::read_to_string(repo.join("specs/001-x/analysis.md")).unwrap()
+    }
+
+    /// Spec 073 under `ductus exec`: step 5.1 dispatches `check-departures`,
+    /// and a departure entry with no `reason:` is a Blocking finding the
+    /// record counts, so the gate sees it. A well-formed entry in the same
+    /// spec is no finding and adds nothing to the count.
+    #[test]
+    fn an_exec_walk_counts_a_malformed_departure_entry_as_blocking() {
+        let repo = analyze_repo(None);
+        std::fs::write(
+            repo.path().join("specs/001-x/spec.md"),
+            "---\nstatus: clarified\ndependencies: []\n---\n\n# x\n\n## Applicable Rules\n\n- departs: `BE-AUTHN-001`\n  - cited: §rules\n",
+        )
+        .unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![5, 1]),
+            name: "check-departures".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+        assert_eq!(
+            progress_at(&envelopes, "5.1"),
+            vec!["dispatching primitive `check-departures`"],
+            "{envelopes:?}"
+        );
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nblocking: true\n"), "{record}");
+        assert!(record.contains("\nblocking-findings: 1\n"), "{record}");
     }
 
     /// The record's rule fields, as text: what two runs must agree on.

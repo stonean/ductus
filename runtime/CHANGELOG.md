@@ -10,6 +10,14 @@ its version and date.
 
 ### Added
 
+- **`ductus exec` analyze counts a departure entry's findings (spec 073).**
+  Step 5.1 of `/analyze` dispatches `check-departures`, and `AnalyzeTally`
+  counts its findings in the tier each carries (its `tier` field) and its
+  `unexamined` rules and citations by reason, so a malformed departure entry
+  is a Blocking finding in `blocking-findings`, and so in the record's
+  `blocking`, instead of being dropped. The walker no longer binds the
+  context's `unexamined` list to `write-analysis`' `unexamined` count, which
+  `check-departures`' result would have made fail to bind.
 - **`write-analysis` lists the rules a record holds as `waived` apart from
   the rest (spec 073).** The body gains a `## Waived rules` section, absent
   when no rule is waived, with one line per rule (``- RULE (MUST) — reason — decided by `EMAIL` at

@@ -155,6 +155,28 @@ impl AnalyzeTally {
                 }
                 self.advisory += count("deprecated");
             }
+            // Step 5.1: a departure entry's finding in the tier it carries (a
+            // `tier` field, not the `severity` the other families name), and
+            // each rule or citation it could not judge unexamined under its
+            // own reason, never a pass (spec 073).
+            "check-departures" => {
+                for finding in items("findings") {
+                    match finding
+                        .get("tier")
+                        .and_then(Value::as_str)
+                        .and_then(|tier| tier.parse().ok())
+                    {
+                        Some(AnalyzeSeverity::Blocking) => self.blocking += 1,
+                        Some(AnalyzeSeverity::Advisory) => self.advisory += 1,
+                        _ => {}
+                    }
+                }
+                for skipped in items("unexamined") {
+                    if let Some(reason) = skipped.get("reason").and_then(Value::as_str) {
+                        self.record_unexamined(reason, 1);
+                    }
+                }
+            }
             // Step 6: drift between body links and `dependencies:` is one
             // advisory finding, and so is each of a non-empty `unwritable`
             // and `unparseable`, which `drift` stays false over. Those two
@@ -500,6 +522,14 @@ mod tests {
             &json!({ "unfolded": [{}] }),
             &context,
         );
+        tally.record_primitive(
+            "check-departures",
+            &json!({
+                "findings": [{ "tier": "blocking" }, { "tier": "advisory" }],
+                "unexamined": [{ "reason": "rule-not-installed" }]
+            }),
+            &context,
+        );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
@@ -525,11 +555,11 @@ mod tests {
         let bindings = bound(&tally);
         assert_eq!(bindings["hard-fail"], 1);
         // frontmatter 1 + two edges + a cycle + a missing citation + an
-        // artifact finding + a MUST assessment.
-        assert_eq!(bindings["blocking-findings"], 7);
+        // artifact finding + a departure finding + a MUST assessment.
+        assert_eq!(bindings["blocking-findings"], 8);
         // anchors 2 + deprecated 1 + drift 1 + lint 1 + artifact 1 + orphan 1
-        // + unfolded 1 + a SHOULD assessment.
-        assert_eq!(bindings["advisory"], 9);
+        // + unfolded 1 + a departure finding + a SHOULD assessment.
+        assert_eq!(bindings["advisory"], 10);
         assert_eq!(
             bindings["unexamined-by-reason"],
             json!([
@@ -538,7 +568,8 @@ mod tests {
                 ["grounding-not-checked", 1],
                 ["integrity-not-checked", 1],
                 ["references-not-checked", 1],
-                ["root-absent", 2]
+                ["root-absent", 2],
+                ["rule-not-installed", 1]
             ])
         );
     }
