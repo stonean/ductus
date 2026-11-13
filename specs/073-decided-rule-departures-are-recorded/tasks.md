@@ -4,9 +4,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Shared reader and history attribution
 
-- [ ] Create `runtime/src/primitives/departures.rs`: the entry parser of `data-model.md` §Departure entry (HTML comments and fenced code skipped; each structural problem reported with its line) and the attribution of §Attribution (the first commit of the unbroken run ending at `HEAD`; `unattributed` when shallow, no repository, absent from `HEAD`, or a revision unreadable)
-- [ ] Unit tests over repositories built in a temp directory: introduced, edited after the commit (keeps the introducing commit), removed and re-added (the re-adding commit), uncommitted, a spec directory renamed, a project in a repository subdirectory (`git_fixture::subdirectory_project`), and a shallow repository
-- [ ] A mutant per attribution state and per structural problem in `scripts/mutation/departures.py`, each killed (`QUAL-TEST-001`)
+- [x] Create `runtime/src/primitives/departures.rs`: the entry parser of `data-model.md` §Departure entry (HTML comments and fenced code skipped; each structural problem reported with its line) and the attribution of §Attribution (the first commit of the unbroken run ending at `HEAD`; `unattributed` when shallow, no repository, absent from `HEAD`, or a revision unreadable)
+- [x] Unit tests over repositories built in a temp directory: introduced, edited after the commit (keeps the introducing commit), removed and re-added (the re-adding commit), uncommitted, a spec directory renamed, a project in a repository subdirectory (`git_fixture::subdirectory_project`), and a shallow repository
+- [x] A mutant per attribution state and per structural problem in `scripts/mutation/departures.py`, each killed (`QUAL-TEST-001`)
 
 - **Done when**: every attribution state and structural problem in the data model has a passing test that its mutant turns red.
 
@@ -14,9 +14,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on task 1.
 
-- [ ] Create `runtime/src/primitives/check_departures.rs` with the result of `data-model.md` §check-departures result, judging each `cited:` through `resolve_anchor::run` against `paths::constitution_path(repo)`
-- [ ] Register it at the sites `docs/developing-ductus.md` §Adding or removing a runtime primitive lists, add its name to `framework/runtime-tools.txt`, and run `scripts/gen-configure-mcp.sh`
-- [ ] Fixtures: each Blocking and Advisory finding with a clean counterpart, a citation that cannot be judged recorded unexamined, a not-installed rule, and the template's commented example yielding no entry
+- [x] Create `runtime/src/primitives/check_departures.rs` with the result of `data-model.md` §check-departures result, judging each `cited:` through `resolve_anchor::run` against `paths::constitution_path(repo)`
+- [x] Register it at the sites `docs/developing-ductus.md` §Adding or removing a runtime primitive lists, add its name to `framework/runtime-tools.txt`, and run `scripts/gen-configure-mcp.sh`
+- [x] Fixtures: each Blocking and Advisory finding with a clean counterpart, a citation that cannot be judged recorded unexamined, a not-installed rule, and the template's commented example yielding no entry
 
 - **Done when**: each AC1 condition has a fixture whose finding appears and whose clean counterpart yields none, `every_registry_name_has_a_case` passes, and the generated allow entry is in `framework/bootstrap/configure/claude.md`.
 
@@ -44,9 +44,9 @@ Blocked on task 3.
 
 Blocked on task 1; independent of tasks 2 to 4.
 
-- [ ] `write-review`: each well-formed entry becomes a new waiver for its rule at the files it fires at that no waiver holds, with `data-model.md` §Review waiver marker's fields, and the run names each malformed entry
-- [ ] `process-waivers`: expire a marked waiver whose rule has no entry, with the `waiver expired:` notice
-- [ ] Fixtures: a MUST departure at two files (both anchors written), a file added later where the rule fires (covered with no second decision), a removed entry (the waivers expire and the MUST blocks again), a SHOULD departure (AC8, `should-violations` 0), and a hand `--waive` on the same rule and file staying the first claim
+- [x] `write-review`: each well-formed entry becomes a new waiver for its rule at the files it fires at that no waiver holds, with `data-model.md` §Review waiver marker's fields, and the run names each malformed entry
+- [x] `process-waivers`: expire a marked waiver whose rule has no entry, with the `waiver expired:` notice
+- [x] Fixtures: a MUST departure at two files (both anchors written), a file added later where the rule fires (covered with no second decision), a removed entry (the waivers expire and the MUST blocks again), a SHOULD departure (AC8, `should-violations` 0), and a hand `--waive` on the same rule and file staying the first claim
 
 - **Done when**: the five fixtures pass, mutants for the marker's expiry and for the SHOULD path are killed, and the fixture's `review.md` lists each file's anchor under `waivers:`.
 
@@ -54,15 +54,15 @@ Blocked on task 1; independent of tasks 2 to 4.
 
 Blocked on task 2.
 
-- [ ] Create `scripts/tests/test-departure-attribution.sh`: commit to a repository it builds under a temp directory, run the release `ductus check-departures` for the attributed, edited, uncommitted and re-added cases and against a `git clone --depth 1` for the shallow case, and fail loudly when its own checkout is shallow
-- [ ] Add its step to `framework-checks` in `.github/workflows/framework-checks.yml`, commented with the history it reads; `actionlint` clean
-- [ ] Prove the script fails with each case's expectation inverted
+- [x] Create `scripts/tests/test-departure-attribution.sh`: commit to a repository it builds under a temp directory, run the release `ductus check-departures` for the attributed, edited, uncommitted and re-added cases and against a `git clone --depth 1` for the shallow case, and fail loudly when its own checkout is shallow
+- [x] Add its step to `framework-checks` in `.github/workflows/framework-checks.yml`, commented with the history it reads; `actionlint` clean
+- [x] Prove the script fails with each case's expectation inverted
 
 - **Done when**: the script passes from a full clone, fails with a message from a depth-1 clone of this repository, and runs in the job that sets `fetch-depth: 0`.
 
 ## 7. Command prose, references, template and constitution (AC6)
 
-Blocked on tasks 2 to 5, so the prose lands with the behavior. Run `scripts/gen-claude-commands.sh` before invoking an edited command.
+Blocked on tasks 2 to 5, so the prose lands with the behavior. Run `scripts/gen-claude-commands.sh` before invoking an edited command. The verifiers of tasks 4 and 5 named three more places the prose must reach. First, the review step reports `write-review`'s `malformed-departures`. Second, analyze step 22 reports `waived` and `waived-count`, and reads `waived` from the `lists-file` past the read size, as it reads `contradictions`. Third, the body skeleton in `docs/analyze.md` gains `## Waived rules`, and gains `## Contradictions`, which 082 never added.
 
 - [ ] `framework/commands/analyze.md`: a step invoking `check-departures`; steps 11 and 12 answer `{verdict: waived}` for a listed rule whose trigger fires; step 22 reports `waived` before the passed rules
 - [ ] `framework/commands/review.md` and `framework/reference/review.md` §Waivers: a departure needs no `--waive`
@@ -85,3 +85,12 @@ Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-sp
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry for the feature
 
 - **Done when**: every spec in 073's `cross-spec-impact:` back-links to 073 and `check-artifacts` reports no cross-spec impact drift for 073.
+
+## 9. Pin the landing verifier's remaining test gaps
+
+- [ ] `check-departures`: a wrapped `cited:` whose `§` reference is on its continuation line, a resolvable one yielding no finding and an unresolvable one a finding at that line (SHOULD, `QUAL-TEST-001`: `judge_citations`' `first..=last` narrowed to `first..=first` survived every test; landing verifier of `51775a3f`, 2026-11-13)
+- [ ] `departures.rs` `opens_block`: the one-to-nine-digit bound pinned on both sides, ten digits and zero digits opening no block (`(1..=12)` and `(0..=9)` survived)
+- [ ] `write-review`'s `malformed-departures` entry asserted exactly, its `line N` included (replacing `problem.line` with 0 survived)
+- [ ] `opens_block` and a thematic break or setext underline (`---`, `***`) directly after a reason: decide whether it ends the child as CommonMark renders it, and pin the choice
+
+- **Done when**: each item has a test that a named mutant turns red, and the whole `cargo test` passes
