@@ -48,6 +48,21 @@ its version and date.
   result's `malformed-departures`. `process-waivers` expires a marked waiver
   whose rule has no well-formed entry, on any run, restricted included, with
   its `waiver expired:` notice.
+- **A rule verdict can be `waived` (spec 073).** `write-analysis` accepts the
+  bare `{verdict: waived}` in `rule-verdicts` for a rule whose trigger fires
+  and whose spec holds a well-formed departure entry, and fills `reason`,
+  `decided-by` (the author email of the commit that introduced the entry, or
+  `unattributed`), `decided-at` (absent when unattributed) and `cited` (absent
+  when the entry has none) from the entry on every write, a carried verdict
+  included, so attribution follows history rather than a digest. It refuses
+  `waived` for a rule with no well-formed entry and `finding` or `addressed`
+  for a rule with one, each leaving no record. A `waived` rule is no finding:
+  it counts into no tier, so `blocking-findings` stays 0 and
+  `dispositions.waived` is untouched. A carried `waived` whose entry is gone is
+  recorded unjudged. The exec walker records `waived` for any fired answer on
+  a rule the spec departs from, a pass citing `addressed-by` included, and
+  nothing for a plain pass. `discover-rule-files`' `reusable` list can carry a
+  `waived` verdict.
 - **`/{project}:analyze` records each loaded rule's verdict and judges a rule
   again only when its subjects changed (spec 082).** `analysis.md` gains
   `rule-verdicts` (each rule that fired: `addressed` with a `cite`, or

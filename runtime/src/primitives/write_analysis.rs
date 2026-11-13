@@ -51,6 +51,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::primitives::decisions;
+use crate::primitives::departures::Entry;
 use crate::primitives::rule_verdicts::{self, Currency};
 use crate::primitives::write_review::{yaml_quoted, yaml_string};
 use crate::primitives::{
@@ -222,7 +223,8 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // to name the rules it left unjudged could leave out the ones it skipped
     // (spec 082, AC2, `QUAL-CLAIM-001`). Both counts land in the breakdown,
     // so the total cannot contradict the list.
-    let rules = derive_rule_fields(args, repo, &feature_dir)?;
+    let spec_rel = format!("{root}/{}/spec.md", args.feature);
+    let rules = derive_rule_fields(args, repo, &feature_dir, &spec_rel, &content)?;
     count_rule_gaps(&mut by_reason, &rules);
     let by_reason = by_reason;
 
@@ -597,14 +599,36 @@ struct DerivedRules {
 }
 
 /// Refuse a new verdict that names no assessable loaded rule, a `finding`
-/// with no message, and a `finding` whose tier its rule cannot fail in.
-fn check_new_verdicts(args: &WriteAnalysisArgs, standing: &rule_verdicts::Standing) -> Result<()> {
+/// with no message, a `finding` whose tier its rule cannot fail in, a
+/// `waived` for a rule the spec holds no departure entry for, and a `finding`
+/// or `addressed` for a rule it does (spec 073): the entry is the decision, so
+/// a host can neither invent a waiver nor turn one back into a finding.
+fn check_new_verdicts(
+    args: &WriteAnalysisArgs,
+    standing: &rule_verdicts::Standing,
+    entries: &BTreeMap<String, Entry>,
+) -> Result<()> {
     for (id, verdict) in &args.rule_verdicts {
         if standing.currency(id).is_none() {
             return Err(invalid(
                 format!("rule-verdicts.{id}"),
                 "names no assessable rule of the loaded rule files",
             ));
+        }
+        match (verdict, entries.contains_key(id)) {
+            (RuleVerdict::Waived { .. }, false) => {
+                return Err(invalid(
+                    format!("rule-verdicts.{id}"),
+                    "a waived verdict names a rule the spec's Applicable Rules holds no well-formed departure entry for",
+                ));
+            }
+            (RuleVerdict::Finding { .. } | RuleVerdict::Addressed { .. }, true) => {
+                return Err(invalid(
+                    format!("rule-verdicts.{id}"),
+                    "the spec's Applicable Rules holds a departure entry for this rule, so a fired answer is waived, never a finding or addressed",
+                ));
+            }
+            _ => {}
         }
         if let RuleVerdict::Finding { message, tier, .. } = verdict {
             if single_line(message).is_empty() {
@@ -676,10 +700,13 @@ fn derive_rule_fields(
     args: &WriteAnalysisArgs,
     repo: &Path,
     feature_dir: &Path,
+    spec_rel: &str,
+    spec_content: &str,
 ) -> Result<DerivedRules> {
     let universe = rule_verdicts::load_universe(repo)?;
     let standing = rule_verdicts::standing(feature_dir, &universe.files);
-    check_new_verdicts(args, &standing)?;
+    let entries = rule_verdicts::departure_entries(spec_content);
+    check_new_verdicts(args, &standing, &entries)?;
     let judged: BTreeSet<&str> = args
         .judged_rules
         .iter()
@@ -698,6 +725,11 @@ fn derive_rule_fields(
         let id = rule.id.as_str();
         if !judged.contains(id) {
             match current {
+                // A carried waiver whose entry is gone is not carried: it
+                // cannot be refilled, and the rule is judged again.
+                Currency::Fired(RuleVerdict::Waived { .. }) if !entries.contains_key(id) => {
+                    fields.unjudged.push(rule.id.clone());
+                }
                 Currency::Fired(verdict) => {
                     fields.verdicts.insert(rule.id.clone(), verdict.clone());
                 }
@@ -725,6 +757,10 @@ fn derive_rule_fields(
             None => {}
         }
     }
+    // Every `waived` verdict, supplied or carried, takes its fields from the
+    // entry and its history now: attribution depends on commits, not on a
+    // digest, so a stored one may be stale though its subjects are current.
+    rule_verdicts::fill_waived(repo, spec_rel, &entries, &mut fields.verdicts);
     // The tier a finding was counted in, which its verdict stored, is the one
     // it floors, not the rule's current text tier: a rule carrying MUST and
     // SHOULD can fail on its SHOULD clause alone, which counts advisory
@@ -972,6 +1008,26 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
                     "{{verdict: addressed, cite: {}}}",
                     yaml_quoted(&single_line(cite))
                 ),
+                RuleVerdict::Waived {
+                    reason,
+                    decided_by,
+                    decided_at,
+                    cited,
+                } => {
+                    let mut flow = format!(
+                        "{{verdict: waived, reason: {}, decided-by: {}",
+                        yaml_quoted(&single_line(reason)),
+                        yaml_quoted(&single_line(decided_by))
+                    );
+                    if let Some(at) = decided_at {
+                        let _ = write!(flow, ", decided-at: {}", yaml_quoted(&single_line(at)));
+                    }
+                    if let Some(cite) = cited {
+                        let _ = write!(flow, ", cited: {}", yaml_quoted(&single_line(cite)));
+                    }
+                    flow.push('}');
+                    flow
+                }
                 RuleVerdict::Finding { tier, at, message } => format!(
                     "{{verdict: finding, tier: {}, at: {}, message: {}}}",
                     match tier {
@@ -2734,7 +2790,9 @@ mod tests {
                 // A Unicode line break flattens to a space, as every scalar does.
                 assert_eq!(message, &single_line(hostile));
             }
-            other @ RuleVerdict::Addressed { .. } => panic!("{other:?}"),
+            other @ (RuleVerdict::Addressed { .. } | RuleVerdict::Waived { .. }) => {
+                panic!("{other:?}")
+            }
         }
 
         fs::write(
@@ -3381,5 +3439,262 @@ mod tests {
             written_record(&tmp).unexamined_by_reason["rule-file-unreadable"],
             1
         );
+    }
+
+    // -- waived verdicts (spec 073) ---------------------------------------
+
+    const DEPARTURE: &str = "\n## Applicable Rules\n\n- departs: `TS-RULE-001`\n  - reason: removed rather than versioned\n  - cited: §shared-exceptions\n";
+
+    /// A git repository over a demo spec holding the departure entry for
+    /// `TS-RULE-001` and three MUST rules, with the work tree committed as
+    /// `test@example.com` when `committed`.
+    fn departing_repo(committed: bool) -> (TempDir, git2::Repository) {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 0);
+        set_spec_tail(&tmp, DEPARTURE);
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        if committed {
+            crate::primitives::git_fixture::commit_all(&repository, "c");
+        }
+        (tmp, repository)
+    }
+
+    /// Replace the demo spec's `## Applicable Rules` tail with `tail`.
+    fn set_spec_tail(tmp: &TempDir, tail: &str) {
+        fs::write(
+            tmp.path().join("specs/042-demo/spec.md"),
+            format!(
+                "---\nstatus: in-progress\ndependencies: []\n---\n\n# 042 — Demo\n\n## Behavior\n\nText.\n{tail}"
+            ),
+        )
+        .unwrap();
+    }
+
+    fn waived_args() -> WriteAnalysisArgs {
+        let mut a = args();
+        a.judged_rules = rule_ids(3, 0);
+        a.rule_verdicts = BTreeMap::from([("TS-RULE-001".to_string(), RuleVerdict::bare_waived())]);
+        a
+    }
+
+    fn waived(by: &str, at: Option<&str>) -> RuleVerdict {
+        RuleVerdict::Waived {
+            reason: "removed rather than versioned".into(),
+            decided_by: by.into(),
+            decided_at: at.map(str::to_owned),
+            cited: Some("§shared-exceptions".into()),
+        }
+    }
+
+    /// AC2: a MUST rule whose trigger fires and whose spec departs from it is
+    /// `waived`, with the entry's reason and citation and the committing
+    /// author, and `blocking-findings` stays 0; the host's own values for the
+    /// derived fields are not kept.
+    #[test]
+    fn a_fired_must_rule_with_an_entry_is_waived_and_blocks_nothing() {
+        let (tmp, _repository) = departing_repo(true);
+        let mut a = waived_args();
+        a.rule_verdicts = BTreeMap::from([(
+            "TS-RULE-001".to_string(),
+            RuleVerdict::Waived {
+                reason: "fabricated".into(),
+                decided_by: "mallory@example.com".into(),
+                decided_at: Some("1999-01-01T00:00:00Z".into()),
+                cited: Some("§nowhere".into()),
+            },
+        )]);
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(!result.blocking);
+        let record = written_record(&tmp);
+        assert_eq!(record.blocking_findings, 0);
+        assert!(!record.blocking);
+        let RuleVerdict::Waived {
+            reason,
+            decided_by,
+            decided_at,
+            cited,
+        } = &record.rule_verdicts["TS-RULE-001"]
+        else {
+            panic!("{:?}", record.rule_verdicts);
+        };
+        assert_eq!(reason, "removed rather than versioned");
+        assert_eq!(decided_by, "test@example.com");
+        assert!(decided_at.as_deref().is_some_and(|at| at.ends_with('Z')));
+        assert_eq!(cited.as_deref(), Some("§shared-exceptions"));
+        assert_eq!(record.rule_verdicts.len(), 1);
+        assert_eq!(record.dispositions.map_or(0, |d| d.waived), 0);
+    }
+
+    /// A rule with an entry whose trigger does not fire has no verdict, as
+    /// any rule that does not fire has none.
+    #[test]
+    fn a_rule_that_does_not_fire_has_no_verdict_however_its_spec_departs() {
+        let (tmp, _repository) = departing_repo(true);
+        let mut a = waived_args();
+        a.rule_verdicts = BTreeMap::new();
+        run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.rule_verdicts.len(), 0);
+        assert_eq!(record.unjudged_rules.len(), 0);
+    }
+
+    /// AC4: a waiver carries forward while its rule fires, and is gone when
+    /// the rule no longer fires.
+    #[test]
+    fn a_waiver_carries_forward_while_its_rule_fires_and_is_gone_when_it_does_not() {
+        let (tmp, _repository) = departing_repo(true);
+        run(&waived_args(), tmp.path()).unwrap();
+        let first = written_record(&tmp).rule_verdicts;
+        assert_eq!(first.len(), 1);
+
+        run(&args(), tmp.path()).unwrap();
+        let carried = written_record(&tmp);
+        assert_eq!(carried.rule_verdicts, first);
+        assert_eq!(carried.unjudged_rules.len(), 0);
+
+        let mut quiet = waived_args();
+        quiet.rule_verdicts = BTreeMap::new();
+        run(&quiet, tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).rule_verdicts.len(), 0);
+    }
+
+    /// A removed entry makes the rule a blocking finding again: the spec
+    /// edit makes the stored waiver stale, so it is not carried, and the
+    /// finding is then accepted and counted.
+    #[test]
+    fn a_removed_entry_makes_the_rule_a_blocking_finding_again() {
+        let (tmp, _repository) = departing_repo(true);
+        run(&waived_args(), tmp.path()).unwrap();
+        set_spec_tail(&tmp, "");
+
+        run(&args(), tmp.path()).unwrap();
+        let unjudged = written_record(&tmp);
+        assert_eq!(unjudged.rule_verdicts.len(), 0);
+        assert_eq!(unjudged.unjudged_rules, rule_ids(3, 0));
+
+        let mut a = args();
+        a.judged_rules = rule_ids(3, 0);
+        a.blocking_findings = 1;
+        a.rule_verdicts = BTreeMap::from([(
+            "TS-RULE-001".to_string(),
+            finding_verdict("removed the field"),
+        )]);
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(result.blocking);
+        let record = written_record(&tmp);
+        assert_eq!(record.blocking_findings, 1);
+        assert!(matches!(
+            record.rule_verdicts["TS-RULE-001"],
+            RuleVerdict::Finding { .. }
+        ));
+    }
+
+    /// A carried `waived` whose entry is gone is never kept, even where the
+    /// record's digests still read current: it cannot be refilled, so the
+    /// rule is judged again.
+    #[test]
+    fn a_carried_waiver_with_no_entry_is_recorded_unjudged() {
+        let (tmp, _repository) = departing_repo(true);
+        run(&waived_args(), tmp.path()).unwrap();
+        set_spec_tail(&tmp, "");
+        let mut a = args();
+        a.judged_rules = rule_ids(3, 0);
+        run(&a, tmp.path()).unwrap();
+        let record = tmp.path().join("specs/042-demo/analysis.md");
+        let text = fs::read_to_string(&record).unwrap();
+        fs::write(
+            &record,
+            text.replacen(
+                "rule-digest:",
+                "rule-verdicts:\n  TS-RULE-001: {verdict: waived, reason: \"r\", decided-by: \"x\"}\nrule-digest:",
+                1,
+            ),
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let after = written_record(&tmp);
+        assert_eq!(after.rule_verdicts.len(), 0, "{:?}", after.rule_verdicts);
+        assert_eq!(after.unjudged_rules, vec!["TS-RULE-001".to_string()]);
+    }
+
+    /// A commit after an `unattributed` run attributes the next write, though
+    /// the carried verdict's subjects never changed: attribution follows
+    /// history, not a digest.
+    #[test]
+    fn a_commit_after_an_unattributed_run_attributes_the_next_write() {
+        let (tmp, repository) = departing_repo(false);
+        run(&waived_args(), tmp.path()).unwrap();
+        assert_eq!(
+            written_record(&tmp).rule_verdicts["TS-RULE-001"],
+            waived("unattributed", None)
+        );
+        let text = analysis_md(&tmp);
+        assert!(text.contains("decided-by: \"unattributed\""), "{text}");
+        assert!(!text.contains("decided-at"), "{text}");
+
+        crate::primitives::git_fixture::commit_all(&repository, "decide");
+        run(&args(), tmp.path()).unwrap();
+        let RuleVerdict::Waived {
+            decided_by,
+            decided_at,
+            ..
+        } = &written_record(&tmp).rule_verdicts["TS-RULE-001"]
+        else {
+            panic!("not waived");
+        };
+        assert_eq!(decided_by, "test@example.com");
+        assert!(decided_at.is_some());
+    }
+
+    /// The refusals, each leaving no record: `waived` for a rule with no
+    /// entry or only a malformed one, and `finding` or `addressed` for a rule
+    /// with one.
+    #[test]
+    fn a_waiver_without_an_entry_and_a_finding_against_one_are_refused_with_no_record() {
+        let (tmp, _repository) = departing_repo(true);
+        let refused = |a: &WriteAnalysisArgs, tmp: &TempDir, needle: &str| {
+            let err = run(a, tmp.path()).unwrap_err().to_string();
+            assert!(err.contains(needle), "{err}");
+            assert!(!analysis_exists(tmp));
+        };
+
+        let mut a = waived_args();
+        a.rule_verdicts = BTreeMap::from([("TS-RULE-002".to_string(), RuleVerdict::bare_waived())]);
+        refused(&a, &tmp, "no well-formed departure entry");
+
+        a.rule_verdicts =
+            BTreeMap::from([("TS-RULE-001".to_string(), finding_verdict("it breaks"))]);
+        a.blocking_findings = 1;
+        refused(&a, &tmp, "a fired answer is waived");
+
+        a.rule_verdicts =
+            BTreeMap::from([("TS-RULE-001".to_string(), addressed("spec.md#Behavior"))]);
+        refused(&a, &tmp, "a fired answer is waived");
+
+        set_spec_tail(
+            &tmp,
+            "\n## Applicable Rules\n\n- departs: `TS-RULE-001`\n  - cited: §shared-exceptions\n",
+        );
+        refused(&waived_args(), &tmp, "no well-formed departure entry");
+    }
+
+    /// A spec with no entry records what it always did: no `waived` verdict,
+    /// and a finding and an addressed verdict are accepted.
+    #[test]
+    fn a_spec_with_no_entry_records_findings_and_addressed_verdicts_as_before() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 0);
+        let mut a = args();
+        a.judged_rules = rule_ids(3, 0);
+        a.blocking_findings = 1;
+        a.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), finding_verdict("it breaks")),
+            ("TS-RULE-002".to_string(), addressed("spec.md#Behavior")),
+        ]);
+        run(&a, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.rule_verdicts.len(), 2);
+        assert_eq!(record.blocking_findings, 1);
+        assert!(record.blocking);
     }
 }

@@ -1148,6 +1148,10 @@ pub(crate) struct LoadedRules {
     /// one; `None` when the walk names no feature that exists, which judges
     /// every rule.
     pub(crate) standing: Option<rule_verdicts::Standing>,
+    /// The rules the feature's spec holds a well-formed departure entry for
+    /// (spec 073): a fired answer for one is `waived`, never a finding.
+    /// Empty when the walk names no feature that exists.
+    pub(crate) departed: std::collections::BTreeSet<String>,
 }
 
 impl LoadedRules {
@@ -1189,8 +1193,21 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
             }
         }
     }
-    loaded.standing = feature_dir(context, repo)
-        .map(|feature_dir| rule_verdicts::standing(&feature_dir, &digested));
+    let feature_dir = feature_dir(context, repo);
+    loaded.standing = feature_dir
+        .as_ref()
+        .map(|feature_dir| rule_verdicts::standing(feature_dir, &digested));
+    // A spec the walk cannot read departs from nothing: the tally then counts
+    // as it did before departures, and `write-analysis`, which reads the same
+    // spec, refuses nothing it did not already.
+    loaded.departed = feature_dir
+        .and_then(|dir| std::fs::read_to_string(dir.join("spec.md")).ok())
+        .map(|content| {
+            rule_verdicts::departure_entries(&content)
+                .into_keys()
+                .collect()
+        })
+        .unwrap_or_default();
     loaded
 }
 

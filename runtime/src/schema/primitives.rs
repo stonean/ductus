@@ -399,6 +399,46 @@ pub enum RuleVerdict {
         /// the verdict.
         message: String,
     },
+    /// The rule's trigger fires and the spec's `## Applicable Rules` holds a
+    /// departure entry for it (spec 073): decided in advance, so neither a
+    /// finding nor a pass. The host supplies the bare `{verdict: waived}`,
+    /// since whether the trigger fires is its judgment; `write-analysis`
+    /// refuses it for a rule with no entry and fills every other field from
+    /// the entry on every write, so none can be fabricated or go stale.
+    Waived {
+        /// The entry's `reason:`.
+        #[serde(default)]
+        reason: String,
+        /// The author email of the commit that introduced the entry, or
+        /// `unattributed` when history cannot say.
+        #[serde(default, rename = "decided-by")]
+        decided_by: String,
+        /// That commit's author time, RFC 3339 UTC; absent when
+        /// `decided-by` is `unattributed`.
+        #[serde(
+            default,
+            rename = "decided-at",
+            skip_serializing_if = "Option::is_none"
+        )]
+        decided_at: Option<String>,
+        /// The entry's `cited:` anchor, absent when it has none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cited: Option<String>,
+    },
+}
+
+impl RuleVerdict {
+    /// The bare `waived` verdict a host supplies: every field is the
+    /// runtime's to fill from the departure entry.
+    #[must_use]
+    pub fn bare_waived() -> Self {
+        Self::Waived {
+            reason: String::new(),
+            decided_by: String::new(),
+            decided_at: None,
+            cited: None,
+        }
+    }
 }
 
 /// The analyze record, parsed from `analysis.md`'s frontmatter — the durable
@@ -752,9 +792,10 @@ pub struct RuleVerdictsBlock {
 pub struct ReusableVerdict {
     /// The rule's ID.
     pub id: String,
-    /// The stored verdict: `verdict` with its `cite` (`addressed`), or with its
-    /// `tier`, `at` and `message` (`finding`); `tier` is carried only by a
-    /// `finding`.
+    /// The stored verdict: `verdict` with its `cite` (`addressed`), with its
+    /// `tier`, `at` and `message` (`finding`), or with its `reason`,
+    /// `decided-by`, `decided-at` and `cited` (`waived`); `tier` is carried
+    /// only by a `finding`.
     #[serde(flatten)]
     pub verdict: RuleVerdict,
 }

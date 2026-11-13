@@ -34,6 +34,7 @@ use std::collections::BTreeMap;
 use std::path::{Component, Path};
 
 use crate::primitives::analyze_subjects::{is_design_subject, subject_digest};
+use crate::primitives::departures::{self, Attribution};
 use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::rule_sections::{parse_rule_sections, rules_digest};
 use crate::primitives::{RecordLoad, Result, discover_rule_files, load_analyze_record, read_text};
@@ -349,7 +350,62 @@ pub(crate) fn contradiction(earlier: &Currency, now: &RuleVerdict) -> Option<&'s
     match earlier {
         Currency::NotFired => Some("not-fired"),
         Currency::Fired(RuleVerdict::Addressed { .. }) => Some("addressed"),
-        Currency::Fired(RuleVerdict::Finding { .. }) | Currency::Stale => None,
+        Currency::Fired(RuleVerdict::Finding { .. } | RuleVerdict::Waived { .. })
+        | Currency::Stale => None,
+    }
+}
+
+/// The well-formed departure entries of a spec's `content`, by rule: the
+/// only entries that waive anything. A rule two entries name is waived by
+/// the first, as `check-departures` reports the second as a blocking finding.
+pub(crate) fn departure_entries(content: &str) -> BTreeMap<String, departures::Entry> {
+    let mut by_rule = BTreeMap::new();
+    for entry in departures::parse(content).entries {
+        by_rule.entry(entry.rule.clone()).or_insert(entry);
+    }
+    by_rule
+}
+
+/// Fill every `waived` verdict of `verdicts` from its departure entry and
+/// the entry's history attribution (spec 073): the host's bare verdict and a
+/// carried one alike, so no field is fabricated and none outlives the history
+/// it was derived from. `spec_rel` is the spec's `/`-separated path from the
+/// project root. History is read only when a `waived` verdict is held.
+pub(crate) fn fill_waived(
+    repo: &Path,
+    spec_rel: &str,
+    entries: &BTreeMap<String, departures::Entry>,
+    verdicts: &mut BTreeMap<String, RuleVerdict>,
+) {
+    let waived: Vec<String> = verdicts
+        .iter()
+        .filter(|(_, verdict)| matches!(verdict, RuleVerdict::Waived { .. }))
+        .map(|(rule, _)| rule.clone())
+        .collect();
+    if waived.is_empty() {
+        return;
+    }
+    let attribution = departures::attribute(repo, spec_rel, &waived);
+    for rule in waived {
+        let Some(entry) = entries.get(&rule) else {
+            continue;
+        };
+        let (decided_by, decided_at) = match attribution.get(&rule) {
+            Some(Attribution::Attributed {
+                decided_by,
+                decided_at,
+            }) => (decided_by.clone(), Some(decided_at.clone())),
+            _ => ("unattributed".to_owned(), None),
+        };
+        verdicts.insert(
+            rule,
+            RuleVerdict::Waived {
+                reason: entry.reason.clone(),
+                decided_by,
+                decided_at,
+                cited: entry.cited.clone(),
+            },
+        );
     }
 }
 

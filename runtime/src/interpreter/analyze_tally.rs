@@ -229,20 +229,35 @@ impl AnalyzeTally {
     /// `addressed-by` is `addressed` with that citation, a plain pass is a rule
     /// that did not fire and leaves no verdict, and a failure is a `finding`
     /// at the section its finding names.
+    ///
+    /// `departed` is whether the spec holds a departure entry for the rule
+    /// (spec 073): any fired answer, a failure or a pass citing
+    /// `addressed-by`, records the bare `waived` verdict and counts into no
+    /// tier, and a plain pass records nothing, as for any rule.
+    /// `write-analysis` fills the verdict from the entry.
     pub(crate) fn record_assessment(
         &mut self,
         rule: &str,
         asked: RuleSeverity,
         mixed: bool,
+        departed: bool,
         response: &Value,
     ) {
         self.judged.insert(rule.to_string());
-        if response.get("passed") == Some(&Value::Bool(true)) {
-            let cited = response
-                .get("addressed-by")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|cite| !cite.is_empty());
+        let passed = response.get("passed") == Some(&Value::Bool(true));
+        let cited = response
+            .get("addressed-by")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|cite| !cite.is_empty());
+        if departed {
+            if !passed || cited.is_some() {
+                self.verdicts
+                    .insert(rule.to_string(), RuleVerdict::bare_waived());
+            }
+            return;
+        }
+        if passed {
             if let Some(cite) = cited {
                 self.verdicts.insert(
                     rule.to_string(),
@@ -489,18 +504,21 @@ mod tests {
             "TS-RULE-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "must" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "should" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": true }),
         );
 
@@ -769,18 +787,20 @@ mod tests {
             "TS-RULE-001",
             RuleSeverity::Should,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "MUST" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "Should" } }),
         );
         let failed = json!({ "passed": false });
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, true, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, true, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, true, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, true, false, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, true, false, &failed);
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, true, false, &failed);
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 2);
         assert_eq!(bindings["advisory"], 2);
@@ -793,8 +813,8 @@ mod tests {
         let mut tally = AnalyzeTally::new();
         let should = json!({ "passed": false, "finding": { "severity": "should" } });
         let must = json!({ "passed": false, "finding": { "severity": "must" } });
-        tally.record_assessment("TS-MUST-001", RuleSeverity::Must, false, &should);
-        tally.record_assessment("TS-SHOULD-001", RuleSeverity::Should, false, &must);
+        tally.record_assessment("TS-MUST-001", RuleSeverity::Must, false, false, &should);
+        tally.record_assessment("TS-SHOULD-001", RuleSeverity::Should, false, false, &must);
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 1);
         assert_eq!(bindings["advisory"], 1);
@@ -806,7 +826,7 @@ mod tests {
                 message: "the host reported the rule failed and gave no finding".into(),
             }
         );
-        tally.record_assessment("TS-BOTH-001", RuleSeverity::Must, true, &should);
+        tally.record_assessment("TS-BOTH-001", RuleSeverity::Must, true, false, &should);
         assert_eq!(bound(&tally)["advisory"], 2);
     }
 
@@ -821,12 +841,14 @@ mod tests {
             "TS-RULE-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "info" } }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
             true,
+            false,
             &json!({ "passed": false, "finding": { "severity": "" } }),
         );
         let bindings = bound(&tally);
@@ -844,12 +866,14 @@ mod tests {
             "TS-RULE-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": true }),
         );
         tally.record_assessment(
             "TS-RULE-001",
             RuleSeverity::Should,
             true,
+            false,
             &json!({ "passed": true }),
         );
         let bindings = bound(&tally);
@@ -913,24 +937,28 @@ mod tests {
             "TS-A-001",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": true }),
         );
         tally.record_assessment(
             "TS-A-002",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": true, "addressed-by": " plan.md#Observability " }),
         );
         tally.record_assessment(
             "TS-A-003",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": true, "addressed-by": "  " }),
         );
         tally.record_assessment(
             "TS-A-004",
             RuleSeverity::Must,
             true,
+            false,
             &json!({ "passed": false, "finding": {
                 "severity": "must", "rule-id": "TS-A-004",
                 "location": { "section": "Goal", "line": 3 }, "message": "no owner" } }),
@@ -939,6 +967,7 @@ mod tests {
             "TS-A-005",
             RuleSeverity::Should,
             true,
+            false,
             &json!({ "passed": false }),
         );
         let bindings = bound(&tally);
@@ -979,5 +1008,46 @@ mod tests {
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 1);
         assert_eq!(bindings["advisory"], 2);
+    }
+
+    /// Spec 073: a rule the spec departs from records the bare `waived`
+    /// verdict on any fired answer, a failure or a pass citing a heading, and
+    /// counts into no tier; a plain pass records nothing, and a rule with no
+    /// entry fails as it always did.
+    #[test]
+    fn a_departed_rule_that_fires_is_waived_and_counts_into_no_tier() {
+        let mut tally = AnalyzeTally::new();
+        let failed = json!({ "passed": false, "finding": { "severity": "must" } });
+        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, false, true, &failed);
+        tally.record_assessment(
+            "TS-RULE-002",
+            RuleSeverity::Must,
+            false,
+            true,
+            &json!({ "passed": true, "addressed-by": "spec.md#Behavior" }),
+        );
+        tally.record_assessment(
+            "TS-RULE-003",
+            RuleSeverity::Must,
+            false,
+            true,
+            &json!({ "passed": true }),
+        );
+        tally.record_assessment("TS-RULE-004", RuleSeverity::Should, false, true, &failed);
+        let bindings = bound(&tally);
+        assert_eq!(bindings["blocking-findings"], 0);
+        assert_eq!(bindings["advisory"], 0);
+        assert_eq!(
+            bindings["rule-verdicts"],
+            json!({
+                "TS-RULE-001": { "verdict": "waived", "reason": "", "decided-by": "" },
+                "TS-RULE-002": { "verdict": "waived", "reason": "", "decided-by": "" },
+                "TS-RULE-004": { "verdict": "waived", "reason": "", "decided-by": "" },
+            })
+        );
+        assert_eq!(bindings["judged-rules"].as_array().unwrap().len(), 4);
+
+        tally.record_assessment("TS-RULE-005", RuleSeverity::Must, false, false, &failed);
+        assert_eq!(bound(&tally)["blocking-findings"], 1);
     }
 }

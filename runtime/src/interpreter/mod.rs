@@ -567,6 +567,10 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             return Ok(None);
         }
         for rule in asked {
+            let departed = self
+                .rules
+                .as_ref()
+                .is_some_and(|rules| rules.departed.contains(&rule.id));
             let asked_tier = rule.severity;
             let mixed =
                 crate::primitives::rule_sections::statement_carries_both_tiers(&rule.statement);
@@ -585,7 +589,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 Err(outcome) => return Ok(Some(outcome)),
             };
             if let Some(tally) = &mut self.analyze_tally {
-                tally.record_assessment(&rule.id, asked_tier, mixed, &response);
+                tally.record_assessment(&rule.id, asked_tier, mixed, departed, &response);
             }
             self.accept_response(number, ASSESS_SPEC_QUALITY, response)?;
         }
@@ -624,7 +628,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             .filter(|(rule, _)| rule.tier == tier)
             .filter_map(|(_, verdict)| match verdict {
                 RuleVerdict::Finding { tier, .. } => Some(*tier),
-                RuleVerdict::Addressed { .. } => None,
+                RuleVerdict::Addressed { .. } | RuleVerdict::Waived { .. } => None,
             })
             .collect();
         if let Some(tally) = &mut self.analyze_tally {
@@ -2533,6 +2537,59 @@ mod tests {
                     && m.ends_with("asking about 1")),
             "{envelopes:?}"
         );
+    }
+
+    /// Spec 073 through the walker: a rule the spec holds a departure entry
+    /// for is waived on a failure and on a pass citing a heading, never a
+    /// finding, so `blocking-findings` stays 0, and a rule with no entry
+    /// still fails as before. The tmp repo has no history, so the entry is
+    /// `unattributed`.
+    #[test]
+    fn an_exec_walk_records_a_departed_rule_that_fires_as_waived() {
+        let entry = "\n## Applicable Rules\n\n- departs: `TS-MUST-001`\n  - reason: decided in advance\n  - cited: §shared\n";
+        for first in [
+            failed_with("must", "TS-MUST-001"),
+            "{\"passed\":true,\"addressed-by\":\"spec.md#x\"}".to_string(),
+        ] {
+            let repo = analyze_repo(Some(THREE_RULES));
+            std::fs::write(
+                repo.path().join("specs/001-x/spec.md"),
+                format!("---\nstatus: clarified\ndependencies: []\n---\n\n# x\n{entry}"),
+            )
+            .unwrap();
+            let responses = [
+                llm_response(1, &first),
+                llm_response(2, &failed_with("must", "TS-MUST-002")),
+                llm_response(3, "{\"passed\":true}"),
+            ]
+            .concat();
+            let (outcome, _) =
+                walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), &responses);
+            assert_eq!(outcome, WalkOutcome::Complete);
+            let analysis = analysis_text(repo.path());
+            assert!(
+                analysis.contains(
+                    "TS-MUST-001: {verdict: waived, reason: \"decided in advance\", decided-by: \"unattributed\", cited: \"§shared\"}"
+                ),
+                "{analysis}"
+            );
+            assert!(
+                analysis.contains("TS-MUST-002: {verdict: finding"),
+                "{analysis}"
+            );
+            assert!(analysis.contains("\nblocking-findings: 1\n"), "{analysis}");
+
+            // A second walk over the unchanged spec reuses the waiver as a
+            // fired verdict that is no finding: the finding of the rule with
+            // no entry is the one blocking finding it reports again.
+            let (outcome, envelopes) =
+                walk_analyze(&both_steps(), repo.path(), Some(&[QUALITY]), "");
+            assert_eq!(outcome, WalkOutcome::Complete);
+            assert_eq!(requests(&envelopes).len(), 0);
+            let again = analysis_text(repo.path());
+            assert!(again.contains("TS-MUST-001: {verdict: waived"), "{again}");
+            assert!(again.contains("\nblocking-findings: 1\n"), "{again}");
+        }
     }
 
     /// A rule carrying MUST and SHOULD, failing on its SHOULD clause and on
