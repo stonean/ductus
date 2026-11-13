@@ -251,6 +251,17 @@ jobs:
       - name: (s) Migration registry sort order against history
         run: bash scripts/tests/test-migration-coverage.sh
 
+      # (t) Spec 073's decided-departure attribution (AC7) reads git history:
+      # an entry's decided-by and decided-at are those of the commit that
+      # introduced it. The test commits to a repository it builds, runs the
+      # release binary built above for the attributed, edited, uncommitted and
+      # re-added cases, and runs it against a `git clone --depth 1` for the
+      # shallow case, so it needs the build and this job's fetch-depth: 0. It
+      # fails, naming fetch-depth, when its own checkout is shallow, rather
+      # than passing without having read history.
+      - name: (t) Departure attribution reads history
+        run: bash scripts/tests/test-departure-attribution.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
