@@ -10,6 +10,17 @@ its version and date.
 
 ### Added
 
+- **`write-analysis` lists the rules a record holds as `waived` apart from
+  the rest (spec 073).** The body gains a `## Waived rules` section, absent
+  when no rule is waived, with one line per rule (`- RULE (MUST) — reason —
+  decided by EMAIL at TIME — cited §anchor`, the time absent when
+  unattributed, the citation absent when the entry has none), MUST-tier rules
+  first and then every other, each in rule-ID order. The result gains `waived`
+  (rule, tier, reason, decided-by, decided-at, cited, in the same order) and
+  `waived-count`, bounded as `contradictions` is: inline within
+  `[artifacts] read-size-bytes`, and past it in the one file `lists-file`
+  names, with `waived-count` inline in both forms. The record gains no field;
+  `rule-verdicts` already holds each verdict.
 - **A spec's departure entries are read and attributed from history by one
   shared module (spec 073).** `runtime/src/primitives/departures.rs` parses
   the `departs:` entries under `## Applicable Rules` (HTML comments and fenced

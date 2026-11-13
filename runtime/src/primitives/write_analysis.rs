@@ -60,8 +60,8 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     AnalysisFinding, AnalysisTier, DecisionOutcome, DecisionRef, Disposition, DispositionOutcome,
-    Dispositions, FindingTier, ListsForm, RuleContradiction, RuleVerdict, WriteAnalysisArgs,
-    WriteAnalysisResult,
+    Dispositions, FindingTier, ListsForm, RuleContradiction, RuleVerdict, WaivedRule,
+    WriteAnalysisArgs, WriteAnalysisResult,
 };
 use crate::schema::severity::RuleSeverity;
 
@@ -274,29 +274,36 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
             unexamined,
             replaced,
             contradictions: rules.fields.contradictions,
+            waived: rules.fields.waived,
             dispositions,
             ..WriteAnalysisResult::default()
         },
     )
 }
 
-/// Bound `result` to one read (`BE-PAYLOAD-001`): `contradictions` inline
-/// while the result fits `[artifacts] read-size-bytes`, and past it in the
-/// file `lists-file` names, with `contradictions-count` inline in both forms,
-/// as `read-re-read` bounds its findings. An empty list stays absent inline,
-/// as before the bound, so a result with none reads as it always did.
+/// Bound `result` to one read (`BE-PAYLOAD-001`): `contradictions` and
+/// `waived` inline while the result fits `[artifacts] read-size-bytes`, and
+/// past it both in the one file `lists-file` names, with each list's `-count`
+/// inline in both forms, as `read-re-read` bounds its findings. An empty list
+/// stays absent inline, as before the bound, so a result with none reads as
+/// it always did.
 fn bounded(
     repo: &Path,
     feature: &str,
     mut result: WriteAnalysisResult,
 ) -> Result<WriteAnalysisResult> {
     result.contradictions_count = result.contradictions.len();
-    let lists = serde_json::json!({ "contradictions": &result.contradictions });
+    result.waived_count = result.waived.len();
+    let lists = serde_json::json!({
+        "contradictions": &result.contradictions,
+        "waived": &result.waived,
+    });
     if let Some(file) =
         super::bounded_lists::place(repo, "write-analysis", feature, &result, &lists)?
     {
         result.form = ListsForm::File;
         result.contradictions = Vec::new();
+        result.waived = Vec::new();
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -570,6 +577,10 @@ struct RuleFields {
     digest: BTreeMap<String, String>,
     /// Reported in the result and the body, recorded in no field.
     contradictions: Vec<RuleContradiction>,
+    /// Each `waived` verdict in `verdicts` with its rule's tier, MUST-tier
+    /// first, then every other, each in rule-ID order. Reported in the result
+    /// and the body, recorded in no field: `verdicts` holds the same facts.
+    waived: Vec<WaivedRule>,
 }
 
 /// Add the gaps [`derive_rule_fields`] found to the unexamined breakdown: each
@@ -764,6 +775,7 @@ fn derive_rule_fields(
     // entry and its history now: attribution depends on commits, not on a
     // digest, so a stored one may be stale though its subjects are current.
     rule_verdicts::fill_waived(repo, spec_rel, &entries, &mut fields.verdicts);
+    fields.waived = waived_rules(&standing, &fields.verdicts);
     // The tier a finding was counted in, which its verdict stored, is the one
     // it floors, not the rule's current text tier: a rule carrying MUST and
     // SHOULD can fail on its SHOULD clause alone, which counts advisory
@@ -791,6 +803,48 @@ fn derive_rule_fields(
         fields,
         unreadable_files: universe.unreadable,
     })
+}
+
+/// The `waived` verdicts of `verdicts` with their rules' tiers, the MUST-tier
+/// first and every other after, each group in rule-ID order (`verdicts` is
+/// keyed by ID), so the order is the same on every run (spec 073).
+fn waived_rules(
+    standing: &rule_verdicts::Standing,
+    verdicts: &BTreeMap<String, RuleVerdict>,
+) -> Vec<WaivedRule> {
+    let mut waived: Vec<WaivedRule> = verdicts
+        .iter()
+        .filter_map(|(id, verdict)| {
+            let RuleVerdict::Waived {
+                reason,
+                decided_by,
+                decided_at,
+                cited,
+            } = verdict
+            else {
+                return None;
+            };
+            let tier = standing
+                .rules()
+                .iter()
+                .find(|(rule, _)| rule.id == *id)
+                .and_then(|(rule, _)| match rule.tier {
+                    RuleSeverity::Must => Some(FindingTier::Must),
+                    RuleSeverity::Should => Some(FindingTier::Should),
+                    RuleSeverity::Info | RuleSeverity::Unspecified => None,
+                });
+            Some(WaivedRule {
+                rule: id.clone(),
+                tier,
+                reason: reason.clone(),
+                decided_by: decided_by.clone(),
+                decided_at: decided_at.clone(),
+                cited: cited.clone(),
+            })
+        })
+        .collect();
+    waived.sort_by_key(|rule| rule.tier != Some(FindingTier::Must));
+    waived
 }
 
 /// The counts this call derived, rendered into the record.
@@ -968,9 +1022,45 @@ fn render_rule_sections(by_reason: &BTreeMap<String, u32>, rules: &RuleFields) -
         );
     }
     format!(
-        "## Contradictions\n\n{}\n\n## Unexamined targets\n\n{unexamined_section}\n\n",
+        "{}## Contradictions\n\n{}\n\n## Unexamined targets\n\n{unexamined_section}\n\n",
+        render_waived(&rules.waived),
         render_contradictions(&rules.contradictions)
     )
+}
+
+/// The `## Waived rules` section, MUST-tier first then every other, each in
+/// rule-ID order (spec 073): one line per rule naming it, its tier, the
+/// entry's reason, who decided it and when (`unattributed` and no time when
+/// history cannot say) and the citation when the entry has one. Empty when no
+/// rule is waived, so a record with none reads as it did before.
+fn render_waived(waived: &[WaivedRule]) -> String {
+    if waived.is_empty() {
+        return String::new();
+    }
+    let lines: Vec<String> = waived
+        .iter()
+        .map(|rule| {
+            let tier = match rule.tier {
+                Some(FindingTier::Must) => "MUST",
+                Some(FindingTier::Should) => "SHOULD",
+                None => "untiered",
+            };
+            let mut line = format!(
+                "- {} ({tier}) — {} — decided by {}",
+                plain(&rule.rule),
+                plain(&rule.reason),
+                plain(&rule.decided_by)
+            );
+            if let Some(at) = &rule.decided_at {
+                let _ = write!(line, " at {}", plain(at));
+            }
+            if let Some(cite) = &rule.cited {
+                let _ = write!(line, " — cited {}", plain(cite));
+            }
+            line
+        })
+        .collect();
+    format!("## Waived rules\n\n{}\n\n", lines.join("\n"))
 }
 
 /// Each rule whose verdict turned from quiet or addressed to a finding over
@@ -2768,6 +2858,7 @@ mod tests {
             unjudged: vec!["BE-AUTHN-004".into(), "BE-AUTHN-005".into()],
             digest: BTreeMap::from([("quality-cross.md".to_string(), "ab".repeat(32))]),
             contradictions: Vec::new(),
+            waived: Vec::new(),
         };
         let dir = tmp.path().join("specs/042-demo");
         fs::write(dir.join("analysis.md"), rendered_with(&rules)).unwrap();
@@ -3788,5 +3879,175 @@ mod tests {
             panic!("not waived");
         };
         assert_eq!(decided_by, "test@example.com");
+    }
+
+    // -- the waived rules section and list (spec 073, AC3) ----------------
+
+    /// A spec departing from two MUST rules and one SHOULD rule, the entries
+    /// written out of ID order, with the work tree committed.
+    fn three_departures() -> (TempDir, git2::Repository) {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 1);
+        set_spec_tail(
+            &tmp,
+            "\n## Applicable Rules\n\n- departs: `TS-SHLD-001`\n  - reason: soft\n- departs: `TS-RULE-003`\n  - reason: third\n  - cited: §shared-exceptions\n- departs: `TS-RULE-001`\n  - reason: first\n",
+        );
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "c");
+        (tmp, repository)
+    }
+
+    fn all_waived_args() -> WriteAnalysisArgs {
+        let mut a = args();
+        a.judged_rules = rule_ids(3, 1);
+        a.rule_verdicts = ["TS-SHLD-001", "TS-RULE-003", "TS-RULE-001"]
+            .iter()
+            .map(|id| ((*id).to_string(), RuleVerdict::bare_waived()))
+            .collect();
+        a
+    }
+
+    /// A run that waived a MUST and one that satisfied it (the rule did not
+    /// fire) differ in the record's `rule-verdicts`, in the body's section and
+    /// in the result.
+    #[test]
+    fn a_waived_rule_and_a_satisfied_one_differ_in_the_record_and_the_result() {
+        let (tmp, _repository) = departing_repo(true);
+        let waived_result = run(&waived_args(), tmp.path()).unwrap();
+        let waived_record = written_record(&tmp);
+        let waived_body = analysis_md(&tmp);
+
+        let mut satisfied = waived_args();
+        satisfied.rule_verdicts = BTreeMap::new();
+        let satisfied_result = run(&satisfied, tmp.path()).unwrap();
+        let satisfied_record = written_record(&tmp);
+        let satisfied_body = analysis_md(&tmp);
+
+        assert_eq!(waived_record.rule_verdicts.len(), 1);
+        assert_eq!(satisfied_record.rule_verdicts.len(), 0);
+        assert!(waived_body.contains("## Waived rules\n\n- TS-RULE-001 (MUST) — removed rather than versioned — decided by test@example.com at "), "{waived_body}");
+        assert!(
+            waived_body.contains(" — cited §shared-exceptions\n"),
+            "{waived_body}"
+        );
+        assert!(!satisfied_body.contains("Waived rules"), "{satisfied_body}");
+        assert_eq!(waived_result.waived.len(), 1);
+        assert_eq!(waived_result.waived_count, 1);
+        let only = &waived_result.waived[0];
+        assert_eq!(
+            (only.rule.as_str(), only.tier, only.decided_by.as_str()),
+            ("TS-RULE-001", Some(FindingTier::Must), "test@example.com")
+        );
+        assert_eq!(satisfied_result.waived, Vec::new());
+        assert_eq!(satisfied_result.waived_count, 0);
+        let json = serde_json::to_value(&satisfied_result).unwrap();
+        assert!(json.get("waived").is_none(), "{json}");
+        // The waiver is no finding and no disposition.
+        assert_eq!(waived_record.dispositions.map_or(0, |d| d.waived), 0);
+    }
+
+    /// MUST-tier rules come first, then the rest, each in rule-ID order,
+    /// whatever order the spec's entries are in; the result lists the same
+    /// order. A waived rule with no `cited:` renders no citation, and an
+    /// unattributed one (no commit) renders no time.
+    #[test]
+    fn waived_rules_list_must_first_then_the_rest_each_in_id_order() {
+        let (tmp, _repository) = three_departures();
+        let result = run(&all_waived_args(), tmp.path()).unwrap();
+        assert_eq!(
+            result
+                .waived
+                .iter()
+                .map(|w| w.rule.as_str())
+                .collect::<Vec<_>>(),
+            ["TS-RULE-001", "TS-RULE-003", "TS-SHLD-001"]
+        );
+        assert_eq!(result.waived[2].tier, Some(FindingTier::Should));
+        let body = analysis_md(&tmp);
+        let lines: Vec<&str> = body
+            .lines()
+            .skip_while(|l| *l != "## Waived rules")
+            .skip(2)
+            .take_while(|l| l.starts_with("- "))
+            .collect();
+        assert_eq!(lines.len(), 3, "{body}");
+        assert!(
+            lines[0].starts_with("- TS-RULE-001 (MUST) — first — decided by test@example.com at "),
+            "{body}"
+        );
+        assert!(!lines[0].contains("cited"), "{body}");
+        assert!(
+            lines[1].starts_with("- TS-RULE-003 (MUST) — third — decided by "),
+            "{body}"
+        );
+        assert!(lines[1].ends_with(" — cited §shared-exceptions"), "{body}");
+        assert!(
+            lines[2].starts_with("- TS-SHLD-001 (SHOULD) — soft — decided by "),
+            "{body}"
+        );
+        // The section sits apart from the unexamined and contradiction notes.
+        assert!(body.find("## Waived rules").unwrap() < body.find("## Contradictions").unwrap());
+    }
+
+    /// An unattributed waiver (the entry not yet committed) names no time.
+    #[test]
+    fn an_unattributed_waiver_renders_without_a_time() {
+        let (tmp, _repository) = departing_repo(false);
+        run(&waived_args(), tmp.path()).unwrap();
+        let body = analysis_md(&tmp);
+        assert!(
+            body.contains("- TS-RULE-001 (MUST) — removed rather than versioned — decided by unattributed — cited §shared-exceptions\n"),
+            "{body}"
+        );
+    }
+
+    /// The record with a `## Waived rules` section still loads, and the
+    /// gate reads it as before: waiving blocks nothing.
+    #[test]
+    fn a_record_with_a_waived_rules_section_still_loads() {
+        let (tmp, _repository) = departing_repo(true);
+        run(&waived_args(), tmp.path()).unwrap();
+        assert!(analysis_md(&tmp).contains("## Waived rules"));
+        let record = written_record(&tmp);
+        assert!(!record.blocking);
+        assert_eq!(record.rule_verdicts.len(), 1);
+    }
+
+    /// `waived` is inline with its count while the result fits the read size.
+    #[test]
+    fn waived_within_the_read_size_is_inline_with_its_count() {
+        let (tmp, _repository) = three_departures();
+        let result = run(&all_waived_args(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.waived.len(), 3);
+        assert_eq!(result.waived_count, 3);
+        assert_eq!(result.lists_file, None);
+    }
+
+    /// Past `[artifacts] read-size-bytes` the list is in the file `lists-file`
+    /// names, whole, with `waived-count` inline; the record and its section
+    /// are written all the same.
+    #[test]
+    fn waived_past_the_read_size_is_in_a_file() {
+        let (tmp, _repository) = three_departures();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let result = run(&all_waived_args(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert_eq!(result.waived_count, 3);
+        assert_eq!(result.waived.len(), 0);
+        let file = result
+            .lists_file
+            .expect("a file-form result names its file");
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+        assert_eq!(lists["waived"].as_array().unwrap().len(), 3);
+        assert_eq!(lists["waived"][0]["rule"], "TS-RULE-001");
+        assert_eq!(lists["waived"][2]["tier"], "should");
+        assert!(analysis_md(&tmp).contains("## Waived rules"));
     }
 }

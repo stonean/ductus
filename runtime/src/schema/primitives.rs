@@ -2057,8 +2057,45 @@ pub struct WriteAnalysisResult {
     /// project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
+    /// Each rule the record holds as `waived` (spec 073), MUST-tier first,
+    /// then every other, each tier in rule-ID order: what the body's
+    /// `## Waived rules` section lists. A waived rule is neither a finding nor
+    /// a pass, so the host reports it apart from both.
+    ///
+    /// Absent when there are none, and past `[artifacts] read-size-bytes`
+    /// absent with the list in the file `lists-file` names (`BE-PAYLOAD-001`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waived: Vec<WaivedRule>,
+    /// Entries in `waived`, in either form. A figure of this result only: the
+    /// record carries no count of its own.
+    #[serde(default)]
+    pub waived_count: usize,
     /// The `dispositions:` map actually written.
     pub dispositions: Dispositions,
+}
+
+/// One rule the record holds as `waived`, in a `write-analysis` result (spec
+/// 073): the `waived` verdict's fields beside the rule's tier.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct WaivedRule {
+    /// The rule's ID.
+    pub rule: String,
+    /// The rule's tier, from its Statement. Absent for a rule whose Statement
+    /// carries no tier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<FindingTier>,
+    /// The entry's `reason:`.
+    pub reason: String,
+    /// The author email of the commit that introduced the entry, or
+    /// `unattributed`.
+    pub decided_by: String,
+    /// That commit's author time; absent when `decided-by` is `unattributed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decided_at: Option<String>,
+    /// The entry's `cited:` text; absent when it has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cited: Option<String>,
 }
 
 /// One verdict that turned from quiet to a finding with nothing changed, in a
