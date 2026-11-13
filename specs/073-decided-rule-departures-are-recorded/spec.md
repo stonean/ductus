@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [016-cross-cutting-rules, 020-code-review, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 082-rule-assessments-converge-across-runs]
 cross-spec-impact: [020-code-review, 022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 082-rule-assessments-converge-across-runs]
 next-criterion: 9
