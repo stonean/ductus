@@ -15,7 +15,8 @@ use serde_json::{Value, json};
 
 use crate::primitives::{process_waivers, write_review};
 use crate::schema::primitives::{
-    FiredFinding, ProcessWaiversArgs, ProcessWaiversResult, WriteReviewArgs, WriteReviewResult,
+    FiredFinding, ListsForm, ProcessWaiversArgs, ProcessWaiversResult, WriteReviewArgs,
+    WriteReviewResult,
 };
 
 const FEATURE: &str = "001-widget";
@@ -559,6 +560,109 @@ fn a_stored_deferral_of_a_violation_an_entry_decides_is_superseded_not_stored_ag
         assert!(!report.contains("decisions:"), "pruned: {report}");
         assert_eq!(waivers(tmp.path()).len(), 1);
     }
+}
+
+/// BE-PAYLOAD-001: `malformed-departures` and `superseded-deferrals` are inline
+/// while the result fits `[artifacts] read-size-bytes`; past it both leave the
+/// result for the one file `lists-file` names, with `analyze-stale-paths`, and
+/// each count stays inline in both forms. A result with neither reads no
+/// setting.
+#[test]
+fn the_departure_lists_past_the_read_size_name_a_file_holding_both_whole() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), "");
+    let key = format!("rule {MUST_RULE} at src/a.rs");
+    run_review(
+        tmp.path(),
+        &[deferred(MUST_RULE, "src/a.rs", None)],
+        T1,
+        &json!({"decided-by": "person@example.com"}),
+    );
+    // A decided rule, and a malformed entry beside it.
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(&format!("{MUST_ENTRY}- departs: `{SHOULD_RULE}`\n")),
+    );
+    commit(&repository, "decide it");
+    let read_size = |bytes: u64| {
+        write(
+            tmp.path(),
+            ".ductus/config.toml",
+            &format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        );
+    };
+    let findings = [deferred(MUST_RULE, "src/a.rs", Some(&key))];
+    let extra = json!({"decided-by": "person@example.com"});
+
+    read_size(1_000_000);
+    let (_, inline) = run_review(tmp.path(), &findings, T2, &extra);
+    assert_eq!(inline.form, ListsForm::Inline, "{inline:?}");
+    assert_eq!(inline.lists_file, None);
+    assert_eq!(inline.malformed_departures.len(), 1, "{inline:?}");
+    assert_eq!(inline.superseded_deferrals.len(), 1, "{inline:?}");
+    assert_eq!(inline.malformed_departures_count, 1);
+    assert_eq!(inline.superseded_deferrals_count, 1);
+
+    read_size(10);
+    let (_, file) = run_review(tmp.path(), &findings, T2, &extra);
+    assert_eq!(file.form, ListsForm::File, "{file:?}");
+    assert!(file.malformed_departures.is_empty(), "{file:?}");
+    assert!(file.superseded_deferrals.is_empty(), "{file:?}");
+    assert_eq!(file.malformed_departures_count, 1);
+    assert_eq!(file.superseded_deferrals_count, 1);
+    let listed: Value = serde_json::from_str(
+        &fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        listed["malformed-departures"],
+        json!(inline.malformed_departures)
+    );
+    assert_eq!(
+        listed["superseded-deferrals"],
+        json!(inline.superseded_deferrals)
+    );
+    let wire = serde_json::to_value(&file).unwrap();
+    assert!(wire.get("malformed-departures").is_none(), "{wire}");
+    assert!(wire.get("superseded-deferrals").is_none(), "{wire}");
+    crate::primitives::bounded_lists::assert_counts_name_the_file("write-review", &wire, &listed);
+
+    // Either list alone is enough to move: the superseded one with no malformed
+    // entry, the malformed one with no deferral.
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(MUST_ENTRY),
+    );
+    let (_, only_superseded) = run_review(tmp.path(), &findings, T2, &extra);
+    assert_eq!(only_superseded.form, ListsForm::File, "{only_superseded:?}");
+    assert_eq!(only_superseded.superseded_deferrals_count, 1);
+    assert_eq!(only_superseded.malformed_departures_count, 0);
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(&format!("- departs: `{SHOULD_RULE}`\n")),
+    );
+    let (_, only_malformed) = run_review(tmp.path(), &[], T2, &json!({}));
+    assert_eq!(only_malformed.form, ListsForm::File, "{only_malformed:?}");
+    assert_eq!(only_malformed.malformed_departures_count, 1);
+    assert_eq!(only_malformed.superseded_deferrals_count, 0);
+
+    // Nothing to move reads no setting: a malformed read size does not halt it.
+    write(
+        tmp.path(),
+        ".ductus/config.toml",
+        "[artifacts]\nread-size-bytes = \"big\"\n",
+    );
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(MUST_ENTRY),
+    );
+    let (_, quiet) = run_review(tmp.path(), &[], T2, &json!({}));
+    assert_eq!(quiet.form, ListsForm::Inline);
+    assert_eq!(quiet.malformed_departures_count, 0);
 }
 
 #[test]

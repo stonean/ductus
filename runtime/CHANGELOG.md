@@ -85,8 +85,10 @@ its version and date.
   nothing, a hand `--waive` on the same rule and file stays the first claim,
   and a SHOULD departure leaves `should-violations` at 0. A malformed entry,
   or a rule a second entry names, derives no waiver and is listed in the
-  result's `malformed-departures`. `process-waivers` expires a marked waiver
-  whose rule has no well-formed entry, on any run, restricted included, with
+  result's `malformed-departures`, which with `superseded-deferrals` moves
+  past `[artifacts] read-size-bytes` to the result's `lists-file`, beside
+  `analyze-stale-paths`, each with a count inline. `process-waivers` expires
+  a marked waiver whose rule has no well-formed entry, on any run, restricted included, with
   its `waiver expired:` notice.
 - **A rule verdict can be `waived` (spec 073).** `write-analysis` accepts the
   bare `{verdict: waived}` in `rule-verdicts` for a rule whose trigger fires
@@ -294,7 +296,7 @@ its version and date.
   decides over a deferral of its violations: a new `--defer` of one is refused
   naming the rule and the entry's `spec.md` line, and a stored one is
   superseded, pruned from `decisions:` and named in the result's new
-  `superseded-deferrals`. A parent commit or rename diff that cannot be read
+  `superseded-deferrals` (bounded as `malformed-departures` is). A parent commit or rename diff that cannot be read
   makes the attribution `unattributed`, where it was the newest commit that
   held the entry.
 

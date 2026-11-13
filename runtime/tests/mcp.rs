@@ -1973,6 +1973,68 @@ async fn write_review_reports_examined_against_a_derived_scope_via_mcp() {
     assert!(!spec.contains("examined:"), "{spec}");
 }
 
+/// The read size the `write-review` bounded test sets: past it twelve
+/// malformed entries pass inline, and the file form's fixed fields (about 550
+/// bytes) fit.
+const REVIEW_READ_SIZE: usize = 700;
+
+/// `write-review` past the read size over MCP: `malformed-departures` reaches
+/// the host through the file `lists-file` names, beside `superseded-deferrals`
+/// and `analyze-stale-paths`, with each count inline (BE-PAYLOAD-001).
+#[tokio::test]
+async fn a_review_result_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    // An entry with no `reason:` is malformed and derives no waiver.
+    let entries = (0..12)
+        .map(|i| format!("- departs: `DM-NONE-0{i:02}`\n"))
+        .collect::<Vec<_>>()
+        .concat();
+    fs::write(
+        dir.join("spec.md"),
+        format!(
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n\n## Applicable Rules\n\n{entries}"
+        ),
+    )
+    .unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        format!("[artifacts]\nread-size-bytes = {REVIEW_READ_SIZE}\n"),
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(
+        &client,
+        "write-review",
+        json!({
+            "feature": "001-x",
+            "reviewed-at": "2026-09-13T00:00:00Z",
+            "reviewed-against": "abc1234",
+            "diff-base": "",
+        }),
+    )
+    .await;
+    let obj = structured_object(&result);
+    assert_eq!(obj["form"], "file", "{obj:?}");
+    for key in ["malformed-departures", "superseded-deferrals"] {
+        assert!(obj.get(key).is_none(), "`{key}` was inline: {obj:?}");
+    }
+    let size = serde_json::to_vec(obj).unwrap().len();
+    assert!(size <= REVIEW_READ_SIZE, "{size} bytes: {obj:?}");
+    let file = obj["lists-file"].as_str().expect("a lists-file path");
+    let lists: Value =
+        serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+    assert_eq!(obj["malformed-departures-count"], 12);
+    assert_eq!(lists["malformed-departures"].as_array().unwrap().len(), 12);
+    assert_eq!(obj["superseded-deferrals-count"], 0);
+    assert_eq!(lists["superseded-deferrals"], json!([]));
+    assert_eq!(obj["analyze-stale-paths-count"], 0);
+    assert_eq!(lists["analyze-stale-paths"], json!([]));
+}
+
 #[tokio::test]
 async fn write_review_renders_report_via_mcp() {
     let tmp = tempfile::tempdir().unwrap();

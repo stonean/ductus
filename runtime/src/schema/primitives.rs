@@ -1801,24 +1801,35 @@ pub struct WriteReviewResult {
     /// its state is `stale`.
     #[serde(default)]
     pub analyze_stale_paths_count: usize,
-    /// Where `analyze-freshness`' `paths` are: in `analyze-freshness`, or past
-    /// `[artifacts] read-size-bytes` in the file `lists-file` names.
+    /// Where `analyze-freshness`' `paths`, `malformed-departures` and
+    /// `superseded-deferrals` are: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names.
     #[serde(default)]
     pub form: ListsForm,
-    /// In the file form, the file holding the list whole, from the project
-    /// root: a JSON object whose `analyze-stale-paths` key is the list.
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object whose `analyze-stale-paths`, `malformed-departures`
+    /// and `superseded-deferrals` keys are the lists, each present even when
+    /// empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// Each departure entry in the spec's `## Applicable Rules` that derived no
     /// waiver because it is malformed, or names a rule an earlier entry names, as
-    /// `spec.md line N: what is wrong` (spec 073). Absent when there are none.
+    /// `spec.md line N: what is wrong` (spec 073). Absent when there are none,
+    /// and in the file form.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub malformed_departures: Vec<String>,
+    /// Entries in `malformed-departures`, in either form.
+    #[serde(default)]
+    pub malformed_departures_count: usize,
     /// Each stored deferral of a violation a departure entry decides, which this run did
     /// not store again and pruned from `decisions:`, as a sentence naming the finding and
-    /// the entry's `spec.md` line (spec 073). Absent when there are none.
+    /// the entry's `spec.md` line (spec 073). Absent when there are none, and
+    /// in the file form.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub superseded_deferrals: Vec<String>,
+    /// Entries in `superseded-deferrals`, in either form.
+    #[serde(default)]
+    pub superseded_deferrals_count: usize,
 }
 
 // -- write-analysis ----------------------------------------------------------

@@ -27,8 +27,8 @@ MUTATIONS = [
     (
         'M2 write-review writes an empty list to the file',
         'src/primitives/write_review.rs',
-        'serde_json::json!({ "analyze-stale-paths": stale_paths })',
-        'serde_json::json!({ "analyze-stale-paths": Vec::<String>::new() })',
+        '        "analyze-stale-paths": stale_paths,\n',
+        '        "analyze-stale-paths": Vec::<String>::new(),\n',
         'write_review::tests::a_stale_analysis_past_the_read_size_names_a_file_holding_every_path',
     ),
     (
@@ -76,7 +76,7 @@ MUTATIONS = [
     (
         'M9 write-review reads the read size when no path is stale',
         'src/primitives/write_review.rs',
-        '    if stale_paths.is_empty() {\n        return Ok(result);\n    }\n',
+        '    if stale_paths.is_empty()\n        && result.malformed_departures.is_empty()\n        && result.superseded_deferrals.is_empty()\n    {\n        return Ok(result);\n    }\n',
         '',
         'resolve_constitutions::tests::write_review_and_write_analysis_keep_the_unmeasured_resolution',
     ),

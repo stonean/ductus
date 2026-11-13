@@ -494,9 +494,11 @@ expires it once the spec no longer holds the entry. The review step reads the
 result's `malformed-departures`, which names each entry that derives nothing. The
 entry decides over a deferral of its violations: `write-review` refuses a new
 `--defer` of one, naming the entry's `spec.md` line, and a stored deferral is
-superseded, named in `superseded-deferrals`. The derivation, the waiver's fields
-and the entry's grammar are `write-review`'s and `check-departures`' (`ductus
-write-review --help`, `ductus check-departures --help`).
+superseded, named in `superseded-deferrals`. Past the read size both lists are
+absent from the result and held whole in `lists-file`, under their own names.
+The derivation, the waiver's fields and the entry's grammar are
+`write-review`'s and `check-departures`' (`ductus write-review --help`, `ductus
+check-departures --help`).
 
 ## Per-run waiver processing
 

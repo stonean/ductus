@@ -640,16 +640,17 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         superseded_deferrals: waivers.superseded.into_iter().map(|s| s.notice).collect(),
         ..WriteReviewResult::default()
     };
-    bound_stale_paths(result, repo, &args.feature)
+    bound_lists(result, repo, &args.feature)
 }
 
-/// Move `analyze-freshness`' `paths` to a file when the result passes the read
-/// size, naming it in `lists-file` and leaving the count inline.
-///
-/// It is the one list in this result that grows with the tree (066 scenario
-/// `freshness-results-have-a-bounded-size`). The record is written already, as
+/// Move the result's lists to a file when it passes the read size, naming it
+/// in `lists-file` and leaving each count inline: `analyze-freshness`' `paths`
+/// (as `analyze-stale-paths`), `malformed-departures` and
+/// `superseded-deferrals`, which grow with the tree and with a spec's
+/// departure entries (066 scenario `freshness-results-have-a-bounded-size`;
+/// 073 BE-PAYLOAD-001). The record is written already, as
 /// `rewrite-spec-links` writes before it bounds.
-fn bound_stale_paths(
+fn bound_lists(
     mut result: WriteReviewResult,
     repo: &Path,
     feature: &str,
@@ -659,17 +660,28 @@ fn bound_stale_paths(
         _ => Vec::new(),
     };
     result.analyze_stale_paths_count = stale_paths.len();
+    result.malformed_departures_count = result.malformed_departures.len();
+    result.superseded_deferrals_count = result.superseded_deferrals.len();
     // Nothing to move reads no setting, so a malformed `read-size-bytes` halts
     // only a result with a list to bound (`QUAL-DELEG-001`).
-    if stale_paths.is_empty() {
+    if stale_paths.is_empty()
+        && result.malformed_departures.is_empty()
+        && result.superseded_deferrals.is_empty()
+    {
         return Ok(result);
     }
-    let lists = serde_json::json!({ "analyze-stale-paths": stale_paths });
+    let lists = serde_json::json!({
+        "analyze-stale-paths": stale_paths,
+        "malformed-departures": result.malformed_departures,
+        "superseded-deferrals": result.superseded_deferrals,
+    });
     if let Some(file) = super::bounded_lists::place(repo, "write-review", feature, &result, &lists)?
     {
         if let RecordFreshness::Stale { paths, .. } = &mut result.analyze_freshness {
             paths.clear();
         }
+        result.malformed_departures.clear();
+        result.superseded_deferrals.clear();
         result.form = ListsForm::File;
         result.lists_file = Some(file);
     }
