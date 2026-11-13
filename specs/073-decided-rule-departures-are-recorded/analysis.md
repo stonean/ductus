@@ -1,7 +1,7 @@
 ---
 spec: 073-decided-rule-departures-are-recorded
-last-run: 2026-11-13T05:45:09Z
-analyzed-against: c835691db4627527432f8018cca3372007c8f241
+last-run: 2026-11-13T13:14:57Z
+analyzed-against: ab7224f2be5b12d80a8f37cb90195aefef4f8d84
 hard-fail: 0
 blocking-findings: 1
 advisory: 0
@@ -11,7 +11,7 @@ analyzed-digest:
   plan.md: 698b777166b3c54ad65c8cd4bda22fbba38f00b9dd67d5de2d9b09cffe77e1a5
   review.md: e13456341090a2578d57db3887c066e7dd491103ddddded6884f93d420a416c9
   spec.md: 126fc9ed63cbb53f9c2d7a989c7ee187ca4c36fdd40ddad08d6edbd800b2c48c
-  tasks.md: 2c167352045f35d7c64289c0d7e5d238bba413d06a6d2429930cf096eb25f123
+  tasks.md: 5c53d95bd0f834969cad443568521e7b24abf2d5fece9cc1ee6af3a47c38e29e
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
@@ -37,16 +37,24 @@ rule-verdicts:
 blocking: true
 dispositions:
   fixed: 4
-  deferred: 0
+  deferred: 1
   waived: 0
-  undispositioned: 1
+  undispositioned: 0
+decisions:
+  - key: "rule-assessment — BE-PAYLOAD-001: check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form, where every other list-returning primitive is bounded through bounded_lists::place past the read size"
+    outcome: deferred
+    target: specs/073-decided-rule-departures-are-recorded/tasks.md
+    task: "12"
+    gating: true
+    decided-at: 2026-11-13T13:14:57Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 073-decided-rule-departures-are-recorded
 
 ## Summary
 
-0 hard-fail, 1 blocking, 0 advisory; blocking. 2 unexamined target(s). Dispositions: 4 fixed, 0 deferred, 0 waived, 1 undispositioned. An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.
+0 hard-fail, 1 blocking, 0 advisory; blocking. 2 unexamined target(s). Dispositions: 4 fixed, 1 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -54,7 +62,7 @@ dispositions:
 
 ## Blocking findings
 
-- rule-assessment — BE-PAYLOAD-001: check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form, where every other list-returning primitive is bounded through bounded_lists::place past the read size — `specs/073-decided-rule-departures-are-recorded/plan.md` — **undispositioned**
+- rule-assessment — BE-PAYLOAD-001: check-departures returns its entries, findings and unexamined lists with no committed size bound or lists-file form, where every other list-returning primitive is bounded through bounded_lists::place past the read size — `specs/073-decided-rule-departures-are-recorded/plan.md` — **deferred** to `specs/073-decided-rule-departures-are-recorded/tasks.md` task 12
 
 ## Advisory findings
 
