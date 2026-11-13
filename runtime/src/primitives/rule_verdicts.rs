@@ -366,6 +366,13 @@ pub(crate) fn departure_entries(content: &str) -> BTreeMap<String, departures::E
     by_rule
 }
 
+// How many times this thread's `fill_waived` read history, so a test can
+// observe that a write holding no `waived` verdict reads none.
+#[cfg(test)]
+thread_local! {
+    pub(crate) static HISTORY_READS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
 /// Fill every `waived` verdict of `verdicts` from its departure entry and
 /// the entry's history attribution (spec 073): the host's bare verdict and a
 /// carried one alike, so no field is fabricated and none outlives the history
@@ -385,6 +392,8 @@ pub(crate) fn fill_waived(
     if waived.is_empty() {
         return;
     }
+    #[cfg(test)]
+    HISTORY_READS.with(|reads| reads.set(reads.get() + 1));
     let attribution = departures::attribute(repo, spec_rel, &waived);
     for rule in waived {
         let Some(entry) = entries.get(&rule) else {

@@ -102,4 +102,32 @@ MUTATIONS = [
         'RuleVerdict::Addressed { .. } => None,\n                RuleVerdict::Waived { .. } => Some(FindingTier::Must),',
         'an_exec_walk_records_a_departed_rule_that_fires_as_waived',
     ),
+    (
+        'M20 a write holding no waiver reads history',
+        'src/primitives/rule_verdicts.rs',
+        'if waived.is_empty() {',
+        'if false {',
+        'a_write_holding_no_waiver_reads_no_history',
+    ),
+    (
+        'M21 the last entry for a rule waives it',
+        'src/primitives/rule_verdicts.rs',
+        'by_rule.entry(entry.rule.clone()).or_insert(entry);',
+        'by_rule.insert(entry.rule.clone(), entry);',
+        'a_rule_two_entries_name_is_waived_by_the_first',
+    ),
+    (
+        'M22 the record renders an absent citation as empty',
+        'src/primitives/write_analysis.rs',
+        'if let Some(cite) = cited {',
+        'if let Some(cite) = Some(cited.as_deref().unwrap_or(\"\")) {',
+        'an_entry_with_no_citation_records_no_cited_key',
+    ),
+    (
+        'M23 a waiver below the repository root is not attributed',
+        'src/primitives/rule_verdicts.rs',
+        'departures::attribute(repo, spec_rel, &waived);',
+        'departures::attribute(repo, &format!("../{spec_rel}"), &waived);',
+        'a_waiver_in_a_project_below_the_repository_root_is_attributed',
+    ),
 ]

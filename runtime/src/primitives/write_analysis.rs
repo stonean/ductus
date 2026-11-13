@@ -688,7 +688,10 @@ fn check_new_verdicts(
 /// rule carrying both MUST and SHOULD can fail in either), or when a tier's
 /// supplied count is below the number of `finding` verdicts the record holds
 /// in that tier: each stands for at least one live finding, and a count under
-/// that would drop a MUST failure from `blocking-findings`. That floor reads
+/// that would drop a MUST failure from `blocking-findings`, when a `waived`
+/// verdict names a rule the spec holds no well-formed departure entry for, or
+/// when a `finding` or `addressed` verdict names a rule it does (spec 073).
+/// That floor reads
 /// the tier each verdict stored, the one the finding was counted in, not the
 /// rule's current text. Reused findings are the host's to count, and the exec
 /// tally does. Also the errors of [`rule_verdicts::load_universe`]: a project
@@ -3696,5 +3699,94 @@ mod tests {
         assert_eq!(record.rule_verdicts.len(), 2);
         assert_eq!(record.blocking_findings, 1);
         assert!(record.blocking);
+    }
+
+    /// A write holding no `waived` verdict reads no history, though the spec
+    /// holds an entry.
+    #[test]
+    fn a_write_holding_no_waiver_reads_no_history() {
+        let (tmp, _repository) = departing_repo(true);
+        rule_verdicts::HISTORY_READS.with(|reads| reads.set(0));
+        let mut a = waived_args();
+        a.rule_verdicts = BTreeMap::new();
+        run(&a, tmp.path()).unwrap();
+        assert_eq!(rule_verdicts::HISTORY_READS.with(std::cell::Cell::get), 0);
+        run(&waived_args(), tmp.path()).unwrap();
+        assert_eq!(rule_verdicts::HISTORY_READS.with(std::cell::Cell::get), 1);
+    }
+
+    /// A rule two entries name is waived by the first entry.
+    #[test]
+    fn a_rule_two_entries_name_is_waived_by_the_first() {
+        let (tmp, _repository) = departing_repo(true);
+        set_spec_tail(
+            &tmp,
+            &format!("{DEPARTURE}\n- departs: `TS-RULE-001`\n  - reason: the second reason\n"),
+        );
+        run(&waived_args(), tmp.path()).unwrap();
+        let RuleVerdict::Waived { reason, .. } = &written_record(&tmp).rule_verdicts["TS-RULE-001"]
+        else {
+            panic!("not waived");
+        };
+        assert_eq!(reason, "removed rather than versioned");
+    }
+
+    /// An entry with no `cited:` records a waived verdict with no `cited` key.
+    #[test]
+    fn an_entry_with_no_citation_records_no_cited_key() {
+        let (tmp, _repository) = departing_repo(true);
+        set_spec_tail(
+            &tmp,
+            "\n## Applicable Rules\n\n- departs: `TS-RULE-001`\n  - reason: plain\n",
+        );
+        run(&waived_args(), tmp.path()).unwrap();
+        let text = analysis_md(&tmp);
+        let line = text
+            .lines()
+            .find(|l| l.contains("TS-RULE-001: {verdict: waived"))
+            .unwrap();
+        assert!(!line.contains("cited"), "{line}");
+        let RuleVerdict::Waived { cited, .. } = &written_record(&tmp).rule_verdicts["TS-RULE-001"]
+        else {
+            panic!("not waived");
+        };
+        assert_eq!(*cited, None);
+    }
+
+    /// A project in a repository subdirectory is attributed: the spec's path
+    /// converts to the repository's before history is read.
+    #[test]
+    fn a_waiver_in_a_project_below_the_repository_root_is_attributed() {
+        let root = tempfile::tempdir().unwrap();
+        let (repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(root.path());
+        let dir = project.join("specs/042-demo");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spec.md"),
+            format!("---\nstatus: in-progress\ndependencies: []\n---\n\n# 042 — Demo\n\n## Behavior\n\nText.\n{DEPARTURE}"),
+        )
+        .unwrap();
+        let rules = project.join("specs/rules");
+        fs::create_dir_all(&rules).unwrap();
+        fs::write(
+            rules.join("a-cross.md"),
+            "### TS-RULE-001\n\n> Specs MUST do 1.\n\n**Verification:** Check 1.\n",
+        )
+        .unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "c");
+        let mut a = args();
+        a.judged_rules = vec!["TS-RULE-001".into()];
+        a.rule_verdicts = BTreeMap::from([("TS-RULE-001".to_string(), RuleVerdict::bare_waived())]);
+        run(&a, &project).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_analyze_record(&dir)
+        else {
+            panic!("no record");
+        };
+        let RuleVerdict::Waived { decided_by, .. } = &record.rule_verdicts["TS-RULE-001"] else {
+            panic!("not waived");
+        };
+        assert_eq!(decided_by, "test@example.com");
     }
 }
