@@ -15,6 +15,8 @@
 #     - frontmatter `dependencies:` field            (Frontmatter schema)
 #     - `## Acceptance Criteria` section             (Spec integrity)
 #     - `## Open Questions` section                  (Spec integrity)
+#     - a `- departs:` example inside the Applicable Rules
+#       comment                                      (Departure entries)
 #
 #   scenario.md template must scaffold:
 #     - frontmatter `section:` field (post-017 schema)
@@ -93,6 +95,7 @@ Task consistency (blocking if tasks exist) | covered — tasks.md link to plan.m
 Scenario open questions (blocking at `done`, advisory otherwise) | not-template-related — counts the entries a scenario carries; an absent section reads as none
 Review state drift (blocking) | not-template-related — reads review.md, which /review writes and no template scaffolds
 Analyze state drift (blocking) | not-template-related — reads analysis.md, which /analyze writes and no template scaffolds
+Departure entries (blocking) | covered — spec.md's Applicable Rules comment carries the departs: grammar (a commented example, so it yields no entry)
 Rules (blocking and advisory) | not-template-related — validates rule files, not spec templates
 JUDGED
 }
@@ -166,6 +169,7 @@ if check_file_exists "$TEMPLATE_DIR/spec.md"; then
   check_contains "$TEMPLATE_DIR/spec.md" "^dependencies:" "frontmatter dependencies: field" "add 'dependencies:' to the template's YAML frontmatter block"
   check_contains "$TEMPLATE_DIR/spec.md" "^## Acceptance Criteria" "## Acceptance Criteria section" "add the section to the template"
   check_contains "$TEMPLATE_DIR/spec.md" "^## Open Questions" "## Open Questions section" "add the section to the template"
+  check_contains "$TEMPLATE_DIR/spec.md" "^- departs: " "departs: grammar in the Applicable Rules comment" "add the commented departure entry (departs:, reason:, cited:) under ## Applicable Rules"
 fi
 
 # scenario.md template

@@ -82,6 +82,16 @@ At least one concrete, testable criterion is required before `/{project}:clarify
      for visibility: /{project}:review enforces it against code, and
      /{project}:analyze does not check whether its trigger fires.
 
+     A spec that deliberately departs from a rule states it once as a nested entry
+     instead of a citation: `departs:` and the rule ID, its `reason:`, and
+     optionally the governing document that decided it as `cited: §anchor`. It
+     takes no `--waive` at review, and /{project}:analyze records the rule
+     `waived` rather than as a finding (the grammar is `check-departures`'):
+
+- departs: `BE-INPUT-001`
+  - reason: why this spec does not satisfy the rule
+  - cited: §rules
+
      Replace this comment block with a list of rule references when applicable:
 
 - `BE-AUTHN-001` — deliberately slow password hashing

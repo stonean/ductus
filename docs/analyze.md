@@ -30,6 +30,7 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Plan record | Advisory | Each `plan.md` section outside the design record — the plan template's own `##` sections — on a spec at `planned` or later, reported even when a stored waiver decides it, so the waiver is matched rather than expired; `/prune` moves such a section's durable pieces home and removes it |
 | Artifact size | Advisory | Each of `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, every scenario and the four project files (`AGENTS.md`, `system.md`, `events.md`, `errors.md`) larger than `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), which an agent may not read in one call; the finding names the fixes for its kind and, on a `done` spec, which reopen it, and a stored waiver holds until the file grows into another read page |
 | Rule integrity and citations | Blocking / advisory | Cited rule IDs resolve; deprecated citations and non-firing `## Applicable Rules` entries are advisory |
+| Departure entries | Blocking / advisory | A `departs:` entry under `## Applicable Rules` missing its rule or reason, malformed, naming an unknown rule or a rule another entry names is blocking; a deprecated rule or an unresolvable `cited:` is advisory. A rule whose trigger fires is recorded `waived`, neither a finding nor a pass |
 | Review state drift | Blocking | A `done` spec holding an unticked criterion or an unchecked box, or whose `review.md` record is missing a run, reports `blocking: true` or an outstanding SHOULD, lists a broken contract in `open-findings`, or still carries a cut-off run's open mark |
 | Analyze state drift | Blocking | A `done` spec whose `analysis.md`, as this run writes it, reports `blocking: true` |
 | Disposition drift | Advisory | A `done` spec whose `review.md` or `analysis.md` records undispositioned findings |
@@ -121,7 +122,7 @@ decisions:
 | `analyzed-digest` | Map of `path: sha256` | Per-path digest of every `.md` under the feature **as this run read it**, keyed within the feature directory, `review.md` included and this file excluded whole. The staleness basis. Omitted when empty, which only a pre-digest record can be |
 | `analyzed-unreadable` | List of paths | Subjects that exist but could not be read when the digest was taken, recorded rather than digested as empty. Omitted when empty |
 | `rule-digest` | Map of `rule file: sha256` | A digest of each loaded rule file's rules (ID, Statement and Verification). A later run reuses a stored verdict only while its rule's file, the set of loaded files and the design subjects are unchanged (spec 082). Omitted when no rule file was loaded |
-| `rule-verdicts` | Map of rule ID to verdict | Each loaded rule that fired: `addressed`, with the `cite` of the design-subject heading that addresses it, or `finding`, with the `tier` it counted in, `at` and `message`. A loaded rule in neither this map nor `unjudged-rules` did not fire. Omitted when empty |
+| `rule-verdicts` | Map of rule ID to verdict | Each loaded rule that fired: `addressed`, with the `cite` of the design-subject heading that addresses it, `finding`, with the `tier` it counted in, `at` and `message`, or `waived`, for a rule whose trigger fires and the spec holds a departure entry for (spec 073): the entry's `reason`, `decided-by` and `decided-at` from git history (`unattributed` and no time when history cannot say) and its `cited` reference, filled on every write and neither a finding nor a pass. A loaded rule in neither this map nor `unjudged-rules` did not fire. Omitted when empty |
 | `unjudged-rules` | List of rule IDs | Each assessable rule the run neither judged nor reused a current verdict for, counted into `rule-assessments-not-checked`; the completion gate holds `done` while it names any. Omitted when empty |
 | `dispositions` | Map of four integers | What the run did with its findings, in every tier: `fixed`, `deferred`, `waived`, `undispositioned`. **Derived**; always written. Absent means the record predates dispositions. A record written before spec 076 carries `routed` and `discarded`, read as `deferred` and `waived` |
 | `decisions` | List | Stored deferred and waived decisions, keyed `{family} — {message}`, each with its outcome, its work reference (`target`, `task`, `work-item`) or `reason`, `decided-at`, and `decided-by`. A deferral of a hard-fail or blocking finding that does not release `done` also carries `gating: true`. Omitted when empty |
@@ -169,7 +170,7 @@ Two classes live in the set, and they call for opposite responses. **Excluded by
 
 ### `rule-verdicts`, `unjudged-rules` and `rule-digest`
 
-A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, or a rule file was added or removed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
+A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, or a rule file was added or removed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A `waived` verdict is listed apart from the passed rules, in the body's `## Waived rules` section and in the report. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
 
 ### `blocking`
 
@@ -198,6 +199,8 @@ rendered whole on every run and never appended to:
 ## Blocking findings
 ## Advisory findings
 ## Deferred to other specs
+## Waived rules
+## Contradictions
 ## Unexamined targets
 ## Fixed in this run
 ```
@@ -214,7 +217,7 @@ disposition:
 A deferral names whichever of its target, task and work item it carries. A
 hard-fail or blocking finding its deferral releases is
 listed under `## Deferred to other specs` instead of its tier, and the tier
-counts leave it out.
+counts leave it out. `## Waived rules` is present only when the record holds a `waived` rule verdict, one line per rule, MUST-tier first, naming its tier and the entry's reason, with who decided it, when and its citation in code spans. `## Contradictions` lists each rule judged a finding over unchanged subjects after a verdict of not fired or addressed.
 
 When a tier's count exceeds the findings the writer was handed, the section
 adds `{n} finding(s) not itemized — counted as undispositioned.`, so the body

@@ -316,7 +316,8 @@ special — the finding counts, and the observation is the reviewer's to drop on
 the next run.
 
 The finding sections reconcile the same way. A SHOULD kept as-is is waived
-with `--waive` and its rationale ([Waivers](#waivers)), since an accepted
+with `--waive` and its rationale, or by a departure entry the spec already
+holds ([Waivers](#waivers)), since an accepted
 trade-off left filed as a violation is indistinguishable from unfinished work; a
 low-confidence finding blocks nothing and needs no waiver. A violation to be
 fixed later is deferred with `--defer` ([Deferrals](#deferrals)), never waived.
@@ -484,6 +485,20 @@ anchor is `(rule, file)`, not line numbers, so code moving within the file does
 not expire the waiver. Each path of a list applies, expires and is retained on
 its own, and is matched literally: a pattern such as `src/**/*.ts` names a path
 that does not exist and expires as one.
+
+**A departure the spec states needs no `--waive`.** A well-formed departure entry
+under the spec's `## Applicable Rules`, of any tier, a SHOULD's included, is a
+decision the spec already holds, so `write-review` stores one waiver for its rule
+from it, listing every file the rule fires at that no waiver holds, with the
+entry's reason and the `waived-by` and `waived-at` of the commit that introduced
+it (`unattributed`, and the run's own time, when history cannot say). The waiver
+carries `departure: true`, which lets `process-waivers` expire it, with its usual
+notice, once the spec no longer holds an entry for the rule. A hand `--waive` for
+the same rule and file stays the first claim, a rule firing nowhere stores
+nothing, and a malformed entry, or a rule a second entry names, derives no waiver:
+the result's `malformed-departures` names each as `spec.md line N: what is wrong`,
+which the review step reports. A departure is bounded by the spec's own scope: it waives only the files this review's scope holds. The grammar and
+its findings are `check-departures`' (see `ductus check-departures --help`).
 
 ## Per-run waiver processing
 
