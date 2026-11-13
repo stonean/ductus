@@ -76,26 +76,13 @@ Blocked on tasks 2 to 5, so the prose lands with the behavior. Run `scripts/gen-
 
 ## 8. Discharge the declared impacts
 
-Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-spec-edit`, so record the reopen with `set-status` (`done` to `in-progress`) with the owner's approval, and leave its return to `done` to its own analysis.
+The gate reads a back-link only in a target's `spec.md` or `scenarios/`, so 022, 066 and 082 also carry a `spec.md` signpost. 082's data-model edit reopened it (`set-status`, `done` to `in-progress`, with the owner's approval); its return to `done` is its own analysis and gate.
 
-The owner approved 082's reopen on 2026-11-13. Every box is implemented, but none is on `main` yet. The local branch `land-073e` holds them as two commits:
-
-- `782b9382`: the boxes, with 082's `set-status` to `in-progress`, cherry-picked from `impl-073-t8`'s `10647a38` with its `runtime/CHANGELOG.md` conflict resolved;
-- `a84ebc18`: one `Why split from …` Resolved Questions entry each in 073's and 082's `spec.md`. Task 8's signposts made each pair link both ways, so `scripts/audit/run-all.sh` Family 7 (`sibling-coupling.sh`) flags them without these entries.
-
-The gate reads a back-link only in a target's `spec.md` or `scenarios/`, so 022, 066 and 082 also carry a `spec.md` signpost. Owed, in order:
-
-1. Cherry-pick both commits onto `main`, comparing `git patch-id --stable`.
-2. Have an independent verifier read them.
-3. Run the full gate.
-4. Tick the boxes.
-5. Analyze 082, which owes an analysis for its data-model edit and returns to `done` through `check-review-gate` and the owner.
-
-- [ ] `specs/082-rule-assessments-converge-across-runs/data-model.md`: the third verdict shape and its handling, back-linking 073
-- [ ] `specs/066-audit-records-and-the-completion-gate/data-model.md`: the `rule-verdicts` description, back-linking 073
-- [ ] `specs/020-code-review/scenarios/waiver-expiry.md`: the exception sentence, back-linking 073
-- [ ] `specs/022-deterministic-runtime/data-model.md`: the `assessSpecQuality` answer for a listed rule; signposts in `specs/050-constitution/spec.md`, `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` and `specs/067-analyze-and-audit-checks/spec.md`, each back-linking 073
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entry for the feature
+- [x] `specs/082-rule-assessments-converge-across-runs/data-model.md`: the third verdict shape and its handling, back-linking 073
+- [x] `specs/066-audit-records-and-the-completion-gate/data-model.md`: the `rule-verdicts` description, back-linking 073
+- [x] `specs/020-code-review/scenarios/waiver-expiry.md`: the exception sentence, back-linking 073
+- [x] `specs/022-deterministic-runtime/data-model.md`: the `assessSpecQuality` answer for a listed rule; signposts in `specs/050-constitution/spec.md`, `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` and `specs/067-analyze-and-audit-checks/spec.md`, each back-linking 073
+- [x] `runtime/CHANGELOG.md` `[Unreleased]` entry for the feature
 
 - **Done when**: every spec in 073's `cross-spec-impact:` back-links to 073 and `check-artifacts` reports no cross-spec impact drift for 073.
 
