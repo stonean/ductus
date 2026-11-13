@@ -94,3 +94,11 @@ Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-sp
 - [x] `opens_block` and a thematic break or setext underline (`---`, `***`) directly after a reason: decide whether it ends the child as CommonMark renders it, and pin the choice
 
 - **Done when**: each item has a test that a named mutant turns red, and the whole `cargo test` passes
+
+## 10. The exec walker runs check-departures and counts its findings
+
+- [ ] `framework/commands/analyze.md`: `check-departures` as a backticked nested sub-step of step 5 (5.1), since a step dispatches one primitive and the parser makes a nested ordered list a sub-step; task 7 left it unbackticked prose, which `ductus exec` never dispatches (task 7's implementer, 2026-11-13)
+- [ ] `AnalyzeTally` (`runtime/src/interpreter/analyze_tally.rs`): count `check-departures`' findings by tier and its `unexamined` targets as the other check families' are; today its `_ => {}` arm drops them, so under `ductus exec` a malformed entry never reaches `blocking-findings`
+- [ ] A fixture where `ductus exec` analyze on a spec with a malformed departure entry records it as a blocking finding, with a mutant for the tally arm; re-bless `analyze-basic` only with its diff read
+
+- **Done when**: under `ductus exec` a malformed departure entry is a blocking finding in `analysis.md`, proven by a fixture its mutant turns red, and the whole `cargo test` passes
