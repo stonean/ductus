@@ -115,6 +115,16 @@ Run the five passes below. Dividing a wide scope among agents, follow each behav
 `skipped` in the report. `write-review` collapses a finding more than one pass
 produced. A pass's finding, or a reviewer's claim, is checked against the tree before it is recorded; break things only in a clone while reviewers read.
 
+### Passes in a subagent
+
+The passes read every loaded rule file and every in-scope file, which in the host's own context every later call of the session would read again. So a host that can start a subagent (Claude Code's Agent tool) runs steps 3 to 7 in one fresh subagent, and one that cannot (Pi) runs them itself. Brief it with the feature, the run's scope (`compute-review-scope`'s `scope`, or the file its `lists-file` names), the rule files step 2 loaded, any dimension-restricting flag, this section and the five pass sections below, and the shapes `write-review` takes for `findings` and `observations`. The subagent reads each rule file and each in-scope file whole, the remainder of any read a tool cut short included, and returns as its last message:
+
+- the findings and the observations as JSON in `write-review`'s shapes;
+- each in-scope file it read, and each it did not, with why;
+- for each rule file, the bytes it read against the file's size, and each pass that did not run.
+
+The host checks the hand-back before using it, as it checks any reviewer's claim. A file read short, a rule file read below its size, or a pass that did not run is named in the Summary and kept out of `examined`, or the subagent is asked to finish; it never reads as a clean result (§design-principles). The host then continues at step 8 with what it was handed, opening a file itself only to check or fix a finding. Under `ductus exec` the walker asks for each pass in turn.
+
 ### Security pass
 
 Walk every file in scope against the loaded security rules (the files **§Load rules** maps to this pass). For each finding,

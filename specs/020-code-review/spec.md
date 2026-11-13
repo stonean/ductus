@@ -3,7 +3,7 @@ spec: 020-code-review
 status: in-progress
 dependencies: []
 cross-spec-impact: [066-audit-records-and-the-completion-gate]
-next-criterion: 16
+next-criterion: 17
 ---
 
 # 020 — `/ductus:review` code review command with blocking gate
@@ -88,6 +88,7 @@ tools — a discipline dependency the framework should remove.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 - [x] AC14: **Flag parsing is specified and surfaced**: the command body documents how `$ARGUMENTS` is parsed for every flag in the Flags table, and `argument-hint` names each of them, so no flag is documented without being surfaced. A `--since` with no value and an unrecognized flag are each reported to the operator rather than silently absorbed. `/audit` holds `argument-hint` and the Flags table in agreement, so a flag added later cannot reopen the gap without a finding.
 - [x] AC15: **A clean review states what it read**: `review.md` and the spec's `review:` block both record `examined` — how many in-scope files the passes read — against a `scope` the primitive derives itself, so a review that examined its scope and found nothing is distinguishable from one whose passes never ran. The two are byte-identical without it: same counts, same digest, same `blocking: false`. An unstated `examined` is recorded as absent rather than as zero. **Half superseded by 057.** The `examined`/`scope` half holds exactly and is unchanged — both now live in `review.md` alone, which is what the criterion's first clause asked for once the second home was removed. The enforcement half is gone: `/{project}:audit` Family 31 reported `examined: 0` over a non-empty scope and an absent `examined` on a record carrying a scope as distinct findings, and 057 retired the family with the reconciliation check it was built on. **Nothing reads `examined` now; it is read at the completion gate by a person.** That is a real loss and is recorded rather than smoothed — but the family could not have carried this claim far anyway, since one `/{project}:review` call wrote both sides from the same values, so it never compared two independent observations. This cannot prove the passes ran — an overstated numerator is as available as an omitted one — and it is not claimed to; it makes the claim explicit and checkable, which is the bar `QUAL-CLAIM-001` sets and the one `write-analysis`'s `unexamined` already cleared.
+- [ ] AC16: A host that can start a subagent runs review's five passes, steps 3 to 7 of `framework/commands/review.md`, in one fresh subagent briefed as `framework/reference/review.md` §Passes in a subagent states, and continues with only the findings, observations and coverage it returns, so the rule files and in-scope files never enter its own context; a read the subagent reports short is named in the Summary and kept out of `examined`. A host that cannot start one runs the passes itself, and `ductus exec` asks for each pass in turn.
 
 ## Non-goals
 

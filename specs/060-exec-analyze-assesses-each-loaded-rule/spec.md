@@ -2,7 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime, 058-findings-route-at-discovery]
 cross-spec-impact: [022-deterministic-runtime]
-next-criterion: 10
+next-criterion: 11
 ---
 
 # 060 — Exec analyze assesses each loaded rule
@@ -47,6 +47,7 @@ Line references in this Motivation and in the Resolved Questions are to the tree
 - [x] AC7: A rule file an exec analyze cannot read is recorded in `unexamined-by-reason`, and a walk with no rule loaded records one `rule-assessments-not-checked` target at each of steps 11 and 12
 - [x] AC8: `framework/commands/analyze.md` steps 11 and 12 and the `assessSpecQuality` section of `specs/022-deterministic-runtime/data-model.md` state that an exec run leaves trigger evaluation to the host, which answers a rule whose trigger does not fire with `passed: true`
 - [x] AC9: 066 records the per-rule exec walk: the `rule-assessments-not-checked` description in `specs/066-audit-records-and-the-completion-gate/data-model.md` counts rules rather than requests, and 022's body or a scenario under it links back to this spec, discharging the `cross-spec-impact:` entry this spec declares on it
+- [ ] AC10: A host that can start a subagent judges the rules of steps 11 and 12 of `framework/commands/analyze.md` in one fresh subagent briefed as `framework/reference/analyze.md` §Rule judging in a subagent states, and continues with only the verdicts and coverage it returns, so no rule's text enters its own context; a rule the subagent did not answer, or judged from a short read, is left out of `judged-rules` and recorded under `unjudged-rules`. A host that cannot start one judges the rules itself, and `ductus exec` asks per rule.
 
 ## Open Questions
 

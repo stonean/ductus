@@ -297,6 +297,15 @@ A spec states that it deliberately departs from a rule as an entry under its `##
 
 `/ductus:review` reads the same entries (**§Waivers** in `.ductus/reference/review.md`).
 
+## Rule judging in a subagent
+
+Steps 11 and 12 read the Statement and whole Verification of every rule `verdicts.judge` lists, on a spec's first analysis every installed rule, which in the host's own context every later call of the session would read again. So a host that can start a subagent (Claude Code's Agent tool) judges them in one fresh subagent, and one that cannot (Pi) judges them itself. Brief it with the feature and its design subjects (`spec.md`, `plan.md`, `data-model.md` and each scenario), the IDs `verdicts.judge` lists, the rule list `discover-rule-files` returned with `rules` and `verification` (or the file its `lists-file` names), the departure entries step 5.1 returned, the rule files this run loaded, for a load-conditioned yield, and steps 11 and 12, this section and **§Stored rule verdicts**. The subagent reads each subject whole and each listed rule's Statement and whole Verification, the remainder of any read a tool cut short included, and returns as its last message:
+
+- for each ID it was given, its answer: not fired, or fired with a finding (tier, location, message), `addressed` with its `<path>#<Heading>` citation, or `waived` for a rule step 5.1 listed;
+- the bytes of the rule list and of each subject it read, against their sizes.
+
+The host checks the hand-back before using it: every ID it was given has an answer, each citation resolves to a heading, and every read was whole. A rule without an answer, or judged from a short read, is left out of `judged-rules`, so `write-analysis` records it under `unjudged-rules`, never as not fired (§design-principles). The fired rules are the set step 14 reads. Under `ductus exec` the walker asks per rule, as steps 11 and 12 state.
+
 ## Stored rule verdicts
 
 A run records each loaded rule's verdict, so a spec that has not changed is judged once and a different session cannot judge it differently. `discover-rule-files`' `verdicts` (called with `feature`) splits the assessable rules: judge each ID in `judge`, and report each `reusable` entry, a current verdict that fired, as a finding of its stored `tier` (or as addressed or waived, with nothing to report beyond step 22's waived list) without judging its rule again. A rule in neither is current and did not fire. A `reason` (`no-prior-verdicts`, `subjects-changed`, `rule-files-changed`, `record-unreadable`) says why nothing is reusable, and then `judge` holds every assessable rule; `record-unreadable` is also a notice, and means the record's verdict map or list does not parse, never that it held none.

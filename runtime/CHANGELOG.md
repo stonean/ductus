@@ -286,6 +286,17 @@ its version and date.
 
 ### Changed
 
+- **Rule judging runs in a fresh subagent where the host can start one
+  (specs 020 and 060).** Review's five passes and analyze's steps 11 and 12
+  read every loaded rule file, and review every in-scope file, into the
+  host's own context, where every later call of the session read them again.
+  A host that can start a subagent (Claude Code's Agent tool) now runs them
+  in one fresh subagent, briefed as `.ductus/reference/review.md` §Passes in
+  a subagent and `.ductus/reference/analyze.md` §Rule judging in a subagent
+  state, and continues with only the findings, verdicts and coverage it
+  returns, checked before use. A host that cannot (Pi) runs them itself, and
+  `ductus exec` still asks per pass and per rule.
+
 - **`process-decisions` keeps retained decisions out of its inline result
   (spec 066, task 22).** A retained decision asks nothing of the host, yet
   each came back inline with a notice of its own, and in one session they
