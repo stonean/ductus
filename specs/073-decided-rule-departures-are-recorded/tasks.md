@@ -24,10 +24,10 @@ Blocked on task 1.
 
 Blocked on task 2.
 
-- [ ] Add `RuleVerdict::Waived` in `runtime/src/schema/primitives.rs`, with an arm at each exhaustive match the plan names
-- [ ] `AnalyzeTally::record_assessment` records `Waived` for a rule with an entry on any fired answer and counts it into no tier; a pass records nothing
-- [ ] `write-analysis` refuses `waived` for a rule with no entry and `finding` or `addressed` for one with an entry, fills the fields from the entry, and recomputes a carried `waived` verdict's fields on every write
-- [ ] Fixtures: a MUST rule that fires is `waived` with `blocking-findings` 0; a rule that does not fire has no verdict; a waiver carries forward while its rule fires and is gone when it does not (AC4); a removed entry makes the rule a blocking finding again; a fired, addressed rule is still `waived`; a commit after an `unattributed` run attributes the next write
+- [x] Add `RuleVerdict::Waived` in `runtime/src/schema/primitives.rs`, with an arm at each exhaustive match the plan names
+- [x] `AnalyzeTally::record_assessment` records `Waived` for a rule with an entry on any fired answer and counts it into no tier; a pass records nothing
+- [x] `write-analysis` refuses `waived` for a rule with no entry and `finding` or `addressed` for one with an entry, fills the fields from the entry, and recomputes a carried `waived` verdict's fields on every write
+- [x] Fixtures: a MUST rule that fires is `waived` with `blocking-findings` 0; a rule that does not fire has no verdict; a waiver carries forward while its rule fires and is gone when it does not (AC4); a removed entry makes the rule a blocking finding again; a fired, addressed rule is still `waived`; a commit after an `unattributed` run attributes the next write
 
 - **Done when**: the AC2 and AC4 fixtures pass, a mutant for each refusal and for the recompute is killed, and `write-analysis` on a spec with no entry writes the record it wrote before.
 
@@ -35,8 +35,8 @@ Blocked on task 2.
 
 Blocked on task 3.
 
-- [ ] `write-analysis` renders `## Waived rules` in `analysis.md` (MUST first, apart from the passed rules) and returns `waived` and `waived-count`, bounded as `contradictions` is
-- [ ] Fixtures: a run with a waived MUST and a run that satisfied it differ in the record and the result; the list moves to a lists file past the read size
+- [x] `write-analysis` renders `## Waived rules` in `analysis.md` (MUST first, apart from the passed rules) and returns `waived` and `waived-count`, bounded as `contradictions` is
+- [x] Fixtures: a run with a waived MUST and a run that satisfied it differ in the record and the result; the list moves to a lists file past the read size
 
 - **Done when**: the two fixture records are distinguishable by `rule-verdicts`, the body section and the result, and the bounded form is proven in both directions.
 
@@ -88,9 +88,9 @@ Blocked on task 7. 082 is `done`: its data-model edit reopens it by `classify-sp
 
 ## 9. Pin the landing verifier's remaining test gaps
 
-- [ ] `check-departures`: a wrapped `cited:` whose `§` reference is on its continuation line, a resolvable one yielding no finding and an unresolvable one a finding at that line (SHOULD, `QUAL-TEST-001`: `judge_citations`' `first..=last` narrowed to `first..=first` survived every test; landing verifier of `51775a3f`, 2026-11-13)
-- [ ] `departures.rs` `opens_block`: the one-to-nine-digit bound pinned on both sides, ten digits and zero digits opening no block (`(1..=12)` and `(0..=9)` survived)
-- [ ] `write-review`'s `malformed-departures` entry asserted exactly, its `line N` included (replacing `problem.line` with 0 survived)
-- [ ] `opens_block` and a thematic break or setext underline (`---`, `***`) directly after a reason: decide whether it ends the child as CommonMark renders it, and pin the choice
+- [x] `check-departures`: a wrapped `cited:` whose `§` reference is on its continuation line, a resolvable one yielding no finding and an unresolvable one a finding at that line (SHOULD, `QUAL-TEST-001`: `judge_citations`' `first..=last` narrowed to `first..=first` survived every test; landing verifier of `51775a3f`, 2026-11-13)
+- [x] `departures.rs` `opens_block`: the one-to-nine-digit bound pinned on both sides, ten digits and zero digits opening no block (`(1..=12)` and `(0..=9)` survived)
+- [x] `write-review`'s `malformed-departures` entry asserted exactly, its `line N` included (replacing `problem.line` with 0 survived)
+- [x] `opens_block` and a thematic break or setext underline (`---`, `***`) directly after a reason: decide whether it ends the child as CommonMark renders it, and pin the choice
 
 - **Done when**: each item has a test that a named mutant turns red, and the whole `cargo test` passes
