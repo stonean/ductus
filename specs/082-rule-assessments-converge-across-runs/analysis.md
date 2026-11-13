@@ -1,16 +1,16 @@
 ---
 spec: 082-rule-assessments-converge-across-runs
-last-run: 2026-11-12T21:09:11Z
-analyzed-against: 9c9a7e4162274fdba52c547f5bf878a20fbf294a
+last-run: 2026-11-13T03:55:11Z
+analyzed-against: 6d085bdb8095d797aec2e9a39d0afa2ef65f5c2e
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 1
 analyzed-digest:
-  data-model.md: f2342da1234ffcbc2c2f76156b21515970299eff57dc0ba3a2e29dccf32c29e8
-  plan.md: 6e9d20a39c7e4c161d56a49606d810cee2c87e1a56bb8a61660e46b81d7cf11a
+  data-model.md: 1efa558e5e07e9976003d27da237ad8c6b529af09188d0f52da538b7833f7b91
+  plan.md: d9297ae1b5c558e22f41a6e52b10bc02eb70113c135ec3498e29f62d9671a579
   review.md: 9856afd6f14e627c482233a0e9e6e8ef618c317f8c055aab8211687470bfe288
-  spec.md: d7332be91a71e0bb86d2b82254e6c34ae169866a6e497a3309df5c19c4aee53c
+  spec.md: 65c8df8fac1bb009e13fbf3222e396676d347f263306448ac18a29f2a32913e6
   tasks.md: c3c61e9c4b9a74870902cfa60295d04d8001fa1156bacc81869fb2b65f6bfbe9
 unexamined-by-reason:
   ships-to-adopter: 1
@@ -41,7 +41,7 @@ rule-verdicts:
   QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Affected Files"}
 blocking: false
 dispositions:
-  fixed: 8
+  fixed: 0
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -51,7 +51,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 8 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -79,11 +79,4 @@ dispositions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-INPUT-004: the plan checked an addressed citation against the design subjects but committed to no containment of the host-supplied path (canonical components, no .., no symlink) — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md's Overview said a stored verdict is reused while the design subjects and the rule file are unchanged; the loaded rule-file set is a fourth input — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md's discover-rule-files decision listed two reason values and put a tier on every reusable entry; four values exist and only a finding carries a tier — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md said record_reused counts a reused finding by the rule's tier; it counts it in its stored tier — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md's tier-floor bullet ran the exec tier rule into the mixed-rule rationale, leaving a clause that refers to nothing — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md said a prior record that does not parse is overwritten; one whose frontmatter does not parse is refused, and only one whose rule fields do not is overwritten — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — plan.md's cross-spec section said 082's cross-spec-impact does not list 022; it does — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
-- grounding — spec.md's Resolved Question said the exec walker asks about every loaded rule; since this spec it skips a rule whose verdict is current — `specs/082-rule-assessments-converge-across-runs/spec.md` — **fixed** (decided by the rule)
+*None.*
