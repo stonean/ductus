@@ -24,8 +24,9 @@ its version and date.
   its `tier`, `reason`, `cited`, `decided-by`, `decided-at`, `line`),
   `findings` of family `departure-entries`, and `unexamined`. Blocking: an
   entry missing a required field or malformed (a second rule ID, another or a
-  repeated child key), a rule no loaded rule file defines or the spec lists in
-  `retired-rules:`, and a rule two entries name. Advisory: a deprecated rule
+  repeated child key), a rule no loaded rule file defines (unknown, or retired when the spec's
+  `retired-rules:` lists it too), and a rule two entries name, which leaves
+  both entries listed, each attributed, the second reported. Advisory: a deprecated rule
   and a `cited:` that is not exactly one `§anchor` reference or whose
   anchor `resolve-anchor` judges unresolved. A rule the project never installed
   (`rule-not-installed`) and a citation that cannot be judged

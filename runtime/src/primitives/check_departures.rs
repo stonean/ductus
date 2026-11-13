@@ -471,7 +471,15 @@ mod tests {
         assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
         assert_eq!(result.findings[0].tier, AnalyzeSeverity::Blocking);
         assert!(result.findings[0].message.contains("line 12"));
+        // Both entries stay listed, each with its own attribution fields.
         assert_eq!(result.entries.len(), 2);
+        assert_eq!(
+            result.entries.iter().map(|e| e.line).collect::<Vec<_>>(),
+            vec![10, 12]
+        );
+        assert!(result.entries.iter().all(|e| e.rule == "DM-MUST-001"
+            && e.decided_by == "unattributed"
+            && e.decided_at.is_none()));
         let two = check(&project(
             "",
             &format!("{}{}", entry("DM-MUST-001"), entry("DM-SHLD-001")),
@@ -526,6 +534,49 @@ mod tests {
             "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: §shared-exceptions\n",
         ));
         assert_eq!(one.findings, vec![]);
+    }
+
+    #[test]
+    fn only_the_cited_lines_are_judged_for_references() {
+        // A stray `§` in the reason, and one on the line after the entry,
+        // are no citation: neither is judged.
+        let tmp = project(
+            "",
+            "- departs: `DM-MUST-001`\n  - reason: see §stray-one\n  - cited: §shared-exceptions\n\nnote §stray-two\n",
+        );
+        let result = check(&tmp);
+        assert_eq!(result.findings, vec![]);
+        assert_eq!(result.unexamined, vec![]);
+    }
+
+    #[test]
+    fn a_rule_file_only_the_all_selection_loads_defines_a_known_rule() {
+        let tmp = project("", &entry("FE-ONLY-001"));
+        write(
+            &tmp.path().join("specs/rules/demo-frontend.md"),
+            "# Frontend\n\n### FE-ONLY-001\n\n> The page MUST render.\n",
+        );
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[rules]\nsurfaces = [\"backend\"]\n",
+        );
+        let result = check(&tmp);
+        assert_eq!(result.findings, vec![]);
+        assert_eq!(result.entries[0].tier, Some(FindingTier::Must));
+    }
+
+    #[test]
+    fn findings_are_in_line_order_whatever_found_them() {
+        // An unknown rule is found after the structural problems, yet its
+        // line is the earlier one.
+        let tmp = project(
+            "",
+            "- departs: `DM-NONE-999`\n  - reason: r\n- departs: `DM-MUST-001`\n  - cited: §shared-exceptions\n",
+        );
+        let result = check(&tmp);
+        assert_eq!(result.findings.len(), 2, "{:?}", result.findings);
+        assert!(result.findings[0].message.starts_with("line 10:"));
+        assert!(result.findings[1].message.starts_with("line 12:"));
     }
 
     #[test]
