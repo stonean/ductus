@@ -739,8 +739,12 @@ pub struct DiscoverRuleFilesResult {
     /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
     /// warnings, then disabled-rule-file notices, then a line per `*.md`
     /// entry that is no regular file, then the closing `loading rule files: …`
-    /// line.
-    pub notices: Vec<String>,
+    /// line. Absent in the file form, since a line per unknown key grows with
+    /// the config (022 task 32).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notices: Option<Vec<String>>,
+    /// Entries in `notices`, in either form.
+    pub notices_count: usize,
     /// With `rules`: each selected file's rules, then each extra file's.
     /// Absent without `rules`, and in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -752,12 +756,13 @@ pub struct DiscoverRuleFilesResult {
     /// text, with its reason.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unreadable: Vec<UnreadableRuleFile>,
-    /// With `rules`: where the rules are, in this result or past the read
-    /// size in the file `lists-file` names.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub form: Option<ListsForm>,
-    /// In the file form, the file holding `rule-files`, and with `verdicts`
-    /// its `reusable` and `judge` lists, whole, from the project root.
+    /// Where the lists are: in this result, or past the read size in the
+    /// file `lists-file` names (spec 080, AC7; `notices`, and so every call,
+    /// since 022 task 32).
+    pub form: ListsForm,
+    /// In the file form, the file holding `notices`, with `rules` its
+    /// `rule-files`, and with `verdicts` its `reusable` and `judge` lists,
+    /// whole, from the project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// With `all`, `rules` and `feature`: which stored rule verdicts a run
@@ -3162,8 +3167,13 @@ pub struct DashboardConfig {
     /// `{location} {key}` — `[rules] surface`, or
     /// `[[review.disabled-rule-files]] entry [0] approved-by` — with a key
     /// that needs quoting quoted and escaped (spec 019). Empty when there are
-    /// none or the file is absent.
-    pub unknown_keys: Vec<String>,
+    /// none or the file is absent. Absent in `dashboard`'s file form, which
+    /// moves it to the list file under `config` (022 task 32); the pipeline
+    /// view's model always holds it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unknown_keys: Option<Vec<String>>,
+    /// Entries in `unknown-keys`, in either form.
+    pub unknown_keys_count: usize,
 }
 
 /// Scenario-level detail returned when the session target names a scenario.

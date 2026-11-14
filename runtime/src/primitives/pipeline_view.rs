@@ -583,20 +583,23 @@ fn config_items(data: &ViewData<'_>) -> Vec<Item> {
             ),
         ));
     }
-    if !config.unknown_keys.is_empty() {
+    // The model always holds the keys: only `dashboard`'s file form moves
+    // them, and the view renders from the model.
+    let unknown_keys = config.unknown_keys.as_deref().unwrap_or_default();
+    if !unknown_keys.is_empty() {
         // Each entry is already one line: a key that needs it is quoted and
         // escaped by the registry (`BE-INPUT-011`).
         items.push(cut(
             format!(
                 "Unknown config keys: {} ({}) — {} — this version of ductus does not read them",
-                config.unknown_keys.len(),
+                unknown_keys.len(),
                 data.config_name,
-                config.unknown_keys.join(", ")
+                unknown_keys.join(", ")
             ),
             Cut::UnknownConfigKeys,
             format!(
                 "Unknown config keys: {} ({})",
-                config.unknown_keys.len(),
+                unknown_keys.len(),
                 data.config_name
             ),
         ));
@@ -1076,7 +1079,8 @@ mod tests {
                 config: DashboardConfig {
                     present: true,
                     disabled_rule_files: Vec::new(),
-                    unknown_keys: Vec::new(),
+                    unknown_keys: Some(Vec::new()),
+                    unknown_keys_count: 0,
                 },
                 inbox: InboxStanding {
                     state: InboxState::Clean,
@@ -1469,7 +1473,8 @@ mod tests {
             config: &DashboardConfig {
                 present: true,
                 disabled_rule_files: vec!["a-cross.md".to_string(), "b-cross.md".to_string()],
-                unknown_keys: vec!["[review] stray".to_string()],
+                unknown_keys: Some(vec!["[review] stray".to_string()]),
+                unknown_keys_count: 1,
             },
             config_name: ".ductus/config.toml",
             inbox: &fixture.inbox,

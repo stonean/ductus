@@ -92,8 +92,8 @@ MUTATIONS = [
     (
         'M11 the rules stay inline past the read size',
         'src/primitives/discover_rule_files.rs',
-        '        result.form = Some(ListsForm::File);\n        result.rule_files = None;\n',
-        '        result.form = Some(ListsForm::Inline);\n',
+        '        result.notices = None;\n        result.rule_files = None;\n',
+        '        result.notices = None;\n',
         'discover_rule_files::tests::past_the_read_size_the_rules_move_to_a_file',
     ),
     (

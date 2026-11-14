@@ -39,7 +39,8 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
      the operator removes the line by hand: `/ductus:review` does not
      auto-reset.
 5. Discover rule files: step 2's `discover-rule-files` applies what follows
-   and returns the notice lines, in order, to emit verbatim. It lists
+   and returns the notice lines, in order, to emit verbatim, in its `notices`
+   or past the read size in the file `lists-file` names. It lists
    `framework/rules/*.md` in ductus's own repository, or `specs/rules/*.md` in
    adopter projects, and classifies each by basename suffix:
    - `*-backend.md` → backend surface

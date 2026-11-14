@@ -71,7 +71,9 @@ pub fn run(args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
 /// it carries `specs` and `tags-union` in the file it names and only their
 /// counts inline (`bounded_lists::place`; spec 080, AC7). A non-empty
 /// `session-notices` or `session-unreadable` moves with them, its count
-/// inline, since nothing else bounds an unparseable session file's entry.
+/// inline, since nothing else bounds an unparseable session file's entry,
+/// and so does `config`'s `unknown-keys`, a line per unknown config key,
+/// under `config` in the file with its count inline (022 task 32).
 pub(crate) fn run_as(
     _args: &DashboardArgs,
     repo: &Path,
@@ -82,6 +84,7 @@ pub(crate) fn run_as(
     let mut lists = serde_json::json!({
         "specs": &result.specs,
         "tags-union": &result.tags_union,
+        "config": { "unknown-keys": &result.config.unknown_keys },
     });
     if !result.session_notices.is_empty() {
         lists["session-notices"] = serde_json::json!(&result.session_notices);
@@ -99,6 +102,7 @@ pub(crate) fn run_as(
         result.form = ListsForm::File;
         result.specs = None;
         result.tags_union = None;
+        result.config.unknown_keys = None;
         if !result.session_notices.is_empty() {
             result.session_notices_count = Some(result.session_notices.len());
             result.session_notices = Vec::new();
@@ -443,7 +447,8 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
             DashboardConfig {
                 present: false,
                 disabled_rule_files: Vec::new(),
-                unknown_keys: Vec::new(),
+                unknown_keys: Some(Vec::new()),
+                unknown_keys_count: 0,
             },
             name,
         ));
@@ -457,7 +462,7 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
     // so `/status` names every one (spec 019). Key names only; the typed
     // parse below is what reports a value of the wrong type, by its line.
     let table: toml::Table = toml::from_str(&content).map_err(toml_error)?;
-    let unknown_keys = config_keys::unknown_keys(&table)
+    let unknown_keys: Vec<String> = config_keys::unknown_keys(&table)
         .iter()
         .map(ToString::to_string)
         .collect();
@@ -473,7 +478,8 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         DashboardConfig {
             present: true,
             disabled_rule_files,
-            unknown_keys,
+            unknown_keys_count: unknown_keys.len(),
+            unknown_keys: Some(unknown_keys),
         },
         name,
     ))
@@ -703,6 +709,49 @@ mod tests {
         )
         .unwrap();
         assert_eq!(file["session-unreadable"].as_array().unwrap().len(), 200);
+    }
+
+    /// Past the read size `config`'s `unknown-keys` moves to the list file,
+    /// under `config` there as inline, with its count inline, so the file
+    /// form stays within the bound however many keys the config carries that
+    /// this version does not read (`BE-PAYLOAD-001`; 022 task 32, from 019's
+    /// analysis).
+    #[test]
+    fn the_file_form_moves_the_unknown_config_keys() {
+        use std::fmt::Write as _;
+        let tmp = TempDir::new().unwrap();
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let keys = (0..200).fold(String::new(), |mut keys, n| {
+            let _ = writeln!(keys, "stray-{n:03} = 1");
+            keys
+        });
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = 2000\n\n[rules]\n{keys}"),
+        )
+        .unwrap();
+
+        let result =
+            super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.config.unknown_keys.is_none(), "{result:?}");
+        assert_eq!(result.config.unknown_keys_count, 200);
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 2000, "{size} bytes");
+        let file: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(result.lists_file.as_deref().unwrap()))
+                .unwrap(),
+        )
+        .unwrap();
+        let moved = file["config"]["unknown-keys"].as_array().unwrap();
+        assert_eq!(moved.len(), 200);
+        assert_eq!(moved[0], "[rules] stray-000");
     }
 
     fn fixed_now() -> SystemTime {
@@ -1387,7 +1436,7 @@ reason = "Deferred until v2 perf budget lands."
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert_eq!(
-            result.config.unknown_keys,
+            result.config.unknown_keys.as_deref().unwrap(),
             [
                 "[rules] surface",
                 "[paths] spec-root",
@@ -1418,7 +1467,11 @@ reason = "Deferred until v2 perf budget lands."
         )
         .unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert_eq!(result.config.unknown_keys, [] as [String; 0]);
+        assert_eq!(
+            result.config.unknown_keys.as_deref().unwrap(),
+            [] as [String; 0]
+        );
+        assert_eq!(result.config.unknown_keys_count, 0);
         assert!(!result.rendered_markdown.contains("Unknown config keys"));
     }
 

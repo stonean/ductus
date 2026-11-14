@@ -92,8 +92,9 @@ fn classify(basename: &str) -> Surface {
 /// - [`PrimitiveError::Io`] on filesystem failures listing the rule-file
 ///   directory.
 /// - With `rules`, [`PrimitiveError::InvalidPath`] for an `extra-files` entry
-///   leaving the project, and every error `bounded_lists::place` returns: a
-///   malformed read size, or a list file that cannot be written.
+///   leaving the project.
+/// - Every error `bounded_lists::place` returns: a malformed read size, or a
+///   list file that cannot be written.
 /// - With `all`, `rules` and `feature`, [`PrimitiveError::FeatureNotFound`] and the
 ///   feature-argument refusals of `validate_feature_argument`.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
@@ -182,25 +183,61 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
     let mut result = DiscoverRuleFilesResult {
         rules_dir: rules_dir_rel,
         selected,
-        notices,
         ..DiscoverRuleFilesResult::default()
     };
     if args.rules {
-        list_rules(args, repo, &mut result)?;
+        list_rules(args, repo, &mut result, &mut notices)?;
     }
+    bound(repo, &mut result, notices)?;
     Ok(result)
+}
+
+/// `result` held to `[artifacts] read-size-bytes` once `notices` is whole:
+/// inline while it fits, and past it with `notices`, with `rules` its
+/// `rule-files`, and with `verdicts` its `reusable` and `judge`, in the file
+/// it names and only their counts inline (`bounded_lists::place`; spec 080,
+/// AC7, and 022 task 32 for `notices`, a line per unknown config key).
+fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>) -> Result<()> {
+    result.notices_count = notices.len();
+    result.notices = Some(notices);
+    result.form = ListsForm::Inline;
+    let mut lists = serde_json::json!({ "notices": &result.notices });
+    if let Some(rule_files) = &result.rule_files {
+        lists["rule-files"] = serde_json::json!(rule_files);
+    }
+    if let Some(block) = &result.verdicts {
+        lists["reusable"] = serde_json::json!(&block.reusable);
+        lists["judge"] = serde_json::json!(&block.judge);
+    }
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "discover-rule-files",
+        super::bounded_lists::ALL_SPECS,
+        &*result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.notices = None;
+        result.rule_files = None;
+        if let Some(block) = &mut result.verdicts {
+            block.reusable = None;
+            block.judge = None;
+        }
+        result.lists_file = Some(file);
+    }
+    Ok(())
 }
 
 /// With `rules`, each selected file's rules and then each extra file's,
 /// parsed by [`parse_rule_sections`], the reading `check-rule-ids` and the
 /// exec walker share; a file that cannot be read is listed under
-/// `unreadable`. The list is returned inline while the result fits
-/// `[artifacts] read-size-bytes`, and past it in the file the result names
-/// (`bounded_lists::place`; spec 080, AC7).
+/// `unreadable`. A record whose verdicts cannot be read adds a line to
+/// `notices`. [`bound`] then holds the result to the read size.
 fn list_rules(
     args: &DiscoverRuleFilesArgs,
     repo: &Path,
     result: &mut DiscoverRuleFilesResult,
+    notices: &mut Vec<String>,
 ) -> Result<()> {
     let mut files: Vec<String> = result
         .selected
@@ -269,32 +306,11 @@ fn list_rules(
     }
     result.rule_files_count = Some(rule_files.len());
     result.rule_files = Some(rule_files);
-    result.form = Some(ListsForm::Inline);
     if args.all
         && let Some(feature) = &args.feature
     {
-        let block = verdicts_block(repo, feature, &loaded, &mut result.notices)?;
+        let block = verdicts_block(repo, feature, &loaded, notices)?;
         result.verdicts = Some(block);
-    }
-    let mut lists = serde_json::json!({ "rule-files": &result.rule_files });
-    if let Some(block) = &result.verdicts {
-        lists["reusable"] = serde_json::json!(&block.reusable);
-        lists["judge"] = serde_json::json!(&block.judge);
-    }
-    if let Some(file) = super::bounded_lists::place(
-        repo,
-        "discover-rule-files",
-        super::bounded_lists::ALL_SPECS,
-        &*result,
-        &lists,
-    )? {
-        result.form = Some(ListsForm::File);
-        result.rule_files = None;
-        if let Some(block) = &mut result.verdicts {
-            block.reusable = None;
-            block.judge = None;
-        }
-        result.lists_file = Some(file);
     }
     Ok(())
 }
@@ -746,7 +762,7 @@ mod tests {
         );
         assert_eq!(result.rules_dir, "framework/rules");
         assert_eq!(
-            result.notices,
+            result.notices.as_deref().unwrap(),
             vec![
                 "loading rule files: accessibility-frontend.md, quality-cross.md, security-backend.md"
             ]
@@ -840,7 +856,7 @@ mod tests {
         let result = run(&args(&["backend"]), tmp.path()).unwrap();
         assert!(result.selected.contains(&"internal-notes.md".to_string()));
         assert_eq!(
-            result.notices[0],
+            result.notices.as_deref().unwrap()[0],
             "rule file internal-notes.md has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
         );
     }
@@ -855,7 +871,7 @@ mod tests {
                 .selected
                 .contains(&"accessibility-frontend.md".to_string())
         );
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"disabled-rule-file: accessibility-frontend.md — Internal admin UI; not yet adopting WCAG AA. (.govern.toml)".to_string()
         ));
     }
@@ -870,7 +886,7 @@ mod tests {
         std::fs::create_dir_all(&cfg_dir).unwrap();
         std::fs::write(cfg_dir.join("config.toml"), toml).unwrap();
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"disabled-rule-file: accessibility-frontend.md — Internal admin UI; not yet adopting WCAG AA. (.ductus/config.toml)".to_string()
         ));
     }
@@ -881,7 +897,7 @@ mod tests {
         let toml = "[rules]\nsurfaces = [\"backend\"]\n\n[[review.disabled-rule-files]]\nfile = \"accessibility-frontend.md\"\nreason = \"Not adopting WCAG AA on this surface yet.\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"disabled-rule-file (no-op): accessibility-frontend.md not selected by stack detection".to_string()
         ));
     }
@@ -891,7 +907,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"nonexistent-cross.md\"\nreason = \"This file was renamed or moved elsewhere.\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"unknown disabled-rule-file: nonexistent-cross.md (no such file in the rule-file directory)".to_string()
         ));
     }
@@ -1016,17 +1032,23 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"nope.md\\nloading rule files: (forged)\"\nreason = \"Renamed upstream, see PROJ-1.\"\n\n[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"\\u001b[31mNot adopting this file yet\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert_eq!(result.notices.len(), 3, "{:?}", result.notices);
         assert_eq!(
-            result.notices[0],
+            result.notices.as_deref().unwrap().len(),
+            3,
+            "{:?}",
+            result.notices.as_deref().unwrap()
+        );
+        assert_eq!(
+            result.notices.as_deref().unwrap()[0],
             "unknown disabled-rule-file: nope.md loading rule files: (forged) (no such file in the rule-file directory)"
         );
         assert!(
-            result.notices[1].starts_with("disabled-rule-file: quality-cross.md — "),
+            result.notices.as_deref().unwrap()[1]
+                .starts_with("disabled-rule-file: quality-cross.md — "),
             "{:?}",
-            result.notices[1]
+            result.notices.as_deref().unwrap()[1]
         );
-        for notice in &result.notices {
+        for notice in result.notices.as_deref().unwrap() {
             assert!(
                 !notice.contains('\n') && !notice.contains('\u{1b}'),
                 "{notice:?}"
@@ -1044,7 +1066,7 @@ mod tests {
         assert!(!result.selected.contains(&"quality-cross.md".to_string()));
         // Reported as informational all the same (spec 019).
         assert_eq!(
-            result.notices[0],
+            result.notices.as_deref().unwrap()[0],
             "unknown config key: [[review.disabled-rule-files]] entry [0] approved-by (.govern.toml) — this version of ductus does not read it"
         );
     }
@@ -1057,7 +1079,7 @@ mod tests {
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&["frontend"]), tmp.path()).unwrap();
         assert_eq!(
-            result.notices,
+            result.notices.as_deref().unwrap(),
             [
                 "unknown config key: [rules] surface (.govern.toml) — this version of ductus does not read it",
                 "unknown config key: [review] disabled-rule-file (.govern.toml) — this version of ductus does not read it",
@@ -1108,7 +1130,7 @@ mod tests {
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert!(!result.selected.contains(&"quality-cross.md".to_string()));
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"duplicate disabled-rule-file: quality-cross.md — entry [1] ignored".to_string()
         ));
     }
@@ -1118,7 +1140,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"\"\"\nInternal admin UI;\nnot adopting WCAG AA yet.\n\"\"\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(result.notices.contains(
+        assert!(result.notices.as_deref().unwrap().contains(
             &"disabled-rule-file: quality-cross.md — Internal admin UI; not adopting WCAG AA yet. (.govern.toml)".to_string()
         ));
     }
@@ -1128,12 +1150,16 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"security-backend.md\"\nreason = \"Backend rules disabled for this probe.\"\n";
         let tmp = setup(&["security-backend.md", "internal-notes.md"], Some(toml));
         let result = run(&args(&["backend"]), tmp.path()).unwrap();
-        assert_eq!(result.notices.len(), 3);
+        assert_eq!(result.notices.as_deref().unwrap().len(), 3);
         assert!(
-            result.notices[0].starts_with("rule file internal-notes.md has unrecognized suffix")
+            result.notices.as_deref().unwrap()[0]
+                .starts_with("rule file internal-notes.md has unrecognized suffix")
         );
-        assert!(result.notices[1].starts_with("disabled-rule-file: security-backend.md"));
-        assert!(result.notices[2].starts_with("loading rule files:"));
+        assert!(
+            result.notices.as_deref().unwrap()[1]
+                .starts_with("disabled-rule-file: security-backend.md")
+        );
+        assert!(result.notices.as_deref().unwrap()[2].starts_with("loading rule files:"));
     }
 
     #[test]
@@ -1153,7 +1179,10 @@ mod tests {
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(result.rules_dir, "");
         assert_eq!(result.selected, [] as [String; 0]);
-        assert_eq!(result.notices, vec!["loading rule files: "]);
+        assert_eq!(
+            result.notices.as_deref().unwrap(),
+            vec!["loading rule files: "]
+        );
     }
 
     #[test]
@@ -1177,8 +1206,9 @@ mod tests {
 
     /// Scenario `rules-load-without-shell-reads`: with `rules`, each selected
     /// file's rules come back, ID, tier and Statement, and the Verification
-    /// only with `verification`. Without `rules` the result keeps its old
-    /// shape.
+    /// only with `verification`. Without `rules` no rule is listed, and the
+    /// result is still bounded, since its `notices` grow with the config's
+    /// unknown keys (022 task 32).
     #[test]
     fn rules_lists_each_selected_files_rules() {
         let tmp = setup(&["quality-cross.md"], None);
@@ -1187,12 +1217,14 @@ mod tests {
         let plain = run(&args(&[]), tmp.path()).unwrap();
         let value = serde_json::to_value(&plain).unwrap();
         assert!(
-            value.get("rule-files").is_none() && value.get("form").is_none(),
+            value.get("rule-files").is_none() && value.get("rule-files-count").is_none(),
             "{value}"
         );
+        assert_eq!(value["form"], "inline", "{value}");
+        assert_eq!(value["notices-count"], 1, "{value}");
 
         let result = run(&with_rules(args(&[])), tmp.path()).unwrap();
-        assert_eq!(result.form, Some(ListsForm::Inline));
+        assert_eq!(result.form, ListsForm::Inline);
         assert_eq!(result.rule_files_count, Some(1));
         let files = result.rule_files.unwrap();
         assert_eq!(files[0].file, "framework/rules/quality-cross.md");
@@ -1262,7 +1294,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            all.notices.last().unwrap(),
+            all.notices.as_deref().unwrap().last().unwrap(),
             "loading rule files: accessibility-frontend.md, quality-cross.md, security-backend.md"
         );
     }
@@ -1290,10 +1322,10 @@ mod tests {
         .unwrap();
         assert_eq!(all.selected, vec!["quality-cross.md"]);
         assert!(
-            all.notices.iter().any(|notice| notice
+            all.notices.as_deref().unwrap().iter().any(|notice| notice
                 == "rule file linked-cross.md is not a regular file — not loaded; replace it with the file itself"),
             "{:?}",
-            all.notices
+            all.notices.as_deref().unwrap()
         );
     }
 
@@ -1448,7 +1480,7 @@ mod tests {
         .unwrap();
         std::fs::write(tmp.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
         let result = run(&with_rules(args(&[])), tmp.path()).unwrap();
-        assert_eq!(result.form, Some(ListsForm::File));
+        assert_eq!(result.form, ListsForm::File);
         assert!(result.rule_files.is_none());
         assert_eq!(result.rule_files_count, Some(1));
         let file = result.lists_file.clone().unwrap();
@@ -1461,6 +1493,55 @@ mod tests {
             &serde_json::to_value(&result).unwrap(),
             &lists,
         );
+    }
+
+    /// Past the read size `notices` moves to the file with the rules, its
+    /// count inline, with or without `rules`: a line per unknown config key
+    /// grows with the config (`BE-PAYLOAD-001`; 022 task 32, from 019's
+    /// analysis).
+    #[test]
+    fn past_the_read_size_the_notices_move_to_the_file() {
+        use std::fmt::Write as _;
+        let tmp = setup(&["quality-cross.md"], None);
+        let keys = (0..200).fold(String::new(), |mut keys, n| {
+            let _ = writeln!(keys, "stray-{n:03} = 1");
+            keys
+        });
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = 2000\n\n[rules]\n{keys}"),
+        )
+        .unwrap();
+        std::fs::write(tmp.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
+        for call in [args(&[]), with_rules(args(&[]))] {
+            let label = format!("rules {}", call.rules);
+            let result = run(&call, tmp.path()).unwrap();
+            assert_eq!(result.form, ListsForm::File, "{label}");
+            assert!(result.notices.is_none(), "{label}: notices stayed inline");
+            assert_eq!(result.notices_count, 201, "{label}");
+            let size = serde_json::to_vec(&result).unwrap().len();
+            assert!(size <= 2000, "{label}: {size} bytes");
+            let file = result.lists_file.clone().unwrap();
+            let lists: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                    .unwrap();
+            let notices = lists["notices"].as_array().unwrap();
+            assert_eq!(notices.len(), 201, "{label}");
+            assert!(
+                notices[0].as_str().unwrap().contains("[rules] stray-000"),
+                "{label}: {notices:?}"
+            );
+            assert_eq!(
+                notices[200], "loading rule files: quality-cross.md",
+                "{label}"
+            );
+            crate::primitives::bounded_lists::assert_counts_name_the_file(
+                "discover-rule-files",
+                &serde_json::to_value(&result).unwrap(),
+                &lists,
+            );
+        }
     }
 
     // -- stored rule verdicts (spec 082) ----------------------------------
@@ -1630,10 +1711,12 @@ mod tests {
         assert!(
             result
                 .notices
+                .as_deref()
+                .unwrap()
                 .iter()
                 .any(|notice| notice.contains("carries no readable record")),
             "{:?}",
-            result.notices
+            result.notices.as_deref().unwrap()
         );
         let block = result.verdicts.unwrap();
         assert_eq!(block.reason.as_deref(), Some("record-unreadable"));
@@ -1653,7 +1736,7 @@ mod tests {
         )
         .unwrap();
         let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
-        assert_eq!(result.form, Some(ListsForm::File));
+        assert_eq!(result.form, ListsForm::File);
         let block = result.verdicts.clone().unwrap();
         assert_eq!((block.reusable_count, block.judge_count), (0, 1));
         assert!(block.reusable.is_none() && block.judge.is_none());

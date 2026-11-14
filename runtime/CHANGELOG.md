@@ -313,6 +313,18 @@ its version and date.
 
 ### Changed
 
+- **`discover-rule-files`' notices and `dashboard`'s unknown config keys are
+  bounded (spec 022, task 32).** Each is a line per key in `.ductus/config.toml`
+  that this version does not read, so it grows with the config. Every
+  `discover-rule-files` call is now held to `[artifacts] read-size-bytes`,
+  with `rules` or without: `form` is always present, `notices-count` stays
+  inline, and past the bound `notices` moves to the lists file with the rules,
+  where review and analyze emit the notice lines from. A malformed read size
+  now halts a call without `rules` too. `dashboard`'s `config` gains
+  `unknown-keys-count`, and past the bound `unknown-keys` moves to the lists
+  file under `config`. `/{project}:status` renders from the model and is
+  unaffected.
+
 - **`derive-references` bounds its result (spec 067, task 32).** Its six
   spec lists grow with the corpus, since a service rename drifts every
   referencing spec at once, yet they came back inline whatever their length.

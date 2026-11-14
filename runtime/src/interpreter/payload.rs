@@ -3173,6 +3173,53 @@ mod tests {
         assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
     }
 
+    /// `discover-rule-files` past the read size gets its `notices` back from
+    /// its list file, with or without `rules`, so the notice lines a walk
+    /// emits are the whole list (022 task 32): the real primitive's file form,
+    /// read back through the count it carries.
+    #[test]
+    fn discover_rule_files_past_the_read_size_gets_its_notices_back() {
+        use std::fmt::Write as _;
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
+        fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            "# rule\n",
+        )
+        .unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        let keys = (0..200).fold(String::new(), |mut keys, n| {
+            let _ = writeln!(keys, "stray-{n:03} = 1");
+            keys
+        });
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = 2000\n\n[rules]\n{keys}"),
+        )
+        .unwrap();
+        for rules in [false, true] {
+            let args = crate::schema::primitives::DiscoverRuleFilesArgs {
+                rules,
+                ..Default::default()
+            };
+            let result = crate::primitives::discover_rule_files::run(&args, tmp.path()).unwrap();
+            let mut value = serde_json::to_value(&result).unwrap();
+            assert_eq!(value["form"], "file", "rules {rules}");
+            assert!(value.get("notices").is_none(), "rules {rules}");
+            let restored = restore_lists("discover-rule-files", &mut value, tmp.path()).unwrap();
+            assert!(
+                restored.contains(&"notices".to_string()),
+                "rules {rules}: {restored:?}"
+            );
+            let notices = value["notices"].as_array().unwrap();
+            assert_eq!(notices.len(), 201, "rules {rules}");
+            assert_eq!(
+                notices[200], "loading rule files: quality-cross.md",
+                "rules {rules}"
+            );
+        }
+    }
+
     /// A key the list file holds and the result carries inline, as
     /// `compute-review-scope`'s `diff-base` is, keeps its inline value and is
     /// not named restored, so it stays in the legacy tail (022's data model).

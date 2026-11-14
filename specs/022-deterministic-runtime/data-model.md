@@ -419,6 +419,12 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 
 `state` is `clean` (examined, empty), `outstanding`, or `no-file` (no readable `{specs-root}/inbox.md`), so a project with no inbox never renders as examined-and-clean. `oldest` is `YYYY-MM-DD` from `git blame` over the surviving bullets, so the whole-file rewrites `append-inbox` and `remove-inbox-item` perform do not reset a surviving line's date. It is **absent, not defaulted**, when the oldest item's date cannot be read — an inbox not yet committed, a surviving item behind a shallow clone's cut, or any other blame failure — and a caller reports that as *age undeterminable* rather than as today; an uncommitted item alone never makes it absent, being newer than every committed one. Being a history read, a CI job running it needs `fetch-depth: 0`. Counting uses the shared comment- and fence-aware bullet grammar the append and remove primitives use. It is **a notice, never a gate**: nothing blocks on inbox depth, because §brownfield-inbox's design rests on capture being free.
 
+`config` carries `unknown-keys-count` beside `unknown-keys` (task 32): past `[artifacts] read-size-bytes` the list moves to the file `lists-file` names, under `config` there as inline, and the count stays, since a line per unknown config key grows with the config (`BE-PAYLOAD-001`, from 019's analysis). The pipeline view renders from the model, which always holds the list, so `/{project}:status` never reads it from the file.
+
+### `discover-rule-files` — `notices` bounded (addendum)
+
+`notices` carries `notices-count`, and every call, with `rules` or without, is held to `[artifacts] read-size-bytes`: past it `notices` moves to the file `lists-file` names, with `rule-files` and the verdict lists when the call returns them, and `form` is present on every call (task 32; `BE-PAYLOAD-001`, from 019's analysis). A host then emits the notice lines from the file, in order, as `/{project}:review` step 2 and `framework/reference/analyze.md` §Rules (blocking and advisory) say, and the exec walker restores the list from the file through its count. The rest of the shape is `specs/080-deterministic-runtime-efficiency/data-model.md` §`discover-rule-files`' rules.
+
 ### `render-status` — the pipeline view (spec 080)
 
 Args: none. The view is rendered from the read `dashboard` makes, without its structured payload:
