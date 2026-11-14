@@ -1,7 +1,8 @@
 # Pi-shaped adopter project — exercises the LEGACY `cli-config-dir`
 # fallback: a pre-relocation adopter still carrying `cli-config-dir` in the
 # committed `.govern.toml` `[host]` block (current adopters write it to the
-# gitignored `.govern.session.toml` instead; see the exec-pi-session fixture).
+# gitignored `.ductus/session.toml`; the exec-pi-session fixture carries it in the
+# legacy `.govern.session.toml`).
 # The runtime would otherwise default to `.claude` / repo directory basename,
 # neither of which resolve under this fixture's `.pi/prompts/` layout.
 

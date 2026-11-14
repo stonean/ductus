@@ -18,10 +18,7 @@ Rationale: Keeping them under `framework/` (not under `.claude/commands/`) avoid
 
 ### Parameterization approach
 
-Every command uses literal `{project}` as the project placeholder, and `{cli-config-dir}` for the agent's config directory (added by `012-multi-agent-govern`). They appear in:
-
-- Command cross-references: `/{project}:clarify`, `/{project}:plan`
-- Command directory references: `{cli-config-dir}/commands/{project}/`
+Every command uses literal `{project}` as the project placeholder, in its cross-references (`/{project}:clarify`, `/{project}:plan`), and `scripts/gen-claude-commands.sh` substitutes `{cli-config-dir}` for the agent's config directory too (added by `012-multi-agent-govern`). No command source spells `{cli-config-dir}` now: `/{project}:analyze` reads the layout-derived rows instead ([scenario](scenarios/analyze-reads-the-layout-derived-command-set.md)).
 
 No other placeholders are needed. The bootstrap command (spec 003) handles find-and-replace during project scaffolding.
 

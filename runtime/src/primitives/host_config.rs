@@ -165,7 +165,7 @@ pub(crate) enum HostRow {
     /// A command or prompt file, or the `ductus` install file. Its
     /// frontmatter is what a host reads to grant tools, so `apply-manifest`
     /// checks it ([`check_frontmatter`]).
-    CommandOrSkill,
+    Command,
     /// Pi's extension bridge.
     PiBridge,
 }
@@ -635,11 +635,11 @@ fn row(layout: Layout, rest: &[String]) -> Option<HostRow> {
     let parts: Vec<&str> = folded.iter().map(String::as_str).collect();
     let md = |name: &str| Path::new(name).extension().is_some_and(|ext| ext == "md");
     match (layout, parts.as_slice()) {
-        (Layout::ClaudeStyle, ["commands", "ductus.md"]) => Some(HostRow::CommandOrSkill),
+        (Layout::ClaudeStyle, ["commands", "ductus.md"]) => Some(HostRow::Command),
         (Layout::ClaudeStyle, ["commands", _, name]) | (Layout::Pi, ["prompts", name])
             if md(name) =>
         {
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         }
         (Layout::Pi, ["extensions", "ductus.ts"]) => Some(HostRow::PiBridge),
         _ => None,
@@ -818,6 +818,21 @@ mod tests {
 
     use super::*;
 
+    /// `CONFIG_DIRS` names exactly the agents the runtime knows: the
+    /// registry's `config_dir` column, which `host::AGENT_CONFIG_DIRS` is held
+    /// to by its own test. An agent added to the registry and not here would
+    /// leave its config directory unprotected, so it fails here; and none is
+    /// also another tool's directory, which `judge` refuses before it reads
+    /// `CONFIG_DIRS` (QUAL-GROUND-001).
+    #[test]
+    fn config_dirs_name_every_registered_agent_and_no_other() {
+        let dirs: Vec<&str> = CONFIG_DIRS.iter().map(|(dir, _)| *dir).collect();
+        assert_eq!(dirs, crate::host::AGENT_CONFIG_DIRS);
+        for dir in &dirs {
+            assert!(!OTHER_TOOL_DIRS.contains(dir), "{dir}");
+        }
+    }
+
     // What each judgment of [`check_destination`] does alone, and the test
     // that fails when that judgment alone loses it (spec 022 task 11,
     // re-reads 7 to 13). The cells are the product of four dimensions:
@@ -908,20 +923,14 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let repo = tmp.path();
         for (rel, kind) in [
-            (".claude/commands/acme/status.md", HostRow::CommandOrSkill),
-            (".claude/commands/ductus.md", HostRow::CommandOrSkill),
-            (".pi/prompts/acme-status.md", HostRow::CommandOrSkill),
-            (".pi/prompts/ductus.md", HostRow::CommandOrSkill),
+            (".claude/commands/acme/status.md", HostRow::Command),
+            (".claude/commands/ductus.md", HostRow::Command),
+            (".pi/prompts/acme-status.md", HostRow::Command),
+            (".pi/prompts/ductus.md", HostRow::Command),
             (".pi/extensions/ductus.ts", HostRow::PiBridge),
             // Under a manifest target root below the project root.
-            (
-                "project/.claude/commands/ductus.md",
-                HostRow::CommandOrSkill,
-            ),
-            (
-                "sub/.claude/commands/acme/status.md",
-                HostRow::CommandOrSkill,
-            ),
+            ("project/.claude/commands/ductus.md", HostRow::Command),
+            ("sub/.claude/commands/acme/status.md", HostRow::Command),
         ] {
             assert_eq!(judge(repo, rel).unwrap(), Some(kind), "{rel}");
         }
@@ -1043,7 +1052,7 @@ mod tests {
         assert!(refused(&judge(repo, "cfg/settings.local.json")));
         assert_eq!(
             judge(repo, "cfg/commands/acme/status.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
 
         std::fs::write(repo.join("cfg-mcp.json"), "{}").unwrap();
@@ -1163,7 +1172,7 @@ mod tests {
         assert!(refused(&judge(repo, ".claude/settings.local.json")));
         assert_eq!(
             judge(repo, ".claude/commands/acme/cmd.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1246,7 +1255,7 @@ mod tests {
         assert!(refused(&check_destination(&below, &dest, "x")));
         assert_eq!(
             judge(repo, "sub/.claude/commands/acme/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
 
         std::fs::create_dir_all(repo.join(".claude")).unwrap();
@@ -1255,7 +1264,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             judge(repo, ".claude/commands/acme/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1329,7 +1338,7 @@ mod tests {
         let dest = repo.join("sub/../.claude/commands/acme/g.md");
         assert_eq!(
             check_destination(repo, &dest, "g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1347,7 +1356,7 @@ mod tests {
         let dest = repo.join(".claude/commands/acme/../acme/g.md");
         assert_eq!(
             check_destination(repo, &dest, "g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
         assert_eq!(lexical_names(Path::new("a/../../b")), None);
         assert_eq!(
@@ -1371,7 +1380,7 @@ mod tests {
         assert!(refused(&judge(&inside, "settings.local.json")));
         assert_eq!(
             judge(&inside, "commands/acme/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
         let below = tree.join("specs");
         let dest = below.join("../.claude/settings.local.json");
@@ -1383,7 +1392,7 @@ mod tests {
     #[test]
     fn a_project_root_outside_any_repository_is_judged_whole() {
         let tmp = tempfile::tempdir().unwrap();
-        let inside = tmp.path().join("proj/.agents");
+        let inside = tmp.path().join("proj/.pi");
         std::fs::create_dir_all(&inside).unwrap();
         assert!(refused(&judge(&inside, "settings.json")));
     }
@@ -1407,7 +1416,7 @@ mod tests {
         assert_eq!(judge(&worktree, "specs/001-x/spec.md").unwrap(), None);
         assert_eq!(
             judge(&worktree, ".claude/commands/acme/status.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
         assert!(refused(&judge(&worktree, ".claude/settings.local.json")));
         let out = worktree.join("../../settings.local.json");
@@ -1429,7 +1438,7 @@ mod tests {
         )));
         assert_eq!(
             judge(main, ".claude/worktrees/wt/.claude/commands/acme/status.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
         assert_eq!(
             judge(main, ".claude/worktrees/wt/specs/001-x/spec.md").unwrap(),
@@ -1455,7 +1464,7 @@ mod tests {
         let dest = below.join("../.claude/commands/acme/g.md");
         assert_eq!(
             check_destination(&below, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1508,7 +1517,7 @@ mod tests {
         std::os::unix::fs::symlink("../shared/cmds", repo.join(".claude/commands")).unwrap();
         assert_eq!(
             judge(repo, ".claude/commands/acme/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1575,7 +1584,7 @@ mod tests {
         let dest = inside.join("../.claude/commands/acme/g.md");
         assert_eq!(
             check_destination(&inside, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1635,7 +1644,7 @@ mod tests {
         let dest = inside.join("../alias/g.md");
         assert_eq!(
             check_destination(&inside, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1658,15 +1667,12 @@ mod tests {
         )
         .unwrap();
         std::os::unix::fs::symlink("sub/.claude/commands/acme", tree.join("alias")).unwrap();
-        assert_eq!(
-            judge(tree, "alias/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
-        );
+        assert_eq!(judge(tree, "alias/g.md").unwrap(), Some(HostRow::Command));
         let below = tree.join("specs");
         let dest = below.join("../alias/g.md");
         assert_eq!(
             check_destination(&below, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1691,15 +1697,12 @@ mod tests {
         )
         .unwrap();
         std::os::unix::fs::symlink(".claude/commands/acme", tree.join("alias")).unwrap();
-        assert_eq!(
-            judge(tree, "alias/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
-        );
+        assert_eq!(judge(tree, "alias/g.md").unwrap(), Some(HostRow::Command));
         let below = tree.join("specs");
         let dest = below.join("../alias/g.md");
         assert_eq!(
             check_destination(&below, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -1767,7 +1770,7 @@ mod tests {
             );
             assert_eq!(
                 judge(repo, &format!("sub/{dir}/{row}")).unwrap(),
-                Some(HostRow::CommandOrSkill),
+                Some(HostRow::Command),
                 "{dir}"
             );
         }
@@ -1807,7 +1810,7 @@ mod tests {
             let file = Path::new(row).file_name().unwrap().to_string_lossy();
             assert_eq!(
                 judge(tree, &format!("alias/{file}")).unwrap(),
-                Some(HostRow::CommandOrSkill),
+                Some(HostRow::Command),
                 "{dir}"
             );
             std::fs::create_dir_all(tree.join("specs")).unwrap();
@@ -1815,7 +1818,7 @@ mod tests {
             let dest = below.join(format!("../alias/{file}"));
             assert_eq!(
                 check_destination(&below, &dest, "x").unwrap(),
-                Some(HostRow::CommandOrSkill),
+                Some(HostRow::Command),
                 "{dir}"
             );
         }
@@ -1950,7 +1953,7 @@ mod tests {
         ] {
             assert_eq!(
                 check_destination(tree, &tree.join(rel), rel).unwrap(),
-                Some(HostRow::CommandOrSkill),
+                Some(HostRow::Command),
                 "{rel}"
             );
         }
@@ -1958,7 +1961,7 @@ mod tests {
         let dest = below.join("../.claude/commands/acme/../acme/g.md");
         assert_eq!(
             check_destination(&below, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
 
         let tmp = tempfile::tempdir().unwrap();
@@ -1970,7 +1973,7 @@ mod tests {
         let dest = inside.join("commands/acme/../acme/g.md");
         assert_eq!(
             check_destination(&inside, &dest, "x").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -2019,7 +2022,7 @@ mod tests {
         )));
         assert_eq!(
             judge(main, ".claude/worktrees/.claude/commands/acme/g.md").unwrap(),
-            Some(HostRow::CommandOrSkill)
+            Some(HostRow::Command)
         );
     }
 
@@ -2061,10 +2064,10 @@ mod tests {
         std::fs::create_dir_all(&claude).unwrap();
         git2::Repository::init(&claude).unwrap();
         assert!(refused(&judge(&claude, "settings.local.json")));
-        let agents = main.join(".agents");
-        std::fs::create_dir_all(&agents).unwrap();
-        std::fs::write(agents.join(".git"), "gitdir: ../.git/modules/agents\n").unwrap();
-        assert!(refused(&judge(&agents, "settings.json")));
+        let pi = main.join(".pi");
+        std::fs::create_dir_all(&pi).unwrap();
+        std::fs::write(pi.join(".git"), "gitdir: ../.git/modules/pi\n").unwrap();
+        assert!(refused(&judge(&pi, "settings.json")));
     }
 
     /// A repository's work tree is found by its `.git` entry, whether or not
@@ -2092,17 +2095,17 @@ mod tests {
             (
                 Layout::ClaudeStyle,
                 names(&["commands", "DUCTUS.md"]),
-                HostRow::CommandOrSkill,
+                HostRow::Command,
             ),
             (
                 Layout::ClaudeStyle,
                 names(&["Commands", "acme", "Status.MD"]),
-                HostRow::CommandOrSkill,
+                HostRow::Command,
             ),
             (
                 Layout::Pi,
                 names(&["prompts", "acme-status.MD"]),
-                HostRow::CommandOrSkill,
+                HostRow::Command,
             ),
             (
                 Layout::Pi,

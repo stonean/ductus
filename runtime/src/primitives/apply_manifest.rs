@@ -278,7 +278,7 @@ fn check_host_destination(
 ) -> Result<Option<Judged>> {
     let dest = target_root.join(Path::new(&entry.dest));
     let row = host_config::check_destination(repo, &dest, &entry.dest)?;
-    if row != Some(HostRow::CommandOrSkill) || pinned_match(pinned, &entry.dest) {
+    if row != Some(HostRow::Command) || pinned_match(pinned, &entry.dest) {
         return Ok(None);
     }
     let source = source_root.join(Path::new(&entry.source));

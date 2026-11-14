@@ -3493,8 +3493,6 @@ mod tests {
         assert!(value.get("target-sections").is_none());
     }
 
-    /// A spec declaring no fold target yields an empty one rather than
-    /// inventing a destination.
     /// BE-INPUT-004: `folds-into` is hand-authored, so it must not reach the
     /// filesystem uncontained. A traversing target reads nothing rather than
     /// lifting a `spec.md` from outside the repo into a payload bound for the
@@ -3528,6 +3526,8 @@ mod tests {
         assert_eq!(value["target-status"], "");
     }
 
+    /// A spec declaring no fold target yields an empty one rather than
+    /// inventing a destination.
     #[test]
     fn build_route_fold_request_leaves_an_undeclared_target_empty() {
         let tmp = tempdir().unwrap();

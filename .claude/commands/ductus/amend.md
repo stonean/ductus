@@ -1,5 +1,5 @@
 ---
-description: Add a question or a scenario to the targeted spec (classifier-driven).
+description: Add a question, a scenario or a criterion to the targeted spec (classifier-driven).
 argument-hint: "[input text]"
 ---
 
@@ -43,7 +43,7 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 
 1. Invoke `resolve-session` to get the session target's feature and optional scenario, and display any notices and unreadable session files it returns.
 2. Read the target artifact (scenario file if targeted, otherwise `spec.md`).
-3. **Recompute dependencies (safety net).** If the target is a spec, invoke `derive-dependencies` in its report-only default. When it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. A non-zero `unwritable-count` counts specs whose derived `dependencies:` cannot be written without breaking their frontmatter: name each, from `unwritable` or, past the read size, the file `lists-file` names, and say to edit that key by hand, since the pre-commit hook stops every commit until then. A non-zero `unparseable-count` counts specs whose frontmatter never closes: name each the same way, as not derived, never as in sync. Neither stops this command. Do **not** pass `--write` here: this command's writes are limited to the target's questions/scenario/task/status and the session file (see Scope Boundaries). (Skip on scenario targets, which have no `dependencies` field.)
+3. **Recompute dependencies (safety net).** If the target is a spec, invoke `derive-dependencies` in its report-only default. When it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. A non-zero `unwritable-count` counts specs whose derived `dependencies:` cannot be written without breaking their frontmatter: name each, from `unwritable` or, past the read size, the file `lists-file` names, and say to edit that key by hand, since the pre-commit hook stops every commit until then. A non-zero `unparseable-count` counts specs whose frontmatter never closes: name each the same way, as not derived, never as in sync. Neither stops this command. Do **not** pass `--write` here: this command's writes are limited to the target's questions, criteria, scenario, task and status and the session file (see Scope Boundaries). (Skip on scenario targets, which have no `dependencies` field.)
 4. If the target is a spec, read its frontmatter `status` field now, for the gate, the impact display, the classifier's status tiebreaker, and the post-record mutation.
 5. Display the feature name, scenario name (if targeted), status, and a brief summary of what the artifact covers. A `done` status is displayed as §spec-lifecycle's *A `done` stop never says the request is built* says.
 

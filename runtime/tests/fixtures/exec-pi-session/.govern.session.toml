@@ -1,6 +1,7 @@
 # Per-contributor session state. `cli-config-dir` is the agent identity
-# `/ductus` records here (never in committed config, since teammates may use
-# different agents); the runtime reads it to resolve command files at
+# `/ductus` once recorded here, now in `.ductus/session.toml` (never in
+# committed config, since teammates may use different agents); the runtime
+# reads it to resolve command files at
 # `.pi/prompts/{project}-<name>.md`. No target is set — `ductus exec`
 # takes the feature as a CLI arg in this fixture.
 cli-config-dir = ".pi"

@@ -26,7 +26,7 @@ Mutually exclusive with positional arguments and other flags. Invoking `--clear`
 
 - **Session file already absent.** `--clear` writes an empty session file, still emits the confirmation line and exits 0. Idempotent.
 - **Session file present but malformed.** `--clear` resets it cleanly; do not error on stale state. As delivered this read "malformed JSON", naming the pre-consolidation `{cli-config-dir}/{project}-session.json`; the session file has been TOML at `.ductus/session.toml` since `022-deterministic-runtime` moved it (see `framework/migrations/session-file-consolidate.md`).
-- **Permission denied on delete.** Surface the OS error and exit non-zero — same envelope shape other session-file writes use today.
+- **Permission denied on write.** Surface the OS error and exit non-zero — same envelope shape other session-file writes use today.
 - **`--clear` combined with feature argument or scenario flag.** Halt with the mutex-violation message above; no session mutation.
 
 ## Open Questions
