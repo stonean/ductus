@@ -4,7 +4,7 @@ next-task: 25
 
 # 023 — `ductus` Refinement Tasks
 
-Tasks derived from the [plan](plan.md). Complete in order. Phase A (invariant + `ductus` primitives) must ship as a tagged `ductus` release before any phase B work begins. Within Phase A, the configure MCP allow-list generator lands first so the `runtime-tools.txt` → configure invariant holds at every commit.
+Tasks derived from the [plan](plan.md).
 
 ## Phase C — Follow-on scenarios
 

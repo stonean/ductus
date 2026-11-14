@@ -45,6 +45,8 @@ One pass over every command source under `framework/commands/`. The sweep replac
 
 Constitution edit deletes §lightweight-track wholesale (lines around 181-194), removes the `spec-and-plan.md` row from the frontmatter schema table (§text-first-artifacts, line 369), and drops references in §spec-phase. §brownfield-process step 1 rewrites to point at `/specify` with sparse-AC guidance per the resolved question.
 
+Rationale: the spec drops the track entirely (its section 1), so no reference to it may survive, and §drift-prevention's *no dead references* rule puts every reference in the same change; one pass over the command sources and the constitution together does both.
+
 ### Constitution slash-command sweep
 
 Separate from the lightweight-track sweep, the constitution carries eight references to deleted verbs (`/capture`, `/elaborate`) outside the lightweight-track section. Each is rewritten to the post-consolidation verb in the same edit pass:
@@ -59,6 +61,8 @@ Separate from the lightweight-track sweep, the constitution carries eight refere
 | 339 | §brownfield-process Capture phase | `/capture` drafts a skeleton spec | `/specify` drafts a skeleton spec |
 | 350 | §brownfield-process Inbox integration | directs the user to run `/capture` … `/capture` creates specs | directs the user to run `/specify` … `/specify` creates specs |
 | 409 | §runtime-boundary (principle 2 example list) | `/capture` sketching | `/specify` sketching |
+
+Rationale: the spec's sections 2 and 3 delete `capture.md` and `elaborate.md` rather than alias them, so each surviving mention of either verb would be a dead reference (§drift-prevention).
 
 The §brownfield-process anchor name is preserved (no cascading anchor reference updates) per the resolved question on brownfield messaging.
 
@@ -112,9 +116,7 @@ The script's existing splice logic handles marker renames without code changes �
 
 ### Migration check in `/ductus` bootstrap
 
-Prose-only step added to `framework/bootstrap/ductus.md`. Runs after archive fetch/extract but before the manifest apply phase. Logic: walk `specs/*/spec-and-plan.md`; for each match, prompt the user with the source path and the proposed destination (`specs/{NNN-feature}/spec.md`); on confirm, run `mv`; on decline, log a warning that subsequent pipeline commands will fail on those features until renamed manually.
-
-The check is idempotent — finds nothing on second run. No new primitive needed; the existing shell-out for `find` plus host-level `Edit`-equivalent file operations cover it. The completion message gains one line: "Migrated N `spec-and-plan.md` files to `spec.md`" (or omitted if N=0).
+Delivered as a prose step in `framework/bootstrap/ductus.md`, run after the archive fetch and before the manifest apply, that offered to rename each `specs/*/spec-and-plan.md` to `spec.md`. `027-bootstrap-migration-registry` has since replaced it with the `spec-and-plan-sunset` entry in `framework/migrations.toml`, as AC11 records. No primitive was added for it, since shell `find` and host file operations covered the rename.
 
 The changelog entry accompanying the paired runtime and framework release documents the rename for adopters who upgrade without re-running `/ductus`.
 
