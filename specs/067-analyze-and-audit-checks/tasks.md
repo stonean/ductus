@@ -1,5 +1,5 @@
 ---
-next-task: 33
+next-task: 35
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -22,3 +22,19 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test proves the inline form under the read size and the file form past it, and the CLI's non-zero exit on an `unwritable` spec moved to the file, each failing under its mutant, and `framework-checks.yml` step (u) passes
 
 - **Done when**: derive-references' lists return inline, or in a lists-file past the read size, with the CLI still failing on an unwritable spec, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 33. The criterion-path and body-path probes refuse a link out of the project (BE-INPUT-004, from 045)
+
+- [ ] `check-artifacts`' `criterion-path-existence` and `body-path-existence` probes refuse a symbolic link leaving the project before probing, as the sibling-link family already does. Today `lexical_in_project` in `runtime/src/primitives/check_artifacts.rs` refuses a `..` that leaves the project, and `exists()` then follows a symbolic link out of it. The owner deferred 045's BE-INPUT-004 (MUST) finding here on 2026-11-14; 045's task 17 cites this task
+- [ ] 067's data model and `CHECK_ARTIFACTS`' description state what each probe reports for such a link
+- [ ] A test with an outward link: a path a criterion and a spec body each name, which is a symbolic link to a file outside the project, is not probed through, and the test turns red under its mutant
+
+- **Done when**: Neither probe follows a link leaving the project, proven by a test its mutant turns red; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 34. A check holds the dogfooded feature-directory grammar to the shipped hook's (051's AC15)
+
+- [ ] A check, an audit family or a test, fails when the feature-directory grammar in `.githooks/pre-commit` or in `scripts/lint-frontmatter.sh` (`FEATURE_DIR_RE`) diverges from the one `framework/bootstrap/hooks/ductus-pre-commit` ships. Each copy exists because its surface runs before any binary resolves or cannot ask a primitive for its corpus, and no check holds either to the shipped one, as 051's AC15 annotation says. The owner placed this on 067 on 2026-11-14; 051's task 36 names this task in AC15's annotation before 051's analysis runs
+- [ ] The check runs where the framework's checks run (`scripts/audit/run-all.sh` or `framework-checks.yml`), and it reports how many copies it compared, so a parse that found no grammar never reads as a pass
+- [ ] It is proven to fail on a deliberately diverged fixture of each copy, and to pass on the tree
+
+- **Done when**: Both copies are held to the shipped hook's grammar by a check that fails on a diverged fixture of each and passes on the tree, and 067's next review reads the change.
