@@ -58,8 +58,10 @@
 #
 # Next it normalizes staged markdown with `markdownlint-cli2 --fix`, so a
 # WYSIWYG editor's table padding and emphasis rewriting do not fail the lint CI
-# runs on push. Swallowed on failure — markdownlint is advisory here and a
-# missing npx must not block a commit.
+# runs on push. A violation `--fix` cannot repair stops the commit, printing
+# the violations, when this repo's own install ran and exited 1; every other
+# failure, the npx fallback's included, is swallowed, so a missing or
+# unfetchable npx never blocks a commit.
 #
 # When staged files include anything under runtime/, this hook additionally
 # runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
@@ -156,11 +158,14 @@ generated_outputs='^framework/bootstrap/configure/claude\.md$
 ^framework/commands/help\.md$'
 
 # The markdown normalizer: this repo's own install when present (the checkout
-# the scratch tree lacks), else npx.
+# the scratch tree lacks), else npx. Only the repo's own install can stop a
+# commit (below): npx's exit 1 can be a failed fetch as well as a violation.
 if [ -x "$ROOT/node_modules/.bin/markdownlint-cli2" ]; then
   mdlint=("$ROOT/node_modules/.bin/markdownlint-cli2")
+  mdlint_local=1
 else
   mdlint=(npx markdownlint-cli2)
+  mdlint_local=0
 fi
 
 # A scratch repository: its own .git (so the runtime's repository discovery
@@ -219,15 +224,32 @@ head_sha="$(git rev-parse --verify -q HEAD || true)"
   # dependency of this repo, and an adopter's commit must not depend on a Node
   # toolchain they never asked for.
   #
-  # Swallowed on failure, and the reason is blast radius: markdownlint is
-  # advisory here — CI is the gate that actually blocks — so a missing npx
-  # must not stop a commit.
+  # A violation `--fix` cannot repair stops the commit, printing what the
+  # linter printed, when this repo's own install ran and exited 1, its exit
+  # for violations left after fixing: CI's markdownlint step (c) would fail the
+  # push on it, and a commit that hid it twice let an MD028 reach `main`
+  # (spec 017 task 46). It stops here, inside the scratch copy, so nothing has
+  # reached the real index. Every other outcome is swallowed: the npx fallback,
+  # whose exit 1 can be a failed fetch as well as a violation, and any other
+  # exit of the local install, a run that failed rather than a violation found.
+  # The linter is called directly, not through xargs, because xargs reports
+  # every exit from 1 to 125 as 123 and so would hide which one it was.
   git add -A > /dev/null
   to_fix="$({ printf '%s\n' "$staged_md"
     git diff --cached --name-only --diff-filter=ACM "$orig_tree" \
       | { grep -E '\.md$' || true; }; } | sort -u | { grep -v '^$' || true; })"
   if [ -n "$to_fix" ]; then
-    printf '%s\n' "$to_fix" | xargs "${mdlint[@]}" --fix > /dev/null 2>&1 || true
+    fix_files=()
+    while IFS= read -r f; do fix_files+=("$f"); done <<< "$to_fix"
+    mdlint_status=0
+    "${mdlint[@]}" --fix "${fix_files[@]}" > "$scratch/.git/mdlint.out" 2>&1 || mdlint_status=$?
+    if [ "$mdlint_local" = 1 ] && [ "$mdlint_status" = 1 ]; then
+      echo "pre-commit: markdownlint found violations --fix cannot repair:" >&2
+      cat "$scratch/.git/mdlint.out" >&2
+      echo "  Fix them and re-stage, or commit with --no-verify to bypass this" >&2
+      echo "  hook deliberately." >&2
+      exit 1
+    fi
   fi
   git add -A > /dev/null
   git diff --cached --raw --no-abbrev -z --no-renames "$orig_tree" > "$scratch/changes.raw"

@@ -24,6 +24,9 @@
 #      text only, and the working copy keeps its unstaged hunks
 #   G. a staged spec gets its derived frontmatter and labelled criteria; an
 #      unstaged spec's derivation stays out of the commit and the working tree
+#   H. a staged violation --fix cannot repair (MD028, a blank line inside a
+#      blockquote) stops the commit, naming it, and leaves HEAD and the index
+#      as they were (spec 017 task 46)
 #
 # HOOK_UNDER_TEST overrides the hook (scripts/mutation-style proofs that a case
 # fails with a behavior removed). The runtime is ./runtime/target/release/ductus
@@ -93,10 +96,16 @@ build_baseline() {
   ln -s "$RUNTIME" "$BASE/runtime/target/release/ductus"
   cat > "$BASE/node_modules/.bin/markdownlint-cli2" <<'STUB'
 #!/usr/bin/env bash
+# Fixes trailing whitespace, and reports a blank line inside a blockquote
+# (MD028, which --fix cannot repair) with exit 1, as the real tool does.
+rc=0
 for f in "$@"; do
   case "$f" in -*) continue ;; esac
   sed 's/[[:space:]]*$//' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  out="$(awk '/^>/ && p1 == "" && p2 ~ /^>/ { print FILENAME ":" NR " MD028/no-blanks-blockquote" } { p2 = p1; p1 = $0 }' "$f")"
+  if [ -n "$out" ]; then printf '%s\n' "$out"; rc=1; fi
 done
+exit "$rc"
 STUB
   chmod +x "$BASE/node_modules/.bin/markdownlint-cli2"
   printf 'node_modules/\nruntime/target/\n' >> "$BASE/.gitignore"
@@ -305,6 +314,24 @@ check "G: the unstaged spec is not committed" \
   test "$(g "$R" show HEAD:specs/003-gamma/spec.md | grep -c 'dependencies: \[\]')" = 1
 check "G: the unstaged spec is byte-identical" \
   test "$(blob_of "$R" specs/003-gamma/spec.md)" = "$snap_gamma"
+
+# H. a violation --fix cannot repair stops the commit.
+new_case h
+head_before="$(g "$R" rev-parse HEAD)"
+printf '\n> one quote\n\n> another quote\n' >> "$R/README.md"
+g "$R" add -- README.md
+index_before="$(g "$R" write-tree)"
+if commit "$R" "case h"; then
+  fail "H: the commit landed with an MD028 the hook should have refused"
+else
+  pass "H: the commit is refused"
+fi
+check "H: the refusal names the violation" \
+  grep -qF "MD028/no-blanks-blockquote" "$CASE/commit.out"
+check "H: HEAD did not move" \
+  test "$(g "$R" rev-parse HEAD)" = "$head_before"
+check "H: the index is as it was staged" \
+  test "$(g "$R" write-tree)" = "$index_before"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2
