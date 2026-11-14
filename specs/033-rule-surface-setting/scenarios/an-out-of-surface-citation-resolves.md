@@ -11,7 +11,7 @@ section: "Enforcement behavior"
 ## Behavior
 
 - A citation to a rule on a surface the project does not enforce resolves without a blocking finding, whether or not that surface's rule file was ever installed: `check-rule-ids` reports a citation of an ID that no file it was given defines, and that the framework ships, in a distinct informational state — known, not installed — never as missing.
-- The set of shipped rule IDs `check-rule-ids` reads that state from is an index of every rule the framework's rule files define at the runtime's version, so it needs no file in the adopter's tree.
+- The set of shipped rule IDs `check-rule-ids` reads that state from is an index of every rule the framework's rule files define at the runtime's version, so it needs no file in the adopter's tree. The `not-installed` list names each ID once and only IDs that index holds, so it never exceeds the index, a fixed set at each runtime version, however many citations the file carries (`shipped_rule_ids` and `not_installed_hits` in `runtime/src/primitives/check_rule_ids.rs`).
 - `[rules] surfaces` keeps scoping `/{project}:review` enforcement and `/{project}` keeps installing only the configured surfaces; the fix does not make `/{project}:review` enforce an out-of-surface file.
 
 ## Edge Cases

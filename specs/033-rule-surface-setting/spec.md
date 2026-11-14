@@ -15,7 +15,7 @@ Rule files carry a closed-suffix surface signal (`-backend.md`, `-frontend.md`, 
 
 1. **No persisted, operator-set source of truth for surface.** Derivation re-runs every time and can mis-read a project whose stack is ambiguous or whose intent differs from what the code currently shows (a backend-only API repo that has not yet added any frontend; a frontend app with a thin backend-for-frontend). There is no place for the operator to *state* "this project is backend-only" once and have every command honor it.
 
-2. **`/ductus` installs every rule file regardless of surface.** A backend-only project receives `accessibility-frontend.md`, `performance-frontend.md`, and `security-frontend.md` on disk even though they never apply — noise in the tree, and (because `security-frontend.md` carries the only CSRF/secure-cookie rules) a confusing split where frontend-suffixed files hold server-side concerns.
+2. **`/ductus` installs every rule file regardless of surface.** A backend-only project receives `accessibility-frontend.md`, `performance-frontend.md`, and `security-frontend.md` on disk even though they never apply — noise in the tree, and (because `security-frontend.md` carries CSRF/secure-cookie rules) a confusing split where frontend-suffixed files hold server-side concerns.
 
 This feature adds an explicit surface setting that both halves read: `/ductus` installs and updates only the matching rule files, and the review command enforces only those rules.
 
