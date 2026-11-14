@@ -25,6 +25,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added the rule assessments to the analyze record and `write-analysis`: the `rule-verdicts`, `unjudged-rules` and `rule-digest` fields, the `rule-verdicts` and `judged-rules` arguments, `contradictions` in the result, and a count of the rules left unjudged in `rule-assessments-not-checked`. The gate also blocks `done` with `unjudged-rules` while the record names any. Its data model carries the shapes.
 >
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added the `waived` verdict to `rule-verdicts`, the `waived` and `waived-count` result fields and the `## Waived rules` body section of `write-analysis`, and derives departure waivers in `write-review` and expires them in `process-waivers`. Its data model carries the shapes.
+>
+> **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md) added reasons to the analysis record's closed set of unexamined reasons, each listed with its class in [data-model.md](data-model.md): its path families now run at `in-progress` and say when they do not run, its reference, integrity and decision-reason checks name what they could not judge, and a path that leaves the project is its own reason.
 
 ## Motivation
 

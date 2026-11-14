@@ -19,7 +19,7 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > routed or discarded in the run that found it, and both records carry a
 > `dispositions:` map and a `decisions:` list. The primitives that write and read
 > both records are specified in `066-audit-records-and-the-completion-gate`, and
-> the analyze and audit checks in `067-analyze-and-audit-checks`.
+> the analyze and audit checks in [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md), which changed the exec tally in `runtime/src/interpreter/analyze_tally.rs` this spec's runtime core owns.
 >
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed surfaces this spec owns. Each primitive has one compiled description, in `runtime/src/schema/descriptions.rs`, that produces its MCP description and `--help`; `diff-cross-spec` starts at the last reopen and lists only the spec's own commits; and the binary is the source of a primitive's rules, and a command stops without the server.
 >
