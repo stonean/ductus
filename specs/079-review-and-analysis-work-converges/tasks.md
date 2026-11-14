@@ -382,3 +382,11 @@ Landed as 771e655b and 619ed609: the rule lives on the measure side, so `write_r
 - [ ] Put the figure to the owner with what it implies for reusing verdicts across a sweep-started reopening, and record the decision
 
 - **Done when**: the measurement is recorded in 079's artifacts with its method, population and units, and the owner's decision on it is recorded beside it
+
+## 38. The workflows' steps get a declared local command (owner decision, 2026-11-13)
+
+- [ ] A script under `scripts/` runs every `run:` step of the workflow files it is given, each in `bash --noprofile --norc -eo pipefail` from the repository root, and records PASS or FAIL from the step's own exit status, continuing past a failure. A step carrying an `if:` is reported SKIP by name. It prints each workflow's count of steps found, run and skipped, and exits non-zero on any FAIL, and also when a workflow yields no step, so a parse that found nothing never reads as a pass. Found when two sessions ran `framework-checks.yml` and `generators.yml` with a hand-rolled scratchpad runner, which §grounding forbids reporting as the project's command
+- [ ] A test on a fixture workflow holds a passing step, a failing step that reads FAIL, an `if:` step that reads SKIP, and a workflow with no step that fails the run; each case fails with its behavior removed. The test runs in the workflow that runs the script tests
+- [ ] AGENTS.md's local-checks rule names the command where it says to run `framework-checks.yml`'s and `generators.yml`'s steps
+
+- **Done when**: Running the command on `framework-checks.yml` and `generators.yml` at a clean HEAD reports every step PASS or SKIP with the counts per workflow, its test passes and fails under each case's mutant, and AGENTS.md's local-checks rule names it.
