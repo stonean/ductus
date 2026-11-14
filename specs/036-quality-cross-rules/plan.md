@@ -24,6 +24,8 @@ Modeled on `configuration-cross.md` (the closest sibling: `-cross.md` suffix, do
 
 Extend the closed allowlist regex from `^(BE|FE|CFG)-[A-Z][A-Z0-9]*-[0-9]{3,4}$` to include `QUAL`, update the matching error-message string (`{BE|FE|CFG|QUAL}`), and add `specs/036-quality-cross-rules/data-model.md` to the "Source of truth" comment block alongside the 008/017 citations. No runtime change — `check_rule_ids.rs`'s generic grammar already matches `QUAL`.
 
+Rationale: the lint's surface allowlist is closed (see the Overview), so a `QUAL-` ID fails it until the surface is added, and AC3 requires `scripts/lint-rule-ids.sh` to pass; the runtime harvester needs no change because its grammar is generic.
+
 ### Surface registry — `specs/036-quality-cross-rules/data-model.md`
 
 A small data-model documenting the `QUAL` surface (rule-ID prefix; cross-cutting; lives in `*-cross.md`), the inaugural `STUB` category, and a pointer to `008-security-rules/data-model.md` for the canonical rule schema (Statement / Verification; `### {ID}` headings; permanent IDs). It does **not** duplicate the schema — it registers the new surface, mirroring how 017 registered `CFG`.
