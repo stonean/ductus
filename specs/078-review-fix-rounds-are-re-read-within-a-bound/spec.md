@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [020-code-review]
 next-criterion: 16
 cross-spec-impact: [020-code-review, 066-audit-records-and-the-completion-gate]
