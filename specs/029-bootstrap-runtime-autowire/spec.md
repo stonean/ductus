@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [003-bootstrap-automation, 021-runtime-boundary, 022-deterministic-runtime]
 next-criterion: 22
 ---
