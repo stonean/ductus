@@ -88,7 +88,7 @@ MUTATIONS = [
     (
         'M9 linked config dir loop removed',
         'src/primitives/host_config.rs',
-        '    for &dir in OTHER_TOOL_DIRS {\n        let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {\n            continue;\n        };\n        if canonical_repo.starts_with(&linked) {\n            continue;\n        }\n        if strip_folded(path, &linked).is_some() {\n            return Err(refuse_other_tool_dir(shown, dir));\n        }\n    }\n    for &(dir, layout) in CONFIG_DIRS {\n        let Ok(linked)',
+        '    for &dir in OTHER_TOOL_DIRS {\n        let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {\n            continue;\n        };\n        if canonical_repo.starts_with(&linked) {\n            continue;\n        }\n        if strip_folded(path, &linked).is_some() {\n            return Err(refuse_other_tool_dir(shown, dir));\n        }\n    }\n    // A config directory a link redirects: `.claude -> cfg` makes\n    // `cfg/settings.local.json` the file the host reads.\n    for &(dir, layout) in CONFIG_DIRS {\n        let Ok(linked)',
         '    for &(dir, layout) in CONFIG_DIRS.iter().take(0) {\n        let Ok(linked)',
         'host_config',
     ),
