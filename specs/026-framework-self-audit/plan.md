@@ -60,6 +60,8 @@ Each family check is one shell script. The contract:
 - Read-only — no file modifications.
 - Idempotent — same inputs produce same output.
 
+Rationale: the four columns let the maintainer route a finding quickly, and a binary exit code is all CI needs to gate on (the spec's Resolved Question *Severity levels*); a family only surfaces drift while the maintainer makes each call (the spec's Output section), so it writes nothing; and the same tree gives the same rows, so CI's verdict and a maintainer's local run agree.
+
 The eight scripts, with implementation notes. **Recorded as planned; each family's behavior as it runs is its criterion's annotation in `spec.md`:** Family 1 AC3, Family 2 AC4 (the installer half retired, the permission half comparing the generated MCP set with `framework/runtime-tools.txt`), Family 4 AC6, Family 5 AC7, Family 6 AC8 (a stub that detects nothing, and says so), Family 7 AC9 and Family 8 AC10 (a hardcoded catalog that judges no tense).
 
 **`scripts/audit/cross-doc-consistency.sh`** (Family 1)

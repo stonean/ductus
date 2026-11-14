@@ -33,8 +33,8 @@ Both were pure refactors with no observable behavior change, verified by `bash s
 
 ## Edge Cases
 
-- **A family script wants different `emit()` semantics** (e.g., severity column). Add the column to the shared `audit_emit` signature with a sensible default; family scripts opt in.
-- **Standalone invocation ergonomics under REUSE-001.** `bash scripts/audit/X.sh` continues to work because the lib is sourced via `$(dirname "$0")/lib.sh`, which resolves regardless of CWD. The documented trade-off in [`scripts/audit/README.md`](../../../scripts/audit/README.md) becomes a non-issue.
+- **A family script wants different `emit()` semantics** (e.g., severity column). Add the column to the shared `emit` signature with a sensible default; family scripts opt in.
+- **Standalone invocation ergonomics under REUSE-001.** `bash scripts/audit/X.sh` continues to work because the lib is sourced via `$(dirname "${BASH_SOURCE[0]}")/lib.sh`, which resolves regardless of CWD. The documented trade-off in [`scripts/audit/README.md`](../../../scripts/audit/README.md) becomes a non-issue.
 - **QUALITY-001 introduces a subshell** that breaks `drift` accumulation. Use a temp file or explicit return-by-stdout to preserve the count; verify with a fixture that has both annotated and non-annotated flagged steps.
 
 ## Open Questions
