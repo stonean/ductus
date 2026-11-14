@@ -1,14 +1,14 @@
 ---
 spec: 058-findings-route-at-discovery
-last-run: 2026-11-14T03:42:00Z
-analyzed-against: bbc8b7bda2988e17998e8f6a601a31f20e9c90a2
+last-run: 2026-11-14T14:16:37Z
+analyzed-against: 6310d4b8069123780a9692fb46897f58332eedd5
 hard-fail: 0
 blocking-findings: 0
-advisory: 4
+advisory: 5
 unexamined: 1
 analyzed-digest:
   data-model.md: 3c0dd92608a493ee61d3bb7e078e77af339958045ab269ae5390016178d99af1
-  plan.md: c8755a0a7831afb9527669c058765ceacc1e9c598f4636eca9d90784a9205f98
+  plan.md: b3aae07018b46f59269faf5a46f3dfee64f18f86a38620b4199097511bfa0100
   review.md: 4b6dbf1296ca7b2bbbd65457ea2fef1f8c03634996a6f6c7266f366ce42728a9
   scenarios/analysis-drift-judges-the-record-it-writes.md: 524d602fab04fdf2e208d9862af69e02fee41fc9f8e9767eccf3b51d3a3c45a9
   scenarios/analyze-findings-match-decisions-by-host-judgment.md: 1ec09d115b84951664fc4d57fb537ee44935b393482a6f28ed43d8b874160575
@@ -16,7 +16,7 @@ analyzed-digest:
   scenarios/auto-records-disposition-tasks-without-pausing.md: 79217820badbfd130ba5e69a78927c3d434bcda01e3c66faec2be2b16dcf2c7e
   scenarios/findings-cost-in-proportion-to-risk.md: 908fca8623fc6fbe70a52e491f6f3efec028fdc8df7310fd958dacea9c48db55
   scenarios/only-unreadable-targets-retain-decisions.md: 76a12d565f6e1056f780906fed41de7d27e4a23c314232eddca0563026bcc3e1
-  spec.md: 0aaafa33c660a11363e0e2b716d8b10c38b49dc92ea76e92511671aeb2ae1e56
+  spec.md: ca9e0a9394bdd01650872b4c38c3f30330788f9840bf5ab7216928ef80feaf61
   tasks.md: 90d3686065261e3359afa1f12420eae92fef6d543ec6f358b5741da6abb0ab6d
 unexamined-by-reason:
   root-absent: 1
@@ -34,14 +34,19 @@ rule-digest:
   security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Trade-offs"}
+  BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#Release", message: "plan changes runtime/Cargo.lock (release refresh) but commits to no automated vulnerability scan on changes to the lockfile"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#`write-analysis` receives the findings, because capture was its only source of finding text"}
-  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#`ReviewObservation` — the `write-review` `observations` entry"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#New primitive: `process-decisions`"}
+  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#`AnalysisFinding` — the new `write-analysis` `findings` entry"}
+  BE-INPUT-004: {verdict: addressed, cite: "plan.md#A new read-only primitive, `process-decisions`, classifies stored decisions before the host proposes"}
+  BE-INPUT-008: {verdict: addressed, cite: "plan.md#The record shape is owned by the two writers, so the new fields are theirs"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#A new read-only primitive, `process-decisions`, classifies stored decisions before the host proposes"}
+  BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#The record shape is owned by the two writers, so the new fields are theirs"}
 blocking: false
 dispositions:
-  fixed: 5
+  fixed: 1
   deferred: 0
-  waived: 4
+  waived: 5
   undispositioned: 0
 decisions:
   - key: grounding — plan.md says .ductus/bin/ductus is a symlink to runtime/target/release/ductus, local state no artifact grounds
@@ -64,13 +69,18 @@ decisions:
     reason: the line bounds this plan's scope, naming another spec's re-review as that spec's decision to spend; it rejects no option for the review it would start
     decided-at: 2026-11-14T03:42:00Z
     decided-by: rule
+  - key: "rule-assessment — BE-DEPS-007: plan changes runtime/Cargo.lock (release refresh) but commits to no automated vulnerability scan on changes to the lockfile"
+    outcome: waived
+    reason: the lockfile change is the release's own version refresh (plan.md §Release), which alters no dependency, and .github/workflows/runtime.yml already runs cargo audit on every change under runtime/, Cargo.lock included
+    decided-at: 2026-11-14T14:16:37Z
+    decided-by: rule
 ---
 
 # Analysis — 058-findings-route-at-discovery
 
 ## Summary
 
-0 hard-fail, 0 blocking, 4 advisory; not blocking. 1 unexamined target(s). Dispositions: 5 fixed, 0 deferred, 4 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 1 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -82,10 +92,11 @@ decisions:
 
 ## Advisory findings
 
+- rule-assessment — BE-DEPS-007: plan changes runtime/Cargo.lock (release refresh) but commits to no automated vulnerability scan on changes to the lockfile — `specs/058-findings-route-at-discovery/plan.md` — **waived**: the lockfile change is the release's own version refresh (plan.md §Release), which alters no dependency, and .github/workflows/runtime.yml already runs cargo audit on every change under runtime/, Cargo.lock included (decided by the rule)
 - grounding — plan.md says .ductus/bin/ductus is a symlink to runtime/target/release/ductus, local state no artifact grounds — `specs/058-findings-route-at-discovery/plan.md` — **waived**: it describes this checkout's runtime link behind the Overview's landing order; every runtime task has landed, and no artifact or check reads it
 - grounding — plan.md says 022's 95 other scenarios are not re-read, a count with no method — `specs/058-findings-route-at-discovery/plan.md` — **waived**: the count priced 022's discharge review when the plan was written; that discharge has landed, so the figure gates nothing, and re-deriving it is a measurement, not a mechanical edit
 - grounding — plan.md says dedup-prefix is refused by name on MCP and the CLI without a source — `specs/058-findings-route-at-discovery/plan.md` — **waived**: the refusal is the MCP server's and the CLI's unknown-argument handling, which the data model states beside it; checking it means reading code, which is the review's work, not the plan's grounding
-- decision-reasons — plan.md Trade-off 'Known limitation: 022's full re-review is not bought here' passes over an option and gives no reason beyond what the review run would cost (low confidence) — `specs/058-findings-route-at-discovery/plan.md` — **waived**: the line bounds this plan's scope, naming another spec's re-review as that spec's decision to spend; it rejects no option for the review it would start (decided by the rule)
+- decision-reasons — plan.md Trade-off 'Known limitation: 022's full re-review is not bought here' passes over an option and gives no reason beyond what the review run would cost (low confidence) — `specs/058-findings-route-at-discovery/plan.md` — **waived**: the line bounds this plan's scope, naming another spec's re-review as that spec's decision to spend; it rejects no option for the review it would start
 
 ## Deferred to other specs
 
@@ -101,8 +112,4 @@ decisions:
 
 ## Fixed in this run
 
-- plan-consistency — Technical Decision 'write-review stops capturing and starts recording dispositions' lists edits and states no reason for the design choice — `specs/058-findings-route-at-discovery/plan.md` — **fixed**
-- plan-consistency — Technical Decision 'The inbox windows and the standing row leave the review and implement primitives' lists removals and states no reason (one sub-bullet, keeping the inbox.md exclusion, gives its own) — `specs/058-findings-route-at-discovery/plan.md` — **fixed**
-- plan-consistency — Technical Decision 'The constitution states the rule once, and every command points at it' lists edit sites and states no reason beyond its heading (weakest of the four) — `specs/058-findings-route-at-discovery/plan.md` — **fixed**
-- plan-consistency — Technical Decision 'The adoption security audit reports instead of capturing' lists edits and states no reason — `specs/058-findings-route-at-discovery/plan.md` — **fixed**
-- task-consistency — tasks.md task 5 describes the 2026-11-09 close (waiting on 079, criteria verified at 9ebca7b0, a blocking BE-PAYLOAD-001 finding, owing review) which is complete; 74ce2da5 closed it done, and the spec was reopened later by 8651d466 (067 task 19) — `specs/058-findings-route-at-discovery/tasks.md` — **fixed** (decided by the rule)
+- rule-assessment — BE-INPUT-004: process-decisions reads specs/{feature}/{review,analysis}.md and stored deferral targets from host-supplied arguments and a --fired-json FILE, and no artifact commits them to canonicalization and containment or points at 022's plan Path arguments — `specs/058-findings-route-at-discovery/plan.md` — **fixed**

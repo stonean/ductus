@@ -102,6 +102,12 @@ not wait for it: `/{project}:review` calls `process-waivers` at step 8, before
   states under `process-decisions`, **Size**.
 - **Malformed entries** are reported and never expired. Duplicates warn, and
   the first one wins. The data model names the two cases a re-render drops.
+- **Paths** (`BE-INPUT-004`): `feature` is screened by
+  `validate_feature_argument`; a deferral target's `spec.md` and
+  `tasks.md` are read only when they resolve inside the project, else
+  the decision is matched with a notice; and on the CLI `--fired-json`
+  is read only from a staging directory, each the containment the *Path
+  arguments* section of `specs/022-deterministic-runtime/plan.md` states.
 
 Both rules match `framework/reference/review.md` §Malformed and duplicate waivers
 (`framework/commands/review.md:703-722`).
