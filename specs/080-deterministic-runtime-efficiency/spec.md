@@ -97,6 +97,8 @@ Every primitive whose result grows with the corpus bounds its size or pages it (
 ## Applicable Rules
 
 - `BE-PAYLOAD-001` — bounded response payload size
+- departs: `BE-TXN-002`
+  - reason: concurrent `/{project}:configure` runs read-modify-write the per-contributor `settings.local.json` with no version check or lock, so one run's hook entry can be lost; both merges are idempotent, so the next run restores it, and a lock would serialize a file two runs rarely share (Edge Cases; owner, 2026-11-14)
 
 ## Open Questions
 
