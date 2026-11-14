@@ -1081,10 +1081,17 @@ its version and date.
   `--*-json` flags' `--help` text says the file is read from a staging
   directory (spec 048 task 30).
 - **`retire-feature --allow-sequential` no longer deletes every spec on a
-  name that is no feature directory.** `--feature .` resolved to the spec
-  root and removed it. The flag now widens the accepted forms to the
+  name that is no feature directory (spec 052).** `--feature .` resolved to
+  the spec root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
+- **`retire-feature` refuses a name holding a path separator, and a spec
+  consolidated into itself (spec 052).** A sequential name leaves its slug
+  ungrammared, so `--feature 012-x/scenarios --allow-sequential` parsed as
+  sequential and deleted the spec's scenarios: both arguments now pass the
+  feature-name screen `rewrite-spec-links` applies to its `to`. A `feature`
+  that is its own `fold-target` was removed too, its spec.md satisfying the
+  guard meant to prove the content had a home; it is now refused.
 - **`lint-markdown` lints only the paths it is given.** It passes
   `--no-globs`, so the config's `globs` (`**/*.md` in the shipped config) are no
   longer appended: a violation elsewhere in the repository is not reported, and

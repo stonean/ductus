@@ -45,10 +45,12 @@ use crate::schema::primitives::{RetireFeatureArgs, RetireFeatureResult};
 /// Returns [`PrimitiveError::InvalidPath`] when either argument is empty,
 /// absolute, or carries a parent-directory component, or when either feature
 /// directory, or a link inside it, resolves outside the project;
-/// [`PrimitiveError::InvalidArgument`] when `feature` is not the
-/// branch-scoped form **and** `allow-sequential` was not set — the
-/// sequential refusal is gated rather than unconditional (spec 052), so a
-/// caller that has opted in retires a sequential directory without error;
+/// [`PrimitiveError::InvalidArgument`] when either argument is not a feature
+/// directory name (a path separator, an invisible character, no number), when
+/// `feature` names its own `fold-target`, or when `feature` is the sequential
+/// form and `allow-sequential` was not set — the sequential refusal is gated
+/// rather than unconditional (spec 052), so a caller that has opted in
+/// retires a sequential directory without error;
 /// [`PrimitiveError::FeatureNotFound`] when
 /// `fold-target` names no feature directory holding a `spec.md`; or
 /// [`PrimitiveError::Io`] when the removal itself fails.
@@ -59,6 +61,28 @@ use crate::schema::primitives::{RetireFeatureArgs, RetireFeatureResult};
 pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult> {
     validate_no_traversal(&args.feature)?;
     validate_no_traversal(&args.fold_target)?;
+    // Each argument names one feature directory and nothing below it. A
+    // sequential `NNN-slug` leaves its slug ungrammared, so `012-x/scenarios`
+    // parses as sequential and, with `allow-sequential`, the removal below
+    // would delete a spec's subdirectory (BE-INPUT-002; 052's review,
+    // 2026-11-14). The screen `rewrite-spec-links` applies to its `to`.
+    super::validate_session_feature("retire-feature", "feature", &args.feature)?;
+    super::validate_session_feature("retire-feature", "fold-target", &args.fold_target)?;
+    // A feature that is its own fold target is never retired: the spec.md
+    // guard below would be satisfied by the very directory being removed, so
+    // consolidating a spec into itself would delete it with nowhere for its
+    // content to have gone (052's review, 2026-11-14).
+    if args.feature == args.fold_target {
+        return Err(PrimitiveError::InvalidArgument {
+            primitive: "retire-feature".into(),
+            argument: "fold-target".into(),
+            reason: format!(
+                "{:?} is the feature being retired; its content has no other home, so \
+                 it is not removed",
+                args.fold_target
+            ),
+        });
+    }
 
     // Refusal 1: the sequential form is permanent *unless the caller says
     // otherwise*. Checked before anything touches the filesystem, so a typo
@@ -275,6 +299,46 @@ mod tests {
             );
             assert!(tmp.path().join("specs/001-x/spec.md").is_file(), "{bad}");
         }
+    }
+
+    /// A name holding a path separator is no feature directory, with
+    /// `allow-sequential` too: `012-x/scenarios` parses as sequential, and
+    /// without the screen the removal deleted the spec's scenarios
+    /// (BE-INPUT-002; 052's review, 2026-11-14).
+    #[test]
+    fn a_name_holding_a_path_separator_is_refused_with_allow_sequential() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "001-x");
+        write_spec(tmp.path(), "012-x");
+        let scenario = tmp.path().join("specs/012-x/scenarios/kept.md");
+        std::fs::create_dir_all(scenario.parent().unwrap()).unwrap();
+        std::fs::write(&scenario, "kept\n").unwrap();
+        for (feature, target) in [("012-x/scenarios", "001-x"), ("012-x", "001-x/scenarios")] {
+            let err = run(&consolidating(feature, target), tmp.path()).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidArgument { .. }),
+                "{feature} into {target}: unexpected error: {err:?}"
+            );
+            assert!(scenario.is_file(), "{feature} into {target}");
+            assert!(tmp.path().join("specs/012-x/spec.md").is_file());
+        }
+    }
+
+    /// A spec consolidated into itself is not removed: the target's spec.md
+    /// would be the very file the removal deletes (052's review, 2026-11-14).
+    #[test]
+    fn a_feature_that_is_its_own_fold_target_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "020-tgt");
+        let err = run(&consolidating("020-tgt", "020-tgt"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                PrimitiveError::InvalidArgument { ref argument, .. } if argument == "fold-target"
+            ),
+            "unexpected error: {err:?}"
+        );
+        assert!(tmp.path().join("specs/020-tgt/spec.md").is_file());
     }
 
     /// The sequential form is permanent: without the opt-in only
