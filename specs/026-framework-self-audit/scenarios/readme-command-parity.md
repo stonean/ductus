@@ -37,4 +37,4 @@ A new audit family asserts that every command shipped to adopters appears in the
 
 ## Resolved Questions
 
-*None yet.*
+- **Should an audit family assert flag-level parity between the README's command rows and each command's flags?** **Resolved with a condition: not in v1.** This family asserts presence only, and each README row links to `docs/slash-commands.md`, which documents the flags. *Trigger to revisit:* a command flag shipped to adopters that neither the README nor `docs/slash-commands.md` names.

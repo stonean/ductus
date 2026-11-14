@@ -1,7 +1,7 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-14T02:33:55Z
-analyzed-against: c9da403a5ecb11fc6f0c6c4d71cecf40dbbeb1ca
+last-run: 2026-11-14T02:54:24Z
+analyzed-against: 17f3a6a459e5252e5038b7c65a4ecd2dcd6652cd
 hard-fail: 0
 blocking-findings: 0
 advisory: 2
@@ -29,7 +29,7 @@ analyzed-digest:
   scenarios/family-40-deprecated-rules-are-removed-on-time.md: b0f97a19013851cdabf3172954b6c0a8da12ccc06a46f0183c93bbf50f0227bc
   scenarios/host-namespace-parity.md: 5d20df476bcd94b0f843e3c44919b19215f5dcc9ddba18af435f2b46e5b194ed
   scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
-  scenarios/readme-command-parity.md: 3788aa1103dba1860af8cb9950a6425ed33e4a24498f825fcd980e0c9bb7f8bc
+  scenarios/readme-command-parity.md: a628c66cde7ce274281f77151f3a6a485c5fd3563b74074bed8d8ba25ff59b75
   spec.md: 1a648a0d7fa2745b48000778efe8eafba879fcef6ff3cf8162cd96ddc2f69cfb
   tasks.md: a89dc6842ebea77e560254167bc11d587a541b544483539843bd46562010c690
 unexamined-by-reason:
@@ -54,7 +54,7 @@ rule-verdicts:
   BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#CI integration", message: "Plan adds audit steps to framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on dependency-set changes."}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   deferred: 0
   waived: 2
   undispositioned: 0
@@ -75,7 +75,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 43 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 43 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -87,8 +87,8 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-DEPS-007: Plan adds audit steps to framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on dependency-set changes. — `specs/026-framework-self-audit/plan.md` — **waived**: advisory and no chore: 026's CI work adds `bash scripts/audit/run-all.sh` steps (framework-checks.yml step (h), runtime-release.yml's audit job) that run repo-local scripts and change no dependency set; cargo audit runs in runtime.yml on every runtime/** change (as 024's analysis waived the same finding) (decided by the rule)
-- scenario-consistency — family-26-broken-relative-links Behavior still describes the family's own code-span stripping and line-by-line fence toggling, while link-check-consolidation and family-35 record Family 26 as an entry point delegating to check-corpus-links — `specs/026-framework-self-audit/scenarios/family-26-broken-relative-links.md` — **waived**: the requirements the Behavior states, code-span stripping and line-by-line fence toggling, still hold; since link-check-consolidation the family meets them by delegating to check-corpus-links, so the requirement is unchanged and only its implementer moved (decided by the rule)
+- rule-assessment — BE-DEPS-007: Plan adds audit steps to framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on dependency-set changes. — `specs/026-framework-self-audit/plan.md` — **waived**: advisory and no chore: 026's CI work adds `bash scripts/audit/run-all.sh` steps (framework-checks.yml step (h), runtime-release.yml's audit job) that run repo-local scripts and change no dependency set; cargo audit runs in runtime.yml on every runtime/** change (as 024's analysis waived the same finding)
+- scenario-consistency — family-26-broken-relative-links Behavior still describes the family's own code-span stripping and line-by-line fence toggling, while link-check-consolidation and family-35 record Family 26 as an entry point delegating to check-corpus-links — `specs/026-framework-self-audit/scenarios/family-26-broken-relative-links.md` — **waived**: the requirements the Behavior states, code-span stripping and line-by-line fence toggling, still hold; since link-check-consolidation the family meets them by delegating to check-corpus-links, so the requirement is unchanged and only its implementer moved
 
 ## Deferred to other specs
 
@@ -107,5 +107,4 @@ decisions:
 
 ## Fixed in this run
 
-- plan-consistency — Technical Decision 'Per-family script designs' states the shared contract (stdout row format, exit 0/1, read-only, idempotent) and the Family 1, 2, 4 and 5 designs with no rationale; only Families 6, 7 and 8 and the sibling decisions carry a reason — `specs/026-framework-self-audit/plan.md` — **fixed**
-- scenario-consistency — audit-script-refactors Edge Cases still describe the sketched signature (`audit_emit`, a `$(dirname "$0")/lib.sh` source path) that its own Behavior says did not ship (`emit LOCATION MESSAGE FIX`, `${BASH_SOURCE[0]}`) — `specs/026-framework-self-audit/scenarios/audit-script-refactors.md` — **fixed** (decided by the rule)
+*None.*
