@@ -173,6 +173,8 @@ to reproduce.
   gains an `observations` row, rendered on every run from the result's
   `dispositions`, in place of the retired `captured` line and inbox row.
 
+Rationale: the inbox is the one destination the pre-`done` gate never reads (the spec's Motivation), so an observation captured there let its spec reach `done` with the finding unresolved; recording its disposition in `review.md` keeps it where the gate reads it (AC2).
+
 ### `write-analysis` receives the findings, because capture was its only source of finding text
 
 Today the writer receives per-tier counts plus the captured inbox bullets. The
@@ -230,6 +232,8 @@ With capture gone, the writer has to be given the findings.
   editing a manual todo is not a cross-spec impact.
 - **`inbox_standing::standing`** (`runtime/src/primitives/inbox_standing.rs:37`)
   survives, with `dashboard` as its only caller.
+
+Rationale: with no pass able to append to the inbox, these windows have nothing left to compute, and the standing count is a project-wide count of logged todos, so it belongs in `/{project}:status` rather than in one spec's review or implement output (the spec's Resolved Question *Where does the standing inbox count go?*; AC10).
 
 ### `/{project}:status` renders the standing row, and the runtime now renders its strings
 
@@ -407,6 +411,8 @@ removed.
   but named `/{project}:log` as its only producer; since `050-constitution`'s
   cut to one read, §brownfield-inbox names it.
 
+Rationale: §design-principles itself listed an inbox item as a disposition the gate never read (the spec's Motivation), so the rule changes where it is stated, once, and the commands point at it rather than restate it (§drift-prevention).
+
 ### The inbox template changes, and a migration carries its guidance to existing adopters
 
 `specs/inbox.md` is installed with strategy `create`
@@ -457,6 +463,8 @@ In `framework/bootstrap/ductus-procedure.md`:
 - The trigger (`:179-182`) and rule loading are unchanged.
 - `ductus.md` carries no capture prose, so its Family 21 byte-identity with
   `govern.md` is unaffected.
+
+Rationale: the audit was one of the four automated inbox writers (the spec's Motivation); reporting each finding with its spec and a pointer to `/{project}:analyze` leaves it where a run will dispose of it rather than in a destination no gate reads (AC12).
 
 ### Cross-spec discharge is priced by destination and batched per spec
 
