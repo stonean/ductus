@@ -10,7 +10,7 @@ section: "The check"
 
 ## Behavior
 
-- **A second subject set.** `project-files` measures the four files against the same threshold. `feature` becomes optional, and a call naming neither is an argument error. A feature-only call returns what it returns today.
+- **A second subject set.** `project-files` measures the four files against the same threshold. `feature` becomes optional, and a call naming neither is an argument error. A feature-only call carries the shared keys and the spec half, and no key of the project half.
 - **The result.** `threshold`, `examined`, `oversized`, `skipped` and `notices` stay at the top level, the last three moving to the result's list file past the read size (`data-model.md`, **Size**). The spec keys (`feature`, `status`, `decisions`, `path`) and a `project-files` list are two halves that share no key. Each `project-files` record names the file, its state (`measured`, `absent` or `unreadable`) and its bytes.
 - **The fix.** A project file over the threshold joins `oversized` under its own kind. Its one fix is `/{project}:prune --project`, it carries no `on-done`, and its warning and message are worded as a spec subject's are.
 - **Absent is reported.** A project file that does not exist has state `absent`, though a missing spec subject is never reported: a project with no `events.md` must read differently from one whose `events.md` was measured. A file that exists but cannot be read goes in `skipped` under `artifact-unreadable`.

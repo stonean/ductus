@@ -86,6 +86,27 @@ fn a_refused_file_exits_1_and_names_its_path_size_limit_and_fix() {
     assert!(stdout.contains("\"refused\":true"), "{stdout}");
 }
 
+/// The same refusal in the inline form, the one a project at a read size its
+/// staged result fits takes: the fixture's 100-byte read size puts every
+/// staged result past it, so the test above runs in the file form only
+/// (BE-PAYLOAD-001).
+#[test]
+fn a_refused_file_exits_1_in_the_inline_form() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 1600);
+    read_size(tmp.path(), 1500);
+    stage_agents(&repository, tmp.path(), 2000);
+    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stderr}");
+    for named in ["AGENTS.md", "2000", "1500-byte", "/prune --project"] {
+        assert!(stderr.contains(named), "{named} not in: {stderr}");
+    }
+    let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(result["form"], "inline", "{stdout}");
+    assert_eq!(result["oversized-count"], 1, "{stdout}");
+    assert_eq!(result["oversized"][0]["path"], "AGENTS.md", "{stdout}");
+}
+
 /// A staged project file that cannot be measured stops the commit as a refused
 /// one does: a hook that passed over a file it could not measure would let an
 /// oversized one through. `AGENTS.md` is left in conflict, one index entry per

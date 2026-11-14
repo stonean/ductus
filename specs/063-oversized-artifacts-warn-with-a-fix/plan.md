@@ -4,7 +4,7 @@ Implements [063 — Oversized artifacts warn with a fix](spec.md).
 
 ## Overview
 
-One new read-only runtime primitive, `check-artifact-size`, measures a feature's subject artifacts against a configured threshold and returns, for each one over it, its size, read-page count, the fixes for its kind with each fix's effect on a `done` spec, and a rendered warning. `/clarify`, `/plan` and `/analyze` each gain one step that invokes it. The first two show the warnings and never gate on them; `/analyze` records each as an advisory finding in a new `artifact-size` family, and the primitive tells it which of those a stored waiver still covers. The threshold is a new `[artifacts] read-size-bytes` key, documented in the README and in the bootstrap's configuration schema. `/plan`'s guidance stops placing code snippets in plans.
+One new runtime primitive, `check-artifact-size`, which writes nothing but a list file past the read size, measures a feature's subject artifacts against a configured threshold and returns, for each one over it, its size, read-page count, the fixes for its kind with each fix's effect on a `done` spec, and a rendered warning. `/clarify`, `/plan` and `/analyze` each gain one step that invokes it. The first two show the warnings and never gate on them; `/analyze` records each as an advisory finding in a new `artifact-size` family, and the primitive tells it which of those a stored waiver still covers. The threshold is a new `[artifacts] read-size-bytes` key, documented in the README and in the bootstrap's configuration schema. `/plan`'s guidance stops placing code snippets in plans.
 
 ## Technical Decisions
 
