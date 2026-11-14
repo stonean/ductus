@@ -1,22 +1,56 @@
 ---
 spec: 078-review-fix-rounds-are-re-read-within-a-bound
-last-run: 2026-11-09T21:41:13Z
-analyzed-against: aa5e3096156aa2a0fc41338e2ba67240dd959b2a
+last-run: 2026-11-14T13:44:48Z
+analyzed-against: 87b2240447b238b2c86a7ebfd964e9d0c44bb9ec
 hard-fail: 0
 blocking-findings: 0
 advisory: 5
 unexamined: 2
 analyzed-digest:
-  data-model.md: 95cd98fd2db64be4ac315c056ac68c8e70b480723cc124a4db436ca5b570cf78
-  plan.md: 9836d6779b53a075eae043e1327d1db8de9d3aa88cf0f64fdcaec5516c7777af
+  data-model.md: 1fc4eae1fc031a011a4aa2346152a20aed0ed867454993c3a31dd1ba8846149d
+  plan.md: 84f5c48d9862a8c81749a229413e638cd59a1cda32d8cad312ff7d50165fe500
   review.md: 3330a8dae59991d2ea8e19895300447af70f73ecff42d631c7c83944fe77946b
   scenarios/a-reviews-own-record-is-no-fix-round.md: 8a0190ef5a926425199a4381d558f52db626cdd81803b4e23c9aa1055b130440
-  scenarios/fix-round-results-have-a-bounded-size.md: bd6472ece8d3586d1de656fd1d1689848d455ed79183249ff003e9db24817de7
-  spec.md: c48110d371473584e66dd08a295650f35e66c8c071a008ba5df0c3600facf2e3
-  tasks.md: b961250dcbf08c4186c5f3878b05c7986d8b55cf5b415514e415fd9b0339c48f
+  scenarios/fix-round-results-have-a-bounded-size.md: 3cf9dc7ebb4213d371eadee7db64826448d2da4ed0bf3ffa96b4fecb897f78d9
+  spec.md: 4a08b1d2f1911af781ff23182c4e3eae72a37d48a201e796502c809d12eb249f
+  tasks.md: 046ea8e5f19a0ed15e64dc250cc4cd707dfff4e011214ec271ad99e16c36553f
+unexamined-by-reason:
+  never-existed: 1
+  not-a-live-claim: 1
+rule-digest:
+  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
+  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
+  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
+  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
+  performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
+  performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
+  quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
+  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
+  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
+  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+rule-verdicts:
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The record and the gate are 066's"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Result file"}
+  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Round directory"}
+  BE-INPUT-003: {verdict: addressed, cite: "data-model.md#`brief-re-read`"}
+  BE-INPUT-004: {verdict: addressed, cite: "data-model.md#Round directory"}
+  BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Result file"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/fix-round-results-have-a-bounded-size.md#Behavior"}
+  BE-RACE-003: {verdict: addressed, cite: "data-model.md#Round directory"}
+  BE-REPR-002: {verdict: finding, tier: should, at: "data-model.md#Result file", message: "result.json's and read-re-read's severities are upper-case MUST, SHOULD and NOTE while 078's other enum values are lower-case kebab"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#The loop's end and its budget"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#The runtime writes the brief"}
+  CFG-CONST-003: {verdict: addressed, cite: "plan.md#The loop's end and its budget"}
+  CFG-CONST-004: {verdict: addressed, cite: "plan.md#The switch is read by the runtime"}
+  CFG-ENV-001: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
+  CFG-ENV-005: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
+  CFG-ENV-008: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 1
   deferred: 0
   waived: 5
   undispositioned: 0
@@ -52,7 +86,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -74,10 +108,15 @@ decisions:
 
 *None.*
 
+## Contradictions
+
+*None.*
+
 ## Unexamined targets
 
-2 target(s) unexamined; no breakdown recorded.
+- never-existed: 1
+- not-a-live-claim: 1
 
 ## Fixed in this run
 
-*None.*
+- task-consistency — tasks.md task 15 still carries handoff prose 079's completed and pruned task 28 made stale: its last sentence says 'before `done` 079's task 28 is corrected to the counts a simulated closing then reads' — `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md` — **fixed** (decided by the rule)
