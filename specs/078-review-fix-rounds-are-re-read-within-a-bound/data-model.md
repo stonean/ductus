@@ -107,6 +107,7 @@ Args (the added half only):
 ```
 
 - `check` — `exempt`, `re-read`, `diff-checked` or `not-re-read`, one entry per round in order; a round with an empty scope is no round. `result` (`clean` or `findings`) is required on a `re-read` and refused elsewhere; `reason` is allowed only on a `not-re-read` and, when present, is its waiver, which requires `decided-by`.
+- `excluded` — optional, empty by default: the paths `brief-re-read` left out of the round because only another spec's commits changed them (079, AC3).
 - `fix-rounds` absent writes none of the fields below: the run stated nothing about its fixes, as an unstated `examined` is absent. An empty list writes them all at zero.
 
 Record (`review.md` frontmatter, after `skipped-passes`):
