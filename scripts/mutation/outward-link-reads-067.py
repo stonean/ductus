@@ -21,8 +21,8 @@ MUTATIONS = [
     (
         'M1 check_plan_consistency reads a plan.md linked outside the project',
         'src/primitives/check_artifacts.rs',
-        '    if outward.covers(&plan) {\n        return;\n    }\n    let Ok(text) = read_text(&plan)',
-        '    let Ok(text) = read_text(&plan)',
+        '    if outward.covers(&plan) {\n        return;\n    }\n    let path = format!("{root}/{feature}/plan.md");',
+        '    let path = format!("{root}/{feature}/plan.md");',
         'check_artifacts::tests::a_linked_body_is_read_by_no_family',
     ),
     (

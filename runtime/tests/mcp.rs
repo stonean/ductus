@@ -536,7 +536,7 @@ fn descriptions_hold_the_check_artifacts_details_067_points_at() {
         ),
         (
             descriptions::CHECK_ARTIFACTS,
-            "run at every status and add nothing to `skipped`",
+            "run at every status and add nothing to `skipped` but a plan.md that exists and could not be read",
         ),
         (
             descriptions::CHECK_ARTIFACTS,

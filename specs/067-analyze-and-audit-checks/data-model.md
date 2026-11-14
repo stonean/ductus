@@ -46,7 +46,7 @@ The families and their severity tiers are `check-artifacts`' compiled descriptio
 - `criterion-labels` — the enforcement half of `label-criteria`, since a criterion typed in an editor never touches a primitive.
 - `disposition-drift` — scenario `disposition-drift-is-advisory`.
 - `spec-integrity` — the deterministic items of `framework/reference/analyze.md` §Spec integrity; whether the spec holds an implementation code block is the host's judgment (analyze step 15, recorded `integrity-not-checked` under exec); scenario [`spec-integrity-and-plan-consistency-are-run`](scenarios/spec-integrity-and-plan-consistency-are-run.md).
-- `plan-consistency` — a decision's rationale and a contradiction of `system.md` are the host's judgment (step 15).
+- `plan-consistency` — a decision's rationale and a contradiction of `system.md` are the host's judgment (step 15); a `plan.md` that exists and cannot be read is recorded `artifact-unreadable`, a skip below `done` and a blocking finding at it.
 - `cross-spec-impact-drift` — advisory because the gate reads the declaration only on the way to `done`.
 
 **No family judges `analysis.md`**: every family runs inside `/ductus:analyze`, whose own run is about to replace that record, so `/ductus:analyze` judges it from the record it writes. `--all` iteration stays with the caller, and the command-frontmatter-completeness family stays with the host, since it reads the host's command directory.

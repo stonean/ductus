@@ -8,7 +8,7 @@ bound that moves `derive-dependencies`' `unwritable` past the read size, the
 exec analyze tally's step 6, `check-artifacts`' status-gated path families
 and `gitignored` skip, and `validate-frontmatter`'s row chosen by path, and `resolve-anchor`'s judgment of
 qualified, registered and span references with the exec tally's unjudged
-counts.
+counts, and `check-artifacts`' unreadable `plan.md` under `plan-consistency`.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -673,5 +673,12 @@ MUTATIONS = [
         '        let names = if is_url(path) {\n            is_markdown(path)\n        } else {',
         '        let names = if is_url(path) {\n            false\n        } else {',
         'a_url_to_a_markdown_document_names_an_absent_document',
+    ),
+    (
+        'M91 plan-consistency returns silently over a plan.md it cannot read (task 31)',
+        'src/primitives/check_artifacts.rs',
+        '        Err(_) => {\n            record_unreadable_artifact(findings, skipped, "plan-consistency", status, path);\n            return;\n        }',
+        '        Err(_) => return,',
+        'an_unreadable_plan',
     ),
 ]

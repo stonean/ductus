@@ -231,7 +231,15 @@ fn check_text_families(
     check_link_adjacent_drift(findings, skipped, &feature_dir, spec, repo, outward);
     check_criterion_path_existence(findings, skipped, status, spec, &spec_path, repo);
     check_body_path_existence(findings, skipped, status, &feature_dir, repo, outward);
-    check_integrity(findings, spec, (root, feature), &spec_path, repo, outward);
+    check_integrity(
+        findings,
+        skipped,
+        spec,
+        (root, feature),
+        &spec_path,
+        repo,
+        outward,
+    );
 }
 
 /// One check of a feature's artifacts, whole: what `check-artifacts` returns,
@@ -407,16 +415,25 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
 /// then spec integrity and plan consistency, for the feature under `root`.
 fn check_integrity(
     findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
     spec: &read_spec::SpecRead,
     (root, feature): (&str, &str),
     spec_path: &Path,
     repo: &Path,
     outward: &super::OutwardLinks,
 ) {
+    let status = spec.frontmatter.status.as_str();
     check_criterion_labels(findings, spec, spec_path, repo);
-    check_spec_integrity(findings, spec, &spec.frontmatter.status, spec_path, repo);
+    check_spec_integrity(findings, spec, status, spec_path, repo);
     let feature_dir = repo.join(root).join(feature);
-    check_plan_consistency(findings, &feature_dir, root, feature, outward);
+    check_plan_consistency(
+        findings,
+        skipped,
+        status,
+        &feature_dir,
+        (root, feature),
+        outward,
+    );
 }
 
 /// Spec integrity (blocking) — reference §"Spec integrity (blocking)", its
@@ -493,22 +510,31 @@ fn is_placeholder_criterion(text: &str) -> bool {
 /// links this spec, its Technical Decisions section holds something, and its
 /// Affected Files section names at least one path. A decision's rationale and
 /// a contradiction of `system.md` are the host's judgment (step 15). A spec
-/// with no `plan.md` is skipped, as the heading says.
+/// with no `plan.md` is skipped, as the heading says. A `plan.md` that exists
+/// but cannot be read is recorded as [`record_unreadable_artifact`] records
+/// one (spec 067 task 31): returning silently would let a plan the family
+/// never examined read as examined and clean (`QUAL-CLAIM-001`).
 fn check_plan_consistency(
     findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    status: &str,
     feature_dir: &Path,
-    root: &str,
-    feature: &str,
+    (root, feature): (&str, &str),
     outward: &super::OutwardLinks,
 ) {
     let plan = feature_dir.join("plan.md");
     if outward.covers(&plan) {
         return;
     }
-    let Ok(text) = read_text(&plan) else {
-        return;
-    };
     let path = format!("{root}/{feature}/plan.md");
+    let text = match super::read_text_if_present(&plan) {
+        Ok(Some(text)) => text,
+        Ok(None) => return,
+        Err(_) => {
+            record_unreadable_artifact(findings, skipped, "plan-consistency", status, path);
+            return;
+        }
+    };
     let mut blocking = |message: String| {
         findings.push(ArtifactFinding {
             family: "plan-consistency".into(),
@@ -4412,6 +4438,71 @@ mod tests {
                 .skipped
                 .iter()
                 .any(|s| s.reason == "artifact-unreadable"),
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    /// `plan-consistency` names a `plan.md` it could not read under its own
+    /// family (spec 067 task 31, `QUAL-CLAIM-001` from 000's review): below
+    /// `done` a skipped target, where it used to return silently, so the plan
+    /// the family never examined read as examined and clean there.
+    #[test]
+    fn an_unreadable_plan_is_skipped_under_plan_consistency() {
+        let tmp = tempdir().unwrap();
+        seed_for_drift(tmp.path(), "# Plan\n");
+        fs::write(
+            tmp.path().join(format!("specs/{FEATURE}/plan.md")),
+            [0xff, 0xfe, 0xfd],
+        )
+        .unwrap();
+        let result = run_every_family(&args(), tmp.path()).unwrap();
+        assert!(
+            result.skipped.iter().any(|s| s.family == "plan-consistency"
+                && s.reason == "artifact-unreadable"
+                && s.path == "specs/042-demo/plan.md"),
+            "{:?}",
+            result.skipped
+        );
+        assert!(
+            !result
+                .findings
+                .iter()
+                .any(|f| f.family == "plan-consistency"),
+            "{:?}",
+            result.findings
+        );
+    }
+
+    /// At `done` the same plan is a blocking finding under `plan-consistency`,
+    /// as every family's unreadable artifact is ([`record_unreadable_artifact`]).
+    #[test]
+    fn an_unreadable_plan_blocks_a_done_spec_under_plan_consistency() {
+        let tmp = tempdir().unwrap();
+        seed_feature(tmp.path(), "done", Some(CLEAN_REVIEW), Some(CLEAN_ANALYZE));
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        fs::write(
+            tmp.path().join(format!("specs/{FEATURE}/plan.md")),
+            [0xff, 0xfe, 0xfd],
+        )
+        .unwrap();
+        let result = run_every_family(&args(), tmp.path()).unwrap();
+        assert!(
+            result
+                .findings
+                .iter()
+                .any(|f| f.family == "plan-consistency"
+                    && f.severity == AnalyzeSeverity::Blocking
+                    && f.message.contains("unreadable artifact")
+                    && f.path == "specs/042-demo/plan.md"),
+            "{:?}",
+            result.findings
+        );
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.family == "plan-consistency"),
             "{:?}",
             result.skipped
         );
