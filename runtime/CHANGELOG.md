@@ -313,6 +313,17 @@ its version and date.
 
 ### Changed
 
+- **`derive-references` bounds its result (spec 067, task 32).** Its six
+  spec lists grow with the corpus, since a service rename drifts every
+  referencing spec at once, yet they came back inline whatever their length.
+  Each now carries its `-count` in both forms, with `unwritable-count` absent
+  at zero as on `derive-dependencies`; past `[artifacts] read-size-bytes`
+  the lists move whole to the file `lists-file` names, under
+  `.ductus/results/derive-references/all-specs/`, and `form` says which. The
+  CLI still exits non-zero on an unwritable spec and still names it on
+  stderr, gating and reporting on the whole derivation. A malformed read
+  size halts a writing call before it rewrites any spec.
+
 - **Rule judging runs in a fresh subagent where the host can start one
   (specs 020 and 060).** Review's five passes and analyze's steps 11 and 12
   read every loaded rule file, and review every in-scope file, into the

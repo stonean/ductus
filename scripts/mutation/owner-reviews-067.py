@@ -8,8 +8,21 @@ bound that moves `derive-dependencies`' `unwritable` past the read size, the
 exec analyze tally's step 6, `check-artifacts`' status-gated path families
 and `gitignored` skip, and `validate-frontmatter`'s row chosen by path, and `resolve-anchor`'s judgment of
 qualified, registered and span references with the exec tally's unjudged
-counts, `check-artifacts`' unreadable `plan.md` under `plan-consistency`, and
-`check-rule-ids`' loaded files deciding before its shipped index.
+counts, `check-artifacts`' unreadable `plan.md` under `plan-consistency`,
+`check-rule-ids`' loaded files deciding before its shipped index, and
+`derive-references`' bounded result (task 32: M93 to M95).
+
+Task 32's two CLI behaviors live in `src/main.rs`, which `cargo test --lib`
+does not build: the gate reading `unwritable-count`, and the stderr lines
+reported from the whole derivation rather than the bounded result. Each was
+proven by hand on 2026-11-14 to fail
+`past_the_read_size_an_unwritable_rewrite_still_exits_1_and_is_named` in
+`runtime/tests/derive_unwritable_cli.rs` (the gate's mutant also fails the
+binary's `an_unwritable_spec_moved_to_the_lists_file_still_blocks`): run
+`cargo test --locked --test derive_unwritable_cli` with either applied.
+M93 also fails `tests/mcp.rs`'s
+`every_result_that_grows_with_the_corpus_moves_its_lists_past_the_read_size_via_mcp`,
+run by hand with `cargo test --locked --test mcp -- past_the_read_size`.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -688,5 +701,27 @@ MUTATIONS = [
         '        match known.get(&id).copied() {',
         '        match (if shipped_rule_ids().contains(id.as_str()) { None } else { known.get(&id).copied() }) {',
         'an_installed_shipped_rule_is_found',
+    ),
+    # -- derive-references: the bounded result (task 32) -----------------
+    (
+        'M93 derive-references returns its lists inline past the read size',
+        'src/primitives/derive_references.rs',
+        '    if let Some(file) = super::bounded_lists::place(\n        repo,\n        "derive-references",\n        super::bounded_lists::ALL_SPECS,\n        &result,\n        &lists,\n    )? {',
+        '    let _ = &lists;\n    if let Some(file) = None::<String> {',
+        'derive_references::tests::past_the_read_size_every_list_moves_to_the_list_file',
+    ),
+    (
+        'M94 derive-references leaves unwritable inline in the file form',
+        'src/primitives/derive_references.rs',
+        '        result.unwritable = None;\n        result.absent = None;\n        result.lists_file = Some(file);',
+        '        result.absent = None;\n        result.lists_file = Some(file);',
+        'derive_references::tests::past_the_read_size_every_list_moves_to_the_list_file',
+    ),
+    (
+        'M95 derive-references rewrites specs before it reads the read size',
+        'src/primitives/derive_references.rs',
+        'pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {\n    super::check_artifact_size::resolve_threshold(repo)?;\n',
+        'pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {\n',
+        'derive_references::tests::a_malformed_read_size_halts_a_writing_call_before_any_write',
     ),
 ]

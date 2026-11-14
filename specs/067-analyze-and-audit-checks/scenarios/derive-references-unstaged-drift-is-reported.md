@@ -81,7 +81,7 @@ here it is tracked and goes unenumerated. Both emit the payload of a clean run.
 `derive-dependencies` does, and consults the staged set only to decide whether
 to write.
 
-`DeriveReferencesResult` gains `unwritten: Vec<String>` — the repo-relative
+`DeriveReferencesResult` gains `unwritten` — the repo-relative
 paths of specs examined and found drifted but deliberately not written, sorted.
 The field carries the meaning it already has on `DeriveDependenciesResult`:
 neither "in sync" nor "not examined", so reported as neither.

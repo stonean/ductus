@@ -2674,18 +2674,25 @@ pub struct DeriveReferencesArgs {
     pub staged: bool,
 }
 
-/// Result for `derive-references`.
+/// Result for `derive-references`: inline up to `[artifacts]
+/// read-size-bytes`, and past it with its six lists in the file `lists-file`
+/// names and their counts inline, as `derive-dependencies`' (spec 067,
+/// scenario `derive-references-results-are-bounded`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DeriveReferencesResult {
     /// Whether any spec was rewritten (or, without `write`, would be).
     pub drift: bool,
     /// Repo-relative paths of the drifted specs, sorted: rewritten under
-    /// `write`, and only reported without it.
-    pub updated: Vec<String>,
+    /// `write`, and only reported without it. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated: Option<Vec<String>>,
+    /// Entries in `updated`, in either form.
+    pub updated_count: usize,
     /// Specs examined and found drifted but deliberately not written — the
     /// `staged` case. Neither "in sync" nor "not examined", so they are
-    /// reported separately rather than folded into either.
+    /// reported separately rather than folded into either. Absent in the file
+    /// form.
     ///
     /// This field carries more weight here than on
     /// [`DeriveDependenciesResult::unwritten`]. A dependency derives from the
@@ -2695,7 +2702,10 @@ pub struct DeriveReferencesResult {
     /// while leaving all of them untouched, and therefore unstaged. Without
     /// this list the pre-commit hook reports such a tree in sync on every
     /// commit indefinitely.
-    pub unwritten: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unwritten: Option<Vec<String>>,
+    /// Entries in `unwritten`, in either form.
+    pub unwritten_count: usize,
     /// Count of tracked specs actually read. Every tracked spec is walked,
     /// `staged` or not — the filter applies to the write, not the walk — but
     /// specs listed in `absent` are excluded, so this never overstates what
@@ -2703,8 +2713,11 @@ pub struct DeriveReferencesResult {
     pub examined: u32,
     /// Untracked specs in the worktree, never enumerated or rewritten
     /// (spec 017). Reported so an empty `updated` cannot be read as
-    /// "everything is in sync".
-    pub untracked_skipped: Vec<String>,
+    /// "everything is in sync". Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub untracked_skipped: Option<Vec<String>>,
+    /// Entries in `untracked-skipped`, in either form.
+    pub untracked_skipped_count: usize,
     /// Number of services resolved from the `[services]` registry. Zero means
     /// every harvested reference records `service: null`, which is a very
     /// different state from "no references found" — an absent registry looks
@@ -2718,29 +2731,46 @@ pub struct DeriveReferencesResult {
     /// The contract this completes: an empty `updated` means examined-and-clean
     /// only when `unparseable` and `unwritable` are also empty
     /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
-    /// `skipped`.
-    pub unparseable: Vec<String>,
+    /// `skipped`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unparseable: Option<Vec<String>>,
+    /// Entries in `unparseable`, in either form.
+    pub unparseable_count: usize,
     /// Specs whose derived `references:` differs from the frontmatter's but
     /// whose rewrite would leave a block that does not parse as YAML, so it
     /// was not written: a value shape the splice's line rules do not cover, or
     /// a block that was invalid before the rewrite. The index is stale and
     /// the primitive cannot fix it, so unlike `unparseable` this is a failure:
     /// the CLI exits non-zero, report-only and `write` alike, naming each spec
-    /// on stderr, and the key is edited by hand. Absent when empty.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub unwritable: Vec<String>,
+    /// on stderr, and the key is edited by hand. Absent when empty, and in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unwritable: Option<Vec<String>>,
+    /// Entries in `unwritable`, in either form; absent when zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unwritable_count: usize,
     /// Specs tracked in the git index but absent from the worktree — deleted
     /// without the deletion being staged. Nothing can be derived from them, so
     /// they are named rather than dropped: they are excluded from `examined`,
     /// and reporting neither would let `examined` assert a subject the run
     /// never read (`QUAL-CLAIM-001`, recorded by 022's review on 2026-08-27).
-    #[serde(default)]
-    pub absent: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub absent: Option<Vec<String>>,
+    /// Entries in `absent`, in either form.
+    pub absent_count: usize,
     /// Spec-root directory name the run enumerated (spec 040).
     pub specs_root: String,
     /// Whether the run actually wrote. A result read out of context cannot
     /// then be mistaken for one that changed the tree.
     pub wrote: bool,
+    /// Where the lists are: in this result, or, past the read size, in the
+    /// file `lists-file` names (spec 067, task 32).
+    pub form: ListsForm,
+    /// In the file form, the file holding the six lists whole, from the
+    /// project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- derive-boundary ---------------------------------------------------------

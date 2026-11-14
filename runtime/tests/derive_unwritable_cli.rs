@@ -77,3 +77,39 @@ fn an_unwritable_rewrite_exits_1_and_names_the_spec_on_stderr() {
         }
     }
 }
+
+/// Past `[artifacts] read-size-bytes` the lists are in the file `lists-file`
+/// names, and an unwritable spec moved there still exits 1 and is still named
+/// on stderr: `main` reports and gates on the whole derivation, never on the
+/// bounded result's lists (spec 067, task 32; scenario
+/// `derive-references-results-are-bounded`).
+#[test]
+fn past_the_read_size_an_unwritable_rewrite_still_exits_1_and_is_named() {
+    for primitive in ["derive-dependencies", "derive-references"] {
+        let tmp = tempfile::tempdir().unwrap();
+        fixture(tmp.path());
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let output = ductus_command(env!("CARGO_BIN_EXE_ductus"))
+            .arg(primitive)
+            .current_dir(tmp.path())
+            .output()
+            .expect("binary runs");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(1), "{primitive}: {stderr}");
+        assert!(
+            stderr
+                .lines()
+                .any(|line| line.starts_with(&format!("{primitive}: {SPEC}:"))),
+            "{primitive}: {stderr}"
+        );
+        let stdout: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(stdout["form"], "file", "{primitive}: {stdout}");
+        assert!(stdout.get("unwritable").is_none(), "{primitive}: {stdout}");
+        assert_eq!(stdout["unwritable-count"], 1, "{primitive}: {stdout}");
+    }
+}

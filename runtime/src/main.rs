@@ -468,9 +468,10 @@ fn derive_dependencies_blocks(r: &DeriveDependenciesResult) -> bool {
 }
 
 /// Whether `derive-references` exits non-zero: a rewrite that could not be
-/// written, or drift on a report-only run.
+/// written, or drift on a report-only run. It reads `unwritable-count`, which
+/// both forms carry, so a list the bound moved to a file still blocks.
 fn derive_references_blocks(r: &DeriveReferencesResult) -> bool {
-    !r.unwritable.is_empty() || (!r.wrote && r.drift)
+    r.unwritable_count > 0 || (!r.wrote && r.drift)
 }
 
 /// The stderr line for each spec whose `key` rewrite the re-parse guard
@@ -1177,11 +1178,16 @@ fn main() -> ExitCode {
         }
         Command::DeriveReferences(args) => {
             // No graph here, so a stale index on a report-only run and a
-            // rewrite that could not be written are the blockers.
-            let outcome = primitives::derive_references::run(&args, &repo);
-            if let Ok(result) = &outcome {
-                report_unwritable("derive-references", "references", &result.unwritable);
+            // rewrite that could not be written are the blockers. As for
+            // `derive-dependencies`, the whole derivation is reported before
+            // the result is bounded, so an unwritable spec the bound moves to
+            // a file is still named on stderr (spec 067, task 32).
+            let derived = primitives::derive_references::compute(&args, &repo);
+            if let Ok(derived) = &derived {
+                report_unwritable("derive-references", "references", &derived.unwritable);
             }
+            let outcome =
+                derived.and_then(|derived| primitives::derive_references::bound(&repo, derived));
             emit_result_gated(outcome, derive_references_blocks)
         }
         Command::CheckArtifacts(args) => {
@@ -1280,16 +1286,24 @@ mod tests {
     fn references_result() -> DeriveReferencesResult {
         DeriveReferencesResult {
             drift: false,
-            updated: vec![],
-            unwritten: vec![],
+            updated: Some(vec![]),
+            updated_count: 0,
+            unwritten: Some(vec![]),
+            unwritten_count: 0,
             examined: 1,
-            untracked_skipped: vec![],
+            untracked_skipped: Some(vec![]),
+            untracked_skipped_count: 0,
             registered_services: 0,
-            unparseable: vec![],
-            unwritable: vec![],
-            absent: vec![],
+            unparseable: Some(vec![]),
+            unparseable_count: 0,
+            unwritable: None,
+            unwritable_count: 0,
+            absent: Some(vec![]),
+            absent_count: 0,
             specs_root: "specs".into(),
             wrote: false,
+            form: ListsForm::Inline,
+            lists_file: None,
         }
     }
 
@@ -1317,13 +1331,40 @@ mod tests {
             let mut refs = references_result();
             refs.wrote = wrote;
             assert!(!derive_references_blocks(&refs), "clean, wrote {wrote}");
-            refs.unparseable = vec!["specs/001-a/spec.md".into()];
+            refs.unparseable = Some(vec!["specs/001-a/spec.md".into()]);
+            refs.unparseable_count = 1;
             assert!(
                 !derive_references_blocks(&refs),
                 "unparseable, wrote {wrote}"
             );
-            refs.unwritable = vec!["specs/001-a/spec.md".into()];
+            refs.unwritable = Some(vec!["specs/001-a/spec.md".into()]);
+            refs.unwritable_count = 1;
             assert!(derive_references_blocks(&refs), "unwritable, wrote {wrote}");
+        }
+    }
+
+    /// Past the read size the lists are in a file, and an unwritable spec the
+    /// bound moved there still blocks: the gate reads the count, which both
+    /// forms carry (spec 067, task 32).
+    #[test]
+    fn an_unwritable_spec_moved_to_the_lists_file_still_blocks() {
+        for wrote in [false, true] {
+            let mut deps = dependencies_result();
+            deps.wrote = wrote;
+            deps.form = ListsForm::File;
+            deps.unwritable = None;
+            deps.unwritable_count = 1;
+            assert!(
+                derive_dependencies_blocks(&deps),
+                "dependencies, wrote {wrote}"
+            );
+
+            let mut refs = references_result();
+            refs.wrote = wrote;
+            refs.form = ListsForm::File;
+            refs.unwritable = None;
+            refs.unwritable_count = 1;
+            assert!(derive_references_blocks(&refs), "references, wrote {wrote}");
         }
     }
 

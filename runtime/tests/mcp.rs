@@ -1774,7 +1774,9 @@ fn vendor_a_violating_markdownlint(root: &Path) {
 /// AC7's population (spec 080): each primitive `research.md` measures as
 /// growing with the corpus, with the arguments it is called with on the
 /// generated corpus and the lists its file form moves. A primitive with an
-/// argument mode that grows is a row per mode.
+/// argument mode that grows is a row per mode. `derive-references`, which
+/// 080 measured only on a corpus holding no reference, joins from spec 067's
+/// task 32 (scenario `derive-references-results-are-bounded`).
 fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
     use common::corpus::{SUBJECT, slug};
     let feature = json!({ "feature": SUBJECT });
@@ -1849,6 +1851,17 @@ fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
             ],
         ),
         (
+            "derive-references",
+            json!({}),
+            &[
+                "updated",
+                "unwritten",
+                "untracked-skipped",
+                "absent",
+                "unparseable",
+            ],
+        ),
+        (
             "derive-routing-candidates",
             json!({ "description": "handle a corpus case" }),
             &["candidates"],
@@ -1870,6 +1883,19 @@ fn drift_one_spec(root: &Path) {
     let drifted = text.replace(&format!("dependencies: [{}]", slug(2)), "dependencies: []");
     assert_ne!(drifted, text, "spec 3 declared its dependency");
     fs::write(path, drifted).unwrap();
+}
+
+/// Give spec 4 a cross-service link its frontmatter does not record, so
+/// `derive-references` has a drifted spec to list.
+fn refer_from_one_spec(root: &Path) {
+    use common::corpus::slug;
+    let path = root.join("specs").join(slug(4)).join("spec.md");
+    let mut text = fs::read_to_string(&path).unwrap();
+    assert!(!text.contains("references:"), "spec 4 records no reference");
+    text.push_str(
+        "\nSee [the API](https://github.com/acme/api/blob/main/specs/003-user/spec.md).\n",
+    );
+    fs::write(path, text).unwrap();
 }
 
 /// `name` called with `args` over MCP on a fresh copy of `template`, with
@@ -1910,6 +1936,7 @@ async fn every_result_that_grows_with_the_corpus_moves_its_lists_past_the_read_s
     common::corpus::generate(template.path(), &common::corpus::SMALL);
     vendor_a_violating_markdownlint(template.path());
     drift_one_spec(template.path());
+    refer_from_one_spec(template.path());
     for (name, args, lists) in bounded_members() {
         let (inline, _) = call_on_a_copy(template.path(), name, &args, None).await;
         assert_eq!(inline["form"], "inline", "{name} {args}: {inline:?}");

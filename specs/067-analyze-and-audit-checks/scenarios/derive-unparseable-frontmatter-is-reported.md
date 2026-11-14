@@ -42,7 +42,7 @@ mid-edit is exactly when a pre-commit hook runs.
 ## Behavior
 
 Both `DeriveDependenciesResult` and `DeriveReferencesResult` gain
-`unparseable: Vec<String>`: the repo-relative paths of specs whose frontmatter
+`unparseable`: the repo-relative paths of specs whose frontmatter
 could not be read well enough to derive from, sorted, and an empty list when
 there are none.
 

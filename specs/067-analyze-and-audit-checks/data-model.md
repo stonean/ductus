@@ -182,18 +182,26 @@ The two derived frontmatter indexes (scenario [`adopter-generator-promotion`](sc
 {
   "drift": true,
   "updated": ["specs/017-derive-dont-ask/spec.md"],
+  "updated-count": 1,
   "unwritten": [],
-  "absent": [],
+  "unwritten-count": 0,
   "examined": 51,
   "untracked-skipped": [],
+  "untracked-skipped-count": 0,
+  "absent": [],
+  "absent-count": 0,
   "cycles": [],
-  "specs-root": "specs",
+  "cycles-count": 0,
   "unparseable": [],
-  "wrote": false
+  "unparseable-count": 0,
+  "specs-root": "specs",
+  "wrote": false,
+  "form": "inline"
 }
 ```
 
 - Each result field is as the compiled descriptions state: `unwritten` (scenario [`derive-references-unstaged-drift-is-reported`](scenarios/derive-references-unstaged-drift-is-reported.md): a `references:` entry derives from the body *and* the `[services]` registry, so a service rename drifts specs nobody staged), `absent`, `untracked-skipped`, `cycles`, `registered-services`, `unparseable` (scenario [`derive-unparseable-frontmatter-is-reported`](scenarios/derive-unparseable-frontmatter-is-reported.md)) and `unwritable`, the last with the shipped hook's `--staged` stop and the CLI's exit (tasks 14 and 25; owner, 2026-11-10 and 2026-11-11).
+- Both results are bounded (`BE-PAYLOAD-001`). Past `[artifacts] read-size-bytes` each moves its lists to the file `lists-file` names, each count staying inline and `unwritable-count` absent at zero, and the CLI gates and reports on the whole derivation, so an unwritable spec moved to the file still fails the run and is still named on stderr. `derive-dependencies` takes the bound from 080 (`specs/080-deterministic-runtime-efficiency/data-model.md` §Bounded results), `derive-references` from task 32 (scenario [`derive-references-results-are-bounded`](scenarios/derive-references-results-are-bounded.md)).
 
 `derive-dependencies` writes `dependencies: []` when a spec has no sibling links; `derive-references` removes the `references:` key entirely. Unifying the two would rewrite frontmatter across every spec in a corpus.
 

@@ -50,6 +50,17 @@
 //! less — the opposite of what the original rationale concluded. See
 //! `specs/067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md`.
 //!
+//! ## The result is bounded
+//!
+//! Every list grows with the corpus — a service rename drifts every referencing
+//! spec at once — so [`run`] holds the result to `[artifacts] read-size-bytes`
+//! as `derive-dependencies` does: inline while it fits, and past it with the
+//! six lists in the file `lists-file` names and their counts inline
+//! (`BE-PAYLOAD-001`; 067 scenario `derive-references-results-are-bounded`).
+//! The CLI gates and reports on [`compute`]'s whole derivation, so an
+//! unwritable spec the bound moves to a file still fails the run and is still
+//! named on stderr.
+//!
 //! ## Root-aware matching
 //!
 //! The spec-root segment of a referenced URL is **not** hardcoded to `specs`:
@@ -78,7 +89,7 @@ use crate::primitives::spec_links::{
 };
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
 use crate::schema::paths;
-use crate::schema::primitives::{DeriveReferencesArgs, DeriveReferencesResult};
+use crate::schema::primitives::{DeriveReferencesArgs, DeriveReferencesResult, ListsForm};
 use crate::schema::services;
 
 /// One harvested reference: the resolved service alias (`None` for an
@@ -92,11 +103,115 @@ struct RegisteredService {
     specs_root: Option<String>,
 }
 
-/// Execute the `derive-references` primitive.
+/// Execute the `derive-references` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its six
+/// lists in the file it names and only their counts inline ([`bound`]).
 ///
 /// # Errors
 ///
-/// Returns [`super::PrimitiveError::Io`] when a spec or the project config
+/// Every error [`compute`] returns, and a list file that cannot be written,
+/// which `bounded_lists::place` returns; a writing run has written by then.
+pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesResult> {
+    bound(repo, compute(args, repo)?)
+}
+
+/// One derivation, whole: what `derive-references` returns before its result
+/// is bounded. Each field is [`DeriveReferencesResult`]'s of the same name.
+/// The CLI gates and reports on this, so an unwritable spec the bound moves to
+/// a file still blocks a commit and is still named on stderr.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Derived {
+    /// As [`DeriveReferencesResult`]'s `drift`, whole.
+    pub drift: bool,
+    /// As [`DeriveReferencesResult`]'s `updated`, whole.
+    pub updated: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `unwritten`, whole.
+    pub unwritten: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `examined`, whole.
+    pub examined: u32,
+    /// As [`DeriveReferencesResult`]'s `untracked-skipped`, whole.
+    pub untracked_skipped: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `registered-services`, whole.
+    pub registered_services: u32,
+    /// As [`DeriveReferencesResult`]'s `unparseable`, whole.
+    pub unparseable: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `unwritable`, whole.
+    pub unwritable: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `absent`, whole.
+    pub absent: Vec<String>,
+    /// As [`DeriveReferencesResult`]'s `specs-root`, whole.
+    pub specs_root: String,
+    /// As [`DeriveReferencesResult`]'s `wrote`, whole.
+    pub wrote: bool,
+}
+
+/// `derived` held to `[artifacts] read-size-bytes`: past it, its six lists go
+/// to the file it names, with their counts inline (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveReferencesResult> {
+    let lists = serde_json::json!({
+        "updated": derived.updated,
+        "unwritten": derived.unwritten,
+        "untracked-skipped": derived.untracked_skipped,
+        "unparseable": derived.unparseable,
+        "unwritable": derived.unwritable,
+        "absent": derived.absent,
+    });
+    let mut result = DeriveReferencesResult {
+        drift: derived.drift,
+        updated_count: derived.updated.len(),
+        updated: Some(derived.updated),
+        unwritten_count: derived.unwritten.len(),
+        unwritten: Some(derived.unwritten),
+        examined: derived.examined,
+        untracked_skipped_count: derived.untracked_skipped.len(),
+        untracked_skipped: Some(derived.untracked_skipped),
+        registered_services: derived.registered_services,
+        unparseable_count: derived.unparseable.len(),
+        unparseable: Some(derived.unparseable),
+        // Absent when empty in the inline form too, so a result with nothing
+        // unwritable reads as it did before the list existed.
+        unwritable_count: derived.unwritable.len(),
+        unwritable: Some(derived.unwritable).filter(|list| !list.is_empty()),
+        absent_count: derived.absent.len(),
+        absent: Some(derived.absent),
+        specs_root: derived.specs_root,
+        wrote: derived.wrote,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "derive-references",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.updated = None;
+        result.unwritten = None;
+        result.untracked_skipped = None;
+        result.unparseable = None;
+        result.unwritable = None;
+        result.absent = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Derive every tracked spec's `references:`, writing the rewrite under
+/// `write`.
+///
+/// # Errors
+///
+/// Returns [`super::PrimitiveError::InvalidReadSize`] for a malformed
+/// `[artifacts] read-size-bytes`, before any write, since the result is
+/// bounded by it only once the rewrite is on disk;
+/// [`super::PrimitiveError::Io`] when a spec or the project config
 /// cannot be read or the rewrite cannot be persisted,
 /// [`super::PrimitiveError::Toml`] when the config does not parse and
 /// [`super::PrimitiveError::InvalidServiceEntry`] when a `[services.<alias>]`
@@ -105,7 +220,8 @@ struct RegisteredService {
 /// repository contains the project but its index or status cannot be read —
 /// the listing of which specs to derive then has no answer, and guessing one
 /// would rewrite drafts or skip specs silently.
-pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesResult> {
+pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {
+    super::check_artifact_size::resolve_threshold(repo)?;
     let specs_root = paths::Paths::load(repo)?.specs_root;
     let registry = load_registry(repo)?;
 
@@ -176,16 +292,16 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         updated.push(spec.clone());
     }
 
-    Ok(DeriveReferencesResult {
+    Ok(Derived {
         drift: !updated.is_empty(),
         updated,
         unwritten,
         examined: u32::try_from(read_count).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
+        registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),
         unparseable,
         unwritable,
         absent,
-        registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),
         specs_root,
         wrote: args.write,
     })
@@ -660,7 +776,7 @@ mod tests {
             write: true,
             staged: false,
         };
-        let result = run(&write, &project).unwrap();
+        let result = compute(&write, &project).unwrap();
         assert_eq!(std::fs::read_to_string(&draft_path).unwrap(), draft);
         assert_eq!(result.examined, 2);
         assert_eq!(result.untracked_skipped, vec!["specs/004-draft/spec.md"]);
@@ -677,7 +793,7 @@ mod tests {
             write: true,
             staged: true,
         };
-        let result = run(&staged, &project).unwrap();
+        let result = compute(&staged, &project).unwrap();
         assert_eq!(result.updated, vec!["specs/001-a/spec.md"]);
         assert_eq!(result.unwritten, vec!["specs/002-b/spec.md"]);
         assert!(std::fs::read_to_string(&a).unwrap().contains("references:"));
@@ -917,7 +1033,7 @@ mod tests {
             git_fixture::write(&path, &original);
             git_fixture::write(&tmp.path().join(".ductus/config.toml"), config);
             git_fixture::commit_all(&repository, "feat: spec");
-            let err = run(
+            let err = compute(
                 &DeriveReferencesArgs {
                     write: true,
                     staged: false,
@@ -952,7 +1068,7 @@ mod tests {
         let path = tmp.path().join("specs/001-a/spec.md");
         git_fixture::write(&path, original);
         git_fixture::commit_all(&repository, "feat: spec");
-        let result = run(
+        let result = compute(
             &DeriveReferencesArgs {
                 write: true,
                 staged: false,
@@ -993,7 +1109,7 @@ mod tests {
         index.add_path(Path::new("specs/002-b/spec.md")).unwrap();
         index.write().unwrap();
         for write in [false, true] {
-            let result = run(
+            let result = compute(
                 &DeriveReferencesArgs {
                     write,
                     staged: true,
@@ -1024,7 +1140,7 @@ mod tests {
         git_fixture::write(&path, original);
         git_fixture::commit_all(&repository, "feat: spec");
         for write in [false, true] {
-            let result = run(
+            let result = compute(
                 &DeriveReferencesArgs {
                     write,
                     staged: false,
@@ -1062,7 +1178,7 @@ mod tests {
             "---\nstatus: done\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n",
         );
         git_fixture::commit_all(&repository, "feat: spec");
-        let result = run(
+        let result = compute(
             &DeriveReferencesArgs {
                 write: true,
                 staged: false,
@@ -1132,5 +1248,131 @@ mod tests {
              ## See also\n\n[nav](https://h/o/other/specs/005-c/spec.md)\n",
         );
         assert_eq!(harvest(&content, &reg), [] as [(Option<String>, String); 0]);
+    }
+
+    /// A malformed `[artifacts] read-size-bytes` halts a writing call before
+    /// it rewrites any spec, as it halts `derive-dependencies`
+    /// (`DERIVE_REFERENCES`; spec 067, task 32).
+    #[test]
+    fn a_malformed_read_size_halts_a_writing_call_before_any_write() {
+        use crate::primitives::git_fixture;
+        const LINK: &str = "[x](https://github.com/other/t/specs/003-user/spec.md)";
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let a = tmp.path().join("specs/001-a/spec.md");
+        git_fixture::write(&a, &spec(LINK));
+        git_fixture::commit_all(&repository, "feat: specs");
+        git_fixture::write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 0\n",
+        );
+        let before = std::fs::read_to_string(&a).unwrap();
+        let err = run(
+            &DeriveReferencesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                crate::primitives::PrimitiveError::InvalidReadSize { .. }
+            ),
+            "{err}"
+        );
+        assert_eq!(std::fs::read_to_string(&a).unwrap(), before);
+    }
+
+    /// The result is bounded (`BE-PAYLOAD-001`; 067 scenario
+    /// `derive-references-results-are-bounded`): inline at the default read
+    /// size, and past it every list, `unwritable` with them, is in the file
+    /// `lists-file` names, exactly as the derivation produced it, with only
+    /// the counts inline.
+    #[test]
+    fn past_the_read_size_every_list_moves_to_the_list_file() {
+        use crate::primitives::git_fixture;
+        const LINK: &str = "[x](https://github.com/other/t/specs/003-user/spec.md)";
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        // 001 drifts; 002 drifts with frontmatter that will not re-parse, so
+        // it is unwritable; 003 is in sync; 004 is an untracked draft.
+        git_fixture::write(&tmp.path().join("specs/001-a/spec.md"), &spec(LINK));
+        git_fixture::write(
+            &tmp.path().join("specs/002-b/spec.md"),
+            &format!("---\nstatus: done\ntitle: [oops\ndependencies: []\n---\n\n{LINK}\n"),
+        );
+        git_fixture::write(&tmp.path().join("specs/003-c/spec.md"), &spec("nothing"));
+        git_fixture::commit_all(&repository, "feat: specs");
+        git_fixture::write(&tmp.path().join("specs/004-d/spec.md"), &spec("nothing"));
+        let args = DeriveReferencesArgs {
+            write: false,
+            staged: false,
+        };
+        let whole = compute(&args, tmp.path()).unwrap();
+        assert_eq!(whole.updated, vec!["specs/001-a/spec.md"]);
+        assert_eq!(whole.unwritable, vec!["specs/002-b/spec.md"]);
+        assert_eq!(whole.untracked_skipped, vec!["specs/004-d/spec.md"]);
+
+        let inline = run(&args, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.updated.as_deref(), Some(whole.updated.as_slice()));
+        assert_eq!(
+            inline.unwritable.as_deref(),
+            Some(whole.unwritable.as_slice())
+        );
+        assert_eq!(inline.lists_file, None);
+
+        git_fixture::write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        );
+        let bounded = run(&args, tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (
+                &bounded.updated,
+                &bounded.unwritten,
+                &bounded.untracked_skipped,
+                &bounded.unparseable,
+                &bounded.unwritable,
+                &bounded.absent
+            ),
+            (&None, &None, &None, &None, &None, &None),
+            "a list stayed inline"
+        );
+        assert_eq!(
+            (
+                bounded.updated_count,
+                bounded.unwritable_count,
+                bounded.untracked_skipped_count
+            ),
+            (1, 1, 1)
+        );
+        assert!(bounded.drift, "drift stays inline, which the CI gate reads");
+        let file = bounded.lists_file.clone().expect("a lists-file path");
+        assert!(
+            file.starts_with(".ductus/results/derive-references/all-specs/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        for (key, list) in [
+            ("updated", &whole.updated),
+            ("unwritten", &whole.unwritten),
+            ("untracked-skipped", &whole.untracked_skipped),
+            ("unparseable", &whole.unparseable),
+            ("unwritable", &whole.unwritable),
+            ("absent", &whole.absent),
+        ] {
+            assert_eq!(lists[key], serde_json::json!(list), "`{key}`");
+        }
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "derive-references",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
     }
 }
