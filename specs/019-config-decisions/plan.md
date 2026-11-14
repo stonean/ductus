@@ -14,7 +14,7 @@ A decision worth remembering is stored in `.ductus/config.toml`, never in a sepa
 
 ### Writes leave the rest of the file intact
 
-A write changes only the keys or the managed block its section owns and preserves everything else in the file — other sections, comments, ordering.
+A write changes only the keys or the managed block its section owns and preserves everything else in the file — other sections, comments, ordering. The file is the team's committed store, changed by hand between runs ([data-model.md](data-model.md), File location and lifecycle; the spec's Resolved Questions: permanent until manually edited), and several writers share it, so a write that regenerated it whole would drop a teammate's keys, comments and order.
 
 ### Validation is per key, at the point of use
 
