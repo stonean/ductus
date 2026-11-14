@@ -1,21 +1,21 @@
 ---
 spec: 063-oversized-artifacts-warn-with-a-fix
-last-run: 2026-11-14T00:36:06Z
-analyzed-against: 9bd9b082dc17d157430f5fcf850d5aab5fe69b17
+last-run: 2026-11-14T02:02:39Z
+analyzed-against: e6f633341eeec1c66ebfc113ca28ebeb53bb28bf
 hard-fail: 0
-blocking-findings: 1
-advisory: 3
+blocking-findings: 0
+advisory: 4
 unexamined: 4
 analyzed-digest:
-  data-model.md: 61cea3c5ca5118ce321714e8c893b86ebc6a62ce5dd3fb95efe960fc52451a1b
-  plan.md: 262fbfcbaa7486a1d24e2739f057c6095fd3f8cc7bdc33b28cfd7145f07e03e6
-  review.md: 9b4d77a78680880207615a929551c987f797f8e35096f7d4c5c1fee561bdef67
+  data-model.md: aa648374269201ebb2318b0e5ba6d3b827cc9ac606c9e31fd1bdd78ded8c6b58
+  plan.md: 53d74cbc382bd2840cf1ecb3cf827e5f538df80d03d47f5716cc15ebc2d3100f
+  review.md: 7e2c022ee70276026482bcc6d734da0b30a64ad5bd5df612bbddd1cd4a48043b
   scenarios/a-plan-trim-does-not-reopen-a-done-spec.md: c77ea68f76643287537d7bd22ce126885e5fc1d56680d59e7970b862f1c2a6cf
   scenarios/an-invalid-threshold-fails-fast.md: 5945eec14f64769ce85570033863a2f209ed8784a7fd1f00d0e9d7b647cd9112
   scenarios/an-unknown-artifacts-key-is-named.md: 912ce563e772f628884c9096a8fafb00526379e935c99f40d7ca96090d986e1a
-  scenarios/project-files-are-measured.md: cf613536df6ef606a837a844ac99964422bfe89f09e5ab79eff5702f4cecbc77
+  scenarios/project-files-are-measured.md: 81e7abfe526e4441091a21a8ff81ba688f36f3e484acc87f22a3ca6d8397e78a
   spec.md: 0e92f3a4fa8113be8c40afa2a60e6c4a19a903fae3d867e66ca4cb3a943824a1
-  tasks.md: 0c0e75eff875d5f2ffed27ff1bcda75fafb9a863ec77d01c43fefa1967807e79
+  tasks.md: 0de61ce805c942b1c3d2c8d0f1c0afca065cd25c4fdc95ad3838fe0c9382d433
 unexamined-by-reason:
   root-absent: 4
 rule-digest:
@@ -32,26 +32,27 @@ rule-digest:
   security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
-  BE-INPUT-001: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The result is bounded to one read"}
+  BE-ERR-002: {verdict: addressed, cite: "data-model.md#`CheckArtifactSizeArgs`"}
+  BE-INPUT-001: {verdict: addressed, cite: "plan.md#Subjects, absence, and readability"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#Subjects, absence, and readability"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Subjects, absence, and readability"}
   BE-INPUT-008: {verdict: addressed, cite: "plan.md#`/analyze`: the `artifact-size` family and the decided rule"}
-  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "data-model.md#`CheckArtifactSizeResult`", message: "check-artifact-size's oversized, skipped and notices lists grow with a spec directory's scenario count, and neither the plan nor the data model commits to a maximum response size or a bound"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#The result is bounded to one read"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
   CFG-CONST-004: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
-  CFG-ENV-001: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
+  CFG-ENV-001: {verdict: addressed, cite: "data-model.md#Configuration"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#Documentation"}
   CFG-ENV-005: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
   CFG-ENV-007: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#The threshold: `[artifacts] read-size-bytes`"}
   CFG-ENV-012: {verdict: addressed, cite: "scenarios/an-unknown-artifacts-key-is-named.md#Behavior"}
-blocking: true
+blocking: false
 dispositions:
   fixed: 0
-  deferred: 1
-  waived: 3
+  deferred: 0
+  waived: 4
   undispositioned: 0
 decisions:
   - key: grounding — spec.md says an adopter's 2,200-line plan.md was never read in full, citing no source
@@ -59,31 +60,28 @@ decisions:
     reason: motivation that cannot be cited without naming another project, which AGENTS.md forbids; the threshold rests on the 2026-09-28 and 2026-10-04 measurements the spec does cite
     decided-at: 2026-10-04T18:18:21Z
     decided-by: andy@stone.dev
-  - key: grounding — Subjects bullet asserts that no command reads research.md and that review.md/analysis.md are regenerated whole by their write primitives, with no file-and-symbol citation at the claim
-    outcome: waived
-    reason: Low-risk scoping rationale; the Resolved Question on review.md and analysis.md cites framework/commands/analyze.md and check-review-gate for the readers, and the claim's truth is review's check, not this form check
-    decided-at: 2026-11-14T00:36:06Z
-    decided-by: rule
   - key: grounding — Cross-spec impact states spec 081 retired Family 19 and review staleness with no link or citation
     outcome: waived
     reason: Historical aside explaining why 058 owes no review; it asserts no contract this spec depends on, and adding a link would create a dependencies edge for a citation
     decided-at: 2026-11-14T00:36:06Z
     decided-by: rule
-  - key: "rule-assessment — BE-PAYLOAD-001: check-artifact-size's oversized, skipped and notices lists grow with a spec directory's scenario count, and neither the plan nor the data model commits to a maximum response size or a bound"
-    outcome: deferred
-    target: specs/063-oversized-artifacts-warn-with-a-fix/tasks.md
-    task: "17"
-    reason: "the owner deferred it to 063's own task 17 on 2026-11-13: 063 owns the primitive, as 073 tasks 12-14 bounded 073's"
-    gating: true
-    decided-at: 2026-11-14T00:36:06Z
-    decided-by: andy@stone.dev
+  - key: grounding — Signpost describes render-status's collapsing and cutting behavior as fact, carrying only a link to 080 and no file-and-symbol citation
+    outcome: waived
+    reason: "advisory and no chore: the signpost's link is to 080, the spec that owns render-status' bound and states it in its data model, which is the substantiating artifact §Grounding accepts; a file-and-symbol citation would copy 080's canonical statement into 063"
+    decided-at: 2026-11-14T02:02:39Z
+    decided-by: rule
+  - key: grounding — New 075 bullet states that the shipped hook's comments call steps 3 and 4 read-only and that check-corpus-links writes a list file in .ductus/results/ since 080, naming no file or symbol
+    outcome: waived
+    reason: "advisory: the bullet records why the hooks' comments stay, and the facts it rests on are cited in the same plan's 'The result is bounded to one read' (bounded_lists::place, .ductus/results/) and in 075's plan, which names the hook's placement comment; adding the file-and-symbol citation here is what this waiver gives up, since editing plan.md now would change a design subject all 310 rule verdicts were judged against"
+    decided-at: 2026-11-14T02:02:39Z
+    decided-by: rule
 ---
 
 # Analysis — 063-oversized-artifacts-warn-with-a-fix
 
 ## Summary
 
-0 hard-fail, 1 blocking, 3 advisory; blocking. 4 unexamined target(s). Dispositions: 0 fixed, 1 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 4 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -91,13 +89,14 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — BE-PAYLOAD-001: check-artifact-size's oversized, skipped and notices lists grow with a spec directory's scenario count, and neither the plan nor the data model commits to a maximum response size or a bound — `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md` — **deferred** to `specs/063-oversized-artifacts-warn-with-a-fix/tasks.md` task 17
+*None.*
 
 ## Advisory findings
 
-- grounding — Subjects bullet asserts that no command reads research.md and that review.md/analysis.md are regenerated whole by their write primitives, with no file-and-symbol citation at the claim — `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` — **waived**: Low-risk scoping rationale; the Resolved Question on review.md and analysis.md cites framework/commands/analyze.md and check-review-gate for the readers, and the claim's truth is review's check, not this form check (decided by the rule)
-- grounding — Motivation cites an adopter's 2,200-line plan.md as fact with no substantiating artifact — `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` — **waived**: motivation that cannot be cited without naming another project, which AGENTS.md forbids; the threshold rests on the 2026-09-28 and 2026-10-04 measurements the spec does cite
-- grounding — Cross-spec impact states spec 081 retired Family 19 and review staleness with no link or citation — `specs/063-oversized-artifacts-warn-with-a-fix/plan.md` — **waived**: Historical aside explaining why 058 owes no review; it asserts no contract this spec depends on, and adding a link would create a dependencies edge for a citation (decided by the rule)
+- grounding — Motivation states as fact that an adopter's 2,200-line plan.md was never read in full and that no command reported an artifact's size, with no citation or marker — `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` — **waived**: motivation that cannot be cited without naming another project, which AGENTS.md forbids; the threshold rests on the 2026-09-28 and 2026-10-04 measurements the spec does cite
+- grounding — Signpost describes render-status's collapsing and cutting behavior as fact, carrying only a link to 080 and no file-and-symbol citation — `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` — **waived**: advisory and no chore: the signpost's link is to 080, the spec that owns render-status' bound and states it in its data model, which is the substantiating artifact §Grounding accepts; a file-and-symbol citation would copy 080's canonical statement into 063 (decided by the rule)
+- grounding — Cross-spec impact aside states that spec 081 retired Family 19 and review staleness and describes Family 19's sweep exemption, uncited — `specs/063-oversized-artifacts-warn-with-a-fix/plan.md` — **waived**: Historical aside explaining why 058 owes no review; it asserts no contract this spec depends on, and adding a link would create a dependencies edge for a citation
+- grounding — New 075 bullet states that the shipped hook's comments call steps 3 and 4 read-only and that check-corpus-links writes a list file in .ductus/results/ since 080, naming no file or symbol — `specs/063-oversized-artifacts-warn-with-a-fix/plan.md` — **waived**: advisory: the bullet records why the hooks' comments stay, and the facts it rests on are cited in the same plan's 'The result is bounded to one read' (bounded_lists::place, .ductus/results/) and in 075's plan, which names the hook's placement comment; adding the file-and-symbol citation here is what this waiver gives up, since editing plan.md now would change a design subject all 310 rule verdicts were judged against (decided by the rule)
 
 ## Deferred to other specs
 
