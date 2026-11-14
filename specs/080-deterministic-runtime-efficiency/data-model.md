@@ -58,7 +58,7 @@ Arguments: none.
 | `rule-files` | list of `{file, rules, other-headings}` | With `rules`, each file read: its rules in heading order, each `{id, heading, tier, statement, verification}`, and under `all` `other-headings`, each `{line, heading, body}` that opens no rule, `body` being the lines under it up to the next heading, blank lines at either end dropped. Absent in the file form |
 | `rule-files-count` | integer | Entries in `rule-files`, with `rules`, in either form |
 | `unreadable` | list of `{file, reason}` | Each file that could not be read, never dropped |
-| `form`, `lists-file` | | With `rules`, as *Bounded results* below gives them |
+| `form`, `lists-file` | | As *Bounded results* below gives them, on every call: `notices` is bounded with `rules` and without (022 task 32) |
 
 `tier` is `must` or `should`, from the Statement's RFC 2119 keyword, and absent when it carries neither. `verification` is present only with the argument of that name.
 
@@ -202,13 +202,13 @@ A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependenci
 | `lint-markdown` | `violations` |
 | `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
 | `prune-plan` | `features`, `skipped` under `all` |
-| `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse |
+| `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse; `config`'s `unknown-keys`, under `config` in the file, its count inline there in both forms (022 task 32) |
 | `check-review-gate` | `violations`, `cross-spec-impact`, `analyze-stale-paths` |
 | `check-artifacts` | `findings`, `skipped` |
 | `check-corpus-links` | `broken`, `examined`, `skipped` |
 | `check-unfolded-specs` | `unfolded` |
 | `rewrite-spec-links` | `rewritten`, `skipped`, `kept-tails`, `mentions` |
-| `discover-rule-files` | `rule-files`, with `rules` |
+| `discover-rule-files` | `notices` (022 task 32); `rule-files`, with `rules` |
 | `derive-dependencies` | `updated`, `unwritten`, `untracked-skipped`, `absent`, `cycles`, `unparseable`, `unwritable`, the last absent inline when empty and its count absent at zero in both forms |
 | `derive-routing-candidates` | `candidates` |
 | `traverse-deps` | `dependencies`, `cycles` |
