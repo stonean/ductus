@@ -41,6 +41,16 @@ fn fixture(dir: &Path, committed: usize) -> Repository {
     repository
 }
 
+/// Set the read size in the working tree's config, which the check reads from
+/// disk whatever the index holds.
+fn read_size(dir: &Path, bytes: usize) {
+    fs::write(
+        dir.join(".ductus/config.toml"),
+        format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+    )
+    .unwrap();
+}
+
 fn stage_agents(repository: &Repository, dir: &Path, bytes: usize) {
     fs::write(dir.join("AGENTS.md"), "x".repeat(bytes)).unwrap();
     let mut index = repository.index().unwrap();
@@ -80,9 +90,12 @@ fn a_refused_file_exits_1_and_names_its_path_size_limit_and_fix() {
 /// one does: a hook that passed over a file it could not measure would let an
 /// oversized one through. `AGENTS.md` is left in conflict, one index entry per
 /// stage and none at stage 0, so there is no one staged copy; it is under the
-/// read size, so only the unmeasured state can set the exit status.
+/// read size, so only the unmeasured state can set the exit status. It does so
+/// in both forms: past the read size `skipped` is in the list file, and the
+/// exit and the stderr line must not depend on it being inline
+/// (BE-PAYLOAD-001).
 #[test]
-fn an_unmeasurable_staged_file_exits_1_and_names_it() {
+fn an_unmeasurable_staged_file_exits_1_and_names_it_in_either_form() {
     let tmp = tempfile::tempdir().unwrap();
     let repository = fixture(tmp.path(), 50);
     let mut index = repository.index().unwrap();
@@ -108,14 +121,21 @@ fn an_unmeasurable_staged_file_exits_1_and_names_it() {
     index.write().unwrap();
     assert!(repository.index().unwrap().has_conflicts());
 
-    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
-    assert_eq!(code, Some(1), "{stdout}");
-    assert!(
-        stderr.contains("AGENTS.md could not be measured"),
-        "{stderr}"
-    );
-    assert!(stdout.contains("\"state\":\"unreadable\""), "{stdout}");
-    assert!(!stdout.contains("\"refused\":true"), "{stdout}");
+    for (bytes, form) in [(100, "file"), (100_000, "inline")] {
+        read_size(tmp.path(), bytes);
+        let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+        assert_eq!(code, Some(1), "{form}: {stdout}");
+        assert!(
+            stderr.contains("AGENTS.md could not be measured (artifact-unreadable)"),
+            "{form}: {stderr}"
+        );
+        let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        assert_eq!(result["form"], form, "{stdout}");
+        assert_eq!(result["skipped-count"], 1, "{stdout}");
+        assert_eq!(result["skipped"].is_array(), form == "inline", "{stdout}");
+        assert!(stdout.contains("\"state\":\"unreadable\""), "{stdout}");
+        assert!(!stdout.contains("\"refused\":true"), "{stdout}");
+    }
 }
 
 #[test]
@@ -130,13 +150,27 @@ fn an_unchanged_or_shrunk_file_exits_0() {
     assert!(stderr.is_empty(), "{stderr}");
 }
 
+/// Past the read size the oversized file is held in the list file the result
+/// names, under `project-files` for a call naming no feature, with its count
+/// inline (BE-PAYLOAD-001).
 #[test]
 fn an_oversized_file_without_staged_is_a_finding_never_an_exit_status() {
     let tmp = tempfile::tempdir().unwrap();
     fixture(tmp.path(), 150);
     let (code, stdout, _) = run(tmp.path(), &["--project-files"]);
     assert_eq!(code, Some(0));
-    assert!(stdout.contains("\"kind\":\"project-file\""), "{stdout}");
+    let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(result["form"], "file", "{stdout}");
+    assert_eq!(result["oversized-count"], 1, "{stdout}");
+    let file = result["lists-file"].as_str().unwrap();
+    assert!(
+        file.starts_with(".ductus/results/check-artifact-size/project-files/"),
+        "{file}"
+    );
+    let lists: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
+    assert_eq!(lists["oversized"][0]["kind"], "project-file", "{lists}");
+    assert_eq!(lists["oversized"][0]["path"], "AGENTS.md", "{lists}");
 }
 
 #[test]

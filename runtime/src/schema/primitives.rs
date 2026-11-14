@@ -7020,8 +7020,11 @@ pub enum DecisionsState {
 
 /// Result for `check-artifact-size`: the shared keys at the top level, then
 /// two flattened halves that share no key, so a result carries the keys of
-/// whichever half the call asked for and nothing of the other. A feature-only
-/// call returns exactly the keys it always has.
+/// whichever half the call asked for and nothing of the other.
+///
+/// Inline while it fits `[artifacts] read-size-bytes`, and past it with
+/// `oversized`, `skipped` and `notices` in the file `lists-file` names, each
+/// count inline in both forms (spec 063, BE-PAYLOAD-001).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactSizeResult {
@@ -7029,20 +7032,40 @@ pub struct CheckArtifactSizeResult {
     pub threshold: ReadSizeThreshold,
     /// Subjects that exist and were measured.
     pub examined: u32,
+    /// Where `oversized`, `skipped` and `notices` are: in this result, or
+    /// past the read size in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
     /// Subjects over the threshold, in subject order: the spec's, then the
     /// project files'. Empty means none over it among the `examined`; it says
-    /// nothing about the `skipped`.
-    pub oversized: Vec<OversizedArtifact>,
+    /// nothing about the `skipped`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oversized: Option<Vec<OversizedArtifact>>,
+    /// Entries in `oversized`, in either form.
+    #[serde(default)]
+    pub oversized_count: usize,
     /// Subjects that exist but could not be measured: family
     /// `artifact-size`, reason `artifact-unreadable`. A spec subject that does
     /// not exist is never listed; an absent project file is reported in
-    /// `project-files` instead.
+    /// `project-files` instead. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<SkippedTarget>>,
+    /// Entries in `skipped`, in either form.
     #[serde(default)]
-    pub skipped: Vec<SkippedTarget>,
-    /// Notices every caller shows: that the stored decisions could not be
-    /// read. An invalid threshold is an error, never a notice.
+    pub skipped_count: usize,
+    /// Notices every caller shows: a line per unknown `[artifacts]` key, then
+    /// that the stored decisions could not be read. An invalid threshold is an
+    /// error, never a notice. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notices: Option<Vec<String>>,
+    /// Entries in `notices`, in either form.
     #[serde(default)]
-    pub notices: Vec<String>,
+    pub notices_count: usize,
+    /// In the file form, the file holding `oversized`, `skipped` and
+    /// `notices` whole, from the project root: a JSON object with the three
+    /// keys, each present even when empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// The feature half; absent when no `feature` was named.
     #[serde(flatten)]
     pub spec: Option<SizeSpecHalf>,
@@ -8532,7 +8555,9 @@ mod tests {
                 source: ThresholdSource::Config,
             },
             examined: 4,
-            oversized: vec![OversizedArtifact {
+            form: super::ListsForm::Inline,
+            oversized_count: 1,
+            oversized: Some(vec![OversizedArtifact {
                 path: "specs/063/data-model.md".into(),
                 kind: ArtifactKind::DataModel,
                 bytes: 120_000,
@@ -8546,13 +8571,16 @@ mod tests {
                 message: "m".into(),
                 decided: true,
                 decision_key: Some("artifact-size — m".into()),
-            }],
-            skipped: vec![SkippedTarget {
+            }]),
+            skipped_count: 1,
+            skipped: Some(vec![SkippedTarget {
                 family: "artifact-size".into(),
                 reason: "artifact-unreadable".into(),
                 path: "specs/063/plan.md".into(),
-            }],
-            notices: vec!["n".into()],
+            }]),
+            notices_count: 1,
+            notices: Some(vec!["n".into()]),
+            lists_file: None,
             spec: Some(SizeSpecHalf {
                 feature: "063-oversized-artifacts-warn-with-a-fix".into(),
                 status: "done".into(),
@@ -8570,6 +8598,11 @@ mod tests {
         );
         assert_eq!(value["oversized"][0]["decision-key"], "artifact-size — m");
         assert_eq!(value["decisions"], "read");
+        assert_eq!(value["form"], "inline");
+        for key in ["oversized-count", "skipped-count", "notices-count"] {
+            assert_eq!(value[key], 1, "{key}");
+        }
+        assert!(!value.as_object().unwrap().contains_key("lists-file"));
         assert!(!value.as_object().unwrap().contains_key("project-files"));
         assert_eq!(round_trip(&result), result);
 
@@ -8580,7 +8613,7 @@ mod tests {
                 bytes: 50_000,
                 source: ThresholdSource::Default,
             },
-            oversized: vec![OversizedArtifact {
+            oversized: Some(vec![OversizedArtifact {
                 fixes: vec![ArtifactFix {
                     fix: FixKind::Split,
                     text: "split it".into(),
@@ -8588,8 +8621,8 @@ mod tests {
                 }],
                 decided: false,
                 decision_key: None,
-                ..result.oversized[0].clone()
-            }],
+                ..result.oversized.as_ref().unwrap()[0].clone()
+            }]),
             ..result.clone()
         };
         let value: serde_json::Value = serde_json::to_value(&below).unwrap();
@@ -8605,6 +8638,45 @@ mod tests {
         assert_eq!(round_trip(&below), below);
     }
 
+    /// Past the read size the three lists leave the result for the file
+    /// `lists-file` names, absent rather than null, and their counts stay.
+    #[test]
+    fn check_artifact_size_round_trip_in_the_file_form() {
+        let file = CheckArtifactSizeResult {
+            threshold: ReadSizeThreshold {
+                bytes: 10,
+                source: ThresholdSource::Config,
+            },
+            examined: 4,
+            form: super::ListsForm::File,
+            oversized: None,
+            oversized_count: 1,
+            skipped: None,
+            skipped_count: 1,
+            notices: None,
+            notices_count: 1,
+            lists_file: Some(".ductus/results/check-artifact-size/063/a.json".into()),
+            spec: Some(SizeSpecHalf {
+                feature: "063-oversized-artifacts-warn-with-a-fix".into(),
+                status: "in-progress".into(),
+                decisions: DecisionsState::Absent,
+                path: "specs/063/spec.md".into(),
+            }),
+            project: None,
+        };
+        let value: serde_json::Value = serde_json::to_value(&file).unwrap();
+        assert_eq!(value["form"], "file");
+        assert_eq!(
+            value["lists-file"],
+            ".ductus/results/check-artifact-size/063/a.json"
+        );
+        for list in ["oversized", "skipped", "notices"] {
+            assert!(value.get(list).is_none(), "{list}");
+            assert_eq!(value[format!("{list}-count")], 1, "{list}");
+        }
+        assert_eq!(round_trip(&file), file);
+    }
+
     #[test]
     fn check_artifact_size_project_half_round_trip() {
         let both = CheckArtifactSizeResult {
@@ -8613,9 +8685,14 @@ mod tests {
                 source: ThresholdSource::Default,
             },
             examined: 1,
-            oversized: vec![],
-            skipped: vec![],
-            notices: vec![],
+            form: super::ListsForm::Inline,
+            oversized: Some(vec![]),
+            oversized_count: 0,
+            skipped: Some(vec![]),
+            skipped_count: 0,
+            notices: Some(vec![]),
+            notices_count: 0,
+            lists_file: None,
             spec: None,
             project: Some(SizeProjectHalf {
                 project_files: vec![ProjectFileSize {

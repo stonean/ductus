@@ -1668,6 +1668,56 @@ async fn a_departures_result_past_the_read_size_reaches_the_host_through_its_lis
     assert_eq!(lists["unexamined"].as_array().unwrap().len(), 6);
 }
 
+/// `check-artifact-size` past the read size over MCP: `oversized`, `skipped`
+/// and `notices` reach the host through the file `lists-file` names, with
+/// `form` and each count inline, and the result within the bound
+/// (spec 063, BE-PAYLOAD-001).
+#[cfg(unix)]
+#[tokio::test]
+async fn an_artifact_size_result_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp()
+{
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(dir.join("scenarios")).unwrap();
+    fs::write(
+        dir.join("spec.md"),
+        "---\nstatus: draft\ndependencies: []\n---\n\n# x\n",
+    )
+    .unwrap();
+    // Six scenarios over the read size, one that cannot be opened, and an
+    // unknown `[artifacts]` key: every list is non-empty.
+    for i in 0..6 {
+        fs::write(dir.join(format!("scenarios/s{i}.md")), "x".repeat(500)).unwrap();
+    }
+    std::os::unix::fs::symlink(dir.join("gone.md"), dir.join("scenarios/z.md")).unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        format!("[artifacts]\nread-size-bytes = {SMALL_READ_SIZE}\nread-size-byte = 1\n"),
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "check-artifact-size", json!({"feature": "001-x"})).await;
+    let obj = structured_object(&result);
+    let lists = lists_in_file(
+        &tmp,
+        obj,
+        SMALL_READ_SIZE,
+        &["oversized", "skipped", "notices"],
+    );
+    assert_eq!(obj["oversized-count"], 6);
+    assert_eq!(lists["oversized"].as_array().unwrap().len(), 6);
+    assert_eq!(lists["oversized"][0]["kind"], "scenario");
+    assert_eq!(obj["skipped-count"], 1);
+    assert_eq!(
+        lists["skipped"][0]["path"], "specs/001-x/scenarios/z.md",
+        "{lists}"
+    );
+    assert_eq!(obj["notices-count"], 1);
+    assert_eq!(lists["notices"].as_array().unwrap().len(), 1);
+}
+
 /// Vendor a `markdownlint-cli2` that reports three violations and exits 1, so
 /// a lint, and the review gate's lint check, return a list to move.
 fn vendor_a_violating_markdownlint(root: &Path) {

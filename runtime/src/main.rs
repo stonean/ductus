@@ -22,13 +22,14 @@ use ductus::schema::primitives::{
     EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
-    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
-    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState,
+    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
+    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -562,9 +563,11 @@ fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
 }
 
 /// Whether a staged `check-artifact-size` exits non-zero: a project file
-/// refused, or one that could not be measured.
+/// refused, or one that could not be measured. It reads `skipped-count`,
+/// which is inline in both forms, so a result whose lists moved to its list
+/// file past the read size never exits like one that measured everything.
 fn size_check_blocks(result: &CheckArtifactSizeResult) -> bool {
-    !result.skipped.is_empty()
+    result.skipped_count > 0
         || result.project.as_ref().is_some_and(|half| {
             half.project_files
                 .iter()
@@ -574,7 +577,10 @@ fn size_check_blocks(result: &CheckArtifactSizeResult) -> bool {
 
 /// Name each refused project file's path, size and limit on stderr, with its
 /// one fix, so an author whose commit is stopped knows what to run. Each
-/// unmeasurable one is named too: the commit is blocked for it as well.
+/// unmeasurable one is named too: the commit is blocked for it as well. Both
+/// are read from `project-files`, which stays inline in both forms: a staged
+/// call names no feature, so its `skipped` holds exactly the project files
+/// whose state is `unreadable`, each under `artifact-unreadable`.
 fn report_refused_project_files(result: &CheckArtifactSizeResult) {
     let Some(half) = &result.project else {
         return;
@@ -597,12 +603,15 @@ fn report_refused_project_files(result: &CheckArtifactSizeResult) {
             );
         }
     }
-    for skip in &result.skipped {
-        let _ = writeln!(
-            stderr,
-            "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
-            skip.path, skip.reason
-        );
+    for file in &half.project_files {
+        if file.state == ProjectSizeState::Unreadable {
+            let _ = writeln!(
+                stderr,
+                "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
+                file.path,
+                primitives::check_artifact_size::UNREADABLE
+            );
+        }
     }
 }
 

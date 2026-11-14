@@ -2042,6 +2042,46 @@ mod tests {
         assert!(analysis.contains("  undispositioned: 1\n"), "{analysis}");
     }
 
+    /// BE-PAYLOAD-001 under `ductus exec`: with `[artifacts] read-size-bytes`
+    /// small, `check-artifact-size` returns `oversized` and `skipped` in a
+    /// file, the walker restores them before the tally reads the result, and
+    /// the oversized plan is still advisory and the unreadable scenario still
+    /// unexamined. An unrestored file form reads as nothing oversized and
+    /// nothing skipped, which looks clean.
+    #[cfg(unix)]
+    #[test]
+    fn an_exec_analyze_counts_an_oversized_artifact_held_in_the_file_form() {
+        let repo = analyze_repo(None);
+        let dir = repo.path().join("specs/001-x");
+        std::fs::write(dir.join("plan.md"), "x".repeat(250)).unwrap();
+        std::fs::create_dir_all(dir.join("scenarios")).unwrap();
+        std::os::unix::fs::symlink(dir.join("gone.md"), dir.join("scenarios/b.md")).unwrap();
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![17]),
+            name: "check-artifact-size".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+        let held = std::fs::read_dir(
+            repo.path()
+                .join(".ductus/results/check-artifact-size/001-x"),
+        )
+        .expect("the file form wrote its list file")
+        .count();
+        assert_eq!(held, 1);
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nadvisory: 1\n"), "{record}");
+        assert!(record.contains("  artifact-unreadable: 1\n"), "{record}");
+    }
+
     /// An exec `/analyze` measures the project files too: the walker seeds
     /// `project-files`, so an over-limit `AGENTS.md` is one more advisory
     /// finding beside the oversized plan (spec 063, scenario

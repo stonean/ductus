@@ -237,15 +237,24 @@ its version and date.
   `events.md` and `errors.md` to the check, against the same
   `[artifacts] read-size-bytes`; `feature` becomes optional, and a call naming
   neither is an argument error. The result keeps its shared keys and adds a
-  `project-files` half beside the feature half, sharing no key with it, so a
-  feature-only call returns what it always has. A file over the limit joins
-  `oversized` as kind `project-file`, whose one fix is `/prune --project`; a
-  missing one is reported as `absent`, an unreadable one goes in `skipped`.
+  `project-files` half beside the feature half, sharing no key with it. A
+  file over the limit joins `oversized` as kind `project-file`, whose one fix
+  is `/prune --project`; a missing one is reported as `absent`, an unreadable
+  one goes in `skipped`.
   `--staged` measures each file's index copy against its `HEAD` copy, adding
   `head-bytes` and `refused` (over the limit, with no `HEAD` copy or larger
   than it), and exits 1 when any file is refused or unreadable, naming it on
   stderr. An exec `/analyze` seeds `project-files`, so step 17 records an
-  oversized project file as an advisory finding.
+  oversized project file as an advisory finding. Its `oversized`, `skipped`
+  and `notices` grow with a spec's scenarios, so they are bounded
+  (BE-PAYLOAD-001) as `check-artifacts`' lists are: past `[artifacts]
+  read-size-bytes` `form` is `file`, the three move whole to the file
+  `lists-file` names, under `.ductus/results/check-artifact-size/` keyed by the
+  feature or `project-files`, and `oversized-count`, `skipped-count` and
+  `notices-count` stay inline in both forms. A consumer reading the three
+  inline past the read size finds none. The staged exit reads
+  `skipped-count`, and under `ductus exec` the walker restores the lists
+  before the tally reads them.
 - **`/review` re-reads the fixes it makes.** Before the record is final, an
   independent agent re-reads each round of fixes the review made, unless it
   changed only markdown in the spec's own directory other than `analysis.md`,

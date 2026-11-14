@@ -12,7 +12,7 @@ One new read-only runtime primitive, `check-artifact-size`, measures a feature's
 
 The check is its own primitive rather than a tenth `check-artifacts` family. A numbered step dispatches exactly one primitive, so a step naming two is a parse error (`runtime/src/parser/mod.rs`, module docs and the two-primitive rejection). `check-artifacts` takes only `feature` and runs all nine of its families together (`CheckArtifactsArgs` in `runtime/src/schema/primitives.rs`), so `/clarify` and `/plan` could only reach a family inside it by also running eight families that do not belong in their output. A standalone primitive serves all three commands from one implementation, and `/analyze` already composes a separately invoked primitive into its findings: step 16 invokes `prune-plan` and records its output as the `plan-record` advisory family (`framework/commands/analyze.md`, step 16).
 
-The primitive is read-only. It writes nothing in any mode, so no command gains a write and no gate is added.
+The primitive writes no artifact it measures. Its one write is the list file below, past the read size, under `.ductus/results/`, which ignores itself, so no command gains a write to a tracked file and no gate is added.
 
 ### Subjects, absence, and readability
 
@@ -88,6 +88,16 @@ When `analysis.md` is absent, nothing is decided. When its `decisions:` list doe
 
 `/clarify` gains a step after step 9 (`label-criteria`), so the size is measured after the questions' answers have been written into the spec, and steps 10–13 become 11–14 (AC2). `/plan` gains a step after step 7, the task breakdown, so `plan.md` and `tasks.md` are measured as written, and steps 8–10 become 9–11. Each step prints every warning and notice, and states that the result never blocks the transition; an invalid threshold halts the command instead, as above. `/plan`'s **Validation gate** reference lists the size check as advisory beside markdownlint, the other advisory check there. A scenario-targeted `/clarify` run does not take the step.
 
+### The result is bounded to one read
+
+`oversized`, `skipped` and `notices` grow with a spec directory's scenario count, and `notices` with the unknown keys in `[artifacts]`, so the result is bounded as `check-artifacts`' is (BE-PAYLOAD-001): `run` measures through `compute`, then passes the three lists to `bounded_lists::place` (`runtime/src/primitives/check_artifact_size.rs`, `bounded`). While the serialized result fits `[artifacts] read-size-bytes` it is inline; past it `form` is `file`, none of the three is inline, and `lists-file` names the one file holding all three whole, each present even when empty. `oversized-count`, `skipped-count` and `notices-count` are inline in both forms, so a count above zero with no list is a moved list, never a short one. Every other collection is bounded by construction: `project-files` holds exactly four records, an entry's `fixes` at most three, and `threshold`, `examined` and the spec half are scalars. [data-model.md](data-model.md) gives the file form's own measured size.
+
+The file sits under `.ductus/results/check-artifact-size/{key}/`, where `{key}` is the feature, or `project-files` for a call naming none (`PROJECT_FILES_KEY`), since that call measures files that belong to no spec. The feature has passed `validate_feature_argument` before `place` builds the path, and `place` refuses a results directory that resolves outside the project.
+
+Each consumer reads the lists from the file in the file form: `/analyze` step 17, `/clarify` step 10 and `/plan` step 8 by their step text, and under `ductus exec` the walker, whose `restore_lists` (`runtime/src/interpreter/payload.rs`) puts them back before `AnalyzeTally` reads the result, so the tally reads them as it reads an inline result. The CLI's staged exit (`size_check_blocks` in `runtime/src/main.rs`) reads `skipped-count`, never `skipped`, and its stderr names each unmeasurable file from `project-files`, which stays inline: a staged call names no feature, so its `skipped` holds exactly the project files whose state is `unreadable`. A staged check past the read size therefore still exits 1 on a file it could not measure.
+
+Under `BE-COMPAT-001` this is **breaking** for a result past the read size, where a consumer reading `oversized`, `skipped` or `notices` inline now finds none; under it the result only gains `form` and the three counts. As with the threshold change above, the release that carries it is a minor bump, and every consumer ships in that release.
+
 ### Without the MCP server
 
 `check-artifact-size` lists a subject it cannot read as not examined, never as under the threshold; without the server the command stops (spec 079).
@@ -102,21 +112,24 @@ The setting is documented in the two places the spec names (AC17): a bullet in `
 
 ### Registration
 
-The primitive is registered everywhere a primitive is, following the `prune-plan` registration as the checklist: `PRIMITIVE_REGISTRY`, the clap subcommand in `runtime/src/main.rs`, the MCP tool in `runtime/src/mcp/server.rs`, the exec dispatch arm in `runtime/src/interpreter/mod.rs`, `framework/runtime-tools.txt`, and the permission entries in `framework/bootstrap/configure/claude.md`. The exec tally in `runtime/src/interpreter/analyze_tally.rs` counts each undecided oversized subject as advisory and each skipped subject as unexamined under `artifact-unreadable`. Exec matches no stored decision, so, as with `prune-plan`, a decided subject is counted live there. The `plan-basic` and `analyze-basic` goldens are re-blessed for the new steps.
+The primitive is registered everywhere a primitive is, following the `prune-plan` registration as the checklist: `PRIMITIVE_REGISTRY`, the clap subcommand in `runtime/src/main.rs`, the MCP tool in `runtime/src/mcp/server.rs`, the exec dispatch arm in `runtime/src/interpreter/mod.rs`, `framework/runtime-tools.txt`, and the permission entries in `framework/bootstrap/configure/claude.md`. The exec tally in `runtime/src/interpreter/analyze_tally.rs` counts each undecided oversized subject as advisory and each skipped subject as unexamined under `artifact-unreadable`, from the lists the walker restores when the result took the file form. Exec matches no stored decision, so, as with `prune-plan`, a decided subject is counted live there. The `plan-basic` and `analyze-basic` goldens are re-blessed for the new steps.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/check_artifact_size.rs` | Create | The primitive: subjects, size, pages, threshold, fixes, warning, decided rule |
+| `runtime/src/primitives/check_artifact_size.rs` | Create | The primitive: subjects, size, pages, threshold, fixes, warning, decided rule, the bound |
 | `runtime/src/primitives/mod.rs` | Modify | Module declaration |
 | `runtime/src/schema/primitives.rs` | Modify | Args and result types |
 | `runtime/src/schema/registry.rs` | Modify | Registry entry |
-| `runtime/src/main.rs` | Modify | CLI subcommand |
+| `runtime/src/main.rs` | Modify | CLI subcommand, and the staged exit read from `skipped-count` and `project-files` |
 | `runtime/src/mcp/server.rs` | Modify | MCP tool |
 | `runtime/src/interpreter/mod.rs` | Modify | Exec dispatch |
 | `runtime/src/interpreter/analyze_tally.rs` | Modify | Exec tally, and the step-number comments the renumber moves |
 | `runtime/tests/walker.rs` | Modify | Exec coverage of the three new steps |
+| `runtime/src/schema/descriptions.rs` | Modify | `CHECK_ARTIFACT_SIZE`, the primitive's one description |
+| `runtime/tests/check_artifact_size_cli.rs`, `runtime/tests/mcp.rs` | Modify | The staged exit and the MCP result in the file form |
+| `scripts/mutation/artifact-size-bounded.py` | Create | The bound's mutants |
 | `runtime/tests/golden/plan-basic.jsonl`, `runtime/tests/golden/analyze-basic.jsonl` | Modify | Re-blessed for the new steps |
 | `framework/commands/clarify.md` | Modify | New step 10, renumber, markdown-only text |
 | `framework/commands/plan.md` | Modify | New step 8, renumber, Validation gate bullet, code-in-plans guidance |
@@ -146,4 +159,5 @@ The primitive is registered everywhere a primitive is, following the `prune-plan
 ## Cross-spec impact
 
 - **058 — Findings route at discovery** owes a step-number sync, not a requirement change: its scenario `only-unreadable-targets-retain-decisions` cites `/analyze` step 17 twice and its plan cites step 20, which become 18 and 21. The edit maps one identifier to its current value and changes no claim, so it is mechanical under §spec-lifecycle case (a) and 058 stays `done`. Family 19's sweep exemption would not have excused it, since it counted a token pair only across files whose whole diff is a substitution and `analyze.md`'s diff also inserts a step; spec 081 retired Family 19 and review staleness, so the sync, confined to artifacts, owes 058 an analysis and no review. No other spec cites the moved steps; the sweep was `grep` over every `.md` and `.rs` file outside `.claude/` for step 17–22 references near `analyze` and step 8–13 references near `plan` or `clarify`.
+- **075 — AGENTS.md holds what every session needs**: its plan said the staged size check *only reads*, which the bound makes false past the read size; it now says the check writes nothing the commit stages. The shipped hook's comments call steps 3 and 4 read-only in that sense, the one their ordering argument needs, which a list file in the self-ignoring `.ductus/results/` keeps true, as it has for `check-corpus-links` since 080 bounded it, so they are unchanged.
 - No other spec's claims change. 022's primitive library is described as an initial set, not a complete one, and `check-artifacts`' contract is untouched.

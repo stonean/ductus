@@ -1,6 +1,6 @@
 # 063 — Oversized artifacts warn with a fix Data Model
 
-Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `OnDone`, `DecisionsState`, `SizeSpecHalf`, `SizeProjectHalf`, `ProjectFileSize` and `ProjectSizeState` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
+Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `OnDone`, `DecisionsState`, `SizeSpecHalf`, `SizeProjectHalf`, `ProjectFileSize` and `ProjectSizeState`, with `form` the shared `ListsForm` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
 
 ## Configuration
 
@@ -39,15 +39,22 @@ A call naming neither `feature` nor `project-files` is an argument error (`missi
 
 ## `CheckArtifactSizeResult`
 
-The shared keys sit at the top level. The spec half and the project half follow, flattened and sharing no key: a result carries the keys of the half the call asked for and none of the other's, and a feature-only call returns exactly the keys it always has.
+The shared keys sit at the top level. The spec half and the project half follow, flattened and sharing no key: a result carries the keys of the half the call asked for and none of the other's.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `threshold` | `ReadSizeThreshold` | The threshold the check ran at, and where it came from. |
 | `examined` | integer | Subjects that exist and were measured, project files included. |
-| `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order, the spec's then the project files'. Empty means none over it, among the `examined`. |
-| `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing spec subject is never listed; a missing project file is reported in `project-files`. |
-| `notices` | list of strings | Human-readable notices every caller shows: a line for each key in `[artifacts]` the shared config-key registry does not recognize, `unknown config key: [artifacts] {key} ({config file}) — this version of ductus does not read it` (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019), then the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
+| `form` | `inline` or `file` | Where the three lists below are: in the result, or past the read size in the file `lists-file` names. |
+| `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order, the spec's then the project files'. Empty means none over it, among the `examined`. Absent in the file form. |
+| `oversized-count` | integer | Entries in `oversized`, in either form. |
+| `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing spec subject is never listed; a missing project file is reported in `project-files`. Absent in the file form. |
+| `skipped-count` | integer | Entries in `skipped`, in either form. |
+| `notices` | list of strings | Human-readable notices every caller shows: a line for each key in `[artifacts]` the shared config-key registry does not recognize, `unknown config key: [artifacts] {key} ({config file}) — this version of ductus does not read it` (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019), then the unreadable-decisions notice. An invalid threshold is the error above, never a notice. Absent in the file form. |
+| `notices-count` | integer | Entries in `notices`, in either form. |
+| `lists-file` | string, optional | In the file form only: the file, from the project root, holding `oversized`, `skipped` and `notices` whole, each key present even when empty. |
+
+**Size** (BE-PAYLOAD-001). `oversized` and `skipped` grow with a spec directory's scenario count, and `notices` with the unknown keys in `[artifacts]`, so the three are bounded as `check-artifacts`' lists are: while the result fits `[artifacts] read-size-bytes` they are inline, and past it `form` is `file`, none of the three is inline, and `lists-file` names a file under `.ductus/results/check-artifact-size/{key}/` holding all three whole, `{key}` being the feature, or `project-files` for a call naming none. Every other collection is bounded by construction: `project-files` holds exactly four records, an entry's `fixes` at most three, and the rest are scalars. The file form's own size is 339 bytes of compact JSON (340 as the CLI prints it, with its trailing newline), measured on the dev build over one draft spec `001-x` and no project file, at `read-size-bytes = 10`, each count and `examined` one digit. It grows by three bytes per character of the feature directory's name, which it carries three times, by each further digit of a count, `examined` or the threshold, and by the length of the `status` and `decisions` words. With `project-files` the same call is 591 bytes, the four records all `absent`; a measured record adds its `bytes`, and a staged one its `head-bytes` and `refused`. Consumers read the lists from `lists-file` in the file form: step 17 of `framework/commands/analyze.md`, step 10 of `clarify.md` and step 8 of `plan.md`, and under `ductus exec` the walker, which restores them (`restore_lists`) before `AnalyzeTally` reads the result. The staged CLI reads `skipped-count`, never `skipped`.
 
 ### The spec half (`SizeSpecHalf`), present with `feature`
 
@@ -75,7 +82,7 @@ The shared keys sit at the top level. The spec half and the project half follow,
 | `head-bytes` | integer, optional | Staged only: the `HEAD` copy's length. Absent when `HEAD` has none, or the repository has no commits. |
 | `refused` | boolean, optional | Staged only, for a measured file: the staged copy is over the threshold and either has no `HEAD` copy or is larger than it. An unchanged or shrunk over-limit file is not refused. |
 
-A project file over the threshold joins `oversized` with kind `project-file`, whose one fix is `prune-project`, with no `on-done` whatever the feature's status. Its `warning` and `message` are worded as a spec subject's, and a stored waiver in the named feature's `analysis.md` covers it by the decided rule below. Staged, `oversized` is judged on the staged copy. The CLI, with `--staged`, exits 1 when any file is refused or any is in `skipped`, naming each on stderr (`ductus check-artifact-size --help`); a repository or `HEAD` that cannot be read is an error, never a clean result, and an index that cannot be read leaves each project file `unreadable` and in `skipped`, so the exit is 1.
+A project file over the threshold joins `oversized` with kind `project-file`, whose one fix is `prune-project`, with no `on-done` whatever the feature's status. Its `warning` and `message` are worded as a spec subject's, and a stored waiver in the named feature's `analysis.md` covers it by the decided rule below. Staged, `oversized` is judged on the staged copy. The CLI, with `--staged`, exits 1 when any file is refused or `skipped-count` is above zero, so in either form, naming each on stderr, an unmeasurable one from `project-files` (`ductus check-artifact-size --help`); a repository or `HEAD` that cannot be read is an error, never a clean result, and an index that cannot be read leaves each project file `unreadable` and in `skipped`, so the exit is 1.
 
 Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the scenarios in the shared scenario ordering (case-insensitive, raw-byte tiebreak).
 

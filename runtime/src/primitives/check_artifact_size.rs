@@ -17,6 +17,14 @@
 //! 075) are a second subject set: `AGENTS.md` and the spec root's `system.md`,
 //! `events.md` and `errors.md`, against the same threshold. `staged` measures
 //! each one's index copy against its `HEAD` copy for the pre-commit hook.
+//!
+//! **Bounded** (BE-PAYLOAD-001). `oversized`, `skipped` and `notices` grow with
+//! a spec directory's scenario count, so [`run`] bounds them as
+//! `check-artifacts` bounds its lists (`bounded_lists::place`): inline while the
+//! result fits `[artifacts] read-size-bytes`, and past it in the file
+//! `lists-file` names, keyed by the feature, or by [`PROJECT_FILES_KEY`] for a
+//! call naming none, with each list's count inline in both forms. Writing that
+//! file is the primitive's only write.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -24,15 +32,16 @@ use std::path::{Path, PathBuf};
 use crate::primitives::decisions::{RawDecision, read_decisions};
 use crate::primitives::prune_tasks::read_status;
 use crate::primitives::{
-    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, flatten_line, read_text,
-    rel_path, scenario_name_cmp,
+    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, bounded_lists, flatten_line,
+    read_text, rel_path, scenario_name_cmp,
 };
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-    FixKind, OnDone, OversizedArtifact, ProjectFileKind, ProjectFileSize, ProjectSizeState,
-    ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
+    FixKind, ListsForm, OnDone, OversizedArtifact, ProjectFileKind, ProjectFileSize,
+    ProjectSizeState, ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget,
+    ThresholdSource,
 };
 
 /// The finding family `/{project}:analyze` records an oversized artifact
@@ -42,7 +51,7 @@ pub(crate) const FAMILY: &str = "artifact-size";
 /// The skip reason for a subject that exists but could not be measured — the
 /// reason `check-artifacts` and `write-analysis` already count as could not be
 /// read.
-const UNREADABLE: &str = "artifact-unreadable";
+pub const UNREADABLE: &str = "artifact-unreadable";
 
 /// The fixed subjects, in subject order. Scenarios follow them. `research.md`,
 /// `review.md`, `analysis.md` and any file the project added are never
@@ -68,8 +77,77 @@ pub(crate) const MIN_READ_SIZE_BYTES: u64 = 1;
 pub(crate) const SECTION: &str = "artifacts";
 pub(crate) const KEY: &str = "read-size-bytes";
 
+/// The path segment a call naming no feature keys its list file by, under
+/// `.ductus/results/check-artifact-size/`, in place of the feature: such a
+/// call measures the four project files alone, which belong to no spec.
+pub(crate) const PROJECT_FILES_KEY: &str = "project-files";
+
+/// What [`compute`] measures, whole: [`CheckArtifactSizeResult`] before [`run`]
+/// decides where its three lists go.
+#[derive(Debug)]
+struct Measured {
+    threshold: ReadSizeThreshold,
+    examined: u32,
+    oversized: Vec<OversizedArtifact>,
+    skipped: Vec<SkippedTarget>,
+    notices: Vec<String>,
+    spec: Option<SizeSpecHalf>,
+    project: Option<SizeProjectHalf>,
+}
+
 /// Measure `args.feature`'s subject artifacts, the four project files, or
-/// both, against the configured read size.
+/// both, against the configured read size: [`compute`], returned with
+/// `oversized`, `skipped` and `notices` inline while the result fits
+/// `[artifacts] read-size-bytes`, and past it with the three in the file
+/// `lists-file` names and only their counts inline (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// Every error [`compute`] returns, and those `bounded_lists::place` returns
+/// for a list file that cannot be written or a results directory that
+/// resolves outside the project. A file that cannot be written fails the
+/// call, so a result never names lists that are not on disk.
+pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
+    let measured = compute(args, repo)?;
+    let key = args.feature.as_deref().unwrap_or(PROJECT_FILES_KEY);
+    bounded(repo, key, measured)
+}
+
+/// Bound `measured`'s three lists to one read under `key`: inline while the
+/// result fits the read size, and past it in the file `lists-file` names,
+/// which holds all three, each present even when empty, since the exec walker
+/// restores every list the result counts.
+fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSizeResult> {
+    let lists = serde_json::json!({
+        "oversized": measured.oversized,
+        "skipped": measured.skipped,
+        "notices": measured.notices,
+    });
+    let mut result = CheckArtifactSizeResult {
+        threshold: measured.threshold,
+        examined: measured.examined,
+        form: ListsForm::Inline,
+        oversized_count: measured.oversized.len(),
+        oversized: Some(measured.oversized),
+        skipped_count: measured.skipped.len(),
+        skipped: Some(measured.skipped),
+        notices_count: measured.notices.len(),
+        notices: Some(measured.notices),
+        lists_file: None,
+        spec: measured.spec,
+        project: measured.project,
+    };
+    if let Some(file) = bounded_lists::place(repo, PRIMITIVE, key, &result, &lists)? {
+        result.form = ListsForm::File;
+        result.oversized = None;
+        result.skipped = None;
+        result.notices = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// What [`run`] measures, with every list whole.
 ///
 /// # Errors
 ///
@@ -97,7 +175,7 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///   reads as one that found nothing. An index that cannot be read is not an
 ///   error: each project file is then `unreadable` and listed in `skipped`, so
 ///   the CLI exits 1.
-pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
+fn compute(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<Measured> {
     check_args(args)?;
     let root = paths::Paths::load(repo)?.specs_root;
     let feature = match &args.feature {
@@ -176,7 +254,7 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
         feature,
         status,
     });
-    Ok(CheckArtifactSizeResult {
+    Ok(Measured {
         threshold,
         examined,
         oversized,
@@ -742,12 +820,12 @@ mod tests {
         tmp
     }
 
-    fn spec_half(result: &CheckArtifactSizeResult) -> &SizeSpecHalf {
+    fn spec_half(result: &Measured) -> &SizeSpecHalf {
         result.spec.as_ref().expect("a feature half")
     }
 
-    fn check(tmp: &TempDir) -> Result<CheckArtifactSizeResult> {
-        run(
+    fn check(tmp: &TempDir) -> Result<Measured> {
+        compute(
             &CheckArtifactSizeArgs {
                 feature: Some("001-a".into()),
                 ..Default::default()
@@ -918,7 +996,7 @@ mod tests {
         tmp
     }
 
-    fn paths_of(result: &CheckArtifactSizeResult) -> Vec<&str> {
+    fn paths_of(result: &Measured) -> Vec<&str> {
         result.oversized.iter().map(|o| o.path.as_str()).collect()
     }
 
@@ -1093,6 +1171,141 @@ mod tests {
         assert_eq!(result.oversized.len(), 1);
         assert_eq!(result.oversized[0].bytes, 183);
         assert_eq!(result.oversized[0].bytes, body.len() as u64);
+    }
+
+    /// BE-PAYLOAD-001: the result is inline while it fits the read size, up
+    /// to its own size exactly; one byte under that, the three lists move
+    /// whole to the file `lists-file` names, with `form` and each count inline
+    /// in both forms.
+    #[cfg(unix)]
+    #[test]
+    fn a_result_past_the_read_size_names_a_file_holding_every_list() {
+        // An oversized plan, a scenario that is a broken link (skipped) and an
+        // unknown `[artifacts]` key (a notice): every list is non-empty.
+        let tmp = sized("draft", &[("plan.md", 6_000)]);
+        let feature = tmp.path().join("specs/001-a");
+        std::fs::create_dir_all(feature.join("scenarios")).unwrap();
+        std::os::unix::fs::symlink(feature.join("gone.md"), feature.join("scenarios/b.md"))
+            .unwrap();
+        let read_size = |bytes: usize| {
+            std::fs::write(
+                tmp.path().join(".ductus/config.toml"),
+                format!("[artifacts]\nread-size-bytes = {bytes}\nread-size-byte = 1\n"),
+            )
+            .unwrap();
+        };
+        let args = CheckArtifactSizeArgs {
+            feature: Some("001-a".into()),
+            ..Default::default()
+        };
+
+        read_size(5_000);
+        let whole = compute(&args, tmp.path()).unwrap();
+        let counts = (
+            whole.oversized.len(),
+            whole.skipped.len(),
+            whole.notices.len(),
+        );
+        assert_eq!(counts, (1, 1, 1), "{whole:?}");
+        let inline = run(&args, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.lists_file, None);
+        assert_eq!(inline.oversized.as_deref(), Some(&whole.oversized[..]));
+        assert_eq!(inline.skipped.as_deref(), Some(&whole.skipped[..]));
+        assert_eq!(inline.notices.as_deref(), Some(&whole.notices[..]));
+        assert_eq!(
+            (
+                inline.oversized_count,
+                inline.skipped_count,
+                inline.notices_count
+            ),
+            counts
+        );
+        assert!(
+            !tmp.path().join(".ductus/results").exists(),
+            "an inline result wrote a list file"
+        );
+
+        // From 1,000 to 5,999 bytes the threshold is four digits and the plan
+        // two to six read pages, so the result is the same length at each.
+        let size = serde_json::to_vec(&inline).unwrap().len();
+        assert!((1_000..6_000).contains(&size), "{size}");
+        read_size(size);
+        assert_eq!(run(&args, tmp.path()).unwrap().form, ListsForm::Inline);
+
+        read_size(size - 1);
+        let whole = compute(&args, tmp.path()).unwrap();
+        let bounded = run(&args, tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (&bounded.oversized, &bounded.skipped, &bounded.notices),
+            (&None, &None, &None)
+        );
+        assert_eq!(
+            (
+                bounded.oversized_count,
+                bounded.skipped_count,
+                bounded.notices_count
+            ),
+            counts
+        );
+        let file = bounded.lists_file.clone().unwrap();
+        assert!(
+            file.starts_with(".ductus/results/check-artifact-size/001-a/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["oversized"],
+            serde_json::to_value(&whole.oversized).unwrap()
+        );
+        assert_eq!(
+            lists["skipped"],
+            serde_json::to_value(&whole.skipped).unwrap()
+        );
+        assert_eq!(
+            lists["notices"],
+            serde_json::to_value(&whole.notices).unwrap()
+        );
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
+    /// A call naming no feature keys its list file by `project-files`, one
+    /// naming a feature by the feature, and the file holds each list even when
+    /// it is empty.
+    #[test]
+    fn a_file_form_call_is_keyed_by_its_feature_or_by_the_project_files() {
+        let tmp = project_tree(1, 1);
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 10\n",
+        )
+        .unwrap();
+        let alone = run(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(alone.form, ListsForm::File);
+        let file = alone.lists_file.unwrap();
+        assert!(
+            file.starts_with(".ductus/results/check-artifact-size/project-files/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        for list in ["oversized", "skipped", "notices"] {
+            assert_eq!(lists[list], serde_json::json!([]), "{list}");
+        }
+        let with_feature = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let file = with_feature.lists_file.unwrap();
+        assert!(
+            file.starts_with(".ductus/results/check-artifact-size/001-a/"),
+            "{file}"
+        );
     }
 
     #[test]
@@ -1516,7 +1729,7 @@ mod tests {
     #[test]
     fn a_missing_feature_is_refused() {
         let tmp = repo(None);
-        let err = run(
+        let err = compute(
             &CheckArtifactSizeArgs {
                 feature: Some("999-none".into()),
                 ..Default::default()
@@ -1540,7 +1753,7 @@ mod tests {
         }
     }
 
-    fn project(result: &CheckArtifactSizeResult) -> &[ProjectFileSize] {
+    fn project(result: &Measured) -> &[ProjectFileSize] {
         &result
             .project
             .as_ref()
@@ -1548,7 +1761,7 @@ mod tests {
             .project_files
     }
 
-    fn state_of(result: &CheckArtifactSizeResult, path: &str) -> (ProjectSizeState, Option<u64>) {
+    fn state_of(result: &Measured, path: &str) -> (ProjectSizeState, Option<u64>) {
         let file = project(result).iter().find(|f| f.path == path).unwrap();
         (file.state, file.bytes)
     }
@@ -1565,7 +1778,7 @@ mod tests {
     #[test]
     fn a_call_naming_nothing_to_measure_is_an_argument_error() {
         let tmp = project_tree(1, 1);
-        let none = run(&CheckArtifactSizeArgs::default(), tmp.path()).unwrap_err();
+        let none = compute(&CheckArtifactSizeArgs::default(), tmp.path()).unwrap_err();
         assert!(
             matches!(none, PrimitiveError::MissingArgument { .. }),
             "{none:?}"
@@ -1575,13 +1788,13 @@ mod tests {
             feature: Some("001-a".into()),
             ..Default::default()
         };
-        let err = run(&staged_alone, tmp.path()).unwrap_err();
+        let err = compute(&staged_alone, tmp.path()).unwrap_err();
         assert!(
             matches!(err, PrimitiveError::MissingArgument { .. }),
             "{err:?}"
         );
         let both = project_args(Some("001-a"), true);
-        let err = run(&both, tmp.path()).unwrap_err();
+        let err = compute(&both, tmp.path()).unwrap_err();
         assert!(
             matches!(err, PrimitiveError::InvalidArgument { .. }),
             "{err:?}"
@@ -1589,9 +1802,25 @@ mod tests {
     }
 
     #[test]
-    fn the_two_halves_share_no_key_and_a_feature_call_is_unchanged() {
+    fn the_two_halves_share_no_key_and_a_feature_call_carries_only_its_own() {
         let tmp = project_tree(1, 1);
-        let feature_only = serde_json::to_value(check(&tmp).unwrap()).unwrap();
+        // A read size the results fit, so each carries its lists inline.
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100000\n",
+        )
+        .unwrap();
+        let feature_only = serde_json::to_value(
+            run(
+                &CheckArtifactSizeArgs {
+                    feature: Some("001-a".into()),
+                    ..Default::default()
+                },
+                tmp.path(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         let mut keys: Vec<&String> = feature_only.as_object().unwrap().keys().collect();
         keys.sort();
         assert_eq!(
@@ -1600,10 +1829,14 @@ mod tests {
                 "decisions",
                 "examined",
                 "feature",
+                "form",
                 "notices",
+                "notices-count",
                 "oversized",
+                "oversized-count",
                 "path",
                 "skipped",
+                "skipped-count",
                 "status",
                 "threshold"
             ]
@@ -1620,7 +1853,7 @@ mod tests {
     #[test]
     fn one_byte_over_is_reported_and_the_threshold_itself_is_not() {
         let tmp = project_tree(101, 100);
-        let result = run(&project_args(None, false), tmp.path()).unwrap();
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
         assert_eq!(paths_of(&result), ["AGENTS.md"]);
         let agents = &result.oversized[0];
         assert_eq!(
@@ -1638,7 +1871,7 @@ mod tests {
     #[test]
     fn an_absent_project_file_is_reported_though_a_missing_spec_subject_is_not() {
         let tmp = project_tree(1, 1);
-        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
         assert_eq!(
             state_of(&result, "specs/events.md"),
             (ProjectSizeState::Absent, None)
@@ -1674,7 +1907,7 @@ mod tests {
             std::fs::set_permissions(&agents, std::fs::Permissions::from_mode(0o644)).unwrap();
             panic!("permissions do not bind (running as root?): no file can be made unreadable");
         }
-        let result = run(&project_args(None, false), tmp.path());
+        let result = compute(&project_args(None, false), tmp.path());
         std::fs::set_permissions(&agents, std::fs::Permissions::from_mode(0o644)).unwrap();
         let result = result.unwrap();
         assert_eq!(
@@ -1695,7 +1928,7 @@ mod tests {
         let tmp = project_tree(250, 1);
         let spec = tmp.path().join("specs/001-a/spec.md");
         std::fs::write(&spec, "---\nstatus: done\n---\n\n# 001 — A\n").unwrap();
-        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
         let agents = &result.oversized[0];
         assert_eq!(fix_kinds(agents), [FixKind::PruneProject]);
         assert_eq!(agents.fixes[0].on_done, None);
@@ -1715,10 +1948,10 @@ mod tests {
     fn a_stored_waiver_covers_a_project_file_until_it_grows_a_page() {
         let tmp = project_tree(250, 1);
         record(&tmp, &[(&stored_key("AGENTS.md", 250, 3, 100), "waived")]);
-        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
         assert!(result.oversized[0].decided);
         std::fs::write(tmp.path().join("AGENTS.md"), "x".repeat(350)).unwrap();
-        let result = run(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
         assert!(!result.oversized[0].decided, "grew into a fourth page");
     }
 
@@ -1750,7 +1983,7 @@ mod tests {
     }
 
     fn refused(project: &Path, path: &str) -> (Option<u64>, Option<u64>, Option<bool>) {
-        let result = run(&project_args(None, true), project).unwrap();
+        let result = compute(&project_args(None, true), project).unwrap();
         let file = self::project(&result)
             .iter()
             .find(|f| f.path == path)
@@ -1832,7 +2065,7 @@ mod tests {
             .remove_path(&Path::new("proj").join("AGENTS.md"))
             .unwrap();
         index.write().unwrap();
-        let result = run(&project_args(None, true), &project).unwrap();
+        let result = compute(&project_args(None, true), &project).unwrap();
         let file = &self::project(&result)[0];
         assert_eq!(
             (file.state, file.bytes, file.refused),
@@ -1844,7 +2077,7 @@ mod tests {
     #[test]
     fn staged_without_a_repository_is_an_error_never_clean() {
         let tmp = project_tree(1, 1);
-        let err = run(&project_args(None, true), tmp.path()).unwrap_err();
+        let err = compute(&project_args(None, true), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Git(_)), "{err:?}");
     }
 }
