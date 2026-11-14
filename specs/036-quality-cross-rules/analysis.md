@@ -1,7 +1,7 @@
 ---
 spec: 036-quality-cross-rules
-last-run: 2026-11-14T03:20:34Z
-analyzed-against: aebce3f506c01b340636c01222b76f06cbfea5fc
+last-run: 2026-11-14T13:58:59Z
+analyzed-against: dfcccd8e2a810e2f82a088d96dd943c2de01162d
 hard-fail: 0
 blocking-findings: 0
 advisory: 2
@@ -11,7 +11,7 @@ analyzed-digest:
   plan.md: 81f093ac4bdb941b7ad7c4a2139054edbcaf92f141e11a1dc9277ed158a35902
   review.md: 5daaf05521f456aed791d570565dc06924a6cfdb0b85db0d89ba56a6594352b2
   scenarios/a-bound-test-pins-the-stated-figure.md: 76496e655ec680babdb0a411e89961b392546ad8bdee7a6e93547feedba33557
-  spec.md: 145275462f88a32403ef8ca1af44237fba9a3b63993d9c2f536c83ed0fef06ee
+  spec.md: 319bab013a0454a2e058649e5888328bb9935ca9033078e6ccef3da36f7caaee
   tasks.md: d864743960789fdb3c1411b22b22175a30d943b26b7c7d9127652ad4c5547f06
 unexamined-by-reason:
   root-absent: 2
@@ -30,7 +30,7 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
   waived: 2
   undispositioned: 0
@@ -51,7 +51,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -63,8 +63,8 @@ decisions:
 
 ## Advisory findings
 
-- grounding — the Motivating incident, an adopter's passthrough stub, is stated as fact with no citation or marker — `specs/036-quality-cross-rules/spec.md` — **waived**: the incident is an adopter's, whose tree is out of reach and whose name this repository never records (AGENTS.md), so no citation can exist; the spec already labels it an adopter incident, and no criterion depends on it (decided by the rule)
-- scenario-consistency — Scenario lists four Edge Cases, above the three that constitution section scenario-promotion says warrants its own spec — `specs/036-quality-cross-rules/scenarios/a-bound-test-pins-the-stated-figure.md` — **waived**: the scenario adds one clause to QUAL-TEST-001 and its Resolved Questions reject a rule of its own; promoting it would mint a spec for a single Verification condition (decided by the rule)
+- grounding — the Motivating incident, an adopter's passthrough stub, is stated as fact with no citation or marker — `specs/036-quality-cross-rules/spec.md` — **waived**: the incident is an adopter's, whose tree is out of reach and whose name this repository never records (AGENTS.md), so no citation can exist; the spec already labels it an adopter incident, and no criterion depends on it
+- scenario-consistency — Scenario lists four Edge Cases, above the three that constitution section scenario-promotion says warrants its own spec — `specs/036-quality-cross-rules/scenarios/a-bound-test-pins-the-stated-figure.md` — **waived**: the scenario adds one clause to QUAL-TEST-001 and its Resolved Questions reject a rule of its own; promoting it would mint a spec for a single Verification condition
 
 ## Deferred to other specs
 
@@ -80,4 +80,4 @@ decisions:
 
 ## Fixed in this run
 
-- plan-consistency — Technical Decision 'New surface registration — scripts/lint-rule-ids.sh' states the edit but carries no reason inside the decision itself — `specs/036-quality-cross-rules/plan.md` — **fixed**
+*None.*
