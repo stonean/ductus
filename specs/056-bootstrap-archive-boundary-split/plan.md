@@ -83,20 +83,3 @@ Not changed, and each checked rather than assumed: every `scripts/audit/*.sh`, e
 **Known limitation — the cut is 26.3%, not the ~40% this was scoped at.** `§Project Configuration` (12,627 B) and `§File Fetching` (5,165 B) both turn out to be pre-extraction reads. The saving is real — 38,616 bytes off every curl, install, context load and byte-compare — but smaller than the backlog item estimated, and the spec records why.
 
 **Known limitation — nothing detects a future section landing on the wrong side.** The boundary is prose discipline: no check asserts that a section in the installed half reads nothing from the extracted tree, or that one in the archive half is never needed before extraction. A new section can be added to either file and nothing will object. Stating it rather than implying a mechanism that does not exist, per [§design-principles](../../framework/constitution.md#design-principles).
-
-## Post-split measurement
-
-Measured 2026-09-15 at `ca85c8b8`, after the split.
-
-| File | Bytes |
-| --- | --- |
-| `framework/bootstrap/ductus.md` before | 146,953 |
-| `framework/bootstrap/ductus.md` after | 110,417 |
-| `framework/bootstrap/ductus-procedure.md` | 39,982 |
-| `framework/bootstrap/govern.md` | 110,417 (byte-identical to `ductus.md`) |
-
-**The installed half is 36,536 bytes smaller — a 24.9% reduction** in what an adopter curls, installs into every agent, loads into context at every invocation, and byte-compares on every run.
-
-**Against the prediction.** `spec.md` §Measured predicted 38,616 bytes moved and a 26.3% cut; the achieved figure is 36,536 and 24.9%. The 2,080-byte shortfall is prose added back, and it is accounted for by diffing the pre- and post-split files rather than estimated: **40,711 bytes removed, 4,191 added**. The additions are the `## The archive half` pointer (1,133 B) and the three named prose repairs — the `§Instructions` convention note, the qualification on `§Pre-flight abort`'s skipped-section enumeration, and the `§Closing restart` qualification. Removal exceeded the predicted section total because excising a section also takes its trailing blank line, which the section-size measurement did not count. The diff-based figures differ from the file-size delta by 16 bytes, an artifact of line-boundary accounting in the diff, so they are the right order of magnitude rather than exact to the byte.
-
-**Secondary result, not predicted.** Because `govern.md` is a copy of the *installed* half and the archive half exists once rather than twice, the in-repo bootstrap cost falls from 293,906 bytes (two identical 146,953-byte files) to 260,816 — an 11.3% reduction on top of the per-invocation saving. Audit Family 21's byte-identity requirement is unchanged and still holds.
