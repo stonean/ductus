@@ -172,6 +172,10 @@ for src in "$ROOT"/framework/commands/*.md; do
   COMMAND_NAMES+=("$(basename "$src" .md)")
 done
 
+# Agent config dirs holding an installed namespace, so a clean exit says what
+# it compared: with none, nothing was compared, which is no finding (above)
+# but no match either (QUAL-CLAIM-001).
+compared=0
 
 for cli_dir in "${CLI_DIRS[@]}"; do
   [ -d "$cli_dir" ] || continue
@@ -205,6 +209,7 @@ for cli_dir in "${CLI_DIRS[@]}"; do
 
   # Nothing installed under this agent dir — nothing to compare.
   [ "${#installed[@]}" -eq 0 ] && continue
+  compared=$((compared + 1))
 
   matched=0
   for ns in "${installed[@]}"; do
@@ -235,5 +240,11 @@ for cli_dir in "${CLI_DIRS[@]}"; do
       "$fix"
   fi
 done
+
+if [ "$compared" -eq 0 ]; then
+  echo "host-namespace-parity: nothing to compare — no agent config dir holds an installed command namespace" >&2
+else
+  echo "host-namespace-parity: compared $compared agent config dir(s) against namespace \"$project\"" >&2
+fi
 
 exit "$drift"

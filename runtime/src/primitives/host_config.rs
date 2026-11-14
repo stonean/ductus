@@ -457,8 +457,8 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
     let Some(names) = strip_folded(path, canonical_repo) else {
         return Ok(None);
     };
-    // A config directory a link redirects: `.claude -> cfg` makes
-    // `cfg/settings.local.json` the file the host reads.
+    // Another tool's configuration directory a link redirects is refused as
+    // the directory itself is.
     for &dir in OTHER_TOOL_DIRS {
         let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
             continue;
@@ -470,6 +470,8 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
             return Err(refuse_other_tool_dir(shown, dir));
         }
     }
+    // A config directory a link redirects: `.claude -> cfg` makes
+    // `cfg/settings.local.json` the file the host reads.
     for &(dir, layout) in CONFIG_DIRS {
         let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
             continue;

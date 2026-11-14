@@ -76,6 +76,48 @@ fn a_refused_file_exits_1_and_names_its_path_size_limit_and_fix() {
     assert!(stdout.contains("\"refused\":true"), "{stdout}");
 }
 
+/// A staged project file that cannot be measured stops the commit as a refused
+/// one does: a hook that passed over a file it could not measure would let an
+/// oversized one through. `AGENTS.md` is left in conflict, one index entry per
+/// stage and none at stage 0, so there is no one staged copy; it is under the
+/// read size, so only the unmeasured state can set the exit status.
+#[test]
+fn an_unmeasurable_staged_file_exits_1_and_names_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 50);
+    let mut index = repository.index().unwrap();
+    let entry = index.get_path(Path::new("AGENTS.md"), 0).unwrap();
+    index.remove_path(Path::new("AGENTS.md")).unwrap();
+    for stage in 1..=3_u16 {
+        let staged = git2::IndexEntry {
+            ctime: entry.ctime,
+            mtime: entry.mtime,
+            dev: entry.dev,
+            ino: entry.ino,
+            mode: entry.mode,
+            uid: entry.uid,
+            gid: entry.gid,
+            file_size: entry.file_size,
+            id: entry.id,
+            flags: (entry.flags & !0x3000) | (stage << 12),
+            flags_extended: entry.flags_extended,
+            path: entry.path.clone(),
+        };
+        index.add(&staged).unwrap();
+    }
+    index.write().unwrap();
+    assert!(repository.index().unwrap().has_conflicts());
+
+    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stdout}");
+    assert!(
+        stderr.contains("AGENTS.md could not be measured"),
+        "{stderr}"
+    );
+    assert!(stdout.contains("\"state\":\"unreadable\""), "{stdout}");
+    assert!(!stdout.contains("\"refused\":true"), "{stdout}");
+}
+
 #[test]
 fn an_unchanged_or_shrunk_file_exits_0() {
     let tmp = tempfile::tempdir().unwrap();

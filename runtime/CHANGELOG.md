@@ -4098,7 +4098,7 @@ The runtime half of spec 048's `state-b-continues-in-session` — a CLI argument
 
 ## [0.29.4] — 2026-08-17
 
-The runtime half of spec 027's `migration-chain-reference-integrity` — the class of defect the real `papur` bootstrap surfaced twice, where a migration chain converges every file it owns and silently breaks the ones it does not.
+The runtime half of spec 027's `migration-chain-reference-integrity` — the class of defect a real adopter bootstrap surfaced twice, where a migration chain converges every file it owns and silently breaks the ones it does not.
 
 ### Added
 

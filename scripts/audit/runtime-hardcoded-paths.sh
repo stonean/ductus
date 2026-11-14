@@ -27,7 +27,25 @@ audit_family runtime-hardcoded-paths
 # This is the exact string the parameterization scenario eliminated.
 # `git grep` keeps the search index-aware and ignores generated/build
 # artifacts under runtime/target/.
-matches="$(git grep -n -F '.claude/commands/ductus/' -- 'runtime/src/' 2>/dev/null || true)"
+#
+# Count what the scan covers first: `git grep` exits 1 both for no match and
+# for a pathspec that matches nothing, so a missing or emptied runtime/src
+# would otherwise read as a clean scan (QUAL-CLAIM-001), as would a grep that
+# failed outright, which exits above 1.
+examined="$(git ls-files -- 'runtime/src/' | wc -l | tr -d ' ')"
+if [ "$examined" -eq 0 ]; then
+  emit "runtime/src/" "no tracked file under runtime/src/, so there was nothing to scan" \
+    "restore runtime/src, or point this family at the runtime's source directory"
+  exit "$drift"
+fi
+matches="$(git grep -n -F '.claude/commands/ductus/' -- 'runtime/src/')"
+rc=$?
+if [ "$rc" -gt 1 ]; then
+  emit "runtime/src/" "git grep failed (exit $rc), so the scan did not run" \
+    "run the family from inside the repository's work tree"
+  exit "$drift"
+fi
+echo "runtime-hardcoded-paths: scanned $examined tracked file(s) under runtime/src/" >&2
 if [ -n "$matches" ]; then
   while IFS= read -r line; do
     emit "$line" \

@@ -21,6 +21,7 @@
 #   J. a latest release outside the ductus-v scheme halts, writing nothing
 #   K. an unreachable latest release halts and does not fall back to main
 #   L. a latest release below the floor halts with the pre-publication message
+#   L2. --ref=latest below the floor halts with the pre-publication message
 #   M. a named tag below the floor halts before fetching anything
 #   N. a named tag that 404s halts as "does not exist", writing nothing
 #   O. an empty --ref= halts before any network call
@@ -32,6 +33,10 @@
 #   T. an empty DUCTUS_REPO is the canonical origin, unannounced
 #   U. the pi agent installs .pi/prompts/ductus.md and writes no settings file
 #   V. every request carries a connect timeout and a total timeout
+#   W. an agent key outside the registry halts naming the supported agents,
+#      writing nothing
+#   X. claude seeds .claude/settings.local.json when it is absent, and leaves
+#      an existing one untouched
 #
 # Each assertion was shown to fail against an installer with its check
 # removed before it was trusted (spec 061, task 5).
