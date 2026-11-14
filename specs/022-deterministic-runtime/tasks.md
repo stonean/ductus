@@ -1,5 +1,5 @@
 ---
-next-task: 33
+next-task: 35
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -23,3 +23,19 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] A test proves the inline form under the read size and the file form past it, each failing under its mutant, and `framework-checks.yml` step (u) passes
 
 - **Done when**: Both lists return inline, or in a lists-file past the read size, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 33. create-scenario refuses an existing slug atomically (BE-RACE-003, from 023)
+
+- [ ] `create-scenario` creates its file exclusively, with `create_new` or a no-clobber persist of its tempfile, so of two concurrent calls with one slug exactly one writes and the other gets `scenario already exists: {feature-path}/scenarios/{slug}.md`. Today `runtime/src/primitives/create_scenario.rs` checks `dest.exists()` and then calls `write_atomic`, a tempfile and a rename that replaces any existing file, so both calls pass the check and the second silently overwrites the first's scenario. The owner deferred 023's BE-RACE-003 (MUST) finding here on 2026-11-14; 023's task 25 cites this task
+- [ ] 022's `scenarios/ask-consolidation.md` edge case "`create-scenario` with a slug that already exists" states the exclusive-create mechanism
+- [ ] A test fails under the old exists-then-rename: a file appearing between the check and the write is refused and left as it was, and the test turns red under its mutant
+
+- **Done when**: create-scenario never replaces an existing scenario file, proven by a test its mutant turns red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 34. The session files open through canonical containment (BE-INPUT-004, from 062)
+
+- [ ] Every open of a session file goes through `validate_contained` against the project root, or refuses a symbolic link leaving the project: this process's own target (`own_path`, `sessions_dir(repo).join("{key}.toml")`, from an identity sanitized from `DUCTUS_SESSION` or `CLAUDE_CODE_SESSION_ID`), the shared default `.ductus/session.toml`, and the other sessions' files under `.ductus/sessions/`. Today none of `runtime/src/session.rs`, `write_session.rs`, `resolve_session.rs` or `retarget_sessions.rs` calls `validate_contained`, so a symbolic link there is followed out of the project. The owner deferred 062's BE-INPUT-004 (MUST) finding here on 2026-11-14, since the session core's path containment is 022's; 062's task 29 cites this task
+- [ ] 022's `plan.md` §Path arguments names the session files among the sites that open a path: its lexical-screen bullet covers `write-session`'s and `retarget-sessions`' `path` argument, which they record and never open, and not the session files they read and write
+- [ ] An outward-link test: a `.ductus/sessions/` entry, and the shared default, each a symbolic link to a file outside the project, is refused or left unread rather than followed, and the test turns red under its mutant
+
+- **Done when**: No session file is read or written through a link leaving the project, proven by an outward-link test its mutant turns red; the whole `cargo test` passes; and 022's next review reads the change.
