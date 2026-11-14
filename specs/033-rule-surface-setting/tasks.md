@@ -1,66 +1,7 @@
+---
+next-task: 11
+---
+
 # 033 — Explicit project rule-surface setting Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
-
-## 1. Add `[rules] surfaces` input resolution to the installer
-
-- [x] In `framework/bootstrap/ductus.md` §Collect Project Inputs, add `[rules] surfaces` as a resolved input: read from `.ductus/config.toml` `[rules] surfaces`, else prompt ("backend / frontend / both"), else persist the answer into `.ductus/config.toml` `[rules]` (preserving every other section).
-- [x] Document accepted members `{"backend", "frontend"}`, rejection of `"cross"`, and that unset means "derive / install all".
-- Done when: a first scaffold prompts once and persists `[rules] surfaces`; a routine re-run with the key present prompts nothing.
-
-## 2. Filter installer manifest rule-file entries by surface
-
-- [x] In `framework/bootstrap/ductus.md`, filter the rule-file manifest entries to suffixes matching a configured surface plus every `*-cross.md`, before `apply-manifest`.
-- [x] Ensure omitted (unconfigured-surface) entries are never added to a prune/enforce set — already-installed files for a now-unconfigured surface are left in place.
-- [x] Add the one-line contradiction notice when `surfaces` excludes a surface implied by `[project] languages`.
-- Done when: with `surfaces=["backend"]`, only `*-backend.md` + `*-cross.md` rule files are applied; pre-existing `*-frontend.md` files are not deleted; a contradiction emits one advisory line and still honors the setting.
-
-## 3. Make `/ductus:review` consult `[rules] surfaces`
-
-- [x] In `framework/commands/review.md` §Behavior step 5, read `.ductus/config.toml` `[rules] surfaces`. When set, keep rule files whose surface is in `surfaces` plus every `*-cross.md` and unrecognized-suffix file (replacing the detected-stack filter); when unset, run the detected-stack filter as today. The 025 disabled-files filter runs after, unchanged.
-- [x] Document `[rules] surfaces` in §Inputs alongside `tech-stack-verified` and `disabled-rule-files`.
-- Done when: with `surfaces` set, `/ductus:review` enforces only the configured surface(s) + `-cross`; with it unset, behavior is identical to today.
-
-## 4. Note analyze is unaffected
-
-- [x] In `framework/commands/analyze.md`, add a short note that `[rules] surfaces` scopes `/ductus:review` enforcement only and never prunes the rule-file set `/ductus:analyze` loads for citation resolution.
-- Done when: the note is present and analyze's load-all behavior is documented as independent of `surfaces`.
-
-## 5. Document the setting
-
-- [x] Document `[rules] surfaces` in `README.md` (and any `.ductus/config.toml` reference): accepted values, derive-when-unset fallback, precedence over stack detection.
-- Done when: a reader can configure `[rules] surfaces` from the docs without reading the command sources.
-
-## 6. Resolve cross-spec impact on 024 / 020
-
-- [x] Decision recorded: **no cross-spec edits needed.** The `review.md` change is additive — when `[rules] surfaces` is unset, [024-rule-loader](../024-rule-loader/spec.md)'s stack derivation and [020-code-review](../020-code-review/spec.md)'s behavior are unchanged, so neither spec's claims are falsified. The new `[rules]` `.ductus/config.toml` table is documented in this spec's body per the AGENTS.md ".ductus/config.toml is a shared database — document a new section in the spec that adds it, not in 019" rule; spec 019 needs no signpost.
-- Done when: the decision is recorded (done — additive layering, no change to 024/020/019).
-
-## 7. Validate
-
-- [x] Pre-commit generators regenerate `.claude/commands/ductus/*.md` from the edited `framework/commands/*` sources cleanly.
-- [x] `npx markdownlint-cli2`, `scripts/lint-*.sh`, and `scripts/audit/*` pass (markdownlint, rule-ids, rule-filenames, frontmatter, tool-coverage, procedure-parseability, ssot-invariants, cross-doc-consistency — all green).
-- [x] Run `/ductus:review` over the change set; resolve any MUST findings before `done`. (0 MUST, not blocking; 2 low-confidence quality notes parked — see `review.md`.)
-- Done when: all lints/audits pass and `/ductus:review` reports no blocking violations.
-
-## 8. Specify degenerate `[rules] surfaces` configs (empty list, invalid member)
-
-- [x] Implement the behavior described in `scenarios/degenerate-surfaces-config.md`
-- Done when: `surfaces = []` selects cross-only (distinct from unset = derive); an unrecognized member, a mixed valid/invalid list, and a non-list value all fail fast per `CFG-ENV-008`, naming the offending value and the accepted members. `/ductus` and `/ductus:review` both honor the behavior, the spec's Setting section documents it, and tests cover the empty-list, unknown-member, mixed-list, and wrong-type cases.
-
-## 9. Rule-file review 2026-10-19: correct the analyze/surfaces claim and re-point malformed-config citations
-
-- [x] Correct the Enforcement behavior bullet and the analyze Resolved Question in `spec.md`: `[rules] surfaces` never scopes `/ductus:analyze` (it loads and assesses every rule file in the rule-file directory, per `framework/commands/analyze.md` §Rules and `derive_analyze_seeds` in `runtime/src/interpreter/mod.rs`); it scopes only `/ductus` install/update and `/ductus:review` selection. The Resolved Question carries a dated correction note
-- [x] Re-point the malformed-`surfaces` fail-fast citations in `scenarios/degenerate-surfaces-config.md` and task 8's Done-when from `CFG-ENV-003` (a required value unset or empty) to `CFG-ENV-008` (a present value that fails to parse into its declared type)
-
-- **Done when**: no 033 artifact outside the audit records says analyze's findings are surface-scoped, and every 033 citation for an unrecognized member or non-list `surfaces` value names `CFG-ENV-008`.
-
-## 10. An out-of-surface citation resolves
-
-- [x] Implement the behavior described in `scenarios/an-out-of-surface-citation-resolves.md`
-- [x] Resolve the scenario's open question (which mechanism)
-- [x] Implement the chosen mechanism so a citation to a known rule on an unselected surface raises no blocking finding
-- [x] A test covers a surfaces = ["backend"] project citing FE-XSS-001 with security-frontend.md not installed
-- [x] Amend the acceptance criterion the chosen mechanism changes: AC3 (only surface-matching rule files are installed) if every rule file is installed, or AC7 (citations resolve against the full rule-file set) if they are not
-
-- **Done when**: The scenario's open question is resolved and an out-of-surface citation resolves without a blocking finding when its rule file was never installed.

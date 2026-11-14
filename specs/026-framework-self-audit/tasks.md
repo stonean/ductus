@@ -1,3 +1,7 @@
+---
+next-task: 5
+---
+
 # 026 — Framework self-audit (`/audit`) Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
@@ -40,15 +44,6 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 -->
 
-## 1. Implement scenario: families-follow-the-command-reference-split
-
-- [x] Implement the behavior described in `scenarios/families-follow-the-command-reference-split.md`
-- [x] Families 18 and 28 read `framework/reference/analyze.md` and `framework/reference/audit.md`
-- [x] Family 4 scans `framework/reference/*.md` under the shared-file rule; Family 16 gains its reference arm; Family 39 reports and judges `cross-document` references
-- [x] Each family seen to fail on its seeded defect
-
-- **Done when**: every changed family passes on the tree and has been seen to report each seeded defect (spec 071 tasks 7 and 11).
-
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
 Not blocked on 067 task 14 or 071 task 22: neither changes a file in 026's review scope or its plan's Affected Files, and under 079's AC6 a commit only 067 or 071 claims stays out of that scope, so 026 closes next (owner, 2026-11-10).
@@ -62,33 +57,3 @@ Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse r
 - Planned as a deferral to 071 task 22 and never stored in a record: a cleanup in `framework/bootstrap/ductus.md`, which it holds outside 026's review scope and 071 task 22 owns.
 
 - **Done when**: 026's review and analysis are recorded and not stale, and every criterion is re-verified against the tree
-
-## 3. Implement scenario: family-40-deprecated-rules-are-removed-on-time
-
-- [x] Implement the behavior described in `scenarios/family-40-deprecated-rules-are-removed-on-time.md`
-- [x] `scripts/audit/deprecation-removal.sh`, registered in `scripts/audit/run-all.sh` and listed in `framework/reference/audit.md` and `scripts/audit/README.md` §Scripts
-- [x] `scripts/tests/test-deprecation-removal.sh` shows each case the scenario's last edge case names, and `framework-checks.yml` step (p) runs it
-- [x] The family passes on the tree, its coverage line counting the four labels 077 wrote against `version` 0.59.11
-
-Eight independent re-reads ran on 2026-11-02 and 2026-11-03. The first's findings are fixed in `62814405`, whose message lists them, the second's in the items below, and the third's to eighth's, MUSTs and SHOULDs on test coverage, 067's contract and the label paragraph's end, in the commit that ticks them, whose message lists them and the NOTEs it waived.
-
-- [x] Tests that fail without each behaviour the scenario claims, with any defect they expose fixed: two deprecated rules in one file, both compared; two labels in one section; a `### Notes` heading after a rule ending its section; a rule file that is not UTF-8, giving the parse-failure finding; python3 missing from `PATH`. Until then, `framework/reference/audit.md` item 40's and `scripts/audit/README.md`'s "proves each case" overclaim
-- [x] A target counts only when it starts like a version (`removed in` then an optional backtick and `v?` and a digit), so a label reading "removed in favour of `SEC-X-001`; removed in 0.62.0" names one target, and a label paragraph ends at a line opening with `>` or `**Field:**`, so a Statement after the label is not read as part of it
-- [x] Messages that say what is wrong: an unreadable `version` reports it unreadable; a label opening its line in another form (`**DEPRECATED:**`) says it is not in the form `**DEPRECATED in X.Y.Z:**`; one target named twice says so
-- [x] 067's scenario `deprecation-labels-are-read-by-the-runtime` states the primitive's result per label line, with the rule section it falls in if any, so Family 40's outside-section findings survive the move to the primitive
-- [x] The "mirrors the runtime" claim is made true or bounded: a tab after a rule heading's hashes crashes the parse (`level = atx(line) or 4`, as the runtime defaults to 4); a rule heading nested in another rule's section is read differently; the pathspec becomes `':(glob)framework/rules/*.md'`, as the runtime's discovery does not descend into subdirectories
-- [x] The family rejects a deprecating version that is not MAJOR.MINOR.PATCH (`**DEPRECATED in v0.60:**`), which 008's `data-model.md` Deprecated row does not require, and the deprecating version is never compared. — owner's call: drop the check; or state MAJOR.MINOR.PATCH for `{version}` in 008's row — stated: 008's `data-model.md` Deprecated row reads "`{version}` is the deprecating release as `MAJOR.MINOR.PATCH`", and the family keeps the check, its fix text citing that row (owner, 2026-11-02, option b)
-- [x] Family 40 holds every shipped rule file to the label form 008's `data-model.md` states, but `configuration-cross.md`'s schema, 017's `data-model.md`, restated a Deprecated row that had drifted to "Includes the removal target version", so a CFG label written to it would draw a finding its schema does not explain. Found while fixing the second re-read's items. — owner's call: replace 017's row with a pointer to 008's Deprecated row, as 036 and 077 point at 008's schema; or sync the copy to 008's wording — a pointer: 017's row reads "As the Deprecated row of `specs/008-security-rules/data-model.md`, which states the label's form, its removal target and what holds a release to it." (owner, 2026-11-02, option a)
-- [x] Test T pinned a rule file that is not UTF-8 as failing the whole parse, the expectation the second re-read's item set, while 067's scenario `deprecation-labels-are-read-by-the-runtime` has the replacing primitive report a file it cannot read and count it unexamined, and says Family 40's test passes unchanged against it; the runtime's `read_text` fails on invalid UTF-8 as an I/O error. Found by the fourth re-read. — owner's call: Family 40 treats a non-UTF-8 file as one it cannot read; or keep the whole-parse failure and state it in 067's scenario — an unreadable file: the family reports it "not UTF-8, so its deprecation labels were not examined", does not count it as examined and still compares every other file's labels, test T shows it beside a python3 that fails, and the scenario's edge case, `audit.md` item 40 and the README say so (owner, 2026-11-03, option a)
-- [x] An independent agent re-reads the fix round, re-running both earlier rounds' probes and mutants, repeated until a round finds no MUST or SHOULD. Rounds 3 to 7 each found a MUST, from round 4 on only test-coverage gaps, while the family matched the runtime throughout; 078's spec bounds such a loop at two finding re-reads. — owner's call: repeat until a round is clean; one more round, then stop; or stop now — one more round: round 8 re-reads round 7's fixes, and then the loop stops, the owner deferring or waiving any finding still open (owner, 2026-11-03, option b). Round 8 found two MUSTs, both test-coverage gaps where the family behaved correctly: case F proved the any-case match with a capital R only, and case I's loop asserted no count for its blockquoted, indented and mid-line labels. — owner's call, each: fix as prescribed, defer, or waive — fixed as prescribed: F holds an all-caps and a mixed-case target, and I's loop asserts "1 deprecation label(s) found, 0 compared", each proven by its surviving mutants dying on both trees (owner, 2026-11-03, option a, both). Its six NOTEs are waived, with reasons, in the message of the commit that ticks this item
-
-- **Done when**: Family 40 passes on the tree, its test passes, and the test is seen to fail when the family's comparison is removed (077 task 8, owner, 2026-11-02).
-
-## 4. What the criteria verification found at `d9ae8f60`, corrected before the records
-
-- [x] Criteria verified at `d9ae8f60` by one read-only agent, which read the source and ran `scripts/audit/run-all.sh` once (exit 0) and no test (425 s), its claims checked by the operator: of the 26 criteria (AC25 was retired by `02bda11a` into AC27), 24 hold; AC11 and AC26 are annotated never held as written, Family 9 skipping each command file `runtime/legacy-prose-commands.txt` lists (`1f92d4cc`) and Family 39 judging only `markers` and, since 071, `cross-document` references (`46793ce2`, `1bc3ad64`); AC27, which held, is ticked
-- [x] Body, corrected by fact (owner's delegation, 2026-11-10): Family 9's section names the allowlist, and the Resolved Question on check order says `gen-claude-commands.sh` runs as `--check`, as it did at `1f92d4cc`
-- [x] Scenarios, read whole at `7f5f1f03` by the review's passes and corrected by fact before its records (owner's delegation, 2026-11-10): `family-19-mechanical-sweep-exemption` and `family-19-review-freshness`, whose sha comparison, Affected Files scope, skip, `git` requirement and unresolvable-sha finding `02bda11a` replaced, as 078's review recorded; `family-19-says-what-it-examined`'s AGENTS.md entry, cut by `4eebe91a`; `family-28`'s entry form; and `family-34`'s empty-extraction case, annotated never held as written (`8edc39c4`); task 2's carried waiver and planned deferral, neither of which a record holds
-- [x] Plan, corrected by fact before the analysis (owner's delegation, 2026-11-10): the command's one `run-generator` step over `run-all.sh`, `run-generator`'s drift rule (a non-zero exit alone), each family's design pointed at its criterion's annotation, the release workflow's `audit` step, Family 8's planned heuristic, and two Affected Files purposes
-
-- **Done when**: every criterion holds or carries a true annotation, and no body passage is false about the tree

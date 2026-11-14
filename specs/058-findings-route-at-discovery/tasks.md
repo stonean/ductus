@@ -1,3 +1,7 @@
+---
+next-task: 7
+---
+
 # 058 — Findings route at discovery Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
@@ -40,39 +44,6 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 -->
 
-## 1. Findings cost in proportion to risk
-
-- [x] Implement the behavior described in `scenarios/findings-cost-in-proportion-to-risk.md`
-
-Start with `/ductus:target 058-findings-route-at-discovery/findings-cost-in-proportion-to-risk` and `/ductus:clarify`; the owner pre-authorized the scenario's `Recommended:` answers (2026-10-26). A record's `dispositions:` map does not split its counts by tier, but the gating findings already gate through other checks — an analyze hard-fail or blocking finding keeps `blocking: true` until the re-check no longer produces it, and review MUST and SHOULD violations have their own counts — so read `check-review-gate`'s undispositioned check against that before changing it, and keep every other gate check as is. The constitution text to change is §brownfield-inbox Finding dispositions (the gate bullet) and the §implement-phase outstanding-SHOULD bullet, within the ceiling in `scripts/lint-governing-size.sh` (then the file's exact size), so it removes as many bytes as it adds; `AGENTS.md` (about 3 KB under its 50,000 ceiling) gets the fix-round entry's scope.
-
-- **Done when**: the scenario's described behavior is correctly implemented and tested
-
-## 2. Remove the guidance comment and placeholder from inboxes that kept them
-
-- [x] Add the later `framework/migrations.toml` entry and its `framework/migrations/{id}.md` procedure as the plan's **The later migration** describes, satisfying AC35
-- [x] Verify it and `inbox-guidance-refresh`'s removal branch with a real adopter bootstrap from a subject adopted before 0.53.0, then tick AC22 and AC35
-
-The entry is `strip-inbox-guidance` at 0.60.0, the release that ships it, sorting after `remove-legacy-constitutions-region` on the id tie-break. It must not be pushed without `013-text-first-artifacts` task 25, the fix for `scenarios/the-precheck-ignores-what-the-same-run-wrote.md`, which goes out in the same push: before it, the Frontmatter Migration's precheck refused a tree a Pre-run Migration dirtied under `specs/`, and this entry would put every adopter past 0.53.0 in front of that refusal, a `--ref=main` adopter on the push. A subject adopted before 0.53.0 crosses both inbox entries, and its Pre-run Migrations write under `specs/`, so one bootstrap verifies this task and 013 task 25 together. After this task, 058's review shares `bca9a2fd`'s window with 006's, which `specs/006-bug-workflow/review.md` reviewed in depth at `797799ba`: review only what changed since, per `AGENTS.md`'s entry on one commit reopening several specs.
-
-- **Done when**: a real adopter bootstrap from a pre-0.53.0 subject leaves an inbox with no guidance comment and no placeholder, every other item byte-identical, and a second run writes nothing
-
-## 3. Disposition out-of-spec findings from task 2's real adopter bootstrap
-
-- [x] framework/bootstrap/ductus.md — Shared Files' Shared constitution imports step 1 passes `--unmeasured` to `resolve-constitutions` (055 task 15, `e8ed5d62`), which the pinned 0.59.11 runtime a `--ref=main` run acquires rejects on the CLI (`error: unexpected argument '--unmeasured' found`, exit 2), while its MCP server accepts `unmeasured: true` silently; every `--ref=main` adopter meets it until a release carries the flag (all three subjects, 2026-10-30) — discarded (owner, 2026-10-30, option a): the gap closes when 0.60.0 is tagged and the pin moves to a runtime carrying the flag; running `main`'s procedure against the last release's runtime is how `--ref=main` works for every runtime-dependent change, and a fallback would cost every `--ref=main` adopter a self-update restart to cover a window it would outlive
-- [x] framework/bootstrap/hooks/ductus-pre-commit — the comment naming `{project}/.githooks/ductus-pre-commit` is substituted with the project name on install — discarded: the substituted comment still names the project's own `.githooks/` directory, and nothing reads a comment
-- [x] framework/bootstrap/ductus.md and ductus-procedure.md — ambiguities the hosts named in the pipeline's own machinery — discarded, per AGENTS.md's rule on such observations made while verifying framework work: the walker's placement of the archive-half sections is already `056-bootstrap-archive-boundary-split`'s scenario `the-walker-places-every-archive-half-section`; the Frontmatter Migration's walk matching `specs/templates/spec.md` was discarded before (052's review: the template has frontmatter); State A detection counting another project's `mcp__ductus__*` tools is an artifact of running the bootstrap from this repository's session; no active entry's `sunset_after` falls between 0.59.11 and `main`, so the sunset filter's version on `main` changes nothing; `generator-primitives` and `audit-record-relocate` defining no report line for their normal path, `ln -sf` re-linking an identical pointer, a per-language `.gitignore` 404 reported as a fetch failure, and `cli-config-dir` on the shared `apply-manifest` call change no file a run writes
-
-- **Done when**: each finding is fixed, routed, or discarded, with a discard's reason written on the task
-
-## 4. Close the 076 reopen
-
-076 task 10 reopened this spec `done → in-progress` (`787093ed`) and swept its body, plan, data model and scenarios to fixed / deferred / waived; 076 task 13 (`specs/076-waived-and-deferred-findings-are-distinct-dispositions/tasks.md`) corrected its data model and plan again. After 076's review record is written, review this spec once with its default window (base `1405eacc`), reading only what changed since 076's review plus this spec's own artifacts (AGENTS.md, the shared-window rule), then analyze it and propose `done`. Until it is `done`, the self-audit's Family 7 reports the 058/057 pair, so `framework-checks` stays red.
-
-- [x] Review with the default window, analyze, and close `done` with the owner's approval
-
-- **Done when**: `review.md` and `analysis.md` are current, `check-review-gate` passes, and the owner approved the transition.
-
 ## 5. Close 058 after 079's changes land
 
 This task waits until the changes of `079-review-and-analysis-work-converges` land (owner, 2026-11-04), so it runs under their scope and disposition rules and counts toward that spec's AC20. Since its reopen, `f47d2b03` edited its spec body and one scenario, and 079's commits its spec body, plan, data model and two scenarios; the scenario and data-model edits owe a review.
@@ -82,11 +53,3 @@ It owes `/ductus:review`, `/ductus:analyze` and the completion gate, which run o
 Its criteria were verified at `9ebca7b0` (2026-11-09): 30 hold, AC3, AC11, AC15 and AC25 changed in part, AC23 never held as written, and passages in the spec body, three scenarios (step numbers one lower than the command's) and the data model are false now. The review's passes and the analysis's rule and grounding steps ran there too: 0 MUST and 0 SHOULD, seven observations, one a broken contract — `write-analysis` counts and renders a rule's waiver sent over a person's standing decision while `decisions:` keeps the person's, which `write-review`'s `standing_decision` already prevents — and one blocking rule finding, `BE-PAYLOAD-001` on `process-decisions`, whose bound 066's data model states and 058's artifacts do not point at (its deferral to 066 task 14 has lapsed). The owner delegated closing it as 055 was closed (2026-11-10): fix the broken contract in this spec's review run with a test and a mutant, fix every observation the disposition rule decides, point at 066's bound, correct the false passages by tense or fact, and annotate the changed criteria, all before the review and analysis records; a design change beyond what the code does, a blocking deferral, `done` and a push carrying another session's commits are still asked.
 
 - **Done when**: 058 is `done`
-
-## 6. What the criteria verification, review and analysis found at `9ebca7b0`, closed before the records
-
-- [x] Criteria verified at `9ebca7b0` (one read-only agent): 30 hold; AC3, AC11, AC15 and AC25, changed in part, are annotated superseded in part; AC23 never held as written and is annotated
-- [x] Runtime: `write-analysis` settles a rule's waiver of a finding a person already decided before it counts and renders, as `write-review` does, so the record says one thing (the review's broken contract); test `a_stored_decision_by_a_person_wins_over_the_rule` and mutants M1 and M2 (`scripts/mutation/analysis-standing-decision.py`); its description states the rule
-- [x] Contracts and text: the plan points at 066's bound for `process-decisions` (`BE-PAYLOAD-001`) and corrects `decided-by`'s rule, the unknown-fields claim, `dedup-title`'s match and the `since` and `lapsed` lists; the data model, three scenarios' step numbers and markdown-only edge cases, the findings-cost scenario's re-read rule and measurement, and the spec body are corrected by tense or fact (owner's delegation, 2026-11-10)
-
-- **Done when**: every criterion holds or carries a true annotation, and no contract or body passage is false about the tree
