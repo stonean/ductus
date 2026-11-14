@@ -290,27 +290,27 @@ fn emit_protocol_schema() -> ExitCode {
 
 /// Fill `apply-manifest`'s context-supplied fields from their `--*-json` paths.
 fn hydrate_apply_manifest(args: &mut ApplyManifestArgs) -> Result<(), String> {
-    if let Some(path) = args.entries_json.clone() {
-        args.entries = ductus::primitives::load_cli_json("entries-json", &path)?;
-    }
-    if let Some(path) = args.pinned_json.clone() {
-        args.pinned = ductus::primitives::load_cli_json("pinned-json", &path)?;
-    }
-    if let Some(path) = args.substitutions_json.clone() {
-        args.substitutions = ductus::primitives::load_cli_json("substitutions-json", &path)?;
-    }
-    Ok(())
+    hydrate_field(
+        "entries-json",
+        args.entries_json.as_ref(),
+        &mut args.entries,
+    )?;
+    hydrate_field("pinned-json", args.pinned_json.as_ref(), &mut args.pinned)?;
+    hydrate_field(
+        "substitutions-json",
+        args.substitutions_json.as_ref(),
+        &mut args.substitutions,
+    )
 }
 
 /// Fill `enforce-manifest`'s context-supplied fields from their `--*-json` paths.
 fn hydrate_enforce_manifest(args: &mut EnforceManifestArgs) -> Result<(), String> {
-    if let Some(path) = args.expected_json.clone() {
-        args.expected = ductus::primitives::load_cli_json("expected-json", &path)?;
-    }
-    if let Some(path) = args.pinned_json.clone() {
-        args.pinned = ductus::primitives::load_cli_json("pinned-json", &path)?;
-    }
-    Ok(())
+    hydrate_field(
+        "expected-json",
+        args.expected_json.as_ref(),
+        &mut args.expected,
+    )?;
+    hydrate_field("pinned-json", args.pinned_json.as_ref(), &mut args.pinned)
 }
 
 /// Fill `field` from the file `flag` names, when one was given. The field keeps
@@ -417,22 +417,7 @@ fn hydrate_prune_project(args: &mut PruneProjectArgs) -> Result<(), String> {
 fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
     result: std::result::Result<T, E>,
 ) -> ExitCode {
-    match result {
-        Ok(value) => match serde_json::to_string(&value) {
-            Ok(text) => match write_stdout_line(&text) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(code) => code,
-            },
-            Err(err) => {
-                eprintln!("failed to serialize result: {err}");
-                ExitCode::from(1)
-            }
-        },
-        Err(err) => {
-            eprintln!("{err}");
-            ExitCode::from(1)
-        }
-    }
+    emit_result_gated(result, |_| false)
 }
 
 /// Like [`emit_result`], but maps a successful *domain* outcome to a non-zero

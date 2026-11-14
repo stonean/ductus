@@ -142,8 +142,10 @@ staged_specs="$(printf '%s\n' "$staged_names" \
 staged_md="$(git diff --cached --name-only --diff-filter=ACM \
   | { grep -E '\.md$' || true; })"
 
-# Does the commit stage a generator source? Everything the three generators read
-# is under framework/ or is one of their own scripts.
+# Does the commit stage a generator source? What the three generators render comes
+# from framework/ or their own scripts (gen-help-tables.sh also reads
+# scripts/maintainer-only-commands.txt, but only to decide whether a command may
+# lack a row, so it moves no output and a bad edit fails the scratch run).
 generator_source_staged=0
 if printf '%s\n' "$staged_names" | grep -qE '^(framework/|scripts/gen-)'; then
   generator_source_staged=1

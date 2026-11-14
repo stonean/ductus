@@ -70,7 +70,6 @@ trap '[ -n "${KEEP_WORK:-}" ] || rm -rf "$WORK"' EXIT
 
 g() { local d="$1"; shift; git -C "$d" "$@"; }
 head_has() { g "$1" show "HEAD:$2" | grep -qF -- "$3"; }
-tree_has() { grep -qF -- "$3" "$1/$2"; }
 blob_of() { g "$1" hash-object -- "$2"; }
 
 # A commit through this repository's hook, output kept for a failing case.

@@ -9098,17 +9098,17 @@ mod tests {
         assert_eq!(value["revoke"][0], "Write(.ductus/session.toml)");
         assert_eq!(round_trip(&args), args);
 
-        // A non-Claude host supplies its own settings path; the runtime
-        // does not hardcode `.claude/`.
-        let pi_args = MergePermissionsArgs {
-            path: ".pi/settings.json".into(),
+        // The caller supplies the path; the runtime does not hardcode
+        // `.claude/settings.local.json`.
+        let other_args = MergePermissionsArgs {
+            path: ".claude/settings.json".into(),
             allow: vec![],
             deny: vec![],
             revoke: vec![],
             canonical: false,
         };
-        let v: serde_json::Value = serde_json::to_value(&pi_args).unwrap();
-        assert_eq!(v["path"], ".pi/settings.json");
+        let v: serde_json::Value = serde_json::to_value(&other_args).unwrap();
+        assert_eq!(v["path"], ".claude/settings.json");
 
         let result = MergePermissionsResult {
             path: ".claude/settings.local.json".into(),
@@ -9310,12 +9310,12 @@ mod tests {
         assert_eq!(value["legacy-path"], ".claude/gov-session.json");
         assert_eq!(round_trip(&args), args);
 
-        // Adopter on a non-Claude host or non-`gov` project name:
-        let pi_args = MigrateSessionFileArgs {
-            legacy_path: ".pi/acme-session.json".into(),
+        // Adopter on a non-`gov` project name:
+        let acme_args = MigrateSessionFileArgs {
+            legacy_path: ".claude/acme-session.json".into(),
         };
-        let v: serde_json::Value = serde_json::to_value(&pi_args).unwrap();
-        assert_eq!(v["legacy-path"], ".pi/acme-session.json");
+        let v: serde_json::Value = serde_json::to_value(&acme_args).unwrap();
+        assert_eq!(v["legacy-path"], ".claude/acme-session.json");
 
         let result = MigrateSessionFileResult {
             source: ".claude/gov-session.json".into(),
