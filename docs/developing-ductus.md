@@ -43,7 +43,7 @@ Run unit tests in the dev profile, and rebuild the release binary after any pari
 Gate the commit on every check's exit status, mutants included, in one script: a follow-up that assumes a landing passed records a commit that was never made. A landing takes about 8 minutes, so batch fixes rather than land each.
 
 1. From a worktree of `HEAD` with this checkout's diff applied and its untracked files copied, since a patch carries none, and its own `CARGO_TARGET_DIR`: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, the whole `cargo test`, and each new or re-anchored mutant by id. An uncommitted edit there joins no other session's scope.
-2. Here: `cargo build --release --locked`, since the hook and the audit run that binary, then `framework-checks.yml`'s and `generators.yml`'s steps.
+2. Here: `cargo build --release --locked`, since the hook and the audit run that binary, then `framework-checks.yml`'s and `generators.yml`'s steps: `python3 -I scripts/run-workflow-steps.py .github/workflows/framework-checks.yml .github/workflows/generators.yml`. Its generator-diff step reads this uncommitted tree, so before a commit it fails by construction.
 3. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
 4. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
 

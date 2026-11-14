@@ -289,6 +289,13 @@ jobs:
           fi
           echo "$checked mutation lists checked"
 
+      # (v) The local command that runs these workflows' steps (spec 079,
+      # task 38) reports each step from its own exit status, never a skipped
+      # or unparsed step as a pass. Its test runs here, beside the other
+      # script tests, and fails on each case it claims to catch.
+      - name: (v) Workflow-step runner reports each step's own status
+        run: bash scripts/tests/test-run-workflow-steps.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
