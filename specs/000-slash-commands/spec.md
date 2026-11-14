@@ -70,7 +70,7 @@ Pipeline commands reference spec templates from the project's `specs/templates/`
 
 ## Acceptance Criteria
 
-- [x] AC1: Ten command template files exist in the command-source directory. **Never held exactly as written.** The first commit's `commands/` directory held thirteen files: nine of the ten this spec named, plus `create`, `question`, `scenario` and `triage`. The tenth, `next`, was never written — no commit in this repository contains a `next.md`. The directory is now `framework/commands/`, and the set is the **Slash commands** manifest in `framework/bootstrap/ductus.md`
+- [x] AC1: Ten command template files exist in the command-source directory. **Never held exactly as written.** The first commit to add `commands/`, `2c838b20`, held thirteen files there: nine of the ten this spec named, plus `create`, `question`, `scenario` and `triage`. The tenth, `next`, was never written — no commit in this repository contains a `next.md` (`git log --all -- '*next.md'` is empty). The directory is now `framework/commands/`, and the set is the **Slash commands** manifest in `framework/bootstrap/ductus.md`
 - [x] AC2: Each template uses `{project}` as the only project-specific placeholder — **delivered, then widened by `012-multi-agent-govern`**: the generator substitutes a second one, `{cli-config-dir}`, so the command set can target more than one AI CLI. The single-placeholder property held as delivered; §Parameterization records both.
 - [x] AC3: Pipeline commands (specify, clarify, plan, implement) enforce gates matching the constitution's spec lifecycle
 - [x] AC4: The `help` command prints a self-contained guide without reading any files

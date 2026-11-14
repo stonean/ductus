@@ -33,9 +33,13 @@ Each command is based on the corresponding command in that project with these tr
 - Keep constitution references (pipeline gates, readiness check, spec lifecycle)
 - Keep AGENTS.md references (conventions, boundaries) as generic pointers
 
+Rationale: every adopter installs these commands, and spec.md §Parameterization requires each to work for any project, so a name, path or convention of one project is wrong in every other; the pipeline references hold for every adopter, so they stay.
+
 ### Analyze and markdownlint
 
 `/{project}:analyze` lints every markdown file in the feature directory through `lint-markdown`, which runs `markdownlint-cli2`, and reports each violation as an advisory finding.
+
+Rationale: lint compliance is a quality gate the constitution defines (§markdown-standards; spec.md Resolved Questions, *Analyze and markdown lint*). A violation is advisory here because the hard-fail and blocking tiers of §text-first-artifacts (Validation Severity) name malformed and inconsistent artifacts, and the pre-done gate, `check-review-gate`, lints the feature directory and holds `done` on a violation itself.
 
 ### A `done` stop says the request is not built
 
@@ -43,7 +47,7 @@ The message shape is one bullet in the constitution's §spec-lifecycle, which ev
 
 ### `/amend`'s criterion route writes with host tools, not a primitive
 
-No runtime primitive appends an acceptance criterion, and none is added. The route is a classifier signal plus four steps in `framework/commands/amend.md`: a normalized-whitespace duplicate check by the host (the check the question route's preview already makes), the host appending `- [ ] {text}` to `## Acceptance Criteria` (creating the section in template order when missing), `label-criteria` for the label, and `set-status` for the `done` back-edge. The label, the counter and the status are the primitives' writes; the append is one unlabelled list item, which a primitive would only restate. A `draft` spec is refused, since `/{project}:clarify` owns criteria there (owner, 2026-11-12).
+No runtime primitive in `framework/runtime-tools.txt` appends an acceptance criterion, and none is added. The route is a classifier signal plus four steps in `framework/commands/amend.md`: a normalized-whitespace duplicate check by the host (the check the question route's preview already makes), the host appending `- [ ] {text}` to `## Acceptance Criteria` (creating the section in template order when missing), `label-criteria` for the label, and `set-status` for the `done` back-edge. The label, the counter and the status are the primitives' writes; the append is one unlabelled list item, which a primitive would only restate. A `draft` spec is refused, since `/{project}:clarify` owns criteria there (owner, 2026-11-12).
 
 ### `/target` names the completion gate's next step from `check-review-gate`
 
@@ -71,7 +75,7 @@ Rejected. Each command needs enough instruction detail that a single file would 
 
 ### Considered: using a different placeholder syntax (e.g., `{{project}}`, `$PROJECT`)
 
-Rejected. `{project}` is simple and readable in markdown. The decision rested on a second premise as well — that curly braces are not used in the constitution or template content — and that one no longer holds: the brace form became the corpus-wide placeholder convention, so the constitution now carries 57 of them across nine names and `framework/templates/spec/spec.md` six. The decision stands on that consistency rather than on the scarcity it was argued from.
+Rejected. `{project}` is simple and readable in markdown. The decision rested on a second premise as well — that curly braces are not used in the constitution or template content — and that one no longer holds: the brace form became the corpus-wide placeholder convention, so the constitution and `framework/templates/spec/spec.md` both carry them. The decision stands on that consistency rather than on the scarcity it was argued from.
 
 ## Open Questions Resolved
 

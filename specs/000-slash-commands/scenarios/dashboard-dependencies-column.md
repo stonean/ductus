@@ -27,7 +27,7 @@ The table render, which lives in the pipeline view `render-status` renders since
 
 2. **Replace the `>>` row-prefix marker** with one that survives markdown renderers. Wrap the target row's Feature cell in `**…**` (bold) — e.g., `| **022-deterministic-runtime** | ... |`. Bold is a well-supported inline span that does not interact with table-cell parsing the way a leading `>>` does. When no session target is set (`dashboard` returns no `session-target`), no row is bolded.
 
-Both are in the pipeline view (`runtime/src/primitives/pipeline_view.rs`); the data is in `dashboard`'s payload.
+Both are in the pipeline view (`runtime/src/primitives/pipeline_view.rs`); the data is in `dashboard`'s payload. The column adds no bound of its own: `render-status`'s whole result, the table and every Dependencies cell with it, is held to `[artifacts] read-size-bytes`, with the whole view in its `lists-file` past it, and `dashboard` moves `specs[]` to its `lists-file` the same way (`specs/080-deterministic-runtime-efficiency/data-model.md` §The pipeline view, *Bound*, and §Bounded results).
 
 ## Edge Cases
 
