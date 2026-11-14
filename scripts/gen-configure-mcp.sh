@@ -78,7 +78,7 @@ fi
 claude_block_file="$(mktemp)"; cleanup_files+=("$claude_block_file")
 
 tool_count=0
-while IFS= read -r tool; do
+while IFS= read -r tool || [ -n "$tool" ]; do
   case "$tool" in
     ''|'#'*) continue ;;
   esac
@@ -144,7 +144,7 @@ splice() {
   ' "$file"
 }
 
-# Process each file. Compare against the source; rewrite or report.
+# Process the configure file. Compare against the source; rewrite or report.
 # `out` is mktemp'd and registered for trap cleanup; the happy path
 # either `mv`s it onto $file (consuming the temp) or leaves it to the
 # trap.

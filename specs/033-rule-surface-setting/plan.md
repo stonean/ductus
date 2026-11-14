@@ -4,7 +4,7 @@ Implements [033 — Explicit project rule-surface setting](spec.md).
 
 ## Overview
 
-A markdown-tier change — no runtime code. The feature threads one new `.ductus/config.toml` setting, `[rules] surfaces`, through the two places that already act on rule-file surface:
+The feature threads one new `.ductus/config.toml` setting, `[rules] surfaces`, through the two places that already act on rule-file surface, and a runtime primitive resolves the citations the setting leaves unresolved (the Technical Decision on `/ductus:analyze` and citation resolution):
 
 1. **`framework/bootstrap/ductus.md`** (the installer) — resolve `[rules] surfaces` as a project input (prompt when unset, persist), then filter the host-built rule-file manifest entries by the configured surface(s) before `apply-manifest` runs.
 2. **`framework/commands/review.md`** (the `/ductus:review` loader, spec 024) — consult `[rules] surfaces` in `framework/reference/review.md` §Resolve target and scope item 5; when set, it replaces the detected-stack filter; when unset, stack derivation remains the fallback.
@@ -56,10 +56,11 @@ surfaces = ["backend"]   # list; members ∈ {"backend", "frontend"}; full-stack
 | --- | --- | --- |
 | `framework/bootstrap/ductus.md` | Modify | Resolve/prompt/persist `[rules] surfaces`; filter manifest rule-file entries by surface (+ always `-cross`); contradiction notice |
 | `framework/commands/review.md` | Modify | `framework/reference/review.md` §Resolve target and scope item 5 consults `[rules] surfaces` (replaces stack filter when set, falls back when unset); §Inputs documents the setting |
-| `framework/commands/analyze.md` | Modify | Note that `surfaces` scopes review enforcement only, not analyze citation resolution |
+| `framework/reference/analyze.md` | Modify | Note that `surfaces` scopes review enforcement only, not analyze citation resolution |
+| `runtime/src/primitives/check_rule_ids.rs` | Modify | The not-installed state, read from the compiled index |
+| `runtime/src/primitives/shipped_rule_ids.txt` | Create | The index of the shipped rule IDs |
+| `runtime/src/interpreter/analyze_tally.rs` | Modify | Record `rule-not-installed` unexamined |
 | `README.md` | Modify | Document the `[rules] surfaces` setting and its precedence |
-| `specs/024-rule-loader/spec.md` | Possibly modify | Cross-spec impact — see below (additive; may not require a change) |
-| `specs/020-code-review/spec.md` | Possibly modify | Cross-spec impact — see below |
 
 `.claude/commands/ductus/*.md` regenerate from the `framework/commands/*` sources via the pre-commit hook — not edited by hand.
 
@@ -73,4 +74,4 @@ surfaces = ["backend"]   # list; members ∈ {"backend", "frontend"}; full-stack
 
 ## Cross-spec impact
 
-The implementation edits `framework/commands/review.md` (conceptually owned by [020-code-review](../020-code-review/spec.md) and [024-rule-loader](../024-rule-loader/spec.md)) and `framework/bootstrap/ductus.md`. The design is **additive**: when `[rules] surfaces` is unset, 024's stack derivation and 020's review behavior are byte-for-byte unchanged. Because 033 layers a new source ahead of an unchanged fallback rather than altering the existing contracts, 024/020 likely do not need a spec edit — but the surface-aware step is a behavior 024 describes, so the final call (a new acceptance criterion or scenario on 024 with a back-link to 033 vs. no change) is made at implement time once the exact `review.md` edit is written. This note is informational and does not block the transition.
+The implementation edits `framework/commands/review.md` (conceptually owned by [020-code-review](../020-code-review/spec.md) and [024-rule-loader](../024-rule-loader/spec.md)) and `framework/bootstrap/ductus.md`. The design is **additive**: when `[rules] surfaces` is unset, 024's stack derivation and 020's review behavior are byte-for-byte unchanged. Because 033 layers a new source ahead of an unchanged fallback rather than altering the existing contracts, neither 024 nor 020 was edited, and neither carries a back-link to 033. The cross-spec impact that holds is 067's, through `cross-spec-impact:` and its signpost.

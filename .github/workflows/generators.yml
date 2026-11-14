@@ -43,8 +43,9 @@ jobs:
           toolchain: 1.100.0
           components: clippy, rustfmt
       # Keyed on what the binary is compiled from, so an unchanged runtime
-      # restores a build of exactly these sources (spec 081). runtime/src holds
-      # no include_str! or include_bytes!, and the crate has no build.rs.
+      # restores a build of exactly these sources (spec 081). runtime/src holds one
+      # include_str!, of a file under runtime/src that the key hashes, no
+      # include_bytes!, and the crate has no build.rs.
       - id: runtime-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

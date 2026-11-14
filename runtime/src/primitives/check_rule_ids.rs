@@ -771,12 +771,6 @@ mod tests {
     fn an_out_of_surface_citation_is_not_installed_rather_than_missing() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        std::fs::create_dir_all(root.join(".ductus")).unwrap();
-        std::fs::write(
-            root.join(".ductus/config.toml"),
-            "[rules]\nsurfaces = [\"backend\"]\n",
-        )
-        .unwrap();
         std::fs::create_dir_all(root.join("specs/rules")).unwrap();
         std::fs::write(
             root.join("specs/rules/security-backend.md"),
@@ -804,11 +798,28 @@ mod tests {
         assert!(!citation(&result, "FE-NOPE-999").not_installed);
     }
 
-    /// A shipped rule whose file is installed is found, not not-installed.
+    /// A shipped rule whose file is installed is found, not not-installed:
+    /// the loaded files decide before the shipped index does, so only the
+    /// shipped rule no given file defines is not installed.
     #[test]
     fn an_installed_shipped_rule_is_found() {
-        let result = run_on("spec.md", "BE-LIVE-001 and FE-XSS-001.\n");
-        assert!(citation(&result, "BE-LIVE-001").found);
-        assert_eq!(result.not_installed, vec!["FE-XSS-001".to_string()]);
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("spec.md"), "FE-XSS-001 and FE-XSS-002.\n").unwrap();
+        std::fs::write(
+            tmp.path().join("rules.md"),
+            "### FE-XSS-001\n\n> Escaped.\n",
+        )
+        .unwrap();
+        let result = run(
+            &CheckRuleIdsArgs {
+                path: "spec.md".into(),
+                rule_files: vec!["rules.md".into()],
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let installed = citation(&result, "FE-XSS-001");
+        assert!(installed.found && !installed.not_installed);
+        assert_eq!(result.not_installed, vec!["FE-XSS-002".to_string()]);
     }
 }

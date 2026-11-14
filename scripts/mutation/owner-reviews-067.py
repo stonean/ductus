@@ -8,7 +8,8 @@ bound that moves `derive-dependencies`' `unwritable` past the read size, the
 exec analyze tally's step 6, `check-artifacts`' status-gated path families
 and `gitignored` skip, and `validate-frontmatter`'s row chosen by path, and `resolve-anchor`'s judgment of
 qualified, registered and span references with the exec tally's unjudged
-counts, and `check-artifacts`' unreadable `plan.md` under `plan-consistency`.
+counts, `check-artifacts`' unreadable `plan.md` under `plan-consistency`, and
+`check-rule-ids`' loaded files deciding before its shipped index.
 
 Each mutation removes the behavior one new or strengthened unit test names,
 and its filter selects that test (and, where two tests share the behavior,
@@ -680,5 +681,12 @@ MUTATIONS = [
         '        Err(_) => {\n            record_unreadable_artifact(findings, skipped, "plan-consistency", status, path);\n            return;\n        }',
         '        Err(_) => return,',
         'an_unreadable_plan',
+    ),
+    (
+        'M92 the shipped index decides before the loaded rule files (033 review, QUAL-TEST-001)',
+        'src/primitives/check_rule_ids.rs',
+        '        match known.get(&id).copied() {',
+        '        match (if shipped_rule_ids().contains(id.as_str()) { None } else { known.get(&id).copied() }) {',
+        'an_installed_shipped_rule_is_found',
     ),
 ]

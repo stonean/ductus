@@ -8,6 +8,8 @@
 #   E. a configure file whose markers are swapped or repeated is refused for
 #      that reason and left byte-identical (the splice would drop every line
 #      after a misplaced start, or between two starts)
+#   F. a runtime-tools.txt whose last line has no trailing newline still puts
+#      that last tool in the block (QUAL-CLAIM-001, from 033's review)
 #
 # Usage: scripts/tests/test-gen-configure-mcp.sh
 
@@ -81,6 +83,19 @@ for case_name in swapped repeated; do
     pass "E: a $case_name marker is refused and the file left as it was"
   fi
 done
+
+# F. an unterminated last line: the scratch copy's tools file without its
+# trailing newline must still yield the block claude.md holds, so --dry-run
+# stays in sync. A loop that drops the line reports drift instead.
+cp "$CLAUDE" "$scratch/framework/bootstrap/configure/"
+printf '%s' "$(cat "$REPO_ROOT/framework/runtime-tools.txt")" > "$scratch/framework/runtime-tools.txt"
+if [ "$(tail -c 1 "$scratch/framework/runtime-tools.txt" | od -An -c | tr -d ' ')" = '\n' ]; then
+  fail "F: the scratch tools file still ends in a newline, so the case proves nothing"
+elif "$scratch/scripts/gen-configure-mcp.sh" --dry-run >/dev/null 2>&1; then
+  pass "F: a tools file with no trailing newline keeps its last tool"
+else
+  fail "F: a tools file with no trailing newline drops its last tool from the block"
+fi
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures test(s) failed" >&2
