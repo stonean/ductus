@@ -14,7 +14,7 @@ Waiting on a task that session `3fd29c6a` adds on another spec (the owner routes
 
 - add to the plan's Technical Decision "Command files" the rationale the owner approved (2026-11-14): a host read would keep every command on the shared default, since only the runtime can read a process's identity (the first decision; the spec's §Process identity), and `fold` and `consolidate` remove a spec directory, so each must re-target or clear every session naming it, which only `retarget-sessions` reaches (AC21; §Removal strands no process);
 - add a plan sentence naming the deferral's task;
-- judge all 310 rules and run the step-15 pass after both edits, since a fix to a design subject is judged again (owner, 2026-11-14), briefing judge A that `BE-INPUT-004` is a MUST finding deferred to that task;
+- judge all 310 rules and run the step-15 pass once, after both edits, since a fix to a design subject is judged again (owner, 2026-11-14), briefing judge A that `BE-INPUT-004` is a MUST finding deferred to that task; a finding that run raises on text no edit touched goes to the owner, not to another run (owner, 2026-11-14);
 - record "Command files" fixed and `BE-INPUT-004` deferred, `decided-by` the owner.
 
 A design change beyond what the code does, a blocking deferral, `done` and a push carrying another session's commits are the owner's to decide (2026-11-10).
