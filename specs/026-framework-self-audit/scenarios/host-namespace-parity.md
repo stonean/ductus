@@ -14,7 +14,7 @@ It went unnoticed for a long time because nothing compares them. A repo whose re
 
 ## Behavior
 
-A new `/ductus:audit` check family — **host namespace parity** — resolves the effective host namespace exactly as `Host::load` does (`[host] project` from `.ductus/config.toml`, falling back to the repo directory basename) and compares it against the slash-command namespace directories actually installed under each agent config directory present in the repo (`{cli-config-dir}/commands/<ns>/`).
+A new `/ductus:audit` check family — **host namespace parity** — resolves the effective host namespace exactly as `Host::load` does (`[host] project` from `.ductus/config.toml`, falling back to the repo directory basename) and compares it against the slash-command namespace directories actually installed under each agent config directory present in the repo (`{cli-config-dir}/commands/<ns>/`), or, for pi, the namespace prefix of its flat prompt templates (`{config_dir}/prompts/<ns>-<command>.md`, spec 064).
 
 A mismatch is a finding that names both values and the fix — the one-block `[host]` / `project = "<ns>"` addition — so the maintainer does not have to rediscover the fallback rule to act on it.
 

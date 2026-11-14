@@ -49,7 +49,7 @@ The first two are runtime primitives, so `scripts/audit/check-zero.sh` builds th
 
 Any non-zero exit produces a `check-zero` finding pointing at the failing script. When check-zero fails, the family checks are skipped — running them against known-stale generator output produces misleading findings. Exit code is `1`; stdout makes the cause unambiguous.
 
-Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `framework-checks.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment) doesn't catch this — Family 1c (cross-doc claim consistency) could be extended to verify the two lists agree, but that's a follow-on enhancement, not v1 scope.
+Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `framework-checks.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment) doesn't catch this — a Family 1d sub-check could verify the two lists agree, but that's a follow-on enhancement, not v1 scope (see Known limitation: new generators require manual update in two places).
 
 ### Per-family script designs
 

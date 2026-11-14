@@ -12,7 +12,7 @@ An adopter ran it by hand over its installed `.claude/commands/ductus.md` agains
 
 ## Behavior
 
-A `/{project}:audit` family runs `resolve-anchor --markers-path framework/constitution.md` over every tracked markdown file under `framework/` and reports each unresolved reference at `file:line`, naming its anchor.
+A `/{project}:audit` family runs `resolve-anchor --markers-path framework/constitution.md` over every tracked markdown file under `framework/`, and every spec's `spec.md`, `plan.md` and scenarios (067's `shared-constitution-references-are-judged`), and reports each unresolved reference at `file:line`, naming its anchor.
 
 - **The subject is `framework/`, whole, enumerated from git.** Every file under it ships in the release archive a `/ductus` run extracts, and the installed ones — the bootstrap, the command sources, the rule files, the templates, the constitution itself — are a subset. Enumerating from `git ls-files` rather than the manifest keeps the archive-half files in scope, `ductus-procedure.md` and the migration bodies, which a host reads during a run without installing; they carried fourteen and six of the references that did not resolve. `govern.md` is included although Family 21 holds it byte-identical to `ductus.md`: pre-rename installs still fetch it, so it ships in its own right, and a defect in the pair reported twice is accurate.
 - **The check is the primitive and this is the entry point**, the Family 30 shape. A second resolver here would drift from the one an adopter runs, and the report this family answers is about that one.
@@ -21,8 +21,8 @@ A `/{project}:audit` family runs `resolve-anchor --markers-path framework/consti
 
 ## Edge Cases
 
-- **An unreachable runtime, an empty enumeration, and a file whose result could not be read or parsed** are each findings. The first two examined nothing and the third did not examine that file; none may exit like a clean run.
-- **Every run reports its coverage on stderr** — files examined, `§` references found, and how many resolved as qualified, intra-document, and constitution markers — so a clean exit says what it looked at.
+- **An unreachable runtime, an empty enumeration, and a file whose result could not be read or parsed** are each findings, as are an unresolved `qualified` reference and one naming a document that exists but could not be read. The first two examined nothing and the third did not examine that file; none may exit like a clean run.
+- **Every run reports its coverage on stderr** — files examined, `§` references found, and how many were constitution markers, cross-document, intra-document and qualified, how many it could not judge by construction, and how many name an unreadable document — so a clean exit says what it looked at.
 - **What it does not catch, stated rather than implied.** What the check cannot catch is what `resolve-anchor`'s compiled description says it cannot judge (its `unjudged` reasons), plus two consequences of its `qualified` kind that it does not spell out: a line naming any `.md` qualifies every `§` on it, a genuine constitution citation included; and a reference meant for another file resolves against a same-named heading in the citing file, which `qualified` judges against — `ductus.md`'s `§Inputs` beside `/ductus:review` did until `f8db885a` named `review.md` on that line. These are the primitive's classification rules (067's AC2), and the family inherits them.
 - **No exemption marker.** A sanctioned way to silence one reference is a hiding place, the reason 046 refused a grandfather rule for scenario questions, and every reference the corpus carries today resolves without one.
 - **Generated command copies are not a subject.** They sit outside `framework/`, and their repair is their source.
