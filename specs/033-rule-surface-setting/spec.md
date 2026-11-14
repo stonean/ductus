@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [017-derive-dont-ask, 020-code-review, 024-rule-loader, 025-rule-opt-out]
 next-criterion: 11
 cross-spec-impact: [067-analyze-and-audit-checks]
