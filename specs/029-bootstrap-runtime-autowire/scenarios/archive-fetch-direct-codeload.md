@@ -10,12 +10,7 @@ section: "Follow-on scenarios"
 
 ## Behavior
 
-The §Archive fetch and extract step in `framework/bootstrap/ductus.md` fetches the **direct `codeload.github.com` endpoint** — the redirect target — instead of the `github.com/.../archive/...` form:
-
-```text
-curl -fsSL "https://codeload.github.com/${DUCTUS_REPO:-stonean/ductus}/tar.gz/{archive-ref}" \
-  -o {tempdir}/framework.tar.gz
-```
+The §Archive fetch and extract step in `framework/bootstrap/ductus.md` fetches the **direct `codeload.github.com` endpoint** — the redirect target — instead of the `github.com/.../archive/...` form: one `curl` of `https://codeload.github.com/${DUCTUS_REPO:-stonean/ductus}/tar.gz/{archive-ref}`, with the HTTPS-only and timeout flags that section gives it.
 
 The direct URL returns the archive with no redirect (HTTP 200, zero redirects), so one `curl` fetches it: an allow a project grants itself covers it, and since 022's task 18 question 2 Claude's seed grants no `curl` (it can write anywhere with `-o`), so in Manual mode it is one prompt rather than two. The tarball is byte-equivalent to the redirect form's: the same top-level directory, which the bootstrap reads back from the extraction as `{framework-root}`, and the same `{framework-root}/framework/...` layout. Extraction and per-file resolution are unchanged.
 

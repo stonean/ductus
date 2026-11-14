@@ -28,7 +28,7 @@ A second, spot reinforcement is added at the top of `framework/bootstrap/ductus.
 - **A step with no primitive.** Stays shell in State A (gitignore curl, git config, chmod, repo checks, input prompts). The contract lists these so the model neither shells a primitive step nor invents a tool for a non-primitive one.
 - **Mixed run.** A single run legitimately interleaves tool calls (primitive steps) and shell (non-primitive steps); that is correct, not a contract violation.
 - **Primitive missing from inventory mid-run.** Treated like a call that cannot run — that step falls back to its shell spec; the rest of the run stays on tools.
-- **A refusal and an inability to run look alike to a host that reads only success or failure.** Neither an MCP tool error nor a CLI error carries a code, so the host tells them apart by the error's text, and for `extract-archive` by name: a refusal of the archive's content is `unsafe archive entry path: …`, a symbolic link that resolves outside the staging directory, or the extract cap on entries or bytes; an I/O or format error, or one about the call's own paths, means the call could not run.
+- **A refusal and an inability to run look alike to a host that reads only success or failure.** Neither an MCP tool error nor a CLI error carries a code, so the host tells them apart by the error's text, and for `extract-archive` by name: a refusal of the archive's content is `unsafe archive entry path: …`, a symbolic link that resolves outside the staging directory, or the extract cap on entries or bytes; an I/O or format error, or one about the call's own paths, means the call could not run, except that the extract cap's refusal arrives as an I/O error naming the cap, and is a refusal.
 
 ## Open Questions
 
