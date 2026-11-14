@@ -1,5 +1,5 @@
 ---
-next-task: 32
+next-task: 33
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -13,3 +13,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test proves an unreadable `plan.md` is named, failing under its mutant, and `framework-checks.yml` step (u) passes
 
 - **Done when**: A planned spec whose `plan.md` cannot be read no longer reads clean under `plan-consistency`, proven by a test its mutant turns red; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 32. derive-references' result is bounded (BE-PAYLOAD-001, from 017's analysis)
+
+- [ ] Implement the behavior described in `scenarios/derive-references-results-are-bounded.md`
+- [ ] `derive-references` goes through `bounded_lists::place` as `derive-dependencies` does (a whole derivation the CLI gates and reports on, and its bound): `updated`, `unwritten`, `untracked-skipped`, `absent`, `unparseable` and `unwritable` move to the file `lists-file` names past `[artifacts] read-size-bytes`, each with its count inline. The owner placed 017's analysis finding here on 2026-11-14, and 017's scenario `generator-sync-claim-honesty` points at this one
+- [ ] `DERIVE_REFERENCES`' description and 067's data model, §`derive-dependencies` / `derive-references`, state the bound; whether 080's §Bounded results table gains a row, which reopens 080 for an analysis, is the owner's decision when that line is written
+- [ ] A test proves the inline form under the read size and the file form past it, and the CLI's non-zero exit on an `unwritable` spec moved to the file, each failing under its mutant, and `framework-checks.yml` step (u) passes
+
+- **Done when**: derive-references' lists return inline, or in a lists-file past the read size, with the CLI still failing on an unwritable spec, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
