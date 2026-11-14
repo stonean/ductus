@@ -35,7 +35,9 @@
 //! left for the next reader to discover the way this one was.
 //!
 //! **Subject**: files under `runtime/src/primitives/` that call
-//! `write_atomic(` — the text writer. `write_atomic_bytes` is deliberately
+//! `write_atomic(` or `write_new_atomic(` — the text writers, the second
+//! creating a file only where none exists (spec 022, task 33).
+//! `write_atomic_bytes` is deliberately
 //! out of scope: its callers copy bytes (template installs, archive
 //! extraction), and bytes are preserved by construction.
 //!
@@ -155,7 +157,7 @@ fn every_text_writer_accounts_for_line_endings() {
         examined.push(name.clone());
         let source = fs::read_to_string(path).unwrap();
         let body = without_test_module(&source);
-        if !body.contains("write_atomic(") {
+        if !writes_text(body) {
             continue;
         }
         writers.push(name.clone());
@@ -188,6 +190,12 @@ fn every_text_writer_accounts_for_line_endings() {
     );
 }
 
+/// Whether `body` calls one of the text writers: `write_atomic`, or
+/// `write_new_atomic`, which creates a file only where none exists.
+fn writes_text(body: &str) -> bool {
+    body.contains("write_atomic(") || body.contains("write_new_atomic(")
+}
+
 /// An `EXEMPT` entry naming a file that no longer writes text is stale — it
 /// would silently keep exempting a name that a later refactor could reuse.
 #[test]
@@ -198,7 +206,7 @@ fn no_exemption_outlives_its_writer() {
         assert!(path.is_file(), "EXEMPT names {name}, which does not exist");
         let source = fs::read_to_string(&path).unwrap();
         assert!(
-            without_test_module(&source).contains("write_atomic("),
+            writes_text(without_test_module(&source)),
             "EXEMPT still lists {name} ({reason}), but it no longer writes text — drop the entry"
         );
         assert!(

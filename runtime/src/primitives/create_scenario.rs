@@ -4,12 +4,13 @@
 //! `/amend`'s scenario branch): writes a single file with `section` frontmatter
 //! and prose body sections atomically via tempfile + rename, creating the
 //! `scenarios/` subdirectory when absent. Refuses to overwrite an existing
-//! scenario.
+//! scenario, exclusively: the rename never replaces a file, so of two calls
+//! racing on one slug exactly one writes (BE-RACE-003; spec 022, task 33).
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use crate::primitives::{PrimitiveError, Result, rel_path, validate_slug, write_atomic};
+use crate::primitives::{PrimitiveError, Result, rel_path, validate_slug, write_new_atomic};
 use crate::schema::primitives::{CreateScenarioArgs, CreateScenarioResult};
 
 /// Execute the `create-scenario` primitive.
@@ -17,7 +18,9 @@ use crate::schema::primitives::{CreateScenarioArgs, CreateScenarioResult};
 /// `args.feature_path` is resolved relative to `repo`. The scenario file lands
 /// at `{repo}/{feature_path}/scenarios/{slug}.md`. The atomic write pattern
 /// leaves the destination unchanged on a crash mid-write; the orphaned
-/// tempfile is the only recovery artifact.
+/// tempfile is the only recovery artifact. The write is also exclusive
+/// ([`write_new_atomic`]): a file already at the destination, including one
+/// another call created after this one began, is refused and left as it is.
 ///
 /// # Errors
 ///
@@ -40,12 +43,10 @@ pub fn run(args: &CreateScenarioArgs, repo: &Path) -> Result<CreateScenarioResul
 
     let scenarios_dir = feature_dir.join("scenarios");
     let dest = scenarios_dir.join(format!("{}.md", args.slug));
-    if dest.exists() {
-        return Err(PrimitiveError::ScenarioConflict { path: dest.clone() });
-    }
-
     let body = render(args);
-    write_atomic(&dest, &body)?;
+    if !write_new_atomic(&dest, &body)? {
+        return Err(PrimitiveError::ScenarioConflict { path: dest });
+    }
     Ok(CreateScenarioResult {
         created: rel_path(&dest, repo),
     })
@@ -188,6 +189,51 @@ mod tests {
             }
             other => panic!("expected ScenarioConflict, got {other:?}"),
         }
+    }
+
+    /// A scenario that appears after a call began is never replaced: the
+    /// create is exclusive, so of many calls racing on one slug exactly one
+    /// writes and every other is refused, the file holding the winner's body.
+    /// An exists-then-rename lets every racer through, each replacing the last
+    /// (BE-RACE-003; spec 022, task 33).
+    #[test]
+    fn calls_racing_on_one_slug_create_it_once() {
+        use std::sync::{Arc, Barrier};
+        let tmp = tempdir().unwrap();
+        make_feature(tmp.path(), "specs/042-foo");
+        let racers = 16;
+        let barrier = Arc::new(Barrier::new(racers));
+        let repo = Arc::new(tmp.path().to_path_buf());
+        let handles: Vec<_> = (0..racers)
+            .map(|n| {
+                let barrier = Arc::clone(&barrier);
+                let repo = Arc::clone(&repo);
+                std::thread::spawn(move || {
+                    let mut a = args("specs/042-foo", "raced", None);
+                    a.section = format!("Racer {n}");
+                    barrier.wait();
+                    (n, run(&a, &repo))
+                })
+            })
+            .collect();
+        let outcomes: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+        let winners: Vec<usize> = outcomes
+            .iter()
+            .filter(|(_, r)| r.is_ok())
+            .map(|(n, _)| *n)
+            .collect();
+        assert_eq!(winners.len(), 1, "exactly one call creates the scenario");
+        for (_, outcome) in outcomes.iter().filter(|(_, r)| r.is_err()) {
+            assert!(
+                matches!(outcome, Err(PrimitiveError::ScenarioConflict { .. })),
+                "{outcome:?}"
+            );
+        }
+        let text = fs::read_to_string(tmp.path().join("specs/042-foo/scenarios/raced.md")).unwrap();
+        assert!(
+            text.contains(&format!("section: \"Racer {}\"", winners[0])),
+            "the file holds the winner's body: {text}"
+        );
     }
 
     #[test]

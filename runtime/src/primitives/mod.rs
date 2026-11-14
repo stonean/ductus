@@ -1297,6 +1297,56 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Write `content` to `path` only when nothing lives there, atomically: the
+/// tempfile in `path`'s parent that [`write_atomic`] writes, persisted with
+/// `persist_noclobber`, which fails rather than replace an existing file
+/// (a no-replace rename or a hard link, on every platform). So of two writers
+/// racing on one path exactly one creates it, and a check that `path` is free
+/// followed by a replacing rename, which both writers pass, is never the
+/// guard. Returns `false`, writing nothing, when `path` already exists
+/// (BE-RACE-003; spec 022, task 33).
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the parent cannot be created, the tempfile
+/// cannot be written or synced, or the persist fails for any reason but the
+/// destination already existing.
+pub(crate) fn write_new_atomic(path: &Path, content: &str) -> Result<bool> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent).map_err(|source| PrimitiveError::Io {
+            path: parent.into(),
+            source,
+        })?;
+    }
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let mut tmp = tempfile::NamedTempFile::new_in(parent).map_err(|source| PrimitiveError::Io {
+        path: parent.into(),
+        source,
+    })?;
+    tmp.as_file_mut()
+        .write_all(content.as_bytes())
+        .map_err(|source| PrimitiveError::Io {
+            path: path.into(),
+            source,
+        })?;
+    tmp.as_file_mut()
+        .sync_all()
+        .map_err(|source| PrimitiveError::Io {
+            path: path.into(),
+            source,
+        })?;
+    match tmp.persist_noclobber(path) {
+        Ok(_) => Ok(true),
+        Err(err) if err.error.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+        Err(err) => Err(PrimitiveError::Io {
+            path: path.into(),
+            source: err.error,
+        }),
+    }
+}
+
 /// Shared helpers for identifying and flipping markdown task-list checkbox
 /// lines (`- [ ] ...` / `- [x] ...`). Used by both `mark-task` and
 /// `mark-criterion`; the regex is `^(\s*-\s+)\[([ xX])\](\s.*)?$`, expressed
@@ -4504,6 +4554,28 @@ mod tests {
                 "predicate and splitter disagreed on {heading:?}"
             );
         }
+    }
+
+    /// `write_new_atomic` never replaces a file at its path, whoever wrote
+    /// it and whenever: it returns `false`, the file keeps its bytes, and no
+    /// tempfile is left beside it. A free path is written and returns `true`
+    /// (spec 022, task 33).
+    #[test]
+    fn write_new_atomic_never_replaces_an_existing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let taken = tmp.path().join("taken.md");
+        std::fs::write(&taken, "theirs").unwrap();
+        assert!(!write_new_atomic(&taken, "ours").unwrap());
+        assert_eq!(std::fs::read_to_string(&taken).unwrap(), "theirs");
+        let free = tmp.path().join("nested/free.md");
+        assert!(write_new_atomic(&free, "ours").unwrap());
+        assert_eq!(std::fs::read_to_string(&free).unwrap(), "ours");
+        let mut names: Vec<String> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["nested", "taken.md"], "no tempfile is left behind");
     }
 
     #[cfg(unix)]

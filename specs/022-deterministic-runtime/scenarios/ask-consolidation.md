@@ -47,7 +47,7 @@ Both register under their bare names (`create-scenario`, `append-task`) on the `
 
 ## Edge Cases
 
-- **`create-scenario` with a slug that already exists** — refuse with a clean operational error: `scenario already exists: {feature-path}/scenarios/{slug}.md`. The caller (host or `/amend`'s scenario branch) decides whether to surface the conflict to the user or to retry under a different slug.
+- **`create-scenario` with a slug that already exists** — refuse with a clean operational error: `scenario already exists: {feature-path}/scenarios/{slug}.md`. The refusal is exclusive, not a check followed by a write: the tempfile is persisted with no-clobber (`write_new_atomic`, a no-replace rename or a hard link), so of two calls racing on one slug exactly one creates the file and the other is refused, never silently replacing the first's scenario (`BE-RACE-003`; task 33). The caller (host or `/amend`'s scenario branch) decides whether to surface the conflict to the user or to retry under a different slug.
 - **`create-scenario` against a feature path that does not exist** — refuse with `feature path does not exist: {feature-path}`. Do not create the parent feature directory; `/specify` owns feature creation.
 - **`create-scenario` with no Edge Cases content** — the caller omits the `## Edge Cases` section from `body`, matching the template's "remove this section if none apply" guidance.
 - **`append-task` against a feature with no existing `tasks.md`** — create the file with the heading `# {NNN} — {Feature Name} Tasks`. When the feature's `spec.md` is unreadable (frontmatter parse failure, missing file), fall back to a minimal heading `# Tasks` and continue; do not halt on a soft failure to derive the feature name.

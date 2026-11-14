@@ -1057,6 +1057,14 @@ its version and date.
 
 ### Fixed
 
+- **`create-scenario` never replaces a scenario another call wrote (spec 022,
+  task 33).** It checked that the slug's file was absent and then wrote with a
+  tempfile and a replacing rename, so two concurrent calls with one slug both
+  passed the check and the second silently overwrote the first's scenario
+  (BE-RACE-003). The tempfile is now persisted with no-clobber, so of two
+  racing calls exactly one writes and the other gets `scenario already
+  exists`.
+
 - **The bootstrap's acquisition names both digests on a mismatch, and its
   framework archive fetch is HTTPS-only and bounded (spec 048).** A checksum
   mismatch halts with a reason naming the expected digest (the sidecar's) and

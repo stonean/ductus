@@ -26,9 +26,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 33. create-scenario refuses an existing slug atomically (BE-RACE-003, from 023)
 
-- [ ] `create-scenario` creates its file exclusively, with `create_new` or a no-clobber persist of its tempfile, so of two concurrent calls with one slug exactly one writes and the other gets `scenario already exists: {feature-path}/scenarios/{slug}.md`. Today `runtime/src/primitives/create_scenario.rs` checks `dest.exists()` and then calls `write_atomic`, a tempfile and a rename that replaces any existing file, so both calls pass the check and the second silently overwrites the first's scenario. The owner deferred 023's BE-RACE-003 (MUST) finding here on 2026-11-14; 023's task 25 cites this task
-- [ ] 022's `scenarios/ask-consolidation.md` edge case "`create-scenario` with a slug that already exists" states the exclusive-create mechanism
-- [ ] A test fails under the old exists-then-rename: a file appearing between the check and the write is refused and left as it was, and the test turns red under its mutant
+- [x] `create-scenario` creates its file exclusively, with `create_new` or a no-clobber persist of its tempfile, so of two concurrent calls with one slug exactly one writes and the other gets `scenario already exists: {feature-path}/scenarios/{slug}.md`. Today `runtime/src/primitives/create_scenario.rs` checks `dest.exists()` and then calls `write_atomic`, a tempfile and a rename that replaces any existing file, so both calls pass the check and the second silently overwrites the first's scenario. The owner deferred 023's BE-RACE-003 (MUST) finding here on 2026-11-14; 023's task 25 cites this task
+- [x] 022's `scenarios/ask-consolidation.md` edge case "`create-scenario` with a slug that already exists" states the exclusive-create mechanism
+- [x] A test fails under the old exists-then-rename: a file appearing between the check and the write is refused and left as it was, and the test turns red under its mutant
 
 - **Done when**: create-scenario never replaces an existing scenario file, proven by a test its mutant turns red; the whole `cargo test` passes; and 022's next review reads the change.
 
