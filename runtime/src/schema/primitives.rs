@@ -753,9 +753,15 @@ pub struct DiscoverRuleFilesResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rule_files_count: Option<usize>,
     /// With `rules`: each file that could not be read, or is not UTF-8
-    /// text, with its reason.
+    /// text, with its reason. Absent when empty, and in the file form, which
+    /// moves it to the list file, since it grows with the rule directory
+    /// (BE-PAYLOAD-001, from 080's analysis).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unreadable: Vec<UnreadableRuleFile>,
+    /// Entries in `unreadable`, in either form; absent when zero, so a call
+    /// that read every file carries neither.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unreadable_count: usize,
     /// Where the lists are: in this result, or past the read size in the
     /// file `lists-file` names (spec 080, AC7; `notices`, and so every call,
     /// since 022 task 32).

@@ -194,16 +194,21 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
 
 /// `result` held to `[artifacts] read-size-bytes` once `notices` is whole:
 /// inline while it fits, and past it with `notices`, with `rules` its
-/// `rule-files`, and with `verdicts` its `reusable` and `judge`, in the file
-/// it names and only their counts inline (`bounded_lists::place`; spec 080,
-/// AC7, and 022 task 32 for `notices`, a line per unknown config key).
+/// `rule-files` and a non-empty `unreadable`, and with `verdicts` its
+/// `reusable` and `judge`, in the file it names and only their counts inline
+/// (`bounded_lists::place`; spec 080, AC7, and 022 task 32 for `notices`, a
+/// line per unknown config key, and `unreadable`, from 080's analysis).
 fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>) -> Result<()> {
     result.notices_count = notices.len();
     result.notices = Some(notices);
+    result.unreadable_count = result.unreadable.len();
     result.form = ListsForm::Inline;
     let mut lists = serde_json::json!({ "notices": &result.notices });
     if let Some(rule_files) = &result.rule_files {
         lists["rule-files"] = serde_json::json!(rule_files);
+    }
+    if !result.unreadable.is_empty() {
+        lists["unreadable"] = serde_json::json!(&result.unreadable);
     }
     if let Some(block) = &result.verdicts {
         lists["reusable"] = serde_json::json!(&block.reusable);
@@ -219,6 +224,7 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
         result.form = ListsForm::File;
         result.notices = None;
         result.rule_files = None;
+        result.unreadable = Vec::new();
         if let Some(block) = &mut result.verdicts {
             block.reusable = None;
             block.judge = None;
@@ -1542,6 +1548,58 @@ mod tests {
                 &lists,
             );
         }
+    }
+
+    /// Past the read size a non-empty `unreadable` moves to the file with the
+    /// rules, its count inline, since it grows with the rule directory
+    /// (BE-PAYLOAD-001, from 080's analysis). Inline, the list and its count
+    /// both stand; a call that read every file carries neither.
+    #[test]
+    fn past_the_read_size_unreadable_moves_to_the_file() {
+        let tmp = setup(&["quality-cross.md", "security-cross.md"], None);
+        std::fs::write(tmp.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
+        std::fs::write(
+            tmp.path().join("framework/rules/security-cross.md"),
+            [0xff, 0xfe],
+        )
+        .unwrap();
+        let inline = run(&with_rules(args(&[])), tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.unreadable.len(), 1);
+        assert_eq!(inline.unreadable_count, 1);
+
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 300\n",
+        )
+        .unwrap();
+        let bounded = run(&with_rules(args(&[])), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert!(bounded.unreadable.is_empty(), "unreadable stayed inline");
+        assert_eq!(bounded.unreadable_count, 1);
+        let file = bounded.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["unreadable"][0]["file"],
+            "framework/rules/security-cross.md"
+        );
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "discover-rule-files",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+
+        let clean = setup(&["quality-cross.md"], None);
+        std::fs::write(clean.path().join("framework/rules/quality-cross.md"), RULES).unwrap();
+        let value =
+            serde_json::to_value(run(&with_rules(args(&[])), clean.path()).unwrap()).unwrap();
+        assert!(
+            value.get("unreadable").is_none() && value.get("unreadable-count").is_none(),
+            "{value}"
+        );
     }
 
     // -- stored rule verdicts (spec 082) ----------------------------------

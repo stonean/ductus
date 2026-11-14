@@ -1,5 +1,6 @@
 """Mutation list for 022's task 32: `discover-rule-files`' `notices` and
-`dashboard`'s `config.unknown-keys`, each a line per unknown config key, held to
+`dashboard`'s `config.unknown-keys`, each a line per unknown config key, and
+`discover-rule-files`' `unreadable` (M7, from 080's analysis), held to
 `[artifacts] read-size-bytes` (BE-PAYLOAD-001, from 019's analysis). Past it
 `notices` moves to the list file with or without `rules`, and `unknown-keys`
 moves there under `config`, each with its count inline in both forms
@@ -35,8 +36,8 @@ MUTATIONS = [
     (
         'M3 discover-rule-files counts no notice',
         'src/primitives/discover_rule_files.rs',
-        '    result.notices_count = notices.len();\n    result.notices = Some(notices);\n    result.form = ListsForm::Inline;',
-        '    result.notices_count = 0;\n    result.notices = Some(notices);\n    result.form = ListsForm::Inline;',
+        '    result.notices_count = notices.len();\n    result.notices = Some(notices);\n    result.unreadable_count = result.unreadable.len();',
+        '    result.notices_count = 0;\n    result.notices = Some(notices);\n    result.unreadable_count = result.unreadable.len();',
         'discover_rule_files::tests::past_the_read_size_the_notices_move_to_the_file discover_rule_files::tests::rules_lists_each_selected_files_rules',
     ),
     (
@@ -59,5 +60,12 @@ MUTATIONS = [
         '            unknown_keys_count: unknown_keys.len(),\n',
         '            unknown_keys_count: 0,\n',
         'dashboard::tests::the_file_form_moves_the_unknown_config_keys',
+    ),
+    (
+        'M7 discover-rule-files leaves unreadable inline in the file form',
+        'src/primitives/discover_rule_files.rs',
+        '        result.rule_files = None;\n        result.unreadable = Vec::new();\n',
+        '        result.rule_files = None;\n',
+        'discover_rule_files::tests::past_the_read_size_unreadable_moves_to_the_file',
     ),
 ]

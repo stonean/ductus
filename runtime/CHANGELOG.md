@@ -320,7 +320,9 @@ its version and date.
   with `rules` or without: `form` is always present, `notices-count` stays
   inline, and past the bound `notices` moves to the lists file with the rules,
   where review and analyze emit the notice lines from. A malformed read size
-  now halts a call without `rules` too. `dashboard`'s `config` gains
+  now halts a call without `rules` too. A non-empty `unreadable`, the rule
+  files a call with `rules` could not read, moves there as well, with
+  `unreadable-count` inline (from 080's analysis). `dashboard`'s `config` gains
   `unknown-keys-count`, and past the bound `unknown-keys` moves to the lists
   file under `config`. `/{project}:status` renders from the model and is
   unaffected.
