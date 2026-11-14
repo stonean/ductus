@@ -117,6 +117,12 @@ The new paths are constants in `runtime/src/schema/paths.rs` beside
 `runtime-hardcoded-paths` (`scripts/audit/runtime-hardcoded-paths.sh`) holds
 the runtime to declaring paths there.
 
+Opening these files does not yet refuse a symbolic link that leaves the
+project: the core builds each path from the sanitized identity under
+`SESSIONS_DIR` and the shared default's fixed name, and states no canonical
+containment. 022's task 34 routes every open through `validate_contained`
+(`BE-INPUT-004`, deferred there by the owner, 2026-11-14).
+
 **Per-process targets need the `.ductus/` layout.** When the active session
 file is a legacy tier (`.govern/session.toml` or the root
 `.govern.session.toml`, `runtime/src/schema/paths.rs:69-73`), the core treats
@@ -315,7 +321,11 @@ That means `amend`, `analyze`, `clarify`, `groom`, `implement`, `plan`,
 `prune`, `review`, `specify` (Context) and `target` (the no-argument display).
 The `target --clear` step keeps `write-session` clear mode (AC20). `fold` and
 `consolidate` switch to `retarget-sessions`. `help` updates its Session target
-glossary entry.
+glossary entry. A host read would keep every command on the shared default,
+since only the runtime can read a process's identity (the first decision; the
+spec's *Process identity* section), and `fold` and `consolidate` remove a spec
+directory, so each must re-target or clear every session naming it, which only
+`retarget-sessions` reaches (AC21; the spec's *Removal strands no process*).
 
 Every file is mirrored to `.claude/commands/ductus/`, and the two new tools
 are added to `framework/runtime-tools.txt` and to the permission list in
