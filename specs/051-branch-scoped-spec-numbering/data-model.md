@@ -101,7 +101,7 @@ Refusals, `allow-sequential` and the already-gone outcome are in `ductus retire-
 | `feature` | in | string | The **upstream** spec whose recorded review no longer describes it — not the branch-scoped one being retired. |
 | `invalidated` | out | boolean | `false` is the domain outcome for a spec recording no current review: already in this state, so a re-run converges. |
 | `path` | out | string | Repo-relative spec path, present either way. |
-| `previous-last-run` | out | optional string | The `last-run` that was cleared, verbatim: an RFC 3339 UTC date-time with `Z`, as the review record's schema states, so the caller can say *what* it invalidated. |
+| `previous-last-run` | out | optional string | The `last-run` that was cleared, verbatim: an ISO-8601 UTC date-time with `Z` (RFC 3339), as the review record's schema states, so the caller can say *what* it invalidated. |
 
 What invalidation resets and keeps, waivers included, is in `ductus invalidate-review --help`.
 
