@@ -1,5 +1,5 @@
 ---
-next-task: 37
+next-task: 38
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -56,3 +56,12 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [ ] A test proves the inline form under the read size and the bounded form past it, each failing under its mutant, and a parity golden is re-blessed only where its shape moved
 
 - **Done when**: No `ductus exec` extension request carries `spec-content`, or `performReview`'s scope or rule files, past the read size inline, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 37. Every exec extension request is bounded whole: writeCode's file bodies, and the lists that grow with entries (BE-PAYLOAD-001, found implementing task 36)
+
+- [ ] `writeCode`'s `plan-relevant-files` (`build_write_code_request` in `runtime/src/interpreter/payload.rs`) carries each file's content whole; past `[artifacts] read-size-bytes` it names each file by the path the builder contained instead, marked as task 36's requests mark their bounded form. Task 36's implementer found it outside task 36's text, which names only the requests carrying `spec-content` and `performReview`
+- [ ] The lists a request carries that grow with the spec's entries rather than with a file's size (`verifyCriteria`'s `criteria`, `routeFold`'s `scenarios` and `target-sections`, `loaded-rule-files`, and the legacy context tail a host seeds) are held to the read size too: once the bodies are named by path, a request still past the bound carries those lists in a file the host reads, through the `bounded_lists` machinery, with each list's count inline, so no request is unbounded whole. Today task 36's data model states that these lists stay inline
+- [ ] 022's data model states the whole-request bound once, in §Request bodies past the read size, and each extension point's section points at it
+- [ ] A test proves each form, failing under its mutant, and a parity golden is re-blessed only where its shape moved
+
+- **Done when**: No `ductus exec` extension request is larger than `[artifacts] read-size-bytes` inline, bodies and lists alike, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
