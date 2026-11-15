@@ -31,9 +31,11 @@
 # shell — and therefore what this family owns — is the hook's *orchestration*:
 # resolving the runtime through the pointer, halting when it is unreachable,
 # scoping staged specs at any configured root, and re-staging what the
-# primitives rewrote. The runtime is stubbed so the family stays hermetic (no
-# `cargo build`, identical in CI and on a laptop); the stub simulates the
-# derivation so the re-stage assertion still has a rewrite to catch.
+# primitives rewrote. The runtime is stubbed for those orchestration cases so
+# they stay hermetic (no `cargo build`, identical in CI and on a laptop); the
+# stub simulates the derivation so the re-stage assertion still has a rewrite
+# to catch. The project-file growth cases (spec 075) drive the real runtime
+# instead, since a stub would assert only itself.
 #
 # The fixtures are deliberately hostile to the masking conditions above:
 #   * one run sets `[paths] specs-root = "features"`, where a hardcoded default

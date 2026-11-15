@@ -5080,6 +5080,33 @@ pub struct ProjectFile {
     /// exactly when `state` is `present`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub over_limit: Option<bool>,
+    /// Present when the file ends inside an open HTML comment or an open
+    /// managed region, so the lines from there to its end are in no entry:
+    /// they were not examined. Absent when the whole file was walked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unexamined_tail: Option<UnexaminedTail>,
+}
+
+/// Why the lines of a file's tail are in no entry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum TailCause {
+    /// A `<!--` with no closing `-->`: every line after it is comment text.
+    OpenComment,
+    /// A `<!-- BEGIN {marker} -->` with no `<!-- END {marker} -->`: every line
+    /// after it is inside a region `/ductus` owns.
+    UnterminatedManagedRegion,
+}
+
+/// The part of a file no entry covers because a region never closes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnexaminedTail {
+    /// 1-based line the open region begins on; that line and every one after
+    /// it are in no entry.
+    pub from_line: usize,
+    /// What is left open.
+    pub cause: TailCause,
 }
 
 /// What shape of markdown an entry is.
@@ -5161,9 +5188,21 @@ pub struct PruneProjectResult {
     pub threshold: ReadSizeThreshold,
     /// All four subjects, in subject order, as read before any write.
     pub files: Vec<ProjectFile>,
+    /// Where `entries` is: in this result, or past the read size in the file
+    /// `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
     /// Every entry of every present file, in file and line order, as read
-    /// before any write.
-    pub entries: Vec<ProjectEntry>,
+    /// before any write, each with its `hits`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entries: Option<Vec<ProjectEntry>>,
+    /// Entries in `entries`, in either form.
+    #[serde(default)]
+    pub entries_count: usize,
+    /// In the file form, the file holding `entries` whole, from the project
+    /// root: a JSON object with the one key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// The literal search. Present on a preview, absent on an apply, which
     /// reads no source.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -8518,6 +8557,7 @@ mod tests {
                     state: ProjectFileState::Present,
                     bytes: Some(131_607),
                     over_limit: Some(true),
+                    unexamined_tail: None,
                 },
                 ProjectFile {
                     path: "specs/system.md".into(),
@@ -8525,9 +8565,13 @@ mod tests {
                     state: ProjectFileState::Absent,
                     bytes: None,
                     over_limit: None,
+                    unexamined_tail: None,
                 },
             ],
-            entries: vec![
+            form: ListsForm::Inline,
+            entries_count: 2,
+            lists_file: None,
+            entries: Some(vec![
                 ProjectEntry {
                     path: "AGENTS.md".into(),
                     section: Some("Gotchas".into()),
@@ -8550,7 +8594,7 @@ mod tests {
                     identifier: Some("order.created".into()),
                     hits: Some(Vec::new()),
                 },
-            ],
+            ]),
             search: Some(ProjectSearch {
                 state: SearchState::Ran,
                 files_searched: Some(312),

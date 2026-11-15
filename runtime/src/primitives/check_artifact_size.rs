@@ -296,8 +296,8 @@ fn check_args(args: &CheckArtifactSizeArgs) -> Result<()> {
 }
 
 /// The four project files, in subject order, each with its project-relative
-/// path. `prune-project` walks the same four.
-fn project_subjects(root: &str) -> [(ProjectFileKind, String); 4] {
+/// path. `prune-project` takes them from here.
+pub(crate) fn project_subjects(root: &str) -> [(ProjectFileKind, String); 4] {
     [
         (ProjectFileKind::Agents, "AGENTS.md".to_string()),
         (ProjectFileKind::System, format!("{root}/system.md")),

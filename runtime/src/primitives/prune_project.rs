@@ -19,15 +19,18 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
-use crate::primitives::check_artifact_size::resolve_threshold;
+use crate::primitives::check_artifact_size::{
+    PROJECT_FILES_KEY, project_subjects, resolve_threshold,
+};
 use crate::primitives::{
-    PrimitiveError, Result, SkipScanner, hex, inline_code_spans, line_ending_of, parse_atx_heading,
-    tracked_project_paths, write_atomic,
+    PrimitiveError, Result, SkipScanner, bounded_lists, hex, inline_code_spans, line_ending_of,
+    parse_atx_heading, tracked_project_paths, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    EntryKind, EntryRemoval, ProjectEntry, ProjectFile, ProjectFileKind, ProjectFileState,
-    ProjectHome, ProjectSearch, PruneProjectArgs, PruneProjectResult, SearchState,
+    EntryKind, EntryRemoval, ListsForm, ProjectEntry, ProjectFile, ProjectFileKind,
+    ProjectFileState, ProjectHome, ProjectSearch, PruneProjectArgs, PruneProjectResult,
+    SearchState, TailCause, UnexaminedTail,
 };
 
 const PRIMITIVE: &str = "prune-project";
@@ -44,16 +47,6 @@ const EVENTS_TEMPLATE: &str = "# Events\n\n<!-- The constitution's §spec-phase 
 
 /// `framework/templates/project/errors.md`; see [`SYSTEM_TEMPLATE`].
 const ERRORS_TEMPLATE: &str = "# Errors\n\n<!-- The constitution's §spec-phase directory tree (.ductus/constitution.md)\n     defines what this file holds. Establish it early, then extend it as modules\n     are built. -->\n\n## Error Response Format\n\n<!-- The standard structure for error responses. Example:\n\nAll error responses use a consistent JSON envelope:\n\n```json\n{\n  \"error\": {\n    \"code\": \"validation_failed\",\n    \"message\": \"One or more fields are invalid.\",\n    \"request_id\": \"req_01J...\",\n    \"details\": []\n  }\n}\n```\n\nThe `request_id` is the request's correlation ID, so a caller can quote it\nwhen reporting the error. The `details` array is optional and used for\nvalidation errors (see below).\n\n-->\n\n## Error Codes\n\n<!-- Naming convention for error codes and a registry of codes in use. Example:\n\nError codes use `snake_case` and follow the pattern `{category}_{description}`.\n\n| Code | Category | Meaning |\n| --- | --- | --- |\n| `auth_token_expired` | auth | Access token has expired |\n| `validation_failed` | validation | Request body failed validation |\n| `not_found` | resource | Requested resource does not exist |\n\n-->\n\n## Status Mapping\n\n<!-- How error codes map to response status codes or equivalent. Example:\n\n| Category | Status Code |\n| --- | --- |\n| `auth_*` | 401 |\n| `forbidden_*` | 403 |\n| `not_found` | 404 |\n| `validation_*` | 422 |\n| `rate_*` | 429 |\n| `internal_*` | 500 |\n\n-->\n\n## Validation Errors\n\n<!-- How per-field validation errors are structured. Example:\n\nValidation errors populate the `details` array with one entry per invalid field:\n\n```json\n{\n  \"error\": {\n    \"code\": \"validation_failed\",\n    \"message\": \"One or more fields are invalid.\",\n    \"request_id\": \"req_01J...\",\n    \"details\": [\n      { \"field\": \"email\", \"code\": \"required\", \"message\": \"Email is required.\" },\n      { \"field\": \"age\", \"code\": \"out_of_range\", \"message\": \"Age must be between 0 and 150.\" }\n    ]\n  }\n}\n```\n\n-->\n\n## Logging\n\n<!-- How errors are logged and severity mapping. Example:\n\nAll errors are logged with structured fields including the error code,\nrequest ID, and stack trace (for unexpected errors only).\n\n| Severity | When |\n| --- | --- |\n| `warn` | Client errors (4xx) — expected, no action needed |\n| `error` | Server errors (5xx) — unexpected, requires investigation |\n\n-->\n\n## Internal vs External Errors\n\n<!-- Rules for what error information is exposed to callers vs kept internal. Example:\n\nExternal responses include the error code and a safe, human-readable message.\nStack traces, internal identifiers, and infrastructure details are never\nincluded in responses. They are logged server-side with the request ID,\nwhich the response also carries so a caller can quote it.\n\n-->\n";
-
-/// The four subjects, in subject order, each with its project-relative path.
-fn subjects(root: &str) -> [(ProjectFileKind, String); 4] {
-    [
-        (ProjectFileKind::Agents, "AGENTS.md".to_string()),
-        (ProjectFileKind::System, format!("{root}/system.md")),
-        (ProjectFileKind::Events, format!("{root}/events.md")),
-        (ProjectFileKind::Errors, format!("{root}/errors.md")),
-    ]
-}
 
 /// A creatable home's project-relative path and template.
 fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
@@ -76,10 +69,14 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 ///   `check-artifact-size` reports them.
 /// - [`PrimitiveError::Git`] when a repository is found but its index cannot
 ///   be read.
-/// - [`PrimitiveError::Io`] when a write fails.
+/// - [`PrimitiveError::Io`] when a write fails, or the list file past the read
+///   size cannot be written, or the results directory resolves outside the
+///   project (`bounded_lists::place`). An apply has written by then, so such an
+///   error fails a call whose writes stand; running the preview again reads
+///   the changed files.
 pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     let root = paths::Paths::load(repo)?.specs_root;
-    let subjects = subjects(&root);
+    let subjects = project_subjects(&root);
     check_args(args, &subjects)?;
     let (threshold, notices) = resolve_threshold(repo)?;
 
@@ -87,9 +84,11 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     let mut contents = Vec::new();
     let mut segments: Vec<Segment> = Vec::new();
     for (kind, rel) in &subjects {
-        let (file, content) = read_subject(repo, *kind, rel, threshold.bytes);
+        let (mut file, content) = read_subject(repo, *kind, rel, threshold.bytes);
         if let Some(text) = &content {
-            segments.extend(segment(rel, *kind, text));
+            let (found, tail) = segment(rel, *kind, text);
+            segments.extend(found);
+            file.unexamined_tail = tail;
         }
         files.push(file);
         contents.push(content);
@@ -131,17 +130,31 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
         }
     }
 
-    Ok(PruneProjectResult {
+    let entries: Vec<ProjectEntry> = segments.into_iter().map(|seg| seg.entry).collect();
+    let mut result = PruneProjectResult {
         threshold,
         files,
-        entries: segments.into_iter().map(|seg| seg.entry).collect(),
+        form: ListsForm::Inline,
+        entries_count: entries.len(),
+        entries: Some(entries),
+        lists_file: None,
         search,
         applied,
         stale_entries,
         created,
         kept,
         notices,
-    })
+    };
+    // `hits` ride inside their entries, so the one list moves whole: a hit
+    // list is read only beside its entry, and `entries` alone grows past the
+    // read size, since each entry is a record whether or not it has hits.
+    let lists = serde_json::json!({ "entries": result.entries });
+    if let Some(file) = bounded_lists::place(repo, PRIMITIVE, PROJECT_FILES_KEY, &result, &lists)? {
+        result.form = ListsForm::File;
+        result.entries = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
 }
 
 /// Refuse an argument set that names nothing to do, or a list without an
@@ -195,6 +208,7 @@ fn read_subject(
         state,
         bytes,
         over_limit: bytes.map(|bytes| bytes > limit),
+        unexamined_tail: None,
     };
     match std::fs::read(repo.join(rel)) {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
@@ -228,8 +242,15 @@ enum Open {
 }
 
 /// Segment `content` into entries by the grammar in 041's `data-model.md`
-/// §`prune-project`.
-fn segment(rel: &str, file: ProjectFileKind, content: &str) -> Vec<Segment> {
+/// §`prune-project`, with the tail no entry covers when the file ends inside an
+/// open HTML comment or an unterminated managed region: its lines are neither
+/// entries nor silently dropped, since the file's record names where they begin.
+/// An unterminated fence is not such a tail; it becomes one block entry.
+fn segment(
+    rel: &str,
+    file: ProjectFileKind,
+    content: &str,
+) -> (Vec<Segment>, Option<UnexaminedTail>) {
     let lines: Vec<&str> = content.lines().collect();
     let mut segmenter = Segmenter {
         lines: lines.clone(),
@@ -242,15 +263,35 @@ fn segment(rel: &str, file: ProjectFileKind, content: &str) -> Vec<Segment> {
         out: Vec::new(),
     };
     let mut skip = SkipScanner::default();
+    // The line the comment still open opened on.
+    let mut comment_from: Option<usize> = None;
     for (i, line) in lines.iter().copied().enumerate() {
         // The scanner sees every line, in order, whatever the step does next.
         let was_fence = skip.in_fence();
+        let was_comment = skip.in_region() && !was_fence;
         let skipped = skip.skip(line);
         let fence = skipped && (was_fence || skip.in_fence());
+        let comment = skip.in_region() && !skip.in_fence();
+        comment_from = match (was_comment, comment) {
+            (false, true) => Some(i),
+            (_, false) => None,
+            (true, true) => comment_from,
+        };
         segmenter.step(i, line, skipped, fence);
     }
     segmenter.close(segmenter.lines.len());
-    segmenter.out
+    // A managed region opens before any comment inside it, so it names the
+    // earlier line.
+    let tail = match (&segmenter.managed, comment_from) {
+        (Some((_, from)), _) => Some((*from, TailCause::UnterminatedManagedRegion)),
+        (None, Some(from)) => Some((from, TailCause::OpenComment)),
+        (None, None) => None,
+    }
+    .map(|(from, cause)| UnexaminedTail {
+        from_line: from + 1,
+        cause,
+    });
+    (segmenter.out, tail)
 }
 
 /// The segmentation state over one file.
@@ -262,8 +303,9 @@ struct Segmenter<'a> {
     section: Option<String>,
     /// The entry being built, and the 0-based line it opened on.
     open: Option<(Open, usize)>,
-    /// The marker of the managed region being skipped, if any.
-    managed: Option<String>,
+    /// The marker of the managed region being skipped, if any, and the
+    /// 0-based line it began on.
+    managed: Option<(String, usize)>,
     /// A table's delimiter row has been seen, so `|` lines are body rows.
     in_table: bool,
     out: Vec<Segment>,
@@ -274,7 +316,7 @@ impl Segmenter<'_> {
     /// says the skipped line belongs to a fenced block rather than a comment.
     fn step(&mut self, i: usize, line: &str, skipped: bool, fence: bool) {
         let trimmed = line.trim();
-        if let Some(marker) = &self.managed {
+        if let Some((marker, _)) = &self.managed {
             if trimmed == format!("<!-- END {marker} -->") {
                 self.managed = None;
             }
@@ -282,7 +324,7 @@ impl Segmenter<'_> {
         }
         if !skipped && let Some(marker) = begin_marker(trimmed) {
             self.close(i);
-            self.managed = Some(marker.to_string());
+            self.managed = Some((marker.to_string(), i));
             return;
         }
         let whole_comment = !skipped && trimmed.starts_with("<!--") && trimmed.ends_with("-->");
@@ -518,12 +560,13 @@ fn search(
                 continue;
             };
             files_searched += 1;
+            let text = std::str::from_utf8(&bytes).ok();
             for idx in &wanted {
                 let entry = &mut segments[*idx].entry;
                 let Some(id) = &entry.identifier else {
                     continue;
                 };
-                if contains(&bytes, id.as_bytes())
+                if contains(text, &bytes, id)
                     && let Some(hits) = entry.hits.as_mut()
                 {
                     hits.push(path.clone());
@@ -538,13 +581,15 @@ fn search(
     })
 }
 
-/// Whether `needle` occurs in `hay` as a byte substring.
-fn contains(hay: &[u8], needle: &[u8]) -> bool {
-    match std::str::from_utf8(hay) {
-        Ok(text) => std::str::from_utf8(needle).is_ok_and(|needle| text.contains(needle)),
-        Err(_) => hay
+/// Whether `needle` occurs in `hay` as a byte substring. `text` is `hay`
+/// validated as UTF-8 once per file by the caller, or `None` for a file that
+/// is not, which keeps the byte-window path.
+fn contains(text: Option<&str>, hay: &[u8], needle: &str) -> bool {
+    match text {
+        Some(text) => text.contains(needle),
+        None => hay
             .windows(needle.len().max(1))
-            .any(|window| window == needle),
+            .any(|window| window == needle.as_bytes()),
     }
 }
 
@@ -734,7 +779,13 @@ Codes use `snake_case`.
     }
 
     fn entries_of<'a>(result: &'a PruneProjectResult, path: &str) -> Vec<&'a ProjectEntry> {
-        result.entries.iter().filter(|e| e.path == path).collect()
+        result
+            .entries
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter(|e| e.path == path)
+            .collect()
     }
 
     #[test]
@@ -831,6 +882,8 @@ Codes use `snake_case`.
         let hits = |id: &str| {
             result
                 .entries
+                .as_ref()
+                .unwrap()
                 .iter()
                 .find(|e| e.identifier.as_deref() == Some(id))
                 .and_then(|e| e.hits.clone())
@@ -850,7 +903,14 @@ Codes use `snake_case`.
         let dir = project();
         let result = preview(dir.path());
         assert_eq!(result.search.unwrap().state, SearchState::Unavailable);
-        assert!(result.entries.iter().all(|e| e.hits.is_none()));
+        assert!(
+            result
+                .entries
+                .as_ref()
+                .unwrap()
+                .iter()
+                .all(|e| e.hits.is_none())
+        );
     }
 
     #[test]
@@ -1059,11 +1119,210 @@ Codes use `snake_case`.
         write(&root.path().join("other/orders.rs"), "user.deleted\n");
         commit_all(&repository, "fixture");
         let result = preview(&project);
-        let hits: Vec<Option<Vec<String>>> =
-            result.entries.iter().map(|e| e.hits.clone()).collect();
+        let hits: Vec<Option<Vec<String>>> = result
+            .entries
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|e| e.hits.clone())
+            .collect();
         assert_eq!(
             hits,
             vec![Some(vec!["src/orders.rs".to_string()]), Some(Vec::new())]
+        );
+    }
+
+    /// A project in a repository with one hit, so `hits` is non-empty.
+    fn project_with_a_hit() -> TempDir {
+        let dir = project();
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        write(
+            &dir.path().join("src/orders.rs"),
+            "emit(\"order.created\");\n",
+        );
+        commit_all(&repository, "fixture");
+        dir
+    }
+
+    fn read_size(dir: &Path, bytes: usize) {
+        write(
+            &dir.join(".ductus/config.toml"),
+            &format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        );
+    }
+
+    #[test]
+    fn entries_are_inline_while_the_result_fits_and_in_a_file_past_it() {
+        let dir = project_with_a_hit();
+        read_size(dir.path(), 9_999);
+        let whole = preview(dir.path());
+        assert_eq!(whole.form, ListsForm::Inline);
+        assert_eq!(whole.lists_file, None);
+        let entries = whole.entries.clone().unwrap();
+        assert_eq!(whole.entries_count, entries.len());
+        assert!(entries.len() > 2, "{entries:?}");
+        assert!(
+            !dir.path().join(".ductus/results").exists(),
+            "an inline result wrote a list file"
+        );
+
+        // A result exactly at the read size fits; one byte under it does not.
+        // The threshold prints at four digits throughout, so the length does
+        // not change with it.
+        let size = serde_json::to_vec(&whole).unwrap().len();
+        assert!((1_000..9_999).contains(&size), "{size}");
+        read_size(dir.path(), size);
+        assert_eq!(preview(dir.path()).form, ListsForm::Inline);
+        read_size(dir.path(), size - 1);
+        let bounded = preview(dir.path());
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(bounded.entries, None);
+        assert_eq!(bounded.entries_count, entries.len());
+        let file = bounded.lists_file.clone().unwrap();
+        assert!(
+            file.starts_with(".ductus/results/prune-project/project-files/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(dir.path().join(&file)).unwrap()).unwrap();
+        // The file holds every entry whole, each with its `hits`.
+        assert_eq!(lists["entries"], serde_json::to_value(&entries).unwrap());
+        assert!(
+            entries
+                .iter()
+                .any(|e| e.hits.as_deref() == Some(&["src/orders.rs".to_string()][..]))
+        );
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
+    #[test]
+    fn an_apply_bounds_its_entries_too() {
+        let dir = project();
+        read_size(dir.path(), 10);
+        let applying = PruneProjectArgs {
+            apply: true,
+            create: vec![ProjectHome::System],
+            ..PruneProjectArgs::default()
+        };
+        let result = run(&applying, dir.path()).unwrap();
+        assert!(result.applied);
+        assert_eq!(result.form, ListsForm::File);
+        assert_eq!(result.entries, None);
+        assert!(result.entries_count > 0);
+        assert!(dir.path().join(result.lists_file.unwrap()).is_file());
+    }
+
+    #[test]
+    fn a_non_utf8_tracked_file_is_searched_bytewise() {
+        let dir = project();
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        let mut bytes = vec![0xff, 0xfe];
+        bytes.extend_from_slice(b"order.created");
+        fs::create_dir_all(dir.path().join("src")).unwrap();
+        fs::write(dir.path().join("src/blob.bin"), bytes).unwrap();
+        commit_all(&repository, "fixture");
+        let result = preview(dir.path());
+        let hits = entries_of(&result, "specs/events.md")
+            .into_iter()
+            .find(|e| e.identifier.as_deref() == Some("order.created"))
+            .and_then(|e| e.hits.clone());
+        assert_eq!(hits, Some(vec!["src/blob.bin".to_string()]));
+    }
+
+    fn tail_of(content: &str) -> (Vec<(EntryKind, usize, usize)>, Option<UnexaminedTail>) {
+        let (segments, tail) = segment("AGENTS.md", ProjectFileKind::Agents, content);
+        let shape = segments
+            .iter()
+            .map(|seg| (seg.entry.kind, seg.entry.start_line, seg.entry.end_line))
+            .collect();
+        (shape, tail)
+    }
+
+    #[test]
+    fn an_unterminated_comment_names_where_the_unexamined_tail_begins() {
+        let content = "## Gotchas\n\n- first\n- second\n\n<!-- never closed\n- third\n- fourth\n";
+        let (shape, tail) = tail_of(content);
+        assert_eq!(
+            shape,
+            vec![(EntryKind::Item, 3, 3), (EntryKind::Item, 4, 4)]
+        );
+        assert_eq!(
+            tail,
+            Some(UnexaminedTail {
+                from_line: 6,
+                cause: TailCause::OpenComment
+            })
+        );
+        // A comment that closes leaves nothing unexamined.
+        let closed =
+            "## Gotchas\n\n- first\n\n<!-- closed -->\n\n<!-- spans\n   lines -->\n\n- last\n";
+        assert_eq!(tail_of(closed).1, None);
+    }
+
+    #[test]
+    fn an_unterminated_managed_region_names_where_the_unexamined_tail_begins() {
+        let content = "## Gotchas\n\n- first\n\n<!-- BEGIN ductus:x -->\n- owned\n- also owned\n";
+        let (shape, tail) = tail_of(content);
+        assert_eq!(shape, vec![(EntryKind::Item, 3, 3)]);
+        assert_eq!(
+            tail,
+            Some(UnexaminedTail {
+                from_line: 5,
+                cause: TailCause::UnterminatedManagedRegion
+            })
+        );
+        // A comment left open inside the region does not move the tail off the
+        // region's own opening line.
+        let nested = "- a\n<!-- BEGIN m -->\n<!-- open\n- b\n";
+        assert_eq!(
+            tail_of(nested).1,
+            Some(UnexaminedTail {
+                from_line: 2,
+                cause: TailCause::UnterminatedManagedRegion
+            })
+        );
+        // A terminated region, and an unterminated fence, are no tail.
+        let closed = "- a\n<!-- BEGIN m -->\nowned\n<!-- END m -->\n- b\n";
+        assert_eq!(tail_of(closed).1, None);
+        let (shape, tail) = tail_of("- a\n\n```\nnever closed\n- b\n");
+        assert_eq!(tail, None);
+        assert_eq!(
+            shape,
+            vec![(EntryKind::Item, 1, 1), (EntryKind::Block, 3, 5)]
+        );
+    }
+
+    #[test]
+    fn a_file_with_an_open_region_reads_present_and_carries_its_tail() {
+        let dir = project();
+        write(
+            &dir.path().join("AGENTS.md"),
+            "## Gotchas\n\n- first\n\n<!-- never closed\n- second\n",
+        );
+        let result = preview(dir.path());
+        let agents = &result.files[0];
+        assert_eq!(agents.state, ProjectFileState::Present);
+        assert_eq!(
+            agents.unexamined_tail,
+            Some(UnexaminedTail {
+                from_line: 5,
+                cause: TailCause::OpenComment
+            })
+        );
+        assert!(
+            result.files[1..]
+                .iter()
+                .all(|file| file.unexamined_tail.is_none())
+        );
+        let value = serde_json::to_value(&result).unwrap();
+        assert_eq!(value["files"][0]["unexamined-tail"]["from-line"], 5);
+        assert_eq!(
+            value["files"][0]["unexamined-tail"]["cause"],
+            "open-comment"
         );
     }
 

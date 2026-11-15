@@ -450,7 +450,7 @@ The deterministic half of `/{project}:prune --project` (scenario `prune-walks-th
 
 ### Segmentation
 
-Every line goes through `SkipScanner`, so nothing inside a fenced block or an HTML comment is structure or an entry. The lines between a `<!-- BEGIN {marker} -->` and its `<!-- END {marker} -->`, as `merge-managed-block` writes them, are never an entry either: `/ductus` owns them. A `#` or `##` heading is structure, never an entry. An entry is one of:
+Every line goes through `SkipScanner`, so nothing inside a fenced block or an HTML comment is structure or an entry. The lines between a `<!-- BEGIN {marker} -->` and its `<!-- END {marker} -->`, as `merge-managed-block` writes them, are never an entry either: `/ductus` owns them. A comment or managed region still open at the end of the file leaves the lines from its opening line on in no entry, so the file's record names them as its **unexamined tail** (below), never as walked. An unterminated fence is not one: it is a `block` entry through the end of the file. A `#` or `##` heading is structure, never an entry. An entry is one of:
 
 - **`heading`** — a `###`-or-deeper heading and every line up to the next heading at its level or above.
 - **`item`** — inside a `##` section's own body (before its first `###`), a top-level list item and every line up to the next top-level item or blank-line-separated block.
@@ -489,9 +489,12 @@ Result (never an entry's text):
   "threshold": { "bytes": 50000, "source": "default" },
   "files": [
     { "path": "AGENTS.md", "kind": "agents", "state": "present",
-      "bytes": 131607, "over-limit": true },
+      "bytes": 131607, "over-limit": true,
+      "unexamined-tail": { "from-line": 210, "cause": "open-comment" } },
     { "path": "specs/system.md", "kind": "system", "state": "absent" }
   ],
+  "form": "inline",
+  "entries-count": 2,
   "entries": [
     { "path": "AGENTS.md", "section": "Gotchas", "kind": "item",
       "start-line": 120, "end-line": 123, "bytes": 412, "digest": "9f2c…" },
@@ -508,8 +511,9 @@ Result (never an entry's text):
 ```
 
 - `threshold` — `[artifacts] read-size-bytes`, resolved by the function `check-artifact-size` uses, so an invalid value fails with that primitive's error (`PrimitiveError::InvalidReadSize`).
-- `files` — all four subjects, in subject order. `state` is `present`, `absent` or `unreadable`. `bytes` and `over-limit` are present when the file is `present`, and an `unreadable` file contributes no entries. A file exactly at the threshold is not over it.
+- `files` — all four subjects, in subject order. `state` is `present`, `absent` or `unreadable`. `bytes` and `over-limit` are present when the file is `present`, and an `unreadable` file contributes no entries. A file exactly at the threshold is not over it. `unexamined-tail` is present when a `present` file ends inside an open HTML comment (`cause: open-comment`) or a `<!-- BEGIN {marker} -->` with no END (`cause: unterminated-managed-region`), and `from-line` is the 1-based line the open region begins on: that line and every line after it are in no entry and were not examined, so the file never reads as walked. When both are open, the managed region, which opened first, names the line.
 - `entries` — every entry of every present file, in file and line order. `section` is the enclosing `##` heading's text, absent in the preamble. `hits` is present exactly when `identifier` is and the search ran, and lists the files holding the identifier.
+- `form`, `entries-count`, `lists-file` — `entries`, each with its `hits`, is inline while the result serialized fits `[artifacts] read-size-bytes` (a result exactly at it fits), and `form` is `inline`. Past it `form` is `file`, `entries` is absent, and `lists-file` names the file holding it whole, from the project root: a JSON object with the one key `entries`, written by the bounding `check-artifact-size` and `prune-tasks` use, under `.ductus/results/prune-project/project-files/`. `entries-count` is inline in both forms. `hits` move with their entry, never apart from it, since each entry is a record whether or not it has hits. Both a preview and an apply bound the result, and an apply has written by the time a list file that cannot be written fails the call.
 - `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason`, as `ductus prune-project --help` states; in the `unavailable` case no entry carries `hits`. It is absent on an apply, which reads no source.
 - `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**, which `ductus prune-project --help` states; its refusal includes `create`. Duplicate digests each claim a distinct entry.
 - `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are.

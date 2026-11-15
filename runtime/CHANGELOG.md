@@ -317,6 +317,17 @@ its version and date.
 
 ### Changed
 
+- **`prune-project` bounds its result and names an unexamined tail (spec
+  075's review).** `entries`, each with its `hits`, is inline while the result
+  fits `[artifacts] read-size-bytes`; past it `form` is `file`, `entries` is
+  absent, `entries-count` stays inline, and `lists-file` names the file under
+  `.ductus/results/prune-project/project-files/` holding them whole
+  (BE-PAYLOAD-001). A project file that ends inside an open HTML comment, or
+  a `<!-- BEGIN … -->` with no END, carries `unexamined-tail`
+  (`from-line`, `cause`), so the lines from there on read as not examined
+  rather than walked (QUAL-CLAIM-001). `/{project}:prune --project`'s preview
+  reads both.
+
 - **`discover-rule-files`' notices and `dashboard`'s unknown config keys are
   bounded (spec 022, task 32).** Each is a line per key in `.ductus/config.toml`
   that this version does not read, so it grows with the config. Every
