@@ -38,7 +38,7 @@ The sections moved from 022 keep every argument and result shape and every field
 | --- | --- | --- |
 | `specs/066-audit-records-and-the-completion-gate/spec.md` | Create | The spec |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Create | The seven primitives' shapes |
-| `specs/066-audit-records-and-the-completion-gate/scenarios/*.md` | Move | The sixteen scenarios moved from 022 |
+| `specs/066-audit-records-and-the-completion-gate/scenarios/*.md` | Move | The scenarios moved from 022 |
 | `runtime/src/primitives/compute_review_scope.rs` | Specify | `compute-review-scope` |
 | `runtime/src/primitives/process_waivers.rs` | Specify | `process-waivers` |
 | `runtime/src/primitives/process_decisions.rs` | Specify | `process-decisions` |

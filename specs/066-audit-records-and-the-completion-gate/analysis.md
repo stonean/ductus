@@ -1,63 +1,81 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-10-28T20:22:39Z
-analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
+last-run: 2026-11-15T21:43:33Z
+analyzed-against: d4233d57ac0eee794638f3dceda2d2f1e0419395
 hard-fail: 0
-blocking-findings: 1
-advisory: 1
-unexamined: 7
+blocking-findings: 0
+advisory: 0
+unexamined: 9
 analyzed-digest:
-  data-model.md: 8851119617356540be9a3fd4434cdf7eecc04bcb9ae5471322a0c5a93ae1ed77
-  plan.md: 37373f3b36eb33b8ed39aab86772e265f720670d0ce4728fd9173c1caefd9a23
-  review.md: 6c92bf8e500e215a0e2a7c70379df99ff5ddc8c180a07b4d15159c5f94ebb0c4
-  scenarios/a-done-spec-has-no-transition-to-gate.md: d4a9f47277ddcd5e8735be7d13ee7f57606827a5f36db608da3fd70a05aaa39a
+  data-model.md: caa0867d6f2877c365207d3fa64ce9f5d660844f577b53e014ec32e19fc2d917
+  plan.md: 2b88085e12037fb2efb067a3d5ea4f33fe11dc84acf26d98a49cae913ef01316
+  review.md: 167d716267361b810487a2d1c13147801bdf9b4d518bb23cf0fb9d92ce6eacf8
+  scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
-  scenarios/a-multi-number-renumber-is-one-rewrite.md: 0b0c25fc2e8446f403bff82cff5b0d64c86cfbc45d98bc492fd5fa824c9fdd5a
-  scenarios/a-renamed-file-contributes-its-rewrites.md: 52907e92b668e9d100ab339e0d36953cd6d025104b3650174bf7b806b3631490
-  scenarios/a-review-states-what-it-read.md: 333ffc663a0d0f471970dbcdad9b010583dd891f651e626741962cad8265da14
-  scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 4273f4da9ffa9a0b4b02b06dba0b8d05a2c8ceb4780937dc360c1e72153d57fc
-  scenarios/only-gating-findings-hold-done.md: 43012eb89501db9f4abc468448aadf7fc1867f72cd0bb1502bad16f26ea107d0
+  scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
+  scenarios/a-renamed-file-contributes-its-rewrites.md: b578c5093853df3201d5d4b451b21c55943afb4840a47cb6d45f263a96e2a9fe
+  scenarios/a-review-states-what-it-read.md: a75902f6c548b664d670a03ef4642b8cb4ff20fbdccfa39468666fa5d9787490
+  scenarios/a-supplied-summary-carries-the-loops-account.md: 80f366f0462d15212f4c5ceb7c097095fd5c5cd87ee68f769056c3dc1c803882
+  scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 39b59f38bb7b419b250d16d6ff6f3fec473959a3f9293706a6fcab931f6f232d
+  scenarios/checkbox-state-is-outside-the-analysis-digest.md: ca9c4875ae8dec48c0c79edc74f3af3d4ee405601c6a8b1dee3c9a68f748834d
+  scenarios/freshness-results-have-a-bounded-size.md: 0365689904e4ca8d3a11c14ce4411acbe95373560bf6ffa390a17afda8c832e0
+  scenarios/only-gating-findings-hold-done.md: 27a6385fb7da6ccd6bf74303f92559b00998fe170248408e1df76bdf3a0b0f29
+  scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
   scenarios/process-waivers-file-lists.md: 3fb3b9e54f414691d28d984ba76cd48c7e1de4fe2ee67259a44ea8559da447dc
-  scenarios/review-base-includes-the-transition-commit.md: 62f1434d3a2d59d62ebbfa37d5c6561d82c4cb343907d7cbe081e0df63801b3f
-  scenarios/review-scope-includes-uncommitted-work.md: 72e5ad46790ca087bd9ee0be134f875ebad189eed87002409f4ede60524d3097
-  scenarios/review-scope-plan-affected-table-format.md: 25d9a4b8b89fea9460ea2b134e4184bcf117df678ed501d1ba16efa9f84abe02
-  scenarios/review-scope-union.md: e5fa76ef2b48ea246649338d71d8c0a6988d7e48a9202e677ad593657316c0ae
-  scenarios/review-staleness-gate.md: 61427d7c8f1393cf72edeae32fd54502c99641499c429cf33b7368d93e0e7131
-  scenarios/review-staleness-on-done-specs.md: 18484a327c18ea44c3cfbe24fc22d1b727c5033cf619aa3760c3652fdc1b66f5
-  scenarios/scope-results-have-a-bounded-size.md: ccd58ff881b92b3c075465c570d848a7ba2579b75602c7718cfcea3ebd2ee53d
-  scenarios/the-committed-tree-horizon.md: cac65fb842defe0ce0326a76274794d1402d96c10aa02a2f977fd6d326ab3772
+  scenarios/process-waivers-notices-flatten-stored-text.md: a0fe96d2f894add12b9ed470dfdc011ce1383b1528871c8d68ec64bb85d64c03
+  scenarios/review-base-includes-the-transition-commit.md: 10d6d341e7338ac19fc9f35c9d2f79960ebc73aca7bf5e702adad17924cd8518
+  scenarios/review-scope-includes-uncommitted-work.md: 9864ae8c8bb85d0ab1606b222b983f6fe449f89b21580af7b0a1c4e644e45bba
+  scenarios/review-scope-plan-affected-table-format.md: 501c1d9737e6d2b928318c02e1d13164817ba7c1054854cd599f14707caba767
+  scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md: e33e76432da85f5cc661041515f0f3aae300ad9974065e5eadba696cc820748c
+  scenarios/review-scope-union.md: 50722645d52601a9b8f0c799272f58923a7250623abc097ad38bb5a4ec62181e
+  scenarios/review-staleness-on-done-specs.md: e0c14689fc666e2658b2cf7f9891b0f00d717aee8bd3c871717d54ed7ff6900c
+  scenarios/scope-results-have-a-bounded-size.md: 99120b144942e06b365e220c30085592a02c477c548e6336f8c23400e1ee4c9d
+  scenarios/the-committed-tree-horizon.md: 046b6a8dcef5f85bdb9083308311729911f5afa49f0351c0505bc558b5adb96b
   scenarios/the-cross-spec-impact-gate.md: b85c2d557733a29beb8084823a9156e13b283090a283203aa14dcaa85afed3c1
-  scenarios/write-analysis-and-the-second-gate.md: afaaa2f6957547d1f9dce559426353e58a00da287b1066f7eb0af05d51330397
+  scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
+  scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: acdbc6f5ada97ba54258a3197dbc1fafdc1785878deba14451cab532cea4bf5a
-  tasks.md: 07d97663d484ecc47ad1a51027e70ce3fc00ef374e68b43d2a98722c94f78fe5
+  spec.md: e9fa9c1d0483fb69ab0aaf8c08032dbc8d201d4a0d9be448eb97d82102ce4b2b
+  tasks.md: 958ef887aa551e587cf7f6c41c8efb8acea2da42914c95d3e1cd20d384fecc84
 unexamined-by-reason:
-  not-a-live-claim: 3
-  root-absent: 4
-blocking: true
+  not-a-live-claim: 4
+  root-absent: 5
+rule-digest:
+  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
+  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
+  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
+  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
+  performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
+  performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
+  quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
+  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
+  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+rule-verdicts:
+  BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
+  BE-ERR-002: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
+  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
+  BE-INPUT-004: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
+  BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-INPUT-011: {verdict: addressed, cite: "scenarios/process-waivers-notices-flatten-stored-text.md#Behavior"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  CFG-ENV-008: {verdict: addressed, cite: "scenarios/scope-results-have-a-bounded-size.md#Edge Cases"}
+blocking: false
 dispositions:
-  fixed: 0
-  routed: 2
-  discarded: 0
+  fixed: 1
+  deferred: 0
+  waived: 0
   undispositioned: 0
-decisions:
-  - key: "rule-assessment — BE-PAYLOAD-001: compute-review-scope and diff-cross-spec return unbounded path lists, and no artifact commits to a maximum response size or pagination"
-    outcome: routed
-    target: specs/066-audit-records-and-the-completion-gate/scenarios/scope-results-have-a-bounded-size.md
-    decided-at: 2026-10-28T13:21:06Z
-    decided-by: andy@stone.dev
-  - key: scenario-open-questions — 1 unresolved open question(s) in scenario(s) scope-results-have-a-bounded-size — a spec is not complete while its scenarios carry questions
-    outcome: routed
-    target: specs/066-audit-records-and-the-completion-gate/tasks.md
-    decided-at: 2026-10-28T13:21:06Z
-    decided-by: andy@stone.dev
 ---
 
 # Analysis — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-0 hard-fail, 1 blocking, 1 advisory; blocking. 7 unexamined target(s). Dispositions: 0 fixed, 2 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -65,17 +83,25 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — BE-PAYLOAD-001: compute-review-scope and diff-cross-spec return unbounded path lists, and no artifact commits to a maximum response size or pagination — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **routed** to `specs/066-audit-records-and-the-completion-gate/scenarios/scope-results-have-a-bounded-size.md`
+*None.*
 
 ## Advisory findings
 
-- scenario-open-questions — 1 unresolved open question(s) in scenario(s) scope-results-have-a-bounded-size — a spec is not complete while its scenarios carry questions — `specs/066-audit-records-and-the-completion-gate/spec.md` — **routed** to `specs/066-audit-records-and-the-completion-gate/tasks.md`
+*None.*
+
+## Deferred to other specs
+
+*None.*
+
+## Contradictions
+
+*None.*
 
 ## Unexamined targets
 
-- not-a-live-claim: 3
-- root-absent: 4
+- not-a-live-claim: 4
+- root-absent: 5
 
 ## Fixed in this run
 
-*None.*
+- grounding — plan.md Affected Files states 'The sixteen scenarios moved from 022' as a count, but scenarios/ now holds 27 files; the enumeration has drifted from the tree — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
