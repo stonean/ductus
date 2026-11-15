@@ -1,7 +1,7 @@
 ---
 spec: 080-deterministic-runtime-efficiency
-last-run: 2026-11-15T02:10:11Z
-analyzed-against: 464533171c3964f473d56bfdf0674021a8c145c8
+last-run: 2026-11-15T14:49:11Z
+analyzed-against: 34367454ceb4d31d928f4dfb5966d901bfd48638
 hard-fail: 0
 blocking-findings: 0
 advisory: 19
@@ -9,7 +9,7 @@ unexamined: 5
 analyzed-digest:
   data-model.md: 79bd7b69b082b597bc3d63fc834573795949af1ef51715ecd777eb10d3eadb95
   plan.md: 9a183db6f4f3101a7c25ecdb59478e1e08dc24b92c8dd203423d26faa6ba2f03
-  research.md: 33cc92a17e6fa7d6c68496729e6294da409409271b033b2807ab2804d859794b
+  research.md: f3fe9bd9319dc4dfd1f6da663e2457cb44018560d0e6491e80422c0985d8981e
   review.md: f7f71d28576bd49886418b0376c2832a7dbd9796feb60c4c3482adbb8a40c1a7
   scenarios/configure-types-no-permission-entries.md: 6c764c4d44c20f0b7d88582dbd52de2d9c1efd915080813f41eb858e16ca7313
   scenarios/groom-derives-routing-candidates.md: 516690b45261a38cad315305e8b1ca19fa51a072137a7bfbb1a12c9217fe42da
@@ -58,7 +58,7 @@ rule-verdicts:
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   deferred: 0
   waived: 19
   undispositioned: 0
@@ -164,7 +164,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 19 advisory; not blocking. 5 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 19 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 19 advisory; not blocking. 5 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 19 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -193,8 +193,8 @@ decisions:
 - grounding — plan.md says the allow side already ignores a pinned configure copy's edits, citing no code or test — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
 - grounding — plan.md says an omitted list and an empty one arrive alike over MCP, naming no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A protocol and library behavior whose re-sourcing needs their documentation or a run, which is research rather than a chore.
 - grounding — plan.md (Trade-offs, Renaming merge-status-hook) says the name is in 28 live files (115 occurrences, 7 specs), with no command or method for the count — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: advisory and no chore: a count of where the name occurs, which a grep of the name across the live-artifact set re-derives; the trade-off rejects the rename on the adopters' permission entries it would retire, which the count does not carry
-- grounding — plan.md 'Bound (AC24)' states fixture-corpus sizes (1,701 planned specs naming 1,498 specs against 515 by rows; a 279,572-byte view file against dashboard's 791,817 bytes) with no method or pointer to research.md — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: Figures are measurements of this spec's own generated fixture corpus, which scripts/measure-result-sizes.sh and the AC24 test reproduce; they carry no research.md pointer in the plan, but they are not claims about a system outside the spec's own work, and no gate reads them. (decided by the rule)
-- grounding — spec.md Edge Cases states 'Collapsing took the 77-spec table from 7,625 to 4,271 characters' with no source, command or method — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A measurement of the view's own collapse step, dated by the surrounding owner decisions (2026-11-08, 2026-11-10); the criterion it illustrates (AC24) is checked by a test, so the figure is illustration, not a contract, and no gate reads it. (decided by the rule)
+- grounding — plan.md 'Bound (AC24)' states fixture-corpus sizes (1,701 planned specs naming 1,498 specs against 515 by rows; a 279,572-byte view file against dashboard's 791,817 bytes) with no method or pointer to research.md — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: Figures are measurements of this spec's own generated fixture corpus, which scripts/measure-result-sizes.sh and the AC24 test reproduce; they carry no research.md pointer in the plan, but they are not claims about a system outside the spec's own work, and no gate reads them.
+- grounding — spec.md Edge Cases states 'Collapsing took the 77-spec table from 7,625 to 4,271 characters' with no source, command or method — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A measurement of the view's own collapse step, dated by the surrounding owner decisions (2026-11-08, 2026-11-10); the criterion it illustrates (AC24) is checked by a test, so the figure is illustration, not a contract, and no gate reads it.
 
 ## Deferred to other specs
 
@@ -215,5 +215,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-PAYLOAD-001: discover-rule-files' new `unreadable` list ({file, reason}, bounded only by the rule directory's file count under `all`) is not among the lists the bounded-results table moves and carries no committed maximum or file form. — `specs/080-deterministic-runtime-efficiency/data-model.md` — **fixed**
-- rule-assessment — BE-TXN-002: Concurrent merge-status-hook runs read-modify-write one settings file with no version check or lock, so an entry can be lost; the spec accepts this in prose, with no guard and no departure entry. — `specs/080-deterministic-runtime-efficiency/spec.md` — **fixed**
+*None.*
