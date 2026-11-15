@@ -314,8 +314,8 @@ pub(crate) fn pass_from_step_prose(prose: &str) -> Option<&'static str> {
 }
 
 /// The passes a procedure runs: those its `performReview` steps name, in
-/// step order. A pass a dimension-restricting flag skips is absent from the
-/// procedure, so is absent here.
+/// step order. `ductus exec` takes no dimension-restricting flag and walks
+/// every step, so under exec this is every pass the command file holds.
 pub(crate) fn passes_run(procedure: &crate::schema::procedure::Procedure) -> Vec<&'static str> {
     procedure
         .steps
@@ -334,7 +334,7 @@ pub(crate) fn passes_run(procedure: &crate::schema::procedure::Procedure) -> Vec
 /// [`restore_lists`] put a moved list back when the result arrived) and the
 /// loaded rule files (`selected` basenames under `rules-dir`, from
 /// `discover-rule-files`) off disk. The pass is the one the step's prose
-/// names, else the context's `pass`. `rule-files` carries only the files
+/// names. `rule-files` carries only the files
 /// [`review_pass_for_rule_file`] maps to that pass; `loaded-rule-files` names
 /// every loaded file with its pass, and `passes-run` the passes this walk
 /// runs, which is what the security pass needs to apply a rule's
@@ -353,12 +353,6 @@ fn build_perform_review_request(
 ) -> Value {
     let pass = pass_from_step_prose(step_prose)
         .map(str::to_string)
-        .or_else(|| {
-            context
-                .get("pass")
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        })
         .unwrap_or_default();
     let scope_files = load_scope_files(context, repo);
     let all_rule_files = load_rule_files(context, repo);
@@ -2898,7 +2892,6 @@ mod tests {
         .unwrap();
 
         let mut ctx = Map::new();
-        ctx.insert("pass".into(), Value::String("security".into()));
         ctx.insert(
             "scope".into(),
             Value::Array(vec![
@@ -2913,7 +2906,7 @@ mod tests {
             Value::Array(vec![Value::String("security-backend.md".into())]),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path(), "");
+        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass.");
         let obj = value.as_object().unwrap();
         // Typed prefix leads in cache-anchor order.
         let prefix: Vec<&str> = obj.keys().map(String::as_str).take(3).collect();
@@ -3084,9 +3077,8 @@ mod tests {
     #[test]
     fn build_perform_review_request_is_empty_without_scope_or_rules() {
         let tmp = tempdir().unwrap();
-        let mut ctx = Map::new();
-        ctx.insert("pass".into(), Value::String("reuse".into()));
-        let value = build_perform_review_request(&ctx, tmp.path(), "");
+        let ctx = Map::new();
+        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **reuse** pass.");
         assert_eq!(value["pass"], "reuse");
         assert_eq!(
             value["scope-files"].as_array().unwrap().as_slice(),
@@ -3401,7 +3393,6 @@ mod tests {
         // discover-rule-files.
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
-        ctx.insert("pass".into(), Value::String("reuse".into()));
         ctx.insert("scope".into(), serde_json::json!(["runtime/src/a.rs"]));
         ctx.insert("diff-base".into(), Value::String("abc1234".into()));
         ctx.insert("rules-dir".into(), Value::String("framework/rules".into()));

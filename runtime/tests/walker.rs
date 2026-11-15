@@ -288,7 +288,7 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
             Step::Extension {
                 number: StepNumber(vec![3]),
                 identifier: "performReview".into(),
-                prose: "Run the security pass.".into(),
+                prose: "Run the **security** pass.".into(),
                 location: loc(),
             },
             Step::Primitive {
@@ -310,7 +310,6 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
         Value::String("2026-07-06T00:00:00Z".into()),
     );
     context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("pass".into(), Value::String("security".into()));
 
     // One security pass returns a single MUST finding against the scoped file,
     // plus one observation — something real that matched no loaded rule.
@@ -1244,14 +1243,13 @@ fn a_scope_past_the_read_size_reaches_the_review_through_its_list_file() {
             Step::Extension {
                 number: StepNumber(vec![2]),
                 identifier: "performReview".into(),
-                prose: "Run the security pass.".into(),
+                prose: "Run the **security** pass.".into(),
                 location: loc(),
             },
         ],
     };
     let mut context = Map::new();
     context.insert("feature".into(), Value::String("001-x".into()));
-    context.insert("pass".into(), Value::String("security".into()));
     let responses =
         "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[]}}\n";
     let mut reader = Cursor::new(responses.to_string());

@@ -122,6 +122,7 @@ decisions:                           # omitted entirely when empty
 | `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058; 076 renamed `routed` and `discarded`, still read from an older record. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema above is open per §text-first-artifacts. |
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop`, `round-waivers` | integers, a boolean, a list | no | The fix-round loop's outcome, derived by `write-review` and absent when the run stated nothing about its fixes. Defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md). |
+| `excluded`, `contract-breaks`, `open-findings`, `fix-rounds-open` | integer, integer, list, boolean | no | Defined in [079's data model](../079-review-and-analysis-work-converges/data-model.md). `excluded` and `contract-breaks` are written on every run; `open-findings` and `fix-rounds-open` only when set. |
 | `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
 **Validation severity** (per [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
@@ -147,6 +148,7 @@ result.
 | `## Deferred findings` | Always (empty when none). MUST and SHOULD violations their deferral releases (076), each with its work; they leave the counts. Added by 076 |
 | `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
 | `## Skipped passes` | Always (empty when none) |
+| `## Excluded from scope` | Always (`*None.*` when none). Each path the scope left to another spec, with the specs that claimed it, and each path a fix round left out. Added by 079 |
 | `## Unexamined governance` | Always (empty when none). Added by 055 |
 
 ### Finding record

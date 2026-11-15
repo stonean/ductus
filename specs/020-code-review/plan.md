@@ -67,7 +67,7 @@ below for *not* invoking `/{project}:review` in CI is unaffected.
 
 ### Waiver-expiry warrants a scenario file
 
-Of the 13 acceptance criteria, AC 8's waiver auto-expiry has the subtlest behavior — the framework drops the waiver when the file is renamed or the rule is no longer triggered, and the underlying finding re-blocks. This is exactly the situational tier (specific condition, concrete behavior) the constitution carves out for scenarios. `scenarios/waiver-expiry.md` documents the expected behavior for at least the four edge cases: file renamed, file deleted, rule renamed/removed, and the same rule firing at a different location. Other ACs are general behavior, covered by the spec body.
+Of the acceptance criteria, AC 8's waiver auto-expiry has the subtlest behavior — the framework drops the waiver when the file is renamed or the rule is no longer triggered, and the underlying finding re-blocks. This is exactly the situational tier (specific condition, concrete behavior) the constitution carves out for scenarios. `scenarios/waiver-expiry.md` documents the expected behavior for at least the four edge cases: file renamed, file deleted, rule renamed/removed, and the same rule firing at a different location. Other ACs are general behavior, covered by the spec body.
 
 The runtime half's `process-waivers` result is bounded (BE-PAYLOAD-001): its `applied`, `expired`, `retained` and `notices` lists, which grow with a spec's waivers and, since [073](../073-decided-rule-departures-are-recorded/data-model.md), with its departure entries, are inline while the result fits `[artifacts] read-size-bytes` and past it are held whole in the file `lists-file` names, each count inline in both forms (073's `data-model.md`, its `process-waivers` result).
 
@@ -80,6 +80,9 @@ The runtime half's `process-waivers` result is bounded (BE-PAYLOAD-001): its `ap
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/commands/review.md` | Create | Source for `/ductus:review`, and **the canonical content** — the spec body points at it rather than embedding it. The original plan had this inverted, naming the spec's embedded copy as canonical; that inversion is what produced a 561-line snapshot which then drifted more than half behind, and it was corrected on 2026-09-13 |
+| `framework/reference/review.md` | Edit | The command's reference: the passes, the rule-file-to-pass mapping, the Not-flagged routing, waivers, deferrals and the fix-round loop |
+| `runtime/src/interpreter/payload.rs`, `runtime/src/interpreter/mod.rs`, `runtime/src/schema/extensions.rs` | Edit | `performReview` names its pass and carries that pass's rule files, `loaded-rule-files` and `passes-run` |
+| `framework/rules/security-frontend.md` | Edit | Its header says review reports a defect under the owner a **Not flagged:** clause names |
 | `framework/bootstrap/ductus.md` | Edit | §Project Configuration lists `[review] tech-stack-verified` with its purpose and its default, the inventory `CFG-ENV-002` requires |
 | `framework/bootstrap/govern.md` | Edit | Byte-identical mirror of `ductus.md` (audit Family 21) |
 | `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when `review.blocking: true` or `review.last-run` missing) |
