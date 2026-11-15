@@ -201,7 +201,7 @@ A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependenci
 | `derive-boundary` | `boundary` |
 | `lint-markdown` | `violations` |
 | `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
-| `prune-plan` | `features`, `skipped` under `all` |
+| `prune-plan` | `sections` for one feature; `features`, `skipped` under `all` (041 task 26) |
 | `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse; `config`'s `unknown-keys`, under `config` in the file, its count inline there in both forms (022 task 32) |
 | `check-review-gate` | `violations`, `cross-spec-impact`, `analyze-stale-paths` |
 | `check-artifacts` | `findings`, `skipped` |
@@ -215,4 +215,4 @@ A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependenci
 
 `render-status` is bounded in a shape of its own, given under *`render-status`* above: its view stays inline, cut, and its file holds the whole view, with no count.
 
-The counts are each list's `{list}-count`. The prune primitives flatten a summary or a walk into their result, so `form` and `lists-file` sit inside the half that moves lists: `prune-tasks`' summary, and the walk both share. A one-feature result is still its summary on the wire. `prune-plan`'s one-feature summary does not grow with the corpus and carries neither.
+The counts are each list's `{list}-count`. The prune primitives flatten a summary or a walk into their result, and `form` and `lists-file` belong to that result, beside whichever half it carries and in neither half, since the two halves share no key. A one-feature result is its summary on the wire plus those two keys.

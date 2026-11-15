@@ -4693,20 +4693,15 @@ pub struct PruneTasksSummary {
     pub sections_count: usize,
     /// Repo-relative path to the tasks file.
     pub path: String,
-    /// Where `sections` is: in this result, or past `[artifacts]
-    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7).
-    #[serde(default)]
-    pub form: ListsForm,
-    /// In the file form, the file holding `sections` whole, from the project
-    /// root: a JSON object with its key.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lists_file: Option<String>,
 }
 
 /// Result for `prune-tasks`: one feature's summary, at the top level exactly
 /// as a single-feature call has always returned it, or — under `all` — the
 /// walk. Both halves are flattened, so a result carries the keys of whichever
-/// half is present and nothing of the other.
+/// half is present and nothing of the other. The two halves share no key,
+/// since serde's flatten consumes a shared key even when that half fails to
+/// deserialize: `form` and `lists-file` are the result's own, declared after
+/// the halves so they stay last on the wire.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct PruneTasksResult {
@@ -4717,6 +4712,15 @@ pub struct PruneTasksResult {
     /// was named.
     #[serde(flatten)]
     pub walk: Option<PruneWalk<PruneTasksLine>>,
+    /// Where the half's lists are (`sections`; under `all`, `features` and
+    /// `skipped`): in this result, or past `[artifacts] read-size-bytes` in
+    /// the file `lists-file` names (spec 080, AC7).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 /// One feature's line in a `prune-tasks` walk: its summary without the
@@ -4788,15 +4792,6 @@ pub struct PruneWalk<T> {
     pub skipped: Option<Vec<SkippedFeature>>,
     /// Entries in `skipped`, in either form.
     pub skipped_count: usize,
-    /// Where `features` and `skipped` are: in this result, or past
-    /// `[artifacts] read-size-bytes` in the file `lists-file` names (spec
-    /// 080, AC7).
-    #[serde(default)]
-    pub form: ListsForm,
-    /// In the file form, the file holding both lists whole, from the project
-    /// root: a JSON object with their two keys.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lists_file: Option<String>,
 }
 
 /// One feature's summary within a walk.
@@ -4970,19 +4965,12 @@ pub struct PrunePlanSummary {
     /// computed, never `false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reopen_required: Option<bool>,
-    /// Where `sections` is: in this result, or past `[artifacts]
-    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7). A
-    /// walk's entries are always inline: the walk is bounded whole.
-    #[serde(default)]
-    pub form: ListsForm,
-    /// In the file form, the file holding `sections` whole, from the project
-    /// root: a JSON object with its key.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lists_file: Option<String>,
 }
 
 /// Result for `prune-plan`: one feature's summary, at the top level, or —
-/// under `all` — the walk, shaped as `prune-tasks`' result is.
+/// under `all` — the walk, shaped as `prune-tasks`' result is: the halves
+/// share no key, and `form` and `lists-file` are the result's own. A walk's
+/// entries carry neither: the walk is bounded whole.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct PrunePlanResult {
@@ -4992,6 +4980,15 @@ pub struct PrunePlanResult {
     /// Every feature's preview; absent when one feature was named.
     #[serde(flatten)]
     pub walk: Option<PruneWalk<PrunePlanSummary>>,
+    /// Where the half's lists are (`sections`; under `all`, `features` and
+    /// `skipped`): in this result, or past `[artifacts] read-size-bytes` in
+    /// the file `lists-file` names (spec 080, AC7).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- prune-project -----------------------------------------------------------
@@ -8424,8 +8421,6 @@ mod tests {
             ]),
             sections_count: 3,
             path: "specs/041-task-pruning/tasks.md".into(),
-            form: ListsForm::Inline,
-            lists_file: None,
         }
     }
 
@@ -8448,11 +8443,20 @@ mod tests {
         let result = PruneTasksResult {
             summary: Some(summary.clone()),
             walk: None,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         // A single-feature result is the summary at the top level, as it has
-        // always been on the wire, with no walk key beside it.
-        assert_eq!(value, serde_json::to_value(&summary).unwrap());
+        // always been on the wire, with no walk key beside it, and its own
+        // `form` last.
+        let mut expected = serde_json::to_value(&summary).unwrap();
+        expected["form"] = "inline".into();
+        assert_eq!(value, expected);
+        assert_eq!(
+            value.as_object().unwrap().keys().next_back().unwrap(),
+            "form"
+        );
         assert_eq!(value["mode"], "keep-pending");
         assert_eq!(value["gate"], "not-applicable");
         assert_eq!(value["nothing-to-prune"], false);
@@ -8485,9 +8489,9 @@ mod tests {
                     reason: SkipReason::NoTasksFile,
                 }]),
                 skipped_count: 1,
-                form: ListsForm::Inline,
-                lists_file: None,
             }),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
         assert_eq!(value["examined"], 3);
@@ -8538,8 +8542,6 @@ mod tests {
             status: "done".into(),
             sections_examined: 5,
             sections_count: 1,
-            form: ListsForm::Inline,
-            lists_file: None,
             sections: Some(vec![PlanSection {
                 heading: "Implementation notes".into(),
                 ordinal: 3,
@@ -8567,9 +8569,13 @@ mod tests {
         let result = PrunePlanResult {
             summary: Some(summary.clone()),
             walk: None,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
-        assert_eq!(value, serde_json::to_value(&summary).unwrap());
+        let mut expected = serde_json::to_value(&summary).unwrap();
+        expected["form"] = "inline".into();
+        assert_eq!(value, expected);
         assert_eq!(value["sections"][0]["finding"]["family"], "plan-record");
         assert_eq!(value["stale-sections"], serde_json::json!([]));
         // Not computed is absent, never `false`.
@@ -8582,6 +8588,8 @@ mod tests {
                 ..summary.clone()
             }),
             walk: None,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&computed).unwrap();
         assert_eq!(value["reopen-required"], false);
@@ -8601,14 +8609,104 @@ mod tests {
                     reason: SkipReason::NoPlanFile,
                 }]),
                 skipped_count: 1,
-                form: ListsForm::Inline,
-                lists_file: None,
             }),
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
         assert_eq!(value["features"][0]["status"], "done");
         assert_eq!(value["skipped"][0]["reason"], "no-plan-file");
         assert_eq!(round_trip(&walked), walked);
+    }
+
+    /// A wire-form `prune-tasks` or `prune-plan` result, deserialized into
+    /// its result type and serialized again, must come back as it went in:
+    /// the two flattened halves share no key, so `form` and `lists-file`
+    /// survive in the file form (serde's flatten consumes a key a failed half
+    /// also names).
+    fn assert_wire_round_trips<R>(wire: &serde_json::Value)
+    where
+        R: serde::Serialize + serde::de::DeserializeOwned,
+    {
+        let result: R = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(&serde_json::to_value(&result).unwrap(), wire);
+    }
+
+    fn size_wire() -> serde_json::Value {
+        serde_json::json!({ "lines": 4, "bytes": 90 })
+    }
+
+    #[test]
+    fn prune_tasks_result_file_form_survives_a_round_trip() {
+        let list_file = ".ductus/results/prune-tasks/041-task-pruning/ab12.json";
+        for form in ["inline", "file"] {
+            let file = form == "file";
+            let mut single = serde_json::json!({
+                "mode": "keep-pending",
+                "applied": false,
+                "gate": "not-applicable",
+                "nothing-to-prune": false,
+                "removed-count": 1,
+                "kept-count": 2,
+                "size-before": size_wire(),
+                "size-after": size_wire(),
+                "sections-count": 3,
+                "path": "specs/041-task-pruning/tasks.md",
+                "form": form,
+            });
+            let mut walk = serde_json::json!({
+                "examined": 3,
+                "features-count": 1,
+                "skipped-count": 1,
+                "form": form,
+            });
+            if file {
+                single["lists-file"] = list_file.into();
+                walk["lists-file"] = list_file.into();
+            } else {
+                single["sections"] = serde_json::json!([]);
+                walk["features"] = serde_json::json!([]);
+                walk["skipped"] = serde_json::json!([]);
+            }
+            assert_wire_round_trips::<PruneTasksResult>(&single);
+            assert_wire_round_trips::<PruneTasksResult>(&walk);
+        }
+    }
+
+    #[test]
+    fn prune_plan_result_file_form_survives_a_round_trip() {
+        let list_file = ".ductus/results/prune-plan/041-task-pruning/ab12.json";
+        for form in ["inline", "file"] {
+            let file = form == "file";
+            let mut single = serde_json::json!({
+                "path": "specs/041-task-pruning/plan.md",
+                "missing": false,
+                "status": "done",
+                "sections-examined": 5,
+                "sections-count": 1,
+                "applied": false,
+                "stale-sections": [],
+                "size-before": size_wire(),
+                "size-after": size_wire(),
+                "form": form,
+            });
+            let mut walk = serde_json::json!({
+                "examined": 2,
+                "features-count": 1,
+                "skipped-count": 1,
+                "form": form,
+            });
+            if file {
+                single["lists-file"] = list_file.into();
+                walk["lists-file"] = list_file.into();
+            } else {
+                single["sections"] = serde_json::json!([]);
+                walk["features"] = serde_json::json!([]);
+                walk["skipped"] = serde_json::json!([]);
+            }
+            assert_wire_round_trips::<PrunePlanResult>(&single);
+            assert_wire_round_trips::<PrunePlanResult>(&walk);
+        }
     }
 
     #[test]

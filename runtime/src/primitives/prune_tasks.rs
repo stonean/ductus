@@ -144,54 +144,87 @@ pub fn run(args: &PruneTasksArgs, repo: &Path) -> Result<PruneTasksResult> {
                     .into(),
             });
         }
-        let mut walk = walk(args, repo, &root)?;
-        bound_walk(repo, "prune-tasks", &mut walk)?;
-        return Ok(PruneTasksResult {
+        let mut result = PruneTasksResult {
             summary: None,
-            walk: Some(walk),
-        });
+            walk: Some(walk(args, repo, &root)?),
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        bound_result(
+            repo,
+            "prune-tasks",
+            super::bounded_lists::ALL_SPECS,
+            &mut result,
+        )?;
+        return Ok(result);
     };
-    let mut summary = summarize(feature, args, repo, &root)?;
-    let lists = serde_json::json!({ "sections": &summary.sections });
-    if let Some(file) = super::bounded_lists::place(repo, "prune-tasks", feature, &summary, &lists)?
-    {
-        summary.form = ListsForm::File;
-        summary.sections = None;
-        summary.lists_file = Some(file);
-    }
-    Ok(PruneTasksResult {
-        summary: Some(summary),
+    let mut result = PruneTasksResult {
+        summary: Some(summarize(feature, args, repo, &root)?),
         walk: None,
-    })
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    bound_result(repo, "prune-tasks", feature, &mut result)?;
+    Ok(result)
 }
 
-/// Hold `walk` to `[artifacts] read-size-bytes`: past it, its `features` and
-/// `skipped` go to the file it names, with only their counts inline
-/// (`bounded_lists::place`; spec 080, AC7). Shared by both prune primitives'
-/// `all` walks. A walk that applied its reductions has written them by then,
-/// so a list file that cannot be written fails a call whose writes stand.
+impl BoundedPruneResult for PruneTasksResult {
+    fn lists(&self) -> serde_json::Value {
+        match (&self.summary, &self.walk) {
+            (Some(summary), _) => serde_json::json!({ "sections": &summary.sections }),
+            (None, Some(walk)) => {
+                serde_json::json!({ "features": &walk.features, "skipped": &walk.skipped })
+            }
+            (None, None) => serde_json::json!({}),
+        }
+    }
+
+    fn move_to_file(&mut self, file: String) {
+        self.form = ListsForm::File;
+        self.lists_file = Some(file);
+        if let Some(summary) = &mut self.summary {
+            summary.sections = None;
+        }
+        if let Some(walk) = &mut self.walk {
+            walk.features = None;
+            walk.skipped = None;
+        }
+    }
+}
+
+/// A prune result whose lists can move to a file: both prune primitives'
+/// results, bounded by [`bound_result`].
+pub(crate) trait BoundedPruneResult: Serialize {
+    /// The lists the file holds whole: a feature's `sections`, or a walk's
+    /// `features` and `skipped`.
+    fn lists(&self) -> serde_json::Value;
+
+    /// Move to the file form: drop those lists, set `form` to `file`, and
+    /// name `file` in `lists-file`.
+    fn move_to_file(&mut self, file: String);
+}
+
+/// Hold `result` to `[artifacts] read-size-bytes`: past it, its lists go to
+/// the file it names, with only their counts inline (`bounded_lists::place`;
+/// spec 080, AC7). The size judged is the result as it is sent, its own
+/// `form` included, not either half alone. Shared by both prune primitives,
+/// for one feature and for an `all` walk. A call that applied its reductions
+/// has written them by then, so a list file that cannot be written fails a
+/// call whose writes stand.
 ///
 /// # Errors
 ///
 /// Those `bounded_lists::place` returns for a malformed read size or a list
 /// file that cannot be written.
-pub(crate) fn bound_walk<T: Serialize>(
+pub(crate) fn bound_result<R: BoundedPruneResult>(
     repo: &Path,
     primitive: &str,
-    walk: &mut PruneWalk<T>,
+    key: &str,
+    result: &mut R,
 ) -> Result<()> {
-    let lists = serde_json::json!({ "features": &walk.features, "skipped": &walk.skipped });
-    if let Some(file) = super::bounded_lists::place(
-        repo,
-        primitive,
-        super::bounded_lists::ALL_SPECS,
-        &*walk,
-        &lists,
-    )? {
-        walk.form = ListsForm::File;
-        walk.features = None;
-        walk.skipped = None;
-        walk.lists_file = Some(file);
+    let lists = result.lists();
+    if let Some(file) = super::bounded_lists::place(repo, primitive, key, &*result, &lists)? {
+        result.move_to_file(file);
     }
     Ok(())
 }
@@ -269,8 +302,6 @@ fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prun
         features: Some(features),
         skipped_count: skipped.len(),
         skipped: Some(skipped),
-        form: ListsForm::Inline,
-        lists_file: None,
     })
 }
 
@@ -381,8 +412,6 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
             sections_count: sections.len(),
             sections: Some(sections),
             path: rel_path(&tasks_path, repo),
-            form: ListsForm::Inline,
-            lists_file: None,
         },
         tasks_path,
         new_content,
@@ -712,17 +741,18 @@ mod tests {
             "[artifacts]\nread-size-bytes = 1\n",
         )
         .unwrap();
-        let summary = run(&args(false, false, false), &repo).unwrap();
-        assert_eq!(summary.form, ListsForm::File);
+        let result = super::run(&args(false, false, false), &repo).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        let summary = result.summary.clone().expect("a single-feature summary");
         assert_eq!(summary.sections, None);
         assert_eq!((summary.removed_count, summary.kept_count), (1, 2));
-        let file = repo.join(summary.lists_file.clone().unwrap());
+        let file = repo.join(result.lists_file.clone().unwrap());
         let lists: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
         assert_eq!(lists["sections"].as_array().map(Vec::len), Some(3));
         crate::primitives::bounded_lists::assert_counts_name_the_file(
             "prune-tasks",
-            &serde_json::to_value(&summary).unwrap(),
+            &serde_json::to_value(&result).unwrap(),
             &lists,
         );
     }
@@ -1105,6 +1135,74 @@ mod tests {
     }
 
     const PENDING_ONLY: &str = "# T\n\n## 1. Pending\n\n- [ ] a\n";
+
+    fn set_read_size(repo: &Path, bytes: usize) {
+        fs::create_dir_all(repo.join(".ductus")).unwrap();
+        fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+
+    /// The bound judges the result as it is sent, its own `form` included: a
+    /// result exactly at the read size is inline, and one byte under it is
+    /// not, for one feature and for a walk alike.
+    #[test]
+    fn a_result_is_held_to_the_read_size_as_it_is_sent() {
+        let (_single, repo) = write_repo(FLAT, Some("in-progress"));
+        let walked = corpus(&[
+            ("002-first", "in-progress", Some(FLAT)),
+            ("003-second", "in-progress", Some(FLAT)),
+        ]);
+        for (repo, args) in [
+            (repo.as_path(), args(false, false, false)),
+            (walked.path(), all(false, false, false)),
+        ] {
+            let whole = super::run(&args, repo).unwrap();
+            assert_eq!(whole.form, ListsForm::Inline);
+            let sent = serde_json::to_vec(&whole).unwrap().len();
+            set_read_size(repo, sent);
+            let fits = super::run(&args, repo).unwrap();
+            assert_eq!(fits.form, ListsForm::Inline, "exactly at the size fits");
+            set_read_size(repo, sent - 1);
+            let over = super::run(&args, repo).unwrap();
+            assert_eq!(over.form, ListsForm::File, "one byte over does not");
+            assert!(over.lists_file.is_some());
+        }
+    }
+
+    /// Past the read size a walk's `features` and `skipped` move to a file,
+    /// with their counts inline, and the result carries `form` and
+    /// `lists-file` once.
+    #[test]
+    fn a_walk_past_the_read_size_moves_its_lists_to_a_file() {
+        let tmp = corpus(&[
+            ("002-first", "in-progress", Some(FLAT)),
+            ("003-no-tasks", "clarified", None),
+        ]);
+        set_read_size(tmp.path(), 1);
+        let result = super::run(&all(false, false, false), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.summary.is_none());
+        let walk = result.walk.clone().expect("an all walk");
+        assert_eq!((walk.features, walk.skipped), (None, None));
+        assert_eq!((walk.features_count, walk.skipped_count), (1, 1));
+        let file = tmp.path().join(result.lists_file.clone().unwrap());
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
+        assert_eq!(lists["features"].as_array().map(Vec::len), Some(1));
+        assert_eq!(lists["skipped"].as_array().map(Vec::len), Some(1));
+        let wire = serde_json::to_value(&result).unwrap();
+        assert!(wire.get("features").is_none() && wire.get("skipped").is_none());
+        assert_eq!(
+            (
+                wire["features-count"].as_u64(),
+                wire["skipped-count"].as_u64()
+            ),
+            (Some(1), Some(1))
+        );
+    }
 
     #[test]
     fn a_walk_reports_features_in_corpus_order_and_names_each_skip() {

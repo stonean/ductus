@@ -340,6 +340,17 @@ its version and date.
   `request-lists-unwritable`. Spec 022's data model states the shapes,
   including a new `performReview` section.
 
+- **A `prune-tasks` or `prune-plan` result carries `form` and `lists-file`
+  once, and a file-form walk deserializes back (spec 041's review).** The two
+  keys moved from the one-feature summary and the walk to the result, so the
+  halves share no key and serde's flatten no longer consumes them for the
+  half that fails; the bound is judged on the result as it is sent, its own
+  `form` included. Key order is unchanged. `prune-plan`'s walk entries no
+  longer carry `form: inline`, which task 26 added. `PRUNE_PLAN` and
+  `PRUNE_TASKS` state that a malformed `[artifacts] read-size-bytes` halts
+  the call before any write; the parity suite's recorded descriptions
+  follow.
+
 - **`prune-plan`'s single-feature `sections` is bounded (spec 041's
   analysis, `BE-PAYLOAD-001`).** It is inline while the result fits
   `[artifacts] read-size-bytes`; past it `form` is `file`, `sections` is

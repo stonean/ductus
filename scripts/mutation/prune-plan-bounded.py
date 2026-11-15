@@ -18,15 +18,15 @@ MUTATIONS = [
     (
         'M1 a single feature past the read size keeps its sections inline',
         'src/primitives/prune_plan.rs',
-        '    if let Some(file) = super::bounded_lists::place(repo, "prune-plan", feature, &summary, &lists)?\n    {\n        summary.form = ListsForm::File;\n        summary.sections = None;\n        summary.lists_file = Some(file);\n    }',
-        '    let _ = (&lists, feature);',
+        '    bound_result(repo, "prune-plan", feature, &mut result)?;\n    Ok(result)',
+        '    Ok(result)',
         'prune_plan::tests::a_summary_past_the_read_size_moves_its_sections_to_a_file',
     ),
     (
         'M2 a single feature under the read size moves its sections to a file',
         'src/primitives/prune_plan.rs',
-        '    if let Some(file) = super::bounded_lists::place(repo, "prune-plan", feature, &summary, &lists)?\n    {',
-        '    if let Some(file) = super::bounded_lists::place(repo, "prune-plan", feature, &summary, &lists)?\n        .or(Some(String::from(".ductus/results/x")))\n    {',
+        '    bound_result(repo, "prune-plan", feature, &mut result)?;\n    Ok(result)',
+        '    result.move_to_file(String::from(".ductus/results/x"));\n    Ok(result)',
         'prune_plan::tests::a_summary_under_the_read_size_keeps_its_sections_inline',
     ),
     (

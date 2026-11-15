@@ -479,6 +479,9 @@ buys nothing here.
 | `runtime/src/primitives/prune_project.rs` | Create | Project-file segmentation, literal search, digest-guarded apply, compiled-in home templates |
 | `scripts/mutation/prune-project.py` | Create | Mutations proving `prune-project`'s tests |
 | `scripts/mutation/prune-project-containment.py` | Create | Mutations proving `prune-project`'s containment tests |
+| `scripts/mutation/prune-plan-bounded.py` | Create | Mutations proving `prune-plan` bounds one feature's sections and halts on a malformed read size before a write |
+| `scripts/mutation/prune-result-keys.py` | Create | Mutations proving a prune result's `form` and `lists-file` survive a round trip and its bound judges the result as sent |
+| `runtime/src/schema/descriptions.rs` | Edit | `PRUNE_PLAN` and `PRUNE_TASKS` descriptions |
 | `framework/reference/prune.md` | Edit | What a step does with a result: the compiled reset body and heading set, decided sections, the reopen |
 
 ## Trade-offs

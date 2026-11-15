@@ -189,7 +189,9 @@ Result for one feature (a **compact summary — never the file body**):
     { "number": "2", "heading": "Add CLI",    "phase": "Phase A — Bootstrap",
       "classification": "pending", "checkbox-total": 3, "checkbox-checked": 1, "action": "kept" }
   ],
-  "path": "specs/041-task-pruning/tasks.md"
+  "sections-count": 2,
+  "path": "specs/041-task-pruning/tasks.md",
+  "form": "inline"
 }
 ```
 
@@ -219,7 +221,10 @@ Result for one feature (a **compact summary — never the file body**):
   `file`, `sections` is absent, `sections-count` stays inline in both forms,
   and `lists-file` names the JSON file under `.ductus/results/` holding
   `sections` whole. `removed-count` and `kept-count` count no list and stay
-  inline. The bound is stated by `ductus prune-tasks --help`.
+  inline. `form` and `lists-file` belong to the result, not to the summary
+  (see *Walking every spec*). The bound is stated by
+  `ductus prune-tasks --help`; a malformed read size halts the call before
+  any write.
 
 ### Operational errors
 
@@ -324,11 +329,13 @@ Result (a **compact summary — never a section's text**):
                    "message": "plan.md §Implementation notes is outside the design record" },
       "decided": false }
   ],
+  "sections-count": 1,
   "applied": true,
   "stale-sections": [],
   "size-before": { "lines": 30, "bytes": 800 },
   "size-after":  { "lines": 26, "bytes": 740 },
-  "reopen-required": false
+  "reopen-required": false,
+  "form": "inline"
 }
 ```
 
@@ -378,15 +385,15 @@ Result (a **compact summary — never a section's text**):
   `file`, `sections` is absent, `sections-count` stays inline in both forms,
   and `lists-file` names the JSON file under `.ductus/results/` holding
   `sections` whole, as `prune-tasks`' does. The bound is stated by
-  `ductus prune-plan --help`. A malformed read size halts an applying call
-  before it writes.
+  `ductus prune-plan --help`. A malformed read size halts the call before
+  any write.
 
 A removal whose sections are removed has its seams normalized as keep-pending's
 are, and is written with `write_atomic`, preserving the file's line endings.
 
 ### Operational errors
 
-Reported as `error` envelopes; the primitive writes nothing when any fires:
+Reported as `error` envelopes; the primitive writes nothing when any fires, except that a list file that cannot be written after an applied removal fails the call and the removal stands:
 
 | Code | Condition |
 | --- | --- |
@@ -396,6 +403,7 @@ Reported as `error` envelopes; the primitive writes nothing when any fires:
 | `invalid-argument` | `remove` without `apply`, or naming a design-record section, which prune never removes; both `feature` and `all`; `all` with `apply` |
 | `yaml` | `analysis.md`'s `decisions:` list does not parse — read as empty, it would propose every section already decided |
 | `git` | a call against a `done` spec cannot read HEAD for the reopen trigger |
+| `invalid-read-size` / `toml` | `[artifacts] read-size-bytes` is not a whole number of bytes, at least 1, or the config does not parse; the message reads ``invalid `[artifacts] read-size-bytes` in <config path>: <value> — …``. Read before any write, so an applying call halts before it removes anything |
 
 ## Walking every spec
 
@@ -415,9 +423,9 @@ discard every in-flight todo under one confirmation, and each plan section is a
 judgment about one spec, so a walk is preview-only. With `apply`, `prune-tasks`
 writes every spec's permitted reduction, the `--reset` gate applied per spec.
 
-Each result is one object with two flattened, optional halves: a
-single-feature call carries the summary above at the top level, unchanged,
-and a walk carries only the walk:
+Each result is one object with two flattened, optional halves and the
+result's own `form` and `lists-file`: a single-feature call carries the
+summary above at the top level, and a walk carries only the walk:
 
 ```json
 {
@@ -429,7 +437,10 @@ and a walk carries only the walk:
       "size-after":  { "lines": 9, "bytes": 418 },
       "path": "specs/000-slash-commands/tasks.md" }
   ],
-  "skipped": [ { "feature": "063-draft", "reason": "no-tasks-file" } ]
+  "features-count": 1,
+  "skipped": [ { "feature": "063-draft", "reason": "no-tasks-file" } ],
+  "skipped-count": 1,
+  "form": "inline"
 }
 ```
 
@@ -449,13 +460,13 @@ and a walk carries only the walk:
   spec's status before an apply writes its reduction, so a status that will
   not read stops the walk with that spec's `tasks.md` untouched.
 
-Each walk is held to `[artifacts] read-size-bytes` as a whole: past it `form`
-is `file`, `features` and `skipped` are absent with `features-count` and
-`skipped-count` inline, and `lists-file` names the file under
-`.ductus/results/` holding both whole, for both primitives, as
+Each result is held to `[artifacts] read-size-bytes` as it is sent, a walk
+as a whole: past it `form` is `file`, `features` and `skipped` are absent
+with `features-count` and `skipped-count` inline, and `lists-file` names the
+file under `.ductus/results/` holding both whole, for both primitives, as
 `ductus prune-tasks --help` and `ductus prune-plan --help` state. A
-`prune-plan` entry is a `PrunePlanSummary`, so it carries `sections-count` and
-`form: inline` beside its `sections`; the bound applies to the walk, never to
+`prune-plan` entry is a `PrunePlanSummary`, so it carries `sections-count`
+beside its `sections` and no `form`; the bound applies to the walk, never to
 an entry.
 
 A `PruneTasksLine` is the summary without its per-section records — `gate`,
@@ -470,7 +481,10 @@ its sections, since the host judges each one by heading.
 The two halves of a result share one key space, so no key may appear in
 both: a summary field named like `examined` would be consumed by the half
 deserialized first and lost to the other, which is why `prune-plan`'s
-section count is `sections-examined`.
+section count is `sections-examined`, and why `form` and `lists-file` belong
+to the result, declared after the halves so they stay last on the wire, and
+to neither half. A result deserializes back through its type with both
+intact, in either form.
 
 ## `prune-project`
 

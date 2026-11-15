@@ -19,6 +19,7 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 
 use crate::primitives::decisions::{RawDecision, read_decisions, same_key};
+use crate::primitives::prune_tasks::{BoundedPruneResult, bound_result};
 use crate::primitives::prune_tasks::{one_feature_or_all, read_status, size_of};
 use crate::primitives::read_tasks::adds_unchecked_box;
 use crate::primitives::write_analysis::finding_key_of;
@@ -170,25 +171,52 @@ pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
     // fail a call whose writes stand.
     super::check_artifact_size::resolve_threshold(repo)?;
     let Some(feature) = feature else {
-        let mut walk = walk(args, repo, &root)?;
-        super::prune_tasks::bound_walk(repo, "prune-plan", &mut walk)?;
-        return Ok(PrunePlanResult {
+        let mut result = PrunePlanResult {
             summary: None,
-            walk: Some(walk),
-        });
+            walk: Some(walk(args, repo, &root)?),
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        bound_result(
+            repo,
+            "prune-plan",
+            super::bounded_lists::ALL_SPECS,
+            &mut result,
+        )?;
+        return Ok(result);
     };
-    let mut summary = summarize(feature, args, repo, &root)?;
-    let lists = serde_json::json!({ "sections": &summary.sections });
-    if let Some(file) = super::bounded_lists::place(repo, "prune-plan", feature, &summary, &lists)?
-    {
-        summary.form = ListsForm::File;
-        summary.sections = None;
-        summary.lists_file = Some(file);
-    }
-    Ok(PrunePlanResult {
-        summary: Some(summary),
+    let mut result = PrunePlanResult {
+        summary: Some(summarize(feature, args, repo, &root)?),
         walk: None,
-    })
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    bound_result(repo, "prune-plan", feature, &mut result)?;
+    Ok(result)
+}
+
+impl BoundedPruneResult for PrunePlanResult {
+    fn lists(&self) -> serde_json::Value {
+        match (&self.summary, &self.walk) {
+            (Some(summary), _) => serde_json::json!({ "sections": &summary.sections }),
+            (None, Some(walk)) => {
+                serde_json::json!({ "features": &walk.features, "skipped": &walk.skipped })
+            }
+            (None, None) => serde_json::json!({}),
+        }
+    }
+
+    fn move_to_file(&mut self, file: String) {
+        self.form = ListsForm::File;
+        self.lists_file = Some(file);
+        if let Some(summary) = &mut self.summary {
+            summary.sections = None;
+        }
+        if let Some(walk) = &mut self.walk {
+            walk.features = None;
+            walk.skipped = None;
+        }
+    }
 }
 
 /// Every feature's preview, in corpus order. A feature is listed when its
@@ -221,8 +249,6 @@ fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prune
         features: Some(features),
         skipped_count: skipped.len(),
         skipped: Some(skipped),
-        form: ListsForm::Inline,
-        lists_file: None,
     })
 }
 
@@ -312,8 +338,6 @@ fn summarize(
         size_before: size_of(before),
         size_after: size_of(&after),
         reopen_required,
-        form: ListsForm::Inline,
-        lists_file: None,
     })
 }
 
@@ -533,9 +557,10 @@ mod tests {
         let tmp = tempdir().unwrap();
         project(tmp.path(), "in-progress", Some(PLAN));
         set_read_size(tmp.path(), 50_000);
-        let summary = run(&preview(), tmp.path()).unwrap();
-        assert_eq!(summary.form, ListsForm::Inline);
-        assert_eq!(summary.lists_file, None);
+        let result = super::run(&preview(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.lists_file, None);
+        let summary = result.summary.expect("a single-feature summary");
         assert_eq!(summary.sections_count, 1);
         assert_eq!(summary.sections.as_ref().map(Vec::len), Some(1));
         assert!(!tmp.path().join(".ductus/results").exists());
@@ -548,17 +573,18 @@ mod tests {
         let tmp = tempdir().unwrap();
         project(tmp.path(), "in-progress", Some(PLAN));
         set_read_size(tmp.path(), 1);
-        let summary = run(&preview(), tmp.path()).unwrap();
-        assert_eq!(summary.form, ListsForm::File);
+        let result = super::run(&preview(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        let summary = result.summary.clone().expect("a single-feature summary");
         assert_eq!(summary.sections, None);
         assert_eq!(summary.sections_count, 1);
-        let file = tmp.path().join(summary.lists_file.clone().unwrap());
+        let file = tmp.path().join(result.lists_file.clone().unwrap());
         let lists: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
         assert_eq!(lists["sections"].as_array().map(Vec::len), Some(1));
         crate::primitives::bounded_lists::assert_counts_name_the_file(
             "prune-plan",
-            &serde_json::to_value(&summary).unwrap(),
+            &serde_json::to_value(&result).unwrap(),
             &lists,
         );
     }
@@ -807,6 +833,59 @@ mod tests {
             apply: false,
             remove: Vec::new(),
         }
+    }
+
+    /// The bound judges the result as it is sent, its own `form` included: a
+    /// result exactly at the read size is inline, and one byte under it is
+    /// not, for one feature and for a walk alike.
+    #[test]
+    fn a_result_is_held_to_the_read_size_as_it_is_sent() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        for args in [preview(), all()] {
+            set_read_size(tmp.path(), 50_000);
+            let whole = super::run(&args, tmp.path()).unwrap();
+            assert_eq!(whole.form, ListsForm::Inline);
+            let sent = serde_json::to_vec(&whole).unwrap().len();
+            set_read_size(tmp.path(), u32::try_from(sent).unwrap());
+            let fits = super::run(&args, tmp.path()).unwrap();
+            assert_eq!(fits.form, ListsForm::Inline, "exactly at the size fits");
+            set_read_size(tmp.path(), u32::try_from(sent - 1).unwrap());
+            let over = super::run(&args, tmp.path()).unwrap();
+            assert_eq!(over.form, ListsForm::File, "one byte over does not");
+            assert!(over.lists_file.is_some());
+        }
+    }
+
+    /// Past the read size a walk's `features` and `skipped` move to a file,
+    /// with their counts inline, and the result carries `form` and
+    /// `lists-file` once; its entries carry neither.
+    #[test]
+    fn a_walk_past_the_read_size_moves_its_lists_to_a_file() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        write(
+            &tmp.path().join("specs/002-draft/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Spec\n",
+        );
+        set_read_size(tmp.path(), 1);
+        let result = super::run(&all(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.summary.is_none());
+        let walk = result.walk.clone().expect("an all walk");
+        assert_eq!((walk.features, walk.skipped), (None, None));
+        assert_eq!((walk.features_count, walk.skipped_count), (1, 1));
+        let file = tmp.path().join(result.lists_file.clone().unwrap());
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
+        assert_eq!(lists["features"].as_array().map(Vec::len), Some(1));
+        assert_eq!(lists["skipped"].as_array().map(Vec::len), Some(1));
+        assert!(lists["features"][0].get("form").is_none());
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "prune-plan",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 
     #[test]
