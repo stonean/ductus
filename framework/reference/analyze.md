@@ -28,7 +28,7 @@ The path chooses the row: a `spec.md` takes the spec row, a file under `scenario
 ## Plan consistency (blocking if plan exists)
 
 - Plan references the spec
-- Technical decisions section has at least one decision with rationale
+- Each Technical Decision carries its rationale
 - Affected files section lists specific file paths
 - Plan does not contradict `specs/system.md`
 
