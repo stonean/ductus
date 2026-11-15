@@ -1,13 +1,13 @@
 ---
 spec: 051-branch-scoped-spec-numbering
-last-run: 2026-11-15T02:05:47Z
-analyzed-against: 464533171c3964f473d56bfdf0674021a8c145c8
+last-run: 2026-11-15T15:41:10Z
+analyzed-against: b43e2b9de4750902224b11dd6435f9605d08473b
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 9
 analyzed-digest:
-  data-model.md: c1f00751b5b4b052f6a03f1433355becba64189069b0ce482f30810cfb2d00fb
+  data-model.md: 6dcf114a4cc86fd5d980afbd844a61959c18125e482da6cc5f58bb389d5d729f
   plan.md: b63de4b06a856773a3e0fdb14030b1a6f242e566e1843dc250dc4b0392f35886
   review.md: 07491611471d62ec036aedf68b2cc1307b628c2f2ebc2af32e32f550cf687b08
   scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md: 015b0ba736e27e91d0d86b37c65e6f7d0d947b5773cf6495313a8ff337b93a47
@@ -38,28 +38,29 @@ rule-digest:
   security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#`create-feature` gains optional arguments rather than a sibling primitive"}
+  BE-COMPAT-001: {verdict: addressed, cite: "data-model.md#Primitive argument and result shapes"}
+  BE-COORD-002: {verdict: addressed, cite: "plan.md#Fold-back is a command over deterministic primitives"}
   BE-ERR-002: {verdict: addressed, cite: "spec.md#Edge cases and failure modes"}
-  BE-ERR-004: {verdict: addressed, cite: "spec.md#Edge cases and failure modes"}
-  BE-INPUT-001: {verdict: addressed, cite: "scenarios/a-fold-target-is-held-to-the-name-grammar.md#Behavior"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Directory-name grammar"}
   BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Directory-name grammar"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#`create-feature` gains optional arguments rather than a sibling primitive"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`rewrite-spec-links` (new)"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#`create-feature` gains optional arguments rather than a sibling primitive"}
   BE-REPR-001: {verdict: addressed, cite: "data-model.md#`invalidate-review` (new)"}
-  BE-REPR-002: {verdict: finding, tier: should, at: "data-model.md#Primitive argument and result shapes", message: "New tool fields (branch-id, fold-into, kept-tails, previous-last-run, fold-target, allow-sequential) follow kebab-case but no casing convention is declared in specs/system.md (file absent)."}
+  BE-REPR-002: {verdict: addressed, cite: "data-model.md#Primitive argument and result shapes"}
   BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#Affected Files"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#One directory-form parse, replacing the boolean predicate"}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   deferred: 0
   waived: 1
   undispositioned: 0
 decisions:
-  - key: "rule-assessment — BE-REPR-002: New tool fields (branch-id, fold-into, kept-tails, previous-last-run, fold-target, allow-sequential) follow kebab-case but no casing convention is declared in specs/system.md (file absent)."
+  - key: plan-consistency — data-model.md lists append-task as extended (new `appended` result) and plan.md's Fold-back section relies on its dedup, but plan.md's Affected Files table has no row for append-task's source file
     outcome: waived
-    reason: "the new fields follow one convention, kebab-case, and this project declares none: it has no specs/system.md"
-    decided-at: 2026-11-15T02:05:47Z
+    reason: Affected Files is a planning aid the plan template calls non-exhaustive (framework/reference/analyze.md, Plan consistency), and data-model.md names append-task's extension, which plan.md's prose cites
+    decided-at: 2026-11-15T15:41:10Z
     decided-by: rule
 ---
 
@@ -67,7 +68,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -79,7 +80,7 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-REPR-002: New tool fields (branch-id, fold-into, kept-tails, previous-last-run, fold-target, allow-sequential) follow kebab-case but no casing convention is declared in specs/system.md (file absent). — `specs/051-branch-scoped-spec-numbering/data-model.md` — **waived**: the new fields follow one convention, kebab-case, and this project declares none: it has no specs/system.md (decided by the rule)
+- plan-consistency — data-model.md lists append-task as extended (new `appended` result) and plan.md's Fold-back section relies on its dedup, but plan.md's Affected Files table has no row for append-task's source file — `specs/051-branch-scoped-spec-numbering/plan.md` — **waived**: Affected Files is a planning aid the plan template calls non-exhaustive (framework/reference/analyze.md, Plan consistency), and data-model.md names append-task's extension, which plan.md's prose cites (decided by the rule)
 
 ## Deferred to other specs
 
@@ -97,5 +98,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-REPR-001: `previous-last-run` is a timestamp result field whose representation (e.g. RFC 3339 UTC) is not named, and no specs/system.md declares an API-wide one. — `specs/051-branch-scoped-spec-numbering/data-model.md` — **fixed**
-- plan-consistency — plan.md counts three new primitives (Fold-back section, Documentation and registration, Affected Files rows for runtime-tools.txt and server.rs) while data-model.md lists four, adding invalidate-review, which plan.md names only in prose under Reopening and lists in no Affected Files row — `specs/051-branch-scoped-spec-numbering/plan.md` — **fixed**
+*None.*
