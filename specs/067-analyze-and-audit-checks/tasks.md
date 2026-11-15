@@ -23,15 +23,16 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - **Done when**: derive-references' lists return inline, or in a lists-file past the read size, with the CLI still failing on an unwritable spec, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
 
-## 33. The criterion-path and body-path probes refuse a link out of the project (BE-INPUT-004, from 045)
+## 33. The criterion-path, body-path and corpus-link probes refuse a link out of the project (BE-INPUT-004, from 045 and 026)
 
 - [ ] `check-artifacts`' `criterion-path-existence` and `body-path-existence` probes refuse a symbolic link leaving the project before probing, as the sibling-link family already does. Today `lexical_in_project` in `runtime/src/primitives/check_artifacts.rs` refuses a `..` that leaves the project, and `exists()` then follows a symbolic link out of it. The owner deferred 045's BE-INPUT-004 (MUST) finding here on 2026-11-14; 045's task 17 cites this task
-- [ ] 067's data model and `CHECK_ARTIFACTS`' description state what each probe reports for such a link
-- [ ] A test with an outward link: a path a criterion and a spec body each name, which is a symbolic link to a file outside the project, is not probed through, and the test turns red under its mutant
+- [ ] `check-corpus-links` refuses a link target that leaves the project, lexically or through a symbolic link, before probing it, and a tracked markdown file that is such a link before reading it: today `runtime/src/primitives/check_corpus_links.rs` tests `lexical_join(base, rel).exists()`, which probes a `..` past the project root and follows a symbolic link out of it, and reads each tracked file it lists without either check. Its resolution stays lexical, never canonicalized, so one corpus answers alike in two checkouts. Decide in the task, and state in 067's data model, whether such a target is reported broken or skipped, and what the containment base is for a project in a subdirectory of its repository (spec 059), where a link climbing out of the project into the repository resolves today and the shipped pre-commit hook blocks on a broken one. `/{project}:audit` Families 26 and 35a delegate their link resolution to it. The owner deferred that part of 026's BE-INPUT-004 (MUST) analysis finding here on 2026-11-15; 026's `analysis.md` records the deferral
+- [ ] 067's data model, `CHECK_ARTIFACTS`' and `CHECK_CORPUS_LINKS`' descriptions state what each probe reports for such a link
+- [ ] A test with an outward link: a path a criterion and a spec body each name, and a relative link's target, each a symbolic link to a file outside the project, is not probed through, and the test turns red under its mutant
 
 Owed when this lands, in the same change: 067's `plan.md` decision "A path that leaves the project is `outside-project`" and the `outside-project` row of `scenarios/check-artifacts-skipped-targets.md` still say the screen is lexical; both state the link check too.
 
-- **Done when**: Neither probe follows a link leaving the project, proven by a test its mutant turns red; the whole `cargo test` passes; and 067's next review reads the change.
+- **Done when**: No probe of the three follows a link leaving the project, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
 
 ## 34. A check holds the dogfooded feature-directory grammar to the shipped hook's (051's AC15)
 
