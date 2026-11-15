@@ -1,5 +1,5 @@
 ---
-next-task: 5
+next-task: 6
 ---
 
 # 026 — Framework self-audit (`/audit`) Tasks
@@ -46,6 +46,8 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
+Blocked on task 5: it changes two family scripts and three family scenarios, design subjects every stored verdict was judged against, so the review, the criteria's verification and the analysis run after it lands (owner, 2026-11-15).
+
 Not blocked on 067 task 14 or 071 task 22: neither changes a file in 026's review scope or its plan's Affected Files, and under 079's AC6 a commit only 067 or 071 claims stays out of that scope, so 026 closes next (owner, 2026-11-10).
 
 It owes its review recorded, then an analysis and the completion gate, which run once no box in this file is open (spec 079), its 26 ticked criteria verified against the tree before the runs (spec 079 task 26, owner, 2026-11-09).
@@ -57,3 +59,12 @@ Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse r
 - Planned as a deferral to 071 task 22 and never stored in a record: a cleanup in `framework/bootstrap/ductus.md`, which it holds outside 026's review scope and 071 task 22 owns.
 
 - **Done when**: 026's review and analysis are recorded and not stale, and every criterion is re-verified against the tree
+
+## 5. Families 35 and 36 canonicalize and contain the paths they read (BE-INPUT-004, from 026's analysis)
+
+- [x] `scripts/audit/manifest-destination-links.sh` canonicalizes each Shared Files source (35a) and each slash-command source (35b) and compares it with the repository root by whole path components (`os.path.realpath` then `os.path.commonpath`, the `contained` helper in `scripts/audit/lib.sh` for 35a) before probing, copying or reading it, and reports one resolving outside the repository rather than copying or reading it. 35a's destinations keep the lexical screen `apply-manifest` shares, since the family builds the tree they land in itself, with `mkdir` and `cp` of regular files, so no link under it can resolve outside it
+- [x] `scripts/audit/self-url-resolution.sh` does the same for each URL's path before probing it and for each tracked markdown file before reading it, and reports an outward one as its own finding, never probed or read. The owner decided on 2026-11-15 that 026 fixes Families 35 and 36 and defers Family 26's part, `check-corpus-links`' probes, to 067 task 33
+- [x] `scenarios/family-35-manifest-destination-links.md` and `scenarios/family-36-self-url-resolution.md` commit to the containment in their Behavior, and `scenarios/family-26-broken-relative-links.md` says the link resolution it delegates is contained by `check-corpus-links`, 067 task 33
+- [x] `scripts/tests/test-audit-path-containment.sh`, run by a `framework-checks.yml` step, builds fixture trees and shows each family reports a symbolic link resolving outside the project and passes on an in-tree file, and it fails with the containment removed
+
+- **Done when**: Neither family probes, copies or reads a path resolving outside the project, proven by a test that fails with the check removed; `framework-checks.yml`'s and `generators.yml`'s steps, `actionlint` and `scripts/audit/run-all.sh` pass; and 026's next review reads the change.

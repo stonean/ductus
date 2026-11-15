@@ -118,6 +118,16 @@ else
     placed=0
     while IFS=$'\t' read -r src dst; do
       [ -z "$src" ] && continue
+      # The source is text committed to the manifest, turned into a path this
+      # family copies, so it is canonicalized and contained before it is
+      # probed: a symbolic link in the repository resolving outside it is
+      # refused rather than copied (BE-INPUT-004, `contained` in lib.sh).
+      if ! contained "$ROOT" "$src"; then
+        emit "$MANIFEST_FILE" \
+          "Shared Files manifest source resolves outside the repository: $src — not copied, so its links were not examined" \
+          "manifest sources are files in this repository; correct the row, or replace the symbolic link with the file it stands for"
+        continue
+      fi
       if [ ! -f "$src" ]; then
         emit "$MANIFEST_FILE" \
           "Shared Files manifest names a source that does not exist: $src" \
@@ -130,7 +140,10 @@ else
       # from a fetched archive; this family reads the manifest from the
       # worktree, so the provenance is weaker — but the check is two lines
       # and the alternative is one reader of this table trusting a field the
-      # other refuses to.
+      # other refuses to. The screen is lexical, and that contains the
+      # destination here: the family builds the tree itself, with `mkdir` and
+      # a `cp` of a regular file, so no symbolic link under it can resolve
+      # outside it.
       case "$dst" in
         /* | ../* | */../* | */..)
           emit "$MANIFEST_FILE" \
@@ -254,15 +267,22 @@ else
       "check the table's Source Path column; only the configure row is expected to be templated"
   else
     findings="$(printf '%s\n' "$sources" | python3 -c '
-import re, sys
+import os, re, sys
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 SPAN = re.compile(r"`[^`]*`")
 ABSOLUTE = ("http://", "https://", "mailto:", "#")
+ROOT = os.path.realpath(".")
 
 count = 0
 for path in (line.strip() for line in sys.stdin):
     if not path:
+        continue
+    # A manifest source is committed text turned into a path, so it is
+    # canonicalized and contained by whole components before it is opened,
+    # as `contained` in lib.sh does (BE-INPUT-004).
+    if os.path.commonpath([ROOT, os.path.realpath(path)]) != ROOT:
+        print("outside\t%s\t\t" % path)
         continue
     try:
         with open(path, encoding="utf-8") as handle:
@@ -300,6 +320,11 @@ print("scanned\t%d\t\t" % count)
           emit "$f1" \
             "slash-command manifest source could not be read ($f3) — its links were not examined" \
             "resolve the read failure; an unexaminable source must not be counted as clean"
+          ;;
+        outside)
+          emit "$f1" \
+            "slash-command manifest source resolves outside the repository — not read, so its links were not examined" \
+            "manifest sources are files in this repository; correct the row, or replace the symbolic link with the file it stands for"
           ;;
         scanned)
           examined_b="$f1"

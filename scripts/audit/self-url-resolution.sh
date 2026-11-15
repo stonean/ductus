@@ -118,8 +118,22 @@ URL = re.compile(r"https://github\.com/" + slug + r"/(blob|tree)/([^/\s)]+)/([^)
 examined = 0
 urls = 0
 pinned = 0
+ROOT = os.path.realpath(".")
+
+
+def inside(candidate):
+    # Canonicalized and compared with the root by whole path components, as
+    # `contained` in lib.sh does: a lexical screen alone does not contain a
+    # path, since a symbolic link under the root still resolves outside it
+    # (BE-INPUT-004).
+    return os.path.commonpath([ROOT, os.path.realpath(candidate)]) == ROOT
+
+
 for path in (line.strip() for line in sys.stdin):
     if not path:
+        continue
+    if not inside(path):
+        print("file-outside\t%s\t\t" % path)
         continue
     try:
         with open(path, encoding="utf-8") as handle:
@@ -156,6 +170,11 @@ for path in (line.strip() for line in sys.stdin):
             if os.path.isabs(normalized) or normalized == ".." or normalized.startswith(".." + os.sep):
                 print("unresolved\t%s\t%d\t%s" % (path, number, clean))
                 continue
+            # A path in the repository that is a symbolic link resolving
+            # outside it is reported as such and never probed.
+            if not inside(clean):
+                print("outside\t%s\t%d\t%s" % (path, number, clean))
+                continue
             if not os.path.exists(clean):
                 print("unresolved\t%s\t%d\t%s" % (path, number, clean))
             elif kind == "blob" and os.path.isdir(clean):
@@ -174,6 +193,16 @@ while IFS=$'\t' read -r kind f1 f2 f3; do
       emit "$f1:$f2" \
         "absolute link into this repository names \`$f3\`, which does not exist — the URL is a 404 no local check would otherwise see" \
         "re-point it at the path the target moved to, or name the target in prose when it was removed"
+      ;;
+    outside)
+      emit "$f1:$f2" \
+        "absolute link into this repository names \`$f3\`, a symbolic link resolving outside the repository — not probed" \
+        "point the URL at the file the link stands for, or replace the symbolic link with that file"
+      ;;
+    file-outside)
+      emit "$f1" \
+        "tracked markdown file is a symbolic link resolving outside the repository — not read, so its absolute links were not examined" \
+        "replace the symbolic link with the file it stands for; a file this family will not open is not one it found clean"
       ;;
     blob-names-dir)
       emit "$f1:$f2" \

@@ -75,6 +75,23 @@ ductus_bin() {
   fi
 }
 
+# contained BASE PATH — succeed when PATH, canonicalized, lies inside BASE,
+# canonicalized, compared by whole path components rather than as a string
+# prefix, so `/srv/base2` is not inside `/srv/base` (BE-INPUT-004).
+#
+# A family that turns text committed to the repository into a path calls this
+# before it probes, copies or opens the path: refusing `..` and absolute
+# paths is a lexical screen, and a symbolic link under the base still
+# resolves outside it. PATH need not exist; its existing prefix is resolved,
+# which is what a probe or an open meets. The families computing in python
+# inline the same comparison: `os.path.realpath` on both sides, then
+# `os.path.commonpath`.
+contained() {
+  python3 -I -c 'import os, sys
+base, path = (os.path.realpath(p) for p in sys.argv[1:3])
+sys.exit(0 if os.path.commonpath([base, path]) == base else 1)' "$1" "$2"
+}
+
 # maintainer_only_commands — echo the base name of each command deliberately
 # withheld from adopters, one per line.
 #

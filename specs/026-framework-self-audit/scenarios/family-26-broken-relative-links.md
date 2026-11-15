@@ -24,6 +24,8 @@ Two categories are excluded by construction, counted and reported rather than dr
 
 A failed file listing is a finding, never a silent pass.
 
+**The resolution is `check-corpus-links`', and so is its containment.** The family delegates resolution to the primitive (scenario `link-check-consolidation`), which reads each tracked markdown file and probes each link target, both paths turned from text committed to this repository. Refusing a symbolic link that resolves outside the project before either is the primitive's, as 067's task 33 records (owner, 2026-11-15, `BE-INPUT-004`), so this family carries no containment of its own: a second copy would be the second implementation that consolidation removed.
+
 ## Edge Cases
 
 - **A link inside a fenced code block** is not a link; fences are skipped.

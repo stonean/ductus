@@ -296,6 +296,16 @@ jobs:
       - name: (v) Workflow-step runner reports each step's own status
         run: bash scripts/tests/test-run-workflow-steps.sh
 
+      # (x) Families 35 and 36 canonicalize each path they turn from committed
+      # text and contain it by whole path components before copying, probing
+      # or reading it (spec 026 task 5, BE-INPUT-004). Step (h) runs both over
+      # this repository, which holds no link resolving outside it, so a family
+      # that stopped containing would pass there. The test builds fixture
+      # trees, given the runtime built above for 35a, and shows each family
+      # reports such a link and passes on a link inside the tree.
+      - name: (x) Audit families contain the paths they read
+        run: bash scripts/tests/test-audit-path-containment.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
