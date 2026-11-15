@@ -681,15 +681,22 @@ fn load_rule_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewRuleF
     string_array(context, "selected")
         .into_iter()
         .filter_map(|name| {
-            let rel = Path::new(rules_dir).join(&name);
-            match classify_contained(&canon_repo, &rel) {
+            // The path the request names is repo-relative and joined with `/`
+            // on every platform, as `scope-files` paths are; `Path::join`
+            // would give a `\` on Windows.
+            let rel = if rules_dir.is_empty() {
+                name.clone()
+            } else {
+                format!("{}/{name}", rules_dir.trim_end_matches('/'))
+            };
+            match classify_contained(&canon_repo, Path::new(&rel)) {
                 Contained::Inside(abs) => {
                     std::fs::read_to_string(&abs)
                         .ok()
                         .map(|content| ReviewRuleFile {
                             name,
                             content: Some(content),
-                            path: Some(rel.to_string_lossy().into_owned()),
+                            path: Some(rel),
                         })
                 }
                 Contained::Missing | Contained::Outside => None,
