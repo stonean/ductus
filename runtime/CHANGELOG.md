@@ -317,6 +317,29 @@ its version and date.
 
 ### Changed
 
+- **A `ductus exec` extension request is bounded whole (spec 022 tasks 36
+  and 37; spec 060's and spec 020's analyses, `BE-PAYLOAD-001`).**
+  `writeCode`, `assessSpecQuality` (one request per assessed rule, up to 192
+  per walk), `askClarifyQuestion`, `routeFold`, `verifyCriteria` and
+  `performReview` are inline while the request fits `[artifacts]
+  read-size-bytes`, byte for byte as before. Past it the request carries no
+  body: `spec-content`, `routeFold`'s `target-content`, and each
+  `performReview` `scope-files` and `rule-files` `content` are absent, the
+  request names the file the host reads (`spec-path`, `target-path`, each
+  entry's `path`, which `rule-files` entries gain only in this form), and a
+  new `content-form: "path"` says so. A body the runtime could not read is
+  never bounded, so a missing spec is still `""` and never a path. A
+  malformed read size halts the walk at the request. A request still past
+  the read size once its bodies are named moves the lists that grow with
+  entries (`criteria`, `scenarios`, `target-sections`, `loaded-rule-files`,
+  `scope-files`, `rule-files`, `passes-run`, `plan-relevant-files`,
+  `constitution-excerpts`, `write-boundary`) and its whole legacy context tail
+  into one file under `.ductus/results/exec-request/{extension point}/`, named
+  by `request-lists-file`, leaving `{list}-count` and `legacy-context-count`
+  inline; a file that cannot be written halts the walk with
+  `request-lists-unwritable`. Spec 022's data model states the shapes,
+  including a new `performReview` section.
+
 - **`prune-plan`'s single-feature `sections` is bounded (spec 041's
   analysis, `BE-PAYLOAD-001`).** It is inline while the result fits
   `[artifacts] read-size-bytes`; past it `form` is `file`, `sections` is

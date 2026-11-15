@@ -28,15 +28,15 @@ MUTATIONS = [
     (
         'M1 the bound removed: every result stays inline',
         'src/primitives/bounded_lists.rs',
-        '    if u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes {',
-        '    if true {',
+        '    Ok(u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes)',
+        '    Ok(true)',
         'bounded_lists::tests::a_result_past_the_read_size_is_written_whole_to_a_file compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list interpreter::tests::a_cross_spec_surface_past_the_read_size_reaches_the_context_through_its_list_file',
     ),
     (
         'M2 a result exactly at the read size no longer fits',
         'src/primitives/bounded_lists.rs',
-        '    if u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes {',
-        '    if u64::try_from(size).unwrap_or(u64::MAX) < threshold.bytes {',
+        '    Ok(u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes)',
+        '    Ok(u64::try_from(size).unwrap_or(u64::MAX) < threshold.bytes)',
         'bounded_lists::tests::a_result_past_the_read_size_is_written_whole_to_a_file bounded_lists::tests::the_default_read_size_is_fifty_thousand_bytes',
     ),
     (

@@ -20,6 +20,24 @@ use serde_json::Value;
 
 use crate::schema::severity::RuleSeverity;
 
+// -- bounded bodies ------------------------------------------------------------
+
+/// How a request that carries file bodies sends them (`BE-PAYLOAD-001`).
+///
+/// A request whose serialized form fits `[artifacts] read-size-bytes` carries
+/// each body inline and no `content-form` field. Past it the request carries
+/// no body: `content-form` is `path`, every body field is absent, and each
+/// file the request names by a path (`spec-path`, `target-path`, each
+/// `scope-files` entry's `path`, each `rule-files` entry's `path`) is one the
+/// host reads itself. A body field absent beside `content-form: path` is a
+/// body left to read, never an empty file; an empty file is `""` inline.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ContentForm {
+    /// The bodies are not in the request: read the files it names.
+    Path,
+}
+
 // -- assessSpecQuality -------------------------------------------------------
 
 /// Verification request for one rule.
@@ -53,8 +71,9 @@ pub struct AssessSpecQualityRule {
 pub struct AssessSpecQualityRequest {
     /// Repo-relative path to the spec file under review.
     pub spec_path: String,
-    /// Full spec contents.
-    pub spec_content: String,
+    /// Full spec contents; absent when `content-form` is `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_content: Option<String>,
     /// Rule whose Verification clause is being assessed.
     pub rule: AssessSpecQualityRule,
     /// Basenames of the rule files the walk loaded, in its `rule-files`
@@ -64,6 +83,10 @@ pub struct AssessSpecQualityRequest {
     /// from the files it loaded (spec 060, scenario
     /// `an-assessment-sees-the-loaded-rule-files`).
     pub loaded_rule_files: Vec<String>,
+    /// `path` when the request is past the read size and the host reads
+    /// `spec-path` itself; absent when the content is inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Location annotation inside a finding.
@@ -129,8 +152,10 @@ pub struct WriteCodeTask {
 pub struct PlanRelevantFile {
     /// Repo-relative file path.
     pub path: String,
-    /// File contents at request time.
-    pub content: String,
+    /// File contents at request time; absent when the request's
+    /// `content-form` is `path`, and the host reads `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 /// Request payload for `writeCode`.
@@ -168,6 +193,11 @@ pub struct WriteCodeRequest {
     pub write_boundary: Vec<String>,
     /// Task being implemented.
     pub task: WriteCodeTask,
+    /// `path` when the request is past the read size and the host reads each
+    /// `plan-relevant-files` entry's `path` itself; absent when the contents
+    /// are inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Edit-action discriminator on a `writeCode` edit.
@@ -247,8 +277,10 @@ pub struct WriteSpecBodyResponse {
 pub struct ReviewScopeFile {
     /// Repo-relative file path.
     pub path: String,
-    /// File contents at request time.
-    pub content: String,
+    /// File contents at request time; absent when the request's
+    /// `content-form` is `path`, and the host reads `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 /// One rule file loaded for the pass (basename + full text).
@@ -257,8 +289,14 @@ pub struct ReviewScopeFile {
 pub struct ReviewRuleFile {
     /// Rule-file basename (e.g., "security-backend.md").
     pub name: String,
-    /// Full rule-file contents.
-    pub content: String,
+    /// Full rule-file contents; absent when the request's `content-form` is
+    /// `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    /// Repo-relative path the host reads in the `path` form; absent when the
+    /// content is inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
 }
 
 /// One loaded rule file named with the pass that applies it.
@@ -300,6 +338,11 @@ pub struct PerformReviewRequest {
     /// here. Empty when the walker names none.
     #[serde(default)]
     pub passes_run: Vec<String>,
+    /// `path` when the request is past the read size and the host reads each
+    /// `scope-files` and `rule-files` entry's `path` itself; absent when the
+    /// contents are inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Response payload for `performReview`. The `findings` array flows directly
@@ -368,10 +411,15 @@ pub struct ClarifyQuestion {
 pub struct AskClarifyQuestionRequest {
     /// Repo-relative path to the spec under clarification.
     pub spec_path: String,
-    /// Full spec contents.
-    pub spec_content: String,
+    /// Full spec contents; absent when `content-form` is `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_content: Option<String>,
     /// The open question this round trip resolves.
     pub question: ClarifyQuestion,
+    /// `path` when the request is past the read size and the host reads
+    /// `spec-path` itself; absent when the content is inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Response payload for `askClarifyQuestion` — the user's answer,
@@ -502,16 +550,28 @@ pub struct FoldSourceScenario {
 pub struct RouteFoldRequest {
     /// The branch-scoped feature directory under decision.
     pub feature: String,
-    /// Its `spec.md`, whole — the content being folded.
-    pub spec_content: String,
+    /// Its `spec.md`'s repo-relative path; present only when `content-form`
+    /// is `path`, for the host to read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_path: Option<String>,
+    /// Its `spec.md`, whole — the content being folded; absent when
+    /// `content-form` is `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_content: Option<String>,
     /// Scenarios it carries, sorted by slug. Empty when it has none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scenarios: Vec<FoldSourceScenario>,
     /// The upstream feature its `folds-into` names.
     pub fold_target: String,
     /// The upstream spec's `spec.md`, whole — the document the content is
-    /// being folded into, without which "which section" is unanswerable.
-    pub target_content: String,
+    /// being folded into, without which "which section" is unanswerable;
+    /// absent when `content-form` is `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_content: Option<String>,
+    /// The upstream spec's `spec.md` path, for the host to read; present
+    /// only when `content-form` is `path` and the runtime read that file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_path: Option<String>,
     /// The upstream spec's frontmatter `status`; empty when unreadable.
     /// Drives the guarded `done` → `in-progress` reopen the fold performs.
     pub target_status: String,
@@ -522,6 +582,11 @@ pub struct RouteFoldRequest {
     pub target_sections: Vec<String>,
     /// Closed route vocabulary: `body-edit`, `scenario`.
     pub routes: Vec<String>,
+    /// `path` when the request is past the read size and the host reads
+    /// `spec-path` and `target-path` itself; absent when the content is
+    /// inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Fold-route discriminator — what shape the folded content takes in its
@@ -591,10 +656,15 @@ pub struct VerifyCriterion {
 pub struct VerifyCriteriaRequest {
     /// Repo-relative path to the spec under verification.
     pub spec_path: String,
-    /// Full spec contents.
-    pub spec_content: String,
+    /// Full spec contents; absent when `content-form` is `path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_content: Option<String>,
     /// Acceptance criteria to verify, in body order.
     pub criteria: Vec<VerifyCriterion>,
+    /// `path` when the request is past the read size and the host reads
+    /// `spec-path` itself; absent when the content is inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// One per-criterion verdict in a `verifyCriteria` response.
@@ -919,7 +989,7 @@ mod tests {
     fn assess_spec_quality_round_trip() {
         let request = AssessSpecQualityRequest {
             spec_path: "specs/022-deterministic-runtime/spec.md".into(),
-            spec_content: "# spec".into(),
+            spec_content: Some("# spec".into()),
             rule: AssessSpecQualityRule {
                 id: "QUAL-CLARITY-001".into(),
                 statement: "Criteria MUST be testable.".into(),
@@ -927,6 +997,7 @@ mod tests {
                 severity: crate::schema::severity::RuleSeverity::Must,
             },
             loaded_rule_files: vec!["quality-cross.md".into()],
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         assert_eq!(
@@ -985,13 +1056,14 @@ mod tests {
             },
             plan_relevant_files: vec![PlanRelevantFile {
                 path: "runtime/src/primitives/read_spec.rs".into(),
-                content: String::new(),
+                content: Some(String::new()),
             }],
             write_boundary: vec![
                 "runtime/**".into(),
                 "specs/022-deterministic-runtime/**".into(),
             ],
             constitution_excerpts: vec!["§runtime-boundary…".into()],
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         assert_eq!(value["write-boundary"][0], "runtime/**");
@@ -1305,7 +1377,7 @@ mod tests {
             constitution_excerpts_unexaminable: vec![],
             plan_relevant_files: vec![PlanRelevantFile {
                 path: "p".into(),
-                content: "c".into(),
+                content: Some("c".into()),
             }],
             write_boundary: vec!["runtime/**".into()],
             task: WriteCodeTask {
@@ -1313,6 +1385,7 @@ mod tests {
                 heading: "h".into(),
                 subtasks: vec![],
             },
+            content_form: None,
         };
         let text = serde_json::to_string(&request).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
@@ -1360,11 +1433,12 @@ mod tests {
         let request = PerformReviewRequest {
             scope_files: vec![ReviewScopeFile {
                 path: "runtime/src/main.rs".into(),
-                content: "fn main() {}".into(),
+                content: Some("fn main() {}".into()),
             }],
             rule_files: vec![ReviewRuleFile {
                 name: "security-backend.md".into(),
-                content: "# Security".into(),
+                content: Some("# Security".into()),
+                path: None,
             }],
             pass: "security".into(),
             loaded_rule_files: vec![LoadedReviewRuleFile {
@@ -1372,6 +1446,7 @@ mod tests {
                 pass: "security".into(),
             }],
             passes_run: vec!["security".into()],
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         // Cache-stable prefix leads: scope-files, then rule-files, then pass.
@@ -1476,11 +1551,12 @@ mod tests {
     fn ask_clarify_question_round_trip() {
         let request = AskClarifyQuestionRequest {
             spec_path: "specs/022-deterministic-runtime/spec.md".into(),
-            spec_content: "# spec".into(),
+            spec_content: Some("# spec".into()),
             question: ClarifyQuestion {
                 text: "Should retries back off exponentially or linearly?".into(),
                 section: Some("Open Questions".into()),
             },
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         // Typed field order: spec-path, spec-content, question.
@@ -1579,7 +1655,7 @@ mod tests {
     fn verify_criteria_round_trip() {
         let request = VerifyCriteriaRequest {
             spec_path: "specs/022-deterministic-runtime/spec.md".into(),
-            spec_content: "# spec".into(),
+            spec_content: Some("# spec".into()),
             criteria: vec![
                 VerifyCriterion {
                     index: 0,
@@ -1592,6 +1668,7 @@ mod tests {
                     checked: true,
                 },
             ],
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         // Typed field order: spec-path, spec-content, criteria.
@@ -1667,17 +1744,21 @@ mod tests {
     fn route_fold_request_round_trips_with_its_source_scenarios() {
         let request = RouteFoldRequest {
             feature: "1234.1-widget-cache".into(),
-            spec_content: "---\nstatus: in-progress\nfolds-into: 050-alpha\n---\n\n# staged\n"
-                .into(),
+            spec_path: None,
+            spec_content: Some(
+                "---\nstatus: in-progress\nfolds-into: 050-alpha\n---\n\n# staged\n".into(),
+            ),
             scenarios: vec![FoldSourceScenario {
                 slug: "eviction".into(),
                 section: "Behavior".into(),
             }],
             fold_target: "050-alpha".into(),
-            target_content: "---\nstatus: done\n---\n\n## Motivation\n".into(),
+            target_content: Some("---\nstatus: done\n---\n\n## Motivation\n".into()),
+            target_path: None,
             target_status: "done".into(),
             target_sections: vec!["Motivation".into()],
             routes: vec!["body-edit".into(), "scenario".into()],
+            content_form: None,
         };
         let value = serde_json::to_value(&request).unwrap();
         assert_eq!(value["feature"], "1234.1-widget-cache");
@@ -1694,13 +1775,16 @@ mod tests {
     fn route_fold_request_omits_empty_scenarios() {
         let request = RouteFoldRequest {
             feature: "1234.1-staged".into(),
-            spec_content: String::new(),
+            spec_path: None,
+            spec_content: Some(String::new()),
             scenarios: vec![],
             fold_target: "050-alpha".into(),
-            target_content: String::new(),
+            target_content: Some(String::new()),
+            target_path: None,
             target_status: String::new(),
             target_sections: vec![],
             routes: vec!["body-edit".into(), "scenario".into()],
+            content_form: None,
         };
         let value = serde_json::to_value(&request).unwrap();
         assert!(value.get("scenarios").is_none());

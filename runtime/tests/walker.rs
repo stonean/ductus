@@ -1227,7 +1227,8 @@ fn over_the_read_size(n: usize) -> tempfile::TempDir {
 /// On the exec path a scope past the read size reaches the review whole: the
 /// walker's `performReview` request loads every in-scope file from the list
 /// file `compute-review-scope` names, and carries no inline `scope`, so the
-/// file form is what it read.
+/// file form is what it read. The request, past the read size itself, names
+/// each file in the lists file it moves its `scope-files` to.
 #[test]
 fn a_scope_past_the_read_size_reaches_the_review_through_its_list_file() {
     let tmp = over_the_read_size(12);
@@ -1274,7 +1275,17 @@ fn a_scope_past_the_read_size_reaches_the_review_through_its_list_file() {
         request["request"].get("scope").is_none(),
         "the scope was inline, so the file form went unexercised: {request}"
     );
-    let paths: Vec<&str> = request["request"]["scope-files"]
+    // Twelve files past the read size is a request past it too: its
+    // `scope-files` is in the lists file the request names, with the count
+    // inline (spec 022 task 37).
+    let lists_file = request["request"]["request-lists-file"]
+        .as_str()
+        .expect("the request moved its lists to a file");
+    assert!(request["request"]["scope-files-count"].as_u64().unwrap() >= 12);
+    let moved: Value =
+        serde_json::from_str(&std::fs::read_to_string(tmp.path().join(lists_file)).unwrap())
+            .unwrap();
+    let paths: Vec<&str> = moved["scope-files"]
         .as_array()
         .unwrap()
         .iter()

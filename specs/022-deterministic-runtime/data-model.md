@@ -615,11 +615,32 @@ The complement of `append-inbox` and the deterministic surface behind `/ductus:g
 
 The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
 
+### Request bodies past the read size
+
+A request is held to `[artifacts] read-size-bytes` (`BE-PAYLOAD-001`), the size a primitive's result is held to, read by the one reader they share: a request exactly at it fits, and the bound is on the whole serialized request, legacy tail included. A malformed read size halts the walk at the request, as it halts every reader of the setting, whether or not a body was read. A request that fits is sent whole, as the sections below show it, with none of the fields this section adds. Past it the request is bounded in two steps, and the second runs only if the request is still past the read size after the first.
+
+**Bodies.** Each file body is dropped and each file the request names by a repo-relative path is one the host reads itself: `content-form` is `"path"`, every body field is absent, and the paths are `spec-path` and `target-path`, a `scope-files`, `rule-files` or `plan-relevant-files` entry's `path`. A host reads an absent body beside `content-form: "path"` as a body left to read, never as an empty file; an empty file is `""` inline. A body the runtime could not read (a missing file, a path outside the project) is never bounded: the request sends what it sends inline, with no path to a file the host would not find, and one with no body to read stays as it is. The form writes no file: the host reads the project's own, by a path the runtime's containment check (`BE-INPUT-004`) already read; `writeCode`'s secret-exfiltration refusal runs before any bounding, so a refused path is never named.
+
+**Lists.** The lists that grow with entries rather than with a file's size move to one file: each non-empty list the request carries from its point's set below, and the whole legacy context tail, which is the primitive results and seeded values behind the typed fields. The file is `.ductus/results/exec-request/{extension point}/{sha256}.json`, written as a primitive's list file is (`.ductus/results/` ignores itself), an object holding each moved list under its own key and the tail under `legacy-context`. The request keeps `{list}-count` for each moved list, `legacy-context-count`, the number of tail keys, for the tail, and `request-lists-file`, the file's path from the project root, which is also how a host knows the request took this form. A list file that cannot be written halts the walk with `request-lists-unwritable`. What stays inline is the typed fields no list owns (`pass`, `rule`, `question`, `task`, `routes`, `fold-target`, `target-status`), so a host decides with them without reading the file. A request with no non-empty list and no tail is still past the read size if a scalar or an object no list owns is: no request can be made smaller by moving what it does not hold.
+
+The marker names are `content-form` and `request-lists-file`, never `form` or `lists-file`, because the legacy tail a request may carry holds a primitive result's `form` and `lists-file` as the walk's last result left them, and a host could take either for this request's.
+
+| Extension point | Bodies | Lists moved past the bound |
+| --- | --- | --- |
+| `writeCode` | `plan-relevant-files[].content` | `constitution-excerpts`, `plan-relevant-files`, `write-boundary`, the tail |
+| `performReview` | `scope-files[].content`, `rule-files[].content` (each `rule-files` entry names its `path` in this form) | `scope-files`, `rule-files`, `loaded-rule-files`, `passes-run`, the tail |
+| `assessSpecQuality` | `spec-content` | `loaded-rule-files` |
+| `askClarifyQuestion` | `spec-content` | none |
+| `routeFold` | `spec-content`, `target-content` | `scenarios`, `target-sections` |
+| `verifyCriteria` | `spec-content` | `criteria` |
+
 ### `assessSpecQuality`
 
 Used by `/ductus:analyze`'s per-rule Verification reads.
 
 One request carries one rule. The exec walker sends one per loaded rule of the asking step's tier — step 11 asks about MUST-tier rules, step 12 about SHOULD-tier ones — so each rule is asked about once (spec 060). `rule.severity` is the tier the rule's Statement states through its RFC 2119 keyword, MUST winning when a Statement carries both; the step's prose only selects which rules it asks about. The walker evaluates no Verification trigger: the host judges whether the rule's trigger fires against the spec, and answers `passed: true` with a `null` finding when it does not. A rule with no keyword or no Verification is never sent, and is recorded under `rule-assessments-not-checked` instead.
+
+The walker sends one request per assessed rule, up to 192 per walk, so `spec-content` is the field the bound exists for. The request is bounded as §Request bodies past the read size states, and the host reads `spec-path` when `content-form` is `"path"`.
 
 `loaded-rule-files` lists the basenames of the rule files the walk loaded, in its `rule-files` order; a listed file it could not read is absent, so the list names exactly the files whose rules the walk assessed. A Verification that yields a case "where `{file}` is also loaded" (`specs/008-security-rules/data-model.md` §Verification phrasing item 6) yields it only when `{file}` is in the list; a file it names that the list lacks, and a request carrying no list, which a runtime predating the field sends, make the condition false, so the yielding rule keeps the case (spec 060, scenario `an-assessment-sees-the-loaded-rule-files`).
 
@@ -664,6 +685,8 @@ The walker asks about a rule only when the feature's stored verdict for it is no
 ### `writeCode`
 
 Used by `/ductus:implement`'s per-task work step.
+
+`plan-relevant-files[].content`, and the lists the request carries, are bounded as §Request bodies past the read size states; the path form names each file by the `path` the builder contained.
 
 Request payload:
 
@@ -745,6 +768,46 @@ Field sourcing (extension-request-hygiene):
 - `feature-description` — the `feature-description` walker-context key, seeded by the host from the slash command's `$ARGUMENTS` (session file or `key=value` exec argument); empty when the host seeds none.
 - `existing-content` — the named section's current body from the file the running command owns (`/ductus:plan` reads `plan.md`, `/ductus:specify` reads `spec.md` — selected by command, never by fallback order); omitted when the file or section is absent or empty.
 
+### `performReview`
+
+Used by `/ductus:review`'s five passes, one single-shot request per pass: `security`, `reuse`, `quality`, `efficiency`, `simplicity`.
+
+Request payload:
+
+```json
+{
+  "scope-files": [
+    { "path": "runtime/src/main.rs", "content": "..." }
+  ],
+  "rule-files": [
+    { "name": "security-backend.md", "content": "..." }
+  ],
+  "pass": "security",
+  "loaded-rule-files": [
+    { "name": "security-backend.md", "pass": "security" },
+    { "name": "quality-cross.md", "pass": "quality" }
+  ],
+  "passes-run": ["security", "reuse", "quality", "efficiency", "simplicity"]
+}
+```
+
+`scope-files` is every in-scope file the runtime could read, from `compute-review-scope`'s `scope`: read whole even when that result was past the read size, since the walker reads the lists back from its list file at that step. A path outside the project, or missing or unreadable, is skipped. `scope-files` leads as the cache-stable prefix, since it is identical across the passes of one run. `rule-files` is the loaded rule files that apply to this pass (`security-*.md` to `security`, `performance-*.md` to `efficiency`, every other file to `quality`; `reuse` and `simplicity` carry none), each with its `name` and `content`. `loaded-rule-files` names every loaded file with the pass that applies it, and `passes-run` the passes this walk runs, which the security pass needs to apply a rule's **Not flagged:** routing: a load condition is judged against the loaded names, and a finding stays with the yielding rule when the owner's file is not loaded or its pass is not in `passes-run` (spec 020, scenario `review-reports-a-defect-under-its-owner`). The legacy context fields follow the typed prefix, as for `writeCode`, with the walker-internal and restored keys filtered out.
+
+**Past the read size** the request is bounded as §Request bodies past the read size states. Each `scope-files` entry is then `{ "path": "..." }` and each `rule-files` entry `{ "name": "...", "path": "..." }`, with `path` the file under the rule directory; every in-scope file is still named, in the lists file when the lists move.
+
+Response payload:
+
+```json
+{
+  "findings": [],
+  "observations": [
+    { "text": "...", "path": "runtime/src/main.rs", "contract-break": false }
+  ]
+}
+```
+
+`findings` flow into `write-review`'s `findings` input, and `observations` (empty when a host sends none) into its `observations` input; the walker accumulates both across the passes. An observation carries no disposition: the walker records every one undispositioned (spec 058).
+
 ### `askClarifyQuestion` (follow-on)
 
 Reserved by the [clarify-command-acceleration](scenarios/clarify-command-acceleration.md) scenario; the typed request builder ships ahead of it ([extension-request-hygiene](scenarios/extension-request-hygiene.md)) so the point never falls back to a raw context dump. One host-mediated request/response round trip per open question.
@@ -762,7 +825,7 @@ Request payload:
 }
 ```
 
-`question.section` is optional and omitted when the walker cannot attribute the question to a section. The question comes from an explicit `question` walker-context value when present, else the first entry of `read-spec`'s merged `open-questions` result.
+`spec-content` is bounded (§Request bodies past the read size). `question.section` is optional and omitted when the walker cannot attribute the question to a section. The question comes from an explicit `question` walker-context value when present, else the first entry of `read-spec`'s merged `open-questions` result.
 
 **Exec-path scope** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): `ductus exec clarify` no-ops clarify steps 7–8, spec-wide passes with no extension marker that must run even when this loop makes no round trip; a host driving exec performs them itself, as `clarify.md`'s Instructions preamble states.
 
@@ -826,7 +889,9 @@ Request payload:
 }
 ```
 
-`target-content` and `target-sections` are both present because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs. `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
+`spec-content` and `target-content` are bounded (§Request bodies past the read size). In the path form `spec-path` (`{specs-root}/{feature}/spec.md`) and `target-path` (the upstream's `spec.md`) name the files the host reads, and `scenarios` and `target-sections` can move to the lists file; `target-status` stays inline. A body not read stays `""`, with no path: a spec whose `folds-into` names no readable upstream sends `target-content: ""` in both forms.
+
+`target-content` and `target-sections` are both present inline because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs. `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
 
 Response payload:
 
@@ -857,7 +922,7 @@ Request payload:
 }
 ```
 
-`criteria` mirrors `read-spec`'s merged `acceptance-criteria` result in body order; `index` is the 0-based position `mark-criterion` addresses (the two share the same comment/fence-aware section walker, so index N here is the checkbox `mark-criterion` flips at N).
+`spec-content` and `criteria` are bounded (§Request bodies past the read size). `criteria` mirrors `read-spec`'s merged `acceptance-criteria` result in body order; `index` is the 0-based position `mark-criterion` addresses (the two share the same comment/fence-aware section walker, so index N here is the checkbox `mark-criterion` flips at N).
 
 Response payload:
 

@@ -36,13 +36,13 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::host::Host;
-use crate::primitives::bounded_lists::counted_lists;
+use crate::primitives::bounded_lists::{counted_lists, fits};
 use crate::primitives::read_tasks;
 use crate::primitives::rule_sections::parse_rule_sections;
 use crate::primitives::rule_verdicts;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
-    FoldSourceScenario, LoadedReviewRuleFile, PerformReviewRequest, PlanRelevantFile,
+    ContentForm, FoldSourceScenario, LoadedReviewRuleFile, PerformReviewRequest, PlanRelevantFile,
     ReviewRuleFile, ReviewScopeFile, RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec,
     VerifyCriteriaRequest, VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
 };
@@ -104,6 +104,14 @@ pub enum PayloadError {
     /// rather than building a request from a default (`CFG-ENV-008`).
     #[error("config-unreadable: {0}")]
     ConfigUnreadable(#[from] crate::primitives::PrimitiveError),
+    /// A request past the read size could not write the file its moved lists
+    /// go to ([`bound_lists`]). The walk halts rather than send a request
+    /// naming a file that is not on disk.
+    #[error("request-lists-unwritable: {reason}")]
+    RequestListsUnwritable {
+        /// Why the file could not be written.
+        reason: String,
+    },
     /// The command name is outside the slug grammar, so no candidate path is
     /// built from it (`BE-INPUT-004`).
     #[error("invalid-command-name: {0}")]
@@ -122,6 +130,7 @@ impl PayloadError {
             // for an identifier `validate_response` does not know.
             Self::UnknownExtension { .. } => "unknown-extension",
             Self::ListsFileUnreadable { .. } => "lists-file-unreadable",
+            Self::RequestListsUnwritable { .. } => "request-lists-unwritable",
             Self::ConfigUnreadable(_) => "config-unreadable",
             Self::InvalidCommandName(_) => "invalid-command-name",
         }
@@ -151,6 +160,15 @@ impl PayloadError {
 ///   [`build_perform_review_request`]); filtered legacy context fields
 ///   follow the typed prefix, preserving the primitive results the pass
 ///   needs (`scope`/`diff-base`, `selected`/`rules-dir`/`notices`).
+///
+/// Every request that carries a file body is bounded (`BE-PAYLOAD-001`):
+/// inline while the request, serialized, fits `[artifacts] read-size-bytes`
+/// ([`fits`], the reader a bounded result shares), and past it carrying no
+/// body but the path of each file the host reads itself, with
+/// `content-form: path` ([`ContentForm`]). A body the runtime could not read
+/// is never bounded: it stays as inline sends it. A request still past the
+/// size then moves the lists that grow with entries, and its legacy tail, to a
+/// file ([`bound_lists`]).
 /// - `assessSpecQuality` — builds [`AssessSpecQualityRequest`] from the
 ///   walker context's `path` (the spec under review, read off disk for
 ///   `spec-content`) and the one rule the walker seeded under
@@ -194,8 +212,8 @@ pub fn build_extension_request(
     match identifier {
         "writeCode" => build_write_code_request(context, repo, command_name),
         "writeSpecBody" => build_write_spec_body_request(context, repo, command_name, step_prose),
-        "performReview" => Ok(build_perform_review_request(context, repo, step_prose)),
-        "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo)),
+        "performReview" => build_perform_review_request(context, repo, step_prose),
+        "assessSpecQuality" => build_assess_spec_quality_request(context, repo),
         "askClarifyQuestion" => build_ask_clarify_question_request(context, repo),
         "routeInboxItem" => build_route_inbox_item_request(context, repo),
         "routeFold" => build_route_fold_request(context, repo),
@@ -269,6 +287,99 @@ fn typed_with_legacy_context<T: Serialize>(typed: &T, context: &Map<String, Valu
     Value::Object(object)
 }
 
+/// The keys a typed request serializes with: what separates its legacy
+/// context tail from it once the two are merged ([`bound_lists`]).
+fn typed_keys<T: Serialize>(typed: &T) -> Vec<String> {
+    match serde_json::to_value(typed) {
+        Ok(Value::Object(map)) => map.keys().cloned().collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The key a request past the read size, bodies already named by path,
+/// carries the file under that holds its moved lists. Not `lists-file`: the
+/// legacy tail of a request holds a primitive result's `lists-file` and
+/// `form` as the walk's last result left them, so either name could be a
+/// result's, not this request's.
+const REQUEST_LISTS_FILE: &str = "request-lists-file";
+
+/// The key the legacy context tail is moved under, in the lists file.
+const LEGACY_CONTEXT: &str = "legacy-context";
+
+/// Hold a request, bodies already bounded, to the read size whole
+/// (`BE-PAYLOAD-001`). Inline while it fits. Past it the lists that grow with
+/// entries rather than with a file (`lists`, those that are non-empty arrays
+/// in the request) and the whole legacy context tail (`typed_keys`: every key the
+/// typed request does not carry) move to one file under
+/// `.ductus/results/exec-request/{identifier}/`, written as a list file is
+/// (`bounded_lists::write`). Each moved list leaves `{list}-count` inline, the
+/// tail `legacy-context-count`, its key count, and `request-lists-file`
+/// names the file, whose object holds each moved value under its own key and
+/// the tail under `legacy-context`. A request with nothing to move stays as it
+/// is: what is left past the bound is a scalar or an object no list owns.
+///
+/// The tail moves whole, not entry by entry, because its keys are the walk's
+/// primitive results, whatever a host seeded, and none is a list this runtime
+/// can name.
+///
+/// # Errors
+///
+/// A malformed read size, as [`fits`] reads it, and
+/// [`PayloadError::RequestListsUnwritable`] when the file cannot be written.
+fn bound_lists(
+    repo: &Path,
+    identifier: &str,
+    mut value: Value,
+    lists: &[&str],
+    typed_keys: Option<Vec<String>>,
+) -> Result<Value, PayloadError> {
+    if fits(repo, &value)? {
+        return Ok(value);
+    }
+    let Value::Object(map) = &mut value else {
+        return Ok(value);
+    };
+    let mut moved = Map::new();
+    let mut counts = Vec::new();
+    if let Some(typed) = typed_keys {
+        let tail: Vec<String> = map
+            .keys()
+            .filter(|key| !typed.contains(key))
+            .cloned()
+            .collect();
+        if !tail.is_empty() {
+            let entries: Map<String, Value> = tail
+                .iter()
+                .filter_map(|key| map.remove(key).map(|entry| (key.clone(), entry)))
+                .collect();
+            counts.push((LEGACY_CONTEXT.to_string(), entries.len()));
+            moved.insert(LEGACY_CONTEXT.into(), Value::Object(entries));
+        }
+    }
+    for key in lists {
+        if map
+            .get(*key)
+            .is_some_and(|list| list.as_array().is_some_and(|items| !items.is_empty()))
+            && let Some(Value::Array(items)) = map.remove(*key)
+        {
+            counts.push(((*key).to_string(), items.len()));
+            moved.insert((*key).into(), Value::Array(items));
+        }
+    }
+    if moved.is_empty() {
+        return Ok(value);
+    }
+    let file = crate::primitives::bounded_lists::write(repo, "exec-request", identifier, &moved)
+        .map_err(|source| PayloadError::RequestListsUnwritable {
+            reason: source.to_string(),
+        })?;
+    for (key, count) in counts {
+        map.insert(format!("{key}-count"), Value::from(count));
+    }
+    map.insert(REQUEST_LISTS_FILE.into(), Value::String(file));
+    Ok(value)
+}
+
 /// Serialize a typed request as the entire payload, with no legacy context
 /// tail. Shared epilogue for the builders the data model documents as
 /// bare-typed (`assessSpecQuality`, `askClarifyQuestion`, `routeInboxItem`,
@@ -333,7 +444,10 @@ pub(crate) fn passes_run(procedure: &crate::schema::procedure::Procedure) -> Vec
 /// (`scope`, from `compute-review-scope`, whole even past the read size, since
 /// [`restore_lists`] put a moved list back when the result arrived) and the
 /// loaded rule files (`selected` basenames under `rules-dir`, from
-/// `discover-rule-files`) off disk. The pass is the one the step's prose
+/// `discover-rule-files`) off disk. Past `[artifacts] read-size-bytes` the
+/// request, legacy tail included, drops each file's content, names each
+/// rule file's `path`, and says `content-form: path`; a request with no file
+/// to read stays as it is. The pass is the one the step's prose
 /// names. `rule-files` carries only the files
 /// [`review_pass_for_rule_file`] maps to that pass; `loaded-rule-files` names
 /// every loaded file with its pass, and `passes-run` the passes this walk
@@ -350,7 +464,7 @@ fn build_perform_review_request(
     context: &Map<String, Value>,
     repo: &Path,
     step_prose: &str,
-) -> Value {
+) -> Result<Value, PayloadError> {
     let pass = pass_from_step_prose(step_prose)
         .map(str::to_string)
         .unwrap_or_default();
@@ -369,19 +483,51 @@ fn build_perform_review_request(
         .collect();
     let passes_run = string_array(context, PASSES_RUN_KEY);
 
-    let typed = PerformReviewRequest {
+    let mut typed = PerformReviewRequest {
         scope_files,
         rule_files,
         pass,
         loaded_rule_files,
         passes_run,
+        content_form: None,
     };
+    // The inline form names no rule file's path: the host has the content.
+    let rule_paths: Vec<Option<String>> = typed
+        .rule_files
+        .iter_mut()
+        .map(|file| file.path.take())
+        .collect();
     // Filtered merge: pass N must not see passes 1..N-1's accumulated
     // `findings` or raw `llm:performReview` echoes, but keeps the
     // primitive results it legitimately needs (`scope`/`diff-base` from
     // compute-review-scope, `selected`/`rules-dir`/`notices` from
     // discover-rule-files).
-    typed_with_legacy_context(&typed, context)
+    let mut value = typed_with_legacy_context(&typed, context);
+    let has_bodies = !typed.scope_files.is_empty() || !typed.rule_files.is_empty();
+    if !fits(repo, &value)? && has_bodies {
+        // Past the read size: no body, and each file the host reads by its path.
+        for file in &mut typed.scope_files {
+            file.content = None;
+        }
+        for (file, rule_path) in typed.rule_files.iter_mut().zip(rule_paths) {
+            file.content = None;
+            file.path = rule_path;
+        }
+        typed.content_form = Some(ContentForm::Path);
+        value = typed_with_legacy_context(&typed, context);
+    }
+    bound_lists(
+        repo,
+        "performReview",
+        value,
+        &[
+            "scope-files",
+            "rule-files",
+            "loaded-rule-files",
+            "passes-run",
+        ],
+        Some(typed_keys(&typed)),
+    )
 }
 
 /// Classification of a repo-relative path against the canonicalized repo root
@@ -425,9 +571,14 @@ fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScop
         .into_iter()
         .filter_map(
             |path| match classify_contained(&canon_repo, Path::new(&path)) {
-                Contained::Inside(abs) => std::fs::read_to_string(&abs)
-                    .ok()
-                    .map(|content| ReviewScopeFile { path, content }),
+                Contained::Inside(abs) => {
+                    std::fs::read_to_string(&abs)
+                        .ok()
+                        .map(|content| ReviewScopeFile {
+                            path,
+                            content: Some(content),
+                        })
+                }
                 Contained::Missing | Contained::Outside => None,
             },
         )
@@ -532,9 +683,15 @@ fn load_rule_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewRuleF
         .filter_map(|name| {
             let rel = Path::new(rules_dir).join(&name);
             match classify_contained(&canon_repo, &rel) {
-                Contained::Inside(abs) => std::fs::read_to_string(&abs)
-                    .ok()
-                    .map(|content| ReviewRuleFile { name, content }),
+                Contained::Inside(abs) => {
+                    std::fs::read_to_string(&abs)
+                        .ok()
+                        .map(|content| ReviewRuleFile {
+                            name,
+                            content: Some(content),
+                            path: Some(rel.to_string_lossy().into_owned()),
+                        })
+                }
                 Contained::Missing | Contained::Outside => None,
             }
         })
@@ -571,19 +728,40 @@ fn build_write_code_request(
     let write_boundary = string_array(context, "write-boundary");
     let task = load_current_task(&feature, context, repo);
 
-    let typed = WriteCodeRequest {
+    let mut typed = WriteCodeRequest {
         constitution_excerpts: excerpts.excerpts,
         constitution_excerpts_unexaminable: excerpts.unexaminable,
         plan_relevant_files,
         write_boundary,
         task,
+        content_form: None,
     };
 
     // Merge: typed prefix first (declaration order = cache-anchor order),
     // then legacy context fields that hosts may already parse (filtered:
     // no `llm:*` echoes or accumulated `findings` — the whole-session dump
     // eroded the cache anchor). Keys present in both prefer the typed value.
-    Ok(typed_with_legacy_context(&typed, context))
+    // The secret-exfiltration refusal above has already run: a refused path
+    // is never bounded, because it is never loaded.
+    let mut value = typed_with_legacy_context(&typed, context);
+    if !typed.plan_relevant_files.is_empty() && !fits(repo, &value)? {
+        for file in &mut typed.plan_relevant_files {
+            file.content = None;
+        }
+        typed.content_form = Some(ContentForm::Path);
+        value = typed_with_legacy_context(&typed, context);
+    }
+    bound_lists(
+        repo,
+        "writeCode",
+        value,
+        &[
+            "constitution-excerpts",
+            "plan-relevant-files",
+            "write-boundary",
+        ],
+        Some(typed_keys(&typed)),
+    )
 }
 
 /// Build the `writeSpecBody` request. All documented typed fields are
@@ -665,7 +843,8 @@ fn load_template(command_name: &str, repo: &Path) -> Result<(String, String), Pa
 ///
 /// - `spec-path` / `spec-content` — the spec under clarification,
 ///   resolved by [`resolve_spec_path`] and read repo-confined
-///   (BE-INPUT-004); content empty when missing.
+///   (BE-INPUT-004); content empty when missing. Past the read size the
+///   content is absent and `content-form` is `path`.
 /// - `question` — an explicit `question` context value when the walker
 ///   seeds one (string, or object with `text` / optional `section`),
 ///   falling back to the first entry of `read-spec`'s merged
@@ -675,14 +854,20 @@ fn build_ask_clarify_question_request(
     repo: &Path,
 ) -> Result<Value, PayloadError> {
     let spec_path = resolve_spec_path(context, repo)?;
-    let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
+    let body = read_repo_file(repo, &spec_path);
+    let read = body.is_some();
     let question = resolve_clarify_question(context);
-    let typed = AskClarifyQuestionRequest {
+    let mut typed = AskClarifyQuestionRequest {
         spec_path,
-        spec_content,
+        spec_content: Some(body.unwrap_or_default()),
         question,
+        content_form: None,
     };
-    Ok(typed_only(&typed))
+    if !fits(repo, &typed)? && read {
+        typed.spec_content = None;
+        typed.content_form = Some(ContentForm::Path);
+    }
+    bound_lists(repo, "askClarifyQuestion", typed_only(&typed), &[], None)
 }
 
 /// Resolve the repo-relative path of the spec file the walker targets.
@@ -844,7 +1029,8 @@ const FOLD_ROUTES: [&str; 2] = ["body-edit", "scenario"];
 ///
 /// - `feature` / `spec-content` — the branch-scoped spec resolved through
 ///   the same `path`/`feature` preference every other builder uses, read
-///   off disk.
+///   off disk. Past the read size the content is absent, `spec-path` names
+///   the file and `content-form` is `path`.
 /// - `scenarios` — the scenarios it carries, sorted by slug. Context rather
 ///   than subjects: a scenario is already an organizational split and
 ///   crosses over unchanged, so what the route decides is the body's shape.
@@ -855,7 +1041,8 @@ const FOLD_ROUTES: [&str; 2] = ["body-edit", "scenario"];
 /// - `target-content` / `target-status` / `target-sections` — the upstream
 ///   spec, without which "which section" has no answer the router could
 ///   give. The section list is what keeps it naming a heading the file
-///   actually has.
+///   actually has. Past the read size `target-content` is absent and
+///   `target-path` names the file; the status and sections stay inline.
 ///
 /// An unreadable spec file yields an empty string rather than an error,
 /// matching every sibling builder; a project config that cannot be read or
@@ -867,7 +1054,8 @@ fn build_route_fold_request(
     repo: &Path,
 ) -> Result<Value, PayloadError> {
     let spec_path = resolve_spec_path(context, repo)?;
-    let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
+    let spec_body = read_repo_file(repo, &spec_path);
+    let spec_content = spec_body.clone().unwrap_or_default();
     let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
     let feature = spec_path
         .strip_prefix(&format!("{specs_root}/"))
@@ -888,26 +1076,50 @@ fn build_route_fold_request(
     // read here is shipped to the host, so a `folds-into` carrying `../`
     // would exfiltrate a `spec.md` from outside the repo. The source spec two
     // lines above already goes through this helper; this is the same read.
-    let target_content = if fold_target.is_empty() {
-        String::new()
+    let target_rel = format!("{specs_root}/{fold_target}/spec.md");
+    let target_body = if fold_target.is_empty() {
+        None
     } else {
-        read_repo_file(repo, &format!("{specs_root}/{fold_target}/spec.md")).unwrap_or_default()
+        read_repo_file(repo, &target_rel)
     };
+    let target_content = target_body.clone().unwrap_or_default();
     let target_status =
         crate::primitives::frontmatter_status(&target_content, &target_spec).unwrap_or_default();
     let target_sections = section_headings(&target_content);
 
-    let typed = RouteFoldRequest {
+    let mut typed = RouteFoldRequest {
         feature,
-        spec_content,
+        spec_path: None,
+        spec_content: Some(spec_content),
         scenarios,
         fold_target,
-        target_content,
+        target_content: Some(target_content),
+        target_path: None,
         target_status,
         target_sections,
         routes: FOLD_ROUTES.iter().map(ToString::to_string).collect(),
+        content_form: None,
     };
-    Ok(typed_only(&typed))
+    // Past the read size each body that was read becomes a path the host
+    // reads; one that was not read stays the empty string it is inline. The
+    // target is named by the spec's own `folds-into`, so a target that was
+    // read implies a spec that was.
+    if !fits(repo, &typed)? && spec_body.is_some() {
+        typed.spec_content = None;
+        typed.spec_path = Some(spec_path);
+        if target_body.is_some() {
+            typed.target_content = None;
+            typed.target_path = Some(target_rel);
+        }
+        typed.content_form = Some(ContentForm::Path);
+    }
+    bound_lists(
+        repo,
+        "routeFold",
+        typed_only(&typed),
+        &["scenarios", "target-sections"],
+        None,
+    )
 }
 
 /// The scenarios a branch-scoped spec carries, sorted by slug through the
@@ -993,7 +1205,8 @@ fn read_spec_status(spec_path: &Path) -> String {
 ///
 /// - `spec-path` / `spec-content` — the spec under verification,
 ///   resolved by [`resolve_spec_path`] and read repo-confined
-///   (BE-INPUT-004); content empty when missing.
+///   (BE-INPUT-004); content empty when missing. Past the read size the
+///   content is absent and `content-form` is `path`.
 /// - `criteria` — the merged `acceptance-criteria` result of the
 ///   completion gate's `read-spec` step, indexed in body order (the same
 ///   0-based addressing `mark-criterion` consumes). Empty when the
@@ -1003,7 +1216,8 @@ fn build_verify_criteria_request(
     repo: &Path,
 ) -> Result<Value, PayloadError> {
     let spec_path = resolve_spec_path(context, repo)?;
-    let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
+    let body = read_repo_file(repo, &spec_path);
+    let read = body.is_some();
     let criteria = context
         .get("acceptance-criteria")
         .and_then(Value::as_array)
@@ -1025,12 +1239,23 @@ fn build_verify_criteria_request(
                 .collect()
         })
         .unwrap_or_default();
-    let typed = VerifyCriteriaRequest {
+    let mut typed = VerifyCriteriaRequest {
         spec_path,
-        spec_content,
+        spec_content: Some(body.unwrap_or_default()),
         criteria,
+        content_form: None,
     };
-    Ok(typed_only(&typed))
+    if !fits(repo, &typed)? && read {
+        typed.spec_content = None;
+        typed.content_form = Some(ContentForm::Path);
+    }
+    bound_lists(
+        repo,
+        "verifyCriteria",
+        typed_only(&typed),
+        &["criteria"],
+        None,
+    )
 }
 
 /// The walker-context key an `/analyze` walk seeds with the rule each
@@ -1052,7 +1277,9 @@ pub(crate) const LOADED_RULE_FILES_KEY: &str = "loaded-rule-files";
 ///   `/ductus:target` as the spec directory, echoed by `read-spec` as the
 ///   file).
 /// - `spec-content` — the spec read off disk, repo-confined
-///   (BE-INPUT-004); empty when missing or out of repo.
+///   (BE-INPUT-004); empty when missing or out of repo. The walker sends
+///   one request per rule, so past the read size the content is absent and
+///   `content-form` is `path`, and the host reads `spec-path`.
 /// - `rule` — the rule the walker seeded under [`ASSESSED_RULE_KEY`]: its
 ///   ID, its Verification phrase, and the tier its Statement carries (see
 ///   [`load_rules`]). The walker seeds one for every request it sends, so an
@@ -1065,13 +1292,17 @@ pub(crate) const LOADED_RULE_FILES_KEY: &str = "loaded-rule-files";
 /// Unlike `writeCode`, no legacy context fields are appended: the data
 /// model documents the bare typed shape for this point, and the previous
 /// raw walker-context dump is exactly the behavior this builder replaces.
-fn build_assess_spec_quality_request(context: &Map<String, Value>, repo: &Path) -> Value {
+fn build_assess_spec_quality_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
     let spec_path = context
         .get("path")
         .and_then(Value::as_str)
         .map(|path| super::spec_file(repo, path))
         .unwrap_or_default();
-    let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
+    let body = read_repo_file(repo, &spec_path);
+    let read = body.is_some();
     let rule = context
         .get(ASSESSED_RULE_KEY)
         .and_then(|rule| serde_json::from_value::<AssessSpecQualityRule>(rule.clone()).ok())
@@ -1081,13 +1312,24 @@ fn build_assess_spec_quality_request(context: &Map<String, Value>, repo: &Path) 
             verification: String::new(),
             severity: RuleSeverity::Unspecified,
         });
-    let typed = AssessSpecQualityRequest {
+    let mut typed = AssessSpecQualityRequest {
         spec_path,
-        spec_content,
+        spec_content: Some(body.unwrap_or_default()),
         rule,
         loaded_rule_files: string_array(context, LOADED_RULE_FILES_KEY),
+        content_form: None,
     };
-    typed_only(&typed)
+    if !fits(repo, &typed)? && read {
+        typed.spec_content = None;
+        typed.content_form = Some(ContentForm::Path);
+    }
+    bound_lists(
+        repo,
+        "assessSpecQuality",
+        typed_only(&typed),
+        &["loaded-rule-files"],
+        None,
+    )
 }
 
 /// Read a repo-relative file with the BE-INPUT-004 containment check.
@@ -1354,7 +1596,10 @@ fn load_plan_relevant_files(
         let Ok(content) = std::fs::read_to_string(&canon_abs) else {
             continue;
         };
-        out.push(PlanRelevantFile { path: rel, content });
+        out.push(PlanRelevantFile {
+            path: rel,
+            content: Some(content),
+        });
     }
     Ok(out)
 }
@@ -1908,6 +2153,7 @@ mod tests {
                 heading: "A task".to_string(),
                 subtasks: vec![],
             },
+            content_form: None,
         };
         let json = serde_json::to_string(&request).unwrap();
         assert!(
@@ -1945,7 +2191,7 @@ mod tests {
         let files = load_plan_relevant_files("123-foo", tmp.path()).unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].path, "existing.txt");
-        assert_eq!(files[0].content, "hello");
+        assert_eq!(files[0].content.as_deref(), Some("hello"));
     }
 
     #[test]
@@ -1969,6 +2215,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2002,6 +2249,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2051,6 +2299,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2094,6 +2343,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2135,6 +2385,7 @@ mod tests {
             Err(
                 other @ (PayloadError::UnknownExtension { .. }
                 | PayloadError::ListsFileUnreadable { .. }
+                | PayloadError::RequestListsUnwritable { .. }
                 | PayloadError::ConfigUnreadable(_)
                 | PayloadError::InvalidCommandName(_)),
             ) => {
@@ -2247,6 +2498,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2293,6 +2545,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2338,6 +2591,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2365,7 +2619,7 @@ mod tests {
         let files = load_plan_relevant_files("123-foo", tmp.path()).unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].path, "src/lib.rs");
-        assert_eq!(files[0].content, "fn main() {}");
+        assert_eq!(files[0].content.as_deref(), Some("fn main() {}"));
     }
 
     #[test]
@@ -2395,6 +2649,7 @@ mod tests {
             }
             other @ (PayloadError::UnknownExtension { .. }
             | PayloadError::ListsFileUnreadable { .. }
+            | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
             | PayloadError::InvalidCommandName(_)) => {
                 panic!("expected SecretExfiltration, got {other:?}")
@@ -2652,7 +2907,7 @@ mod tests {
     fn build_assess_spec_quality_request_emits_documented_typed_shape() {
         let tmp = tempdir().unwrap();
         stage_assess_fixture(tmp.path());
-        let value = build_assess_spec_quality_request(&assess_context(), tmp.path());
+        let value = build_assess_spec_quality_request(&assess_context(), tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -2692,7 +2947,7 @@ mod tests {
         stage_assess_fixture(tmp.path());
         let mut context = assess_context();
         context.insert("path".into(), Value::String("specs/003-analyze".into()));
-        let value = build_assess_spec_quality_request(&context, tmp.path());
+        let value = build_assess_spec_quality_request(&context, tmp.path()).unwrap();
         assert_eq!(value["spec-path"], "specs/003-analyze/spec.md");
         assert_eq!(value["spec-content"], "# Spec body\n");
     }
@@ -2704,7 +2959,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
         ctx.insert("path".into(), Value::String("specs/absent/spec.md".into()));
-        let value = build_assess_spec_quality_request(&ctx, tmp.path());
+        let value = build_assess_spec_quality_request(&ctx, tmp.path()).unwrap();
         let keys: Vec<&str> = value
             .as_object()
             .unwrap()
@@ -2850,7 +3105,7 @@ mod tests {
             ASSESSED_RULE_KEY.into(),
             serde_json::to_value(&rule).unwrap(),
         );
-        let request = build_assess_spec_quality_request(&request_ctx, &repo);
+        let request = build_assess_spec_quality_request(&request_ctx, &repo).unwrap();
         assert_eq!(request["rule"]["statement"], rule.statement.as_str());
         let verification = request["rule"]["verification"].as_str().unwrap();
         assert!(
@@ -2906,7 +3161,8 @@ mod tests {
             Value::Array(vec![Value::String("security-backend.md".into())]),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass.");
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass.").unwrap();
         let obj = value.as_object().unwrap();
         // Typed prefix leads in cache-anchor order.
         let prefix: Vec<&str> = obj.keys().map(String::as_str).take(3).collect();
@@ -2962,7 +3218,7 @@ mod tests {
         // (quality-cross.md, design-time files, an unrecognized suffix) to
         // quality; reuse and simplicity apply none.
         let (tmp, ctx) = review_rules_fixture();
-        let request = |prose: &str| build_perform_review_request(&ctx, tmp.path(), prose);
+        let request = |prose: &str| build_perform_review_request(&ctx, tmp.path(), prose).unwrap();
 
         let security = request("Run the **security** pass over the in-scope files");
         assert_eq!(security["pass"], "security");
@@ -2998,7 +3254,8 @@ mod tests {
             PASSES_RUN_KEY.into(),
             serde_json::json!(["security", "quality"]),
         );
-        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass");
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **security** pass").unwrap();
         let loaded: Vec<(&str, &str)> = value["loaded-rule-files"]
             .as_array()
             .unwrap()
@@ -3078,7 +3335,8 @@ mod tests {
     fn build_perform_review_request_is_empty_without_scope_or_rules() {
         let tmp = tempdir().unwrap();
         let ctx = Map::new();
-        let value = build_perform_review_request(&ctx, tmp.path(), "Run the **reuse** pass.");
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **reuse** pass.").unwrap();
         assert_eq!(value["pass"], "reuse");
         assert_eq!(
             value["scope-files"].as_array().unwrap().as_slice(),
@@ -3123,7 +3381,7 @@ mod tests {
         let files = load_scope_files(&ctx, &repo);
         assert_eq!(files.len(), 1, "only the in-repo scope file is read");
         assert_eq!(files[0].path, "src/in.rs");
-        assert_eq!(files[0].content, "fn a() {}");
+        assert_eq!(files[0].content.as_deref(), Some("fn a() {}"));
     }
 
     /// A result that took the file form: no inline list, and `lists-file`
@@ -3473,7 +3731,7 @@ mod tests {
             serde_json::json!({ "findings": [] }),
         );
 
-        let value = build_perform_review_request(&ctx, tmp.path(), "");
+        let value = build_perform_review_request(&ctx, tmp.path(), "").unwrap();
         let obj = value.as_object().unwrap();
         assert!(!obj.contains_key("findings"));
         assert!(!obj.contains_key("observations"));
@@ -3920,5 +4178,570 @@ mod tests {
             locate_command_file("smoke", tmp.path()).unwrap().is_some(),
             "a slug still resolves"
         );
+    }
+
+    // -- BE-PAYLOAD-001: a request past the read size names its files ----------
+
+    /// A project config with `[artifacts] read-size-bytes = {value}`.
+    fn set_read_size(repo: &Path, value: &str) {
+        fs::create_dir_all(repo.join(".ductus")).unwrap();
+        fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {value}\n"),
+        )
+        .unwrap();
+    }
+
+    /// About 4 KB: past a 1000-byte read size, far under the default.
+    fn big_body(title: &str) -> String {
+        format!("# {title}\n{}", "a line of spec text\n".repeat(200))
+    }
+
+    /// The branch-scoped spec `routeFold` reads, and the upstream it names.
+    const FOLD_SPEC: &str = "specs/1234.1-staged/spec.md";
+    const FOLD_TARGET: &str = "specs/050-alpha/spec.md";
+
+    /// The four requests that carry a spec body, built for the same repo, as
+    /// `(extension point, request)`. The spec the first three read is
+    /// `specs/003-analyze/spec.md`; `routeFold` reads `FOLD_SPEC`.
+    fn spec_body_requests(repo: &Path) -> Vec<(&'static str, Result<Value, PayloadError>)> {
+        let mut spec = Map::new();
+        spec.insert(
+            "path".into(),
+            Value::String("specs/003-analyze/spec.md".into()),
+        );
+        spec.insert(
+            "acceptance-criteria".into(),
+            serde_json::json!([{ "checked": false, "text": "It walks." }]),
+        );
+        spec.insert("question".into(), Value::String("Which?".into()));
+        let mut fold = Map::new();
+        fold.insert("feature".into(), Value::String("1234.1-staged".into()));
+        let mut assess = assess_context();
+        assess.insert(
+            "path".into(),
+            Value::String("specs/003-analyze/spec.md".into()),
+        );
+        vec![
+            (
+                "assessSpecQuality",
+                build_extension_request("assessSpecQuality", &assess, repo, "analyze", ""),
+            ),
+            (
+                "askClarifyQuestion",
+                build_extension_request("askClarifyQuestion", &spec, repo, "clarify", ""),
+            ),
+            (
+                "verifyCriteria",
+                build_extension_request("verifyCriteria", &spec, repo, "implement", ""),
+            ),
+            (
+                "routeFold",
+                build_extension_request("routeFold", &fold, repo, "fold", ""),
+            ),
+        ]
+    }
+
+    /// Stage every spec `spec_body_requests` reads, each a `big_body` long.
+    fn stage_spec_bodies(repo: &Path) {
+        let specs = [
+            ("specs/003-analyze/spec.md", big_body("analyze")),
+            (
+                FOLD_SPEC,
+                format!(
+                    "---\nstatus: draft\nfolds-into: 050-alpha\n---\n\n{}",
+                    big_body("staged")
+                ),
+            ),
+            (
+                FOLD_TARGET,
+                format!(
+                    "---\nstatus: done\n---\n\n{}\n## Motivation\n",
+                    big_body("alpha")
+                ),
+            ),
+        ];
+        for (rel, text) in specs {
+            let file = repo.join(rel);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, text).unwrap();
+        }
+    }
+
+    #[test]
+    fn a_spec_body_request_under_the_read_size_carries_its_bodies_inline() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        for (point, request) in spec_body_requests(tmp.path()) {
+            let value = request.unwrap();
+            assert!(value.get("content-form").is_none(), "{point}");
+            let spec = fs::read_to_string(tmp.path().join(if point == "routeFold" {
+                FOLD_SPEC
+            } else {
+                "specs/003-analyze/spec.md"
+            }))
+            .unwrap();
+            assert_eq!(value["spec-content"], spec.as_str(), "{point}");
+            assert!(value.get("spec-path").is_some() || point == "routeFold");
+            if point == "routeFold" {
+                assert!(value["target-content"].as_str().unwrap().contains("alpha"));
+                assert!(value.get("target-path").is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn a_spec_body_request_past_the_read_size_names_the_files_instead() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        set_read_size(tmp.path(), "1000");
+        for (point, request) in spec_body_requests(tmp.path()) {
+            let value = request.unwrap();
+            assert_eq!(value["content-form"], "path", "{point}");
+            assert!(value.get("spec-content").is_none(), "{point}");
+            let (spec_key, target) = if point == "routeFold" {
+                assert!(value.get("target-content").is_none());
+                assert_eq!(value["target-path"], FOLD_TARGET);
+                // What it still decides on stays inline.
+                assert_eq!(value["target-status"], "done");
+                assert_eq!(value["target-sections"][0], "Motivation");
+                ("spec-path", FOLD_SPEC)
+            } else {
+                ("spec-path", "specs/003-analyze/spec.md")
+            };
+            assert_eq!(value[spec_key], target, "{point}");
+            // The path is one the host can read, and holds the whole body.
+            let read = fs::read_to_string(tmp.path().join(target)).unwrap();
+            assert!(read.len() > 1000, "{point}");
+            assert!(
+                serde_json::to_vec(&value).unwrap().len() <= 1000,
+                "{point}: the bounded request fits the read size"
+            );
+        }
+    }
+
+    #[test]
+    fn a_request_exactly_at_the_read_size_stays_inline() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        let build = || {
+            build_extension_request(
+                "assessSpecQuality",
+                &assess_context(),
+                tmp.path(),
+                "analyze",
+                "",
+            )
+            .unwrap()
+        };
+        let size = serde_json::to_vec(&build()).unwrap().len();
+        set_read_size(tmp.path(), &size.to_string());
+        assert!(build().get("content-form").is_none(), "at the size fits");
+        set_read_size(tmp.path(), &(size - 1).to_string());
+        assert_eq!(build()["content-form"], "path", "one byte past does not");
+    }
+
+    #[test]
+    fn a_spec_body_that_was_not_read_stays_inline_past_the_read_size() {
+        // Nothing is staged: every body is unread. The request is past a
+        // 1-byte read size all the same, and stays inline with the empty
+        // string the builders have always sent, never a path to nothing.
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "1");
+        for (point, request) in spec_body_requests(tmp.path()) {
+            let value = request.unwrap();
+            assert!(value.get("content-form").is_none(), "{point}");
+            assert_eq!(value["spec-content"], "", "{point}");
+            assert!(value.get("target-path").is_none(), "{point}");
+        }
+    }
+
+    #[test]
+    fn route_fold_bounds_only_the_body_it_read() {
+        // The staged spec is read and big; its upstream is not on disk.
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        fs::remove_file(tmp.path().join(FOLD_TARGET)).unwrap();
+        set_read_size(tmp.path(), "1000");
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("1234.1-staged".into()));
+        let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert_eq!(value["spec-path"], FOLD_SPEC);
+        assert!(value.get("spec-content").is_none());
+        assert_eq!(value["target-content"], "");
+        assert!(value.get("target-path").is_none());
+    }
+
+    #[test]
+    fn a_malformed_read_size_halts_every_spec_body_request() {
+        // Staged or not: the setting is read whether or not a body was.
+        for staged in [true, false] {
+            let tmp = tempdir().unwrap();
+            if staged {
+                stage_spec_bodies(tmp.path());
+            }
+            set_read_size(tmp.path(), "\"big\"");
+            for (point, request) in spec_body_requests(tmp.path()) {
+                assert!(
+                    matches!(request, Err(PayloadError::ConfigUnreadable(_))),
+                    "{point} (staged: {staged}): {request:?}"
+                );
+            }
+        }
+    }
+
+    /// A review fixture: the rule files of `review_rules_fixture`, and a
+    /// `scope` of one big in-repo file, one traversing path and one missing.
+    fn review_scope_fixture() -> (tempfile::TempDir, Map<String, Value>) {
+        let (tmp, mut ctx) = review_rules_fixture();
+        fs::create_dir_all(tmp.path().join("src")).unwrap();
+        fs::write(tmp.path().join("src/big.rs"), big_body("big")).unwrap();
+        ctx.insert(
+            "scope".into(),
+            serde_json::json!(["src/big.rs", "../outside.rs", "src/absent.rs"]),
+        );
+        (tmp, ctx)
+    }
+
+    #[test]
+    fn perform_review_under_the_read_size_carries_scope_and_rule_contents_inline() {
+        let (tmp, ctx) = review_scope_fixture();
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **quality** pass").unwrap();
+        assert!(value.get("content-form").is_none());
+        let scope = value["scope-files"].as_array().unwrap();
+        assert_eq!(scope.len(), 1);
+        assert_eq!(scope[0]["content"], big_body("big").as_str());
+        let rules = value["rule-files"].as_array().unwrap();
+        assert_eq!(rules.len(), 3, "quality-cross, api-backend, project-notes");
+        for rule in rules {
+            assert_eq!(rule["content"], "# Rules\n");
+            assert!(rule.get("path").is_none(), "{rule}");
+        }
+    }
+
+    #[test]
+    fn perform_review_past_the_read_size_names_the_files_instead() {
+        let (tmp, ctx) = review_scope_fixture();
+        set_read_size(tmp.path(), "1000");
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **quality** pass").unwrap();
+        assert_eq!(value["content-form"], "path");
+        // The same in-scope files, each without its content: a skipped path
+        // stays skipped in this form too.
+        let scope = value["scope-files"].as_array().unwrap();
+        assert_eq!(scope.len(), 1);
+        assert_eq!(scope[0]["path"], "src/big.rs");
+        assert!(scope[0].get("content").is_none());
+        let rules = value["rule-files"].as_array().unwrap();
+        assert_eq!(rules.len(), 3, "quality-cross, api-backend, project-notes");
+        for rule in rules {
+            let name = rule["name"].as_str().unwrap();
+            assert_eq!(rule["path"], format!("framework/rules/{name}").as_str());
+            assert!(rule.get("content").is_none(), "{rule}");
+        }
+        // What names the loaded files and passes stays inline.
+        assert_eq!(value["loaded-rule-files"].as_array().unwrap().len(), 6);
+        assert_eq!(value["pass"], "quality");
+        let read = fs::read_to_string(tmp.path().join("src/big.rs")).unwrap();
+        assert_eq!(read, big_body("big"));
+    }
+
+    #[test]
+    fn perform_review_with_no_file_to_read_stays_inline_past_the_read_size() {
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "1");
+        let value =
+            build_perform_review_request(&Map::new(), tmp.path(), "Run the **quality** pass")
+                .unwrap();
+        assert!(value.get("content-form").is_none());
+        assert_eq!(value["scope-files"], serde_json::json!([]));
+    }
+
+    #[test]
+    fn a_malformed_read_size_halts_a_perform_review_request() {
+        let (tmp, ctx) = review_scope_fixture();
+        set_read_size(tmp.path(), "\"big\"");
+        let err =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **quality** pass").unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err}");
+        // With no file to read, too.
+        let err = build_perform_review_request(&Map::new(), tmp.path(), "").unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err}");
+    }
+
+    // -- BE-PAYLOAD-001: what is still past the bound moves to a file ----------
+
+    /// The object a request's `request-lists-file` names, read from the repo.
+    fn request_lists(repo: &Path, request: &Value) -> Map<String, Value> {
+        let file = request["request-lists-file"].as_str().unwrap();
+        assert!(file.starts_with(".ductus/results/exec-request/"), "{file}");
+        let text = fs::read_to_string(repo.join(file)).unwrap();
+        serde_json::from_str::<Value>(&text)
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .clone()
+    }
+
+    /// A plan naming `files`, each a `big_body` long, for feature `123-foo`.
+    fn plan_with_files(repo: &Path, files: &[&str]) -> Map<String, Value> {
+        let feature_dir = repo.join("specs/123-foo");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let mut plan = String::from("## Affected Files\n\n| File | Action |\n| --- | --- |\n");
+        for file in files {
+            plan.push_str("| `");
+            plan.push_str(file);
+            plan.push_str("` | Edit |\n");
+            fs::create_dir_all(repo.join(file).parent().unwrap()).unwrap();
+            fs::write(repo.join(file), big_body(file)).unwrap();
+        }
+        fs::write(feature_dir.join("plan.md"), plan).unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        ctx.insert("write-boundary".into(), serde_json::json!(["src/**"]));
+        ctx
+    }
+
+    #[test]
+    fn write_code_under_the_read_size_carries_its_files_inline() {
+        let tmp = tempdir().unwrap();
+        let ctx = plan_with_files(tmp.path(), &["src/a.rs", "src/b.rs"]);
+        let value = build_write_code_request(&ctx, tmp.path(), "implement").unwrap();
+        assert!(value.get("content-form").is_none());
+        assert!(value.get("request-lists-file").is_none());
+        let files = value["plan-relevant-files"].as_array().unwrap();
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0]["content"], big_body("src/a.rs").as_str());
+    }
+
+    #[test]
+    fn write_code_past_the_read_size_names_its_files_instead() {
+        let tmp = tempdir().unwrap();
+        let ctx = plan_with_files(tmp.path(), &["src/a.rs", "src/b.rs"]);
+        set_read_size(tmp.path(), "3000");
+        let value = build_write_code_request(&ctx, tmp.path(), "implement").unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert!(value.get("request-lists-file").is_none(), "{value}");
+        let files = value["plan-relevant-files"].as_array().unwrap();
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[1]["path"], "src/b.rs");
+        assert!(files[1].get("content").is_none());
+    }
+
+    #[test]
+    fn write_code_with_no_file_to_read_stays_inline_past_the_read_size() {
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "1");
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        let value = build_write_code_request(&ctx, tmp.path(), "implement").unwrap();
+        assert!(value.get("content-form").is_none());
+    }
+
+    #[test]
+    fn write_code_refuses_a_secret_before_it_bounds_anything() {
+        let tmp = tempdir().unwrap();
+        let ctx = plan_with_files(tmp.path(), &["src/a.rs", ".env.production"]);
+        set_read_size(tmp.path(), "1");
+        let err = build_write_code_request(&ctx, tmp.path(), "implement").unwrap_err();
+        assert!(
+            matches!(err, PayloadError::SecretExfiltration { .. }),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn write_code_past_the_bound_with_paths_moves_its_lists_and_its_tail() {
+        let tmp = tempdir().unwrap();
+        let mut ctx = plan_with_files(tmp.path(), &["src/a.rs", "src/b.rs"]);
+        ctx.insert(
+            "notices".into(),
+            Value::Array(vec![Value::String("a notice".into()); 3]),
+        );
+        write_command_file(tmp.path(), "implement", "§alpha");
+        write_constitution(tmp.path(), "<!-- §alpha -->\n\nBody of alpha.\n");
+        set_read_size(tmp.path(), "200");
+        let value = build_write_code_request(&ctx, tmp.path(), "implement").unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert!(value.get("plan-relevant-files").is_none(), "{value}");
+        assert_eq!(value["plan-relevant-files-count"], 2);
+        assert_eq!(value["constitution-excerpts-count"], 1);
+        assert_eq!(value["write-boundary-count"], 1);
+        assert!(value.get("notices").is_none(), "the tail moved whole");
+        assert_eq!(value["legacy-context-count"], 2, "feature and notices");
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["plan-relevant-files"][0]["path"], "src/a.rs");
+        assert!(
+            moved["constitution-excerpts"][0]
+                .as_str()
+                .unwrap()
+                .contains("Body of alpha.")
+        );
+        assert_eq!(moved["write-boundary"][0], "src/**");
+        assert_eq!(
+            moved["legacy-context"]["notices"].as_array().unwrap().len(),
+            3
+        );
+        // What does not grow with entries stays where a host expects it.
+        assert!(value.get("task").is_some());
+    }
+
+    /// A `spec-body` fixture with `count` criteria on a small spec.
+    fn many_criteria(count: usize) -> Map<String, Value> {
+        let mut ctx = Map::new();
+        ctx.insert(
+            "path".into(),
+            Value::String("specs/003-analyze/spec.md".into()),
+        );
+        let criteria: Vec<Value> = (0..count)
+            .map(|i| serde_json::json!({ "checked": false, "text": format!("Criterion {i} holds.") }))
+            .collect();
+        ctx.insert("acceptance-criteria".into(), Value::Array(criteria));
+        ctx
+    }
+
+    #[test]
+    fn verify_criteria_past_the_bound_moves_its_criteria_to_a_file() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        let ctx = many_criteria(80);
+        let inline =
+            build_extension_request("verifyCriteria", &ctx, tmp.path(), "implement", "").unwrap();
+        assert_eq!(inline["criteria"].as_array().unwrap().len(), 80);
+        assert!(inline.get("request-lists-file").is_none());
+        set_read_size(tmp.path(), "1000");
+        let value =
+            build_extension_request("verifyCriteria", &ctx, tmp.path(), "implement", "").unwrap();
+        assert!(value.get("criteria").is_none());
+        assert_eq!(value["criteria-count"], 80);
+        assert_eq!(value["content-form"], "path");
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["criteria"].as_array().unwrap().len(), 80);
+        assert_eq!(moved["criteria"][79]["index"], 79);
+    }
+
+    #[test]
+    fn route_fold_past_the_bound_moves_its_scenarios_and_target_sections() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        let scenarios = tmp.path().join("specs/1234.1-staged/scenarios");
+        fs::create_dir_all(&scenarios).unwrap();
+        for i in 0..40 {
+            fs::write(
+                scenarios.join(format!("scenario-number-{i}.md")),
+                "---\nsection: Behavior\n---\n\n# s\n",
+            )
+            .unwrap();
+        }
+        let mut target = fs::read_to_string(tmp.path().join(FOLD_TARGET)).unwrap();
+        for i in 0..40 {
+            target.push_str("\n## Heading number ");
+            target.push_str(&i.to_string());
+            target.push('\n');
+        }
+        fs::write(tmp.path().join(FOLD_TARGET), target).unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("1234.1-staged".into()));
+        set_read_size(tmp.path(), "1500");
+        let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
+        assert!(value.get("scenarios").is_none() && value.get("target-sections").is_none());
+        assert_eq!(value["scenarios-count"], 40);
+        assert_eq!(value["target-sections-count"], 41);
+        // The vocabulary a host decides with stays inline.
+        assert_eq!(value["routes"][0], "body-edit");
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["scenarios"].as_array().unwrap().len(), 40);
+        assert_eq!(moved["target-sections"].as_array().unwrap().len(), 41);
+    }
+
+    #[test]
+    fn assess_spec_quality_past_the_bound_moves_its_loaded_rule_files() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        let mut ctx = assess_context();
+        let names: Vec<Value> = (0..100)
+            .map(|i| Value::String(format!("rules-file-{i}.md")))
+            .collect();
+        ctx.insert(LOADED_RULE_FILES_KEY.into(), Value::Array(names));
+        set_read_size(tmp.path(), "1000");
+        let value = build_assess_spec_quality_request(&ctx, tmp.path()).unwrap();
+        assert!(value.get("loaded-rule-files").is_none());
+        assert_eq!(value["loaded-rule-files-count"], 100);
+        assert_eq!(
+            request_lists(tmp.path(), &value)["loaded-rule-files"][99],
+            "rules-file-99.md"
+        );
+    }
+
+    #[test]
+    fn perform_review_past_the_bound_moves_its_lists_and_its_legacy_tail() {
+        let (tmp, mut ctx) = review_scope_fixture();
+        ctx.insert(
+            "notices".into(),
+            Value::Array(vec![Value::String("a long notice text".into()); 60]),
+        );
+        ctx.insert(
+            PASSES_RUN_KEY.into(),
+            serde_json::json!(["security", "quality"]),
+        );
+        set_read_size(tmp.path(), "1000");
+        let value =
+            build_perform_review_request(&ctx, tmp.path(), "Run the **quality** pass").unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert!(value.get("notices").is_none() && value.get("selected").is_none());
+        assert!(value["legacy-context-count"].as_u64().unwrap() >= 2);
+        assert_eq!(value["scope-files-count"], 1);
+        assert_eq!(value["passes-run-count"], 2);
+        assert_eq!(value["rule-files-count"], 3);
+        assert_eq!(value["loaded-rule-files-count"], 6);
+        // The pass a host runs stays inline.
+        assert_eq!(value["pass"], "quality");
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["scope-files"][0]["path"], "src/big.rs");
+        assert_eq!(
+            moved["legacy-context"]["notices"].as_array().unwrap().len(),
+            60
+        );
+        assert_eq!(moved["legacy-context"]["rules-dir"], "framework/rules");
+    }
+
+    #[test]
+    fn a_request_with_no_list_to_move_stays_as_it_is_past_the_bound() {
+        // Nothing staged and no lists: past a 1-byte size there is nothing
+        // to move, so no file is named and none is written.
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "1");
+        for (point, request) in spec_body_requests(tmp.path()) {
+            let value = request.unwrap();
+            let moved = value.get("request-lists-file").is_some();
+            // assess carries two loaded rule files and verify one criterion,
+            // which do move; the other two carry no list.
+            let has_list = point == "assessSpecQuality" || point == "verifyCriteria";
+            assert_eq!(moved, has_list, "{point}");
+        }
+        assert!(
+            !tmp.path()
+                .join(".ductus/results/exec-request/routeFold")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn a_lists_file_that_cannot_be_written_halts_the_request() {
+        let tmp = tempdir().unwrap();
+        stage_spec_bodies(tmp.path());
+        set_read_size(tmp.path(), "1000");
+        // `.ductus/results` is a file, so no directory can be made under it.
+        fs::write(tmp.path().join(".ductus/results"), "x").unwrap();
+        let ctx = many_criteria(80);
+        let err = build_extension_request("verifyCriteria", &ctx, tmp.path(), "implement", "")
+            .unwrap_err();
+        assert!(
+            matches!(err, PayloadError::RequestListsUnwritable { .. }),
+            "{err}"
+        );
+        assert_eq!(err.code(), "request-lists-unwritable");
     }
 }

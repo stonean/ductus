@@ -9,7 +9,9 @@
 //! 50,000 bytes by default. Past it, the lists are written whole to a file the
 //! result names, with their counts inline. `render-status` keeps its cut view
 //! inline and writes the whole view. One contract serves the MCP tool, the CLI
-//! and the `ductus exec` walker alike.
+//! and the `ductus exec` walker alike. The walker's own requests to a host
+//! that carry file bodies are held to the same size through [`fits`], and
+//! past it name their files instead of writing a list file.
 //!
 //! The file sits under `.ductus/results/{primitive}/{key}/`, named by the
 //! sha256 of its bytes, so two calls in one tree never overwrite each other's
@@ -122,16 +124,31 @@ pub(crate) fn place(
     inline: &impl Serialize,
     lists: &impl Serialize,
 ) -> Result<Option<String>> {
-    let (threshold, _) = resolve_threshold(repo)?;
-    let serialize_error = |source| PrimitiveError::Json {
-        path: repo.join(RESULTS_DIR),
-        source,
-    };
-    let size = serde_json::to_vec(inline).map_err(serialize_error)?.len();
-    if u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes {
+    if fits(repo, inline)? {
         return Ok(None);
     }
     write(repo, primitive, feature, lists).map(Some)
+}
+
+/// Whether `inline`, serialized, fits the configured read size: the one
+/// reader of `[artifacts] read-size-bytes` a bounded result ([`place`]) and a
+/// bounded `ductus exec` extension request (`interpreter::payload`) share. A
+/// value exactly at the size fits.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidReadSize`] for a malformed read size and
+/// [`PrimitiveError::Toml`] for a config file that does not parse;
+/// [`PrimitiveError::Json`] when the value does not serialize.
+pub(crate) fn fits(repo: &Path, inline: &impl Serialize) -> Result<bool> {
+    let (threshold, _) = resolve_threshold(repo)?;
+    let size = serde_json::to_vec(inline)
+        .map_err(|source| PrimitiveError::Json {
+            path: repo.join(RESULTS_DIR),
+            source,
+        })?
+        .len();
+    Ok(u64::try_from(size).unwrap_or(u64::MAX) <= threshold.bytes)
 }
 
 /// Write `lists` whole to its file under the results directory, whatever the
