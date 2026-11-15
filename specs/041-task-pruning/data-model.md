@@ -214,6 +214,13 @@ Result for one feature (a **compact summary — never the file body**):
   the primitive doing its own write (per the runtime-eligibility resolution
   in [spec.md](spec.md)).
 
+- `sections-count`, `form`, `lists-file` — `sections` is inline while the
+  result serialized fits `[artifacts] read-size-bytes`; past it `form` is
+  `file`, `sections` is absent, `sections-count` stays inline in both forms,
+  and `lists-file` names the JSON file under `.ductus/results/` holding
+  `sections` whole. `removed-count` and `kept-count` count no list and stay
+  inline. The bound is stated by `ductus prune-tasks --help`.
+
 ### Operational errors
 
 Reported as `error` envelopes (not result fields). The primitive writes
@@ -366,6 +373,14 @@ Result (a **compact summary — never a section's text**):
   fresh preview taken once the run has finished writing to the spec, so the
   reopen follows the tree the run leaves.
 
+- `sections-count`, `form`, `lists-file` — `sections` is inline while the
+  result serialized fits `[artifacts] read-size-bytes`; past it `form` is
+  `file`, `sections` is absent, `sections-count` stays inline in both forms,
+  and `lists-file` names the JSON file under `.ductus/results/` holding
+  `sections` whole, as `prune-tasks`' does. The bound is stated by
+  `ductus prune-plan --help`. A malformed read size halts an applying call
+  before it writes.
+
 A removal whose sections are removed has its seams normalized as keep-pending's
 are, and is written with `write_atomic`, preserving the file's line endings.
 
@@ -433,6 +448,15 @@ and a walk carries only the walk:
   it would stop a single-feature call. A `prune-tasks` walk reads a listed
   spec's status before an apply writes its reduction, so a status that will
   not read stops the walk with that spec's `tasks.md` untouched.
+
+Each walk is held to `[artifacts] read-size-bytes` as a whole: past it `form`
+is `file`, `features` and `skipped` are absent with `features-count` and
+`skipped-count` inline, and `lists-file` names the file under
+`.ductus/results/` holding both whole, for both primitives, as
+`ductus prune-tasks --help` and `ductus prune-plan --help` state. A
+`prune-plan` entry is a `PrunePlanSummary`, so it carries `sections-count` and
+`form: inline` beside its `sections`; the bound applies to the walk, never to
+an entry.
 
 A `PruneTasksLine` is the summary without its per-section records — `gate`,
 `status`, `applied`, the two counts, the two sizes and `path`. A corpus

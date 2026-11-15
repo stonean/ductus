@@ -260,8 +260,11 @@ heading. Either way a walk never carries a file body or a section's text: a
 `prune-tasks` walk carries one fixed-shape line per listed spec, and a
 `prune-plan` walk a summary only for a spec with something to report, with
 per-section metadata only, so its size grows with the number of specs and of
-sections outside the record, never with file sizes. Pagination is not
-provided, because the corpus is the project's own spec directory.
+sections outside the record, never with file sizes. No client pagination is
+provided, and every list either primitive returns (a single feature's
+`sections`, a walk's `features` and `skipped`) is held to `[artifacts]
+read-size-bytes` through a `lists-file`, as `ductus prune-tasks --help` and
+`ductus prune-plan --help` state (`BE-PAYLOAD-001`).
 `prune-tasks` with `all` and `apply` writes every feature's
 reduction under one confirmation; `prune-plan` with `all` is preview-only and
 refuses `apply`, before it checks the `remove` list, because each plan

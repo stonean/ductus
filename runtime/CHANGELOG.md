@@ -317,6 +317,15 @@ its version and date.
 
 ### Changed
 
+- **`prune-plan`'s single-feature `sections` is bounded (spec 041's
+  analysis, `BE-PAYLOAD-001`).** It is inline while the result fits
+  `[artifacts] read-size-bytes`; past it `form` is `file`, `sections` is
+  absent, `sections-count` stays inline in both forms, and `lists-file` names
+  the file under `.ductus/results/prune-plan/{feature}/` holding it whole, as
+  `prune-tasks` already did for one feature. A malformed read size now halts
+  an applying call before its removal. A walk's entries carry `sections-count`
+  and `form: inline`. `/{project}:prune` reads `sections` from `lists-file`.
+
 - **`resolve-anchor`'s and `read-deprecation-labels`' results are bounded
   (spec 067 task 35, `BE-PAYLOAD-001`).** `resolve-anchor`'s `references` and
   `unresolved`, and `read-deprecation-labels`' `labels` and `unreadable`, grow

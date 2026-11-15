@@ -143,9 +143,13 @@ fn segment(content: &str) -> Vec<Block> {
 ///   decided.
 /// - [`PrimitiveError::Git`] when a call against a `done` spec cannot read
 ///   HEAD for the reopen trigger.
+/// - [`PrimitiveError::InvalidReadSize`] / [`PrimitiveError::Toml`] when
+///   `[artifacts] read-size-bytes` is malformed or the config does not parse,
+///   before any write.
 /// - [`PrimitiveError::Io`] on filesystem failure.
 ///
-/// Each error writes nothing.
+/// Each error writes nothing, except a list file that cannot be written after
+/// an applied removal: the removal stands (`bounded_lists::place`).
 pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     let feature = one_feature_or_all("prune-plan", args.feature.as_deref(), args.all)?;
@@ -161,6 +165,10 @@ pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
         });
     }
     check_removals(args)?;
+    // The read size bounds the result only after an applied removal is
+    // written, so a malformed one halts here, before any write, rather than
+    // fail a call whose writes stand.
+    super::check_artifact_size::resolve_threshold(repo)?;
     let Some(feature) = feature else {
         let mut walk = walk(args, repo, &root)?;
         super::prune_tasks::bound_walk(repo, "prune-plan", &mut walk)?;
@@ -169,8 +177,16 @@ pub fn run(args: &PrunePlanArgs, repo: &Path) -> Result<PrunePlanResult> {
             walk: Some(walk),
         });
     };
+    let mut summary = summarize(feature, args, repo, &root)?;
+    let lists = serde_json::json!({ "sections": &summary.sections });
+    if let Some(file) = super::bounded_lists::place(repo, "prune-plan", feature, &summary, &lists)?
+    {
+        summary.form = ListsForm::File;
+        summary.sections = None;
+        summary.lists_file = Some(file);
+    }
     Ok(PrunePlanResult {
-        summary: Some(summarize(feature, args, repo, &root)?),
+        summary: Some(summary),
         walk: None,
     })
 }
@@ -187,7 +203,7 @@ fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prune
     let mut skipped = Vec::new();
     for feature in &names {
         let summary = summarize(feature, args, repo, root)?;
-        if !summary.sections.is_empty() || summary.reopen_required == Some(true) {
+        if summary.sections_count > 0 || summary.reopen_required == Some(true) {
             features.push(PruneWalkEntry {
                 feature: feature.clone(),
                 summary,
@@ -289,12 +305,15 @@ fn summarize(
         missing: content.is_none(),
         status,
         sections_examined: examined,
-        sections: outside.into_iter().map(|(_, section)| section).collect(),
+        sections_count: outside.len(),
+        sections: Some(outside.into_iter().map(|(_, section)| section).collect()),
         applied,
         stale_sections,
         size_before: size_of(before),
         size_after: size_of(&after),
         reopen_required,
+        form: ListsForm::Inline,
+        lists_file: None,
     })
 }
 
@@ -483,8 +502,8 @@ mod tests {
         let result = run(&preview(), tmp.path()).unwrap();
         assert!(!result.missing);
         assert_eq!(result.sections_examined, 5);
-        assert_eq!(result.sections.len(), 1);
-        let section = &result.sections[0];
+        assert_eq!(result.sections_count, 1);
+        let section = &result.sections.as_ref().unwrap()[0];
         assert_eq!(section.heading, "Implementation notes");
         assert_eq!(section.ordinal, 3);
         assert_eq!(section.lines, 3);
@@ -500,6 +519,72 @@ mod tests {
         assert_eq!(plan_text(tmp.path()), PLAN, "a preview must not write");
     }
 
+    fn set_read_size(repo: &Path, bytes: u32) {
+        write(
+            &repo.join(".ductus/config.toml"),
+            &format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        );
+    }
+
+    /// Under the read size one feature's `sections` stay in the result, with
+    /// their count, and no list file is written (spec 080, AC7).
+    #[test]
+    fn a_summary_under_the_read_size_keeps_its_sections_inline() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        set_read_size(tmp.path(), 50_000);
+        let summary = run(&preview(), tmp.path()).unwrap();
+        assert_eq!(summary.form, ListsForm::Inline);
+        assert_eq!(summary.lists_file, None);
+        assert_eq!(summary.sections_count, 1);
+        assert_eq!(summary.sections.as_ref().map(Vec::len), Some(1));
+        assert!(!tmp.path().join(".ductus/results").exists());
+    }
+
+    /// Past the read size one feature's `sections` move to a file, with their
+    /// count inline in both forms: the count the walker reads the file by.
+    #[test]
+    fn a_summary_past_the_read_size_moves_its_sections_to_a_file() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        set_read_size(tmp.path(), 1);
+        let summary = run(&preview(), tmp.path()).unwrap();
+        assert_eq!(summary.form, ListsForm::File);
+        assert_eq!(summary.sections, None);
+        assert_eq!(summary.sections_count, 1);
+        let file = tmp.path().join(summary.lists_file.clone().unwrap());
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(file).unwrap()).unwrap();
+        assert_eq!(lists["sections"].as_array().map(Vec::len), Some(1));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "prune-plan",
+            &serde_json::to_value(&summary).unwrap(),
+            &lists,
+        );
+    }
+
+    /// A malformed read size halts an applying call before the removal.
+    #[test]
+    fn a_malformed_read_size_halts_an_applying_call_before_any_write() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        let previewed = run(&preview(), tmp.path()).unwrap();
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = \"big\"\n",
+        );
+        let err = super::run(
+            &apply(&[&previewed.sections.as_ref().unwrap()[0]]),
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err:?}"
+        );
+        assert_eq!(plan_text(tmp.path()), PLAN, "nothing written");
+    }
+
     #[test]
     fn a_heading_inside_a_fence_or_a_comment_is_not_a_section() {
         let tmp = tempdir().unwrap();
@@ -507,7 +592,8 @@ mod tests {
         project(tmp.path(), "planned", Some(plan));
         let result = run(&preview(), tmp.path()).unwrap();
         assert_eq!(result.sections_examined, 2);
-        assert!(result.sections.is_empty(), "{:?}", result.sections);
+        assert_eq!(result.sections_count, 0);
+        assert_eq!(result.sections, Some(Vec::new()));
     }
 
     #[test]
@@ -516,7 +602,12 @@ mod tests {
         let plan = "# P\n\n## overview\n\nA.\n\n## TECHNICAL DECISIONS\n\nB.\n\n## Cross-Spec Impact\n\nC.\n\n## Tradeoffs\n\nD.\n";
         project(tmp.path(), "planned", Some(plan));
         let result = run(&preview(), tmp.path()).unwrap();
-        let headings: Vec<&str> = result.sections.iter().map(|s| s.heading.as_str()).collect();
+        let headings: Vec<&str> = result
+            .sections
+            .iter()
+            .flatten()
+            .map(|s| s.heading.as_str())
+            .collect();
         // Case is ignored; punctuation is not.
         assert_eq!(headings, ["Tradeoffs"]);
     }
@@ -532,7 +623,11 @@ mod tests {
         );
         project(tmp.path(), "in-progress", Some(&plan));
         let previewed = run(&preview(), tmp.path()).unwrap();
-        let result = run(&apply(&[&previewed.sections[0]]), tmp.path()).unwrap();
+        let result = run(
+            &apply(&[&previewed.sections.as_ref().unwrap()[0]]),
+            tmp.path(),
+        )
+        .unwrap();
         assert!(result.applied);
         assert_eq!(result.stale_sections, [] as [String; 0]);
         let written = plan_text(tmp.path());
@@ -551,12 +646,15 @@ mod tests {
         let plan = format!("{PLAN}\n## Resuming from here\n\nOrder.\n");
         project(tmp.path(), "in-progress", Some(&plan));
         let previewed = run(&preview(), tmp.path()).unwrap();
-        assert_eq!(previewed.sections.len(), 2);
+        assert_eq!(previewed.sections_count, 2);
         // The journal changes after the preview; the other section does not.
         let edited = plan.replace("A journal entry.", "A journal entry, edited.");
         write(&feature_dir(tmp.path()).join("plan.md"), &edited);
         let result = run(
-            &apply(&[&previewed.sections[0], &previewed.sections[1]]),
+            &apply(&[
+                &previewed.sections.as_ref().unwrap()[0],
+                &previewed.sections.as_ref().unwrap()[1],
+            ]),
             tmp.path(),
         )
         .unwrap();
@@ -651,8 +749,14 @@ mod tests {
         );
         commit_all(&repository, "done");
         let result = run(&preview(), tmp.path()).unwrap();
-        assert!(!result.sections.is_empty(), "{result:?}");
-        assert!(result.sections.iter().all(|section| !section.decided));
+        assert!(result.sections_count > 0, "{result:?}");
+        assert!(
+            result
+                .sections
+                .iter()
+                .flatten()
+                .all(|section| !section.decided)
+        );
     }
 
     #[test]
@@ -673,6 +777,7 @@ mod tests {
         let decided: Vec<(&str, bool)> = result
             .sections
             .iter()
+            .flatten()
             .map(|s| (s.heading.as_str(), s.decided))
             .collect();
         assert_eq!(
@@ -691,7 +796,7 @@ mod tests {
         let result = run(&preview(), tmp.path()).unwrap();
         assert!(result.missing);
         assert_eq!(result.sections_examined, 0);
-        assert_eq!(result.sections, [] as [PlanSection; 0]);
+        assert_eq!(result.sections, Some(Vec::new()));
         assert!(!feature_dir(tmp.path()).join("plan.md").exists());
     }
 
@@ -879,7 +984,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         project(tmp.path(), "in-progress", Some(PLAN));
         let previewed = run(&preview(), tmp.path()).unwrap();
-        let journal = &previewed.sections[0];
+        let journal = &previewed.sections.as_ref().unwrap()[0];
         let result = run(&apply(&[journal, journal]), tmp.path()).unwrap();
         assert!(!result.applied);
         assert_eq!(result.stale_sections, ["Implementation notes"]);
@@ -892,7 +997,11 @@ mod tests {
         let crlf = PLAN.replace('\n', "\r\n");
         project(tmp.path(), "in-progress", Some(&crlf));
         let previewed = run(&preview(), tmp.path()).unwrap();
-        let result = run(&apply(&[&previewed.sections[0]]), tmp.path()).unwrap();
+        let result = run(
+            &apply(&[&previewed.sections.as_ref().unwrap()[0]]),
+            tmp.path(),
+        )
+        .unwrap();
         assert!(result.applied);
         let written = plan_text(tmp.path());
         assert!(!written.contains("Implementation notes"));
@@ -937,7 +1046,7 @@ mod tests {
 
     fn remove_journal(root: &Path) -> PrunePlanSummary {
         let previewed = run(&preview(), root).unwrap();
-        run(&apply(&[&previewed.sections[0]]), root).unwrap()
+        run(&apply(&[&previewed.sections.as_ref().unwrap()[0]]), root).unwrap()
     }
 
     #[test]
@@ -1076,7 +1185,11 @@ mod tests {
         project(tmp.path(), "in-progress", Some(PLAN));
         let previewed = run(&preview(), tmp.path()).unwrap();
         project(tmp.path(), "done", None);
-        let err = run(&apply(&[&previewed.sections[0]]), tmp.path()).unwrap_err();
+        let err = run(
+            &apply(&[&previewed.sections.as_ref().unwrap()[0]]),
+            tmp.path(),
+        )
+        .unwrap_err();
         assert!(matches!(err, PrimitiveError::Git(..)), "{err}");
         assert_eq!(plan_text(tmp.path()), PLAN);
     }

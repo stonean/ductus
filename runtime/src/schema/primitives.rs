@@ -4942,7 +4942,11 @@ pub struct PrunePlanSummary {
     /// features, because the two halves of a result share one key space.
     pub sections_examined: u32,
     /// Every section outside the design record, as read before any removal.
-    pub sections: Vec<PlanSection>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sections: Option<Vec<PlanSection>>,
+    /// Entries in `sections`, in either form.
+    pub sections_count: usize,
     /// Whether the listed sections were removed. `false` on a preview and on
     /// a refused apply.
     pub applied: bool,
@@ -4966,6 +4970,15 @@ pub struct PrunePlanSummary {
     /// computed, never `false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reopen_required: Option<bool>,
+    /// Where `sections` is: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names (spec 080, AC7). A
+    /// walk's entries are always inline: the walk is bounded whole.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding `sections` whole, from the project
+    /// root: a JSON object with its key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 /// Result for `prune-plan`: one feature's summary, at the top level, or —
@@ -8524,7 +8537,10 @@ mod tests {
             missing: false,
             status: "done".into(),
             sections_examined: 5,
-            sections: vec![PlanSection {
+            sections_count: 1,
+            form: ListsForm::Inline,
+            lists_file: None,
+            sections: Some(vec![PlanSection {
                 heading: "Implementation notes".into(),
                 ordinal: 3,
                 lines: 3,
@@ -8535,7 +8551,7 @@ mod tests {
                     message: "plan.md §Implementation notes is outside the design record".into(),
                 },
                 decided: false,
-            }],
+            }]),
             applied: false,
             stale_sections: Vec::new(),
             size_before: SizeSummary {
