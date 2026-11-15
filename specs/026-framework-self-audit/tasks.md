@@ -1,5 +1,5 @@
 ---
-next-task: 7
+next-task: 8
 ---
 
 # 026 — Framework self-audit (`/audit`) Tasks
@@ -46,7 +46,7 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
-Blocked on task 6: it changes `check-step-references`, Family 34's script and the family-34 scenario, a design subject every stored verdict was judged against, so the review of its change, the criteria's verification and the analysis run after it lands. Task 5 landed and was reviewed at `713c1ca7` (owner, 2026-11-15).
+Blocked on task 7: it changes `plan.md`, a design subject every stored verdict was judged against, and ten family scripts, so the review of its change, the criteria's verification and the analysis run after it lands. Tasks 5 and 6 landed and were reviewed at `713c1ca7` and `368249a9` (owner, 2026-11-15).
 
 Not blocked on 067 task 14 or 071 task 22: neither changes a file in 026's review scope or its plan's Affected Files, and under 079's AC6 a commit only 067 or 071 claims stays out of that scope, so 026 closes next (owner, 2026-11-10).
 
@@ -76,3 +76,12 @@ Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse r
 - [x] A test proves the inline form under the read size and the file form past it, failing under its mutant, and a fixture run of Family 34 with a read size small enough to force the file form reports the same findings as the inline form
 
 - **Done when**: The result returns inline, or in a lists-file past the read size, with Family 34 reading the file form, proven by tests their mutants turn red; the whole `cargo test` passes; `framework-checks.yml` step (u) passes; and 026's next review reads the change.
+
+## 7. Every audit family contains the paths it did not write as a literal (BE-INPUT-004, from 026's analysis)
+
+- [ ] `plan.md` commits once, for every family: a path the family did not write as a literal — read from committed text (a manifest row, a registry field, a table cell, a link target, configured `[paths] specs-root`), listed by `git ls-files` or a walk, or enumerated by a primitive — is canonicalized and contained by whole path components to the repository root before it is probed, globbed or opened, through `contained` in `scripts/audit/lib.sh` or the inline `os.path.commonpath` form, and one resolving outside is reported as such, never touched. A literal path, a primitive's own `lists-file`, and a tree the family builds itself with `mkdir` and regular-file `cp` are outside the rule, each with its reason. The owner decided on 2026-11-15 to close the class rather than fix the two families the third judge run named
+- [ ] The families the 2026-11-15 inventory found uncontained come under it: 7 (`sibling-coupling.sh`) and 8 (`introducing-drift.sh`), feature directories the dashboard enumerated; 10 (`migration-coverage.sh`), `procedure_file` and `target_paths` from `framework/migrations.toml`, globbed and probed; 12 (`fixture-session-shape.sh`), fixture files `find` lists; 17 (`host-namespace-parity.sh`), the Agent Registry's `config_dir` cells; 24 (`rename-sweep-residue.sh`), 27 (`done-spec-criteria.sh`), 39 (`shipped-anchor-resolution.sh`) and 40 (`deprecation-removal.sh`), files `git ls-files` lists; 37 (`analyze-record-backlog.sh`), records under the configured spec root
+- [ ] Each family's scenario, where it has one, points at the plan's commitment rather than restating it, and `scripts/audit/README.md` names the rule once
+- [ ] `scripts/tests/test-audit-path-containment.sh` gains a case per changed family showing a symbolic link resolving outside the repository is reported and not touched, each failing with its family's check removed, proven by hand and recorded
+
+- **Done when**: No audit family probes, globs or opens a path it did not write as a literal without containing it first, proven by a test case per family that fails with the check removed; `framework-checks.yml`'s and `generators.yml`'s steps and `scripts/audit/run-all.sh` pass; and 026's next review reads the change.
