@@ -25,7 +25,7 @@ An argument that widens what a primitive reads gets a row of its own, since a re
 
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at e48033c659fa739acb8caa4ce671606b6a482537, with a clean tree, at 2026-11-10T20:31:42Z.
+Measured by `scripts/measure-result-sizes.sh` at ddc4703faa1438106ebd2fa4ae39cb6ac3611f38, with a clean tree, at 2026-11-15T14:39:12Z.
 
 Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenarios, one markdown-lint violation and one broken link; 5 inbox items. Large corpus: 100 specs, each with 50 criteria, 50 tasks of 3 subtasks and 20 scenarios, one markdown-lint violation and one broken link; 50 inbox items. Small and Large are measured at a read size of 1000000000 bytes, past every result; Large at the default read size is the same corpus at 50,000.
 
@@ -38,21 +38,25 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `mark-criterion` | 79 | 79 | 79 | no | no | |
 | `set-status` | 89 | 89 | 89 | no | no | |
 | `derive-boundary` | 421 | 2717 | 2717 | yes | yes | |
-| `discover-rule-files` | 110 | 110 | 110 | no | no | |
-| `discover-rule-files` with `rules` | 2606 | 2606 | 2606 | no | yes | |
-| `discover-rule-files` with `all`, `rules` and `verification` | 9344 | 9344 | 9344 | no | yes | |
-| `process-waivers` | 54 | 54 | 54 | no | no | |
+| `discover-rule-files` | 144 | 144 | 144 | no | yes | |
+| `discover-rule-files` with `rules` | 2624 | 2624 | 2624 | no | yes | |
+| `discover-rule-files` with `all`, `rules` and `verification` | 9362 | 9362 | 9362 | no | yes | |
+| `discover-rule-files` with `all`, `rules`, `verification` and `feature` | 9547 | 9547 | 9547 | no | yes | |
+| `process-waivers` | 143 | 143 | 143 | no | yes | |
 | `process-decisions` | 172 | 172 | 172 | no | yes | |
 | `compute-review-scope` | 1631 | 35970 | 35970 | yes | yes | |
-| `write-review` | 359 | 360 | 360 | no | no | |
-| `write-analysis` | 172 | 172 | 172 | no | no | |
+| `write-review` | 467 | 468 | 468 | no | yes | |
+| `write-analysis` | 230 | 230 | 230 | no | yes | |
 | `check-step-references` | 255 | 255 | 255 | no | no | |
 | `check-stuck` | 101 | 101 | 101 | no | no | |
 | `validate-frontmatter` | 28 | 28 | 28 | no | no | |
-| `resolve-anchor` | 85 | 85 | 85 | no | no | |
+| `resolve-anchor` | 144 | 144 | 144 | no | no | |
 | `traverse-deps` | 196 | 192 | 192 | no | yes | |
 | `traverse-deps` with a cycle through every spec | 448 | 2694 | 2694 | yes | yes | |
 | `check-rule-ids` | 58 | 58 | 58 | no | no | |
+| `check-departures` | 118 | 118 | 118 | no | yes | |
+| `check-departures` with the subject holding entries past the read size | 95048 | 95110 | 218 | no | yes | |
+| `read-deprecation-labels` | 42 | 42 | 42 | no | no | |
 | `run-generator` | — | — | — | not measured | — | CLI-only: it runs a project script and is no MCP tool, so no host reads its result as a tool result |
 | `lint-markdown` | 1442 | 13783 | 13783 | yes | yes | |
 | `gate-confirm` | 70 | 70 | 70 | no | no | |
@@ -66,16 +70,16 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `migrate-session-file` | 114 | 114 | 114 | no | no | |
 | `relocate-audit-records` | 68 | 68 | 68 | no | no | |
 | `create-scenario` | 66 | 66 | 66 | no | no | |
-| `append-task` | 96 | 97 | 97 | no | no | |
+| `append-task` | 98 | 99 | 99 | no | no | |
 | `label-criteria` | 96 | 97 | 97 | no | no | |
-| `prune-tasks` | 947 | 6928 | 6928 | yes | yes | |
-| `prune-tasks` with `all` | 1420 | 13563 | 13563 | yes | yes | |
+| `prune-tasks` | 948 | 6929 | 6929 | yes | yes | |
+| `prune-tasks` with `all` | 1423 | 13589 | 13589 | yes | yes | |
 | `prune-plan` | 235 | 235 | 235 | no | no | |
 | `prune-plan` with `all` | 150 | 658 | 658 | yes | yes | |
 | `prune-project` | 424 | 424 | 420 | no | no | |
-| `dashboard` | 3820 | 34932 | 34932 | yes | yes | |
+| `dashboard` | 3843 | 34955 | 34955 | yes | yes | |
 | `render-status` | 2140 | 12881 | 12881 | yes | yes | |
-| `render-help` | 6223 | 6223 | 6223 | no | no | |
+| `render-help` | 6236 | 6236 | 6236 | no | no | |
 | `read-section` | 555 | 4012 | 4012 | yes | yes | |
 | `write-session` | 46 | 46 | 46 | no | no | |
 | `resolve-session` | 60 | 60 | 60 | no | no | |
@@ -85,8 +89,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `resolve-feature` | 134 | 134 | 134 | no | no | |
 | `create-feature` | 130 | 130 | 130 | no | no | |
 | `create-plan-artifacts` | 217 | 217 | 217 | no | no | |
-| `check-review-freshness` | 93 | 93 | 93 | no | no | |
-| `check-review-gate` | 1000 | 6628 | 6628 | yes | yes | |
+| `check-review-gate` | 1030 | 6658 | 6658 | yes | yes | |
 | `classify-spec-edit` | 28 | 28 | 28 | no | no | |
 | `measure-reopenings` | 541 | 4315 | 4315 | yes | yes | |
 | `append-question` | 142 | 142 | 142 | no | no | |
@@ -94,7 +97,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `append-inbox` | 56 | 57 | 57 | no | no | |
 | `remove-inbox-item` | 60 | 61 | 61 | no | no | |
 | `check-artifacts` | 698 | 5199 | 5199 | yes | yes | |
-| `check-artifact-size` | 231 | 232 | 228 | no | no | |
+| `check-artifact-size` | 303 | 304 | 300 | no | yes | |
 | `derive-routing-candidates` | 2287 | 20554 | 20554 | yes | yes | |
 | `check-corpus-links` | 4703 | 147494 | 295 | yes | yes | |
 | `check-corpus-links` with `scope: repository` | 4702 | 147493 | 295 | yes | yes | |
@@ -104,7 +107,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 | `derive-dependencies` | 294 | 295 | 295 | no | yes | |
 | `derive-dependencies` with every spec drifted | 643 | 4155 | 4155 | yes | yes | |
 | `derive-dependencies` with a cycle through every spec | 545 | 2796 | 2796 | yes | yes | |
-| `derive-references` | 168 | 169 | 169 | no | no | |
+| `derive-references` | 289 | 290 | 290 | no | yes | |
 | `check-unfolded-specs` | 174 | 1177 | 1177 | yes | yes | |
 | `rewrite-spec-links` | 991 | 7744 | 7744 | yes | yes | |
 | `retire-feature` | 54 | 54 | 54 | no | no | |
@@ -116,7 +119,7 @@ Small corpus: 10 specs, each with 5 criteria, 5 tasks of 3 subtasks and 2 scenar
 
 ### Grows with the corpus
 
-Of the 73 registry names, 21 grow with the corpus by the test above, in 25 of the table's rows, and every one is bounded.
+Of the 74 registry names, 21 grow with the corpus by the test above, in 25 of the table's rows, and every one is bounded.
 
 - **Bounded through `bounded_lists` by this spec, so AC7's population (16):** `read-spec`, `read-tasks`, `read-section`, `derive-boundary`, `lint-markdown`, `prune-tasks`, `prune-plan`, `dashboard`, `check-review-gate`, `check-artifacts`, `check-corpus-links`, `check-unfolded-specs`, `rewrite-spec-links`, `derive-routing-candidates`, `derive-dependencies`, `traverse-deps`. The first measurement, at 2b4eaddb, called each primitive in its default mode only and found 11 of them; `prune-plan` grows only in its `all` walk. `read-section`, which task 37 added bounded, joined at task 41's re-measure, and the last three at task 50's: routing grows only with a description the slugs match, and `derive-dependencies` and `traverse-deps` only over a corpus that drifts or holds a cycle.
 - **Bounded through `bounded_lists` before this spec (4):** `compute-review-scope`, `measure-reopenings`, `diff-cross-spec`, `brief-re-read`.
@@ -136,75 +139,81 @@ The measurement at a11079af, after tasks 44 to 52, totalled 142,809 across the s
 
 The measurement at e48033c6, after the closing review's fixes (567e6399), totals 143,069 across the same 72, 204 more, each a description the review corrected: `dashboard` by 62, `render-help` by 42, `check-corpus-links` and `check-unfolded-specs` by 41 each, and `render-status` by 18.
 
+The measurement at ddc4703f, at the 2026-11-15 pre-done verification, totals 186,233 across 73, 43,164 more. `check-departures` (3,790) and `read-deprecation-labels` (1,913) are new, `check-review-freshness` (763) is gone, and 46 tools changed over the 75 commits to `runtime/src/schema/` since e48033c6, two of them this spec's (36a4ce86, ba5166e3); `write-analysis` grew by 7,919 and `write-review` by 3,744, the most. Every tool `/ductus:target` loads upfront stays under the 4,096-character cut, the largest description among them `derive-dependencies`' 2,735; `write-review`'s 6,837 and `write-analysis`'s 5,641 load through tool search, cut at 16,384.
+
 ### Measurement
 
-Measured by `scripts/measure-result-sizes.sh` at e48033c659fa739acb8caa4ce671606b6a482537, with a clean tree, at 2026-11-10T20:31:42Z.
+Measured by `scripts/measure-result-sizes.sh` at ddc4703faa1438106ebd2fa4ae39cb6ac3611f38, with a clean tree, at 2026-11-15T14:39:12Z.
 
-72 tools, 143069 characters in all.
+73 tools, 186233 characters in all.
 
 | Tool | Description | Input schema | Loaded |
 | --- | --- | --- | --- |
-| `write-review` | 3577 | 17010 | 20587 |
-| `write-analysis` | 1565 | 8721 | 10286 |
-| `rewrite-spec-links` | 2614 | 1486 | 4100 |
-| `apply-manifest` | 1336 | 2667 | 4003 |
-| `compute-review-scope` | 3217 | 704 | 3921 |
-| `process-decisions` | 1563 | 1964 | 3527 |
-| `append-task` | 234 | 3222 | 3456 |
+| `write-review` | 6837 | 17494 | 24331 |
+| `write-analysis` | 5641 | 12564 | 18205 |
+| `discover-rule-files` | 2972 | 1627 | 4599 |
+| `append-task` | 1349 | 3222 | 4571 |
+| `compute-review-scope` | 3794 | 704 | 4498 |
+| `rewrite-spec-links` | 2926 | 1486 | 4412 |
+| `apply-manifest` | 1731 | 2667 | 4398 |
+| `write-session` | 2151 | 2061 | 4212 |
+| `check-review-gate` | 3927 | 211 | 4138 |
+| `check-artifacts` | 3824 | 211 | 4035 |
+| `derive-references` | 3207 | 735 | 3942 |
+| `process-decisions` | 2066 | 1873 | 3939 |
+| `derive-dependencies` | 2735 | 1063 | 3798 |
+| `check-departures` | 3610 | 180 | 3790 |
+| `check-artifact-size` | 3101 | 591 | 3692 |
+| `process-waivers` | 2227 | 1420 | 3647 |
+| `retire-feature` | 1866 | 1638 | 3504 |
 | `check-corpus-links` | 2076 | 1365 | 3441 |
-| `retire-feature` | 1522 | 1638 | 3160 |
-| `prune-project` | 986 | 2089 | 3075 |
-| `write-session` | 970 | 2097 | 3067 |
-| `merge-permissions` | 554 | 2324 | 2878 |
-| `derive-references` | 1927 | 735 | 2662 |
-| `derive-dependencies` | 1577 | 1063 | 2640 |
-| `discover-rule-files` | 1264 | 1209 | 2473 |
-| `measure-reopenings` | 1980 | 460 | 2440 |
+| `prune-project` | 1156 | 2108 | 3264 |
+| `resolve-anchor` | 2550 | 611 | 3161 |
+| `check-prescriptions` | 2638 | 368 | 3006 |
+| `merge-permissions` | 554 | 2288 | 2842 |
+| `measure-reopenings` | 2131 | 460 | 2591 |
+| `prune-tasks` | 1491 | 973 | 2464 |
 | `prune-plan` | 1173 | 1242 | 2415 |
-| `check-review-gate` | 2109 | 211 | 2320 |
-| `check-prescriptions` | 1904 | 368 | 2272 |
-| `check-artifacts` | 1990 | 211 | 2201 |
+| `retarget-sessions` | 943 | 1443 | 2386 |
+| `check-orphaned-references` | 2235 | 74 | 2309 |
+| `brief-re-read` | 1884 | 350 | 2234 |
+| `dashboard` | 2112 | 74 | 2186 |
 | `create-feature` | 330 | 1749 | 2079 |
 | `derive-routing-candidates` | 1303 | 742 | 2045 |
-| `retarget-sessions` | 588 | 1443 | 2031 |
-| `process-waivers` | 544 | 1438 | 1982 |
-| `brief-re-read` | 1555 | 350 | 1905 |
-| `classify-spec-edit` | 1560 | 339 | 1899 |
-| `resolve-constitutions` | 1471 | 427 | 1898 |
-| `dashboard` | 1677 | 74 | 1751 |
-| `read-re-read` | 1316 | 314 | 1630 |
-| `prune-tasks` | 573 | 973 | 1546 |
+| `classify-spec-edit` | 1630 | 339 | 1969 |
+| `resolve-constitutions` | 1526 | 427 | 1953 |
+| `read-deprecation-labels` | 1587 | 326 | 1913 |
+| `read-re-read` | 1394 | 314 | 1708 |
+| `validate-frontmatter` | 1145 | 485 | 1630 |
 | `append-question` | 666 | 852 | 1518 |
 | `check-promotion-coverage` | 138 | 1360 | 1498 |
 | `render-status` | 1384 | 74 | 1458 |
-| `invalidate-review` | 1159 | 291 | 1450 |
+| `create-plan-artifacts` | 570 | 860 | 1430 |
 | `diff-cross-spec` | 1200 | 211 | 1411 |
-| `create-plan-artifacts` | 514 | 860 | 1374 |
 | `check-step-references` | 1293 | 74 | 1367 |
-| `check-artifact-size` | 1094 | 211 | 1305 |
+| `invalidate-review` | 1073 | 291 | 1364 |
 | `merge-status-hook` | 987 | 299 | 1286 |
 | `resolve-references` | 1007 | 243 | 1250 |
+| `create-scenario` | 386 | 810 | 1196 |
+| `resolve-session` | 1107 | 74 | 1181 |
 | `enforce-manifest` | 66 | 1089 | 1155 |
 | `check-unfolded-specs` | 1013 | 74 | 1087 |
 | `resolve-feature` | 442 | 622 | 1064 |
-| `check-orphaned-references` | 969 | 74 | 1043 |
-| `check-command-flags` | 938 | 74 | 1012 |
-| `create-scenario` | 193 | 810 | 1003 |
-| `render-help` | 929 | 74 | 1003 |
+| `lint-markdown` | 536 | 527 | 1063 |
+| `check-command-flags` | 970 | 74 | 1044 |
+| `start-fix-rounds` | 820 | 224 | 1044 |
+| `relocate-audit-records` | 785 | 223 | 1008 |
 | `merge-managed-block` | 76 | 921 | 997 |
-| `start-fix-rounds` | 763 | 224 | 987 |
 | `check-stuck` | 657 | 316 | 973 |
+| `render-help` | 885 | 74 | 959 |
 | `derive-boundary` | 762 | 180 | 942 |
-| `relocate-audit-records` | 698 | 223 | 921 |
+| `mark-task` | 459 | 478 | 937 |
 | `fetch-archive` | 64 | 847 | 911 |
-| `mark-task` | 420 | 478 | 898 |
-| `migrate-session-file` | 342 | 555 | 897 |
-| `resolve-anchor` | 266 | 611 | 877 |
-| `resolve-session` | 791 | 74 | 865 |
+| `check-rule-ids` | 545 | 352 | 897 |
+| `migrate-session-file` | 342 | 525 | 867 |
 | `mark-criterion` | 57 | 807 | 864 |
+| `read-tasks` | 649 | 195 | 844 |
 | `read-section` | 506 | 319 | 825 |
-| `lint-markdown` | 263 | 527 | 790 |
-| `check-review-freshness` | 552 | 211 | 763 |
 | `read-spec` | 443 | 300 | 743 |
 | `append-inbox` | 258 | 407 | 665 |
 | `extract-archive` | 72 | 546 | 618 |
@@ -212,10 +221,7 @@ Measured by `scripts/measure-result-sizes.sh` at e48033c659fa739acb8caa4ce671606
 | `gate-confirm` | 289 | 273 | 562 |
 | `set-status` | 136 | 330 | 466 |
 | `traverse-deps` | 281 | 180 | 461 |
-| `read-tasks` | 246 | 195 | 441 |
-| `check-rule-ids` | 64 | 352 | 416 |
 | `label-criteria` | 163 | 211 | 374 |
-| `validate-frontmatter` | 55 | 187 | 242 |
 
 ## Command cost (AC8)
 
