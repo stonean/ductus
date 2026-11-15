@@ -61,21 +61,91 @@ use std::path::Path;
 
 use crate::primitives::{Result, read_text, rel_path, section_line_indices};
 use crate::schema::primitives::{
-    CheckCommandFlagsArgs, CheckCommandFlagsResult, CommandFlagFinding, CommandFlagSkip,
+    CheckCommandFlagsArgs, CheckCommandFlagsResult, CommandFlagFinding, CommandFlagSkip, ListsForm,
 };
 
 /// Directory holding the command sources this check reads.
 const COMMANDS_DIR: &str = "framework/commands";
 
-/// Execute the `check-command-flags` primitive.
+/// Execute the `check-command-flags` primitive: [`compute`], returned inline
+/// while it fits `[artifacts] read-size-bytes`, and past it with its five lists
+/// in the file `lists-file` names and only their counts inline ([`bound`];
+/// `BE-PAYLOAD-001`).
 ///
 /// # Errors
 ///
-/// Never returns an error for an unreadable command file — that is a
+/// What `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written. The check itself returns no error: an unreadable command file, a command directory that
+/// cannot be listed, and a directory or file that is a link leaving the
+/// project (never listed or opened, `BE-INPUT-004`) are each a
 /// [`CommandFlagSkip`], so an empty `findings` is not mistaken for a verified
-/// tree. Returns [`super::PrimitiveError::Io`] only when the directory listing
-/// itself fails.
+/// tree.
 pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFlagsResult> {
+    bound(repo, compute(repo))
+}
+
+/// One pass over the command sources, every list whole: what
+/// `check-command-flags` returns before its lists are bounded. Each field is
+/// [`CheckCommandFlagsResult`]'s of the same name.
+#[derive(Debug)]
+pub(crate) struct Checked {
+    pub(crate) findings: Vec<CommandFlagFinding>,
+    pub(crate) examined: Vec<String>,
+    pub(crate) with_flags_table: Vec<String>,
+    pub(crate) with_argument_hint: Vec<String>,
+    pub(crate) skipped: Vec<CommandFlagSkip>,
+    pub(crate) commands_dir: String,
+    pub(crate) guidance: String,
+}
+
+/// `checked` held to `[artifacts] read-size-bytes`: past it, its five lists go
+/// to the file the result names, with their counts inline
+/// (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+fn bound(repo: &Path, checked: Checked) -> Result<CheckCommandFlagsResult> {
+    let lists = serde_json::json!({
+        "findings": checked.findings,
+        "examined": checked.examined,
+        "with-flags-table": checked.with_flags_table,
+        "with-argument-hint": checked.with_argument_hint,
+        "skipped": checked.skipped,
+    });
+    let mut result = CheckCommandFlagsResult {
+        findings_count: checked.findings.len(),
+        findings: Some(checked.findings),
+        examined_count: checked.examined.len(),
+        examined: Some(checked.examined),
+        with_flags_table_count: checked.with_flags_table.len(),
+        with_flags_table: Some(checked.with_flags_table),
+        with_argument_hint_count: checked.with_argument_hint.len(),
+        with_argument_hint: Some(checked.with_argument_hint),
+        skipped_count: checked.skipped.len(),
+        skipped: Some(checked.skipped),
+        commands_dir: checked.commands_dir,
+        guidance: checked.guidance,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) =
+        super::bounded_lists::place(repo, "check-command-flags", "repository", &result, &lists)?
+    {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.examined = None;
+        result.with_flags_table = None;
+        result.with_argument_hint = None;
+        result.skipped = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Check every command source under [`COMMANDS_DIR`], every list whole.
+pub(crate) fn compute(repo: &Path) -> Checked {
     let dir = repo.join(COMMANDS_DIR);
 
     let mut examined = Vec::new();
@@ -84,7 +154,14 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
     let mut skipped = Vec::new();
     let mut findings = Vec::new();
 
-    let mut paths: Vec<_> = match std::fs::read_dir(&dir) {
+    let listing = if super::leaves_project(repo, COMMANDS_DIR) {
+        Err(std::io::Error::other(
+            "a link that leaves the project; not listed",
+        ))
+    } else {
+        std::fs::read_dir(&dir)
+    };
+    let mut paths: Vec<_> = match listing {
         Ok(entries) => entries
             .filter_map(std::result::Result::ok)
             .map(|e| e.path())
@@ -98,7 +175,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
                 path: COMMANDS_DIR.to_string(),
                 reason: format!("command source directory could not be listed: {err}"),
             });
-            return Ok(CheckCommandFlagsResult {
+            return Checked {
                 findings,
                 examined,
                 with_flags_table,
@@ -106,13 +183,20 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
                 skipped,
                 commands_dir: COMMANDS_DIR.to_string(),
                 guidance: String::new(),
-            });
+            };
         }
     };
     paths.sort();
 
     for path in &paths {
         let rel = rel_path(path, repo);
+        if super::leaves_project(repo, &rel) {
+            skipped.push(CommandFlagSkip {
+                path: rel,
+                reason: "a link that leaves the project; not read".to_string(),
+            });
+            continue;
+        }
         let content = match read_text(path) {
             Ok(text) => text,
             Err(err) => {
@@ -146,7 +230,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
         String::new()
     };
 
-    Ok(CheckCommandFlagsResult {
+    Checked {
         findings,
         examined,
         with_flags_table,
@@ -154,7 +238,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
         skipped,
         commands_dir: COMMANDS_DIR.to_string(),
         guidance,
-    })
+    }
 }
 
 /// The two directions for one command file, appending each result to the
@@ -549,14 +633,14 @@ mod tests {
 
     /// Write each `(name, content)` under `framework/commands/` in a fresh
     /// project and run the check over it.
-    fn run_over(files: &[(&str, String)]) -> CheckCommandFlagsResult {
+    fn run_over(files: &[(&str, String)]) -> Checked {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join(COMMANDS_DIR);
         std::fs::create_dir_all(&dir).unwrap();
         for (name, content) in files {
             std::fs::write(dir.join(name), content).unwrap();
         }
-        run(&CheckCommandFlagsArgs::default(), tmp.path()).unwrap()
+        compute(tmp.path())
     }
 
     /// The whole pass over a directory: each direction's finding, from the
@@ -666,5 +750,135 @@ mod tests {
             "## Flags\n\n| `--all` | a |\n| `--all` | again |\n",
         );
         assert_eq!(tabled_flags(&content), vec!["--all"]);
+    }
+
+    /// Write `(name, content)` files under `framework/commands/` of a fresh
+    /// project, and return it.
+    fn project_with(files: &[(&str, String)]) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join(COMMANDS_DIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, content) in files {
+            std::fs::write(dir.join(name), content).unwrap();
+        }
+        tmp
+    }
+
+    /// A command source that is a link leaving the project is skipped by name
+    /// and never read: the file beyond it declares a hint with no token, which
+    /// would be a finding were it read (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_command_source_that_leaves_the_project_is_skipped_and_not_read() {
+        let tmp = project_with(&[("a-fine.md", command(Some("[feature]"), "$ARGUMENTS"))]);
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(
+            outside.path().join("evil.md"),
+            command(Some("[feature]"), "no token"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("evil.md"),
+            tmp.path().join(COMMANDS_DIR).join("b-evil.md"),
+        )
+        .unwrap();
+        let result = compute(tmp.path());
+        assert_eq!(result.findings, [] as [CommandFlagFinding; 0]);
+        assert_eq!(result.examined, vec!["framework/commands/a-fine.md"]);
+        assert_eq!(result.skipped.len(), 1, "{:?}", result.skipped);
+        assert_eq!(result.skipped[0].path, "framework/commands/b-evil.md");
+        assert!(
+            result.skipped[0].reason.contains("leaves the project"),
+            "{}",
+            result.skipped[0].reason
+        );
+    }
+
+    /// A command directory that is a link leaving the project is not listed:
+    /// one skip names it, and nothing is examined.
+    #[cfg(unix)]
+    #[test]
+    fn a_command_directory_that_leaves_the_project_is_skipped_and_not_listed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(
+            outside.path().join("evil.md"),
+            command(Some("[feature]"), "no token"),
+        )
+        .unwrap();
+        std::fs::create_dir_all(tmp.path().join("framework")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join(COMMANDS_DIR)).unwrap();
+        let result = compute(tmp.path());
+        assert_eq!(result.examined, [] as [String; 0]);
+        assert_eq!(result.findings, [] as [CommandFlagFinding; 0]);
+        assert_eq!(result.skipped.len(), 1, "{:?}", result.skipped);
+        assert_eq!(result.skipped[0].path, COMMANDS_DIR);
+        assert!(
+            result.skipped[0].reason.contains("leaves the project"),
+            "{}",
+            result.skipped[0].reason
+        );
+    }
+
+    /// The five lists come back inline while the result fits `[artifacts]
+    /// read-size-bytes`, and past it in the file the result names, whole, with
+    /// only their counts inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn the_lists_move_to_a_file_past_the_read_size() {
+        let tmp = project_with(&[
+            ("a.md", command(Some("[feature]"), "no token")),
+            ("b.md", command(None, "No flags here.")),
+        ]);
+        let args = CheckCommandFlagsArgs::default();
+        let inline = run(&args, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.examined_count, 2);
+        assert_eq!(inline.examined.as_ref().unwrap().len(), 2);
+        assert_eq!(inline.lists_file, None);
+
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let file = run(&args, tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(
+            (
+                &file.findings,
+                &file.examined,
+                &file.with_flags_table,
+                &file.with_argument_hint,
+                &file.skipped
+            ),
+            (&None, &None, &None, &None, &None),
+            "a list stayed inline"
+        );
+        assert_eq!(
+            (
+                file.findings_count,
+                file.examined_count,
+                file.with_flags_table_count,
+                file.with_argument_hint_count,
+                file.skipped_count
+            ),
+            (1, 2, 0, 1, 0)
+        );
+        assert_eq!(file.commands_dir, COMMANDS_DIR, "the subject stays inline");
+        let lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            lists["examined"],
+            serde_json::json!(["framework/commands/a.md", "framework/commands/b.md"])
+        );
+        assert_eq!(lists["findings"][0]["direction"], "hint-unreachable");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-command-flags",
+            &serde_json::to_value(&file).unwrap(),
+            &lists,
+        );
     }
 }

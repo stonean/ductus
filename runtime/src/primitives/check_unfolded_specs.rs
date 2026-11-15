@@ -78,13 +78,19 @@ pub fn run(args: &CheckUnfoldedSpecsArgs, repo: &Path) -> Result<CheckUnfoldedSp
 /// rather than skipping is deliberate: this check's whole output is what each
 /// surviving spec declares, so a directory whose declaration could not be read
 /// has no honest row — and dropping it silently would understate the very
-/// backlog the check exists to report.
+/// backlog the check exists to report. By the same stance
+/// [`PrimitiveError::InvalidPath`] halts it for a spec root, or a branch-scoped
+/// directory's `spec.md`, that is or runs through a symbolic link leaving the
+/// project: the directory names it lists are committed state the code turns
+/// into a path, so it is contained before it is listed or opened
+/// (`BE-INPUT-004`), and a directory it refuses has no honest row either.
 pub(crate) fn compute(
     _args: &CheckUnfoldedSpecsArgs,
     repo: &Path,
 ) -> Result<(Vec<UnfoldedSpec>, u32)> {
     let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
+    super::validate_contained(repo, &layout.specs_root)?;
 
     let mut unfolded: Vec<UnfoldedSpec> = Vec::new();
     let mut examined: u32 = 0;
@@ -99,6 +105,7 @@ pub(crate) fn compute(
             continue;
         };
 
+        super::validate_contained(repo, &format!("{}/{slug}/spec.md", layout.specs_root))?;
         let spec_path = specs_dir.join(&slug).join("spec.md");
         if !spec_path.is_file() {
             return Err(PrimitiveError::MissingSpecFile {
@@ -278,6 +285,51 @@ mod tests {
 
         assert!(
             matches!(err, PrimitiveError::MissingSpecFile { ref feature, .. } if feature == "1234.1-empty"),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    /// A branch-scoped directory that is a link leaving the project halts the
+    /// check, and its `spec.md` is not read: the directory beyond the link is
+    /// well formed, so only the screen makes the run refuse it.
+    #[cfg(unix)]
+    #[test]
+    fn a_branch_scoped_directory_that_leaves_the_project_halts_unread() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        write_spec(&project, "050-alpha", "status: done\ndependencies: []\n");
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(
+            outside.join("spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&outside, project.join("specs/1234.1-linked")).unwrap();
+
+        let err = run(&CheckUnfoldedSpecsArgs {}, &project).unwrap_err();
+
+        assert!(
+            matches!(err, PrimitiveError::InvalidPath { .. }),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    /// A spec root that is a link leaving the project is refused before it is
+    /// listed, so the names it holds are not read.
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_that_leaves_the_project_halts_unlisted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        fs::create_dir_all(&project).unwrap();
+        write_spec(tmp.path(), "050-alpha", "status: done\ndependencies: []\n");
+        std::os::unix::fs::symlink(tmp.path().join("specs"), project.join("specs")).unwrap();
+
+        let err = run(&CheckUnfoldedSpecsArgs {}, &project).unwrap_err();
+
+        assert!(
+            matches!(err, PrimitiveError::InvalidPath { .. }),
             "unexpected error: {err:?}"
         );
     }

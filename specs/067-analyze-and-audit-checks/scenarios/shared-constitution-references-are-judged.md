@@ -29,7 +29,7 @@ A project may register a shared constitution under `.ductus/config.toml` `[const
 - A registered constitution that cannot be read: the run records `constitution-unresolved`, as 055 AC8 has it, and each reference naming it is unexamined as could not be read.
 - A stored waiver of an `anchor-resolution` finding whose section was since renamed: falls away once registered documents are judged; what remains is 058's decision matching, with 063's primitive-decided `decision-key` as precedent.
 - The constitution's Cross-document references bullet says nothing about shared constitutions or unchecked qualified references, and still says "longest-first", which AC2 says never decided a match.
-- A code span holding a path and two `§` references, a markdown link, or any word besides the path and the reference: not a citation, ignored like any other span.
+- A code span holding a path and two `§` references, a markdown link, or any word before the path: not a citation; words after the reference are part of it, as in prose, so a multi-word heading can be named, ignored like any other span.
 - A span citation whose path names a document absent from the tree: unexamined, excluded by construction, as on a line.
 - A line or span naming a registered document by its registered path and also naming an in-tree document: each reference is judged against every readable document named, so it resolves when any of them carries the cited section.
 - Repeat runs over unchanged inputs are byte-identical: each occurrence is one reference, judged once.

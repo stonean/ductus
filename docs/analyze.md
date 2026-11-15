@@ -38,6 +38,7 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Scenario open questions | Blocking at `done`, advisory otherwise | Unresolved `## Open Questions` in any `scenarios/*.md` |
 | Scenario consistency | Advisory | Scenario sections present; a still-pending scenario has a task |
 | Grounding | Advisory | Descriptive claims about the existing system are cited or hedged (form, never truth) |
+| Decision reasons | Advisory | A Resolved Question or plan Trade-off that rejects an option for the reopen or review run it would start, not for a result it gives up |
 | Link-adjacent decision drift | Advisory | Prose asserting an open state that its own sibling link's target contradicts |
 | Acceptance-criterion path existence | Advisory | A path named in an `in-progress` or `done` spec's criterion that no longer resolves |
 | Body path existence | Advisory | A path named in an `in-progress` or `done` spec's body, plan, data model or scenarios that existed in this repository and no longer resolves |

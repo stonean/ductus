@@ -81,6 +81,24 @@ import json, sys
 
 data = json.load(sys.stdin)
 
+# Past [artifacts] read-size-bytes the five lists are in the file `lists-file`
+# names (spec 080): read them there, or say no command was checked. A list the
+# file lacks would read as none found, so it halts too.
+if data.get("form") == "file":
+    try:
+        with open(data["lists-file"], encoding="utf-8") as handle:
+            lists = json.load(handle)
+        keys = ("findings", "examined", "with-flags-table", "with-argument-hint", "skipped")
+        missing = [key for key in keys if not isinstance(lists.get(key), list)]
+        if missing:
+            raise ValueError("it holds no %s list" % ", ".join(missing))
+        data.update(lists)
+    except (KeyError, TypeError, OSError, ValueError) as err:
+        print("\t".join(["(precondition)",
+                         "check-command-flags moved its lists to a file that could not be read (%s), so no command was checked" % err,
+                         "run `ductus check-command-flags` and read the file its lists-file names"]))
+        raise SystemExit(0)
+
 # guidance is set when the run examined command files and found no Flags
 # table at all: an extraction failure, not a clean corpus.
 guidance = data.get("guidance", "")

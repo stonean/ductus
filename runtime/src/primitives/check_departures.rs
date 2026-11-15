@@ -327,7 +327,9 @@ impl RuleFacts {
             .collect();
         let mut tiers = HashMap::new();
         for file in &files {
-            for section in parse_rule_sections(&read_text(&repo.join(file))?) {
+            // A listed rule file is contained before it is read, as
+            // `check-rule-ids` contains the same files (`BE-INPUT-004`).
+            for section in parse_rule_sections(&read_text(&super::contained_path(repo, file)?)?) {
                 let tier = match section.tier() {
                     Some(RuleSeverity::Must) => Some(FindingTier::Must),
                     Some(RuleSeverity::Should) => Some(FindingTier::Should),
@@ -338,7 +340,9 @@ impl RuleFacts {
                 }
             }
         }
-        let checked = check_rule_ids::run(
+        // The lists whole: this reads each citation, and a result bounded to a
+        // file would hold none inline.
+        let checked = check_rule_ids::compute(
             &CheckRuleIdsArgs {
                 path: spec_rel.to_owned(),
                 rule_files: files,
@@ -943,5 +947,31 @@ mod tests {
             ),
             Err(PrimitiveError::FeatureNotFound { .. })
         ));
+    }
+
+    /// A rule file in the listing that lies under a link leaving the project
+    /// is refused before it is read: the file beyond the link is not UTF-8, so
+    /// a read would fail as an I/O error, and only the screen makes the run
+    /// refuse it as a path (`BE-INPUT-004`). The listing itself skips a file
+    /// that is a link, so the link here is the rules directory.
+    #[cfg(unix)]
+    #[test]
+    fn a_rule_file_that_leaves_the_project_is_refused_unread() {
+        let tmp = project("", &entry("DM-MUST-001"));
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("evil-cross.md"), [0xff, 0xfe]).unwrap();
+        std::fs::remove_dir_all(tmp.path().join("specs/rules")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("specs/rules")).unwrap();
+        let err = run(
+            &CheckDeparturesArgs {
+                feature: FEATURE.into(),
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidPath { .. }),
+            "unexpected error: {err:?}"
+        );
     }
 }

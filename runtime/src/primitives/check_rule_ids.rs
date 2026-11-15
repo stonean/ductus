@@ -11,7 +11,7 @@ use regex::Regex;
 
 use crate::primitives::rule_sections::{heading_id_regex, section_label_lines};
 use crate::primitives::{Result, contained_path, read_text, split_frontmatter};
-use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitation};
+use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, ListsForm, RuleCitation};
 
 /// The unexamined reason of a citation of a rule whose file was never installed.
 pub const NOT_INSTALLED: &str = "rule-not-installed";
@@ -19,7 +19,82 @@ pub const NOT_INSTALLED: &str = "rule-not-installed";
 /// The unexamined reason of a citation checked against no rule file.
 pub const CITATIONS_NOT_CHECKED: &str = "rule-citations-not-checked";
 
-/// Execute the `check-rule-ids` primitive.
+/// Execute the `check-rule-ids` primitive: [`compute`], returned inline while
+/// it fits `[artifacts] read-size-bytes`, and past it with its five lists in
+/// the file `lists-file` names and only their counts inline ([`bound`];
+/// `BE-PAYLOAD-001`).
+///
+/// # Errors
+///
+/// As [`compute`], and a malformed read size or a list file that cannot be
+/// written, which `bounded_lists::place` returns.
+pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
+    bound(repo, &args.path, compute(args, repo)?)
+}
+
+/// One run's lists and count, whole: what `check-rule-ids` returns before the
+/// lists are bounded. Each field is [`CheckRuleIdsResult`]'s of the same name.
+#[derive(Debug)]
+pub(crate) struct Checked {
+    pub(crate) citations: Vec<RuleCitation>,
+    pub(crate) missing: Vec<String>,
+    pub(crate) deprecated: Vec<String>,
+    pub(crate) retired: Vec<String>,
+    pub(crate) not_installed: Vec<String>,
+    pub(crate) examined: usize,
+}
+
+/// `checked` held to `[artifacts] read-size-bytes`: past it, its five lists go
+/// to the file the result names, with their counts inline
+/// (`bounded_lists::place`). `retired` and `not-installed` stay omitted, with
+/// their counts, when empty.
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+fn bound(repo: &Path, path: &str, checked: Checked) -> Result<CheckRuleIdsResult> {
+    let lists = serde_json::json!({
+        "citations": checked.citations,
+        "missing": checked.missing,
+        "deprecated": checked.deprecated,
+        "retired": checked.retired,
+        "not-installed": checked.not_installed,
+    });
+    let mut result = CheckRuleIdsResult {
+        citations_count: checked.citations.len(),
+        citations: Some(checked.citations),
+        missing_count: checked.missing.len(),
+        missing: Some(checked.missing),
+        deprecated_count: checked.deprecated.len(),
+        deprecated: Some(checked.deprecated),
+        retired_count: checked.retired.len(),
+        retired: Some(checked.retired).filter(|list| !list.is_empty()),
+        not_installed_count: checked.not_installed.len(),
+        not_installed: Some(checked.not_installed).filter(|list| !list.is_empty()),
+        examined: checked.examined,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "check-rule-ids",
+        super::bounded_lists::path_key(path),
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.citations = None;
+        result.missing = None;
+        result.deprecated = None;
+        result.retired = None;
+        result.not_installed = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Check one file's rule-ID citations against rule files, every list whole.
 ///
 /// # Errors
 ///
@@ -28,7 +103,7 @@ pub const CITATIONS_NOT_CHECKED: &str = "rule-citations-not-checked";
 /// [`crate::primitives::PrimitiveError::InvalidPath`], before any is read,
 /// when one of them is absolute, climbs out with `..`, or leaves the project
 /// through a symlink ([`crate::primitives::contained_path`]).
-pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
+pub(crate) fn compute(args: &CheckRuleIdsArgs, repo: &Path) -> Result<Checked> {
     // Every path is checked before any is read.
     let target = contained_path(repo, &args.path)?;
     let rule_paths = args
@@ -133,7 +208,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
     retired.sort();
     let mut not_installed: Vec<String> = not_installed_hits.into_iter().collect();
     not_installed.sort();
-    Ok(CheckRuleIdsResult {
+    Ok(Checked {
         citations,
         missing,
         deprecated,
@@ -170,8 +245,9 @@ fn shipped_rule_ids() -> &'static HashSet<&'static str> {
 /// Only a `spec.md` carries the list, so a citation of a removed rule in any
 /// other artifact stays missing. A `retired-rules` that is not a list, or an
 /// entry that is not a string, yields nothing for that part: the citation
-/// stays missing, the blocking side, and `validate-frontmatter` owns
-/// diagnosing the file.
+/// stays missing, the blocking side; `validate-frontmatter` checks the list's
+/// shape nowhere (067's plan), so a malformed list shows only as that missing
+/// citation.
 fn retired_rules_and_body<'a>(target: &Path, content: &'a str) -> (HashSet<String>, &'a str) {
     let Ok((fm_text, body)) = split_frontmatter(content, target) else {
         return (HashSet::new(), content);
@@ -230,6 +306,8 @@ mod tests {
 
     use super::*;
     use std::path::PathBuf;
+    // The tests read each list whole; `bound` holds the public result to the read size.
+    use super::compute as run;
 
     fn fixture_repo() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")
@@ -608,7 +686,7 @@ mod tests {
 
     /// Run the primitive on `target` (a file written under a temp project)
     /// against one rule file defining `BE-LIVE-001` only.
-    fn run_on(target: &str, content: &str) -> CheckRuleIdsResult {
+    fn run_on(target: &str, content: &str) -> Checked {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(target), content).unwrap();
         std::fs::write(tmp.path().join("rules.md"), "### BE-LIVE-001\n\n> Live.\n").unwrap();
@@ -622,7 +700,7 @@ mod tests {
         .unwrap()
     }
 
-    fn citation<'a>(result: &'a CheckRuleIdsResult, id: &str) -> &'a RuleCitation {
+    fn citation<'a>(result: &'a Checked, id: &str) -> &'a RuleCitation {
         result
             .citations
             .iter()
@@ -821,5 +899,74 @@ mod tests {
         let installed = citation(&result, "FE-XSS-001");
         assert!(installed.found && !installed.not_installed);
         assert_eq!(result.not_installed, vec!["FE-XSS-002".to_string()]);
+    }
+
+    /// The five lists come back inline while the result fits `[artifacts]
+    /// read-size-bytes`, and past it in the file the result names, whole,
+    /// with only their counts inline; `retired` and `not-installed` keep
+    /// their omit-when-empty counts (`BE-PAYLOAD-001`).
+    #[test]
+    fn the_lists_move_to_a_file_past_the_read_size() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("rules.md"), "### BE-OK-001\n\n> MUST x.\n").unwrap();
+        std::fs::write(
+            tmp.path().join("spec.md"),
+            "---\nstatus: draft\ndependencies: []\nretired-rules: [BE-OLD-005]\n---\n\nBE-OK-001 BE-GONE-009 BE-OLD-005 FE-XSS-002\n",
+        )
+        .unwrap();
+        let args = CheckRuleIdsArgs {
+            path: "spec.md".into(),
+            rule_files: vec!["rules.md".into()],
+        };
+        let inline = super::run(&args, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.citations_count, 4);
+        assert_eq!(
+            inline.missing.as_deref(),
+            Some(&["BE-GONE-009".to_string()][..])
+        );
+        assert_eq!(inline.lists_file, None);
+
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let file = super::run(&args, tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(
+            (
+                &file.citations,
+                &file.missing,
+                &file.deprecated,
+                &file.retired,
+                &file.not_installed
+            ),
+            (&None, &None, &None, &None, &None),
+            "a list stayed inline"
+        );
+        assert_eq!(
+            (
+                file.citations_count,
+                file.missing_count,
+                file.retired_count,
+                file.not_installed_count
+            ),
+            (4, 1, 1, 1)
+        );
+        assert_eq!(file.examined, 1, "the denominator stays inline");
+        let lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(lists["retired"], serde_json::json!(["BE-OLD-005"]));
+        assert_eq!(lists["missing"], serde_json::json!(["BE-GONE-009"]));
+        assert_eq!(lists["not-installed"], serde_json::json!(["FE-XSS-002"]));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-rule-ids",
+            &serde_json::to_value(&file).unwrap(),
+            &lists,
+        );
     }
 }

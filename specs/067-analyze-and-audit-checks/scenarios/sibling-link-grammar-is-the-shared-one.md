@@ -14,7 +14,7 @@ The failure is silent, which is what makes it worth a scenario rather than a pat
 
 ## Behavior
 
-**Both generators call the shared grammar.** `leading_slug` takes the first path segment and asks `is_feature_slug`; `is_spec_slug` delegates outright. Neither restates the digit rule, so a future change to the corpus's membership rule reaches both without being copied into them.
+**Both generators call the shared grammar.** The form comes from the shared grammar and the charset stays local: `leading_slug` takes the longest run of lowercase letters, digits, hyphen and dot at the head of the target and asks `is_feature_slug` of it, and `is_spec_slug` asks `is_feature_slug` and `is_slug_grammar` of each dotted piece, since the value is written verbatim into frontmatter (`9bfc4af6`). Neither restates the digit rule, so a future change to the corpus's membership rule reaches both without being copied into them.
 
 **The guard is widened, not removed — and the distinction is the reusable part.** `harvest` writes its result straight into `dependencies:` with no downstream validation against the enumerated corpus, so the predicate is the only thing standing between an ordinary relative link (`../docs/guide.md`) and a false edge. That is what separates these two call sites from the third copy of the same grammar, in `scripts/audit/sibling-coupling.sh`, which was fixed by **deleting** its predicate: that caller matched every candidate against a slug list the runtime had already enumerated, so extracting the segment was strictly safer than re-testing it. Ask which case you are in before reaching for either fix.
 

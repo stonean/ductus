@@ -166,8 +166,8 @@ MUTATIONS = [
     (
         'M18 a tracked spec absent from disk is counted in examined',
         'src/primitives/derive_dependencies.rs',
-        '        let path = repo.join(spec);\n        if !path.is_file() {',
-        '        let path = repo.join(spec);\n        read_count += usize::from(!path.is_file());\n        if !path.is_file() {',
+        '        if !path.is_file() {\n            // Tracked in the index but not on disk. Named rather than dropped,',
+        '        read_count += usize::from(!path.is_file());\n        if !path.is_file() {\n            // Tracked in the index but not on disk. Named rather than dropped,',
         'derive_dependencies::tests::a_tracked_but_absent_spec_is_named_not_counted',
     ),
     # -- derive-references: the splice and the guard ----------------------
@@ -349,8 +349,8 @@ MUTATIONS = [
     (
         'M43 derive-dependencies reports a refused rewrite as unparseable, not unwritable',
         'src/primitives/derive_dependencies.rs',
-        '            unwritable.push(spec.clone());',
-        '            unparseable.push(spec.clone());',
+        '            // filter so a dry run, a write and a staged run say the same.\n            unwritable.push(spec.clone());',
+        '            // filter so a dry run, a write and a staged run say the same.\n            unparseable.push(spec.clone());',
         'derive_dependencies::tests::a_splice_that_would_not_parse_is_unwritable_and_never_written',
     ),
     (
@@ -529,21 +529,21 @@ MUTATIONS = [
     (
         'M68 a spec.md run skips the scenarios beside it',
         'src/primitives/validate_frontmatter.rs',
-        '                validate_scenarios_beside(dir, &mut findings);\n',
+        '                validate_scenarios_beside(repo, &rel, dir, &mut findings);\n',
         '',
         'validate_frontmatter::tests::a_spec_run_reports_a_malformed_scenario_by_its_path',
     ),
     (
         'M69 a fenceless scenario beside a spec passes silently',
         'src/primitives/validate_frontmatter.rs',
-        '                report(format!(\n                    "{field} has no frontmatter (no leading `---` block)"\n                ));\n',
+        '                push(\n                    field.clone(),\n                    format!("{field} has no frontmatter (no leading `---` block)"),\n                );\n',
         '',
         'validate_frontmatter::tests::an_unparseable_scenario_in_a_spec_run_is_a_hard_fail_not_an_error',
     ),
     (
         'M70 a scenario beside a spec that cannot be read passes silently',
         'src/primitives/validate_frontmatter.rs',
-        '                report(format!("{field} could not be read: {source}"));\n',
+        '                push(\n                    field.clone(),\n                    format!("{field} could not be read: {source}"),\n                );\n',
         '',
         'validate_frontmatter::tests::a_scenario_a_spec_run_cannot_read_is_a_hard_fail',
     ),

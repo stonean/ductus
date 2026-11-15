@@ -24,10 +24,10 @@
 //! to the retiring directory that this check would report is one the rewrite
 //! re-points, short of a referrer the rewrite lists in its `skipped` and
 //! leaves as written: a symbolic link, which it does not follow and this
-//! check reads through; one reached through a directory that resolves
-//! outside the project, which this check also reads; and one that is not
-//! UTF-8 text, which this check skips too, in the same words
-//! ([`UNREADABLE_AS_TEXT`]).
+//! check reads through while the link stays inside the project; one reached
+//! through a directory that resolves outside the project, which this check
+//! skips too ([`LEAVES_PROJECT`]); and one that is not UTF-8 text, which
+//! this check skips too, in the same words ([`UNREADABLE_AS_TEXT`]).
 //!
 //! Defined by `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`,
 //! required by `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md`.
@@ -40,7 +40,7 @@ use crate::primitives::{PrimitiveError, Result, read_text_if_present};
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
-    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, OrphanedReference,
+    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, ListsForm, OrphanedReference,
     OrphanedReferenceSkip,
 };
 
@@ -154,18 +154,95 @@ pub(crate) const UNREADABLE_AS_TEXT: &str = "file exists but could not be read a
 const ATTRIBUTION_REGISTRY: &str = "registry";
 const ATTRIBUTION_WATERMARK: &str = "watermark";
 
-/// Execute the `check-orphaned-references` primitive.
+/// The `skipped` reason for a referrer, or a managed path a referrer names,
+/// that is or runs through a symbolic link leaving the project: never read or
+/// probed (`BE-INPUT-004`), and named so an empty `findings` is not read as
+/// examined over it.
+pub(crate) const LEAVES_PROJECT: &str = "a link that leaves the project; not read or probed";
+
+/// Execute the `check-orphaned-references` primitive: [`compute`], returned
+/// inline while it fits `[artifacts] read-size-bytes`, and past it with its
+/// three lists in the file `lists-file` names and only their counts inline
+/// ([`bound`]; `BE-PAYLOAD-001`).
 ///
 /// # Errors
 ///
-/// None — every failure is a recorded `skipped` entry rather than a raised
-/// error. A check that dies on an unreadable referrer tells the caller nothing
-/// about the referrers it *could* read, and this one runs inside `/ductus`'s
-/// migration batch, which must not be aborted by a file it could not open.
+/// A malformed read size or a list file that cannot be written, which
+/// `bounded_lists::place` returns, and the errors [`compute`] returns.
 pub fn run(
     _args: &CheckOrphanedReferencesArgs,
     repo: &Path,
 ) -> Result<CheckOrphanedReferencesResult> {
+    bound(repo, compute(repo)?)
+}
+
+/// One check, every list whole: what `check-orphaned-references` returns
+/// before its lists are bounded. Each field is
+/// [`CheckOrphanedReferencesResult`]'s of the same name.
+#[derive(Debug)]
+pub(crate) struct Checked {
+    pub(crate) findings: Vec<OrphanedReference>,
+    pub(crate) examined: Vec<String>,
+    pub(crate) skipped: Vec<OrphanedReferenceSkip>,
+    pub(crate) matched_prefixes: Vec<String>,
+    pub(crate) attribution: String,
+    pub(crate) last_applied: String,
+}
+
+/// `checked` held to `[artifacts] read-size-bytes`: past it, its three lists
+/// go to the file the result names, with their counts inline
+/// (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+fn bound(repo: &Path, checked: Checked) -> Result<CheckOrphanedReferencesResult> {
+    let lists = serde_json::json!({
+        "findings": checked.findings,
+        "examined": checked.examined,
+        "skipped": checked.skipped,
+    });
+    let mut result = CheckOrphanedReferencesResult {
+        findings_count: checked.findings.len(),
+        findings: Some(checked.findings),
+        examined_count: checked.examined.len(),
+        examined: Some(checked.examined),
+        skipped_count: checked.skipped.len(),
+        skipped: Some(checked.skipped),
+        matched_prefixes: checked.matched_prefixes,
+        attribution: checked.attribution,
+        last_applied: checked.last_applied,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "check-orphaned-references",
+        "repository",
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.examined = None;
+        result.skipped = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Check every referrer, every list whole.
+///
+/// # Errors
+///
+/// A configuration that does not load, which every reader of it halts on.
+/// Every failure to read a referrer is a recorded `skipped` entry rather than
+/// a raised error: a check that dies on an unreadable referrer tells the
+/// caller nothing about the referrers it *could* read, and this one runs
+/// inside `/ductus`'s migration batch, which must not be aborted by a file it
+/// could not open.
+pub(crate) fn compute(repo: &Path) -> Result<Checked> {
     // Loaded once and shared: both the referrer list and the managed roots are
     // derived from the configured spec root, and reading the config twice to
     // answer one question is work with no second answer behind it.
@@ -187,6 +264,15 @@ pub fn run(
 
     for referrer in referrers(&layout) {
         let full = repo.join(&referrer);
+        if super::leaves_project(repo, &referrer) {
+            // Not opened, and not judged absent either: a link that leaves
+            // the project may point at nothing, and nothing says which.
+            skipped.push(OrphanedReferenceSkip {
+                path: referrer.clone(),
+                reason: LEAVES_PROJECT.into(),
+            });
+            continue;
+        }
         if !full.exists() {
             // Not every project has every referrer. An absent file is not an
             // unexamined one — there is nothing there to examine — so it is
@@ -204,7 +290,20 @@ pub fn run(
         let prefixes = root_prefixes(&referrer);
         for (idx, line) in text.lines().enumerate() {
             for target in managed_paths_in(line, &roots, prefixes) {
-                if repo.join(target.trim_end_matches('/')).exists() {
+                let probed = target.trim_end_matches('/');
+                if super::leaves_project(repo, probed) {
+                    // The text names it, and a link on the way would carry
+                    // the probe out of the project: no finding, no probe.
+                    let skip = OrphanedReferenceSkip {
+                        path: target,
+                        reason: format!("{LEAVES_PROJECT} (named by {referrer})"),
+                    };
+                    if !skipped.contains(&skip) {
+                        skipped.push(skip);
+                    }
+                    continue;
+                }
+                if repo.join(probed).exists() {
                     continue;
                 }
                 if super::check_artifacts::ships_to_adopter(&ships_elsewhere, &target) {
@@ -223,7 +322,7 @@ pub fn run(
         }
     }
 
-    Ok(CheckOrphanedReferencesResult {
+    Ok(Checked {
         findings,
         examined,
         skipped,
@@ -581,6 +680,12 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::{TempDir, tempdir};
+
+    /// One check's lists whole, as most tests read them; [`bound`] holds the
+    /// public result to the read size.
+    fn run(_args: &CheckOrphanedReferencesArgs, repo: &Path) -> Result<Checked> {
+        compute(repo)
+    }
 
     /// The shared registry declares every key this reader reads, so none of
     /// them is reported as unknown (spec 019).
@@ -1298,6 +1403,99 @@ mod tests {
                 ".ductus/scripts/gone-c.sh"
             ],
             "trailing `)` and backticks must not survive into the path"
+        );
+    }
+
+    /// A referrer that is a link leaving the project is skipped by name and
+    /// never opened: the file beyond it names a missing managed path, which
+    /// would be a finding were it read (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_referrer_that_leaves_the_project_is_skipped_and_not_read() {
+        let tmp = adopter();
+        let outside = tempdir().unwrap();
+        write(
+            &outside.path().join("agents.md"),
+            "See `.ductus/nowhere.md`.\n",
+        );
+        let link = tmp.path().join("AGENTS.md");
+        let _ = fs::remove_file(&link);
+        std::os::unix::fs::symlink(outside.path().join("agents.md"), &link).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert!(!result.examined.contains(&"AGENTS.md".to_string()));
+        let skip = result
+            .skipped
+            .iter()
+            .find(|skip| skip.path == "AGENTS.md")
+            .unwrap_or_else(|| panic!("no skip: {:?}", result.skipped));
+        assert!(
+            skip.reason.contains("leaves the project"),
+            "{}",
+            skip.reason
+        );
+    }
+
+    /// A managed path a referrer names that runs through a link leaving the
+    /// project is skipped and not probed: the file beyond the link is absent
+    /// from the project, and its presence outside must not answer.
+    #[cfg(unix)]
+    #[test]
+    fn a_managed_path_through_a_link_out_is_skipped_and_not_probed() {
+        let tmp = adopter();
+        let outside = tempdir().unwrap();
+        write(&outside.path().join("present.md"), "x\n");
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join(".ductus/link")).unwrap();
+        write(
+            &tmp.path().join("README.md"),
+            "See `.ductus/link/present.md` and `.ductus/link/absent.md`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        let skipped: Vec<&str> = result.skipped.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            skipped,
+            [".ductus/link/absent.md", ".ductus/link/present.md"],
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    /// The three lists come back inline while the result fits `[artifacts]
+    /// read-size-bytes`, and past it in the file the result names, whole,
+    /// with only their counts inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn the_lists_move_to_a_file_past_the_read_size() {
+        let tmp = adopter();
+        write(&tmp.path().join("README.md"), "See `.ductus/nowhere.md`.\n");
+        let inline = super::run(&args(), tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.findings_count, 1);
+        assert_eq!(inline.findings.as_ref().unwrap().len(), 1);
+        assert_eq!(inline.lists_file, None);
+
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[migrations]\nlast_applied = \"x\"\n[artifacts]\nread-size-bytes = 100\n",
+        );
+        let file = super::run(&args(), tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(
+            (&file.findings, &file.examined, &file.skipped),
+            (&None, &None, &None)
+        );
+        assert_eq!(file.findings_count, 1);
+        assert!(file.examined_count >= 1);
+        assert!(!file.matched_prefixes.is_empty(), "the scope stays inline");
+        let lists: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(lists["findings"][0]["target"], ".ductus/nowhere.md");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-orphaned-references",
+            &serde_json::to_value(&file).unwrap(),
+            &lists,
         );
     }
 }

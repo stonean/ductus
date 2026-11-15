@@ -28,7 +28,7 @@ The blind spot was known and worked around rather than fixed: this primitive's o
 
 - A reference to a path under a historical root that **does** resolve — an adopter who kept a `.govern/` directory deliberately — is not a finding, the same as for a current root: the check reports unresolved references, not retired vocabulary.
 - An adopter-owned `scripts/build.sh` that does not resolve: not a finding, and covered by a test, because it carries neither historical prefix.
-- A reference nested under a longer path, e.g. `.ductus/scripts/gen-spec-deps.sh`: matched once under `.ductus/`, not twice, because the existing `preceded_by_path_char` guard rejects a match that begins mid-token. That guard is what keeps `scripts/gen-` from double-reporting a reference under `.ductus/scripts/`.
+- A reference nested under a longer path, e.g. `.ductus/scripts/gen-spec-deps.sh`: matched once under `.ductus/`, not twice, because the existing token-start test (`is_path_char` on the character before the match, in `managed_path_spans`) rejects a match that begins mid-token. That test is what keeps `scripts/gen-` from double-reporting a reference under `.ductus/scripts/`.
 
 ## Open Questions
 

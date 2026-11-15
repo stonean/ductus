@@ -349,8 +349,8 @@ MUTATIONS = [
     (
         "M46 a managed path is tested for existence from the repository's root",
         'src/primitives/check_orphaned_references.rs',
-        "                if repo.join(target.trim_end_matches('/')).exists() {\n",
-        "                if super::ProjectRepository::discover(repo).ok().and_then(|p| p.repository.workdir().map(|w| w.join(target.trim_end_matches('/')))).unwrap_or_else(|| repo.join(target.trim_end_matches('/'))).exists() {\n",
+        "                if repo.join(probed).exists() {\n",
+        "                if super::ProjectRepository::discover(repo).ok().and_then(|p| p.repository.workdir().map(|w| w.join(probed))).unwrap_or_else(|| repo.join(probed)).exists() {\n",
         'check_orphaned_references::',
     ),
     (

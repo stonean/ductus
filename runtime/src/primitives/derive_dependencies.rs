@@ -190,6 +190,16 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
 
     for spec in &tracked {
         let path = repo.join(spec);
+        if super::leaves_project(repo, spec) {
+            // The index names a path the repository holds, and a link on it
+            // that leaves the project would be read, and under `write`
+            // replaced by a regular file holding the outside content
+            // (`BE-INPUT-004`). Never opened, and named so it does not read as
+            // examined: its `dependencies:` is unknown, like an unterminated
+            // block's.
+            unparseable.push(spec.clone());
+            continue;
+        }
         if !path.is_file() {
             // Tracked in the index but not on disk. Named rather than dropped,
             // for the reason recorded on `derive_references` — counting it in
@@ -212,6 +222,13 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
 
         let rewritten = splice_dependencies(&content, &deps);
         if rewritten == content {
+            if !deps.is_empty() && !has_dependencies_key(&content) {
+                // Links to siblings and no key to hold them: the splice leaves
+                // the key where the author decides, so the index cannot be
+                // written here and only an edit by hand fixes it. Named, so
+                // the spec does not read as in sync (`QUAL-CLAIM-001`).
+                unwritable.push(spec.clone());
+            }
             continue;
         }
         if !frontmatter_parses(&rewritten) {
@@ -457,6 +474,21 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
         joined.push_str(line_ending);
     }
     joined
+}
+
+/// Whether the frontmatter carries a `dependencies:` key, as
+/// [`splice_dependencies`] reads one: a line starting with it between the
+/// opening fence and the next.
+fn has_dependencies_key(content: &str) -> bool {
+    let mut lines = content
+        .lines()
+        .map(|raw| raw.strip_suffix('\r').unwrap_or(raw));
+    if !lines.next().is_some_and(is_frontmatter_fence) {
+        return false;
+    }
+    lines
+        .take_while(|line| !is_frontmatter_fence(line))
+        .any(|line| line.starts_with("dependencies:"))
 }
 
 /// Tarjan's strongly-connected-components over the derived graph.
@@ -1278,5 +1310,91 @@ mod tests {
         }
         graph.insert("05000-n".to_string(), vec![]);
         assert_eq!(find_cycles(&graph), [] as [Vec<String>; 0]);
+    }
+
+    /// A tracked spec that is a link leaving the project is never read, and
+    /// `--write` never replaces it with a regular file holding the outside
+    /// content (`BE-INPUT-004`). It is named `unparseable`, so it does not
+    /// read as examined or in sync: the file beyond it would drift, so only
+    /// the screen keeps it out of `updated`.
+    #[cfg(unix)]
+    #[test]
+    fn a_tracked_spec_that_leaves_the_project_is_named_and_never_rewritten() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        std::fs::create_dir_all(&project).unwrap();
+        let repository = git2::Repository::init(&project).unwrap();
+        git_fixture::write(
+            &project.join("specs/001-a/spec.md"),
+            &spec("dependencies: []", "nothing"),
+        );
+        let outside = tmp.path().join("outside.md");
+        let content = spec("dependencies: []", "[a](../001-a/spec.md)");
+        std::fs::write(&outside, &content).unwrap();
+        std::fs::create_dir_all(project.join("specs/002-b")).unwrap();
+        let link = project.join("specs/002-b/spec.md");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+        git_fixture::commit_all(&repository, "feat: specs");
+
+        let result = run(
+            &DeriveDependenciesArgs {
+                write: true,
+                staged: false,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.unparseable, vec!["specs/002-b/spec.md"]);
+        assert_eq!(result.examined, 1, "only the contained spec was read");
+        assert!(result.updated.is_empty(), "{:?}", result.updated);
+        assert!(!result.drift);
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the link was replaced"
+        );
+        assert_eq!(std::fs::read_to_string(&outside).unwrap(), content);
+    }
+
+    /// A spec that links siblings and carries no `dependencies:` key is not
+    /// in sync: its index cannot be written here, so it is `unwritable`, never
+    /// absent from every list while `drift` stays false (`QUAL-CLAIM-001`).
+    #[test]
+    fn a_spec_with_sibling_links_and_no_key_is_unwritable() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        git_fixture::write(
+            &tmp.path().join("specs/001-a/spec.md"),
+            &spec("dependencies: []", "nothing"),
+        );
+        let keyless = "---\nstatus: done\n---\n\n[a](../001-a/spec.md)\n";
+        git_fixture::write(&tmp.path().join("specs/002-b/spec.md"), keyless);
+        // No links and no key: nothing to derive, nothing unwritable.
+        git_fixture::write(
+            &tmp.path().join("specs/003-c/spec.md"),
+            "---\nstatus: done\n---\n\nnothing\n",
+        );
+        git_fixture::commit_all(&repository, "feat: specs");
+
+        let result = run(
+            &DeriveDependenciesArgs {
+                write: true,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unwritable, vec!["specs/002-b/spec.md"]);
+        assert!(!result.drift);
+        assert_eq!(result.examined, 3);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("specs/002-b/spec.md")).unwrap(),
+            keyless,
+            "the spec is left as written"
+        );
     }
 }

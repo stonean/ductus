@@ -275,6 +275,13 @@ impl Checked {
     }
 }
 
+/// The `read-tasks` arguments for the feature `args` names.
+fn tasks_args(args: &CheckArtifactsArgs) -> ReadTasksArgs {
+    ReadTasksArgs {
+        feature: args.feature.clone(),
+    }
+}
+
 /// Run every family, every finding and skip whole.
 ///
 /// # Errors
@@ -327,18 +334,17 @@ pub(crate) fn compute(args: &CheckArtifactsArgs, repo: &Path) -> Result<Checked>
     let status = frontmatter.status.clone();
 
     let mut findings: Vec<ArtifactFinding> = Vec::new();
-    check_completeness(&mut findings, &feature_dir, &root, &args.feature, &status);
+    check_completeness(
+        &mut findings,
+        &feature_dir,
+        (&root, &args.feature),
+        (&status, &outward),
+    );
 
     // Task parsing is shared by families (b) and (c); parse once.
     let tasks_md = feature_dir.join("tasks.md");
-    let tasks = if tasks_md.is_file() && !outward.covers(&tasks_md) {
-        Some(read_tasks::read_checked(
-            &ReadTasksArgs {
-                feature: args.feature.clone(),
-            },
-            repo,
-            &root,
-        )?)
+    let tasks = if !outward.covers(&tasks_md) && tasks_md.is_file() {
+        Some(read_tasks::read_checked(&tasks_args(args), repo, &root)?)
     } else {
         None
     };
@@ -495,8 +501,15 @@ fn check_spec_integrity(
 fn is_placeholder_criterion(text: &str) -> bool {
     let text = text.trim();
     let bare = text.trim_end_matches(['.', ':']).to_lowercase();
-    let bracketed = (text.starts_with('<') && text.ends_with('>'))
-        || (text.starts_with('{') && text.ends_with('}'));
+    // One bracketed span and nothing else: `<b>bold</b> output … the <i>`
+    // starts and ends with brackets and is a real criterion, so the inside
+    // holds neither bracket.
+    let wholly_inside = |open: char, close: char| {
+        text.strip_prefix(open)
+            .and_then(|rest| rest.strip_suffix(close))
+            .is_some_and(|inner| !inner.contains(open) && !inner.contains(close))
+    };
+    let bracketed = wholly_inside('<', '>') || wholly_inside('{', '}');
     text.is_empty()
         || bracketed
         || matches!(
@@ -593,13 +606,20 @@ fn lists_a_file(lines: &[&str], section: &[usize]) -> bool {
             }
             return header_seen && cells.first().is_some_and(|cell| !cell.is_empty());
         }
+        // The CommonMark list-item markers: `-`, `*` and `+` bullets, and
+        // digits then `.` or `)`.
         let item = trimmed
             .strip_prefix("- ")
             .or_else(|| trimmed.strip_prefix("* "))
+            .or_else(|| trimmed.strip_prefix("+ "))
             .or_else(|| {
                 let digits = trimmed.trim_start_matches(|c: char| c.is_ascii_digit());
                 (digits.len() < trimmed.len())
-                    .then(|| digits.strip_prefix(". "))
+                    .then(|| {
+                        digits
+                            .strip_prefix(". ")
+                            .or_else(|| digits.strip_prefix(") "))
+                    })
                     .flatten()
             });
         item.is_some_and(|text| !text.trim().is_empty())
@@ -611,21 +631,41 @@ fn lists_a_file(lines: &[&str], section: &[usize]) -> bool {
 }
 
 /// Whether a plan references its spec: a link to its `spec.md`, or the feature
-/// named by directory name or by its number (the part before the first `-`),
-/// as the plans written before the plan template carried the link do in their
-/// title.
+/// named by directory name or by its number, as the plans written before the
+/// plan template carried the link do in their title. The number is the part
+/// before the first `-` of a sequential directory and `{identifier}.{n}` of a
+/// branch-scoped one, which [`super::parse_feature_dir`] tells apart: the
+/// identifier may hold a `-`, so the first `-` of `my-branch.1-slug` is no
+/// number.
 fn plan_references_spec(text: &str, feature: &str) -> bool {
     let own = format!("{feature}/spec.md");
     let links = markdown_link_targets(text).any(|target| {
         let target = target.trim_start_matches("./");
         target == "spec.md" || target.ends_with(&own)
     });
-    let number = feature.split('-').next().unwrap_or(feature);
     links
         || text.contains(feature)
-        || text
-            .split(|c: char| !(c.is_alphanumeric() || c == '.'))
-            .any(|token| token.trim_matches('.') == number)
+        || if let Some(super::FeatureForm::BranchScoped { identifier, n }) =
+            super::parse_feature_dir(feature)
+        {
+            names_token(text, &format!("{identifier}.{n}"))
+        } else {
+            let number = feature.split('-').next().unwrap_or(feature);
+            text.split(|c: char| !(c.is_alphanumeric() || c == '.'))
+                .any(|token| token.trim_matches('.') == number)
+        }
+}
+
+/// Whether `text` holds `needle` as a token of its own: not preceded by a
+/// letter, digit, `-` or `.`, and not followed by a letter or digit, so
+/// `my-branch.1` is not found inside `xmy-branch.1` or `my-branch.12`.
+fn names_token(text: &str, needle: &str) -> bool {
+    text.match_indices(needle).any(|(start, matched)| {
+        let before = text[..start].chars().next_back();
+        let after = text[start + matched.len()..].chars().next();
+        !before.is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '.'))
+            && !after.is_some_and(char::is_alphanumeric)
+    })
 }
 
 /// `line` with each `<!-- ... -->` that opens and closes on it removed, the
@@ -663,9 +703,8 @@ fn markdown_link_targets(text: &str) -> impl Iterator<Item = &str> {
 fn check_completeness(
     findings: &mut Vec<ArtifactFinding>,
     feature_dir: &Path,
-    root: &str,
-    feature: &str,
-    status: &str,
+    (root, feature): (&str, &str),
+    (status, outward): (&str, &super::OutwardLinks),
 ) {
     // "planned or later" is the same lifecycle tail `schema::status`
     // derives as `COMPATIBLE_STATUSES` (planned / in-progress / done).
@@ -673,7 +712,14 @@ fn check_completeness(
         return;
     }
     for file in ["plan.md", "tasks.md"] {
-        if !feature_dir.join(file).is_file() {
+        let target = feature_dir.join(file);
+        // A link that leaves the project is a file that exists, one the run
+        // declined to open: the outward-link skip says so, and it is no
+        // missing artifact.
+        if outward.covers(&target) {
+            continue;
+        }
+        if !target.is_file() {
             findings.push(ArtifactFinding {
                 family: "artifact-completeness".into(),
                 severity: AnalyzeSeverity::Blocking,
@@ -868,6 +914,17 @@ fn ever_tasked_slugs(
     Some(seen)
 }
 
+/// [`list_scenario_files`] unless `scenarios_dir` is, or lies under, a link
+/// that leaves the project: listing it would open and stat every entry of a
+/// directory outside the project before [`super::OutwardLinks::covers`] could
+/// drop the names (`BE-INPUT-004`), so such a directory lists as empty.
+fn unlinked_scenario_files(scenarios_dir: &Path, outward: &super::OutwardLinks) -> Vec<String> {
+    if outward.covers(scenarios_dir) {
+        return Vec::new();
+    }
+    list_scenario_files(scenarios_dir)
+}
+
 /// List scenario slugs (`*.md` basenames without extension) under the
 /// feature's `scenarios/` directory, sorted. Empty when the directory is
 /// absent. Enumerates via the shared [`list_scenario_files`] so the `.md`
@@ -875,7 +932,7 @@ fn ever_tasked_slugs(
 /// the `FOO.MD`-counted-by-one-surface-only divergence.
 fn scenario_slugs(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<String> {
     let scenarios_dir = feature_dir.join("scenarios");
-    let mut slugs: Vec<String> = list_scenario_files(&scenarios_dir)
+    let mut slugs: Vec<String> = unlinked_scenario_files(&scenarios_dir, outward)
         .iter()
         .filter(|name| !outward.covers(&scenarios_dir.join(name)))
         .filter_map(|name| {
@@ -1349,7 +1406,7 @@ fn check_link_adjacent_drift(
             .or_insert(0) += 1;
     }
     let scenarios_dir = feature_dir.join("scenarios");
-    let readable_scenarios: HashSet<String> = list_scenario_files(&scenarios_dir)
+    let readable_scenarios: HashSet<String> = unlinked_scenario_files(&scenarios_dir, outward)
         .iter()
         // The symlink test short-circuits the read: a linked entry is never
         // opened, so its destination is never touched. It lands in the
@@ -1585,11 +1642,11 @@ fn scanned_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<P
     let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]
         .iter()
         .map(|name| feature_dir.join(name))
-        .filter(|path| path.is_file() && !outward.covers(path))
+        .filter(|path| !outward.covers(path) && path.is_file())
         .collect();
     let scenarios_dir = feature_dir.join("scenarios");
     out.extend(
-        list_scenario_files(&scenarios_dir)
+        unlinked_scenario_files(&scenarios_dir, outward)
             .iter()
             .map(|name| scenarios_dir.join(name))
             .filter(|path| !outward.covers(path)),
@@ -2566,10 +2623,10 @@ fn body_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<Path
     let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]
         .iter()
         .map(|name| feature_dir.join(name))
-        .filter(|path| path.is_file() && !outward.covers(path))
+        .filter(|path| !outward.covers(path) && path.is_file())
         .collect();
     let scenarios = feature_dir.join("scenarios");
-    let mut names = list_scenario_files(&scenarios);
+    let mut names = unlinked_scenario_files(&scenarios, outward);
     names.sort_by(|a, b| scenario_name_cmp(a, b));
     out.extend(
         names
@@ -2614,14 +2671,15 @@ fn leaves_project_by_link(repo: &Path, rel: &str) -> bool {
 }
 
 /// A candidate's project-relative path, its `#fragment` stripped and any
-/// trailing slash dropped. A candidate starting `..` resolves from `from_dir`,
-/// any other from the project root; either way the resolution is lexical.
+/// trailing slash dropped. A candidate starting `../` (or naming `..`) resolves
+/// from `from_dir`, any other, an elided `.../x` and `..hidden/x` included,
+/// from the project root; either way the resolution is lexical.
 /// `None` when it leaves the project lexically, which the caller records as an
 /// `outside-project` skip (a link out is judged separately,
 /// [`leaves_project_by_link`]).
 fn resolve_body_path(candidate: &str, from_dir: &Path, repo: &Path) -> Option<String> {
     let file_part = candidate.split('#').next()?.trim_end_matches('/');
-    let base = if file_part.starts_with("..") {
+    let base = if file_part == ".." || file_part.starts_with("../") {
         from_dir
     } else {
         repo
@@ -3759,6 +3817,31 @@ mod tests {
             "---\nsection: \"X\"\n---\n\n# A\n\nThe parent is `../spec.md`.\n",
         );
         assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    /// Only `../` (or `..` alone) climbs from the citing directory: a name
+    /// that merely begins with two dots, an elision `.../x` or `..hidden/x`,
+    /// is a name under the project root.
+    #[test]
+    fn only_a_dotdot_segment_resolves_from_the_citing_directory() {
+        let repo = Path::new("/p");
+        let from = Path::new("/p/specs/042-demo");
+        assert_eq!(
+            resolve_body_path("../043-x/spec.md", from, repo).as_deref(),
+            Some("specs/043-x/spec.md")
+        );
+        assert_eq!(
+            resolve_body_path("../", from, repo).as_deref(),
+            Some("specs")
+        );
+        assert_eq!(
+            resolve_body_path("..hidden/x", from, repo).as_deref(),
+            Some("..hidden/x")
+        );
+        assert_eq!(
+            resolve_body_path(".../x", from, repo).as_deref(),
+            Some(".../x")
+        );
     }
 
     #[test]
@@ -5442,6 +5525,57 @@ mod tests {
         );
     }
 
+    /// A link that leaves the project is a file that exists, so the
+    /// completeness family, which asks whether `plan.md` exists, must not
+    /// call a dangling one missing beside the outward-link skip.
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_link_out_of_the_project_is_no_missing_artifact() {
+        let (outer, project) = project_beside_a_file();
+        seed_with_questioning_scenario(&project, "planned");
+        let plan = project.join(format!("specs/{FEATURE}/plan.md"));
+        fs::remove_file(&plan).unwrap();
+        std::os::unix::fs::symlink(outer.path().join("missing.md"), &plan).unwrap();
+        let result = run(&args(), &project).unwrap();
+        assert!(
+            result
+                .findings
+                .iter()
+                .all(|f| f.family != "artifact-completeness"),
+            "{:?}",
+            result.findings
+        );
+        assert_eq!(
+            outward_skips(&result),
+            vec![("target-unparseable", "specs/042-demo/plan.md")]
+        );
+    }
+
+    /// A `scenarios/` directory that is a link out of the project is not
+    /// listed: the names behind it are an outside directory's, and the plan
+    /// says nothing behind a link is opened.
+    #[cfg(unix)]
+    #[test]
+    fn a_scenarios_directory_linked_outside_the_project_is_not_listed() {
+        let (outer, project) = project_beside_a_file();
+        let feature_dir = project.join(format!("specs/{FEATURE}"));
+        fs::create_dir_all(&feature_dir).unwrap();
+        let outside = outer.path().join("outside-scenarios");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("a.md"), SCENARIO_ASKING).unwrap();
+        let scenarios = feature_dir.join("scenarios");
+        std::os::unix::fs::symlink(&outside, &scenarios).unwrap();
+        let outward =
+            crate::primitives::OutwardLinks::find(&project, &format!("specs/{FEATURE}")).unwrap();
+        assert!(outward.covers(&scenarios));
+        // Without the guard the outside names are listed.
+        assert_eq!(list_scenario_files(&scenarios), vec!["a.md".to_string()]);
+        assert_eq!(
+            unlinked_scenario_files(&scenarios, &outward),
+            Vec::<String>::new()
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn a_fixed_name_file_linked_outside_the_project_is_never_read() {
@@ -6243,16 +6377,29 @@ mod tests {
     /// The integrity findings of a `{status}` spec and optional plan, as
     /// `(family, message)`.
     fn integrity(status: &str, body: &str, plan: Option<&str>) -> Vec<(String, String)> {
+        integrity_in(FEATURE, status, body, plan)
+    }
+
+    /// [`integrity`] for the feature directory `feature`.
+    fn integrity_in(
+        feature: &str,
+        status: &str,
+        body: &str,
+        plan: Option<&str>,
+    ) -> Vec<(String, String)> {
         let tmp = tempdir().unwrap();
         write(
             tmp.path(),
-            "specs/042-demo/spec.md",
+            &format!("specs/{feature}/spec.md"),
             &spec_with(status, body),
         );
         if let Some(plan) = plan {
-            write(tmp.path(), "specs/042-demo/plan.md", plan);
+            write(tmp.path(), &format!("specs/{feature}/plan.md"), plan);
         }
-        run_every_family(&args(), tmp.path())
+        let args = CheckArtifactsArgs {
+            feature: feature.into(),
+        };
+        run_every_family(&args, tmp.path())
             .unwrap()
             .findings
             .into_iter()
@@ -6294,7 +6441,19 @@ mod tests {
 
     #[test]
     fn an_empty_or_placeholder_criterion_is_blocking() {
-        for text in ["", "TBD", "todo.", "<criterion>", "{criterion}", "N/A"] {
+        for text in [
+            "",
+            "TBD",
+            "todo.",
+            "<criterion>",
+            "{criterion}",
+            "N/A",
+            "TBC",
+            "fixme:",
+            "Placeholder",
+            "…",
+            "...",
+        ] {
             let body = format!("## Acceptance Criteria\n\n- [ ] {text}\n- [ ] A real one.\n");
             let found = integrity("draft", &body, None);
             assert_eq!(found.len(), 1, "{text:?}: {found:?}");
@@ -6302,6 +6461,19 @@ mod tests {
         }
         let real = "## Acceptance Criteria\n\n- [ ] Handles TBD values without crashing.\n";
         assert_eq!(integrity("draft", real, None), vec![]);
+        // A criterion that merely starts and ends with brackets is real: only
+        // one bracketed span and nothing else is a template slot.
+        for text in [
+            "<b>bold</b> output is escaped by the <i>",
+            "{a: 1} parses into {b}",
+            "<a> and <b>",
+            "{ one } or { two }",
+            "<criterion}",
+            "{criterion>",
+        ] {
+            let body = format!("## Acceptance Criteria\n\n- [ ] {text}\n");
+            assert_eq!(integrity("draft", &body, None), vec![], "{text:?}");
+        }
     }
 
     #[test]
@@ -6330,6 +6502,37 @@ mod tests {
             .replace("(spec.md)", "(../043-other/spec.md)")
             .replace("[042 — Demo]", "[Other]");
         assert_eq!(integrity("planned", GOOD_BODY, Some(&other)).len(), 1);
+    }
+
+    /// A branch-scoped directory's number is `{identifier}.{n}`, not the part
+    /// before its first `-`: the identifier may hold one, and then the first
+    /// word of the name (`my`) would stand in for the number.
+    #[test]
+    fn a_branch_scoped_plan_is_matched_by_its_identifier_and_counter() {
+        let feature = "my-branch.1-demo";
+        let plan = |intro: &str| GOOD_PLAN.replace("Implements [042 — Demo](spec.md).", intro);
+        let found = integrity_in(
+            feature,
+            "planned",
+            GOOD_BODY,
+            Some(&plan("Implements the thing for my users.")),
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("does not reference its spec"));
+        // The token inside a longer one is no reference.
+        for intro in ["Staged in xmy-branch.1.", "Staged in my-branch.12."] {
+            let found = integrity_in(feature, "planned", GOOD_BODY, Some(&plan(intro)));
+            assert_eq!(found.len(), 1, "{intro}: {found:?}");
+        }
+        // The number alone, the directory name and the link each reference it.
+        for intro in [
+            "Plan for my-branch.1.",
+            "# my-branch.1-demo plan",
+            "Implements [Demo](spec.md).",
+        ] {
+            let found = integrity_in(feature, "planned", GOOD_BODY, Some(&plan(intro)));
+            assert_eq!(found, vec![], "{intro}");
+        }
     }
 
     #[test]
@@ -6369,6 +6572,8 @@ mod tests {
             "- internal/widgets/widget.go",
             "- Makefile\n- Dockerfile",
             "1. Makefile",
+            "+ Makefile",
+            "1) Makefile",
             "| File | Action |\n| --- | --- |\n| Makefile | Modify |",
             "Edits internal/widgets/widget.go only.",
             "`Makefile`",

@@ -2082,6 +2082,41 @@ mod tests {
         assert!(record.contains("  artifact-unreadable: 1\n"), "{record}");
     }
 
+    /// An exec `/analyze` walk through `resolve-anchor` past the read size
+    /// still counts the unresolved anchor: the walker reads the lists back
+    /// from the list file in `take_result` before the tally, so a tally that
+    /// read the result first would see `unresolved` absent and count the
+    /// spec clean.
+    #[test]
+    fn an_exec_analyze_counts_an_unresolved_anchor_held_in_the_file_form() {
+        let repo = analyze_repo(None);
+        std::fs::write(
+            repo.path().join("specs/001-x/spec.md"),
+            "---\nstatus: clarified\ndependencies: []\n---\n\n# x\n\nSee §nowhere.\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![4]),
+            name: "resolve-anchor".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+        let held = std::fs::read_dir(repo.path().join(".ductus/results/resolve-anchor/spec"))
+            .expect("the file form wrote its list file")
+            .count();
+        assert_eq!(held, 1);
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nadvisory: 1\n"), "{record}");
+    }
+
     /// An exec `/analyze` measures the project files too: the walker seeds
     /// `project-files`, so an over-limit `AGENTS.md` is one more advisory
     /// finding beside the oversized plan (spec 063, scenario

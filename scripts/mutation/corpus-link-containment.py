@@ -41,8 +41,8 @@ MUTATIONS = [
     (
         'M4 a directory that is a link out of the base is listed',
         'src/primitives/check_corpus_links.rs',
-        '            if containment.leaves(&path) {\n                skipped.push(CorpusLinkSkip {',
-        '            if false && containment.leaves(&path) {\n                skipped.push(CorpusLinkSkip {',
+        '        if linked && containment.leaves(&path) {\n            if path.extension()',
+        '        if false && linked && containment.leaves(&path) {\n            if path.extension()',
         'check_corpus_links::tests::a_directory_that_is_a_link_out_of_the_project_is_skipped_and_not_listed',
     ),
     (

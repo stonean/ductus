@@ -529,7 +529,7 @@ fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
     }
     for skip in &result.skipped {
         eprintln!(
-            "unreadable: {} ({}) — its links were never checked",
+            "skipped: {} ({}) — its links were never checked",
             skip.path, skip.reason
         );
     }

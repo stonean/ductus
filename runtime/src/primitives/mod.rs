@@ -1636,7 +1636,7 @@ pub(crate) fn output_within(
 /// This is the canonical statement of the converse, cited rather than
 /// restated by the primitives that rely on it (`resolve-constitutions`
 /// for `[constitutions.*]`, `resolve-anchor` for the documents those entries
-/// name, `resolve-references` for `[services]`).
+/// name, `resolve-references` and `derive-references` for `[services]`).
 ///
 /// A primitive that reads a path out of the project's **committed config**
 /// may skip this check, and `..` is the normal case there: a sibling
@@ -1811,6 +1811,18 @@ pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
 pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
     validate_contained(repo, rel)?;
     Ok(repo.join(rel))
+}
+
+/// Whether `rel`, a project-relative path the runtime builds from text the
+/// repository holds (a `dependencies:` name, a tracked or listed file, a link
+/// target a primitive then probes), is refused by [`validate_contained`]: it
+/// leaves the project lexically or through a symbolic link, or cannot be
+/// resolved. Such a path is contained before it is probed, listed or opened,
+/// as a path argument is (`BE-INPUT-004`; spec 022 plan §Path arguments,
+/// *Paths drawn from committed text*), and a primitive that finds one reports
+/// it as skipped, never reads it.
+pub(crate) fn leaves_project(repo: &Path, rel: &str) -> bool {
+    validate_contained(repo, rel).is_err()
 }
 
 /// [`validate_contained`] for a path or glob a tool expands itself, as
@@ -2501,6 +2513,9 @@ impl ProjectRepository {
     /// the components of its place in the work tree removed. `project` is the
     /// path [`Self::discover`] was given. Spelled so, never as git's own
     /// `workdir`, it compares lexically with every path built from `project`.
+    /// It must end in the components `discover` placed it by, as the working
+    /// directory's physical path does: one spelled through a link in its last
+    /// components would name a different root.
     pub(crate) fn work_tree_root(&self, project: &Path) -> PathBuf {
         let mut root = project.to_path_buf();
         for _ in self.prefix.split('/').filter(|part| !part.is_empty()) {

@@ -172,7 +172,7 @@ if result.get("form") == "file":
         if missing:
             raise ValueError("it holds no %s list" % ", ".join(missing))
         result.update(lists)
-    except (KeyError, TypeError, OSError, ValueError) as err:
+    except (AttributeError, KeyError, TypeError, OSError, ValueError) as err:
         print(SEP.join(("P", str(err).replace(SEP, " "))))
         raise SystemExit(0)
 for name in result["unreadable"]:

@@ -48,7 +48,9 @@ there are none.
 
 A spec lands there when its frontmatter fence is never closed — the condition
 both splices already detect implicitly by never finding their anchor, made
-explicit and reported instead of swallowed. A rewritten frontmatter that
+explicit and reported instead of swallowed. A tracked spec that is, or runs
+through, a symbolic link leaving the project lands there too, never opened or
+rewritten (`BE-INPUT-004`, 067's review). A rewritten frontmatter that
 would not parse as YAML is a different case: a rewrite that would leave
 unparseable YAML is refused and named in `unwritable`, per each primitive's
 compiled description (since 2026-10-26, 071's re-review of 067, after a YAML
@@ -78,8 +80,8 @@ is in each primitive's `--help`.
 
 - **A spec with no frontmatter at all** is not unparseable for this purpose:
   there is no block to close, nothing is derived from it, and reporting every
-  such file would bury the real signal. Only an *opened but unterminated*
-  block counts.
+  such file would bury the real signal. Of the specs it opens, only one with
+  an *opened but unterminated* block counts.
 - **`--staged` scoping applies unchanged.** The field describes what this run
   examined, not the corpus.
 

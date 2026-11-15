@@ -249,6 +249,14 @@ pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {
     let mut read_count: usize = 0;
     for spec in &tracked {
         let path = repo.join(spec);
+        if super::leaves_project(repo, spec) {
+            // As `derive-dependencies`: a tracked path whose link leaves the
+            // project is never opened, or rewritten into a regular file
+            // holding the outside content, and is named `unparseable` so it
+            // does not read as examined (`BE-INPUT-004`).
+            unparseable.push(spec.clone());
+            continue;
+        }
         if !path.is_file() {
             // Tracked in the index but not on disk — deleted without the
             // deletion being staged. Nothing can be derived from it, and it is
@@ -319,6 +327,13 @@ fn load_registry(repo: &Path) -> Result<BTreeMap<String, RegisteredService>> {
     let services = load_services(repo)?;
     let mut registry = BTreeMap::new();
     for (alias, entry) in services.0 {
+        // A registered service's checkout lies outside the project by
+        // contract (specs 030 and 040: a sibling directory), so its path is
+        // not contained (`BE-INPUT-004`). The value is a committed `[services]`
+        // entry an operator typed, as `validate_no_traversal` describes for
+        // committed config, and only the fixed name `.ductus/config.toml` is
+        // read from it, for its `specs-root`; a project base would defeat the
+        // feature.
         let candidate = Path::new(&entry.path);
         let resolved = if candidate.is_absolute() {
             candidate.to_path_buf()
@@ -1374,5 +1389,50 @@ mod tests {
             &serde_json::to_value(&bounded).unwrap(),
             &lists,
         );
+    }
+
+    /// A tracked spec that is a link leaving the project is never read, and
+    /// `--write` never replaces it with a regular file holding the outside
+    /// content plus a derived block (`BE-INPUT-004`). It is named
+    /// `unparseable`, so it does not read as examined: the file beyond it
+    /// carries a reference that would drift, so only the screen keeps it out
+    /// of `updated`.
+    #[cfg(unix)]
+    #[test]
+    fn a_tracked_spec_that_leaves_the_project_is_named_and_never_rewritten() {
+        use crate::primitives::git_fixture;
+        const LINK: &str = "[x](https://github.com/other/t/specs/003-user/spec.md)";
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        std::fs::create_dir_all(&project).unwrap();
+        let repository = git2::Repository::init(&project).unwrap();
+        git_fixture::write(&project.join("specs/001-a/spec.md"), &spec("nothing"));
+        let outside = tmp.path().join("outside.md");
+        let content = spec(LINK);
+        std::fs::write(&outside, &content).unwrap();
+        std::fs::create_dir_all(project.join("specs/002-b")).unwrap();
+        let link = project.join("specs/002-b/spec.md");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+        git_fixture::commit_all(&repository, "feat: specs");
+
+        let result = compute(
+            &DeriveReferencesArgs {
+                write: true,
+                staged: false,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.unparseable, vec!["specs/002-b/spec.md"]);
+        assert_eq!(result.examined, 1, "only the contained spec was read");
+        assert!(result.updated.is_empty(), "{:?}", result.updated);
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the link was replaced"
+        );
+        assert_eq!(std::fs::read_to_string(&outside).unwrap(), content);
     }
 }

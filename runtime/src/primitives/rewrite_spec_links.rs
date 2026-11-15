@@ -62,8 +62,8 @@
 //!   turn the link into a copy. The file it names is rewritten in its own
 //!   right when it is itself a referrer; the link is listed in `skipped`, so
 //!   a reference reached only through it is reported unexamined rather than
-//!   passed over, and `check-orphaned-references`, which reads through it,
-//!   reports that reference once the directory is gone.
+//!   passed over, and `check-orphaned-references`, which reads through a link that stays
+//!   inside the project, reports that reference once the directory is gone.
 //! - **Reached through a directory that resolves outside the project** —
 //!   `.githooks` linked to a shared hooks directory — it is listed in
 //!   `skipped` and not written: the write would land in a file this project
@@ -1728,7 +1728,6 @@ mod tests {
     #[test]
     fn the_orphan_check_reports_clean_where_it_reported_before() {
         use crate::primitives::check_orphaned_references;
-        use crate::schema::primitives::CheckOrphanedReferencesArgs;
 
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
@@ -1750,8 +1749,7 @@ mod tests {
             "# System\n\nSee `specs/1234.1-staged/spec.md`.\n",
         );
 
-        let before =
-            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let before = check_orphaned_references::compute(tmp.path()).unwrap();
         let mut flagged: Vec<&str> = before
             .findings
             .iter()
@@ -1773,8 +1771,7 @@ mod tests {
 
         run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
-        let after =
-            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let after = check_orphaned_references::compute(tmp.path()).unwrap();
         assert!(after.findings.is_empty(), "{:?}", after.findings);
         assert_eq!(after.examined.len(), 5, "{:?}", after.examined);
     }
@@ -2147,7 +2144,6 @@ mod tests {
     #[test]
     fn a_non_utf8_referrer_is_skipped_and_the_rest_is_still_rewritten() {
         use crate::primitives::check_orphaned_references;
-        use crate::schema::primitives::CheckOrphanedReferencesArgs;
 
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
@@ -2176,8 +2172,7 @@ mod tests {
         // `skipped`, not counted.
         assert_eq!(result.examined, 3);
 
-        let check =
-            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let check = check_orphaned_references::compute(tmp.path()).unwrap();
         let theirs: Vec<(&str, &str)> = check
             .skipped
             .iter()
@@ -2391,7 +2386,6 @@ mod tests {
     #[test]
     fn a_fragment_running_into_the_next_token_does_not_panic() {
         use crate::primitives::check_orphaned_references;
-        use crate::schema::primitives::CheckOrphanedReferencesArgs;
 
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
@@ -2410,8 +2404,7 @@ mod tests {
             "odd: specs/050-alpha/spec.md#specs/1234.1-staged/plan.md\n"
         );
 
-        let check =
-            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let check = check_orphaned_references::compute(tmp.path()).unwrap();
         let targets: Vec<&str> = check.findings.iter().map(|f| f.target.as_str()).collect();
         assert_eq!(targets, vec!["specs/1234.1-staged/plan.md"]);
     }
@@ -2478,7 +2471,6 @@ mod tests {
     #[test]
     fn a_non_utf8_system_md_is_skipped_and_the_rest_is_still_rewritten() {
         use crate::primitives::check_orphaned_references;
-        use crate::schema::primitives::CheckOrphanedReferencesArgs;
 
         let tmp = tempfile::tempdir().unwrap();
         seed_beside_system_md(tmp.path());
@@ -2506,8 +2498,7 @@ mod tests {
             latin1
         );
 
-        let check =
-            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let check = check_orphaned_references::compute(tmp.path()).unwrap();
         assert_eq!(check.skipped.len(), 1, "{:?}", check.skipped);
         assert_eq!(
             (

@@ -18,10 +18,10 @@ use serde_norway::Value as YamlValue;
 
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, FeatureForm, PrimitiveError, REVIEW_RECORD_FILE, Result, contained_path,
-    list_scenario_files, parse_feature_dir, read_text, split_frontmatter,
+    list_scenario_files, parse_feature_dir, read_text, rel_path, split_frontmatter,
 };
 use crate::schema::primitives::{
-    FrontmatterFinding, ValidateFrontmatterArgs, ValidateFrontmatterResult,
+    FrontmatterFinding, ListsForm, ValidateFrontmatterArgs, ValidateFrontmatterResult,
 };
 use crate::schema::severity::AnalyzeSeverity;
 use crate::schema::status::ALLOWED_STATUSES;
@@ -58,8 +58,57 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// beside the spec: one bad scenario never hides the rest of the run.
 /// [`crate::primitives::PrimitiveError::InvalidPath`] when `path` is absolute,
 /// climbs out with `..`, or leaves the project through a symlink
-/// ([`crate::primitives::contained_path`]).
+/// ([`crate::primitives::contained_path`]). [`bound`] adds those
+/// `bounded_lists::place` returns for a malformed read size or a list file it
+/// cannot write.
 pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontmatterResult> {
+    bound(repo, &args.path, compute(args, repo)?)
+}
+
+/// `findings` as the primitive's result: inline while it fits `[artifacts]
+/// read-size-bytes`, and past it in the file the result names with only its
+/// count inline (`bounded_lists::place`; `BE-PAYLOAD-001`). A `spec.md` run
+/// adds one finding per defective scenario, so the list grows with the
+/// scenarios under a spec.
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+fn bound(
+    repo: &Path,
+    path: &str,
+    findings: Vec<FrontmatterFinding>,
+) -> Result<ValidateFrontmatterResult> {
+    let lists = serde_json::json!({ "findings": findings });
+    let mut result = ValidateFrontmatterResult {
+        findings_count: findings.len(),
+        clean: findings.is_empty(),
+        findings: Some(findings),
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "validate-frontmatter",
+        super::bounded_lists::path_key(path),
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Every finding of one `validate-frontmatter` run, whole: what [`run`]
+/// returns before the list is bounded.
+///
+/// # Errors
+///
+/// As [`run`], but for the bound.
+fn compute(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<Vec<FrontmatterFinding>> {
     let path = contained_path(repo, &args.path)?;
     let Some(kind) = artifact_kind(&path) else {
         return Err(PrimitiveError::InvalidArgument {
@@ -88,8 +137,15 @@ pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontm
         Artifact::Spec => {
             validate_spec_row(&path, &mut findings)?;
             if let Some(dir) = path.parent() {
-                validate_record_artifacts(dir, &mut findings);
-                validate_scenarios_beside(dir, &mut findings);
+                // The feature directory as the project names it, with its
+                // separator (empty for the project root), for the links a name
+                // read from it could leave the project by.
+                let rel = match rel_path(dir, repo) {
+                    rel if rel.is_empty() => rel,
+                    rel => format!("{rel}/"),
+                };
+                validate_record_artifacts(repo, &rel, dir, &mut findings);
+                validate_scenarios_beside(repo, &rel, dir, &mut findings);
             }
         }
         Artifact::Record(file) => {
@@ -102,8 +158,7 @@ pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontm
             }
         }
     }
-    let clean = findings.is_empty();
-    Ok(ValidateFrontmatterResult { findings, clean })
+    Ok(findings)
 }
 
 /// The schema row a path is checked against.
@@ -279,46 +334,88 @@ fn scenario_row_problems(fm_text: &str) -> Vec<(&'static str, String)> {
 /// that cannot be read, has no frontmatter fence, or never closes one is
 /// reported, never raised, so the rest of the run still reports. No
 /// directory, or an empty one, adds nothing.
-fn validate_scenarios_beside(dir: &Path, findings: &mut Vec<FrontmatterFinding>) {
+///
+/// `rel` is `dir` as the project names it, with a trailing `/` (empty for the
+/// project root). The directory and each name read
+/// from it are committed text the code turns into a path, so a link leaving
+/// the project is reported and never listed or opened (`BE-INPUT-004`), and a
+/// directory that exists and cannot be listed is a finding, never an empty
+/// listing: with no scenario checked, a clean result would be a claim about
+/// files nobody read (`QUAL-CLAIM-001`).
+fn validate_scenarios_beside(
+    repo: &Path,
+    rel: &str,
+    dir: &Path,
+    findings: &mut Vec<FrontmatterFinding>,
+) {
     let scenarios = dir.join("scenarios");
+    let mut push = |field: String, message: String| {
+        findings.push(FrontmatterFinding {
+            severity: AnalyzeSeverity::HardFail,
+            field,
+            message,
+        });
+    };
+    if super::leaves_project(repo, &format!("{rel}scenarios")) {
+        push(
+            "scenarios/".into(),
+            "scenarios/ is a link that leaves the project: it was not listed, and no scenario was \
+             checked"
+                .into(),
+        );
+        return;
+    }
+    if let Err(source) = std::fs::read_dir(&scenarios)
+        && source.kind() != std::io::ErrorKind::NotFound
+    {
+        push(
+            "scenarios/".into(),
+            format!("scenarios/ could not be listed, so no scenario was checked: {source}"),
+        );
+        return;
+    }
     for name in list_scenario_files(&scenarios) {
         let field = format!("scenarios/{name}");
+        if super::leaves_project(repo, &format!("{rel}{field}")) {
+            push(
+                field.clone(),
+                format!("{field} is a link that leaves the project: it was not read"),
+            );
+            continue;
+        }
         let scenario = scenarios.join(&name);
-        let mut report = |message: String| {
-            findings.push(FrontmatterFinding {
-                severity: AnalyzeSeverity::HardFail,
-                field: field.clone(),
-                message,
-            });
-        };
-        let content = match read_text(&scenario) {
+        let content = match std::fs::read_to_string(&scenario) {
             Ok(content) => content,
-            Err(PrimitiveError::Io { source, .. }) => {
-                report(format!("{field} could not be read: {source}"));
-                continue;
-            }
-            Err(error) => {
-                report(format!("{field} could not be read: {error}"));
+            Err(source) => {
+                push(
+                    field.clone(),
+                    format!("{field} could not be read: {source}"),
+                );
                 continue;
             }
         };
         match split_frontmatter(&content, &scenario) {
             Ok((fm_text, _body)) => {
                 for (_, message) in scenario_row_problems(fm_text) {
-                    report(format!("{field}: {message}"));
+                    push(field.clone(), format!("{field}: {message}"));
                 }
             }
             Err(PrimitiveError::MissingFrontmatter { .. }) => {
-                report(format!(
-                    "{field} has no frontmatter (no leading `---` block)"
-                ));
+                push(
+                    field.clone(),
+                    format!("{field} has no frontmatter (no leading `---` block)"),
+                );
             }
             Err(PrimitiveError::UnclosedFrontmatter { .. }) => {
-                report(format!(
-                    "{field}'s frontmatter opens with `---` but never closes"
-                ));
+                push(
+                    field.clone(),
+                    format!("{field}'s frontmatter opens with `---` but never closes"),
+                );
             }
-            Err(error) => report(format!("{field}'s frontmatter could not be read: {error}")),
+            Err(error) => push(
+                field.clone(),
+                format!("{field}'s frontmatter could not be read: {error}"),
+            ),
         }
     }
 }
@@ -443,8 +540,24 @@ fn validate_no_residual_records(
 /// defect. What *is* a defect is an artifact that exists and carries no
 /// readable record: the gate cannot tell from it whether the run happened, so
 /// it is reported here rather than left for a later command to stumble on.
-fn validate_record_artifacts(dir: &Path, findings: &mut Vec<FrontmatterFinding>) {
+fn validate_record_artifacts(
+    repo: &Path,
+    rel: &str,
+    dir: &Path,
+    findings: &mut Vec<FrontmatterFinding>,
+) {
     for file in [REVIEW_RECORD_FILE, ANALYSIS_RECORD_FILE] {
+        if super::leaves_project(repo, &format!("{rel}{file}")) {
+            // Committed text names it, and the direct path is refused the
+            // same way (`BE-INPUT-004`): never opened, and reported rather
+            // than passed as an absent record.
+            findings.push(FrontmatterFinding {
+                severity: AnalyzeSeverity::HardFail,
+                field: file.into(),
+                message: format!("{file} is a link that leaves the project: it was not read"),
+            });
+            continue;
+        }
         validate_record(dir, file, findings);
     }
 }
@@ -496,6 +609,21 @@ mod tests {
 
     use super::*;
     use std::path::PathBuf;
+
+    /// One run's findings whole, as most tests read them; [`bound`] holds the
+    /// public result to the read size.
+    #[derive(Debug)]
+    struct Whole {
+        findings: Vec<FrontmatterFinding>,
+        clean: bool,
+    }
+
+    fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<Whole> {
+        compute(args, repo).map(|findings| Whole {
+            clean: findings.is_empty(),
+            findings,
+        })
+    }
 
     fn fixture_repo() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")
@@ -773,7 +901,7 @@ mod tests {
 
     /// Lay `files` (repo-relative path, content) out in a fresh tree and run
     /// the validator on `path` there.
-    fn run_in_tree(files: &[(&str, &str)], path: &str) -> Result<ValidateFrontmatterResult> {
+    fn run_in_tree(files: &[(&str, &str)], path: &str) -> Result<Whole> {
         let tmp = tempfile::tempdir().unwrap();
         for (rel, content) in files {
             let file = tmp.path().join(rel);
@@ -962,8 +1090,10 @@ mod tests {
         std::fs::write(tmp.path().join(SPEC), CLEAN_SPEC).unwrap();
         std::fs::write(&scenario, "---\nsection: \"B\"\n---\n").unwrap();
         std::fs::set_permissions(&scenario, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
         if std::fs::File::open(&scenario).is_ok() {
-            return; // running as root: permissions do not bind
+            std::fs::set_permissions(&scenario, std::fs::Permissions::from_mode(0o644)).unwrap();
+            panic!("permissions do not bind (running as root?): no file can be made unreadable");
         }
         let result = run(&ValidateFrontmatterArgs { path: SPEC.into() }, tmp.path());
         std::fs::set_permissions(&scenario, std::fs::Permissions::from_mode(0o644)).unwrap();
@@ -1326,5 +1456,158 @@ mod tests {
             findings[0].message,
             "dependency entry must be a string feature name"
         );
+    }
+
+    /// A project holding a clean spec, and a directory beside it holding the
+    /// files a link can point at.
+    #[cfg(unix)]
+    fn linked_tree() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(project.join("specs/001-x")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(project.join(SPEC), CLEAN_SPEC).unwrap();
+        (tmp, project, outside)
+    }
+
+    fn spec_run(project: &Path) -> Vec<FrontmatterFinding> {
+        compute(&ValidateFrontmatterArgs { path: SPEC.into() }, project).unwrap()
+    }
+
+    /// A `scenarios/` that is a link leaving the project is reported and never
+    /// listed: the well-formed file beyond it is not read, and the run does
+    /// not read as clean (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_scenarios_directory_that_leaves_the_project_is_not_listed() {
+        let (_tmp, project, outside) = linked_tree();
+        std::fs::write(outside.join("a.md"), "---\nsection: \"B\"\n---\n").unwrap();
+        std::os::unix::fs::symlink(&outside, project.join("specs/001-x/scenarios")).unwrap();
+        let findings = spec_run(&project);
+        let fields: Vec<&str> = findings.iter().map(|f| f.field.as_str()).collect();
+        assert_eq!(fields, ["scenarios/"], "{findings:?}");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::HardFail);
+        assert!(
+            findings[0].message.contains("leaves the project")
+                && findings[0].message.contains("no scenario was checked"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    /// A scenario that is a link leaving the project is a hard fail keyed by
+    /// its path and never opened: the file beyond it is well formed, so only
+    /// the screen makes the run report it.
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_that_leaves_the_project_is_not_read() {
+        let (_tmp, project, outside) = linked_tree();
+        std::fs::write(outside.join("evil.md"), "---\nsection: \"B\"\n---\n").unwrap();
+        let scenarios = project.join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::os::unix::fs::symlink(outside.join("evil.md"), scenarios.join("evil.md")).unwrap();
+        std::fs::write(scenarios.join("ok.md"), "---\nsection: \"B\"\n---\n").unwrap();
+        let findings = spec_run(&project);
+        let fields: Vec<&str> = findings.iter().map(|f| f.field.as_str()).collect();
+        assert_eq!(fields, ["scenarios/evil.md"], "{findings:?}");
+        assert!(
+            findings[0].message.contains("leaves the project"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    /// A `review.md` that is a link leaving the project is reported as one
+    /// and not read, as the direct path is refused: it is neither the absent
+    /// record nor a record read from beyond the project.
+    #[cfg(unix)]
+    #[test]
+    fn a_record_that_leaves_the_project_is_not_read() {
+        let (_tmp, project, outside) = linked_tree();
+        std::fs::write(outside.join("review.md"), "# no record\n").unwrap();
+        std::os::unix::fs::symlink(
+            outside.join("review.md"),
+            project.join("specs/001-x/review.md"),
+        )
+        .unwrap();
+        let findings = spec_run(&project);
+        let fields: Vec<&str> = findings.iter().map(|f| f.field.as_str()).collect();
+        assert_eq!(fields, ["review.md"], "{findings:?}");
+        assert!(
+            findings[0].message.contains("leaves the project"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    /// A `scenarios/` that exists and cannot be listed is a finding, never a
+    /// clean run over scenarios nobody read (`QUAL-CLAIM-001`).
+    #[cfg(unix)]
+    #[test]
+    fn an_unlistable_scenarios_directory_is_a_hard_fail() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, project, _outside) = linked_tree();
+        let scenarios = project.join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(scenarios.join("bad.md"), "no fence\n").unwrap();
+        std::fs::set_permissions(&scenarios, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let listable = std::fs::read_dir(&scenarios).is_ok();
+        let findings = spec_run(&project);
+        std::fs::set_permissions(&scenarios, std::fs::Permissions::from_mode(0o755)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
+        assert!(
+            !listable,
+            "permissions do not bind (running as root?): no directory can be made unlistable"
+        );
+        let fields: Vec<&str> = findings.iter().map(|f| f.field.as_str()).collect();
+        assert_eq!(fields, ["scenarios/"], "{findings:?}");
+        assert!(
+            findings[0].message.contains("could not be listed"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    /// The findings come back inline while they fit `[artifacts]
+    /// read-size-bytes`, and past it in the file the result names, whole,
+    /// with only their count inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn the_findings_move_to_a_file_past_the_read_size() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("specs/001-x/scenarios")).unwrap();
+        std::fs::write(tmp.path().join(SPEC), CLEAN_SPEC).unwrap();
+        for name in ["a", "b", "c"] {
+            std::fs::write(
+                tmp.path().join(format!("specs/001-x/scenarios/{name}.md")),
+                "---\nowner: x\n---\n",
+            )
+            .unwrap();
+        }
+        let args = ValidateFrontmatterArgs { path: SPEC.into() };
+        let inline = super::run(&args, tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.findings_count, 3);
+        assert_eq!(inline.findings.as_ref().unwrap().len(), 3);
+        assert!(!inline.clean);
+        assert_eq!(inline.lists_file, None);
+
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let file = super::run(&args, tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(file.findings, None);
+        assert_eq!(file.findings_count, 3);
+        assert!(!file.clean);
+        let named = file.lists_file.unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&named)).unwrap())
+                .unwrap();
+        assert_eq!(lists["findings"].as_array().unwrap().len(), 3);
+        assert_eq!(lists["findings"][0]["field"], "scenarios/a.md", "{lists}");
     }
 }

@@ -20,6 +20,8 @@
 #      finding and reports nothing as checked
 #   D. a result naming a list file that lacks a list is a `(precondition)`
 #      finding too
+#   E. a list file holding valid JSON that is not an object is a
+#      `(precondition)` finding, never a traceback
 #
 # Needs the release runtime (runtime/target/release/ductus), as
 # framework-checks.yml builds it before this step.
@@ -84,7 +86,7 @@ stub() {
 }
 
 # family SCRIPT LABEL EXPECT RESULTS_DIR STUB_FILE_MISSING STUB_FILE_LACKING
-# LACKING_CONTENT — the four cases for one family.
+# LACKING_CONTENT — the five cases for one family.
 family() {
   local script="$1" label="$2" expect="$3" results="$4" missing_stub="$5" lacking_stub="$6" lacking_body="$7"
   local dir inline_out
@@ -141,6 +143,19 @@ family() {
     pass "a list file missing a list is a precondition finding"
   else
     fail "$label list file lacking a list: exit $code, output: $out"
+  fi
+
+  echo "$label E. a list file that is not an object"
+  dir="$(make_tree "$script" array)"
+  mkdir -p "$dir/.ductus/results"
+  printf '[1, 2]\n' > "$dir/.ductus/results/partial.json"
+  stub "$dir" "$lacking_stub"
+  run_family "$script" "$dir"
+  if [ "$code" = 1 ] && printf '%s' "$out" | grep -q '(precondition)' \
+    && ! printf '%s' "$out" | grep -q 'Traceback'; then
+    pass "a list file holding an array is a precondition finding"
+  else
+    fail "$label list file holding an array: exit $code, output: $out"
   fi
 }
 

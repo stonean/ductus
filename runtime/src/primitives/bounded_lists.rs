@@ -18,7 +18,9 @@
 //! lists and a repeated call reuses its file. `{key}` is the feature for a
 //! per-feature primitive, [`ALL_SPECS`] for a corpus-wide one, `project-files`
 //! for a `check-artifact-size` call naming no feature (spec 063's data model),
-//! and otherwise what spec 080's data model's *Bounded results* gives. The
+//! and otherwise what spec 080's data model's *Bounded results* gives, or, for
+//! `resolve-anchor` (the scanned path's file stem) and `read-deprecation-labels`
+//! (`paths`), spec 067's data model. The
 //! results directory ignores itself, as `.ductus/review-rounds/` does, so no
 //! list file enters a scope.
 
@@ -250,6 +252,19 @@ mod tests {
             std::fs::write(tmp.path().join(".ductus/config.toml"), config).unwrap();
         }
         tmp
+    }
+
+    /// The segment a document path's list file sits under is its file stem
+    /// when that is plain, and `document` otherwise: a path's own characters
+    /// never name a directory (`BE-INPUT-004`, the first screen before
+    /// `write`'s containment check).
+    #[test]
+    fn a_document_path_is_keyed_by_its_stem_or_document() {
+        assert_eq!(path_key("specs/001-x/spec.md"), "spec");
+        assert_eq!(path_key("docs/my_file-2.md"), "my_file-2");
+        for odd in ["docs/my file.md", "docs/a$b.md", "docs/é.md", "", "..", "/"] {
+            assert_eq!(path_key(odd), "document", "{odd:?}");
+        }
     }
 
     /// A result at the read size stays inline, one byte past it goes to a

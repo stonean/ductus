@@ -34,14 +34,14 @@ The replacement is largely written already. `traverse_deps.rs` runs Tarjan's SCC
 
 Two primitives, kept distinct because the indexes are: `dependencies:` is a blocking graph and `references:` is explicitly never one ([030](../../030-cross-service-references/spec.md) keeps them "strictly distinct"), mirroring the existing `traverse-deps` / `resolve-references` split.
 
-- **`derive-dependencies`** — harvests sibling-spec inline links into frontmatter `dependencies:`, honoring the fenced-block, blockquote, and `## See also` exclusions, and runs the SCC cycle check across the full graph. Reuses `traverse_deps.rs`'s Tarjan implementation rather than standing up a second one.
+- **`derive-dependencies`** — harvests sibling-spec inline links into frontmatter `dependencies:`, honoring the fenced-block, blockquote, and `## See also` exclusions, and runs the SCC cycle check across the full graph. Runs its own iterative Tarjan over the derived graph (`find_cycles`), not `traverse_deps.rs`'s recursive one: a spec corpus is author-controlled, and a deep dependency chain would put stack depth at the mercy of the input (`f4c3bbd3`).
 - **`derive-references`** — harvests absolute cross-service spec URLs into frontmatter `references:`, resolving each repo against `[services]` with the root-aware matching the current script documents: a registered service with a reachable checkout is matched against that checkout's own `[paths] specs-root`, an unreachable or unregistered one against any single `[A-Za-z0-9_-]` segment. Absent-when-empty.
 
 Each is wired at the six Rust sites plus `framework/runtime-tools.txt` per AGENTS.md's primitive-wiring rule. Both preserve the contracts their callers already depend on: a `--staged` scoping mode, so a commit rewrites only the specs it touches, and a dry-run mode reporting drift as a non-zero exit, which `framework-checks.yml` and `/ductus:target`'s safety net both read.
 
 `.ductus/scripts/lib/specs-root.sh` is retired outright — `schema/paths.rs` is the resolution both primitives use.
 
-`framework/bootstrap/hooks/ductus-pre-commit` stays shell, because git invokes hooks as executables, but reduces to a wrapper: resolve the runtime through the `.ductus/bin/ductus` pointer, invoke the two primitives and `label-criteria`, re-stage the rewritten specs. Its staged-spec detection reads the configured spec root from the runtime rather than resolving it in bash.
+`framework/bootstrap/hooks/ductus-pre-commit` stays shell, because git invokes hooks as executables, but reduces to a wrapper: resolve the runtime through the `.ductus/bin/ductus` pointer, invoke the two primitives and `label-criteria`, re-stage the rewritten specs. Its staged-spec detection matches a staged path by shape, any single leading segment then a feature directory in either form `parse_feature_dir` accepts, so the hook holds no configured spec root to get wrong (specs 040, 051 and 059; `f4c3bbd3`); it also runs the corpus-link and project-file size checks after the writes.
 
 Retired alongside the scripts: `scripts/tests/test-gen-spec-deps.sh` (786 lines) and `scripts/tests/test-gen-cross-service-refs.sh` (568), replaced by Rust tests that run on every platform the runtime builds for — including Windows, where the bash suites never ran.
 

@@ -97,6 +97,24 @@ data = json.load(sys.stdin)
 rules_file = os.environ["RULES_FILE"]
 table_file = os.environ["TABLE_FILE"]
 
+# Past [artifacts] read-size-bytes the three lists are in the file `lists-file`
+# names (spec 080): read them there, or say the coverage was not computed. A
+# list the file lacks would read as none found, so it halts too.
+if data.get("form") == "file":
+    try:
+        with open(data["lists-file"], encoding="utf-8") as handle:
+            lists = json.load(handle)
+        keys = ("unclassified-entries", "unmatched-keys", "missing-sections")
+        missing = [key for key in keys if not isinstance(lists.get(key), list)]
+        if missing:
+            raise ValueError("it holds no %s list" % ", ".join(missing))
+        data.update(lists)
+    except (KeyError, TypeError, OSError, ValueError) as err:
+        print("\t".join(["(precondition)",
+                         "check-promotion-coverage moved its lists to a file that could not be read (%s), so the coverage was not computed" % err,
+                         "run `ductus check-promotion-coverage` and read the file its lists-file names"]))
+        raise SystemExit(0)
+
 for key in data.get("unmatched-keys", []):
     print("\t".join([
         table_file,

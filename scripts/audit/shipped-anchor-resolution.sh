@@ -177,7 +177,7 @@ for path in (line.strip() for line in sys.stdin):
             if missing:
                 raise ValueError("it holds no %s list" % ", ".join(missing))
             data.update(lists)
-        except (KeyError, TypeError, OSError, ValueError) as err:
+        except (AttributeError, KeyError, TypeError, OSError, ValueError) as err:
             print("precondition\t%s\t%s" % (path, str(err).replace("\t", " ")))
             continue
     try:

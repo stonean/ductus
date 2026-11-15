@@ -579,11 +579,14 @@ pub struct AnalyzeBlock {
     ///   status other than `in-progress` or `done`, one skip each),
     ///   `gitignored` (a criterion path the
     ///   repository's own ignore rules ignore, local state a fresh clone
-    ///   lacks). Correct, and nothing is owed.
+    ///   lacks), `anchor-target-unjudgeable` (a reference naming only
+    ///   documents absent from this tree). Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
     ///   `no-readable-state`, `outside-project` (a path family's candidate
     ///   whose resolution leaves the project, lexically or through a
-    ///   symbolic link, recorded and never probed), `artifact-unreadable`, and
+    ///   symbolic link, recorded and never probed), `artifact-unreadable`,
+    ///   `anchor-target-unreadable` (a reference whose named document exists
+    ///   but could not be read), and
     ///   the gaps no check
     ///   decided on: `referrer-unreadable` (a referrer
     ///   `check-orphaned-references` could not read),
@@ -2624,7 +2627,9 @@ pub struct DeriveDependenciesResult {
     /// Entries in `cycles`, in either form.
     pub cycles_count: usize,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them. Reported rather than repaired —
+    /// be derived from them, and tracked specs that are, or run through, a
+    /// symbolic link leaving the project, which are never opened or rewritten
+    /// (`BE-INPUT-004`). Reported rather than repaired —
     /// `validate-frontmatter` owns diagnosing a malformed block — and never an
     /// error: an unparseable spec is an unknown, not drift.
     ///
@@ -2639,7 +2644,9 @@ pub struct DeriveDependenciesResult {
     /// Specs whose derived `dependencies:` differs from the frontmatter's but
     /// whose rewrite would leave a block that does not parse as YAML, so it
     /// was not written: a value shape the splice's line rules do not cover, or
-    /// a block that was invalid before the rewrite. The index is stale and
+    /// a block that was invalid before the rewrite. A spec that links siblings
+    /// and carries no `dependencies:` key is here too, since the key's place
+    /// is the author's to choose. The index is stale and
     /// the primitive cannot fix it, so unlike `unparseable` this is a failure:
     /// the CLI exits non-zero, report-only and `write` alike, naming each spec
     /// on stderr, and the key is edited by hand. Absent when empty, and in the
@@ -2736,7 +2743,9 @@ pub struct DeriveReferencesResult {
     /// identical in `updated` alone. One that cannot be read halts the run.
     pub registered_services: u32,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them. Reported rather than repaired —
+    /// be derived from them, and tracked specs that are, or run through, a
+    /// symbolic link leaving the project, which are never opened or rewritten
+    /// (`BE-INPUT-004`). Reported rather than repaired —
     /// `validate-frontmatter` owns diagnosing a malformed block — and never an
     /// error: an unparseable spec is an unknown, not drift.
     ///
@@ -2899,10 +2908,21 @@ pub struct ValidateFrontmatterArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ValidateFrontmatterResult {
-    /// All findings collected (empty when `clean`).
-    pub findings: Vec<FrontmatterFinding>,
+    /// All findings collected (empty when `clean`). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<FrontmatterFinding>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
     /// Whether the frontmatter is clean.
     pub clean: bool,
+    /// Where `findings` is: in this result, or past the read size in the file
+    /// `lists-file` names (`BE-PAYLOAD-001`; spec 067).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding `findings` whole, from the project
+    /// root: a JSON object with its key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- resolve-anchor ----------------------------------------------------------
@@ -3462,25 +3482,41 @@ pub struct RuleCitation {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckRuleIdsResult {
-    /// All citations parsed from the file.
-    pub citations: Vec<RuleCitation>,
-    /// Cited rule IDs that don't exist.
-    pub missing: Vec<String>,
-    /// Cited rule IDs that exist but are deprecated.
-    pub deprecated: Vec<String>,
+    /// All citations parsed from the file. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citations: Option<Vec<RuleCitation>>,
+    /// Entries in `citations`, in either form.
+    pub citations_count: usize,
+    /// Cited rule IDs that don't exist. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing: Option<Vec<String>>,
+    /// Entries in `missing`, in either form.
+    pub missing_count: usize,
+    /// Cited rule IDs that exist but are deprecated. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deprecated: Option<Vec<String>>,
+    /// Entries in `deprecated`, in either form.
+    pub deprecated_count: usize,
     /// Cited rule IDs that no loaded rule file defines and the citing spec
     /// lists in its `retired-rules:` frontmatter, so they pass as a record of
     /// the rule's retirement. Not in `missing`; a listed ID a loaded file
-    /// still defines is `found`, never here. Omitted when empty.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub retired: Vec<String>,
+    /// still defines is `found`, never here. Omitted when empty, and in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retired: Option<Vec<String>>,
+    /// Entries in `retired`, in either form. Omitted at zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub retired_count: usize,
     /// Cited rule IDs no file given defines that the framework ships, read
     /// from an index of the shipped rule IDs at the runtime's version: known,
     /// not installed. Not in `missing`, and no rule text was available to
     /// judge them against, so `/{project}:analyze` records each unexamined.
-    /// Omitted when empty.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub not_installed: Vec<String>,
+    /// Omitted when empty, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_installed: Option<Vec<String>>,
+    /// Entries in `not-installed`, in either form. Omitted at zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub not_installed_count: usize,
     /// How many rule files were read to build the known-ID set — the
     /// denominator `missing` is asserted against.
     ///
@@ -3500,6 +3536,14 @@ pub struct CheckRuleIdsResult {
     /// `derive-dependencies`, `check-corpus-links` and
     /// `check-orphaned-references` all carry `examined`; this one did not.
     pub examined: usize,
+    /// Where the lists are: in this result, or past the read size in the file
+    /// `lists-file` names (`BE-PAYLOAD-001`; spec 067).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with their keys, each list present, empty or not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-departures --------------------------------------------------------
@@ -3752,21 +3796,41 @@ pub struct CheckPromotionCoverageResult {
     pub unclassified: usize,
     /// The lead phrase of every entry in neither set, so the result is a
     /// worklist rather than a number.
-    pub unclassified_entries: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unclassified_entries: Option<Vec<String>>,
+    /// Entries in `unclassified-entries`, in either form.
+    pub unclassified_entries_count: usize,
     /// Table rows read from `table-file`.
     pub table_rows: usize,
     /// Table keys matching no entry. **Load-bearing, not a diagnostic**: this
     /// is how a *reworded* entry surfaces. A lead-phrase key degrades loudly
     /// to not matching at all, where a positional identifier would have
     /// degraded silently to matching whichever entry later occupied its slot.
-    pub unmatched_keys: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unmatched_keys: Option<Vec<String>>,
+    /// Entries in `unmatched-keys`, in either form.
+    pub unmatched_keys_count: usize,
     /// Named sections that do not occur in `rules-file`. Reported rather than
     /// contributing zero bullets: a denominator that quietly shrinks when a
     /// section is renamed moves coverage in the flattering direction, which is
-    /// the failure this whole measurement exists to prevent.
-    pub missing_sections: Vec<String>,
+    /// the failure this whole measurement exists to prevent. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing_sections: Option<Vec<String>>,
+    /// Entries in `missing-sections`, in either form.
+    pub missing_sections_count: usize,
     /// Whether a classification table was available.
     pub table_state: PromotionTableState,
+    /// Where the three lists are: in this result, or past the read size in
+    /// the file `lists-file` names (`BE-PAYLOAD-001`; spec 067).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- run-generator -----------------------------------------------------------
@@ -6971,13 +7035,12 @@ pub struct SkippedTarget {
 pub struct CheckArtifactsResult {
     /// Feature directory name echoed from the args.
     pub feature: String,
-    /// Spec frontmatter `status` the tier classification ran against.
+    /// Spec frontmatter `status` the tier classification ran against, or
+    /// `unreadable` when `spec.md` is a link that leaves the project, which
+    /// ends the run with only the `outward-link` skip.
     pub status: String,
-    /// Findings across the ten families, in the order the primitive emits
-    /// them (completeness → task consistency → scenario consistency → review
-    /// drift → disposition drift → scenario open questions → link-adjacent
-    /// drift → criterion path existence → body path existence → criterion
-    /// labels). Absent in the file form.
+    /// Findings across the families the compiled description lists, each
+    /// carrying its family name. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub findings: Option<Vec<ArtifactFinding>>,
     /// Entries in `findings`, in either form.
@@ -6990,12 +7053,11 @@ pub struct CheckArtifactsResult {
     /// `clean` with an empty `skipped` is verified-clean, `clean` with a
     /// non-empty `skipped` is partially examined.
     pub clean: bool,
-    /// Targets no family could examine. The three families that read
-    /// paths or targets an artifact names record the ones they could not, or
-    /// by construction did not, look at, and `scenario-consistency` records
-    /// each unmapped scenario as `no-readable-state` when the `tasks.md`
-    /// history cannot be consulted. The other families' subjects are fully
-    /// examinable by construction. Absent in the file form.
+    /// Targets no family could examine. Every family records here a target
+    /// it could not examine, with a reason from the closed set
+    /// [`SkippedTarget`] names; a link in the feature directory that leaves
+    /// the project is recorded under the family `outward-link`. Absent in the
+    /// file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skipped: Option<Vec<SkippedTarget>>,
     /// Entries in `skipped`, in either form.
@@ -7448,17 +7510,27 @@ pub struct OrphanedReferenceSkip {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckOrphanedReferencesResult {
-    /// Unresolved references, in referrer then line order.
-    #[serde(default)]
-    pub findings: Vec<OrphanedReference>,
+    /// Unresolved references, in referrer then line order. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<OrphanedReference>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
     /// Referrers examined, repo-relative — the subject the counts describe.
     /// A caller that reports "clean" quantifies it from this rather than
-    /// asserting a property of files nobody enumerated.
-    #[serde(default)]
-    pub examined: Vec<String>,
-    /// Referrers that could not be read.
-    #[serde(default)]
-    pub skipped: Vec<OrphanedReferenceSkip>,
+    /// asserting a property of files nobody enumerated. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub examined: Option<Vec<String>>,
+    /// Entries in `examined`, in either form.
+    pub examined_count: usize,
+    /// Referrers that could not be read, and referrers or referenced paths
+    /// that are or run through a symbolic link leaving the project (never
+    /// read or probed). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<OrphanedReferenceSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// The path prefixes a reference had to carry to be examined at all —
     /// current *and* historical framework-managed roots.
     ///
@@ -7475,6 +7547,15 @@ pub struct CheckOrphanedReferencesResult {
     /// carry a `migration`; `watermark` when it was not, and `last-applied`
     /// is the only migration context available.
     pub attribution: String,
+    /// Where `findings`, `examined` and `skipped` are: in this result, or past
+    /// the read size in the file `lists-file` names (`BE-PAYLOAD-001`; spec
+    /// 067).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the three lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
     /// `[migrations].last_applied` from the active config file — the adopter's
     /// migration watermark. Empty when no `[migrations]` section exists, which
     /// means *no migration has been applied*, not *a migration named ""*.
@@ -7795,26 +7876,41 @@ pub struct CommandFlagSkip {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckCommandFlagsResult {
-    /// Unsurfaced flags, in command then table order.
-    #[serde(default)]
-    pub findings: Vec<CommandFlagFinding>,
-    /// Command sources read, repo-relative and sorted.
-    #[serde(default)]
-    pub examined: Vec<String>,
+    /// Unsurfaced flags, in command then table order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<CommandFlagFinding>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
+    /// Command sources read, repo-relative and sorted. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub examined: Option<Vec<String>>,
+    /// Entries in `examined`, in either form.
+    pub examined_count: usize,
     /// The subset of `examined` that carries a Flags table — the actual
     /// subject. A clean result quantifies itself from this, not from
     /// `examined`, since a command with no table cannot produce a finding.
-    #[serde(default)]
-    pub with_flags_table: Vec<String>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub with_flags_table: Option<Vec<String>>,
+    /// Entries in `with-flags-table`, in either form.
+    pub with_flags_table_count: usize,
     /// The subset of `examined` that declares an `argument-hint:` — the
     /// subject of the token direction. A command with no hint has no
     /// interface to be unreachable, so it cannot produce that finding; a
     /// clean result quantifies the direction from this, not from `examined`.
-    #[serde(default)]
-    pub with_argument_hint: Vec<String>,
-    /// Command sources that could not be read.
-    #[serde(default)]
-    pub skipped: Vec<CommandFlagSkip>,
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub with_argument_hint: Option<Vec<String>>,
+    /// Entries in `with-argument-hint`, in either form.
+    pub with_argument_hint_count: usize,
+    /// Command sources that could not be read, and a command directory or
+    /// source that is a link leaving the project (never listed or read).
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<CommandFlagSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// Directory the run enumerated, so a caller can tell a genuinely
     /// table-free corpus from a wrong working directory.
     pub commands_dir: String,
@@ -7824,6 +7920,14 @@ pub struct CheckCommandFlagsResult {
     /// common case stays quiet, so its silence means "examined and current".
     #[serde(default)]
     pub guidance: String,
+    /// Where the five lists are: in this result, or past the read size in the
+    /// file `lists-file` names (`BE-PAYLOAD-001`; spec 067).
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project
+    /// root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-unfolded-specs ------------------------------------------------------
@@ -9106,14 +9210,29 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = ValidateFrontmatterResult {
-            findings: vec![FrontmatterFinding {
+            findings: Some(vec![FrontmatterFinding {
                 severity: crate::schema::severity::AnalyzeSeverity::Blocking,
                 field: "status".into(),
                 message: "unknown status".into(),
-            }],
+            }]),
+            findings_count: 1,
             clean: false,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         assert_eq!(round_trip(&result), result);
+        // The file form drops the list and names the file; its count stays.
+        let moved = ValidateFrontmatterResult {
+            findings: None,
+            lists_file: Some(".ductus/results/validate-frontmatter/spec/h.json".into()),
+            form: ListsForm::File,
+            ..result
+        };
+        let value: serde_json::Value = serde_json::to_value(&moved).unwrap();
+        assert!(value.get("findings").is_none(), "{value}");
+        assert_eq!(value["findings-count"], 1);
+        assert_eq!(value["form"], "file");
+        assert_eq!(round_trip(&moved), moved);
     }
 
     #[test]
@@ -9217,23 +9336,57 @@ mod tests {
         );
         assert_eq!(round_trip(&args), args);
         let result = CheckRuleIdsResult {
-            citations: vec![RuleCitation {
+            citations: Some(vec![RuleCitation {
                 rule_id: "SEC-AUTH-001".into(),
                 found: true,
                 deprecated: false,
                 retired: false,
                 not_installed: false,
-            }],
-            missing: vec![],
-            deprecated: vec![],
-            retired: vec![],
-            not_installed: vec![],
+            }]),
+            citations_count: 1,
+            missing: Some(vec![]),
+            missing_count: 0,
+            deprecated: Some(vec![]),
+            deprecated_count: 0,
+            retired: None,
+            retired_count: 0,
+            not_installed: None,
+            not_installed_count: 0,
             examined: 1,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["citations"][0]["rule-id"], "SEC-AUTH-001");
         assert_eq!(value["examined"], 1, "the denominator is serialized");
+        assert_eq!(value["citations-count"], 1);
+        // Omitted when empty: the retired state and its count, and the flag
+        // on a citation that is not one.
+        assert!(value.get("retired").is_none(), "{value}");
+        assert!(value.get("retired-count").is_none(), "{value}");
+        assert!(value["citations"][0].get("retired").is_none(), "{value}");
         assert_eq!(round_trip(&result), result);
+
+        // The retired state is in the JSON the host reads: the citation's
+        // flag, the list and its count, so a serde attribute that drops one
+        // fails here (spec 067 scenario `a-record-cites-a-removed-rule`).
+        let retired = CheckRuleIdsResult {
+            citations: Some(vec![RuleCitation {
+                rule_id: "BE-OLD-005".into(),
+                found: false,
+                deprecated: false,
+                retired: true,
+                not_installed: false,
+            }]),
+            retired: Some(vec!["BE-OLD-005".into()]),
+            retired_count: 1,
+            ..result
+        };
+        let value: serde_json::Value = serde_json::to_value(&retired).unwrap();
+        assert_eq!(value["citations"][0]["retired"], true);
+        assert_eq!(value["retired"][0], "BE-OLD-005");
+        assert_eq!(value["retired-count"], 1);
+        assert_eq!(round_trip(&retired), retired);
     }
 
     #[test]

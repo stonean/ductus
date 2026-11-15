@@ -147,6 +147,17 @@ pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> 
     let mut files = Vec::new();
     let mut walk_skips = Vec::new();
     let listed = match args.scope {
+        // A spec root that is, or lies under, a link out of the base is not
+        // listed either, before its entries are (`BE-INPUT-004`): the names
+        // it holds are the neighbour's. One skip names the root, so the scan
+        // reads as partially examined, never as a corpus with nothing broken.
+        LinkScope::SpecCorpus if containment.leaves(&specs_dir) => {
+            walk_skips.push(CorpusLinkSkip {
+                path: specs_root.clone(),
+                reason: OUTWARD_LINK.into(),
+            });
+            true
+        }
         LinkScope::SpecCorpus => collect_markdown(
             &specs_dir,
             (repo, &containment),
@@ -333,16 +344,25 @@ fn collect_markdown(
     };
     for entry in entries.filter_map(std::result::Result::ok) {
         let path = entry.path();
-        if path.is_dir() {
-            // A directory that is, or lies under, a link out of the base is
-            // not listed: its files are the same refusal, recorded once.
-            if containment.leaves(&path) {
+        // A link out of the base is judged before it is followed, so the type
+        // of what it points at is not probed either (`BE-INPUT-004`): a
+        // markdown file's skip is recorded where it is read, and anything
+        // else, a directory not listed or a file of another kind, once here.
+        // `DirEntry::file_type` does not follow a link, and nothing under a
+        // directory the walk reached can leave the base but a link.
+        let linked = entry.file_type().is_ok_and(|kind| kind.is_symlink());
+        if linked && containment.leaves(&path) {
+            if path.extension().is_some_and(|ext| ext == "md") {
+                out.push(path);
+            } else {
                 skipped.push(CorpusLinkSkip {
                     path: rel_path(&path, repo),
                     reason: OUTWARD_LINK.into(),
                 });
-                continue;
             }
+            continue;
+        }
+        if path.is_dir() {
             if depth_budget == 0 {
                 skipped.push(CorpusLinkSkip {
                     path: rel_path(&path, repo),
@@ -1386,6 +1406,33 @@ mod tests {
             }]
         );
         assert_eq!(result.examined, vec!["specs/042-demo/spec.md".to_string()]);
+        assert!(result.broken.is_empty(), "{:?}", result.broken);
+    }
+
+    /// A spec root that is itself a link out of the project is not listed, so
+    /// the names it holds are not recorded: one skip names the root, and the
+    /// scan reads as partially examined, never as a corpus with nothing broken.
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_that_is_a_link_out_of_the_project_is_skipped_and_not_listed() {
+        let (outer, project) = project_beside_a_file();
+        write(
+            outer.path(),
+            "neighbour/001-a/spec.md",
+            "# A\n\n[gone](./nowhere.md)\n",
+        );
+        write(outer.path(), "neighbour/index.md", "# Index\n");
+        std::os::unix::fs::symlink(outer.path().join("neighbour"), project.join("specs")).unwrap();
+        let result = run_at(&project);
+        assert_eq!(
+            result.skipped,
+            vec![CorpusLinkSkip {
+                path: "specs".into(),
+                reason: "outward-link".into(),
+            }],
+            "no entry of the linked root is named"
+        );
+        assert!(result.examined.is_empty(), "{:?}", result.examined);
         assert!(result.broken.is_empty(), "{:?}", result.broken);
     }
 

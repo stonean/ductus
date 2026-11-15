@@ -317,6 +317,16 @@ its version and date.
 
 ### Changed
 
+- **067's primitives contain every path drawn from committed text, and five results are bounded (spec 067's review, `BE-INPUT-004`, `BE-PAYLOAD-001`).** A path a primitive builds from text the repository holds is refused before it is probed, listed or opened, as a path argument is, and reported as the primitive reports an unreadable one, never read:
+  - `derive-dependencies` and `derive-references` name a tracked spec that is or runs through a link leaving the project in `unparseable`, and `--write` never replaces it with a regular file holding the outside content. `derive-references` still reads a registered service's `.ductus/config.toml` outside the project, by contract (specs 030 and 040).
+  - `validate-frontmatter` reports a `scenarios/`, scenario, `review.md` or `analysis.md` that leaves the project as a hard-fail finding, and a `scenarios/` that exists and cannot be listed as one saying no scenario was checked, where it read as `clean: true`.
+  - `traverse-deps` treats a `dependencies:` name that is absolute, holds a `..` segment or runs through a link leaving the project as a missing dependency and a cycle-walk sink.
+  - `check-corpus-links` lists no spec root that leaves the project, and probes no linked directory's target type before judging the link; `check-unfolded-specs` halts as an invalid path on a spec root or branch-scoped `spec.md` that leaves it; `check-departures` contains each listed rule file; `check-orphaned-references` skips a referrer, or a managed path one names, that leaves the project; `check-command-flags` skips a command directory or source that does.
+  - A spec that links siblings and has no `dependencies:` key is `unwritable` in `derive-dependencies`, not in sync.
+  - `validate-frontmatter`'s `findings`, `check-rule-ids`' five lists, `check-orphaned-references`' three, `check-command-flags`' five and `check-promotion-coverage`' three move to the file `lists-file` names past `[artifacts] read-size-bytes`, each list absent and its `-count` inline (`findings-count`, `citations-count`, `missing-count`, `deprecated-count`, `retired-count` and `not-installed-count` absent at zero, `examined-count`, `skipped-count`, `with-flags-table-count`, `with-argument-hint-count`, `unclassified-entries-count`, `unmatched-keys-count`, `missing-sections-count`), and `form` says which. `/analyze` steps 2, 5 and 9 and Families 30 and 38 read the lists from that file, as the bootstrap's Pre-run Migrations step 8 now reads `check-orphaned-references`' and `/analyze` step 3 reads `traverse-deps`', and `ductus exec` restores them from it.
+  - `DERIVE_REFERENCES`' description states the report-only run and the CLI's exit on drift.
+- **`check-artifacts` reads what its placeholder, plan-reference and completeness checks name (spec 067's review).** A criterion is a placeholder only when it is wholly one bracketed span, so `<b>bold</b> output … the <i>` is a criterion; a branch-scoped spec's plan is matched by its `{identifier}.{n}`; a `+` or `N)` list item lists a file; a `plan.md` or `tasks.md` that is a link out of the project is no missing artifact, and a `scenarios/` link out is never listed. `check-corpus-links`' stderr line for a skipped file says `skipped:`.
+
 - **A `ductus exec` extension request is bounded whole (spec 022 tasks 36
   and 37; spec 060's and spec 020's analyses, `BE-PAYLOAD-001`).**
   `writeCode`, `assessSpecQuality` (one request per assessed rule, up to 192
@@ -424,6 +434,12 @@ its version and date.
   `unknown-keys-count`, and past the bound `unknown-keys` moves to the lists
   file under `config`. `/{project}:status` renders from the model and is
   unaffected.
+
+- **`derive-dependencies` and `derive-references` name a rewrite they refuse, and exit non-zero on it (spec 067, tasks 14 and 25).** A rewrite whose result would not parse as YAML is never written. Each primitive lists such a spec in the new `unwritable`, absent when empty, with `unwritable-count` beside it, absent at zero, whether or not `staged` holds the spec. Both CLIs exit non-zero on a non-empty `unwritable`, report-only and with `--write` alike, and name each spec on stderr, so the shipped pre-commit hook stops the commit, an unstaged spec included, where before both exited 0 over a stale index. `derive-dependencies` moves `unwritable` to the file `lists-file` names past the read size, its count inline, and the exec `/analyze` tally counts a non-empty `unwritable` and a non-empty `unparseable` as one advisory finding each.
+
+- **`validate-frontmatter` chooses its schema row by the path it is given (spec 067 task 18).** A `.md` file under a `scenarios/` directory takes the scenario row (`section`, or the legacy `spec-ref`, a non-empty string; no `status` or `dependencies`), a `spec.md` the spec row and its run also checks every scenario beside it, each finding keyed by its `scenarios/{file}` path and an unreadable or fenceless scenario a hard fail, and a `review.md` or `analysis.md` that record's checks. Any other path (a `plan.md`, a `tasks.md`) is now refused with an error naming the four kinds, where it was checked against the spec row, and a `spec.md` whose frontmatter is not valid YAML no longer ends the run, so its records and scenarios are still checked.
+
+- **`plan-consistency` names a `plan.md` it cannot read (spec 067 task 31).** A plan the family could not read was passed over silently; it is now an `artifact-unreadable` skip below `done` and a blocking finding at `done`, as every family records an artifact it could not read.
 
 - **`derive-references` bounds its result (spec 067, task 32).** Its six
   spec lists grow with the corpus, since a service rename drifts every
@@ -604,6 +620,14 @@ its version and date.
   never gating. An exec walk records the host judgment unexamined under the
   new reason `decision-reasons-not-checked`, in the *could not be read*
   class, once per run like step 15's other two (spec 067).
+- **BREAKING: `check-artifacts`' two path families examine a spec at
+  `in-progress`, and say so when they do not.** `criterion-path-existence` and
+  `body-path-existence` run at `in-progress` as at `done`, so the analysis the
+  pre-`done` gate reads has run them; at any other status each records one
+  `status-gated` skip naming the spec's `spec.md`. A criterion path the
+  repository's ignore rules ignore is recorded `gitignored`, no longer a
+  finding. The closed reason set gains `status-gated` and `gitignored`, both
+  excluded by construction (spec 067 task 17).
 - **A path citation that leaves the project is skipped as `outside-project`,
   no longer `root-absent`.** The two path families resolve a candidate
   lexically and record one that leaves the project without probing it, as
@@ -659,10 +683,11 @@ its version and date.
   refused. The set is compiled in and a test pins it to
   `framework/bootstrap/ductus.md` §Placeholder Substitution.
 - **`check-artifacts`' two path families never probe outside the project.**
-  A criterion or body-line candidate is resolved lexically before any stat, and
-  one whose `..` leaves the project is recorded as a `root-absent` skip (the
-  body family used to drop a leading-`..` one silently and probe an interior
-  one). The reason set is unchanged.
+  A criterion or body-line candidate is resolved lexically before any stat;
+  one whose `..` leaves the project is recorded as an `outside-project` skip,
+  as is one whose path runs through a link that resolves outside it (the body
+  family used to drop a leading-`..` candidate silently and probe an interior
+  one).
 
 - **BREAKING: `append-task`'s `task-number` is a string, and a suffixed task
   number is a task.** The result field was an integer and is now a string,

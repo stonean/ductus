@@ -28,7 +28,7 @@ MUTATIONS = [
     (
         'M2 scanned_artifacts lists a fixed-name file linked outside the project',
         'src/primitives/check_artifacts.rs',
-        '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| path.is_file() && !outward.covers(path))',
+        '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| !outward.covers(path) && path.is_file())',
         '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| path.is_file())',
         'check_artifacts::tests::a_linked_body_is_read_by_no_family',
     ),
@@ -42,7 +42,7 @@ MUTATIONS = [
     (
         'M4 body_artifacts lists a fixed-name file linked outside the project',
         'src/primitives/check_artifacts.rs',
-        '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| path.is_file() && !outward.covers(path))',
+        '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| !outward.covers(path) && path.is_file())',
         '    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]\n        .iter()\n        .map(|name| feature_dir.join(name))\n        .filter(|path| path.is_file())',
         'check_artifacts::tests::a_linked_body_is_read_by_no_family',
     ),

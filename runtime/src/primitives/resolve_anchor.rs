@@ -205,6 +205,12 @@ pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
     let mut tally = Tally::default();
     for (line_no, line) in content.lines().enumerate() {
         let line_no = u32::try_from(line_no + 1).unwrap_or(u32::MAX);
+        // A line with no `§` yields no reference in either loop below
+        // (`span_citation` needs exactly one), so a document it names is not
+        // opened for it.
+        if !line.contains('§') {
+            continue;
+        }
         let code_spans = inline_code_spans(line);
         // Every document the line names other than the markers file, each
         // resolved once: what a reference on this line can be judged against.
@@ -1201,10 +1207,10 @@ mod tests {
     }
 
     /// A markers file below the root is cited from a sibling directory by a
-    /// `../` path, which never contains the repo-relative `markers-path`:
-    /// only its basename identifies the line as citing the markers file, so
-    /// the reference is judged against the markers rather than excused as
-    /// qualified.
+    /// `../` path, which never equals the repo-relative `markers-path` as
+    /// written: the token resolves, from the citing file's directory, to the
+    /// markers file, so the reference is judged against the markers rather
+    /// than excused as qualified.
     #[test]
     fn a_line_citing_a_nested_markers_file_by_a_relative_path_is_not_qualified() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1825,24 +1831,15 @@ mod tests {
     }
 
     /// A document that exists and cannot be read is unexamined, could not be
-    /// read.
-    #[cfg(unix)]
+    /// read. The document is not UTF-8, which no user can read as text, so the
+    /// test holds whoever runs it (a mode-0 file reads for root and passed
+    /// silently).
     #[test]
     fn a_reference_naming_an_unreadable_document_is_unexamined_as_unreadable() {
-        use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
-        std::fs::write(root.join("locked.md"), "## Install\n").unwrap();
-        std::fs::set_permissions(
-            root.join("locked.md"),
-            std::fs::Permissions::from_mode(0o000),
-        )
-        .unwrap();
-        if std::fs::read_to_string(root.join("locked.md")).is_ok() {
-            // Running as root: permissions do not bind, so nothing to test.
-            return;
-        }
+        std::fs::write(root.join("locked.md"), [0xff, 0xfe, b'\n']).unwrap();
         std::fs::write(root.join("citing.md"), "See `locked.md` §Install.\n").unwrap();
         let r = compute(
             &ResolveAnchorArgs {
@@ -1855,6 +1852,33 @@ mod tests {
         assert_eq!(r.references[0].unjudged.as_deref(), Some(UNREADABLE));
         assert_eq!(r.anchor_target_unreadable, 1);
         assert_eq!(r.unresolved, [] as [String; 0]);
+    }
+
+    /// A `[constitutions]` registry that does not parse is an error, never an
+    /// empty registry: the registered shared constitutions are what a
+    /// reference is judged against, so a run that fell back to none would
+    /// report every shared-constitution reference unjudged as if it had read
+    /// the registry.
+    #[test]
+    fn a_registry_that_does_not_parse_is_an_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".ductus")).unwrap();
+        std::fs::write(
+            root.join(".ductus/config.toml"),
+            "[constitutions.x\nbroken\n",
+        )
+        .unwrap();
+        std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(root.join("citing.md"), "See §known.\n").unwrap();
+        let result = compute(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("markers.md".into()),
+            },
+            root,
+        );
+        assert!(result.is_err(), "{result:?}");
     }
 
     /// Decision (10a): a file that is not markdown holds no section, so a

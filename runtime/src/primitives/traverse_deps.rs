@@ -112,7 +112,10 @@ pub(crate) fn compute(args: &TraverseDepsArgs, repo: &Path) -> Result<Traversed>
     for dep_name in &frontmatter.dependencies {
         let dep_dir = specs_dir.join(dep_name);
         let dep_spec = dep_dir.join("spec.md");
-        let exists = dep_dir.is_dir() && dep_spec.is_file();
+        // The name is frontmatter text the code turns into a path: one
+        // [`refused`] names is an edge to nothing, never probed or opened
+        // (`BE-INPUT-004`), so the missing-dependency finding still fires.
+        let exists = !refused(repo, &root, dep_name) && dep_dir.is_dir() && dep_spec.is_file();
         // Shared READ-only status reader; any unreadability collapses to
         // the empty string, which is never in the compatible set.
         let status = if exists {
@@ -135,7 +138,7 @@ pub(crate) fn compute(args: &TraverseDepsArgs, repo: &Path) -> Result<Traversed>
         });
     }
 
-    let cycles = detect_cycles(&specs_dir, &args.feature);
+    let cycles = detect_cycles(repo, &root, &args.feature);
     if !cycles.is_empty() {
         overall = false;
     }
@@ -169,12 +172,12 @@ fn read_dependencies(spec_path: &Path) -> Vec<String> {
 /// Walk the reachable dep subgraph from `start`, then run Tarjan's SCC
 /// over the resulting directed graph. Returns one entry per non-trivial
 /// SCC: size ≥ 2 (multi-node cycle) or size 1 with a self-edge.
-fn detect_cycles(specs_dir: &Path, start: &str) -> Vec<Vec<String>> {
+fn detect_cycles(repo: &Path, root: &str, start: &str) -> Vec<Vec<String>> {
     let mut order: Vec<String> = Vec::new();
     let mut index_of: HashMap<String, usize> = HashMap::new();
     let mut adj: Vec<Vec<usize>> = Vec::new();
 
-    visit(start, specs_dir, &mut order, &mut index_of, &mut adj);
+    visit(start, repo, root, &mut order, &mut index_of, &mut adj);
 
     let mut tarjan = Tarjan::new(&adj);
     tarjan.run();
@@ -193,9 +196,22 @@ fn detect_cycles(specs_dir: &Path, start: &str) -> Vec<Vec<String>> {
     cycles
 }
 
+/// Whether a `dependencies:` name is refused as a path, so it is never probed
+/// or opened (`BE-INPUT-004`): one the lexical screen rejects (empty, absolute,
+/// which a join would put in place of the spec root, or holding a `..`
+/// segment, wherever it points), or one whose spec is or runs through a link
+/// leaving the project.
+fn refused(repo: &Path, root: &str, name: &str) -> bool {
+    super::validate_no_traversal(name).is_err()
+        || super::leaves_project(repo, &format!("{root}/{name}/spec.md"))
+}
+
+/// One node of the walk. A name [`refused`] names is a sink, never opened
+/// (`BE-INPUT-004`), as a missing or malformed spec is.
 fn visit(
     node: &str,
-    specs_dir: &Path,
+    repo: &Path,
+    root: &str,
     order: &mut Vec<String>,
     index_of: &mut HashMap<String, usize>,
     adj: &mut Vec<Vec<usize>>,
@@ -208,10 +224,13 @@ fn visit(
     index_of.insert(node.to_string(), idx);
     adj.push(Vec::new());
 
-    let spec_path = specs_dir.join(node).join("spec.md");
-    let deps = read_dependencies(&spec_path);
+    let deps = if refused(repo, root, node) {
+        Vec::new()
+    } else {
+        read_dependencies(&repo.join(root).join(node).join("spec.md"))
+    };
     for dep in deps {
-        let dep_idx = visit(&dep, specs_dir, order, index_of, adj);
+        let dep_idx = visit(&dep, repo, root, order, index_of, adj);
         adj[idx].push(dep_idx);
     }
     idx
@@ -564,5 +583,91 @@ mod tests {
         assert!(!result.compatible);
         assert_eq!(result.cycles.len(), 1);
         assert_eq!(result.cycles[0].len(), 3);
+    }
+
+    /// A dependency name that climbs out of the spec root names a spec beyond
+    /// the project, which is never probed or read: the edge is a missing
+    /// dependency, as for any name that resolves to nothing (`BE-INPUT-004`).
+    #[test]
+    fn a_dependency_name_that_leaves_the_project_is_not_read() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        write_spec(&project, "001-a", "draft", &["../../outside/spec-evil"]);
+        let evil = tmp.path().join("outside/spec-evil");
+        std::fs::create_dir_all(&evil).unwrap();
+        std::fs::write(
+            evil.join("spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n",
+        )
+        .unwrap();
+        let result = run(
+            &TraverseDepsArgs {
+                feature: "001-a".into(),
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.dependencies.len(), 1);
+        assert!(!result.dependencies[0].exists, "{:?}", result.dependencies);
+        assert_eq!(result.dependencies[0].status, "");
+        assert!(!result.compatible);
+    }
+
+    /// An absolute dependency name would take the spec root's place when
+    /// joined, so it is refused before any probe: the edge is a missing
+    /// dependency, and the cycle the outside spec would close is not walked
+    /// (`BE-INPUT-004`, spec 067's review).
+    #[test]
+    fn an_absolute_dependency_name_is_neither_read_nor_walked() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(
+            outside.join("spec.md"),
+            "---\nstatus: done\ndependencies: [001-a]\n---\n",
+        )
+        .unwrap();
+        let name = outside.to_str().unwrap().replace('\\', "/");
+        write_spec(&project, "001-a", "draft", &[name.as_str()]);
+        let result = run(
+            &TraverseDepsArgs {
+                feature: "001-a".into(),
+            },
+            &project,
+        )
+        .unwrap();
+        assert!(!result.dependencies[0].exists, "{:?}", result.dependencies);
+        assert_eq!(result.dependencies[0].status, "");
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
+    }
+
+    /// A dependency that is a link leaving the project is not opened either,
+    /// and the cycle walk treats it as a sink: the cycle its target would
+    /// close is not reported from beyond the project.
+    #[cfg(unix)]
+    #[test]
+    fn a_dependency_that_is_a_link_out_is_neither_read_nor_walked() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        write_spec(&project, "001-a", "draft", &["002-b"]);
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(
+            outside.join("spec.md"),
+            "---\nstatus: done\ndependencies: [001-a]\n---\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&outside, project.join("specs/002-b")).unwrap();
+        let result = run(
+            &TraverseDepsArgs {
+                feature: "001-a".into(),
+            },
+            &project,
+        )
+        .unwrap();
+        assert!(!result.dependencies[0].exists, "{:?}", result.dependencies);
+        assert_eq!(result.dependencies[0].status, "");
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
     }
 }

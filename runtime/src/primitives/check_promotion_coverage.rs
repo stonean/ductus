@@ -40,10 +40,87 @@ use crate::primitives::{
     PrimitiveError, Result, contained_path, iter_bullets, parse_atx_heading, read_text,
 };
 use crate::schema::primitives::{
-    CheckPromotionCoverageArgs, CheckPromotionCoverageResult, PromotionTableState,
+    CheckPromotionCoverageArgs, CheckPromotionCoverageResult, ListsForm, PromotionTableState,
 };
 
-/// Execute the `check-promotion-coverage` primitive.
+/// Execute the `check-promotion-coverage` primitive: [`compute`], returned
+/// inline while it fits `[artifacts] read-size-bytes`, and past it with its
+/// three lists in the file `lists-file` names and only their counts inline
+/// ([`bound`]; `BE-PAYLOAD-001`).
+///
+/// # Errors
+///
+/// A malformed read size or a list file that cannot be written, which
+/// `bounded_lists::place` returns, and the errors [`compute`] returns.
+pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromotionCoverageResult> {
+    bound(repo, compute(args, repo)?)
+}
+
+/// One measurement, every list whole: what `check-promotion-coverage` returns
+/// before its lists are bounded. Each field is
+/// [`CheckPromotionCoverageResult`]'s of the same name.
+#[derive(Debug)]
+pub(crate) struct Measured {
+    pub(crate) rule_bearing: usize,
+    pub(crate) table_keyed: usize,
+    pub(crate) pointer_citing: usize,
+    pub(crate) classified: usize,
+    pub(crate) unclassified: usize,
+    pub(crate) unclassified_entries: Vec<String>,
+    pub(crate) table_rows: usize,
+    pub(crate) unmatched_keys: Vec<String>,
+    pub(crate) missing_sections: Vec<String>,
+    pub(crate) table_state: PromotionTableState,
+}
+
+/// `measured` held to `[artifacts] read-size-bytes`: past it, its three lists
+/// go to the file the result names, with their counts inline
+/// (`bounded_lists::place`).
+///
+/// # Errors
+///
+/// What `bounded_lists::place` returns: a malformed read size, or a list file
+/// that cannot be written.
+fn bound(repo: &Path, measured: Measured) -> Result<CheckPromotionCoverageResult> {
+    let lists = serde_json::json!({
+        "unclassified-entries": measured.unclassified_entries,
+        "unmatched-keys": measured.unmatched_keys,
+        "missing-sections": measured.missing_sections,
+    });
+    let mut result = CheckPromotionCoverageResult {
+        rule_bearing: measured.rule_bearing,
+        table_keyed: measured.table_keyed,
+        pointer_citing: measured.pointer_citing,
+        classified: measured.classified,
+        unclassified: measured.unclassified,
+        unclassified_entries_count: measured.unclassified_entries.len(),
+        unclassified_entries: Some(measured.unclassified_entries),
+        table_rows: measured.table_rows,
+        unmatched_keys_count: measured.unmatched_keys.len(),
+        unmatched_keys: Some(measured.unmatched_keys),
+        missing_sections_count: measured.missing_sections.len(),
+        missing_sections: Some(measured.missing_sections),
+        table_state: measured.table_state,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "check-promotion-coverage",
+        "repository",
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.unclassified_entries = None;
+        result.unmatched_keys = None;
+        result.missing_sections = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Measure the rules file, every list whole.
 ///
 /// # Errors
 ///
@@ -60,7 +137,7 @@ use crate::schema::primitives::{
 /// before anything is read, when `sections` is empty: with no section named
 /// there is no rule-bearing entry to count, and a run would report a
 /// denominator of zero that measured nothing.
-pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromotionCoverageResult> {
+pub(crate) fn compute(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<Measured> {
     // Both paths are checked before either is read, and before the arguments
     // are judged, so a path leaving the project is refused whatever else the
     // call carries.
@@ -131,7 +208,7 @@ pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromot
         .map(|(_, lead)| lead.clone())
         .collect();
 
-    Ok(CheckPromotionCoverageResult {
+    Ok(Measured {
         rule_bearing: entries.len(),
         table_keyed: table_keyed.len(),
         pointer_citing: pointer_citing.len(),
@@ -297,6 +374,8 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    // The tests read each list whole; `bound` holds the public result to the read size.
+    use super::compute as run;
     use std::fs;
     use tempfile::{TempDir, tempdir};
 
@@ -445,7 +524,11 @@ mod tests {
         let tmp = seed(rules, Some(table));
         let r = run(&args(true), tmp.path()).unwrap();
         assert_eq!(r.table_keyed, 0);
-        assert_eq!(r.unmatched_keys.len(), 1);
+        assert_eq!(
+            r.unmatched_keys,
+            vec!["The entry as it used to read".to_string()],
+            "the key itself is named, not only counted"
+        );
     }
 
     /// Tables outside the named section are not read.
@@ -476,5 +559,62 @@ mod tests {
         let r = run(&args(false), tmp.path()).unwrap();
         assert_eq!(r.rule_bearing, 0);
         assert_eq!(r.unclassified, 0);
+    }
+
+    /// The three lists come back inline while the result fits `[artifacts]
+    /// read-size-bytes`, and past it in the file the result names, whole,
+    /// with only their counts inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn the_lists_move_to_a_file_past_the_read_size() {
+        let rules =
+            "# R\n\n## Workflow\n\n- **The entry as reworded.** Text.\n- **Another.** Text.\n";
+        let table = "# Plan\n\n## Classification\n\n| Entry | Reason |\n| --- | --- |\n| The entry as it used to read | promoted |\n";
+        let tmp = seed(rules, Some(table));
+        let inline = super::run(&args(true), tmp.path()).unwrap();
+        assert_eq!(inline.form, ListsForm::Inline);
+        assert_eq!(inline.unclassified_entries_count, 2);
+        assert_eq!(inline.unclassified_entries.as_ref().unwrap().len(), 2);
+        assert_eq!(inline.lists_file, None);
+
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let file = super::run(&args(true), tmp.path()).unwrap();
+        assert_eq!(file.form, ListsForm::File);
+        assert_eq!(
+            (
+                &file.unclassified_entries,
+                &file.unmatched_keys,
+                &file.missing_sections
+            ),
+            (&None, &None, &None),
+            "a list stayed inline"
+        );
+        assert_eq!(
+            (
+                file.unclassified_entries_count,
+                file.unmatched_keys_count,
+                file.missing_sections_count
+            ),
+            (2, 1, 1)
+        );
+        assert_eq!(file.unclassified, 2, "the measurement stays inline");
+        let lists: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            lists["unmatched-keys"],
+            serde_json::json!(["The entry as it used to read"])
+        );
+        assert_eq!(lists["missing-sections"], serde_json::json!(["Gotchas"]));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-promotion-coverage",
+            &serde_json::to_value(&file).unwrap(),
+            &lists,
+        );
     }
 }

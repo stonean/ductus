@@ -199,6 +199,15 @@ fn collect_scenario_open_questions_unlinked(
     covered: &dyn Fn(&Path) -> bool,
 ) -> ScenarioQuestionScan {
     let scenarios_dir = feature_dir.join("scenarios");
+    // A covered `scenarios/` is never listed: listing it would open and stat
+    // every entry of a directory outside the project before `covered` could
+    // drop the names (`BE-INPUT-004`).
+    if covered(&scenarios_dir) {
+        return ScenarioQuestionScan {
+            questions: Vec::new(),
+            unreadable: Vec::new(),
+        };
+    }
     let mut out = Vec::new();
     let mut unreadable = Vec::new();
     for name in list_scenario_files(&scenarios_dir) {
@@ -1190,6 +1199,30 @@ dependencies: []
             scenario_names(&[q("alpha"), q("beta"), q("alpha")]),
             vec!["alpha", "beta", "alpha"]
         );
+    }
+
+    /// A covered `scenarios/` is not listed, so nothing beneath it is read
+    /// even when the predicate names the directory alone (`BE-INPUT-004`,
+    /// spec 067's review).
+    #[test]
+    fn a_covered_scenarios_directory_is_never_listed() {
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[(
+                "a.md",
+                "---\nsection: Behavior\n---\n\n# A\n\n## Open Questions\n\n- Is it?\n",
+            )],
+        );
+        let feature_dir = tmp.path().join("specs/046-probe");
+        let scenarios = feature_dir.join("scenarios");
+        // Uncovered, the scenario is listed and its question read.
+        let open = collect_scenario_open_questions_unlinked(&feature_dir, &|_| false);
+        assert_eq!(open.questions.len(), 1);
+        let scan = collect_scenario_open_questions_unlinked(&feature_dir, &|p: &Path| {
+            p == scenarios.as_path()
+        });
+        assert!(scan.questions.is_empty(), "{:?}", scan.questions);
+        assert!(scan.unreadable.is_empty(), "{:?}", scan.unreadable);
     }
 
     #[test]
