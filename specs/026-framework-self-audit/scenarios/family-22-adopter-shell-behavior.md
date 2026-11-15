@@ -63,9 +63,16 @@ one fixture would let either failure mask the other — which is how the second
 defect above first presented, as a runtime-resolution failure that was really a
 scoping failure one step upstream.
 
-The runtime is a **stub** that records its invocation, not the real binary. What
-is under test is the shell's resolution and scoping, not the primitive, so the
-family stays hermetic: no `cargo build`, identical behavior in CI and locally.
+For these orchestration cases the runtime is a **stub** that records its
+invocation, not the real binary. What is under test is the shell's resolution
+and scoping, not the primitive, so they stay hermetic: no `cargo build`,
+identical behavior in CI and locally.
+
+> **Signpost:** [075](../../075-agents-md-holds-what-every-session-needs/spec.md)
+> added project-file growth cases to this family that drive the built runtime
+> through the `.ductus/bin/ductus` pointer, since what they test is that the hook
+> surfaces `check-artifact-size`'s refusal as a failed commit, which a stub would
+> assert only of itself. A runtime they cannot reach is a finding, not a skip.
 
 ## Edge Cases
 
