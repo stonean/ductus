@@ -122,12 +122,19 @@ else
       # family copies, so it is canonicalized and contained before it is
       # probed: a symbolic link in the repository resolving outside it is
       # refused rather than copied (BE-INPUT-004, `contained` in lib.sh).
-      if ! contained "$ROOT" "$src"; then
-        emit "$MANIFEST_FILE" \
-          "Shared Files manifest source resolves outside the repository: $src — not copied, so its links were not examined" \
-          "manifest sources are files in this repository; correct the row, or replace the symbolic link with the file it stands for"
-        continue
-      fi
+      contained "$ROOT" "$src"
+      case $? in
+        1)
+          emit "$MANIFEST_FILE" \
+            "Shared Files manifest source resolves outside the repository: $src — not copied, so its links were not examined" \
+            "manifest sources are files in this repository; correct the row, or replace the symbolic link with the file it stands for"
+          continue
+          ;;
+        2)
+          containment_unchecked "$src"
+          exit "$drift"
+          ;;
+      esac
       if [ ! -f "$src" ]; then
         emit "$MANIFEST_FILE" \
           "Shared Files manifest names a source that does not exist: $src" \

@@ -109,6 +109,18 @@ For each `done` spec's body, grep for each old-name token in code-span form (`` 
 
 Heuristic by design — false positives expected on first runs. The maintainer accepts or dismisses each per-spec via a small `/ductus:amend` cycle on the affected spec.
 
+### Every family contains the paths it did not write as a literal
+
+A path a family did not write as a literal — read from committed text (a manifest row, a registry field, a table cell, a link target, the configured `[paths] specs-root`), listed by `git ls-files` or a walk, or enumerated by a primitive — is canonicalized and contained by whole path components to the repository root **before** it is probed, globbed or opened, through `contained` in `scripts/audit/lib.sh` or, in embedded python, the same comparison inline (`os.path.realpath` on both sides, then `os.path.commonpath`). A glob's pattern is contained before it is expanded and each match after. One resolving outside the repository is reported in the family's own finding shape, naming the path and that it resolves outside and was not read or probed, and never touched; the family goes on with the rest. A containment that cannot run — no `python3`, or one that fails or prints no verdict — is neither: `contained` exits 2 for it, never the 1 that means outside, and the family reports the path through `containment_unchecked` and stops, since a `python3` that cannot canonicalize one path canonicalizes none and an uncontained path is never touched. Where a family hands a path to a primitive that opens it (`resolve-anchor --path`, `read-deprecation-labels --rule-file`), it contains the path first, so the runtime is never given an outward one. Refusing `..` and absolute paths is a lexical screen that a symbolic link under the root defeats (`BE-INPUT-004`).
+
+Three things are outside the rule, each for its own reason:
+
+- **A literal path** — one the script wrote (`framework/constitution.md`, `version`, a fixed directory). Nothing committed chooses it, so there is nothing for a link a contributor commits to redirect that the script's author did not already name.
+- **A primitive's own `lists-file`** — the runtime wrote it, and `bounded_lists::place` contains its directory (`validate_contained`) before writing, so the family reads a file its producer vouches for.
+- **A tree the family builds itself with `mkdir` and regular-file `cp`** — 35a's destination. The family decides every path in it, and each source copied into it was contained first.
+
+The test is `scripts/tests/test-audit-path-containment.sh`: a case per family puts a symbolic link resolving into a sibling directory where the family would touch the path, with content there the family would report if it reached it, and requires the containment finding and not that one; a last case requires each family calling `contained`, where `python3` fails that call alone, to report the path as not checked and stop. A family that splices a feature slug under the spec root reads the root through `specs_root` in `lib.sh`, not a hard-coded `specs/`, since containing a path that names the wrong directory proves nothing.
+
 ### `/audit`'s command procedure shape
 
 `framework/commands/audit.md` follows the parseable conventions established by spec 022. **Superseded:** its one step runs `run-all.sh`, as the Overview's note says; the shape below is the one planned.
@@ -165,6 +177,7 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `scripts/audit/ssot-invariants.sh` | Create | Family 6 — duplicate normative rule text detection |
 | `scripts/audit/sibling-coupling.sh` | Create | Family 7 — bundling-candidate detection with Q5 suppression-phrase support |
 | `scripts/audit/introducing-drift.sh` | Create | Family 8 — current-tense old-name references in done spec bodies |
+| `scripts/tests/test-audit-path-containment.sh` | Modify | A case per family that contains the paths it did not write as a literal, each failing with its family's check removed |
 | `.github/workflows/framework-checks.yml` | Modify | Add `/audit` step after existing lint steps |
 | `.github/workflows/runtime-release.yml` | Modify | Add `/audit` pre-tag gate before release matrix fires |
 | `runtime/legacy-prose-commands.txt` | Modify | Remove `framework/commands/audit.md` from the legacy allowlist — the command ships parseable from day one |

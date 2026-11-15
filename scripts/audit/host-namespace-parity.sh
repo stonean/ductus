@@ -177,7 +177,29 @@ done
 # but no match either (QUAL-CLAIM-001).
 compared=0
 
+# Each config dir is a registry cell and each entry beneath it a listing, so
+# every path is contained before it is probed or globbed, and one resolving
+# outside the repository is reported and not touched (026 plan, BE-INPUT-004).
+# admit PATH succeeds for a path inside the repository, reports one outside
+# and fails, and stops the family when `contained` could not tell.
+admit() {
+  contained "$ROOT" "$1"
+  case $? in
+    0) return 0 ;;
+    1)
+      emit "$1" "resolves outside the repository, so it was not probed" \
+        "replace the symbolic link with the directory or file, or remove it"
+      return 1
+      ;;
+    *)
+      containment_unchecked "$1"
+      exit "$drift"
+      ;;
+  esac
+}
+
 for cli_dir in "${CLI_DIRS[@]}"; do
+  admit "$cli_dir" || continue
   [ -d "$cli_dir" ] || continue
 
   # The `commands/<ns>/` layout (claude).
@@ -185,8 +207,9 @@ for cli_dir in "${CLI_DIRS[@]}"; do
   # space would otherwise be re-split into bogus entries by word splitting,
   # and the count below would be wrong. Bash 3.2 compatible (indexed array).
   installed=()
-  if [ -d "$cli_dir/commands" ]; then
+  if admit "$cli_dir/commands" && [ -d "$cli_dir/commands" ]; then
     for ns_path in "$cli_dir/commands"/*/; do
+      admit "${ns_path%/}" || continue
       [ -d "$ns_path" ] || continue
       installed+=("$(basename "$ns_path")")
     done
@@ -197,7 +220,12 @@ for cli_dir in "${CLI_DIRS[@]}"; do
   # known command name — whether or not it matches, since a mismatch is what
   # this family reports. The `ductus.md` self-install and an adopter's own
   # templates end in no command name and name no namespace.
-  for prompt_file in "$cli_dir/prompts/"*.md; do
+  prompt_files=()
+  if admit "$cli_dir/prompts"; then
+    prompt_files=("$cli_dir/prompts/"*.md)
+  fi
+  for prompt_file in "${prompt_files[@]+"${prompt_files[@]}"}"; do
+    admit "$prompt_file" || continue
     [ -f "$prompt_file" ] || continue
     base="$(basename "$prompt_file" .md)"
     for name in "${COMMAND_NAMES[@]}"; do

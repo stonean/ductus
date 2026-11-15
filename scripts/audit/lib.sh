@@ -75,9 +75,11 @@ ductus_bin() {
   fi
 }
 
-# contained BASE PATH — succeed when PATH, canonicalized, lies inside BASE,
+# contained BASE PATH — exit 0 when PATH, canonicalized, lies inside BASE,
 # canonicalized, compared by whole path components rather than as a string
-# prefix, so `/srv/base2` is not inside `/srv/base` (BE-INPUT-004).
+# prefix, so `/srv/base2` is not inside `/srv/base` (BE-INPUT-004); 1 when it
+# lies outside; 2 when that could not be told: python3 is missing, fails, or
+# answers neither.
 #
 # A family that turns text committed to the repository into a path calls this
 # before it probes, copies or opens the path: refusing `..` and absolute
@@ -86,10 +88,42 @@ ductus_bin() {
 # which is what a probe or an open meets. The families computing in python
 # inline the same comparison: `os.path.realpath` on both sides, then
 # `os.path.commonpath`.
+#
+# The verdict is a word the python prints, never its exit status alone: a
+# python3 that fails exits 1, which would read as outside, and one that exits
+# 0 having compared nothing would read as inside. A caller branches on all
+# three, and on 2 reports `containment_unchecked` and stops, as it reports a
+# missing python3: a python3 that cannot canonicalize one path canonicalizes
+# none, and an uncontained path is never touched.
 contained() {
-  python3 -I -c 'import os, sys
+  command -v python3 > /dev/null 2>&1 || return 2
+  local verdict
+  verdict="$(python3 -I -c 'import os, sys
 base, path = (os.path.realpath(p) for p in sys.argv[1:3])
-sys.exit(0 if os.path.commonpath([base, path]) == base else 1)' "$1" "$2"
+print("inside" if os.path.commonpath([base, path]) == base else "outside")' "$1" "$2")" || return 2
+  case "$verdict" in
+    inside) return 0 ;;
+    outside) return 1 ;;
+    *) return 2 ;;
+  esac
+}
+
+# containment_unchecked PATH — the finding for a path `contained` could not
+# judge (its exit 2). The caller exits "$drift" after it.
+containment_unchecked() {
+  emit "$1" "could not tell whether this path resolves inside the repository, since python3 is missing or failed, so it was not examined and the family stopped" \
+    "install python3, which contained in scripts/audit/lib.sh canonicalizes paths with, then run the family again"
+}
+
+# specs_root — echo the spec root `.ductus/config.toml` configures as
+# `[paths] specs-root` (spec 040), or `specs` when none is set. A family
+# splicing a feature slug under the root reads it here rather than assuming
+# `specs`, and contains the path it builds, since the value is committed text
+# (BE-INPUT-004): this reads it and does not contain it.
+specs_root() {
+  local configured
+  configured="$(sed -n -E 's/^[[:space:]]*specs-root[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' .ductus/config.toml 2> /dev/null | head -1)"
+  echo "${configured:-specs}"
 }
 
 # maintainer_only_commands — echo the base name of each command deliberately

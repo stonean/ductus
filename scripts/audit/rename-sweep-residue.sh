@@ -123,6 +123,20 @@ fi
 examined=0
 while IFS= read -r f; do
   [ -z "$f" ] && continue
+  # A tracked symbolic link resolving outside the repository is reported and
+  # never probed or read (026 plan, BE-INPUT-004).
+  contained "$ROOT" "$f"
+  case $? in
+    1)
+      emit "$f" "tracked markdown file resolves outside the repository, so it was not read and was not scanned for residue" \
+        "replace the symbolic link with the file, or untrack it"
+      continue
+      ;;
+    2)
+      containment_unchecked "$f"
+      exit "$drift"
+      ;;
+  esac
   [ -f "$f" ] || continue
   examined=$((examined + 1))
   # Strip code spans and quoted spans before matching. Prose that *documents*

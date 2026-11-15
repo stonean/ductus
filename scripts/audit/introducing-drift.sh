@@ -87,10 +87,26 @@ if ! corpus="$(spec_corpus "$bin")"; then
   exit "$drift"
 fi
 
+# The slug is the runtime's enumeration, spliced under the configured spec
+# root; a spec.md resolving outside the repository through a symbolic link is
+# reported and never probed or read (026 plan, BE-INPUT-004).
+SPECS_ROOT="$(specs_root)"
 while IFS="$(printf '\t')" read -r slug status; do
   [ -n "$slug" ] || continue
   [ "$status" = "done" ] || continue
-  spec_file="specs/$slug/spec.md"
+  spec_file="$SPECS_ROOT/$slug/spec.md"
+  contained "$ROOT" "$spec_file"
+  case $? in
+    1)
+      emit "$spec_file" "resolves outside the repository, so it was not read" \
+        "replace the symbolic link with the file, or remove it"
+      continue
+      ;;
+    2)
+      containment_unchecked "$spec_file"
+      exit "$drift"
+      ;;
+  esac
   [ -f "$spec_file" ] || continue
   # File-level skip: bail before walking lines if the marker is present.
   if grep -q '<!-- audit:ignore-introducing-drift:file -->' "$spec_file"; then

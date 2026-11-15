@@ -29,6 +29,7 @@ The check belongs to `/ductus:audit` rather than `/ductus:analyze` per the [§Bo
 - **Multiple namespace directories under one `commands/`** — a finding only when *none* matches the effective namespace; an adopter may legitimately install commands from more than one source.
 - **Multiple agent config directories present** — each is checked independently. `project` is the shared committed value across agents per spec 012's multi-agent contract, so a namespace present under one config dir and absent under another is itself the finding.
 - **Placeholder overlap with Family 4** — Family 4 (placeholder roundtrip) forbids a hardcoded `ductus:` inside `framework/commands/` sources; this family compares *resolved* values in an installed repo. The two never look at the same file, so no duplicate finding arises.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's path-containment decision states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a registry `config_dir` or an entry beneath it.
 
 ## Open Questions
 

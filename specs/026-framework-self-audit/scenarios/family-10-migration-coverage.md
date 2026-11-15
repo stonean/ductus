@@ -32,6 +32,7 @@ The CHANGELOG.md archived-entry parsing piece of 10b is deferred until the first
 - **Glob in `target_paths` matches a pinned file in adopter context**. Not Family 10's concern — pinned-file handling lives in the bootstrap loop and procedure files. Family 10 only sees the registry's text.
 - **Two registry entries reference the same `procedure_file`**. Not caught by Family 10 as designed (each entry passes 10c individually). The bootstrap loop's duplicate-id guard catches it on read; an additional 10d sub-check could enforce procedure-file uniqueness, captured as future work.
 - **A new family check ships.** It is a hard gate from its first run. This bullet originally said a new family inherits soft-launch (`continue-on-error: true`) per the [audit-ci-hard-gate](audit-ci-hard-gate.md) scenario's contract, and that was already untrue when it was written: the flip landed in `5732c6de` on 2026-05-17 and this scenario was recorded on 2026-05-21, so no per-family soft-launch regime existed for Family 10 to inherit. `continue-on-error` appears nowhere in `.github/workflows/` today, and every family since 10 has shipped straight into the gate.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's path-containment decision states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a `procedure_file` or `target_paths` entry, a glob match, a procedure file.
 
 ## Open Questions
 

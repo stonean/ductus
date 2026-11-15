@@ -110,7 +110,7 @@ else
       "build the runtime (cargo build --release --manifest-path runtime/Cargo.toml) or run /ductus to acquire the pinned binary"
   else
     records="$(printf '%s\n' "$files" | python3 -c '
-import json, re, subprocess, sys
+import json, os, re, subprocess, sys
 
 PAIR = re.compile(r"\*\*§([^*]+)\*\* in `([^`]+)`")
 WORD = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
@@ -140,8 +140,14 @@ def pair_document(path, number, anchor):
 
 binary, markers = sys.argv[1], sys.argv[2]
 examined = refs = qualified = intra = marker_refs = cross = unjudgeable = unreadable = 0
+repo = os.path.realpath(".")
 for path in (line.strip() for line in sys.stdin):
     if not path:
+        continue
+    # A tracked symbolic link resolving outside the repository is reported and
+    # never opened, here or by the runtime (026 plan, BE-INPUT-004).
+    if os.path.commonpath([repo, os.path.realpath(path)]) != repo:
+        print("outside\t%s" % path)
         continue
     try:
         run = subprocess.run(
@@ -232,6 +238,11 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, int
           emit "$f1" \
             "the § reference beginning \`§$f2\` $what" \
             "spell the target section's heading in full, as it reads in the framework source the Shared Files manifest maps that document to"
+          ;;
+        outside)
+          emit "$f1" \
+            "tracked markdown file resolves outside the repository, so it was not read and its § references were not examined" \
+            "replace the symbolic link with the file, or untrack it"
           ;;
         unresolved-qualified)
           emit "$f1" \

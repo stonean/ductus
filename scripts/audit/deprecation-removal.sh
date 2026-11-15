@@ -80,12 +80,44 @@ if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
   exit "$drift"
 fi
 
+# The runtime and python3 are checked before any rule file is listed, since
+# the containment below runs python3: a missing one is reported as that, never
+# as a rule file resolving outside the repository.
+bin="$(ductus_bin)"
+if [ -z "$bin" ]; then
+  emit "scripts/audit/deprecation-removal.sh" "the ductus runtime is not reachable, so no deprecation label was read" \
+    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
+  coverage "nothing compared: the runtime is not reachable"
+  exit "$drift"
+fi
+if ! command -v python3 > /dev/null 2>&1; then
+  emit "scripts/audit/deprecation-removal.sh" "python3 is not on PATH, so no deprecation label was read" \
+    "install python3, which this family contains each rule file and renders the primitive's result with"
+  coverage "nothing compared: python3 is missing"
+  exit "$drift"
+fi
+
 # NUL-separated, so a path git would quote is read as it is. The glob magic
 # keeps `*` from matching a `/`.
 tracked=0
 readable=()
 while IFS= read -r -d '' f; do
   tracked=$((tracked + 1))
+  # A tracked symbolic link resolving outside the repository is reported and
+  # never probed or handed to the runtime to open (026 plan, BE-INPUT-004).
+  contained "$ROOT" "$f"
+  case $? in
+    1)
+      emit "$f" "tracked but resolves outside the repository, so its deprecation labels were not examined" \
+        "replace the symbolic link with the file, or remove it from the index"
+      continue
+      ;;
+    2)
+      containment_unchecked "$f"
+      coverage "nothing compared: python3 could not contain a tracked rule file"
+      exit "$drift"
+      ;;
+  esac
   if [ -f "$f" ] && [ -r "$f" ]; then
     readable+=("$f")
   else
@@ -184,20 +216,6 @@ EOF_B
   [ "$a2" -ne "$b2" ] && { [ "$a2" -lt "$b2" ]; return; }
   [ "$a3" -le "$b3" ]
 }
-
-bin="$(ductus_bin)"
-if [ -z "$bin" ]; then
-  emit "scripts/audit/deprecation-removal.sh" "the ductus runtime is not reachable, so no deprecation label was read" \
-    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
-  coverage "nothing compared: the runtime is not reachable"
-  exit "$drift"
-fi
-if ! command -v python3 > /dev/null 2>&1; then
-  emit "scripts/audit/deprecation-removal.sh" "python3 is not on PATH, so no deprecation label was read" \
-    "install python3, which this family renders the primitive's result with"
-  coverage "nothing compared: python3 is missing"
-  exit "$drift"
-fi
 
 rule_args=()
 for f in "${readable[@]}"; do

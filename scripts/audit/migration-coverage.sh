@@ -69,6 +69,20 @@ PY
 # have a matching TOML entry whose procedure_file ends with that filename.
 if [ -d "$PROCEDURES_DIR" ]; then
   for f in "$PROCEDURES_DIR"/*.md; do
+    # A glob match is a path this family did not write; one resolving outside
+    # the repository is reported and not probed further (026 plan, BE-INPUT-004).
+    contained "$ROOT" "$f"
+    case $? in
+      1)
+        emit "$f" "procedure file resolves outside the repository, so it was not examined" \
+          "replace the symbolic link with the file, or remove it"
+        continue
+        ;;
+      2)
+        containment_unchecked "$f"
+        exit "$drift"
+        ;;
+    esac
     [ -e "$f" ] || continue
     if ! grep -qF "procedure_file = \"$f\"" "$REGISTRY"; then
       emit "$f" "orphan procedure file (no [[migrations]] entry references it)" \
@@ -81,6 +95,19 @@ fi
 # must exist on disk.
 while IFS=$'\t' read -r id pf tps; do
   [ -n "$id" ] || continue
+  # The registry field is committed text, contained before it is probed.
+  contained "$ROOT" "$pf"
+  case $? in
+    1)
+      emit "$REGISTRY" "[[migrations]] entry '$id' procedure_file resolves outside the repository and was not probed: $pf" \
+        "correct the procedure_file value to a file inside the repository"
+      continue
+      ;;
+    2)
+      containment_unchecked "$pf"
+      exit "$drift"
+      ;;
+  esac
   if [ ! -f "$pf" ]; then
     emit "$REGISTRY" "[[migrations]] entry '$id' references missing procedure_file: $pf" \
       "create $pf or correct the procedure_file value"
@@ -98,11 +125,37 @@ while IFS=$'\t' read -r id pf tps; do
       framework/*) ;;
       *) continue ;;  # adopter-relative; cannot verify from this repo
     esac
+    # The entry is committed text: the pattern is contained before it is
+    # expanded, and each match after.
+    contained "$ROOT" "$p"
+    case $? in
+      1)
+        emit "$REGISTRY" "[[migrations]] entry '$id' target_path resolves outside the repository and was not probed: $p" \
+          "correct the target_path to a path inside the repository"
+        continue
+        ;;
+      2)
+        containment_unchecked "$p"
+        exit "$drift"
+        ;;
+    esac
     if [[ "$p" == *"*"* ]]; then
       # Glob pattern — expand and check for any matches.
       # shellcheck disable=SC2206
       matches=( $p )
       for m in "${matches[@]}"; do
+        contained "$ROOT" "$m"
+        case $? in
+          1)
+            emit "$REGISTRY" "[[migrations]] entry '$id' target_path '$p' matched '$m', which resolves outside the repository and was not probed" \
+              "remove the symbolic link '$m', or narrow the target_path"
+            continue
+            ;;
+          2)
+            containment_unchecked "$m"
+            exit "$drift"
+            ;;
+        esac
         if [ -e "$m" ]; then
           emit "$REGISTRY" "[[migrations]] entry '$id' claims '$p' was removed but '$m' still exists" \
             "delete $m or remove the target_path from the entry"

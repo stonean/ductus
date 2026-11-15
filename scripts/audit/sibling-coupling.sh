@@ -50,11 +50,32 @@ if ! corpus="$(spec_corpus "$bin")"; then
   exit "$drift"
 fi
 
+# The feature directories are the runtime's enumeration, spliced under the
+# configured spec root; a spec.md or plan.md that resolves outside the
+# repository through a symbolic link is reported and never read, and its spec
+# is left out of the comparison (026 plan, BE-INPUT-004).
+SPECS_ROOT="$(specs_root)"
 non_done_specs=()
 while IFS="$(printf '\t')" read -r slug status; do
   [ -n "$slug" ] || continue
   if [ "$status" != "done" ]; then
-    non_done_specs+=("$slug")
+    reachable=1
+    for artifact in spec.md plan.md; do
+      contained "$ROOT" "$SPECS_ROOT/$slug/$artifact"
+      case $? in
+        1)
+          emit "$SPECS_ROOT/$slug/$artifact" \
+            "resolves outside the repository, so it was not read and $slug was left out of the sibling comparison" \
+            "replace the symbolic link with the file, or remove it"
+          reachable=0
+          ;;
+        2)
+          containment_unchecked "$SPECS_ROOT/$slug/$artifact"
+          exit "$drift"
+          ;;
+      esac
+    done
+    [ "$reachable" -eq 1 ] && non_done_specs+=("$slug")
   fi
 done <<EOF
 $corpus
@@ -62,7 +83,7 @@ EOF
 
 # Nothing to compare when fewer than two non-done specs exist.
 if [ "${#non_done_specs[@]}" -lt 2 ]; then
-  exit 0
+  exit "$drift"
 fi
 
 # Helper: extract the first path segment of every inline `../SEGMENT/...`
@@ -131,14 +152,14 @@ for i in "${!non_done_specs[@]}"; do
     # Order: spec_a has the lower NNN (first-drafted), spec_b the higher.
 
     # (a) Bidirectional inline-link check.
-    links_a="$(extract_sibling_links "specs/$spec_a/spec.md")"
-    links_b="$(extract_sibling_links "specs/$spec_b/spec.md")"
+    links_a="$(extract_sibling_links "$SPECS_ROOT/$spec_a/spec.md")"
+    links_b="$(extract_sibling_links "$SPECS_ROOT/$spec_b/spec.md")"
     if ! grep -qFx "$spec_b" <<< "$links_a"; then continue; fi
     if ! grep -qFx "$spec_a" <<< "$links_b"; then continue; fi
 
     # (b) Affected-files overlap check.
-    files_a="$(extract_affected_files "specs/$spec_a/plan.md")"
-    files_b="$(extract_affected_files "specs/$spec_b/plan.md")"
+    files_a="$(extract_affected_files "$SPECS_ROOT/$spec_a/plan.md")"
+    files_b="$(extract_affected_files "$SPECS_ROOT/$spec_b/plan.md")"
     overlap="$(comm -12 <(printf '%s' "$files_a") <(printf '%s' "$files_b"))"
     [ -z "$overlap" ] && continue
 
@@ -148,7 +169,7 @@ for i in "${!non_done_specs[@]}"; do
       /^## Resolved Questions/ { in_section = 1; next }
       /^## / { in_section = 0; next }
       in_section { print }
-    ' "specs/$spec_b/spec.md")"
+    ' "$SPECS_ROOT/$spec_b/spec.md")"
     # spec_a's slug-without-NNN-prefix is the lookup pattern.
     a_slug="${spec_a#*-}"
     if grep -qE "Why split from .*${a_slug}:" <<< "$resolved"; then
@@ -157,7 +178,7 @@ for i in "${!non_done_specs[@]}"; do
 
     # Unsuppressed bundling candidate — emit finding.
     overlap_summary="$(echo "$overlap" | tr '\n' ',' | sed 's/,$//')"
-    emit "specs/$spec_b/spec.md" "bundling candidate with specs/$spec_a (overlapping Affected Files: $overlap_summary)" "either fold $spec_b into $spec_a (delete dir, merge ACs and open questions), or append a 'Why split from $a_slug: <reason>' entry to $spec_b/spec.md's ## Resolved Questions section to suppress"
+    emit "$SPECS_ROOT/$spec_b/spec.md" "bundling candidate with $SPECS_ROOT/$spec_a (overlapping Affected Files: $overlap_summary)" "either fold $spec_b into $spec_a (delete dir, merge ACs and open questions), or append a 'Why split from $a_slug: <reason>' entry to $spec_b/spec.md's ## Resolved Questions section to suppress"
   done
 done
 

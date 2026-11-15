@@ -59,6 +59,21 @@ fi
 
 while IFS= read -r f; do
   [ -n "$f" ] || continue
+  # `find` lists a symbolic link named like a session file; one resolving
+  # outside the repository is reported and never opened (026 plan,
+  # BE-INPUT-004).
+  contained "$ROOT" "$f"
+  case $? in
+    1)
+      emit "$f" "fixture session file resolves outside the repository, so it was not read" \
+        "replace the symbolic link with the fixture file, or remove it"
+      continue
+      ;;
+    2)
+      containment_unchecked "$f"
+      exit "$drift"
+      ;;
+  esac
   # 12a parses-as-TOML.
   if ! python3 -c "import tomllib; tomllib.loads(open('$f').read())" 2>/dev/null; then
     err=$(python3 -c "import tomllib

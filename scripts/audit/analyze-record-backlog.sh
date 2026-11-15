@@ -98,13 +98,29 @@ if [ -z "$corpus" ]; then
   exit "$drift"
 fi
 
-specs_root="$(sed -n -E 's/^[[:space:]]*specs-root[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' .ductus/config.toml 2> /dev/null | head -1)"
-[ -n "$specs_root" ] || specs_root="specs"
+specs_root="$(specs_root)"
+
+# The root is committed text. One resolving outside the repository is
+# reported and no record under it is read (026 plan, BE-INPUT-004).
+contained "$ROOT" "$specs_root"
+case $? in
+  1)
+    emit "$specs_root/" \
+      "the configured spec root resolves outside the repository, so no audit record under it was read" \
+      "set [paths] specs-root in .ductus/config.toml to a directory inside the repository"
+    exit "$drift"
+    ;;
+  2)
+    containment_unchecked "$specs_root/"
+    exit "$drift"
+    ;;
+esac
 
 records="$(printf '%s\n' "$corpus" | SPECS_ROOT="$specs_root" python3 -c '
 import os, sys
 
 root = os.environ["SPECS_ROOT"]
+repo = os.path.realpath(".")
 
 def record_state(path):
     """Whether an audit artifact carries a record: absent / present / unreadable.
@@ -141,6 +157,13 @@ for row in sys.stdin:
     slug, status = parts[0], parts[1]
     if status != "done":
         continue
+    # A record resolving outside the repository through a symbolic link is
+    # reported and never opened (026 plan, BE-INPUT-004).
+    outward = [name for name in ("review.md", "analysis.md")
+               if os.path.commonpath([repo, os.path.realpath(os.path.join(root, slug, name))]) != repo]
+    if outward:
+        print("outside\t%s\t" % os.path.join(root, slug, outward[0]))
+        continue
     review = record_state(os.path.join(root, slug, "review.md"))
     analysis = record_state(os.path.join(root, slug, "analysis.md"))
     if "unreadable" in (review, analysis):
@@ -169,6 +192,11 @@ while IFS=$'\t' read -r kind f1 f2; do
     backlog)
       backlog=$((backlog + 1))
       backlog_specs="$backlog_specs$f2"$'\n'
+      ;;
+    outside)
+      emit "$f1" \
+        "audit artifact resolves outside the repository, so it was not read and this spec was not examined" \
+        "replace the symbolic link with the record, or remove it"
       ;;
     unreadable)
       emit "$f1" \

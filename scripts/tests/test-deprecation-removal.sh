@@ -56,9 +56,12 @@
 #   S. one target named twice says so
 #   T. a rule file that is not UTF-8 is reported and not examined, its label
 #      not compared and the other files' labels still compared; a parse that
-#      cannot run fails: no python3 on PATH, a python3 that fails, and one that
-#      prints nothing, and no runtime reachable or one whose primitive fails;
-#      and a module at the repository root does not shadow the
+#      cannot run fails: no python3 on PATH, a python3 that fails the label
+#      parse, and one that prints nothing there, and no runtime reachable or
+#      one whose primitive fails; a python3 that fails, or prints nothing, when
+#      a rule file is contained (`contained` in lib.sh) stops the family with
+#      that finding, never one saying the file resolves outside the
+#      repository; and a module at the repository root does not shadow the
 #      parse's standard library
 #   U. a rule file in a subdirectory of framework/rules/, or one not
 #      tracked, is not read
@@ -506,22 +509,40 @@ done
 run_family "$(make_tree no-python 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")" "$no_python"
 expect "no python3 on PATH" 1 'python3 is not on PATH'
 counted 'nothing compared: python3 is missing'
+# stub_python DIR EXIT CONTAIN — a PATH directory whose python3 exits EXIT
+# printing nothing; with CONTAIN, the containment call (`python3 -I -c`, from
+# lib.sh) goes to the real python3, so the stub stands in for the label parse
+# (`python3 -I -`) alone.
+# The interpreter itself, not the first python3 on PATH, which may be a shim
+# needing tools the stub's PATH lacks.
+real_python="$(python3 -c 'import sys; print(sys.executable)')"
+stub_python() {
+  mkdir -p "$1"
+  cp -P "$no_python"/* "$1/"
+  if [ -n "${3:-}" ]; then
+    printf '#!/bin/sh\nif [ "$2" = "-c" ]; then exec "%s" "$@"; fi\nexit %s\n' "$real_python" "$2" > "$1/python3"
+  else
+    printf '#!/bin/sh\nexit %s\n' "$2" > "$1/python3"
+  fi
+  chmod +x "$1/python3"
+}
 silent_python="$WORK/bin-silent-python"
-mkdir -p "$silent_python"
-cp -P "$no_python"/* "$silent_python/"
-printf '#!/bin/sh\nexit 0\n' > "$silent_python/python3"
-chmod +x "$silent_python/python3"
+stub_python "$silent_python" 0 contain
 run_family "$(make_tree silent-python 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")" "$silent_python"
 expect "a python3 that prints nothing" 1 'the label parse printed no counts'
 counted 'nothing compared: the label parse printed no counts'
 failing_python="$WORK/bin-failing-python"
-mkdir -p "$failing_python"
-cp -P "$no_python"/* "$failing_python/"
-printf '#!/bin/sh\nexit 1\n' > "$failing_python/python3"
-chmod +x "$failing_python/python3"
+stub_python "$failing_python" 1 contain
 run_family "$(make_tree failing-python 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")" "$failing_python"
 expect "a python3 that fails" 1 'the label parse exited non-zero'
 counted 'nothing compared: the label parse failed'
+for stub in 0 1; do
+  stub_python "$WORK/bin-uncontained-$stub" "$stub"
+  run_family "$(make_tree "uncontained-$stub" 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")" "$WORK/bin-uncontained-$stub"
+  expect "a python3 exiting $stub with no verdict when a rule file is contained" 1 \
+    'fixture-backend\.md [|] could not tell whether this path resolves inside the repository'
+  counted 'nothing compared: python3 could not contain a tracked rule file'
+done
 d="$(make_tree no-runtime 0.62.0 "$(rule "$(label 0.60.0 0.62.0)")")"
 rm "$d/.ductus/bin/ductus"
 run_family "$d" "$no_python"

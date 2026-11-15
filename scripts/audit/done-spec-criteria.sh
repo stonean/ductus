@@ -64,14 +64,22 @@ fi
 
 # The spec root is adopter-configurable (spec 040); resolve it the way the
 # shipped shell does rather than assuming `specs`.
-SPECS_ROOT="specs"
-if [ -f .ductus/config.toml ]; then
-  configured="$(
-    sed -n 's/^[[:space:]]*specs-root[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
-      .ductus/config.toml | head -1
-  )"
-  [ -n "$configured" ] && SPECS_ROOT="$configured"
-fi
+SPECS_ROOT="$(specs_root)"
+
+# The root is committed text. One resolving outside the repository is
+# reported and never listed or read (026 plan, BE-INPUT-004).
+contained "$ROOT" "$SPECS_ROOT"
+case $? in
+  1)
+    emit "$SPECS_ROOT/" "the configured spec root resolves outside the repository, so no spec was listed or read" \
+      "set [paths] specs-root in .ductus/config.toml to a directory inside the repository"
+    exit "$drift"
+    ;;
+  2)
+    containment_unchecked "$SPECS_ROOT/"
+    exit "$drift"
+    ;;
+esac
 
 files="$(git ls-files -- "$SPECS_ROOT/*/spec.md" 2>/dev/null)"
 if [ -z "$files" ]; then
@@ -86,13 +94,19 @@ untracked="$(git ls-files --others --exclude-standard -- "$SPECS_ROOT/*/spec.md"
 
 report="$(
   printf '%s\n' "$files" | python3 -c '
-import sys, re
+import os, sys, re
 
+ROOT = os.path.realpath(".")
 paths = [p for p in sys.stdin.read().splitlines() if p]
 examined = 0
 findings = []
 
 for path in paths:
+    # A tracked symbolic link resolving outside the repository is reported
+    # and never opened (026 plan, BE-INPUT-004).
+    if os.path.commonpath([ROOT, os.path.realpath(path)]) != ROOT:
+        findings.append((path, 0, "", "resolves outside the repository, so it was not read"))
+        continue
     try:
         with open(path, encoding="utf-8") as fh:
             lines = fh.read().splitlines()
