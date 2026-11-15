@@ -364,7 +364,6 @@ fn step_numbers(lines: &[&str], subject: &[usize]) -> Vec<(u32, usize)> {
 /// reference.
 fn step_references(line: &str) -> Vec<u32> {
     let lower = line.to_lowercase();
-    let bytes = lower.as_bytes();
     let mut out = Vec::new();
     let mut i = 0usize;
 
@@ -419,7 +418,6 @@ fn step_references(line: &str) -> Vec<u32> {
             out.extend(numbers);
         }
         i = walk.max(start + 4);
-        let _ = bytes;
     }
     out
 }

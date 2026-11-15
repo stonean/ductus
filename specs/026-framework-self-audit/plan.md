@@ -8,7 +8,7 @@ Implements [026 — Framework self-audit](spec.md).
 
 **As it runs:** the command has one step, `run-generator` over `scripts/audit/run-all.sh`, which runs check-zero and then every family it registers; `framework/reference/audit.md` enumerates the families. The procedure shape and the per-family designs below are recorded as planned.
 
-Per [Q2's resolution](spec.md#resolved-questions), v1 uses shell-first orchestration with the runtime as the invocation mechanism — no new primitives are added in 026. The pattern is intentional: when a check pattern proves common enough across multiple commands, it graduates to a runtime primitive in a follow-on. Inventing primitives for `/audit` alone would overengineer ahead of data.
+Per [Q2's resolution](spec.md#resolved-questions), v1 uses shell-first orchestration with the runtime as the invocation mechanism. 026 adds one primitive, `check-step-references`, because Family 34 parses markdown structure, which §runtime-boundary keeps out of shell pipelines; `scripts/audit/step-reference-integrity.sh` is its entry point, and every other family delegates to primitives that already existed. The pattern is intentional: when a check pattern proves common enough across multiple commands, it graduates to a runtime primitive in a follow-on. Inventing primitives for `/audit` alone would overengineer ahead of data.
 
 Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifact). Exit code is binary (`0` / `1`). CI integration: `.github/workflows/framework-checks.yml` runs `/audit` on every PR; `.github/workflows/runtime-release.yml` runs `/audit` as a pre-tag gate.
 
@@ -176,7 +176,7 @@ The runtime write boundary that `/ductus:implement` derives from git history wil
 
 ### Considered: add `/audit`-specific runtime primitives
 
-Each family check could become a primitive (`audit-cross-doc`, `audit-manifest-parity`, …). The runtime would gain richer typed interfaces and the procedure would shrink. Rejected because: (a) primitives carry maintenance overhead (schema, MCP wiring, tests) that earns its keep only when reused across commands — these are one-offs; (b) shell scripts can be modified by future maintainers without recompiling the runtime; (c) primitive promotion is a documented path for when reuse surfaces. v1 ships the simpler design and lets data drive promotion.
+Each family check could become a primitive (`audit-cross-doc`, `audit-manifest-parity`, …). The runtime would gain richer typed interfaces and the procedure would shrink. Rejected because: (a) primitives carry maintenance overhead (schema, MCP wiring, tests) that earns its keep only when reused across commands — these are one-offs; (b) shell scripts can be modified by future maintainers without recompiling the runtime; (c) primitive promotion is a documented path for when reuse surfaces. v1 ships the simpler design and lets data drive promotion. Family 34 is the exception, for the reason the Overview gives.
 
 ### Considered: single bash entrypoint `scripts/audit.sh`
 

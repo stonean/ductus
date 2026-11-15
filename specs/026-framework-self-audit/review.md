@@ -1,17 +1,19 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-15T18:19:24Z
-reviewed-against: a15b6cf6c71662b1416e73cd3109eccb9a52bbb4
-diff-base: 50604a4cc629b50c92d59b148846bb1df53873cc
+last-run: 2026-11-15T19:09:11Z
+reviewed-against: 5e00b87bd1c819d383df5480614edb9b7fc843d5
+diff-base: 713c1ca7f9a8c8c59a840e4c1a43ad05b77081f4
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 12
-scope: 14
+examined: 7
+scope: 11
 unread:
   - .github/workflows/framework-checks.yml
-  - scripts/audit/README.md
-excluded: 50
+  - runtime/CHANGELOG.md
+  - runtime/src/schema/descriptions.rs
+  - runtime/src/schema/primitives.rs
+excluded: 8
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -33,7 +35,7 @@ reviewed-digest:
   scenarios/family-26-broken-relative-links.md: 9e03cfe250dbffe6128229b1bb064c8b574b61ead93ed1ce5fd2fe12ec8e615d
   scenarios/family-27-done-spec-unchecked-criteria.md: d164ba1fedaababcb88f5a4062b150ae8bd7e017699d7ac6d310292a25489bf9
   scenarios/family-28-audit-family-registry-parity.md: bf80f1d64718deb87a7dec79c69e9248e8c1ab4a41e65c638488fdd9fcd5e529
-  scenarios/family-34-step-reference-integrity.md: 4175e05f88fcec7a03a63150bf652a3dd352a4e2d48b228a51a3839c0d867656
+  scenarios/family-34-step-reference-integrity.md: 4494835543a7ebfa3fe429d732652a658faf6f0b0cc8376daa05cb4e09ad2ca0
   scenarios/family-35-manifest-destination-links.md: d51539ef0b2834b712658784442a2f90f574cf667510b5a771c65b6b60d646cc
   scenarios/family-36-self-url-resolution.md: cd99f03527a227ce027dff7026bea461c1d0dd5d054422687e3076f44cefa3fe
   scenarios/family-39-shipped-anchor-resolution.md: c00188dfd875ce2aeda794be6e023221173dd712c949b58f60ac34a80a5e17ca
@@ -45,7 +47,7 @@ blocking: false
 dispositions:
   fixed: 3
   deferred: 0
-  waived: 8
+  waived: 9
   undispositioned: 0
 decisions:
   - key: "other: 066 task 19's item 0 is applied but unchecked, and its item 3 and note 5 name text that has moved — `specs/066-audit-records-and-the-completion-gate/tasks.md`"
@@ -153,13 +155,33 @@ decisions:
     reason: Not an entry in 026's review scope, and the pipeline's own machinery observed while reviewing framework work, which AGENTS.md waives; the case needs a runtime found only on PATH, which this repository never has (the release build is tier 2).
     decided-at: 2026-11-15T18:19:24Z
     decided-by: rule
+  - key: "other — reuse: the file-form read of a `lists-file` is now carried by four embedded-python copies (`scripts/audit/lib.sh` spec_corpus, `broken-relative-links.sh`, `manifest-destination-links.sh`, and `step-reference-integrity.sh`), each with its own key set and precondition wording. — `scripts/audit/step-reference-integrity.sh:116`"
+    outcome: waived
+    reason: Pipeline machinery. Each family's python is embedded in its own script by the README contract (families keep their own renderer, and an apostrophe-free `python3 -c` string cannot import a shared module); the copies differ in the keys they require and the message they name, and a shared helper would be a new feature, not a defect in 026's change. The four copies read the lists the same way (missing list halts, never reads as none), which is the property that matters.
+    decided-at: 2026-11-15T19:09:11Z
+    decided-by: rule
+  - key: other — spec 080's data-model 'Bounded results' table says each member's row is added as it lands, and its research.md measurement table records check-step-references as Bounded 'no'; neither names the primitive now that it is bounded. prune-project (041/075) is equally absent from the table. — `specs/080-deterministic-runtime-efficiency/data-model.md:196`
+    outcome: waived
+    reason: "080's Bounded results table lists 080's own population, as the owner decided on 2026-11-14 when 067 task 32 bounded derive-references (that task's text: the table gains no row, since it lists 080's own population), so a bound another spec adds takes no row there; research.md's table is a measurement record at the commit it states, not a live claim"
+    decided-at: 2026-11-15T19:09:11Z
+    decided-by: rule
+  - key: other — the lists file sits under `.ductus/results/check-step-references/all-specs/`; `all-specs` is the key 080's data model gives a corpus-wide spec result, while this primitive's subject is command sources and two bootstrap files, not the spec corpus. Mutant M10 and the unit test pin the segment. — `runtime/src/primitives/check_step_references.rs:145`
+    outcome: waived
+    reason: "a naming choice with no behavioral effect: the key only separates one primitive's list files, a caller reads the path from lists-file, and the whole-corpus key is how the other corpus-wide primitives key theirs"
+    decided-at: 2026-11-15T19:09:11Z
+    decided-by: rule
+  - key: other — the family-34 scenario's Context says 'the 33 existing `/audit` families'; the framework has more families now. — `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md:19`
+    outcome: waived
+    reason: the sentence is the account of the 054 incident at the time Family 34 was introduced, when 33 families existed and Family 34 was the next; it is a dated historical account, not a claim about the present, as the scenario's other counts carry their dates
+    decided-at: 2026-11-15T19:09:11Z
+    decided-by: rule
 ---
 
 # Review — 026-framework-self-audit
 
 ## Summary
 
-026's first review of its 2026-11-15 reopening. The window runs from `50604a4c`, the reopen's parent, to `a15b6cf6`. One agent ran all five passes, reading all nine loaded backend and cross rule files whole. It read 12 of the 14 scope entries whole: the two family scripts, `lib.sh`, the new containment test, 026's spec and tasks, and the six scenarios in scope, each checked claim by claim. It reviewed `1a382f81` (026 task 5) hunk by hunk, the reopen `55a96825` and `c016f6f5`'s AC27 hunk. Unread: `.github/workflows/framework-checks.yml`, `scripts/audit/README.md`, each read only at the task-5 hunks and the sections beside them; `framework-checks.yml`'s steps (b) to (n) were not read. Two findings were fixed in the run. BE-INPUT-004 (MUST): 35a's lexical destination screen let a destination of exactly `..` through, so `cp` could write outside the throwaway tree; the screen now refuses it. QUAL-TEST-001 (SHOULD, low confidence): the containment test asserted that each outward path was reported but not that it was never copied, probed or read; each outward target now carries content a family would report if it reached it, and each case asserts that finding absent. Of the observations, three chores were fixed: Family 36 now reports a URL path holding a NUL as unresolved rather than dying on it, the `unreadable` record of 35b and 36 keeps its reason, and the test gives Family 35 a source that is a link inside the tree. Five were waived by the rule. Three stored waivers on `framework-checks.yml` and the family-22 scenario still stand and are carried. The test was proven against 13 hand mutants, every one killed.
+026's second review of its 2026-11-15 reopening. The window runs from `713c1ca7`, its first review, to `5e00b87b`. One agent ran all five passes, reading all nine loaded backend and cross rule files whole. It read 7 of the 11 scope entries whole: `check_step_references.rs`, Family 34's script, its mutation list and shell test, 026's plan and tasks, and the family-34 scenario, checked claim by claim. It reviewed `5e00b87b` (026 task 6, check-step-references' result bounded), `851d0f17` (the plan's analysis chores) and `4f093e4e` (task 6 recorded) hunk by hunk. Unread: `.github/workflows/framework-checks.yml`, `runtime/CHANGELOG.md`, `runtime/src/schema/descriptions.rs`, `runtime/src/schema/primitives.rs`, each read at the task-6 hunk and what it needed; `framework-checks.yml`'s lines 60-110 and 140-195 were not read. No finding. Three chores were fixed in the run: `step_references`' dead `bytes` binding, the plan's claim that 026 adds no primitive (Family 34's check is one, since it parses markdown structure), and the CHANGELOG entry now says an empty list is `[]` inline. Four observations were waived by the rule, and five stored waivers still stand and are carried.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
@@ -185,17 +207,18 @@ decisions:
 
 ## Observations
 
-- bug — Family 36's `inside()` (added by 1a382f81) calls os.path.realpath on a URL path that went through urllib `unquote`, so `%00` in any tracked markdown URL raises ValueError (embedded null character) uncaught: the python program dies with a traceback, the `counts` record is never printed, and the family reports one misleading finding, 'no tracked markdown file could be read', for the whole corpus. Before the change os.path.exists returned False for the same path and the URL was reported `unresolved`. Reproduced in a fixture. The run still exits 1, so it fails closed, which is why it is not recorded as a contract break. — `scripts/audit/self-url-resolution.sh:124-129,175` — **fixed** (decided by the rule)
-- bug — the `unreadable` record loses its reason in both 35b and 36: python prints `unreadable<TAB>path<TAB><TAB>reason`, but the shell reads it with `IFS=$'\t' read -r kind f1 f2 f3`, and a tab is IFS whitespace, so the two adjacent tabs collapse, the reason lands in f2 and f3 is empty, and the message prints 'could not be read ()'. Reproduced with the same read on a sample line. Pre-existing, in the case statements task 5 edited. — `scripts/audit/manifest-destination-links.sh:291,319-323; scripts/audit/self-url-resolution.sh:142,217-221` — **fixed** (decided by the rule)
-- other — the test's header and case A say a symbolic link to a file inside the tree passes 'both families', but only Family 36 is given an in-tree link (docs/alias.md). Family 35 sees regular files, so a `contained` that refused every symbolic link (an lstat-based check) leaves all six cases green; shown in a fixture copy, and the case below turns it red. — `scripts/tests/test-audit-path-containment.sh:15-17,118-123` — **fixed** (decided by the rule)
-- other — the audit-script-refactors scenario's Context says flush_step 'reads and mutates seven caller-scope variables' and then lists five names plus `drift`, which is six. — `specs/026-framework-self-audit/scenarios/audit-script-refactors.md:12` — **waived**: Context quoting a 2026-05-18 review finding about code that no longer exists (flush_step is gone, report_step is pure, which the Behavior records and the script confirms); the count cannot be re-derived against the pre-refactor source the finding read, and correcting it changes no requirement. (decided by the rule)
-- other — the family-22 scenario's reworded sentence says the orchestration cases' stub 'records its invocation', while install_stub also simulates the dependency derivation (it rewrites the seeded spec on `derive-dependencies --write`), which assertions 3 and 4 depend on. The script's header states both. — `specs/026-framework-self-audit/scenarios/family-22-adopter-shell-behavior.md:66-69` — **waived**: The sentence is accurate as far as it goes and its purpose is the contrast with the project-file cases, which drive the real runtime; the simulation is stated in adopter-shell-behavior.sh's header, and adding it to the scenario edits a requirement sentence for no behavioral difference. (decided by the rule)
-- other — the family-36 scenario's 'Three findings, because three repairs differ' and AC24's enumeration list unresolved, blob-names-dir and tree-names-file, while the family now also reports `outside`, `file-outside` and `unreadable`; the two new kinds are stated in the next paragraph, not in that list. — `specs/026-framework-self-audit/scenarios/family-36-self-url-resolution.md:27-34; specs/026-framework-self-audit/spec.md:148` — **waived**: The three-finding list is the repairs for a path inside the repository and still holds as written; the new kinds are specified in the Behavior paragraph that follows, and AC24 says those three are distinct, not that they are the only kinds. (decided by the rule)
-- other — three copies of the containment comparison now exist (lib.sh `contained`, 35b's inline python, 36's `inside`), and 35a starts one python3 process per Shared Files row (38 rows today, about a second). — `scripts/audit/lib.sh:78-93; scripts/audit/manifest-destination-links.sh:125,284; scripts/audit/self-url-resolution.sh:124-129` — **waived**: The copies are the documented trade-off (lib.sh's comment and the family scenarios): the python-computing families cannot call a shell function per path without a process each, and the comparison is two lines. The per-row cost is under two seconds in a maintainer-run script that also builds a runtime-backed tree. (decided by the rule)
-- other — in scripts/audit/adopter-shell-behavior.sh (outside 026's review scope, read as a check of the Family 22 claim) project_file_fixture links `"$ROOT/$bin"`, and `ductus_bin`'s third tier returns an absolute PATH result, giving `$ROOT//abs/path`, a broken link that surfaces as the 'no runtime reachable' finding. The claim edited by 55a96825 (a runtime they cannot reach is a finding) holds: the failure is loud, only its message is misleading. — `scripts/audit/adopter-shell-behavior.sh:503` — **waived**: Not an entry in 026's review scope, and the pipeline's own machinery observed while reviewing framework work, which AGENTS.md waives; the case needs a runtime found only on PATH, which this repository never has (the release build is tier 2). (decided by the rule)
+- other — dead code in `step_references`: `let bytes = lower.as_bytes();` is never read, and `let _ = bytes;` exists only to silence the unused binding (from 8edc39c4, outside the window's hunks but inside the file in scope). AGENTS.md: no dead code, fixed in the run. — `runtime/src/primitives/check_step_references.rs:367` — **fixed** (decided by the rule)
+- other — plan.md still says no primitive is added by 026 (Overview: 'v1 uses shell-first orchestration ... no new primitives are added in 026'; Trade-offs: add /audit-specific runtime primitives 'Rejected'), but Family 34's check is the `check-step-references` primitive, added by 026 in 8edc39c4 and the subject of task 6. The plan is meant to record the design as it stands; Family 9's reversal is recorded in the same file, this one is not. — `specs/026-framework-self-audit/plan.md:11` — **fixed** (decided by the rule)
+- other — the CHANGELOG entry for task 6 states the file form but not that an inline empty list now serializes as `[]` where it was absent (`not-a-procedure`, `skipped`, `findings` on a clean tree), a shape change a consumer of the MCP or CLI result can see. The commit message records it; the CHANGELOG, which adopters read, does not. — `runtime/CHANGELOG.md:327` — **fixed** (decided by the rule)
+- other — reuse: the file-form read of a `lists-file` is now carried by four embedded-python copies (`scripts/audit/lib.sh` spec_corpus, `broken-relative-links.sh`, `manifest-destination-links.sh`, and `step-reference-integrity.sh`), each with its own key set and precondition wording. — `scripts/audit/step-reference-integrity.sh:116` — **waived**: Pipeline machinery. Each family's python is embedded in its own script by the README contract (families keep their own renderer, and an apostrophe-free `python3 -c` string cannot import a shared module); the copies differ in the keys they require and the message they name, and a shared helper would be a new feature, not a defect in 026's change. The four copies read the lists the same way (missing list halts, never reads as none), which is the property that matters. (decided by the rule)
+- other — spec 080's data-model 'Bounded results' table says each member's row is added as it lands, and its research.md measurement table records check-step-references as Bounded 'no'; neither names the primitive now that it is bounded. prune-project (041/075) is equally absent from the table. — `specs/080-deterministic-runtime-efficiency/data-model.md:196` — **waived**: 080's Bounded results table lists 080's own population, as the owner decided on 2026-11-14 when 067 task 32 bounded derive-references (that task's text: the table gains no row, since it lists 080's own population), so a bound another spec adds takes no row there; research.md's table is a measurement record at the commit it states, not a live claim (decided by the rule)
+- other — the lists file sits under `.ductus/results/check-step-references/all-specs/`; `all-specs` is the key 080's data model gives a corpus-wide spec result, while this primitive's subject is command sources and two bootstrap files, not the spec corpus. Mutant M10 and the unit test pin the segment. — `runtime/src/primitives/check_step_references.rs:145` — **waived**: a naming choice with no behavioral effect: the key only separates one primitive's list files, a caller reads the path from lists-file, and the whole-corpus key is how the other corpus-wide primitives key theirs (decided by the rule)
+- other — the family-34 scenario's Context says 'the 33 existing `/audit` families'; the framework has more families now. — `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md:19` — **waived**: the sentence is the account of the 054 incident at the time Family 34 was introduced, when 33 families existed and Family 34 was the next; it is a dated historical account, not a claim about the present, as the scenario's other counts carry their dates (decided by the rule)
+- other: check-step-references' not-a-procedure field doc defines the set by files holding several numbered lists, though it also holds files with no step or too few — `runtime/src/schema/primitives.rs` — **waived**: the primitive's schema doc, 067's surface and outside 026's code; the family's own stderr line now says not one procedure (decided by the rule)
 - other: framework-checks step (m) tests the pins check on fixtures only, so a pull request adding a tag-pinned uses: merges green until the weekly run reports it — `.github/workflows/framework-checks.yml` — **waived**: The owner chose the weekly currency check as the pins' update process (022 task 3, option c); a per-pull-request pin lint is not part of it and would be its own decision.
 - other: runs-on: ubuntu-latest is mutable and now supplies framework-checks' Node too — `.github/workflows/framework-checks.yml` — **waived**: The owner chose the runner image's Node (022 task 3, option a), and a GitHub-hosted image has no immutable reference to pin.
-- other — the family-22 scenario says the fixture is built twice (default and configured root) and lists four assertions; adopter-shell-behavior.sh also runs cases for a too-old runtime (1b), a hung runtime (1c), a staged spec deletion (3), a project in a repository subdirectory through the outer hook (4) and the size-limit refusal (5). The scenario understates the family; nothing it says is false, and AC15 states the same subset. — `specs/026-framework-self-audit/scenarios/family-22-adopter-shell-behavior.md:59` — **waived**: an understatement, not a false claim: every behavior the scenario states holds, the extra cases are documented in the script's own case headers, and listing them in the scenario would add requirements rather than correct one. It is also a claim about the pipeline's own machinery under review. (decided by the rule)
+- other — the family-36 scenario's 'Three findings, because three repairs differ' and AC24's enumeration list unresolved, blob-names-dir and tree-names-file, while the family now also reports `outside`, `file-outside` and `unreadable`; the two new kinds are stated in the next paragraph, not in that list. — `specs/026-framework-self-audit/scenarios/family-36-self-url-resolution.md:27-34; specs/026-framework-self-audit/spec.md:148` — **waived**: The three-finding list is the repairs for a path inside the repository and still holds as written; the new kinds are specified in the Behavior paragraph that follows, and AC24 says those three are distinct, not that they are the only kinds. (decided by the rule)
+- other — three copies of the containment comparison now exist (lib.sh `contained`, 35b's inline python, 36's `inside`), and 35a starts one python3 process per Shared Files row (38 rows today, about a second). — `scripts/audit/lib.sh:78-93; scripts/audit/manifest-destination-links.sh:125,284; scripts/audit/self-url-resolution.sh:124-129` — **waived**: The copies are the documented trade-off (lib.sh's comment and the family scenarios): the python-computing families cannot call a shell function per path without a process each, and the comparison is two lines. The per-row cost is under two seconds in a maintainer-run script that also builds a runtime-backed tree. (decided by the rule)
 
 ## Skipped passes
 
@@ -203,56 +226,14 @@ decisions:
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/implement.md` — 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/prune.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `.ductus/reference/audit.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `.github/workflows/runtime-release.yml` — 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-implement.md` — 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-prune.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `README.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `docs/slash-commands.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `framework/commands/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/commands/prune.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `framework/reference/audit.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `runtime/CHANGELOG.md` — 022-deterministic-runtime, 041-task-pruning, 066-audit-records-and-the-completion-gate, 075-agents-md-holds-what-every-session-needs
-- `runtime/src/host.rs` — 022-deterministic-runtime
-- `runtime/src/main.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/append_task.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/check_artifact_size.rs` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `runtime/src/primitives/compute_review_scope.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/migrate_session_file.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/process_waivers.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/prune_project.rs` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `runtime/src/primitives/write_review.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/descriptions.rs` — 022-deterministic-runtime, 041-task-pruning, 066-audit-records-and-the-completion-gate, 075-agents-md-holds-what-every-session-needs
-- `runtime/src/schema/paths.rs` — 022-deterministic-runtime
-- `runtime/src/schema/primitives.rs` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `runtime/src/schema/registry.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/session.rs` — 022-deterministic-runtime
-- `runtime/tests/golden/implement-basic.jsonl` — 066-audit-records-and-the-completion-gate
-- `scripts/audit/adopter-shell-behavior.sh` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `scripts/mutation/append-task-lost-update.py` — 022-deterministic-runtime
-- `scripts/mutation/prune-project.py` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `scripts/mutation/review-scope-cells-and-deletions.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/session-file-containment.py` — 022-deterministic-runtime
-- `scripts/mutation/waiver-notices-flatten.py` — 066-audit-records-and-the-completion-gate
-- `specs/020-code-review/analysis.md` — 020-code-review, 022-deterministic-runtime
-- `specs/020-code-review/spec.md` — 020-code-review
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/tasks.md` — 020-code-review, 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks
-- `specs/041-task-pruning/data-model.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `specs/041-task-pruning/tasks.md` — 022-deterministic-runtime, 041-task-pruning
-- `specs/060-exec-analyze-assesses-each-loaded-rule/analysis.md` — 060-exec-analyze-assesses-each-loaded-rule, 075-agents-md-holds-what-every-session-needs
-- `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — 060-exec-analyze-assesses-each-loaded-rule
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/scenarios/a-renamed-file-contributes-its-rewrites.md` — 066-audit-records-and-the-completion-gate
-- `specs/067-analyze-and-audit-checks/tasks.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/075-agents-md-holds-what-every-session-needs/analysis.md` — 060-exec-analyze-assesses-each-loaded-rule, 075-agents-md-holds-what-every-session-needs
-- `specs/075-agents-md-holds-what-every-session-needs/review.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
-- `specs/075-agents-md-holds-what-every-session-needs/spec.md` — 041-task-pruning, 075-agents-md-holds-what-every-session-needs
+- `.claude/commands/ductus/prune.md` — 041-task-pruning
+- `.pi/prompts/ductus-prune.md` — 041-task-pruning
+- `framework/commands/prune.md` — 041-task-pruning
+- `runtime/src/primitives/prune_project.rs` — 041-task-pruning
+- `scripts/mutation/prune-project-containment.py` — 041-task-pruning
+- `specs/041-task-pruning/data-model.md` — 041-task-pruning
+- `specs/041-task-pruning/tasks.md` — 041-task-pruning
+- `specs/067-analyze-and-audit-checks/tasks.md` — 067-analyze-and-audit-checks
 
 ## Unexamined governance
 

@@ -325,7 +325,8 @@ its version and date.
   (`findings-count`, `examined-count`, `with-steps-count`,
   `not-a-procedure-count`, `skipped-count`), and `lists-file` names the file
   under `.ductus/results/` holding them whole. `references-out-of-subject` and
-  `guidance` stay inline. Family 34 reads the lists from that file, and a file
+  `guidance` stay inline, and an empty list is `[]` inline where it was
+  absent, as `check-corpus-links`' is. Family 34 reads the lists from that file, and a file
   it cannot read, or one lacking a list, is a `(precondition)` finding.
 
 - **`prune-project` bounds its result and names an unexamined tail (spec
