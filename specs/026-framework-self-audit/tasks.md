@@ -1,5 +1,5 @@
 ---
-next-task: 6
+next-task: 7
 ---
 
 # 026 — Framework self-audit (`/audit`) Tasks
@@ -46,7 +46,7 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
-Blocked on task 5: it changes two family scripts and three family scenarios, design subjects every stored verdict was judged against, so the review, the criteria's verification and the analysis run after it lands (owner, 2026-11-15).
+Blocked on task 6: it changes `check-step-references`, Family 34's script and the family-34 scenario, a design subject every stored verdict was judged against, so the review of its change, the criteria's verification and the analysis run after it lands. Task 5 landed and was reviewed at `713c1ca7` (owner, 2026-11-15).
 
 Not blocked on 067 task 14 or 071 task 22: neither changes a file in 026's review scope or its plan's Affected Files, and under 079's AC6 a commit only 067 or 071 claims stays out of that scope, so 026 closes next (owner, 2026-11-10).
 
@@ -68,3 +68,11 @@ Handoff (2026-10-29). 026's record (2026-10-16) is review-stale. For the reuse r
 - [x] `scripts/tests/test-audit-path-containment.sh`, run by a `framework-checks.yml` step, builds fixture trees and shows each family reports a symbolic link resolving outside the project and passes on an in-tree file, and it fails with the containment removed
 
 - **Done when**: Neither family probes, copies or reads a path resolving outside the project, proven by a test that fails with the check removed; `framework-checks.yml`'s and `generators.yml`'s steps, `actionlint` and `scripts/audit/run-all.sh` pass; and 026's next review reads the change.
+
+## 6. check-step-references' result is bounded (BE-PAYLOAD-001, from 026's analysis)
+
+- [ ] `check-step-references`' result lists (`findings`, `examined`, `with-steps`, `not-a-procedure`, `skipped`) go through `bounded_lists::place`: inline while the result fits `[artifacts] read-size-bytes`, and past it in the file `lists-file` names, each list's count inline. Today the result has no file form, and each list grows with the command files it reads. The owner decided on 2026-11-15 that 026 bounds it, since the primitive's contract is `scenarios/family-34-step-reference-integrity.md`; the finding's other part, `resolve-anchor` and `read-deprecation-labels`, is deferred to 067 task 35
+- [ ] `CHECK_STEP_REFERENCES`' description and the family-34 scenario state the bound, and `scripts/audit/step-reference-integrity.sh` reads the lists from `lists-file` in the file form, reporting a list file it cannot read, or one missing a list, as a finding, never as nothing found
+- [ ] A test proves the inline form under the read size and the file form past it, failing under its mutant, and a fixture run of Family 34 with a read size small enough to force the file form reports the same findings as the inline form
+
+- **Done when**: The result returns inline, or in a lists-file past the read size, with Family 34 reading the file form, proven by tests their mutants turn red; the whole `cargo test` passes; `framework-checks.yml` step (u) passes; and 026's next review reads the change.
