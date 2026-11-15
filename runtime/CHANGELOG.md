@@ -1074,6 +1074,17 @@ its version and date.
 
 ### Fixed
 
+- **`prune-project` opens nothing through a symbolic link leaving the project
+  (spec 041 task 25, BE-INPUT-004).** Each project file is checked with
+  `validate_contained` before it is read, and one that is, or lies under, such
+  a link reads the new file state `outside-project`: neither read nor written,
+  no entries. A rewrite re-checks its path before `write_atomic`; every listed
+  `create` home is checked before an apply writes anything, and a refused one
+  fails the whole call with `invalid-path`. The search leaves a tracked file
+  behind such a link unread and names it in the search's `outside-project`,
+  with `outside-project-count`; the list moves to the `lists-file` under the
+  key `outside-project` past the read size, the count staying inline.
+
 - **The session files open through canonical containment (spec 022, task
   34).** Every read of a session file, the lock and the sessions directory
   goes through the project's containment check: another session's file that

@@ -14,6 +14,13 @@
 //! the code never rests on the operator's memory. It is a literal search: an
 //! identifier built at runtime does not appear, which is why the walk words
 //! zero hits as *no literal occurrence found*.
+//!
+//! Every open the primitive makes goes through `validate_contained`
+//! (BE-INPUT-004): a project file that is, or lies under, a symbolic link
+//! resolving outside the project is `outside-project` and neither read nor
+//! written, a home to create there refuses the whole apply before it writes,
+//! and a tracked file the search would read through one is left unread and
+//! named.
 
 use std::path::Path;
 
@@ -24,7 +31,7 @@ use crate::primitives::check_artifact_size::{
 };
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, bounded_lists, hex, inline_code_spans, line_ending_of,
-    parse_atx_heading, tracked_project_paths, write_atomic,
+    parse_atx_heading, tracked_project_paths, validate_contained, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -69,6 +76,10 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 ///   `check-artifact-size` reports them.
 /// - [`PrimitiveError::Git`] when a repository is found but its index cannot
 ///   be read.
+/// - [`PrimitiveError::InvalidPath`] when an apply lists a home to create
+///   whose path is, or lies under, a symbolic link resolving outside the
+///   project, checked before the apply writes anything; and from the
+///   re-check just before each rewrite.
 /// - [`PrimitiveError::Io`] when a write fails, or the list file past the read
 ///   size cannot be written, or the results directory resolves outside the
 ///   project (`bounded_lists::place`). An apply has written by then, so such an
@@ -105,6 +116,11 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     let mut created = Vec::new();
     let mut kept = Vec::new();
     if applied {
+        // Every home to create is checked before anything is written, so a
+        // refused one never leaves half an apply on disk.
+        for kind in &args.create {
+            validate_contained(repo, &home(&root, *kind).0)?;
+        }
         for (idx, (_, rel)) in subjects.iter().enumerate() {
             let Some(content) = &contents[idx] else {
                 continue;
@@ -116,7 +132,7 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
             if edits.is_empty() {
                 continue;
             }
-            write_atomic(&repo.join(rel), &rewrite(content, &segments, &edits))?;
+            write_contained(repo, rel, &rewrite(content, &segments, &edits))?;
         }
         for kind in &args.create {
             let (rel, body) = home(&root, *kind);
@@ -148,10 +164,22 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     // `hits` ride inside their entries, so the one list moves whole: a hit
     // list is read only beside its entry, and `entries` alone grows past the
     // read size, since each entry is a record whether or not it has hits.
-    let lists = serde_json::json!({ "entries": result.entries });
+    // The search's `outside-project` grows with the tracked files, so it
+    // moves with them.
+    let mut lists = serde_json::json!({ "entries": result.entries });
+    if let Some(outside) = result
+        .search
+        .as_ref()
+        .and_then(|s| s.outside_project.as_ref())
+    {
+        lists["outside-project"] = serde_json::json!(outside);
+    }
     if let Some(file) = bounded_lists::place(repo, PRIMITIVE, PROJECT_FILES_KEY, &result, &lists)? {
         result.form = ListsForm::File;
         result.entries = None;
+        if let Some(search) = result.search.as_mut() {
+            search.outside_project = None;
+        }
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -194,8 +222,10 @@ fn check_args(args: &PruneProjectArgs, subjects: &[(ProjectFileKind, String); 4]
     Ok(())
 }
 
-/// Read one subject. A file that is not there is `absent`; one that is there
-/// but cannot be read as text is `unreadable` and contributes no entries.
+/// Read one subject. A file that is not there is `absent`; one that is, or
+/// lies under, a symbolic link resolving outside the project is
+/// `outside-project` and is never opened; one that is there but cannot be
+/// read as text is `unreadable`. Neither contributes entries.
 fn read_subject(
     repo: &Path,
     kind: ProjectFileKind,
@@ -210,6 +240,13 @@ fn read_subject(
         over_limit: bytes.map(|bytes| bytes > limit),
         unexamined_tail: None,
     };
+    match validate_contained(repo, rel) {
+        Ok(()) => {}
+        Err(PrimitiveError::InvalidPath { .. }) => {
+            return (file(ProjectFileState::OutsideProject, None), None);
+        }
+        Err(_) => return (file(ProjectFileState::Unreadable, None), None),
+    }
     match std::fs::read(repo.join(rel)) {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
             (file(ProjectFileState::Absent, None), None)
@@ -523,8 +560,9 @@ fn next_line_is_indented(lines: &[&str], i: usize) -> bool {
 
 /// Run the literal search for every catalog identifier over the tracked files
 /// outside the spec root, the four subjects excepted, setting each such
-/// entry's `hits`. Each file is read once. With no identifier to look for,
-/// nothing is read.
+/// entry's `hits`. Each file is read once, unless it is, or lies under, a
+/// symbolic link resolving outside the project: that one is not read and is
+/// named in `outside-project`. With no identifier to look for, nothing is read.
 fn search(
     repo: &Path,
     root: &str,
@@ -538,6 +576,8 @@ fn search(
             reason: Some(
                 "no git repository contains the project, so no tracked file was read".into(),
             ),
+            outside_project: None,
+            outside_project_count: None,
         });
     };
     let prefix = format!("{root}/");
@@ -554,8 +594,17 @@ fn search(
         segments[*idx].entry.hits = Some(Vec::new());
     }
     let mut files_searched = 0;
+    let mut outside_project = Vec::new();
     if !wanted.is_empty() {
         for path in &candidates {
+            match validate_contained(repo, path) {
+                Ok(()) => {}
+                Err(PrimitiveError::InvalidPath { .. }) => {
+                    outside_project.push(path.clone());
+                    continue;
+                }
+                Err(err) => return Err(err),
+            }
             let Ok(bytes) = std::fs::read(repo.join(path)) else {
                 continue;
             };
@@ -578,6 +627,8 @@ fn search(
         state: SearchState::Ran,
         files_searched: Some(files_searched),
         reason: None,
+        outside_project_count: Some(outside_project.len()),
+        outside_project: Some(outside_project),
     })
 }
 
@@ -662,6 +713,14 @@ fn rewrite(content: &str, segments: &[Segment], edits: &[&(usize, Option<&str>)]
         out.push_str(ending);
     }
     out
+}
+
+/// Rewrite a project file, after re-checking that its path still resolves
+/// inside the project: the read that gave `body` its text left an outward link
+/// with no content, so this closes the window between that read and the write.
+fn write_contained(repo: &Path, rel: &str, body: &str) -> Result<()> {
+    validate_contained(repo, rel)?;
+    write_atomic(&repo.join(rel), body)
 }
 
 /// Write a missing home from its template, at mode `0644` on Unix:
@@ -1231,6 +1290,214 @@ Codes use `snake_case`.
             .find(|e| e.identifier.as_deref() == Some("order.created"))
             .and_then(|e| e.hits.clone());
         assert_eq!(hits, Some(vec!["src/blob.bin".to_string()]));
+    }
+
+    #[cfg(unix)]
+    fn link(target: &Path, at: &Path) {
+        fs::create_dir_all(at.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink(target, at).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_agents_md_is_outside_project_and_an_apply_writes_nothing() {
+        let dir = project();
+        let outside = TempDir::new().unwrap();
+        let target = outside.path().join("elsewhere.md");
+        write(&target, AGENTS);
+        fs::remove_file(dir.path().join("AGENTS.md")).unwrap();
+        link(&target, &dir.path().join("AGENTS.md"));
+
+        let result = preview(dir.path());
+        let agents = &result.files[0];
+        assert_eq!(agents.state, ProjectFileState::OutsideProject);
+        assert_eq!((agents.bytes, agents.over_limit), (None, None));
+        assert_eq!(entries_of(&result, "AGENTS.md").len(), 0);
+
+        // An entry digest from the target's own text claims nothing, so the
+        // apply is refused as stale and the target is untouched.
+        let digest = segment("AGENTS.md", ProjectFileKind::Agents, AGENTS).0[0]
+            .entry
+            .digest
+            .clone();
+        let applying = PruneProjectArgs {
+            apply: true,
+            remove: vec![EntryRemoval {
+                path: "AGENTS.md".into(),
+                digest,
+            }],
+            ..PruneProjectArgs::default()
+        };
+        let applied = run(&applying, dir.path()).unwrap();
+        assert!(!applied.applied);
+        assert_eq!(fs::read_to_string(&target).unwrap(), AGENTS);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_rewrite_is_refused_through_a_link_leaving_the_project() {
+        let dir = project();
+        let outside = TempDir::new().unwrap();
+        let target = outside.path().join("elsewhere.md");
+        write(&target, "before\n");
+        link(&target, &dir.path().join("linked.md"));
+        let err = write_contained(dir.path(), "linked.md", "after\n").unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "before\n");
+        write_contained(dir.path(), "AGENTS.md", "inside\n").unwrap();
+        assert_eq!(
+            fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
+            "inside\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_spec_root_makes_its_files_outside_project_and_refuses_a_create() {
+        let dir = TempDir::new().unwrap();
+        write(&dir.path().join("AGENTS.md"), AGENTS);
+        let outside = TempDir::new().unwrap();
+        write(&outside.path().join("events.md"), EVENTS);
+        link(outside.path(), &dir.path().join("specs"));
+
+        let result = preview(dir.path());
+        let states: Vec<ProjectFileState> = result.files.iter().map(|f| f.state).collect();
+        assert_eq!(
+            states,
+            vec![
+                ProjectFileState::Present,
+                ProjectFileState::OutsideProject,
+                ProjectFileState::OutsideProject,
+                ProjectFileState::OutsideProject,
+            ]
+        );
+        assert_eq!(entries_of(&result, "specs/events.md").len(), 0);
+
+        // The refused create is listed after a home the link does not
+        // reach, and nothing is written for either.
+        let applying = PruneProjectArgs {
+            apply: true,
+            create: vec![ProjectHome::System],
+            ..PruneProjectArgs::default()
+        };
+        let err = run(&applying, dir.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert!(!outside.path().join("system.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_refused_create_leaves_no_half_an_apply_on_disk() {
+        let dir = project();
+        let outside = TempDir::new().unwrap();
+        // `specs/errors.md` is present and its listed removal would be
+        // written; the home to create is a link out, so nothing is.
+        link(
+            &outside.path().join("sys.md"),
+            &dir.path().join("specs/system.md"),
+        );
+        let digest = segment("specs/errors.md", ProjectFileKind::Errors, ERRORS).0[1]
+            .entry
+            .digest
+            .clone();
+        let applying = PruneProjectArgs {
+            apply: true,
+            remove: vec![EntryRemoval {
+                path: "specs/errors.md".into(),
+                digest,
+            }],
+            create: vec![ProjectHome::System],
+            ..PruneProjectArgs::default()
+        };
+        let err = run(&applying, dir.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("specs/errors.md")).unwrap(),
+            ERRORS
+        );
+        assert!(!outside.path().join("sys.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_search_names_a_tracked_link_out_and_does_not_read_it() {
+        let dir = project();
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        write(
+            &dir.path().join("src/orders.rs"),
+            "emit(\"order.created\");\n",
+        );
+        let outside = TempDir::new().unwrap();
+        let target = outside.path().join("secret.rs");
+        write(&target, "order.created and user.deleted\n");
+        link(&target, &dir.path().join("src/linked.rs"));
+        // A tracked file under a linked directory is named too.
+        write(&outside.path().join("lib/deep.rs"), "order.created\n");
+        link(&outside.path().join("lib"), &dir.path().join("vendor"));
+        commit_all(&repository, "fixture");
+
+        let result = preview(dir.path());
+        let search = result.search.as_ref().unwrap();
+        assert_eq!(search.state, SearchState::Ran);
+        assert_eq!(search.files_searched, Some(1));
+        let mut named = search.outside_project.clone().unwrap();
+        named.sort();
+        assert_eq!(
+            named,
+            vec!["src/linked.rs".to_string(), "vendor".to_string()]
+        );
+        assert_eq!(search.outside_project_count, Some(2));
+        let hits = |id: &str| {
+            entries_of(&result, "specs/events.md")
+                .into_iter()
+                .find(|e| e.identifier.as_deref() == Some(id))
+                .and_then(|e| e.hits.clone())
+        };
+        assert_eq!(
+            hits("order.created"),
+            Some(vec!["src/orders.rs".to_string()])
+        );
+        assert_eq!(hits("user.deleted"), Some(Vec::new()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn outside_project_moves_to_the_lists_file_with_its_count_inline() {
+        let dir = project();
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        write(
+            &dir.path().join("src/orders.rs"),
+            "emit(\"order.created\");\n",
+        );
+        let outside = TempDir::new().unwrap();
+        write(&outside.path().join("x.rs"), "order.created\n");
+        link(
+            &outside.path().join("x.rs"),
+            &dir.path().join("src/linked.rs"),
+        );
+        commit_all(&repository, "fixture");
+        read_size(dir.path(), 9_999);
+        let whole = preview(dir.path());
+        assert_eq!(whole.form, ListsForm::Inline);
+        assert_eq!(
+            whole.search.as_ref().unwrap().outside_project,
+            Some(vec!["src/linked.rs".to_string()])
+        );
+        let size = serde_json::to_vec(&whole).unwrap().len();
+        read_size(dir.path(), size - 1);
+        let bounded = preview(dir.path());
+        assert_eq!(bounded.form, ListsForm::File);
+        let search = bounded.search.as_ref().unwrap();
+        assert_eq!(search.outside_project, None);
+        assert_eq!(search.outside_project_count, Some(1));
+        let file = bounded.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(dir.path().join(file)).unwrap()).unwrap();
+        assert_eq!(
+            lists["outside-project"],
+            serde_json::json!(["src/linked.rs"])
+        );
+        assert!(lists["entries"].is_array());
     }
 
     fn tail_of(content: &str) -> (Vec<(EntryKind, usize, usize)>, Option<UnexaminedTail>) {

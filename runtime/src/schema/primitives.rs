@@ -5061,6 +5061,10 @@ pub enum ProjectFileState {
     Absent,
     /// It exists but could not be read, so it contributes no entries.
     Unreadable,
+    /// It is, or lies under, a symbolic link that resolves outside the
+    /// project (BE-INPUT-004), so it was neither read nor written and
+    /// contributes no entries. A file that is simply not there is `absent`.
+    OutsideProject,
 }
 
 /// One of the four project files, as read.
@@ -5178,6 +5182,18 @@ pub struct ProjectSearch {
     /// Why it could not run. Present when it did not.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// Tracked files left unread because each is, or lies under, a symbolic
+    /// link resolving outside the project (BE-INPUT-004), as project-relative
+    /// paths in search order. Present when it ran, inline while the result
+    /// fits the read size; in the file form it is absent and the file
+    /// `lists-file` names holds it under the key `outside-project`. A file
+    /// listed here is not in `files-searched`. Checked only when an
+    /// identifier is searched for, since otherwise nothing is read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outside_project: Option<Vec<String>>,
+    /// Files in `outside-project`, in either form. Present when it ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outside_project_count: Option<usize>,
 }
 
 /// Result for `prune-project`. Compact; no entry's text is ever included.
@@ -5200,7 +5216,8 @@ pub struct PruneProjectResult {
     #[serde(default)]
     pub entries_count: usize,
     /// In the file form, the file holding `entries` whole, from the project
-    /// root: a JSON object with the one key.
+    /// root: a JSON object with the key `entries`, and the key
+    /// `outside-project` when the search ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// The literal search. Present on a preview, absent on an apply, which
@@ -8599,6 +8616,8 @@ mod tests {
                 state: SearchState::Ran,
                 files_searched: Some(312),
                 reason: None,
+                outside_project: Some(vec!["docs/linked.md".into()]),
+                outside_project_count: Some(1),
             }),
             applied: false,
             stale_entries: Vec::new(),
@@ -8619,6 +8638,8 @@ mod tests {
                 .contains_key("hits")
         );
         assert_eq!(value["search"]["files-searched"], 312);
+        assert_eq!(value["search"]["outside-project"][0], "docs/linked.md");
+        assert_eq!(value["search"]["outside-project-count"], 1);
         assert_eq!(round_trip(&result), result);
     }
 
