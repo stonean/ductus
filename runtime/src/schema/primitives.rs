@@ -7635,31 +7635,44 @@ pub struct StepReferenceSkip {
     pub reason: String,
 }
 
-/// Result of `check-step-references`.
+/// Result of `check-step-references`. Its five lists are inline while the
+/// result fits `[artifacts] read-size-bytes`, and past it in the file
+/// `lists-file` names, each list's count inline in both forms.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckStepReferencesResult {
-    /// Every defect found, in file then line order.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub findings: Vec<StepReferenceFinding>,
+    /// Every defect found, in file then line order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<StepReferenceFinding>>,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
     /// Files read. A file with no `## Instructions` section is examined and
-    /// contributes nothing, which is correct rather than a gap.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub examined: Vec<String>,
+    /// contributes nothing, which is correct rather than a gap. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub examined: Option<Vec<String>>,
+    /// Entries in `examined`, in either form.
+    pub examined_count: usize,
     /// The subset carrying numbered Instructions steps — the files this
-    /// check can actually say something about.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub with_steps: Vec<String>,
+    /// check can actually say something about. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub with_steps: Option<Vec<String>>,
+    /// Entries in `with-steps`, in either form.
+    pub with_steps_count: usize,
     /// Files whose Instructions section holds several numbered lists rather
     /// than one procedure — `amend.md` restarts at 1 under each subsection,
     /// `status.md` uses three separate one-item lists. Their references
     /// cannot be resolved against a single set without inventing findings,
-    /// so they are named here rather than examined.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub not_a_procedure: Vec<String>,
-    /// Files that could not be read.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub skipped: Vec<StepReferenceSkip>,
+    /// so they are named here rather than examined. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_a_procedure: Option<Vec<String>>,
+    /// Entries in `not-a-procedure`, in either form.
+    pub not_a_procedure_count: usize,
+    /// Files that could not be read. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<StepReferenceSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
     /// `step N` mentions outside the Instructions section, counted but never
     /// resolved: a numbered list elsewhere in the file restarts at 1 and is a
     /// different list. (A command's reference, whose
@@ -7671,6 +7684,14 @@ pub struct CheckStepReferencesResult {
     /// Set when the check could not establish a subject at all.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub guidance: String,
+    /// Where the five lists are: in this result, or past the read size in the
+    /// file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the five lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-command-flags -------------------------------------------------------

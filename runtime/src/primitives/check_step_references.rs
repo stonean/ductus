@@ -61,7 +61,8 @@ use std::path::Path;
 
 use crate::primitives::{Result, read_text, rel_path, section_line_indices};
 use crate::schema::primitives::{
-    CheckStepReferencesArgs, CheckStepReferencesResult, StepReferenceFinding, StepReferenceSkip,
+    CheckStepReferencesArgs, CheckStepReferencesResult, ListsForm, StepReferenceFinding,
+    StepReferenceSkip,
 };
 
 /// Command sources. The generated copies under a host's commands directory
@@ -79,19 +80,89 @@ const BOOTSTRAP_FILES: [&str; 2] = [
 /// The heading whose numbered list is the subject.
 const SUBJECT_SECTION: &str = "Instructions";
 
-/// Execute the `check-step-references` primitive.
+/// Execute the `check-step-references` primitive: [`compute`], returned
+/// through [`bound`].
 ///
 /// # Errors
 ///
-/// Returns [`crate::primitives::PrimitiveError`] only on a failure that makes
-/// the whole run meaningless. An unreadable individual file is a skip, not an
-/// error: nothing can be proven about a file that will not open, and a read
-/// that died on one would say nothing about the files it could read.
+/// Only those [`bound`] returns. An unreadable individual file is a skip, not
+/// an error: nothing can be proven about a file that will not open, and a
+/// read that died on one would say nothing about the files it could read.
+pub fn run(args: &CheckStepReferencesArgs, repo: &Path) -> Result<CheckStepReferencesResult> {
+    bound(compute(args, repo), repo)
+}
+
+/// A step-reference scan, whole: what `check-step-references` reports before
+/// its result is bounded. Each field is [`CheckStepReferencesResult`]'s of
+/// the same name.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct StepReferences {
+    findings: Vec<StepReferenceFinding>,
+    examined: Vec<String>,
+    with_steps: Vec<String>,
+    not_a_procedure: Vec<String>,
+    skipped: Vec<StepReferenceSkip>,
+    references_out_of_subject: u32,
+    guidance: String,
+}
+
+/// `scan` as the primitive's result: inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with its five lists in the file it names and
+/// only their counts inline (`bounded_lists::place`; 026 task 6,
+/// `BE-PAYLOAD-001`).
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+fn bound(scan: StepReferences, repo: &Path) -> Result<CheckStepReferencesResult> {
+    let lists = serde_json::json!({
+        "findings": scan.findings,
+        "examined": scan.examined,
+        "with-steps": scan.with_steps,
+        "not-a-procedure": scan.not_a_procedure,
+        "skipped": scan.skipped,
+    });
+    let mut result = CheckStepReferencesResult {
+        findings_count: scan.findings.len(),
+        findings: Some(scan.findings),
+        examined_count: scan.examined.len(),
+        examined: Some(scan.examined),
+        with_steps_count: scan.with_steps.len(),
+        with_steps: Some(scan.with_steps),
+        not_a_procedure_count: scan.not_a_procedure.len(),
+        not_a_procedure: Some(scan.not_a_procedure),
+        skipped_count: scan.skipped.len(),
+        skipped: Some(scan.skipped),
+        references_out_of_subject: scan.references_out_of_subject,
+        guidance: scan.guidance,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "check-step-references",
+        super::bounded_lists::ALL_SPECS,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.findings = None;
+        result.examined = None;
+        result.with_steps = None;
+        result.not_a_procedure = None;
+        result.skipped = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Scan every subject file, every list whole.
 // One flat pass over the subject files: enumerate, classify, resolve. Split
 // into helpers the branches would only be threaded back through — the same
 // reason `main`'s CLI match and `dispatch_primitive` carry this allow.
 #[allow(clippy::too_many_lines)]
-pub fn run(_args: &CheckStepReferencesArgs, repo: &Path) -> Result<CheckStepReferencesResult> {
+fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
     let mut examined = Vec::new();
     let mut with_steps = Vec::new();
     let mut skipped = Vec::new();
@@ -246,7 +317,7 @@ pub fn run(_args: &CheckStepReferencesArgs, repo: &Path) -> Result<CheckStepRefe
         String::new()
     };
 
-    Ok(CheckStepReferencesResult {
+    StepReferences {
         findings,
         examined,
         with_steps,
@@ -254,7 +325,7 @@ pub fn run(_args: &CheckStepReferencesArgs, repo: &Path) -> Result<CheckStepRefe
         skipped,
         references_out_of_subject,
         guidance,
-    })
+    }
 }
 
 /// The step number a line opens with, when it opens a numbered step.
@@ -469,5 +540,114 @@ mod tests {
         assert_eq!(step_references("per step 2 of §Load"), Vec::<u32>::new());
         // The unqualified form still counts.
         assert_eq!(step_references("see step 5 of the walk"), vec![5]);
+    }
+
+    /// A project with a clean command file and one whose Instructions
+    /// refers to step 9, which it lacks.
+    fn project() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join(COMMANDS_DIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("cmd.md"),
+            "# Cmd\n\n## Instructions\n\n1. One, see step 2.\n2. Two.\n3. Three.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("bad.md"),
+            "# Bad\n\n## Instructions\n\n1. One, see step 9.\n2. Two.\n3. Three.\n",
+        )
+        .unwrap();
+        tmp
+    }
+
+    fn read_size(repo: &Path, bytes: usize) {
+        std::fs::create_dir_all(repo.join(".ductus")).unwrap();
+        std::fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+
+    /// Under the read size every list is in the result with its count, and
+    /// no list file is written.
+    #[test]
+    fn the_lists_are_inline_while_the_result_fits() {
+        let tmp = project();
+        let result = run(&CheckStepReferencesArgs {}, tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.lists_file, None);
+        let findings = result.findings.unwrap();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].kind, "unresolved");
+        assert_eq!(result.findings_count, 1);
+        assert_eq!(result.examined.as_ref().unwrap().len(), 2);
+        assert_eq!(result.examined_count, 2);
+        assert_eq!(result.with_steps.as_ref().unwrap().len(), 2);
+        assert_eq!(result.with_steps_count, 2);
+        assert_eq!(result.not_a_procedure, Some(vec![]));
+        assert_eq!(result.not_a_procedure_count, 0);
+        assert_eq!(result.skipped, Some(vec![]));
+        assert_eq!(result.skipped_count, 0);
+        assert!(!tmp.path().join(".ductus/results").exists());
+    }
+
+    /// A result exactly at the read size fits; one byte under it moves the
+    /// five lists whole to the file the result names, their counts staying.
+    #[test]
+    fn the_lists_are_in_a_file_past_the_read_size() {
+        let tmp = project();
+        let whole = run(&CheckStepReferencesArgs {}, tmp.path()).unwrap();
+        let size = serde_json::to_vec(&whole).unwrap().len();
+        read_size(tmp.path(), size);
+        assert_eq!(
+            run(&CheckStepReferencesArgs {}, tmp.path()).unwrap().form,
+            ListsForm::Inline
+        );
+        read_size(tmp.path(), size - 1);
+        let bounded = run(&CheckStepReferencesArgs {}, tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(bounded.findings, None);
+        assert_eq!(bounded.examined, None);
+        assert_eq!(bounded.with_steps, None);
+        assert_eq!(bounded.not_a_procedure, None);
+        assert_eq!(bounded.skipped, None);
+        assert_eq!(bounded.findings_count, 1);
+        assert_eq!(bounded.examined_count, 2);
+        assert_eq!(bounded.with_steps_count, 2);
+        assert_eq!(bounded.not_a_procedure_count, 0);
+        assert_eq!(bounded.skipped_count, 0);
+        assert_eq!(
+            bounded.references_out_of_subject,
+            whole.references_out_of_subject
+        );
+        let file = bounded.lists_file.clone().unwrap();
+        assert!(
+            file.starts_with(".ductus/results/check-step-references/all-specs/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["findings"],
+            serde_json::to_value(&whole.findings).unwrap()
+        );
+        assert_eq!(
+            lists["examined"],
+            serde_json::to_value(&whole.examined).unwrap()
+        );
+        assert_eq!(
+            lists["with-steps"],
+            serde_json::to_value(&whole.with_steps).unwrap()
+        );
+        assert_eq!(lists["not-a-procedure"], serde_json::json!([]));
+        assert_eq!(lists["skipped"], serde_json::json!([]));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "check-step-references",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
     }
 }

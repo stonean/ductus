@@ -317,6 +317,17 @@ its version and date.
 
 ### Changed
 
+- **`check-step-references`' result is bounded (spec 026 task 6,
+  `BE-PAYLOAD-001`).** Its lists, `findings`, `examined`, `with-steps`,
+  `not-a-procedure` and `skipped`, grow with the command files it reads. They
+  stay inline while the result fits `[artifacts] read-size-bytes`; past it
+  `form` is `file`, the lists are absent and each has its `-count` inline
+  (`findings-count`, `examined-count`, `with-steps-count`,
+  `not-a-procedure-count`, `skipped-count`), and `lists-file` names the file
+  under `.ductus/results/` holding them whole. `references-out-of-subject` and
+  `guidance` stay inline. Family 34 reads the lists from that file, and a file
+  it cannot read, or one lacking a list, is a `(precondition)` finding.
+
 - **`prune-project` bounds its result and names an unexamined tail (spec
   075's review).** `entries`, each with its `hits`, is inline while the result
   fits `[artifacts] read-size-bytes`; past it `form` is `file`, `entries` is

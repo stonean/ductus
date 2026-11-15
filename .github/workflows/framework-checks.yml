@@ -306,6 +306,17 @@ jobs:
       - name: (x) Audit families contain the paths they read
         run: bash scripts/tests/test-audit-path-containment.sh
 
+      # (y) Family 34 reads check-step-references' lists from the file its
+      # `lists-file` names past `[artifacts] read-size-bytes` (spec 026 task
+      # 6, BE-PAYLOAD-001). Step (h) runs the family over this repository,
+      # whose result fits inline, so a family that lost the file-form read
+      # would pass there. The test builds fixture trees, given the runtime
+      # built above, forces the file form with a small read size, and shows
+      # the family reports the same finding, and a list file it cannot read
+      # as a precondition finding.
+      - name: (y) Step-reference family reads the bounded result
+        run: bash scripts/tests/test-step-reference-integrity.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

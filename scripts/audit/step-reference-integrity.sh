@@ -65,6 +65,12 @@
 # finding without the fields it reads would otherwise print nothing and leave
 # the examined-set guard above unrun, which reads as clean. Its exit status is
 # tested, and a non-zero one is a finding.
+#
+# Past `[artifacts] read-size-bytes` the primitive moves its five lists to the
+# file its `lists-file` names, relative to the repository root where this
+# family runs (026 task 6, BE-PAYLOAD-001). The render reads them there, and a
+# file it cannot read, or one lacking a list, is a `(precondition)` finding
+# saying nothing was checked, never an empty result.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -103,6 +109,24 @@ render_findings() {
 import json, sys
 
 d = json.load(sys.stdin)
+
+# Past [artifacts] read-size-bytes the lists are in the file lists-file names
+# (026 task 6): read them there, or say nothing was checked. A list the file
+# lacks would read as none found, so it halts too.
+if d.get("form") == "file":
+    try:
+        with open(d["lists-file"], encoding="utf-8") as handle:
+            lists = json.load(handle)
+        missing = [key for key in ("findings", "examined", "with-steps", "not-a-procedure", "skipped")
+                   if not isinstance(lists.get(key), list)]
+        if missing:
+            raise ValueError("it holds no {} list".format(", ".join(missing)))
+        d.update(lists)
+    except (KeyError, TypeError, OSError, ValueError) as err:
+        print("\t".join(["(precondition)",
+                         "check-step-references moved its lists to a file that could not be read ({}), so no step reference was checked".format(err),
+                         "run check-step-references directly and read the file its lists-file names"]))
+        raise SystemExit(0)
 
 FIX = {
     "unresolved": "renumber the reference to the step it means, or restore the step it named",
