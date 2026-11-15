@@ -44,16 +44,6 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 -->
 
-## 2. Record the review and analysis of the 071 reopen's fixes
-
-Handoff (2026-11-15). Tasks 5, 6 and 7 have landed, and 026's third review, over the window since `368249a9`, is recorded with its fixes: Families 4, 9, 16 and 33 brought under the containment rule, `contained_each` in `scripts/audit/lib.sh`, and the window's defects. Owed, in order:
-
-1. The 26 ticked criteria verified against the tree.
-2. The analysis, all 310 rules judged, since `plan.md` and the scenarios changed. BE-PAYLOAD-001 is now met by the design: `check-step-references` by task 6, `resolve-anchor` and `read-deprecation-labels` by 067 task 35 (`7f40a52e`), so the owner's 2026-11-15 deferral of that part to 067 task 35 is discharged and needs no stored decision. BE-INPUT-004 is met by the plan's decision *Every family contains the paths it did not write as a literal*. BE-DEPS-007 keeps its stored waiver.
-3. The completion gate, then the owner's `done` decision.
-
-- **Done when**: 026's review and analysis are recorded and not stale, and every criterion is re-verified against the tree
-
 ## 5. Families 35 and 36 canonicalize and contain the paths they read (BE-INPUT-004, from 026's analysis)
 
 - [x] `scripts/audit/manifest-destination-links.sh` canonicalizes each Shared Files source (35a) and each slash-command source (35b) and compares it with the repository root by whole path components (`os.path.realpath` then `os.path.commonpath`, the `contained` helper in `scripts/audit/lib.sh` for 35a) before probing, copying or reading it, and reports one resolving outside the repository rather than copying or reading it. 35a's destinations keep the lexical screen `apply-manifest` shares, since the family builds the tree they land in itself, with `mkdir` and `cp` of regular files, so no link under it can resolve outside it
