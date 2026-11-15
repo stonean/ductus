@@ -26,7 +26,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use crate::primitives::{PrimitiveError, Result, derive_slug, write_atomic};
+use crate::primitives::{PrimitiveError, Result, derive_slug, validate_contained, write_atomic};
 use crate::schema::paths;
 use crate::schema::primitives::{
     SessionNotice, SessionNoticeKind, SessionPeer, SessionSource, SessionTarget,
@@ -259,14 +259,36 @@ fn is_false(value: &bool) -> bool {
     !*value
 }
 
+/// Refuse `file`, a path under `repo`, when it or a directory above it is a
+/// symbolic link leaving the project (`BE-INPUT-004`), through
+/// [`validate_contained`]. Every open of a session file — read, lock, listing
+/// and store — calls this first, so a link planted in `.ductus/` is never
+/// followed out. A link that stays inside the project is followed. The check
+/// runs once, so a link created between it and the open is not caught; a
+/// path not under `repo` is refused as absolute. Public for the readers of the
+/// shared default outside this module (`Host::load`, the `exec` seed,
+/// `migrate-session-file`).
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] for a link leaving `repo`, or
+/// [`PrimitiveError::Io`] when `repo` cannot be resolved.
+pub fn contained(repo: &Path, file: &Path) -> Result<()> {
+    let rel = file.strip_prefix(repo).unwrap_or(file).to_string_lossy();
+    validate_contained(repo, &rel)
+}
+
 impl ProcessRecord {
-    /// Read and parse a per-process file.
+    /// Read and parse the per-process file `path` under `repo`.
     ///
     /// # Errors
     ///
-    /// [`PrimitiveError::Io`] or [`PrimitiveError::Toml`], each naming the
-    /// file: an unreadable record is reported, never treated as absent (AC22).
-    pub fn load(path: &Path) -> Result<Self> {
+    /// [`PrimitiveError::InvalidPath`] when `path` leads out of `repo` through
+    /// a symbolic link (not read); [`PrimitiveError::Io`] or
+    /// [`PrimitiveError::Toml`], each naming the file: an unreadable record is
+    /// reported, never treated as absent (AC22).
+    pub fn load(repo: &Path, path: &Path) -> Result<Self> {
+        contained(repo, path)?;
         let text = std::fs::read_to_string(path).map_err(|source| PrimitiveError::Io {
             path: path.into(),
             source,
@@ -277,17 +299,20 @@ impl ProcessRecord {
         })
     }
 
-    /// Atomically write this record to `path`.
+    /// Atomically write this record to `path` under `repo`.
     ///
     /// # Errors
     ///
-    /// [`PrimitiveError::Io`] on a failed write.
+    /// [`PrimitiveError::InvalidPath`] when `path` leads out of `repo`
+    /// through a symbolic link (not written); [`PrimitiveError::Io`] on a
+    /// failed write.
     ///
     /// # Panics
     ///
     /// Never in practice: the record holds only strings, a bool, a string
     /// list and a table of strings, none of which TOML cannot represent.
-    pub fn store(&self, path: &Path) -> Result<()> {
+    pub fn store(&self, repo: &Path, path: &Path) -> Result<()> {
+        contained(repo, path)?;
         // A struct of strings, bools, a string list and a string table has no
         // unrepresentable value, so serialization cannot fail.
         #[allow(clippy::expect_used)]
@@ -300,7 +325,9 @@ impl ProcessRecord {
 /// the per-process files never show as untracked — whatever the state of the
 /// repository's own `.gitignore` (spec 062 plan, §Gitignore).
 ///
-/// Called only with the session lock held. Every first writer in a fresh
+/// Called only with the session lock held, which has judged `dir` contained;
+/// the file itself is written only when absent, and the write replaces a link
+/// at that name rather than following it. Every first writer in a fresh
 /// working tree finds the file absent, and each writing it replaces the same
 /// path by rename; Windows refuses a rename onto a file another process is
 /// replacing, with *Access is denied* (os error 5), so unserialized first
@@ -381,9 +408,30 @@ fn jitter_seed() -> u64 {
 ///
 /// [`PrimitiveError::Io`] naming the lock file when it cannot be opened or
 /// locked, or when another process holds it past the timeout or the attempt
-/// bound.
+/// bound; [`PrimitiveError::InvalidPath`] when the sessions directory or the
+/// lock file is a symbolic link leaving the project.
 pub fn lock(repo: &Path) -> Result<SessionLock> {
     lock_within(repo, SESSION_LOCK_TIMEOUT)
+}
+
+/// Take the exclusive advisory lock `append-task` holds across its read of a
+/// `tasks.md` and the write that replaces it (`BE-TXN-002`), on
+/// `.ductus/locks/append-task.lock`: one lock for the project's every
+/// `tasks.md`, since a hold lasts one small read-modify-write. The directory
+/// is created and self-ignored as [`lock`]'s is, and the wait, its bound and
+/// its refusal of a link leaving the project are [`lock`]'s.
+///
+/// # Errors
+///
+/// As [`lock`], for `.ductus/locks`.
+pub fn lock_append_task(repo: &Path) -> Result<SessionLock> {
+    lock_file_waiting(
+        repo,
+        &repo.join(paths::LOCKS_DIR),
+        &repo.join(paths::APPEND_TASK_LOCK),
+        SESSION_LOCK_TIMEOUT,
+        std::thread::sleep,
+    )
 }
 
 /// [`lock`], waiting at most `timeout`.
@@ -396,23 +444,44 @@ fn lock_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
 fn lock_waiting(
     repo: &Path,
     timeout: Duration,
+    pause: impl FnMut(Duration),
+) -> Result<SessionLock> {
+    lock_file_waiting(
+        repo,
+        &sessions_dir(repo),
+        &repo.join(paths::SESSIONS_LOCK),
+        timeout,
+        pause,
+    )
+}
+
+/// Take the exclusive advisory lock on `path`, in the self-ignoring directory
+/// `dir`, waiting at most `timeout` and pausing through `pause`. The one loop
+/// behind [`lock`] and [`lock_append_task`].
+fn lock_file_waiting(
+    repo: &Path,
+    dir: &Path,
+    path: &Path,
+    timeout: Duration,
     mut pause: impl FnMut(Duration),
 ) -> Result<SessionLock> {
-    let dir = sessions_dir(repo);
-    std::fs::create_dir_all(&dir).map_err(|source| PrimitiveError::Io {
-        path: dir.clone(),
+    // Judged before the directory is created and before the lock file is
+    // opened, since both follow a link (`BE-INPUT-004`).
+    contained(repo, dir)?;
+    std::fs::create_dir_all(dir).map_err(|source| PrimitiveError::Io {
+        path: dir.into(),
         source,
     })?;
-    let path = repo.join(paths::SESSIONS_LOCK);
+    contained(repo, path)?;
     let io = |source| PrimitiveError::Io {
-        path: path.clone(),
+        path: path.into(),
         source,
     };
     let file = OpenOptions::new()
         .create(true)
         .truncate(false)
         .write(true)
-        .open(&path)
+        .open(path)
         .map_err(io)?;
     let deadline = Instant::now() + timeout;
     let mut attempt: u32 = 0;
@@ -420,7 +489,7 @@ fn lock_waiting(
         match file.try_lock() {
             Ok(()) => {
                 let held = SessionLock { _file: file };
-                ignore_everything(&dir)?;
+                ignore_everything(dir)?;
                 return Ok(held);
             }
             // Only a lock another process holds is retried; any other error
@@ -437,7 +506,7 @@ fn lock_waiting(
                 return Err(io(std::io::Error::new(
                     std::io::ErrorKind::TimedOut,
                     format!(
-                        "another session held the lock past {}s or {LOCK_MAX_ATTEMPTS} attempts",
+                        "another process held the lock past {}s or {LOCK_MAX_ATTEMPTS} attempts",
                         timeout.as_secs()
                     ),
                 )));
@@ -625,6 +694,10 @@ impl DefaultRecord {
         self.set_at = set_at;
     }
 
+    /// Atomically write this record to `path`. Every caller has refused a
+    /// `path` leading out of the project already, through
+    /// [`read_default_lenient`] or [`read_default_strict`] or `retarget`'s own
+    /// check; the write replaces a link at `path` rather than following it.
     fn store(&self, path: &Path) -> Result<()> {
         // A struct of `Option<String>` has no unrepresentable value.
         #[allow(clippy::expect_used)]
@@ -638,19 +711,28 @@ impl DefaultRecord {
 /// — the write replaces the broken file, as it always has. The flag is `true`
 /// when a file was there that could not be read, so the write names it as
 /// replaced rather than reading it as absent (AC22).
-fn read_default_lenient(path: &Path) -> (DefaultRecord, bool) {
-    match std::fs::read_to_string(path) {
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] when `path` leads out of `repo` through a
+/// symbolic link: refused, not read as an empty record to replace.
+fn read_default_lenient(repo: &Path, path: &Path) -> Result<(DefaultRecord, bool)> {
+    contained(repo, path)?;
+    Ok(match std::fs::read_to_string(path) {
         Ok(content) => toml::from_str(&content)
             .map_or((DefaultRecord::default(), true), |record| (record, false)),
         Err(_) => (DefaultRecord::default(), path.exists()),
-    }
+    })
 }
 
 /// Strict read for a *resolution*: `None` when no default exists, an error
 /// naming the file when it does not parse — reported, never treated as absent
-/// (AC22), exactly as `dashboard` has always treated it.
+/// (AC22), exactly as `dashboard` has always treated it — and an
+/// [`PrimitiveError::InvalidPath`] when the file is a symbolic link leaving
+/// the project.
 fn read_default_strict(repo: &Path) -> Result<Option<DefaultRecord>> {
     let path = paths::session_path(repo);
+    contained(repo, &path)?;
     if !path.is_file() {
         return Ok(None);
     }
@@ -689,9 +771,13 @@ impl ProcessRecord {
 
 /// Every per-process file under `repo`, as `(identity, path)`, sorted by key
 /// so every scan visits them in one order. Dotfiles — the lock and the
-/// `.gitignore` — are not sessions.
+/// `.gitignore` — are not sessions. A listed file that is a symbolic link
+/// leaving the project is listed, and [`ProcessRecord::load`] then refuses
+/// it, so each scan reports it unreadable; a sessions directory that is such
+/// a link fails the scan.
 fn session_files(repo: &Path) -> Result<Vec<(Identity, PathBuf)>> {
     let dir = sessions_dir(repo);
+    contained(repo, &dir)?;
     let entries = match std::fs::read_dir(&dir) {
         Ok(entries) => entries,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -742,7 +828,7 @@ fn peers_of(
         if own.is_some_and(|own| own.key == identity.key) {
             continue;
         }
-        let Ok(record) = ProcessRecord::load(&path) else {
+        let Ok(record) = ProcessRecord::load(repo, &path) else {
             unreadable.push(path);
             continue;
         };
@@ -783,7 +869,7 @@ fn sweep(
         if keep.is_some_and(|keep| keep.key == identity.key) {
             continue;
         }
-        let Ok(record) = ProcessRecord::load(&path) else {
+        let Ok(record) = ProcessRecord::load(repo, &path) else {
             unreadable.push(path);
             continue;
         };
@@ -980,7 +1066,10 @@ pub struct Resolution {
 ///
 /// [`PrimitiveError::Toml`] naming the file when the process's own file, or the
 /// default it would adopt, does not parse — never adoption in its place (AC22);
-/// [`PrimitiveError::Io`] on a failed read, lock or write.
+/// [`PrimitiveError::Io`] on a failed read, lock or write;
+/// [`PrimitiveError::InvalidPath`] when the process's own file, the default or
+/// the sessions directory is a symbolic link leaving the project. Another
+/// session's file that is one is left unread and listed in `unreadable`.
 pub fn resolve(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result<Resolution> {
     let Some(identity) = effective(repo, identity) else {
         return resolve_unidentified(repo);
@@ -990,12 +1079,12 @@ pub fn resolve(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Res
     let own = own_path(repo, identity);
 
     if own.exists() {
-        let mut record = ProcessRecord::load(&own)?;
+        let mut record = ProcessRecord::load(repo, &own)?;
         let due = due_notices(repo, identity, &record, now)?;
         record.notice = None;
         record.seen_peers = due.seen_peers;
         record.used_at = Some(iso8601_utc(now));
-        record.store(&own)?;
+        record.store(repo, &own)?;
         return Ok(own_resolution(
             identity,
             record.target(),
@@ -1009,7 +1098,7 @@ pub fn resolve(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Res
     };
     let due = due_notices(repo, identity, &record, now)?;
     record.seen_peers = due.seen_peers;
-    record.store(&own)?;
+    record.store(repo, &own)?;
     let mut notices = vec![adopted_notice(identity, &target)];
     notices.extend(due.notices);
     Ok(Resolution {
@@ -1095,7 +1184,7 @@ pub fn peek(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result
     let _lock = lock_if_shared(repo)?;
     let own = own_path(repo, identity);
     if own.exists() {
-        let record = ProcessRecord::load(&own)?;
+        let record = ProcessRecord::load(repo, &own)?;
         let due = due_notices(repo, identity, &record, now)?;
         return Ok(own_resolution(
             identity,
@@ -1164,7 +1253,11 @@ pub struct RetargetOutcome {
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::Io`] on a failed lock, read or write.
+/// [`PrimitiveError::Io`] on a failed lock, read or write;
+/// [`PrimitiveError::InvalidPath`] when the shared default, the caller's own
+/// file or the sessions directory is a symbolic link leaving the project. A
+/// file of another session that is one is left unread and listed in
+/// `unreadable`.
 pub fn retarget(
     repo: &Path,
     identity: Option<&Identity>,
@@ -1185,6 +1278,12 @@ pub fn retarget(
     };
 
     let default_path = paths::session_path_for_write(repo);
+    // The default and the caller's own file are refused when a link leaves
+    // the project; another session's is reported unreadable below.
+    contained(repo, &default_path)?;
+    if let Some(identity) = identity {
+        contained(repo, &own_path(repo, identity))?;
+    }
     if default_path.is_file() {
         match read_default_strict(repo) {
             Ok(Some(mut default)) if default.feature.as_deref() == Some(from) => {
@@ -1199,7 +1298,7 @@ pub fn retarget(
 
     let actor = identity.map_or_else(|| UNIDENTIFIED_ACTOR.to_owned(), Identity::label);
     for (file_identity, path) in session_files(repo)? {
-        let Ok(mut record) = ProcessRecord::load(&path) else {
+        let Ok(mut record) = ProcessRecord::load(repo, &path) else {
             outcome.unreadable.push(path);
             continue;
         };
@@ -1217,7 +1316,7 @@ pub fn retarget(
                 by: actor.clone(),
             });
         }
-        record.store(&path)?;
+        record.store(repo, &path)?;
         record_outcome(label);
     }
     Ok(outcome)
@@ -1273,7 +1372,10 @@ pub struct WriteOutcome {
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::Io`] on a failed lock, read or write.
+/// [`PrimitiveError::Io`] on a failed lock, read or write;
+/// [`PrimitiveError::InvalidPath`] when the shared default, or this process's
+/// own file, is a symbolic link leaving the project: refused, never replaced
+/// as if it did not parse.
 pub fn write(
     repo: &Path,
     identity: Option<&Identity>,
@@ -1286,7 +1388,7 @@ pub fn write(
 
     let default_path = paths::session_path_for_write(repo);
     let created = !default_path.exists();
-    let (mut default, default_unreadable) = read_default_lenient(&default_path);
+    let (mut default, default_unreadable) = read_default_lenient(repo, &default_path)?;
     let stamp = iso8601_utc(now);
 
     let mut outcome = WriteOutcome {
@@ -1309,8 +1411,11 @@ pub fn write(
         && *shape != WriteShape::HostConfig
     {
         let own = own_path(repo, identity);
+        // A link leaving the project is refused here, not read as a record
+        // that does not parse and replaced.
+        contained(repo, &own)?;
         if own.exists() {
-            match ProcessRecord::load(&own) {
+            match ProcessRecord::load(repo, &own) {
                 Ok(record) => {
                     outcome.notices = record.notice.iter().map(removal_notice).collect();
                 }
@@ -1377,7 +1482,7 @@ pub fn write(
         }
     }
     if let Some((own, record)) = own_record {
-        record.store(&own)?;
+        record.store(repo, &own)?;
         outcome.own_path = Some(own);
     }
     Ok(outcome)
@@ -1755,8 +1860,8 @@ mod tests {
             }),
             ..ProcessRecord::default()
         };
-        record.store(&path).unwrap();
-        assert_eq!(ProcessRecord::load(&path).unwrap(), record);
+        record.store(tmp.path(), &path).unwrap();
+        assert_eq!(ProcessRecord::load(tmp.path(), &path).unwrap(), record);
     }
 
     #[test]
@@ -1764,7 +1869,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let path = tmp.path().join("bad.toml");
         std::fs::write(&path, "feature = [unterminated").unwrap();
-        let err = ProcessRecord::load(&path).unwrap_err();
+        let err = ProcessRecord::load(tmp.path(), &path).unwrap_err();
         assert!(err.to_string().contains("bad.toml"), "{err}");
     }
 
@@ -2190,7 +2295,7 @@ mod tests {
 
         let shape = WriteShape::Target(target("055-a"));
         assert!(write(tmp.path(), Some(&x), &shape, None, at(2)).is_err());
-        let record = ProcessRecord::load(&own_path(tmp.path(), &x)).unwrap();
+        let record = ProcessRecord::load(tmp.path(), &own_path(tmp.path(), &x)).unwrap();
         assert!(
             record.notice.is_some(),
             "the notice survived the failed write"
@@ -2226,14 +2331,14 @@ mod tests {
         let x = id("x");
         set(tmp.path(), Some(&x), "055-a", t0());
         let own = own_path(tmp.path(), &x);
-        let mut record = ProcessRecord::load(&own).unwrap();
+        let mut record = ProcessRecord::load(tmp.path(), &own).unwrap();
         record.notice = Some(RemovalNotice {
             cause: "fold".into(),
             from: "1234.1-b".into(),
             to: Some("055-a".into()),
             by: "y".into(),
         });
-        record.store(&own).unwrap();
+        record.store(tmp.path(), &own).unwrap();
 
         let first = resolve(tmp.path(), Some(&x), at(1)).unwrap();
         assert_eq!(first.notices.len(), 1);
@@ -2463,6 +2568,296 @@ mod tests {
         assert_eq!(out.unreadable, vec![bad.clone()]);
         assert!(out.cleared.is_empty() && out.retargeted.is_empty());
         assert_eq!(std::fs::read_to_string(&bad).unwrap(), "feature = [");
+    }
+
+    // -- containment (BE-INPUT-004, spec 022 task 34) -------------------------
+    //
+    // Each test links a session file to somewhere outside the project; the
+    // mutant that turns each red is in
+    // `scripts/mutation/session-file-containment.py`. The cells:
+    //
+    // - another session's file, on a write, a resolution and a sweep: left
+    //   unread, listed in `unreadable`, never swept;
+    // - the caller's own file, on a resolve and a peek: refused; on a write:
+    //   refused before the default is written; where it would be adopted:
+    //   refused, not replaced;
+    // - the shared default, on a resolution and a write: refused;
+    // - a retarget: refuses the default and the caller's own file, and a
+    //   sessions directory that is a link, on a legacy layout where no lock
+    //   was taken first;
+    // - the lock: refuses a sessions directory that is a link, creating
+    //   nothing there, and a lock file that is one.
+
+    #[cfg(unix)]
+    fn outside(tmp: &tempfile::TempDir, body: &str) -> PathBuf {
+        let dir = tmp.path().parent().unwrap().to_path_buf();
+        let file = dir.join(format!(
+            "{}-outside.toml",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        std::fs::write(&file, body).unwrap();
+        file
+    }
+
+    #[cfg(unix)]
+    fn peer_record(feature: &str, used_at: &str) -> String {
+        format!("feature = \"{feature}\"\npath = \"specs/{feature}\"\nused-at = \"{used_at}\"\n")
+    }
+
+    #[cfg(unix)]
+    fn is_outward(err: &PrimitiveError) -> bool {
+        matches!(err, PrimitiveError::InvalidPath { .. })
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn another_sessions_outward_link_is_left_unread_and_reported() {
+        let tmp = repo();
+        let x = id("x");
+        set(tmp.path(), Some(&x), "055-a", t0());
+        let far = outside(&tmp, &peer_record("055-a", &iso8601_utc(t0())));
+        let link = tmp.path().join(".ductus/sessions/y.toml");
+        std::os::unix::fs::symlink(&far, &link).unwrap();
+
+        let outcome = write(
+            tmp.path(),
+            Some(&x),
+            &WriteShape::Target(target("055-a")),
+            None,
+            at(1),
+        )
+        .unwrap();
+        assert!(outcome.peers.is_empty(), "{:?}", outcome.peers);
+        assert_eq!(outcome.unreadable, vec![link.clone()]);
+        let resolved = resolve(tmp.path(), Some(&x), at(2)).unwrap();
+        assert_eq!(resolved.unreadable, vec![link]);
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_link_idle_past_expiry_is_not_swept() {
+        let tmp = repo();
+        let x = id("x");
+        set(tmp.path(), Some(&x), "055-a", t0());
+        let far = outside(&tmp, &peer_record("056-b", &iso8601_utc(t0())));
+        let link = tmp.path().join(".ductus/sessions/y.toml");
+        std::os::unix::fs::symlink(&far, &link).unwrap();
+
+        let outcome = write(
+            tmp.path(),
+            Some(&x),
+            &WriteShape::Target(target("055-a")),
+            None,
+            t0() + IDLE_EXPIRY + Duration::from_secs(60),
+        )
+        .unwrap();
+        assert!(outcome.expired.is_empty(), "{:?}", outcome.expired);
+        assert_eq!(outcome.unreadable, vec![link.clone()]);
+        assert!(link.symlink_metadata().is_ok(), "the link stays");
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_link_as_the_callers_own_file_is_refused() {
+        let tmp = repo();
+        let x = id("x");
+        let far = outside(&tmp, &peer_record("055-a", &iso8601_utc(t0())));
+        std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
+        let own = own_path(tmp.path(), &x);
+        std::os::unix::fs::symlink(&far, &own).unwrap();
+
+        let err = resolve(tmp.path(), Some(&x), at(1)).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        let err = peek(tmp.path(), Some(&x), at(1)).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&far).unwrap(),
+            peer_record("055-a", &iso8601_utc(t0()))
+        );
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_write_over_an_outward_own_link_is_refused_before_it_writes_anything() {
+        let tmp = repo();
+        let x = id("x");
+        let far = outside(&tmp, "feature = [");
+        std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
+        std::os::unix::fs::symlink(&far, own_path(tmp.path(), &x)).unwrap();
+
+        let err = write(
+            tmp.path(),
+            Some(&x),
+            &WriteShape::Target(target("055-a")),
+            None,
+            t0(),
+        )
+        .unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(
+            !tmp.path().join(".ductus/session.toml").exists(),
+            "the default is not written when the own file is refused"
+        );
+        assert_eq!(std::fs::read_to_string(&far).unwrap(), "feature = [");
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_link_where_the_own_file_would_be_adopted_is_not_replaced() {
+        let tmp = repo();
+        let x = id("x");
+        let y = id("y");
+        set(tmp.path(), Some(&y), "055-a", t0());
+        let missing = tmp.path().parent().unwrap().join(format!(
+            "{}-gone.toml",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        let own = own_path(tmp.path(), &x);
+        std::os::unix::fs::symlink(&missing, &own).unwrap();
+
+        let err = resolve(tmp.path(), Some(&x), at(1)).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(
+            own.symlink_metadata().unwrap().file_type().is_symlink(),
+            "the link is refused, not replaced by an adopted record"
+        );
+        assert!(!missing.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_link_as_the_shared_default_is_refused() {
+        let tmp = repo();
+        let far = outside(&tmp, "feature = \"055-a\"\npath = \"specs/055-a\"\n");
+        let default = tmp.path().join(".ductus/session.toml");
+        std::os::unix::fs::symlink(&far, &default).unwrap();
+
+        let err = resolve(tmp.path(), None, at(1)).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        let err = write(
+            tmp.path(),
+            None,
+            &WriteShape::Target(target("056-b")),
+            None,
+            at(2),
+        )
+        .unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(
+            std::fs::read_to_string(&far).unwrap().contains("055-a"),
+            "nothing is written through the link"
+        );
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_retarget_refuses_an_outward_default_and_an_outward_own_file() {
+        let tmp = repo();
+        let x = id("x");
+        set(tmp.path(), Some(&x), "058-gone", t0());
+        let record = "feature = \"058-gone\"\npath = \"specs/058-gone\"\n";
+        let far = outside(&tmp, record);
+        let default = tmp.path().join(".ductus/session.toml");
+        std::fs::remove_file(&default).unwrap();
+        std::os::unix::fs::symlink(&far, &default).unwrap();
+        let err = retarget(
+            tmp.path(),
+            None,
+            "058-gone",
+            None,
+            RemovalCause::Consolidate,
+            at(1),
+        )
+        .unwrap_err();
+        assert!(is_outward(&err), "{err}");
+
+        std::fs::remove_file(&default).unwrap();
+        let own = own_path(tmp.path(), &x);
+        std::fs::remove_file(&own).unwrap();
+        std::os::unix::fs::symlink(&far, &own).unwrap();
+        let err = retarget(
+            tmp.path(),
+            Some(&x),
+            "058-gone",
+            None,
+            RemovalCause::Consolidate,
+            at(2),
+        )
+        .unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert_eq!(std::fs::read_to_string(&far).unwrap(), record);
+        std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_sessions_directory_is_refused_by_the_lock_and_creates_nothing_there() {
+        let tmp = repo();
+        let elsewhere = tmp.path().parent().unwrap().join(format!(
+            "{}-sessions",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        std::os::unix::fs::symlink(&elsewhere, tmp.path().join(".ductus/sessions")).unwrap();
+
+        let err = lock(tmp.path()).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(
+            !elsewhere.exists(),
+            "creating the directory followed the link"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_sessions_directory_fails_a_retarget_on_a_legacy_layout() {
+        let tmp = tempdir().unwrap();
+        std::fs::write(tmp.path().join(".govern.session.toml"), "").unwrap();
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        let elsewhere = tempdir().unwrap();
+        std::fs::write(
+            elsewhere.path().join("y.toml"),
+            "feature = \"058-gone\"\npath = \"specs/058-gone\"\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(elsewhere.path(), tmp.path().join(".ductus/sessions")).unwrap();
+
+        let err = retarget(
+            tmp.path(),
+            None,
+            "058-gone",
+            None,
+            RemovalCause::Consolidate,
+            at(1),
+        )
+        .unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(
+            std::fs::read_to_string(elsewhere.path().join("y.toml"))
+                .unwrap()
+                .contains("058-gone"),
+            "no file outside the project is rewritten"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_lock_file_is_refused_and_not_opened() {
+        let tmp = repo();
+        std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
+        let missing = tmp.path().parent().unwrap().join(format!(
+            "{}-lock",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        std::os::unix::fs::symlink(&missing, tmp.path().join(paths::SESSIONS_LOCK)).unwrap();
+
+        let err = lock(tmp.path()).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(!missing.exists(), "the lock open did not create the far");
     }
 
     #[test]

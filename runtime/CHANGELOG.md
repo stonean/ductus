@@ -1074,6 +1074,20 @@ its version and date.
 
 ### Fixed
 
+- **The session files open through canonical containment (spec 022, task
+  34).** Every read of a session file, the lock and the sessions directory
+  goes through the project's containment check: another session's file that
+  is a symbolic link leaving the project is left unread and listed in
+  `unreadable`, and this process's own file, the shared default
+  `.ductus/session.toml` or the sessions directory as such a link is refused
+  as an invalid path, never read or replaced. The `Host` config read, the
+  `ductus exec` seed and `migrate-session-file`'s destination take the same
+  check (BE-INPUT-004, from 062's review).
+- **`append-task` no longer loses a concurrent append (spec 022, task 35).**
+  Its read of `tasks.md`, its numbering and its write are held under a lock,
+  `.ductus/locks/append-task.lock`, with the session lock's backoff and
+  ten-second timeout, so two calls on one `tasks.md` each land their task
+  (BE-TXN-002, from 023's re-judge).
 - **`process-waivers` flattens every notice it prints (spec 066's review).**
   The notice for a waiver retained because the run did not read its file
   interpolated the stored path raw, so a control or line-separator character

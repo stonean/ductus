@@ -83,6 +83,14 @@ pub(crate) const SESSIONS_DIR: &str = ".ductus/sessions";
 /// `BE-RACE-001`). The file carries no content; the lock is on its handle.
 pub(crate) const SESSIONS_LOCK: &str = ".ductus/sessions/.lock";
 
+/// Directory holding the advisory locks of the read-modify-writes that are
+/// not session state. Gitignored and self-ignoring, as [`SESSIONS_DIR`] is.
+pub(crate) const LOCKS_DIR: &str = ".ductus/locks";
+
+/// The advisory lock `append-task` holds across its read and write of a
+/// `tasks.md` (`BE-TXN-002`). The file carries no content.
+pub(crate) const APPEND_TASK_LOCK: &str = ".ductus/locks/append-task.lock";
+
 /// Session locations in resolution order, newest first. See [`CONFIG_CHAIN`].
 pub(crate) const SESSION_CHAIN: [&str; 3] =
     [SESSION_FILE, LEGACY_DIR_SESSION_FILE, LEGACY_SESSION_FILE];

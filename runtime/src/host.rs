@@ -130,10 +130,13 @@ impl Host {
     /// ordinary state) or carries no such key, so resolution falls through to
     /// the config file's `[host]` value and then the default. A file that
     /// exists but cannot be read or does not parse is an error naming it,
-    /// matching [`Self::load_host_block`] (`CFG-ENV-008`); `write-session`
+    /// matching [`Self::load_host_block`] (`CFG-ENV-008`), and a file that is a
+    /// symbolic link leaving the project is refused unread
+    /// ([`PrimitiveError::InvalidPath`], `BE-INPUT-004`); `write-session`
     /// replaces such a file, which is how `/target` repairs it.
     fn load_session_cli_config_dir(repo: &Path) -> Result<Option<String>> {
         let session_path = paths::session_path(repo);
+        crate::session::contained(repo, &session_path)?;
         let Some(content) = read_text_if_present(&session_path)? else {
             return Ok(None);
         };
@@ -429,5 +432,19 @@ mod tests {
         let err = Host::load(repo.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Io { .. }), "{err}");
         assert!(err.to_string().contains("session.toml"), "{err}");
+    }
+
+    /// `BE-INPUT-004`: a session file that is a symbolic link leaving the
+    /// project is refused unread, not taken for the contributor's setting.
+    #[cfg(unix)]
+    #[test]
+    fn a_session_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tmp_repo("ductus-fixture");
+        let far = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(far.path(), "cli-config-dir = \".pi\"\n").unwrap();
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::os::unix::fs::symlink(far.path(), repo.path().join(".ductus/session.toml")).unwrap();
+        let err = Host::load(repo.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
     }
 }

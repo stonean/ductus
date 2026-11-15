@@ -745,6 +745,7 @@ fn seed_context(
 
     let mut context = Map::new();
     let session_path = ductus::schema::paths::session_path(repo);
+    ductus::session::contained(repo, &session_path)?;
     if let Some(text) = ductus::primitives::read_text_if_present(&session_path)? {
         let parsed = toml::from_str::<Value>(&text).map_err(|source| {
             ductus::primitives::PrimitiveError::Toml {
@@ -1715,5 +1716,23 @@ mod tests {
         let mut absent = WriteReviewArgs::default();
         super::hydrate_write_review(&mut absent).unwrap();
         assert_eq!(absent.fix_rounds, None);
+    }
+
+    /// `BE-INPUT-004`: the exec seed refuses a shared default that is a
+    /// symbolic link leaving the project, rather than seeding the walk from it.
+    #[cfg(unix)]
+    #[test]
+    fn an_exec_seed_refuses_a_shared_default_linked_outside_the_project() {
+        let tmp = repo_with_default("");
+        let far = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(far.path(), "feature = \"055-a\"\npath = \"specs/055-a\"\n").unwrap();
+        let link = tmp.path().join(".ductus/session.toml");
+        std::fs::remove_file(&link).unwrap();
+        std::os::unix::fs::symlink(far.path(), &link).unwrap();
+        let err = seed_context(tmp.path(), None).unwrap_err();
+        assert!(
+            matches!(err, ductus::primitives::PrimitiveError::InvalidPath { .. }),
+            "{err}"
+        );
     }
 }

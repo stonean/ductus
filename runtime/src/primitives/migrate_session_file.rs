@@ -32,7 +32,8 @@ use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult
 /// `session-file-consolidate` migration names (spec 022 task 11: the
 /// primitive deletes the file, so it deletes nothing else), when it is
 /// absolute or contains a parent-directory component, or when a symlink on
-/// it resolves outside the project, [`PrimitiveError::Json`]
+/// it, or on the `.ductus/session.toml` destination or a directory above it,
+/// resolves outside the project, [`PrimitiveError::Json`]
 /// when the legacy file is malformed JSON, [`PrimitiveError::JsonSchema`]
 /// when the legacy file's top-level value isn't a JSON object, or
 /// [`PrimitiveError::Io`] for filesystem failures during read, write,
@@ -42,6 +43,9 @@ pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionF
     super::validate_contained(repo, &args.legacy_path)?;
     let legacy_path = repo.join(&args.legacy_path);
     let dest_path = repo.join(SESSION_FILE);
+    // The destination is replaced, never followed, but a link on a directory
+    // above it would carry the write outside the project (`BE-INPUT-004`).
+    crate::session::contained(repo, &dest_path)?;
 
     // Idempotency: no legacy file → no-op. Adopters who never had a
     // session file, or who already migrated, hit this branch.
@@ -367,5 +371,25 @@ mod tests {
         let err = run(&args(".claude/settings.local.json"), repo).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
         assert!(repo.join(".claude/settings.local.json").exists());
+    }
+
+    /// `BE-INPUT-004`: a `.ductus` that is a link out of the project carries
+    /// the destination write outside it, so the call is refused and the legacy
+    /// file is kept.
+    #[cfg(unix)]
+    #[test]
+    fn a_destination_under_a_directory_linked_outside_is_refused() {
+        let tmp = tempdir().unwrap();
+        let far = tempdir().unwrap();
+        write_legacy(
+            tmp.path(),
+            ".claude/acme-session.json",
+            "{\"feature\":\"001-x\"}",
+        );
+        std::os::unix::fs::symlink(far.path(), tmp.path().join(".ductus")).unwrap();
+        let err = run(&args(".claude/acme-session.json"), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
+        assert!(!far.path().join("session.toml").exists());
+        assert!(tmp.path().join(".claude/acme-session.json").exists());
     }
 }

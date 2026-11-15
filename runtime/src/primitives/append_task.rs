@@ -4,7 +4,9 @@
 //! frontmatter counter when larger) so a tasks file with
 //! `## 1.`, `## 3.` headings produces `## 4.` rather than overwriting `## 3.`.
 //! Creates `tasks.md` with a derived heading when absent. Atomic write via
-//! tempfile + rename.
+//! tempfile + rename, with the read and the write held under one advisory
+//! lock (`BE-TXN-002`, [`crate::session::lock_append_task`]) so concurrent
+//! calls on one `tasks.md` each land their task.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -78,6 +80,12 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     }
 
     let tasks_path = feature_dir.join("tasks.md");
+    // The read, the numbering and the replacing write below are one
+    // read-modify-write: without the lock, two calls read the same file, pick
+    // the same number, and the later rename drops the earlier call's task
+    // (`BE-TXN-002`). Held until `run` returns, dedup returns included, so a
+    // call that waited reads what the call before it wrote.
+    let _lock = crate::session::lock_append_task(repo)?;
     let (existing, created_now) = match read_text(&tasks_path) {
         Ok(text) => (text, false),
         Err(PrimitiveError::Io { source, .. }) if source.kind() == std::io::ErrorKind::NotFound => {
@@ -1572,5 +1580,70 @@ mod tests {
             matches!(err, PrimitiveError::MalformedTasks { .. }),
             "{err:?}"
         );
+    }
+
+    /// Of many concurrent appends on one `tasks.md`, every task lands, each
+    /// under its own number: without the lock, calls that read the same file
+    /// pick the same number and the last rename drops the others
+    /// (`BE-TXN-002`; spec 022, task 35).
+    #[test]
+    fn concurrent_appends_on_one_tasks_md_each_land_their_task() {
+        use std::sync::{Arc, Barrier};
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let racers = 16;
+        let barrier = Arc::new(Barrier::new(racers));
+        let repo = Arc::new(tmp.path().to_path_buf());
+        let handles: Vec<_> = (0..racers)
+            .map(|n| {
+                let barrier = Arc::clone(&barrier);
+                let repo = Arc::clone(&repo);
+                std::thread::spawn(move || {
+                    let mut a = args("specs/042-foo", &format!("Racer {n}"), "done.");
+                    a.slug = Some(format!("racer-{n}"));
+                    barrier.wait();
+                    run(&a, &repo).unwrap()
+                })
+            })
+            .collect();
+        let mut numbers: Vec<String> = handles
+            .into_iter()
+            .map(|h| h.join().unwrap().task_number)
+            .collect();
+        numbers.sort_by_key(|n| n.parse::<u32>().unwrap());
+        let expected: Vec<String> = (1..=racers).map(|n| n.to_string()).collect();
+        assert_eq!(numbers, expected, "every call took its own number");
+        let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+        for n in 0..racers {
+            assert!(
+                body.contains(&format!("Racer {n}")),
+                "task {n} lost:\n{body}"
+            );
+        }
+    }
+
+    /// The deterministic half: an append waits while another process holds
+    /// the lock, and writes nothing until it is released, then reads what the
+    /// holder left. A stress run alone could pass without the lock.
+    #[test]
+    fn an_append_waits_for_the_lock_and_writes_after_it() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        let held = crate::session::lock_append_task(tmp.path()).unwrap();
+
+        let repo = tmp.path().to_path_buf();
+        let waiter = std::thread::spawn(move || {
+            run(&args("specs/042-foo", "Waits", "done."), &repo).unwrap()
+        });
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        assert!(
+            !tasks_path.exists(),
+            "the append wrote while another call held the lock"
+        );
+        drop(held);
+        let result = waiter.join().unwrap();
+        assert!(result.appended && result.created);
+        assert!(fs::read_to_string(&tasks_path).unwrap().contains("Waits"));
     }
 }
