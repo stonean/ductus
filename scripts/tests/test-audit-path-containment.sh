@@ -24,6 +24,15 @@
 #      copied
 #   E. Family 35b: a slash-command source resolving outside is reported and not
 #      read
+#   F. Family 35a: a destination of exactly `..` is refused, not copied
+#   G. Family 36: a URL path holding a percent-encoded NUL is unresolved
+#   H. Family 36: an unreadable tracked file is reported with its reason
+#
+# "Not copied, probed or read" is asserted, not inferred: everything outside
+# the tree would produce a finding of its own if it were — the outside file
+# carries a self-URL to a missing path and two relative links that resolve
+# nowhere, and the outside directory B names would be a `blob` URL naming a
+# directory — so each case also requires that finding to be absent.
 #
 # Needs the release runtime (runtime/target/release/ductus), which 35a runs
 # check-corpus-links from, as framework-checks.yml builds it before this step.
@@ -51,12 +60,13 @@ trap 'rm -rf "$WORK"' EXIT
 # make_tree CASE — a fixture repository holding both families, their lib, the
 # runtime as an adopter-owned pointer, a manifest naming one Shared Files row
 # and one slash-command row, the files those rows ship, a markdown file citing
-# one self-URL, and, beside the root, a directory `repo2` holding a file
-# outside it. Prints the directory.
+# one self-URL, and, beside the root, a directory `repo2` holding a file and a
+# directory outside it, each of which a family would report if it reached it.
+# Prints the directory.
 make_tree() {
   local dir="$WORK/$1/repo"
   mkdir -p "$dir/scripts/audit" "$dir/framework/bootstrap" "$dir/framework/rules" \
-    "$dir/framework/commands" "$dir/docs" "$dir/.ductus/bin" "$WORK/$1/repo2"
+    "$dir/framework/commands" "$dir/docs" "$dir/.ductus/bin" "$WORK/$1/repo2/dir"
   cp "$REPO_ROOT/scripts/audit/lib.sh" "$REPO_ROOT/scripts/audit/manifest-destination-links.sh" \
     "$REPO_ROOT/scripts/audit/self-url-resolution.sh" "$dir/scripts/audit/"
   ln -s "$BIN" "$dir/.ductus/bin/ductus"
@@ -83,7 +93,8 @@ EOF
   printf '# Target\n' > "$dir/framework/commands/target.md"
   printf '# In\n' > "$dir/docs/in.md"
   ln -s in.md "$dir/docs/alias.md"
-  printf '# Outside\n' > "$WORK/$1/repo2/secret.md"
+  printf '# Outside\n\nSee https://github.com/acme/widget/blob/main/nope.md, [y](../y.md) and [z](sub/z.md).\n' \
+    > "$WORK/$1/repo2/secret.md"
   printf 'See https://github.com/acme/widget/blob/main/docs/alias.md here.\n' > "$dir/README.md"
   echo "$dir"
 }
@@ -113,45 +124,86 @@ expect() {
   if printf '%s' "$out" | grep -qE -- "$3"; then pass "$1"; else fail "$1: no finding matched /$3/: $out"; fi
 }
 
+# expect_absent NAME PATTERN — no finding of the last run matches PATTERN: the
+# finding the family would make had it reached the outside path.
+expect_absent() {
+  if printf '%s' "$out" | grep -qE -- "$2"; then fail "$1: reached it, /$2/ matched: $out"; else pass "$1"; fi
+}
+
 echo "Running audit path-containment tests..."
 
 dir="$(make_tree a)"
+rm "$dir/framework/rules/security-cross.md"
+ln -s ../../docs/in.md "$dir/framework/rules/security-cross.md"
 track "$dir"
 run_family "$dir" self-url-resolution.sh
 expect "A: Family 36 passes regular files and a link inside the tree" 0 ""
 run_family "$dir" manifest-destination-links.sh
-expect "A: Family 35 passes regular files" 0 ""
+expect "A: Family 35 passes a source that is a link inside the tree" 0 ""
 
 dir="$(make_tree b)"
-ln -s ../../repo2/secret.md "$dir/docs/out.md"
-printf 'See https://github.com/acme/widget/blob/main/docs/out.md here.\n' > "$dir/README.md"
+ln -s ../../repo2/dir "$dir/docs/out"
+printf 'See https://github.com/acme/widget/blob/main/docs/out here.\n' > "$dir/README.md"
 track "$dir"
 run_family "$dir" self-url-resolution.sh
 expect "B: Family 36 reports a URL naming a link out of the tree, a prefix-named sibling" 1 \
-  '^self-url \| README\.md:1 \| absolute link into this repository names `docs/out\.md`, a symbolic link resolving outside the repository'
+  '^self-url \| README\.md:1 \| absolute link into this repository names `docs/out`, a symbolic link resolving outside the repository'
+expect_absent "B: Family 36 never probes it (a /blob/ URL naming its directory)" 'uses /blob/ for'
 
 dir="$(make_tree c)"
 ln -s ../../repo2/secret.md "$dir/docs/linked.md"
 track "$dir"
 run_family "$dir" self-url-resolution.sh
-expect "C: Family 36 reports a tracked markdown file linking out of the tree, unread" 1 \
+expect "C: Family 36 reports a tracked markdown file linking out of the tree" 1 \
   '^self-url \| docs/linked\.md \| tracked markdown file is a symbolic link resolving outside the repository'
+expect_absent "C: Family 36 never reads it (its URL to a missing path)" 'names `nope\.md`'
 
 dir="$(make_tree d)"
 rm "$dir/framework/rules/security-cross.md"
 ln -s ../../../repo2/secret.md "$dir/framework/rules/security-cross.md"
 track "$dir"
 run_family "$dir" manifest-destination-links.sh
-expect "D: Family 35a reports a Shared Files source linking out of the tree, uncopied" 1 \
+expect "D: Family 35a reports a Shared Files source linking out of the tree" 1 \
   '^manifest-dest \| framework/bootstrap/ductus\.md \| Shared Files manifest source resolves outside the repository: framework/rules/security-cross\.md'
+expect_absent "D: Family 35a never copies it (its links resolve nowhere)" 'shipped file links'
 
 dir="$(make_tree e)"
 rm "$dir/framework/commands/target.md"
 ln -s ../../../repo2/secret.md "$dir/framework/commands/target.md"
 track "$dir"
 run_family "$dir" manifest-destination-links.sh
-expect "E: Family 35b reports a slash-command source linking out of the tree, unread" 1 \
+expect "E: Family 35b reports a slash-command source linking out of the tree" 1 \
   '^manifest-dest \| framework/commands/target\.md \| slash-command manifest source resolves outside the repository'
+expect_absent "E: Family 35b never reads it (its links leave the command directory)" 'command source links'
+
+dir="$(make_tree f)"
+sed -i.bak 's#`specs/rules/security-cross.md`#`..`#' "$dir/framework/bootstrap/ductus.md"
+rm "$dir/framework/bootstrap/ductus.md.bak"
+track "$dir"
+run_family "$dir" manifest-destination-links.sh
+expect "F: Family 35a refuses a destination of exactly .." 1 \
+  '^manifest-dest \| framework/bootstrap/ductus\.md \| Shared Files manifest destination escapes the target tree: \.\. \|'
+
+dir="$(make_tree g)"
+printf 'See https://github.com/acme/widget/blob/main/a%%00b here.\n' > "$dir/README.md"
+track "$dir"
+run_family "$dir" self-url-resolution.sh
+expect "G: Family 36 reports a URL path holding a NUL as unresolved" 1 \
+  '^self-url \| README\.md:1 \| absolute link into this repository names `a%00b`, which does not exist'
+
+dir="$(make_tree h)"
+track "$dir"
+chmod 000 "$dir/docs/in.md"
+if [ -r "$dir/docs/in.md" ]; then
+  # A user who reads a mode-000 file (root) cannot build this case; say so
+  # rather than count it as a pass.
+  printf '  SKIP  H: this user can read a mode-000 file, so no unreadable file can be built\n'
+else
+  run_family "$dir" self-url-resolution.sh
+  expect "H: Family 36 names an unreadable file's reason" 1 \
+    '^self-url \| docs/in\.md \| tracked markdown file could not be read \(Permission denied\)'
+fi
+chmod 644 "$dir/docs/in.md"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

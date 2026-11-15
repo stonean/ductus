@@ -145,7 +145,7 @@ else
       # a `cp` of a regular file, so no symbolic link under it can resolve
       # outside it.
       case "$dst" in
-        /* | ../* | */../* | */..)
+        /* | .. | ../* | */../* | */..)
           emit "$MANIFEST_FILE" \
             "Shared Files manifest destination escapes the target tree: $dst" \
             "manifest destinations are relative paths inside the adopter project; correct the row"
@@ -288,7 +288,7 @@ for path in (line.strip() for line in sys.stdin):
         with open(path, encoding="utf-8") as handle:
             lines = handle.read().splitlines()
     except OSError as err:
-        print("unreadable\t%s\t\t%s" % (path, err.strerror))
+        print("unreadable\t%s\t%s\t" % (path, err.strerror))
         continue
     count += 1
     fenced = False
@@ -318,7 +318,7 @@ print("scanned\t%d\t\t" % count)
           ;;
         unreadable)
           emit "$f1" \
-            "slash-command manifest source could not be read ($f3) — its links were not examined" \
+            "slash-command manifest source could not be read ($f2) — its links were not examined" \
             "resolve the read failure; an unexaminable source must not be counted as clean"
           ;;
         outside)

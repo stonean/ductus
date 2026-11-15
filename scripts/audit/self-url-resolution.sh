@@ -139,7 +139,7 @@ for path in (line.strip() for line in sys.stdin):
         with open(path, encoding="utf-8") as handle:
             lines = handle.read().splitlines()
     except OSError as err:
-        print("unreadable\t%s\t\t%s" % (path, err.strerror))
+        print("unreadable\t%s\t%s\t" % (path, err.strerror))
         continue
     examined += 1
     for number, line in enumerate(lines, 1):
@@ -165,7 +165,12 @@ for path in (line.strip() for line in sys.stdin):
             # A path that leaves the repository is nonsense in a URL naming a
             # file *in* the repository, and probing it would answer about the
             # filesystem instead — reporting a hit for something the URL
-            # cannot reach. Treated as unresolved, which is what it is.
+            # cannot reach. Treated as unresolved, which is what it is. So is a
+            # path holding a NUL, which names no file and which os.path refuses
+            # to resolve, reported with the NUL percent-encoded again.
+            if "\x00" in clean:
+                print("unresolved\t%s\t%d\t%s" % (path, number, clean.replace("\x00", "%00")))
+                continue
             normalized = os.path.normpath(clean)
             if os.path.isabs(normalized) or normalized == ".." or normalized.startswith(".." + os.sep):
                 print("unresolved\t%s\t%d\t%s" % (path, number, clean))
@@ -216,7 +221,7 @@ while IFS=$'\t' read -r kind f1 f2 f3; do
       ;;
     unreadable)
       emit "$f1" \
-        "tracked markdown file could not be read ($f3) — its absolute links were not examined" \
+        "tracked markdown file could not be read ($f2) — its absolute links were not examined" \
         "resolve the read failure; an unexaminable file must not be counted as clean"
       ;;
     counts)
