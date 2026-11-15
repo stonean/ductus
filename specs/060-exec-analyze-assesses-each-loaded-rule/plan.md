@@ -43,7 +43,7 @@ pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection>;
 pub(crate) fn heading_id_regex() -> &'static Regex;
 ```
 
-`heading_id_regex` moves here and `check_rule_ids.rs` imports it. A section runs from its heading to the next heading of the same or higher level, the boundary `section_is_deprecated` already uses (`runtime/src/primitives/check_rule_ids.rs:125`). The Verification paragraph ends at a blank line or the next `**Field:**`, as `extract_rule_verification` ends it today (`runtime/src/interpreter/payload.rs:962`).
+`heading_id_regex` moves here and `check_rule_ids.rs` imports it. A section runs from its heading to the next heading of the same or higher level, the boundary `section_is_deprecated` already uses (`runtime/src/primitives/check_rule_ids.rs:125`). The Verification runs from its marker to the next `**Field:**` line or heading, every block between included (scenario `an-assessment-sees-the-rule-it-asks-about`), and a line inside a fenced block is neither a field nor a heading.
 
 The keyword scan splits the Statement on non-alphanumeric characters and matches the whole tokens `MUST` and `SHOULD`, case-sensitively. RFC 2119 keywords are written in capitals in every rule file, and a lowercase "must" in a Statement's prose is not an obligation keyword. Over this repository's 192 rules, 151 Statements carry MUST alone, 25 SHOULD alone, 16 both and none neither (measured during clarification over the Statement block quotes in `framework/rules/*.md`), so the scan yields 167 MUST-tier and 25 SHOULD-tier rules. A deprecated rule parses like any other and is asked about, as the spec's Edge Cases decide.
 
@@ -55,7 +55,7 @@ The rule set is loaded lazily, when the walk reaches its first `assessSpecQualit
 /// The rules an `/analyze` walk assesses, loaded at its first assessment step.
 struct LoadedRules {
     /// Rules carrying a tier and a Verification, in file then heading order.
-    assessable: Vec<AssessableRule>,   // id, verification, tier
+    assessable: Vec<AssessSpecQualityRule>,   // id, statement, verification, severity
     /// Rule sections with no Verification or no keyword.
     unassessable: u32,
     /// Listed rule files that could not be read.
@@ -73,7 +73,7 @@ Requests go out in rule-file order, then heading order, with `fresh_request_id` 
 
 A step that asks about no rule emits a progress envelope saying so, rather than silence in the stream. When the rule set is empty, whatever the cause, the step also records one `rule-assessments-not-checked` target: this is AC7's per-step record, the count today's no-rule-directory parity test already asserts (`runtime/tests/parity.rs:458`). A step whose own tier is empty while the other tier has rules records nothing, since every loaded rule was asked about. A step whose prose names no MUST or SHOULD tier cannot know which rules it covers. It records one `rule-assessments-not-checked` target rather than asking about nothing. `framework/commands/analyze.md` never writes such a step.
 
-The per-rule builder replaces `build_assess_spec_quality_request`, `resolve_assessed_rule`, `extract_rule_verification` and `first_rule_with_verification` in `runtime/src/interpreter/payload.rs`. `build_extension_request`'s `assessSpecQuality` arm has no remaining caller once `handle_extension` builds the list itself: its only caller is `handle_extension` (`runtime/src/interpreter/mod.rs:371`). The arm is removed, and the function's doc comment (`runtime/src/interpreter/payload.rs:122`) is updated to match. The rule's citation no longer steers which rule is asked about, because every rule is asked about.
+`load_rules` and the shared parser replace `resolve_assessed_rule`, `extract_rule_verification` and `first_rule_with_verification` in `runtime/src/interpreter/payload.rs`. `build_assess_spec_quality_request` stays, building each request from the one rule and the loaded rule files the walker seeds under `ASSESSED_RULE_KEY` and `LOADED_RULE_FILES_KEY`, and `build_extension_request`'s `assessSpecQuality` arm stays with it, since the walker's `exchange` builds every request through it. The rule's citation no longer steers which rule is asked about, because every rule is asked about.
 
 ### The tally takes the tier from the rule it asked about
 
@@ -151,4 +151,4 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 - **Rejected: counting a rule file's rules when it cannot be read.** An unreadable file has no enumerable rules. Guessing a count from the file's name or size would state a number nobody measured.
 - **Rejected: reusing `artifact-unreadable` for rule files.** That reason escalates to blocking at `done` because it names the spec's own artifact. A shared rule file is not one.
 - **Kept: per-section assessment when two files define the same ID.** Each section is asked about once, so neither section's text goes unexamined. Duplicate IDs are the rule format's integrity concern, not the walker's.
-- **Limitation: exec clarify has the same one-request-per-step shape.** `/ductus:clarify` step 6 promises one `askClarifyQuestion` round trip per open question (`framework/commands/clarify.md:78`). The walker sends one per step, and `resolve_clarify_question` falls back to the first question (`runtime/src/interpreter/payload.rs:516`). This spec does not fix it. It is recorded as a disposition task in `tasks.md`, so 060 cannot reach `done` until it is fixed, deferred or waived.
+- **Out of scope: exec clarify's per-question round trip.** `/ductus:clarify` step 6's one `askClarifyQuestion` round trip per open question is spec 022's scenario `exec-clarify-asks-each-open-question` (`Walker::handle_clarify_questions`), which this spec leaves as it is.

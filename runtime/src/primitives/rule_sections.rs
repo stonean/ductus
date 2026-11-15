@@ -157,17 +157,22 @@ fn tab_heading_regex() -> &'static Regex {
 /// gives up, a malformed rule heading among them. The body is the lines under
 /// the heading up to the next heading of any level, blank lines at either end
 /// dropped, so a reader judges whether the heading heads a rule without
-/// reading the file (spec 080, task 57).
+/// reading the file (spec 080, task 57). A `#`-led line inside a fenced block
+/// is the block's content, as [`parse_rule_sections`] reads it, so it is no
+/// heading here either.
 pub(crate) fn other_headings(content: &str) -> Vec<(usize, String, String)> {
     let lines: Vec<&str> = content.lines().collect();
     // A heading here is what `CommonMark` renders as one, which is wider than
     // what the shared parser takes: it also counts a `#` run followed by a
     // tab, which `parse_atx_heading` rejects, so that heading opens no rule
     // and is listed rather than seen nowhere. Kept local, since widening the
-    // shared parser would change every reader of it.
+    // shared parser would change every reader of it. `fences` sees every line
+    // in order, so it is asked first.
+    let mut fences = Fences::default();
     let headings: Vec<usize> = (0..lines.len())
         .filter(|&i| {
-            parse_atx_heading(lines[i]).is_some() || tab_heading_regex().is_match(lines[i])
+            !fences.holds(lines[i].trim())
+                && (parse_atx_heading(lines[i]).is_some() || tab_heading_regex().is_match(lines[i]))
         })
         .collect();
     let opens_rule =
@@ -234,13 +239,18 @@ pub(crate) fn section_label_lines(content: &str, heading_start: usize) -> Vec<us
 /// the boundary `check-rule-ids` uses to scope a deprecation label. A deeper
 /// heading that is not a rule's is a subsection and stays in scope. The
 /// Statement is the section's first block quote. The Verification runs to the
-/// next `**Field:**` line or any heading, every block between included.
+/// next `**Field:**` line or any heading, every block between included. A
+/// line inside a fenced block, its delimiters included, is the block's content:
+/// a `#`-led line there is no heading and a `**Field:**`-shaped one no field
+/// ([`Fences`]).
 pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
     let mut sections = Vec::new();
     let mut open: Option<OpenSection> = None;
+    let mut fences = Fences::default();
     for line in content.lines() {
         let trimmed = line.trim();
-        if let Some((level, _)) = parse_atx_heading(line) {
+        let in_fence = fences.holds(trimmed);
+        if !in_fence && let Some((level, _)) = parse_atx_heading(line) {
             let rule_id = heading_id_regex()
                 .captures(line)
                 .map(|cap| cap[1].to_string());
@@ -257,7 +267,7 @@ pub(crate) fn parse_rule_sections(content: &str) -> Vec<RuleSection> {
             continue;
         }
         if let Some(section) = open.as_mut() {
-            section.read(trimmed, line);
+            section.read(trimmed, line, in_fence);
         }
     }
     if let Some(section) = open {
@@ -309,8 +319,14 @@ impl OpenSection {
     }
 
     /// Read one non-heading line of the section, trimmed and as it stands.
-    fn read(&mut self, trimmed: &str, raw: &str) {
-        let quoted = trimmed.strip_prefix('>');
+    /// `in_fence` says it is a fenced block's line, which opens no quote, no
+    /// Verification and no field.
+    fn read(&mut self, trimmed: &str, raw: &str, in_fence: bool) {
+        let quoted = if in_fence {
+            None
+        } else {
+            trimmed.strip_prefix('>')
+        };
         match (self.quote, quoted) {
             (Quote::NotStarted | Quote::Reading, Some(rest)) => {
                 self.quote = Quote::Reading;
@@ -324,13 +340,13 @@ impl OpenSection {
         }
         match self.paragraph {
             Paragraph::NotStarted => {
-                if let Some(rest) = trimmed.strip_prefix("**Verification:**") {
+                if !in_fence && let Some(rest) = trimmed.strip_prefix("**Verification:**") {
                     self.paragraph = Paragraph::Reading;
                     self.push_verification(rest.trim());
                 }
             }
             Paragraph::Reading => {
-                if is_field_line(trimmed) {
+                if !in_fence && is_field_line(trimmed) {
                     self.paragraph = Paragraph::Done;
                 } else {
                     self.push_verification(raw.trim_end());
@@ -384,11 +400,58 @@ enum Entry {
     Fence,
 }
 
-/// A fence delimiter line: three backticks or tildes.
-fn fence_marker(trimmed: &str) -> Option<&'static str> {
-    ["```", "~~~"]
-        .into_iter()
-        .find(|marker| trimmed.starts_with(marker))
+/// An open fence's delimiter: its character, a backtick or a tilde, and how
+/// many of it the opening line ran.
+#[derive(Clone, Copy)]
+struct FenceRun {
+    mark: u8,
+    len: usize,
+}
+
+impl FenceRun {
+    /// The fence `trimmed` opens: a run of three or more backticks or tildes,
+    /// then an info string, which in a backtick fence holds no backtick, as
+    /// `CommonMark`'s fenced code blocks open.
+    fn opened_by(trimmed: &str) -> Option<Self> {
+        let mark = *trimmed.as_bytes().first()?;
+        if mark != b'`' && mark != b'~' {
+            return None;
+        }
+        let len = trimmed.bytes().take_while(|&b| b == mark).count();
+        // The run is ASCII, so `len` is a character boundary.
+        let info_ok = mark == b'~' || !trimmed[len..].contains('`');
+        (len >= 3 && info_ok).then_some(Self { mark, len })
+    }
+
+    /// Whether `trimmed` closes this fence: a run of its character at least as
+    /// long as the opening one, with nothing after it, so a line such as
+    /// ```` ```sh ```` inside a longer fence is the fence's content.
+    fn closed_by(self, trimmed: &str) -> bool {
+        let len = trimmed.bytes().take_while(|&b| b == self.mark).count();
+        len >= self.len && trimmed[len..].trim().is_empty()
+    }
+}
+
+/// Whether each line of a file, asked in order, belongs to a fenced block:
+/// the opening delimiter, every line up to the closing one, and that one. A
+/// fence opens and closes as [`FenceRun`] says, which [`render_verification`]
+/// also reads, and one left open runs to the end of the file, as `CommonMark`
+/// renders it.
+#[derive(Default)]
+struct Fences(Option<FenceRun>);
+
+impl Fences {
+    /// Whether `trimmed`, the next line, is a fenced block's line.
+    fn holds(&mut self, trimmed: &str) -> bool {
+        if let Some(open) = self.0 {
+            if open.closed_by(trimmed) {
+                self.0 = None;
+            }
+            return true;
+        }
+        self.0 = FenceRun::opened_by(trimmed);
+        self.0.is_some()
+    }
 }
 
 /// A list item line: a `-`, `*` or `+` bullet, or an `N.` marker, then a space.
@@ -409,12 +472,12 @@ fn render_verification(lines: &[String]) -> Option<String> {
     let mut blocks: Vec<Vec<String>> = Vec::new();
     let mut block: Vec<String> = Vec::new();
     let mut last = Entry::Paragraph;
-    let mut fence: Option<&'static str> = None;
+    let mut fence: Option<FenceRun> = None;
     for line in lines {
         let trimmed = line.trim();
-        if let Some(marker) = fence {
+        if let Some(open) = fence {
             block.push(line.clone());
-            if trimmed.starts_with(marker) {
+            if open.closed_by(trimmed) {
                 fence = None;
             }
             continue;
@@ -425,8 +488,8 @@ fn render_verification(lines: &[String]) -> Option<String> {
             }
             continue;
         }
-        if let Some(marker) = fence_marker(trimmed) {
-            fence = Some(marker);
+        if let Some(run) = FenceRun::opened_by(trimmed) {
+            fence = Some(run);
             block.push(line.clone());
             last = Entry::Fence;
         } else if trimmed.starts_with('|') {
@@ -700,6 +763,71 @@ mod tests {
         assert_eq!(
             section.verification.as_deref(),
             Some("v:\n\n```text\na\n\nb\n```\n\nafter")
+        );
+    }
+
+    /// A fenced block's `#`-led line and `**Field:**`-shaped line are its
+    /// content: neither ends the Verification or closes the rule,
+    /// `other_headings` lists neither, and a rule after the closed fence still
+    /// opens (060's review, 2026-11-15).
+    #[test]
+    fn a_fenced_heading_or_field_line_stays_in_the_verification() {
+        let content = "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v:\n\n```sh\n# a comment\n**Note:** x\n> quoted\n```\n\nafter\n\n**Source:** s\n";
+        let section = only(content);
+        assert_eq!(
+            section.verification.as_deref(),
+            Some("v:\n\n```sh\n# a comment\n**Note:** x\n> quoted\n```\n\nafter")
+        );
+        assert_eq!(section.statement, "A MUST.");
+        assert_eq!(other_headings(content), Vec::new());
+        let next = format!("{content}\n### TS-RULE-002\n\n> B MUST.\n");
+        let ids: Vec<String> = parse_rule_sections(&next)
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(ids, ["TS-RULE-001", "TS-RULE-002"]);
+    }
+
+    /// A fence before the Statement holding a `>` line and a
+    /// `**Verification:**` line opens neither the Statement nor the
+    /// Verification: both are read from the lines after it.
+    #[test]
+    fn a_fenced_quote_or_verification_marker_opens_neither() {
+        let section = only(
+            "### TS-RULE-001\n\n```text\n> not the statement\n**Verification:** not this\n```\n\n> The real MUST.\n\n**Verification:** v\n",
+        );
+        assert_eq!(section.statement, "The real MUST.");
+        assert_eq!(section.verification.as_deref(), Some("v"));
+    }
+
+    /// A fence closes only at a bare run of its own character at least as
+    /// long as the opening one: a shorter run, or one carrying an info string,
+    /// is the fence's content, so a markdown example nesting a fence keeps its
+    /// `#` lines inside the Verification (060's review, fix round 1).
+    #[test]
+    fn a_fence_closes_only_at_a_bare_run_as_long_as_its_opening() {
+        let section = only(
+            "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v:\n\n````md\n```\n# a heading in the example\n```\n````\n\n```sh\n```sh\n# b\n```\n\nafter\n\n**Source:** s\n",
+        );
+        assert_eq!(
+            section.verification.as_deref(),
+            Some(
+                "v:\n\n````md\n```\n# a heading in the example\n```\n````\n\n```sh\n```sh\n# b\n```\n\nafter"
+            )
+        );
+    }
+
+    /// A line of backticks whose info string holds another backtick is no
+    /// fence, as `CommonMark` has it, so the field and the rule after it are
+    /// read as such.
+    #[test]
+    fn a_backtick_line_holding_another_backtick_opens_no_fence() {
+        let content = "### TS-RULE-001\n\n> A MUST.\n\n**Verification:** v\n```inline``` code\n\n**Source:** s\n\n### TS-RULE-002\n\n> B MUST.\n";
+        let sections = parse_rule_sections(content);
+        assert_eq!(sections.len(), 2, "{sections:?}");
+        assert_eq!(
+            sections[0].verification.as_deref(),
+            Some("v ```inline``` code")
         );
     }
 

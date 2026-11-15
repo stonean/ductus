@@ -210,7 +210,11 @@ its version and date.
   keeps its line breaks. Among the shipped rules only `BE-API-001` gains text
   (its header table already arrived since spec 080). The same reading serves
   `discover-rule-files`' `verification`, so a project rule with a paragraph or
-  list after the first blank line is no longer cut.
+  list after the first blank line is no longer cut. Every such request also
+  carries `loaded-rule-files`, the basenames of the rule files the walk read,
+  in its `rule-files` order (a listed file it could not read is absent), so a
+  host applies a Verification's "where `{file}` is also loaded" yield from it,
+  and a request carrying none makes the condition false (spec 060).
 - **A pruned task number is never reissued.** `prune-tasks` writes a
   `next-task:` frontmatter counter in `tasks.md`, set past the highest task
   number the file held before it removed any section (never lowering one
@@ -1058,6 +1062,19 @@ its version and date.
   copies, so a copy left tracked there has its links checked.
 
 ### Fixed
+
+- **A fenced block inside a rule no longer cuts its Verification (spec 060's
+  review).** The rule-section reader took a `#`-led line inside a fence (a
+  shell or YAML comment) for a heading, which closed the rule and listed the
+  rest of the fence under `discover-rule-files`' `other-headings`, and took a
+  `**Field:**`-shaped line there for the field that ends the Verification. A
+  fenced block's lines, its delimiters included, are now its content: neither
+  heading, field, Statement quote nor Verification marker, as `CommonMark`
+  renders them. A fence opens and closes as `CommonMark`'s do: a run of three
+  or more backticks or tildes opens one, and only a bare run of its character
+  at least as long closes it, so a markdown example nesting a fence keeps its
+  lines. A fence left open runs to the end of the file. No shipped rule file
+  holds a fence, so only a project's own rule files read differently.
 
 - **`create-scenario` never replaces a scenario another call wrote (spec 022,
   task 33).** It checked that the slug's file was absent and then wrote with a
