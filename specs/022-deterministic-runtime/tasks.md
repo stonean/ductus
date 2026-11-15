@@ -1,5 +1,5 @@
 ---
-next-task: 35
+next-task: 36
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -39,3 +39,11 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [ ] An outward-link test: a `.ductus/sessions/` entry, and the shared default, each a symbolic link to a file outside the project, is refused or left unread rather than followed, and the test turns red under its mutant
 
 - **Done when**: No session file is read or written through a link leaving the project, proven by an outward-link test its mutant turns red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 35. append-task guards its read-modify-write of tasks.md (BE-TXN-002, from 023)
+
+- [ ] append-task's read of `tasks.md`, its numbering and its write are guarded, by a lock held across the read and the write or by a compare before persist, so two concurrent calls on one `tasks.md` each land their task. Today `runtime/src/primitives/append_task.rs` `run` reads the file, computes the next number and calls `write_atomic`, a tempfile and a replacing rename, so the second of two concurrent calls drops the first's task. The owner placed this on 022 on 2026-11-14, from 023's re-judge: BE-RACE-003's message named it, and the lost update is BE-TXN-002's (MUST); 023's task 25 cites this task
+- [ ] `scenarios/ask-consolidation.md`'s edge case "Concurrent invocation against the same `tasks.md`" states the mechanism the code uses. It now says the second writer's `persist` fails when the destination was replaced underneath it, which `write_atomic` does not do
+- [ ] A test with two concurrent appends on one `tasks.md` shows both tasks survive, and it turns red under its mutant
+
+- **Done when**: Two concurrent append-task calls on one `tasks.md` both land their tasks, proven by a test its mutant turns red; the scenario states the mechanism; the whole `cargo test` passes; and 022's next review reads the change.
