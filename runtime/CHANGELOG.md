@@ -10,17 +10,19 @@ its version and date.
 
 ### Added
 
-- **The pre-`done` gate reads an affected spec only through paths contained in the project (spec 066 task 23, from 067's review; `BE-INPUT-004`).**
+- **BREAKING: the pre-`done` gate reads an affected spec only through paths contained in the project (spec 066 task 23, from 067's review; `BE-INPUT-004`).**
   `check-review-gate` contains each affected spec's `spec.md`,
   `scenarios/` directory and scenarios before it probes, lists or opens them:
-  one that is a symbolic link leaving the project is never read, and its
+  one that is a symbolic link leaving the project, or a scenario whose name is
+  not UTF-8 and so has no spelling to contain, is never read, and its
   `cross-spec-impact` entry is the new state `outside-project`, with the link
-  in a new optional `detail`, holding `done` as `undischarged` does. Before,
+  or the reason in a new optional `detail`, holding `done` as `undischarged`
+  does. Before,
   an outside file decided the verdict: the same file passed the gate with a
   back-link and blocked it without one. `check-artifacts`'
   `cross-spec-impact-drift` family inherits the state and names it in its
-  finding. Breaking under `BE-COMPAT-001`: a new value of a response set
-  documented closed.
+  finding. Breaking under `BE-COMPAT-001`: a new value of a response enum
+  the schema does not document as open to new values.
 
 - **A review states what it read, and a read is credited once (spec 081).**
   `write-review` records `unread`, the scope entries the passes did not

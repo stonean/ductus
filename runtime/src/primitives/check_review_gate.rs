@@ -1189,10 +1189,13 @@ fn classify_cross_spec_entry(
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
         {
-            scenarios.push((
-                format!("{scenarios_rel}/{}", entry.file_name().to_string_lossy()),
-                path,
-            ));
+            let Some(rel) = scenario_rel(&scenarios_rel, &entry.file_name()) else {
+                return outside(PrimitiveError::InvalidPath {
+                    path: scenarios_rel,
+                    reason: "a scenario name that is not UTF-8 cannot be contained".into(),
+                });
+            };
+            scenarios.push((rel, path));
         }
     }
     // Every scenario is contained before any is read, so the verdict never
@@ -1209,6 +1212,14 @@ fn classify_cross_spec_entry(
         return state(CrossSpecImpactState::Discharged);
     }
     state(CrossSpecImpactState::Undischarged)
+}
+
+/// A scenario's project-relative path under `scenarios_rel`, or `None` when
+/// its name is not UTF-8. Containment checks a path spelled as text, so a
+/// lossy spelling would check a name other than the one opened, and a link out
+/// by that name would be read (`BE-INPUT-004`, 066's review).
+fn scenario_rel(scenarios_rel: &str, name: &std::ffi::OsStr) -> Option<String> {
+    name.to_str().map(|name| format!("{scenarios_rel}/{name}"))
 }
 
 /// Whether the markdown file at `path` carries a pointer to `feature`.
@@ -1758,6 +1769,46 @@ mod tests {
         .unwrap();
 
         assert_reported_outside(tmp.path(), "specs/050-upstream/scenarios/a-case.md");
+    }
+
+    /// A scenario name is contained only under its exact spelling: one that is
+    /// not UTF-8 has no text spelling, so it is never contained, rather than
+    /// checked under a lossy name it does not have.
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_name_that_is_not_utf8_has_no_contained_spelling() {
+        use std::os::unix::ffi::OsStrExt;
+        let not_utf8 = std::ffi::OsStr::from_bytes(b"a-\xffcase.md");
+        assert_eq!(scenario_rel("specs/050-upstream/scenarios", not_utf8), None);
+        assert_eq!(
+            scenario_rel(
+                "specs/050-upstream/scenarios",
+                std::ffi::OsStr::new("a-case.md")
+            ),
+            Some("specs/050-upstream/scenarios/a-case.md".to_string())
+        );
+    }
+
+    /// The gate end to end with a scenario linked outside under a name that is
+    /// not UTF-8. Linux only, since macOS's APFS refuses such a name.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_scenario_linked_outside_under_a_name_that_is_not_utf8_is_never_read() {
+        use std::os::unix::ffi::OsStrExt;
+        let tmp = tempdir().unwrap();
+        let outer = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(tmp.path(), "Body text that names nothing.");
+        let scenarios = tmp.path().join("specs/050-upstream/scenarios");
+        fs::create_dir_all(&scenarios).unwrap();
+        fs::write(outer.path().join("a-case.md"), BACK_LINK_SCENARIO).unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("a-case.md"),
+            scenarios.join(std::ffi::OsStr::from_bytes(b"a-\xffcase.md")),
+        )
+        .unwrap();
+
+        assert_reported_outside(tmp.path(), "not UTF-8");
     }
 
     /// A scenario's links carry two `../` segments rather than one. Reading

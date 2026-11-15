@@ -6728,9 +6728,11 @@ pub enum CrossSpecImpactState {
     /// the wrong advice here.
     SelfReference,
     /// The named spec's directory, `spec.md`, `scenarios/` or a scenario is a
-    /// symbolic link that resolves outside the project.
+    /// symbolic link that resolves outside the project, or a scenario's name
+    /// is not UTF-8 and so has no spelling to contain.
     ///
-    /// Reported with the link in the entry's `detail` and never read, so a
+    /// Reported with the link or that reason in the entry's `detail` and never
+    /// read, so a
     /// file outside the project cannot decide the obligation either way
     /// (`BE-INPUT-004`). Nothing proved a back-link, so it holds `done` as
     /// [`Self::Undischarged`] does, but its remedy differs: the link is

@@ -48,4 +48,11 @@ MUTATIONS = [
         '            entry.state != CrossSpecImpactState::Discharged\n',
         'check_artifacts::tests::an_impact_read_through_an_outward_link_is_drift_naming_the_link',
     ),
+    (
+        'M5 a scenario name that is not UTF-8 is contained under a lossy spelling',
+        'src/primitives/check_review_gate.rs',
+        '    name.to_str().map(|name| format!("{scenarios_rel}/{name}"))',
+        '    Some(format!("{scenarios_rel}/{}", name.to_string_lossy()))',
+        'check_review_gate::tests::a_scenario_name_that_is_not_utf8_has_no_contained_spelling',
+    ),
 ]

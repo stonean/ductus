@@ -36,7 +36,7 @@ The sections moved from 022 keep every argument and result shape and every field
 
 `classify_cross_spec_entry` contains the affected spec's `spec.md`, its `scenarios/` directory and each scenario with `validate_contained` before it probes, lists or opens them (`BE-INPUT-004`; the *Paths drawn from committed text* bullet of `specs/022-deterministic-runtime/plan.md` §Path arguments: a lexical screen, then canonical containment), listing no scenario until every one is contained so the verdict never depends on directory order. `parse_feature_dir` already rules out `..` and an absolute name, so the slug needs no screen of its own; it admits a `/` inside a sequential slug, which the component-by-component link check covers. A path that leaves the project is a fifth per-entry state, `outside-project`, with the link in the entry's new optional `detail`: it holds `done` as `undischarged` does, since nothing proved a back-link, and it is a state of its own because the remedy is replacing the link, not adding a signpost. Rejected: reading it as `undischarged`, whose guidance says to add a signpost, and `target-missing`, a typo. `check-artifacts`' cross-spec-impact-drift family inherits the state and says so in its message.
 
-**`BE-COMPAT-001`:** `check-review-gate`'s `cross-spec-impact[].state` gains `outside-project`, a new value of a response set the data model documents as closed, and the entry gains the optional `detail`, omitted when absent. The value is **breaking**; the field is additive. It ships with the pending minor bump (pre-1.0, the compatibility boundary).
+**`BE-COMPAT-001`:** `check-review-gate`'s `cross-spec-impact[].state` gains `outside-project`, a new value of a response enum the schema does not document as open to new values, and the entry gains the optional `detail`, omitted when absent. The value is **breaking**; the field is additive. It ships with the pending minor bump (pre-1.0, the compatibility boundary).
 
 ## Affected Files
 
@@ -58,6 +58,8 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/diff_cross_spec.rs` | Specify | `diff-cross-spec` |
 | `runtime/src/primitives/bounded_lists.rs` | Specify | The read-size bound `compute-review-scope` and `diff-cross-spec` share (scenario `scope-results-have-a-bounded-size`) |
 | `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
+| `runtime/src/primitives/check_artifacts.rs` | Specify | The cross-spec-impact-drift message that names an affected spec read through a link out (task 23) |
+| `scripts/mutation/gate-cross-spec-containment.py` | Create | The mutation list proving the gate contains each path it builds from a cross-spec-impact slug (task 23) |
 
 ## Data Model
 
