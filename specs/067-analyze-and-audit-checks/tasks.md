@@ -29,6 +29,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] 067's data model and `CHECK_ARTIFACTS`' description state what each probe reports for such a link
 - [ ] A test with an outward link: a path a criterion and a spec body each name, which is a symbolic link to a file outside the project, is not probed through, and the test turns red under its mutant
 
+Owed when this lands, in the same change: 067's `plan.md` decision "A path that leaves the project is `outside-project`" and the `outside-project` row of `scenarios/check-artifacts-skipped-targets.md` still say the screen is lexical; both state the link check too.
+
 - **Done when**: Neither probe follows a link leaving the project, proven by a test its mutant turns red; the whole `cargo test` passes; and 067's next review reads the change.
 
 ## 34. A check holds the dogfooded feature-directory grammar to the shipped hook's (051's AC15)
