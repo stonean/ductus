@@ -1,5 +1,5 @@
 ---
-next-task: 36
+next-task: 37
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -47,3 +47,11 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [ ] A test with two concurrent appends on one `tasks.md` shows both tasks survive, and it turns red under its mutant
 
 - **Done when**: Two concurrent append-task calls on one `tasks.md` both land their tasks, proven by a test its mutant turns red; the scenario states the mechanism; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 36. The exec extension requests bound their spec-content (BE-PAYLOAD-001, from 060's analysis)
+
+- [ ] The `ductus exec` extension requests that carry `spec-content` (`assessSpecQuality`, `askClarifyQuestion` and `routeFold`: `build_assess_spec_quality_request` and its siblings in `runtime/src/interpreter/payload.rs`) bound it: inline while the request fits `[artifacts] read-size-bytes`, and past it a path the host reads, so no request carries an unbounded body. Today each reads the spec's `spec.md` whole, and `assessSpecQuality` sends it once per assessed rule, up to 192 per walk. The owner deferred 060's BE-PAYLOAD-001 (MUST) analysis finding here on 2026-11-15, since the request shapes are 022's exec protocol; 060's `analysis.md` records the deferral
+- [ ] 022's data model states the bound and the past-the-bound shape in each of those extension points' sections
+- [ ] A test proves the inline form under the read size and the bounded form past it, each failing under its mutant, and a parity golden is re-blessed only where its shape moved
+
+- **Done when**: No `ductus exec` extension request carries `spec-content` past the read size inline, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
