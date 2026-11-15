@@ -1,13 +1,13 @@
 ---
 spec: 080-deterministic-runtime-efficiency
-last-run: 2026-11-15T14:49:11Z
-analyzed-against: 34367454ceb4d31d928f4dfb5966d901bfd48638
+last-run: 2026-11-15T22:23:00Z
+analyzed-against: aeb385319286d2b869f2e77d5b63d3a1202f2bf5
 hard-fail: 0
 blocking-findings: 0
 advisory: 19
 unexamined: 5
 analyzed-digest:
-  data-model.md: 79bd7b69b082b597bc3d63fc834573795949af1ef51715ecd777eb10d3eadb95
+  data-model.md: 41f9e11983f62f3a3994146a09b39a26806863f229eb155813cca580859c8768
   plan.md: 9a183db6f4f3101a7c25ecdb59478e1e08dc24b92c8dd203423d26faa6ba2f03
   research.md: f3fe9bd9319dc4dfd1f6da663e2457cb44018560d0e6491e80422c0985d8981e
   review.md: f7f71d28576bd49886418b0376c2832a7dbd9796feb60c4c3482adbb8a40c1a7
@@ -18,7 +18,7 @@ analyzed-digest:
   scenarios/reference-reads-follow-the-cited-sections.md: 66a004c23e55c8e1a4823a5fa13370220af42c42563194fc693c7067998d9c5f
   scenarios/rules-load-without-shell-reads.md: 052d22a0ed61649128bdada4bf6cef556aba1568aa64f6d6055eb5dbe84b92dd
   scenarios/the-search-goes-out-with-the-first-call.md: fb2cfb2453ca185c97d8fd9e81daad0c09fe92280d925c2ee2b52d6273dc000e
-  spec.md: bc9156734364439ff7f1f6b4908a7c2b56e82be0a3f700f4236fa8418a63f673
+  spec.md: 92bc0a74db32eca012cfdcc1d9c897c4dda539768d3a1365ed2a97843488efb1
   tasks.md: 508851a1ac6f7095f26d7edab4e0b524966fcf4afa10c9ff4b9433f76606217b
 unexamined-by-reason:
   never-existed: 1
@@ -33,28 +33,31 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#`render-status` serves the view, and `dashboard` stops carrying it"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
-  BE-INPUT-002: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Bounded results"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Reference sections are read through `read-section`"}
   BE-INPUT-008: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-INPUT-011: {verdict: addressed, cite: "plan.md#One view model, two renderings, one bound"}
   BE-LOCK-001: {verdict: addressed, cite: "spec.md#Edge Cases"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "spec.md#Bounded tool results"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#Bounded results"}
   BE-PAYLOAD-002: {verdict: addressed, cite: "data-model.md#`discover-rule-files`' rules"}
-  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#A `claude -p` harness records each command's cost"}
+  BE-RACE-003: {verdict: addressed, cite: "spec.md#Edge Cases"}
+  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-TXN-002: {verdict: waived, reason: "concurrent `/{project}:configure` runs read-modify-write the per-contributor `settings.local.json` with no version check or lock, so one run's hook entry can be lost; both merges are idempotent, so the next run restores it, and a lock would serialize a file two runs rarely share (Edge Cases; owner, 2026-11-14)", decided-by: "andy@stone.dev", decided-at: "2026-11-14T17:31:43Z"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
-  CFG-CONST-003: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
-  CFG-ENV-001: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
+  CFG-CONST-003: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
+  CFG-ENV-001: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
   CFG-ENV-004: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
-  CFG-ENV-007: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  CFG-ENV-005: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  CFG-ENV-007: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
 blocking: false
 dispositions:
@@ -176,12 +179,12 @@ decisions:
 
 ## Advisory findings
 
+- grounding — Resolved Question 'Which ductus tools set anthropic/alwaysLoad?' states as fact that Claude Code cuts an upfront-loaded tool description at 4,096 characters against 16,384 through tool search, with no source or assumption marker; plan.md cites it only back to this spec. — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
 - artifact-size — `specs/080-deterministic-runtime-efficiency/plan.md` is 62571 bytes, 2 read pages at the 50000-byte read size — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: plan.md is 080's design record, grown by this analysis's rule commitments; its finished Affected Files rows are trimmed with /ductus:prune once 080 is done.
 - grounding — spec.md says Claude Code transcripts are removed after `cleanupPeriodDays`, 30 days by default, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
 - grounding — spec.md says `MessageDisplay` transforms only assistant text and a `systemMessage` without a block lets the prompt reach the model, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
 - grounding — spec.md says Claude Code reads only user, project and local settings, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
 - grounding — spec.md says the output schemas never reach the model, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — spec.md says Claude Code cuts an upfront-loaded tool's description at 4,096 characters against 16,384 through tool search, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
 - grounding — plan.md says the parser ends `## Instructions` at its first sub-heading, citing no path or symbol — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
 - grounding — plan.md says rmcp 3.9.0's `Tool.meta` serializes as `_meta`, naming no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore.
 - grounding — plan.md says `apply-manifest` holds both roots inside the directory it runs in, citing no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
