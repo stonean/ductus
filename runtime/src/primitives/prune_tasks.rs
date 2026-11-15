@@ -7,9 +7,9 @@
 //!   surviving task section; preserve the preamble and every pending /
 //!   no-checkbox section verbatim.
 //! - **reset** (`--reset`) — rewrite the file to the template's initial state:
-//!   the existing `# …` heading followed by [`CANONICAL_EMPTY_TASKS_BODY`].
-//!   Gated on spec status: permitted only when the spec is `done`, unless
-//!   `--force` is supplied.
+//!   the file's frontmatter block, when it has one, the existing `# …` heading,
+//!   and [`CANONICAL_EMPTY_TASKS_BODY`]. Gated on spec status: permitted only
+//!   when the spec is `done`, unless `--force` is supplied.
 //!
 //! Parsing reuses the shared `tasks.md` machinery
 //! (`detect_tasks_structure`, `parse_atx_heading`, `checkbox::find_checkbox_line`)
@@ -112,7 +112,9 @@ impl Block {
 /// - [`PrimitiveError::TasksFileMissing`] when the named feature has no
 ///   `tasks.md`; under `all` such a feature is skipped instead.
 /// - [`PrimitiveError::MalformedTasks`] when a `--reset` file has no `# …`
-///   heading.
+///   heading, or, in either mode, its frontmatter never closes or its
+///   `next-task:` is not a positive integer, or no counter can follow its
+///   highest task number.
 /// - [`PrimitiveError::MissingSpecFile`] / [`PrimitiveError::StatusFieldMissing`]
 ///   when the spec status cannot be read: by a `--reset`, for its gate, and by
 ///   an `all` walk, for each spec it lists.
@@ -332,7 +334,7 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
         (PruneMode::KeepPending, PruneGate::NotApplicable, None)
     };
 
-    let blocks = segment(&content);
+    let blocks = segment(&content, &tasks_path)?;
 
     // Per-mode reduction: compute the would-be output, the section records,
     // and the removed/kept counts.
@@ -347,7 +349,10 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
     // carries one keeps it.
     let held = super::tasks_counter::read(&content, &tasks_path)?;
     let new_content = if removed > 0 {
-        let past = super::tasks_counter::highest_present(&content) + 1;
+        let past = super::tasks_counter::after(
+            super::tasks_counter::highest_present(&content),
+            &tasks_path,
+        )?;
         let counted =
             super::tasks_counter::set(&new_content, past.max(held.unwrap_or(0)), &tasks_path)?;
         // `set` writes LF where it adds the block; the file keeps its ending.
@@ -409,7 +414,17 @@ pub(crate) fn read_status(feature_dir: &Path, root: &str, feature: &str) -> Resu
 }
 
 /// Segment `content` into structure / phase / task blocks in document order.
-fn segment(content: &str) -> Vec<Block> {
+///
+/// The frontmatter block the file opens with is the first structure block,
+/// whole and unscanned: a `#` line in it is a YAML comment, not a heading, so
+/// it opens no block and a prune leaves the block as it found it.
+///
+/// # Errors
+///
+/// [`PrimitiveError::MalformedTasks`] when the frontmatter never closes.
+fn segment(content: &str, path: &Path) -> Result<Vec<Block>> {
+    let frontmatter = super::tasks_counter::frontmatter(content, path)?;
+    let body = &content[frontmatter.len()..];
     let task_level: u8 = match detect_tasks_structure(content) {
         TasksStructure::Flat => 2,
         TasksStructure::Phased => 3,
@@ -420,11 +435,12 @@ fn segment(content: &str) -> Vec<Block> {
     let mut cur = Block::new(Kind::Structure, "");
     // The initial block starts empty (no first line); clear the placeholder.
     cur.lines.clear();
+    cur.lines.extend(frontmatter.lines().map(str::to_string));
     let mut skip = SkipScanner::default();
     let mut current_phase_name: Option<String> = None;
     let mut current_phase_idx: Option<usize> = None;
 
-    for line in content.lines() {
+    for line in body.lines() {
         if skip.skip(line) {
             cur.lines.push(line.to_string());
             continue;
@@ -489,7 +505,7 @@ fn segment(content: &str) -> Vec<Block> {
         cur.lines.push(line.to_string());
     }
     blocks.push(cur);
-    blocks
+    Ok(blocks)
 }
 
 /// keep-pending reduction: drop spent task sections and emptied phase
@@ -560,20 +576,23 @@ fn reduce_keep_pending(content: &str, blocks: &[Block]) -> (String, Vec<PruneSec
     (new_content, sections, removed, kept)
 }
 
-/// reset reduction: existing H1 + [`CANONICAL_EMPTY_TASKS_BODY`]. Every task
-/// section is reported as removed.
+/// reset reduction: the frontmatter block, existing H1 and
+/// [`CANONICAL_EMPTY_TASKS_BODY`]. Every task section is reported as removed.
 fn reduce_reset(
     content: &str,
     blocks: &[Block],
     tasks_path: &Path,
 ) -> Result<(String, Vec<PruneSection>, u32, u32)> {
+    // The frontmatter block is not the feature's body: it stays, so the
+    // `next-task:` counter survives the reset, and the H1 is searched only
+    // below it — a `#` line there is a YAML comment, not the feature's title.
+    let frontmatter = super::tasks_counter::frontmatter(content, tasks_path)?;
     // Outside fences and comments, as `segment` reads structure: a `# ` line
     // in an example block is not the feature's identity.
     let mut skip = SkipScanner::default();
-    let h1 = blocks
-        .iter()
-        .flat_map(|b| b.lines.iter())
-        .find(|line| !skip.skip(line) && matches!(parse_atx_heading(line.as_str()), Some((1, _))))
+    let h1 = content[frontmatter.len()..]
+        .lines()
+        .find(|line| !skip.skip(line) && matches!(parse_atx_heading(line), Some((1, _))))
         .ok_or_else(|| PrimitiveError::MalformedTasks {
             path: tasks_path.to_path_buf(),
             reason: "no top-level (`#`) heading to preserve the feature identity".to_string(),
@@ -582,9 +601,6 @@ fn reduce_reset(
     // The H1 is lifted from the file being reset, so this is a rewrite of an
     // existing file and not the creation of a new one — the ending it had is
     // the ending it gets back.
-    // The frontmatter block is not the feature's body: it stays, so the
-    // `next-task:` counter survives the reset.
-    let frontmatter = super::tasks_counter::frontmatter(content, tasks_path)?;
     let lead = if frontmatter.is_empty() { "" } else { "\n" };
     let new_content = super::with_line_ending(
         &format!("{frontmatter}{lead}{h1}\n\n{CANONICAL_EMPTY_TASKS_BODY}"),
@@ -709,6 +725,58 @@ mod tests {
             &serde_json::to_value(&summary).unwrap(),
             &lists,
         );
+    }
+
+    /// A `#` line in the frontmatter block is a YAML comment, not a heading:
+    /// a keep-pending prune leaves the block as it found it, with no blank line
+    /// inserted after its opening fence, and a reset keeps the file's own
+    /// title (spec 041, review).
+    #[test]
+    fn a_comment_in_the_frontmatter_is_no_heading() {
+        let tasks = "---\n# owner note\nnext-task: 3\n---\n\n# T\n\n## 1. Spent\n\n- [x] a\n\n## 4. Pending\n\n- [ ] b\n";
+        let (_tmp, repo) = write_repo(tasks, Some("done"));
+        let path = repo.join("specs/041-task-pruning/tasks.md");
+        run(&args(false, false, true), &repo).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "---\n# owner note\nnext-task: 5\n---\n\n# T\n\n## 4. Pending\n\n- [ ] b\n"
+        );
+        fs::write(&path, tasks).unwrap();
+        run(&args(true, false, true), &repo).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            format!("---\n# owner note\nnext-task: 5\n---\n\n# T\n\n{CANONICAL_EMPTY_TASKS_BODY}")
+        );
+    }
+
+    /// A counter block the prune adds to a CRLF file is written in CRLF, so
+    /// the file keeps one ending (spec 041, review).
+    #[test]
+    fn a_crlf_file_gets_its_counter_block_in_crlf() {
+        let tasks = "# T\r\n\r\n## 1. Spent\r\n\r\n- [x] a\r\n\r\n## 2. Pending\r\n\r\n- [ ] b\r\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        run(&args(false, false, true), &repo).unwrap();
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(
+            body,
+            "---\r\nnext-task: 3\r\n---\r\n\r\n# T\r\n\r\n## 2. Pending\r\n\r\n- [ ] b\r\n"
+        );
+    }
+
+    /// A task numbered `u32::MAX` leaves no counter to write past it: the
+    /// prune refuses with the file untouched, rather than write the wrapped
+    /// `0` its own reader refuses (spec 041, review).
+    #[test]
+    fn a_number_with_no_counter_past_it_stops_the_prune() {
+        let tasks = "# T\n\n## 4294967295. Spent\n\n- [x] a\n\n## 2. Pending\n\n- [ ] b\n";
+        let (_tmp, repo) = write_repo(tasks, None);
+        let err = run(&args(false, false, true), &repo).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::MalformedTasks { reason, .. } if reason.contains("4294967295")),
+            "{err:?}"
+        );
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, tasks, "nothing written");
     }
 
     /// The number a prune removed from the top is not reissued: the prune

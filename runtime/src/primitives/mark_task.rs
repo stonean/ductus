@@ -117,11 +117,6 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     })
 }
 
-/// Locate the task heading line (`## N. ...` for flat structure or
-/// `### N. ...` for phased) and return the half-open range of lines
-/// that constitute the task body (heading inclusive; the next heading
-/// at the task level or shallower is exclusive). Returns `None` when
-/// no matching heading is found.
 /// Compute the per-line fence/HTML-comment skip mask for the whole file, so
 /// heading and checkbox scans ignore content inside fenced blocks or
 /// `<!-- … -->` guidance comments — the same set `read-tasks` ignores.
@@ -130,6 +125,11 @@ fn compute_skip_mask(lines: &[&str]) -> Vec<bool> {
     lines.iter().map(|line| skip.skip(line)).collect()
 }
 
+/// Locate the task heading line (`## N. ...` for flat structure or
+/// `### N. ...` for phased) and return the half-open range of lines
+/// that constitute the task body (heading inclusive; the next heading
+/// at the task level or shallower is exclusive). Returns `None` when
+/// no matching heading is found.
 fn locate_task_range(
     lines: &[&str],
     skip_mask: &[bool],

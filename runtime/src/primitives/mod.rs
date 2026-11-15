@@ -3298,8 +3298,9 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
         }
         if let Some((2, heading)) = parse_atx_heading(line) {
             // Skip numeric flat-task remnants: a heading whose text begins
-            // with "N." (decimal digits, then dot) is a flat task, not a
-            // phase container. Mixed files keep their phase set clean.
+            // with "N." (decimal digits, at most one lowercase letter, then
+            // dot) is a flat task, not a phase container. Mixed files keep
+            // their phase set clean.
             if heading_is_numeric(&heading) {
                 continue;
             }
@@ -3330,6 +3331,10 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
 /// `mark-task`, `append-task`, and the phase scanner below all read the same
 /// tasks file, so a divergence here would let one primitive see a task
 /// another does not. The number's order is [`TaskNumber`]'s.
+///
+/// A signed number (`+5.`) is no task: the local parsers this grammar replaced
+/// read the sign through `str::parse`, and the numbering walk and the slug
+/// guard once counted it. Digits only is the contract.
 pub(crate) fn split_numbered_heading(heading: &str) -> Option<(&str, &str)> {
     let digits = heading
         .bytes()
@@ -4536,6 +4541,31 @@ mod tests {
         assert_eq!(split_numbered_heading("12"), None);
         // A number with the dot but no title is a task with an empty title.
         assert_eq!(split_numbered_heading("12."), Some(("12", "")));
+    }
+
+    /// A suffixed heading above the task level in a mixed file is a flat
+    /// remnant, not a phase container (spec 041, scenario
+    /// `a-suffixed-task-number-is-a-task`).
+    #[test]
+    fn a_suffixed_flat_remnant_is_no_phase() {
+        let content = "# T\n\n## 11a. Legacy flat\n\n## Phase 1\n\n### 12. Real\n";
+        let phases: Vec<String> = iter_phase_ranges(content)
+            .into_iter()
+            .map(|p| p.heading)
+            .collect();
+        assert_eq!(phases, vec!["Phase 1".to_string()]);
+        assert!(heading_is_numeric("11a. Legacy flat"));
+    }
+
+    /// A signed number is no task: the local parsers the shared grammar
+    /// replaced (`str::parse::<u32>`) read `+5` as 5, and the shared one
+    /// reads digits only, as `read-tasks` always did.
+    #[test]
+    fn a_signed_number_is_no_task() {
+        assert_eq!(split_numbered_heading("+5. X"), None);
+        assert!(!heading_is_numeric("+5. X"));
+        assert_eq!(iter_task_numbers_at_levels("## +5. X\n", &[2]).count(), 0);
+        assert_eq!(iter_task_numbers_at_levels("### +5. X\n", &[3]).count(), 0);
     }
 
     #[test]

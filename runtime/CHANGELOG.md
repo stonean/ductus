@@ -1086,6 +1086,16 @@ its version and date.
 
 ### Fixed
 
+- **`prune-tasks` and `append-task` no longer write a counter their own reader
+  refuses, and a `#` comment in `tasks.md`'s frontmatter is no heading (spec
+  041's review).** A task numbered `4294967295` made `prune-tasks --apply`
+  write `next-task: 0`, and `append-task` advanced past one the same way;
+  both now refuse with `malformed-tasks`, naming the number, and write
+  nothing. `prune-tasks` read the first top-level heading line anywhere as the file's H1, so
+  a YAML comment in the frontmatter replaced the title on `--reset`, and a
+  keep-pending prune inserted a blank line after the block's opening `---`;
+  both now find the heading below the frontmatter and keep the block as it was.
+
 - **`prune-project` opens nothing through a symbolic link leaving the project
   (spec 041 task 25, BE-INPUT-004).** Each project file is checked with
   `validate_contained` before it is read, and one that is, or lies under, such

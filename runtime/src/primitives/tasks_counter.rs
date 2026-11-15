@@ -78,6 +78,22 @@ pub(crate) fn highest_present(content: &str) -> u32 {
         .unwrap_or(0)
 }
 
+/// The counter value past `number`: the number the next task takes, or the
+/// counter to write once `number` is assigned.
+///
+/// # Errors
+///
+/// [`PrimitiveError::MalformedTasks`] when `number` is `u32::MAX`: no counter
+/// past it can be written, and a wrapped `0` is one [`read`] refuses.
+pub(crate) fn after(number: u32, path: &Path) -> Result<u32> {
+    number
+        .checked_add(1)
+        .ok_or_else(|| PrimitiveError::MalformedTasks {
+            path: path.to_path_buf(),
+            reason: format!("task {number} is the highest number a counter holds: no `next-task:` past it can be written"),
+        })
+}
+
 /// `content` with its counter set to `value`: the existing line replaced, a
 /// line added to existing frontmatter, or a block created above the file.
 ///
@@ -167,6 +183,16 @@ mod tests {
         assert_eq!(
             set("---\r\nnext-task: 2\r\n---\r\n\r\n# T\r\n", 3, p()).unwrap(),
             "---\r\nnext-task: 3\r\n---\r\n\r\n# T\r\n"
+        );
+    }
+
+    #[test]
+    fn a_number_at_the_ceiling_has_no_counter_past_it() {
+        assert_eq!(after(7, p()).unwrap(), 8);
+        let err = after(u32::MAX, p()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::MalformedTasks { reason, .. } if reason.contains("4294967295")),
+            "{err:?}"
         );
     }
 

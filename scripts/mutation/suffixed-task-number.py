@@ -82,4 +82,18 @@ MUTATIONS = [
         'suffix.is_some_and(|c| !c.is_ascii_alphabetic())',
         'suffixed_task',
     ),
+    (
+        'M10 a suffixed task is spared the Done when rule',
+        'src/primitives/check_artifacts.rs',
+        'if task.done_when.is_none() {',
+        'if task.done_when.is_none() && super::TaskNumber::parse(&task.number).is_some_and(|n| n.to_string() == n.digits().to_string()) {',
+        'a_suffixed_task_is_held_to_done_when',
+    ),
+    (
+        'M11 a suffixed heading above the task level reads as a phase',
+        'src/primitives/mod.rs',
+        'split_numbered_heading(heading).is_some()\n}',
+        "heading.starts_with(|c: char| c.is_ascii_digit()) && heading.trim_start_matches(|c: char| c.is_ascii_digit()).starts_with('.')\n}",
+        'a_suffixed_flat_remnant',
+    ),
 ]

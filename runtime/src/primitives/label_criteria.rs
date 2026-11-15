@@ -136,14 +136,15 @@ pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult>
     })
 }
 
-/// Frontmatter block bounds as `(opening_index, closing_index)` over the
-/// line vector, or `None` when the file has no leading `---` fence or no
-/// closing one.
+/// Where a spec's frontmatter closes, and the line ending that closing line
+/// uses.
 struct Frontmatter {
     closing: usize,
     newline: &'static str,
 }
 
+/// The frontmatter block's bounds, or `None` when the file has no leading `---`
+/// fence or no closing one.
 fn frontmatter_bounds(lines: &[&str]) -> Option<Frontmatter> {
     let first = lines.first()?;
     if first.trim_end() != "---" {

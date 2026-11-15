@@ -4,7 +4,7 @@ The reset body and the design-record heading set are compiled into `prune-tasks`
 
 **Where a named section lives.** A section named below with no heading here is in the command file, `prune.md`, with the numbered steps this file cites. A bare `§name` is a heading here or a constitution marker; one with another file's path on its line is a heading there, unless it is a constitution marker.
 
-**`tasks.md`.** `prune-tasks` classifies each task section **spent** (≥ 1 checkbox, all checked), **pending** (any unchecked), or **no-checkbox** (zero checkboxes), counting only real task-list checkboxes (a `- **Done when**:` line is not one). **keep-pending** (default) drops every spent section and a phase container left governing none; **reset** (`--reset`) keeps the file's `# …` heading and replaces everything below it with the template's initial tasks body, refused unless the spec status is `done` or `--force` is supplied.
+**`tasks.md`.** `prune-tasks` classifies each task section **spent** (≥ 1 checkbox, all checked), **pending** (any unchecked), or **no-checkbox** (zero checkboxes), counting only real task-list checkboxes (a `- **Done when**:` line is not one). **keep-pending** (default) drops every spent section and a phase container left governing none; **reset** (`--reset`) keeps the file's frontmatter block and `# …` heading and replaces everything below it with the template's initial tasks body, refused unless the spec status is `done` or `--force` is supplied.
 
 **`plan.md`.** `prune-plan`'s description states the design record.
 

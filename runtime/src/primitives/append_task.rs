@@ -25,8 +25,10 @@ use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 /// Returns [`PrimitiveError::InvalidArgument`] when `title`, `done-when`,
 /// or a `body` item carries an embedded newline (structure injection into
 /// `tasks.md`), [`PrimitiveError::FeaturePathNotFound`] when the resolved
-/// feature directory does not exist, or [`PrimitiveError::Io`] for
-/// filesystem failures.
+/// feature directory does not exist, [`PrimitiveError::MalformedTasks`] when
+/// the `next-task:` counter is not a positive integer, its frontmatter never
+/// closes, or no number or counter can follow the highest `u32::MAX` one, or
+/// [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     super::validate_feature_path(repo, &args.feature_path)?;
     // A feature path may name any directory inside the project, so refuse one
@@ -139,7 +141,7 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     // reissued. Maintained only where a file already carries one, so a file
     // that was never pruned is written exactly as it always was.
     let counter = super::tasks_counter::read(&existing, &tasks_path)?;
-    let next_number = next_task_number(&existing, counter);
+    let next_number = next_task_number(&existing, counter, &tasks_path)?;
     let new_content = match detect_tasks_structure(&existing) {
         TasksStructure::Flat => {
             let block = render_flat_task_block(next_number, args);
@@ -152,7 +154,11 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     // the ending through each, so appending a task cannot convert a CRLF
     // `tasks.md` to LF (or leave the appended block disagreeing with it).
     let new_content = match counter {
-        Some(_) => super::tasks_counter::set(&new_content, next_number + 1, &tasks_path)?,
+        Some(_) => super::tasks_counter::set(
+            &new_content,
+            super::tasks_counter::after(next_number, &tasks_path)?,
+            &tasks_path,
+        )?,
         None => new_content,
     };
     let new_content = super::with_line_ending(&new_content, super::line_ending_of(&existing));
@@ -301,8 +307,14 @@ fn validate_single_line(argument: &str, value: &str) -> Result<()> {
 /// (`### N.`) task headings in `tasks.md`, which makes the numbering robust to
 /// mixed-structure files: an old `## 1.` flat task alongside a new `### 2.`
 /// phased task produces `next = 3`, not `next = 2`.
-fn next_task_number(content: &str, counter: Option<u32>) -> u32 {
-    (super::tasks_counter::highest_present(content) + 1).max(counter.unwrap_or(0))
+///
+/// # Errors
+///
+/// [`PrimitiveError::MalformedTasks`] when the highest number present is
+/// `u32::MAX`, which no number follows.
+fn next_task_number(content: &str, counter: Option<u32>, path: &Path) -> Result<u32> {
+    let past = super::tasks_counter::after(super::tasks_counter::highest_present(content), path)?;
+    Ok(past.max(counter.unwrap_or(0)))
 }
 
 /// Render the flat task block at ATX-2 (`## N. Title`). Always preceded
@@ -1580,6 +1592,28 @@ mod tests {
             matches!(err, PrimitiveError::MalformedTasks { .. }),
             "{err:?}"
         );
+    }
+
+    /// A task numbered `u32::MAX` leaves no number to assign, and a counter at
+    /// it no counter to write past the task it assigns: either way the append
+    /// refuses with the file untouched, since a wrapped `0` is a counter its
+    /// own reader refuses (spec 041, review).
+    #[test]
+    fn a_number_with_no_successor_stops_the_append() {
+        for tasks in [
+            "# T\n\n## 4294967295. Last\n\n- [ ] a\n- **Done when**: done.\n",
+            "---\nnext-task: 4294967295\n---\n\n# T\n\n## 1. One\n\n- [ ] a\n- **Done when**: done.\n",
+        ] {
+            let tmp = tempdir().unwrap();
+            write_tasks(tmp.path(), tasks);
+            let err = run(&args("specs/042-foo", "Next", "done."), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::MalformedTasks { reason, .. } if reason.contains("4294967295")),
+                "{err:?}"
+            );
+            let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
+            assert_eq!(body, tasks, "nothing written");
+        }
     }
 
     /// Of many concurrent appends on one `tasks.md`, every task lands, each

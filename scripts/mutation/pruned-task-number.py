@@ -20,22 +20,22 @@ MUTATIONS = [
     (
         'M1 append-task ignores the counter and numbers from the highest present',
         'src/primitives/append_task.rs',
-        '(super::tasks_counter::highest_present(content) + 1).max(counter.unwrap_or(0))',
-        'super::tasks_counter::highest_present(content) + 1',
+        'Ok(past.max(counter.unwrap_or(0)))',
+        'Ok(past)',
         'a_counter_past_the_highest',
     ),
     (
         'M2 append-task does not advance the counter',
         'src/primitives/append_task.rs',
-        'Some(_) => super::tasks_counter::set(&new_content, next_number + 1, &tasks_path)?,',
+        'Some(_) => super::tasks_counter::set(\n            &new_content,\n            super::tasks_counter::after(next_number, &tasks_path)?,\n            &tasks_path,\n        )?,',
         'Some(_) => new_content,',
         'a_counter_past_the_highest',
     ),
     (
         'M3 append-task lets a counter below the highest present win',
         'src/primitives/append_task.rs',
-        '(super::tasks_counter::highest_present(content) + 1).max(counter.unwrap_or(0))',
-        'counter.unwrap_or(super::tasks_counter::highest_present(content) + 1)',
+        'Ok(past.max(counter.unwrap_or(0)))',
+        'Ok(counter.unwrap_or(past))',
         'a_counter_at_or_below',
     ),
     (
@@ -93,5 +93,12 @@ MUTATIONS = [
         'let counter = super::tasks_counter::read(&existing, &tasks_path)?;',
         'let counter = super::tasks_counter::read(&existing, &tasks_path).unwrap_or(None);',
         'an_unreadable_counter_stops_the_append',
+    ),
+    (
+        'M12 a counter block added to a CRLF file keeps its LF',
+        'src/primitives/prune_tasks.rs',
+        'super::with_line_ending(&counted, super::line_ending_of(&content))',
+        'counted',
+        'a_crlf_file_gets_its_counter_block',
     ),
 ]

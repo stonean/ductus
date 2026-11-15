@@ -122,12 +122,16 @@ Output is the feature's identity plus a canonical empty task body:
 <CANONICAL_EMPTY_TASKS_BODY>
 ```
 
-`<existing first H1 line>` is the file's first `# …` heading (preserves
-feature identity, e.g. `# 041 — Spec Directory Pruning Tasks`).
+`<existing first H1 line>` is the file's first `# …` heading below its
+frontmatter block, outside a fence or comment (preserves feature identity,
+e.g. `# 041 — Spec Directory Pruning Tasks`); a `#` line inside the
+frontmatter is a YAML comment, never the heading.
 `<CANONICAL_EMPTY_TASKS_BODY>` is a constant embedded in the primitive equal
 to `framework/templates/spec/tasks.md` with its own H1 line removed (the
 intro line + the guidance comment). A unit test asserts the constant equals
-that template body so the two never drift. This satisfies the acceptance
+that template body so the two never drift. A frontmatter block the file
+opens with is kept whole above this output, one blank line before the H1 (see
+*The `next-task:` counter*). This satisfies the acceptance
 criterion "restores `tasks.md` to the template's initial state (heading plus
 guidance comment)" without coupling the primitive to a template path at
 runtime.
@@ -221,7 +225,7 @@ running it again resumes:
 | --- | --- |
 | `feature-not-found` | feature directory absent under the spec-root |
 | `tasks-file-missing` | feature directory exists but has no `tasks.md` (the command directs the user to `/{project}:plan` when there is no `plan.md` either, and otherwise reduces the plan and reports the missing task list); a walk skips such a spec instead |
-| `malformed-tasks` | file has no `# …` heading (reset cannot preserve identity), or its frontmatter never closes or carries a `next-task:` that is not a positive integer |
+| `malformed-tasks` | file has no `# …` heading (reset cannot preserve identity), or its frontmatter never closes or carries a `next-task:` that is not a positive integer, or its highest task number is `4294967295`, which no counter can follow |
 | `missing-spec-file` / `status-field-missing` / `missing-frontmatter` | `spec.md` is absent, opens no frontmatter, or its frontmatter has no `status`, when a `reset` reads it for its gate or a walk reads it for a spec it lists |
 | `yaml` | that `spec.md` frontmatter does not parse |
 | `missing-argument` | neither `feature` nor `all` |
@@ -502,7 +506,8 @@ Result (never an entry's text):
       "start-line": 40, "end-line": 52, "bytes": 380, "digest": "77d0…",
       "identifier": "order.created", "hits": [] }
   ],
-  "search": { "state": "ran", "files-searched": 312 },
+  "search": { "state": "ran", "files-searched": 312,
+              "outside-project": [], "outside-project-count": 0 },
   "applied": false,
   "stale-entries": [],
   "created": [],

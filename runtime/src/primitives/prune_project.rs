@@ -716,8 +716,8 @@ fn rewrite(content: &str, segments: &[Segment], edits: &[&(usize, Option<&str>)]
 }
 
 /// Rewrite a project file, after re-checking that its path still resolves
-/// inside the project: the read that gave `body` its text left an outward link
-/// with no content, so this closes the window between that read and the write.
+/// inside the project. `read_subject` yields no text for a file behind an outward
+/// link, so this closes only the window between that read and the write.
 fn write_contained(repo: &Path, rel: &str, body: &str) -> Result<()> {
     validate_contained(repo, rel)?;
     write_atomic(&repo.join(rel), body)
@@ -1373,8 +1373,8 @@ Codes use `snake_case`.
         );
         assert_eq!(entries_of(&result, "specs/events.md").len(), 0);
 
-        // The refused create is listed after a home the link does not
-        // reach, and nothing is written for either.
+        // A home to create under the linked root is refused, and nothing is
+        // written through the link.
         let applying = PruneProjectArgs {
             apply: true,
             create: vec![ProjectHome::System],

@@ -659,7 +659,7 @@ fn descriptions_hold_the_next_task_details_041_points_at() {
         ),
         (
             descriptions::APPEND_TASK,
-            "or a frontmatter block that never closes, is a malformed-tasks error that writes nothing, unless the call matched an existing task first and returned without reading it",
+            "or a highest number or counter of 4294967295, which no number or counter can follow, is a malformed-tasks error that writes nothing, unless the call matched an existing task first and returned without reading it",
         ),
         (
             descriptions::PRUNE_TASKS,
@@ -675,7 +675,7 @@ fn descriptions_hold_the_next_task_details_041_points_at() {
         ),
         (
             descriptions::PRUNE_TASKS,
-            "a block that never closes or a counter that is not a positive integer is a malformed-tasks error that writes nothing",
+            "a block that never closes, a counter that is not a positive integer, or a highest task number of 4294967295, which no counter can follow, is a malformed-tasks error that writes nothing",
         ),
     ];
     let missing: Vec<_> = held

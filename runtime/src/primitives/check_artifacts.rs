@@ -6110,6 +6110,32 @@ mod tests {
         );
     }
 
+    /// A suffixed task is held to every rule a numbered one is, `Done when`
+    /// included (spec 041, scenario `a-suffixed-task-number-is-a-task`).
+    #[test]
+    fn a_suffixed_task_is_held_to_done_when() {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(
+            tmp.path(),
+            "specs/042-demo/tasks.md",
+            "# T\n\n## 11a. T\n\n- [ ] a\n",
+        );
+        let messages: Vec<String> = run(&args(), tmp.path())
+            .unwrap()
+            .findings
+            .into_iter()
+            .map(|f| f.message)
+            .collect();
+        assert!(
+            messages
+                .iter()
+                .any(|m| m == "task 11a (T) has no Done when clause"),
+            "{messages:?}"
+        );
+    }
+
     // --- spec integrity and plan consistency ----------------------------------
 
     const GOOD_PLAN: &str = "# Plan\n\nImplements [042 — Demo](spec.md).\n\n## Technical Decisions\n\n\

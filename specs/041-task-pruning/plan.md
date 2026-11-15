@@ -95,11 +95,26 @@ choices the scenario left open:
   always written, and the counter appears with the first prune, the only event
   that can lower the highest number.
 - A `--reset` keeps the whole frontmatter block, not the counter alone, since
-  the block precedes the `# …` heading the reset already preserves.
+  the block precedes the `# …` heading the reset already preserves. Both
+  modes read the block whole and unscanned, so a `#` line in it is a comment,
+  never the heading, and the block comes back byte for byte.
+- A counter is never wrapped: a highest number of `4294967295` leaves none to
+  write past it, so `prune-tasks` and `append-task` refuse with
+  `malformed-tasks` and write nothing.
 
 All other `tasks.md` readers are line scanners that match headings and
 checkboxes, so the block needs no change in them; a test proves `read-tasks`
 and `mark-task` agree with and without it.
+
+### A suffixed task number is a task
+
+A task number is decimal digits and at most one lowercase letter before the
+dot (`11`, `11a`); `split_numbered_heading` stays the one home of that
+grammar, and `TaskNumber` orders by digits then suffix. `read-tasks`,
+`mark-task`, `prune-tasks`, `append-task`'s two guards and `check-artifacts`'
+numbering check read through them. `append-task` numbers past the highest
+digits, never writes a suffix, and reports `task-number` as a string, since a
+guard may match `11a`.
 
 ### Status gate for `--reset`
 
@@ -266,8 +281,8 @@ before → after, plan sections kept because `analysis.md` decided them, and —
 under `--all` — one row per spec with its status. The `tasks.md` reduction is
 confirmed through `gate-confirm` and applied. Then, per undecided plan
 section, the host reads the section with its own file tools, proposes where
-each durable piece goes (a Technical Decisions entry, `AGENTS.md` for
-knowledge that holds for this project alone, a pending task) and what is
+each durable piece goes (a Technical Decisions entry, the home `prune.md`
+step 8 routes project-only knowledge to, a pending task) and what is
 dropped, and confirms the moves and the removal together, naming the reopen
 the moves imply on a `done` spec. A reopen the preview reports — edits made
 before the run already require it — is named in the preview, before
@@ -282,8 +297,8 @@ named that the fresh reading no longer requires, such as a `--reset` that
 removed the unchecked boxes it came from, is not performed. A spec the run
 wrote nothing to keeps its status. A declined section is skipped
 for that run, and the prompt names a fold under a design-record heading as the lasting keep.
-The write surface is `tasks.md`, `plan.md`, `AGENTS.md` for moved knowledge,
-and status through `set-status`; knowledge that holds more widely is named
+The write surface is `tasks.md`, `plan.md`, the home `prune.md` step 8 routes
+moved project-only knowledge to, and status through `set-status`; knowledge that holds more widely is named
 for the operator to route where §drift-prevention's *Shared knowledge stays
 in git* sends it, and never written by prune. A missing `tasks.md`
 stops the run with the "run `/{project}:plan`" directive only when there is
@@ -328,10 +343,10 @@ follow it, and every present-tense citation of them names those numbers.
   to adopters with the `update` strategy (`framework/bootstrap/ductus.md`,
   *ductus-owned shared files*), so no migration is needed.
 - **Command sources.** `framework/commands/prune.md` is rewritten for the
-  spec-directory scope, stored waivers, the reopen, and `--all`, with a
-  markdown-only reference for plan segmentation. `framework/commands/analyze.md`
-  gains the new step and a `plan-record` section in its markdown-only
-  reference. `scripts/gen-help-tables.sh` carries prune's new description.
+  spec-directory scope, stored waivers, the reopen, and `--all`.
+  `framework/commands/analyze.md` gains the new step, and its reference a
+  `plan-record` section. `scripts/gen-help-tables.sh` carries prune's new
+  description.
 - **Docs.** `docs/slash-commands.md` sharpens the flag-versus-command rule and
   rewrites the `/prune` entry, whose "One spec." and single-artifact scope go
   false; `docs/analyze.md` names the new advisory; `README.md`'s `/prune`
@@ -344,8 +359,9 @@ Before any path is opened, `feature` passes `validate_no_traversal`
 joins a caller-supplied `feature` into a path runs: an empty value, an
 absolute or rooted path, a drive or UNC prefix, or a `..` component is
 refused with `InvalidPath`. It must then name an existing directory under the
-spec root, else `FeatureNotFound`. The check resolves no symlink, so a link
-the operator placed inside their own tree is followed.
+spec root, else `FeatureNotFound`. `validate_feature_argument` also refuses, with
+`InvalidPath`, a symbolic link on the feature's path or under its directory that
+resolves outside the project; a link that stays inside is followed.
 
 `spec.md` frontmatter and `analysis.md`'s `decisions:` list are read with
 `serde_norway`, a data-only YAML parser that deserializes into typed structs
@@ -400,6 +416,7 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 - **The literal search runs in the runtime.** Without it, whether a catalog entry is still true would rest on the operator's memory. It reads each tracked file once, outside the spec-root, and reports hits per identifier. A repository that cannot be opened is `unavailable`, never zero hits.
 - **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs them as the files themselves. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
 - **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
+- **Every open is contained** (BE-INPUT-004; 075's analysis deferred it here). Each open goes through `validate_contained` against the project root: a project file that is, or lies under, a symbolic link leaving the project reads `outside-project` and is neither read nor written; a tracked file the search would read through one is left unread and named in the search's `outside-project`; every `create` home is checked before an apply writes anything and a refused one fails the whole call, so no half an apply is left; a rewrite re-checks its path just before `write_atomic`.
 - **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit to a `done` spec that `classify-spec-edit` reads as reopening is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
 
 ### Title and slug
@@ -421,7 +438,12 @@ buys nothing here.
 | `runtime/src/primitives/append_task.rs` | Edit | Assigns the larger of the counter and the highest present plus one, and advances a counter the file carries |
 | `scripts/mutation/pruned-task-number.py` | Create | Mutations proving the counter's tests |
 | `runtime/src/primitives/prune_plan.rs` | Create | Segmentation, classification, finding key, digest-guarded removal, reopen trigger |
-| `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses |
+| `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses; `TaskNumber` and the suffix grammar |
+| `runtime/src/primitives/mark_task.rs` | Edit | `heading_task_number` reads the number through the shared grammar |
+| `runtime/src/primitives/read_tasks.rs` | Edit | Its tests list a suffixed task |
+| `runtime/src/primitives/check_artifacts.rs` | Edit | Numbering compared by `TaskNumber` |
+| `framework/reference/analyze.md` | Edit | Task consistency states the grammar and order |
+| `scripts/mutation/suffixed-task-number.py` | Create | Mutations proving the suffixed-number tests |
 | `runtime/src/primitives/check_stuck.rs` | Edit | Calls the promoted HEAD-blob reader |
 | `runtime/src/primitives/analyze_subjects.rs` | Edit | Its hex encoder moved to `mod.rs`; `prune-plan` named among `analysis.md`'s readers; a `done` spec's freshness ignores an in-place `plan.md` or `tasks.md` edit |
 | `runtime/src/primitives/check_artifact_size.rs` | Edit | A `plan.md` trim on a `done` spec does not reopen it |
@@ -453,7 +475,8 @@ buys nothing here.
 | `runtime/CHANGELOG.md`, `runtime/Cargo.toml`, `version` | Edit | Release |
 | `runtime/src/primitives/prune_project.rs` | Create | Project-file segmentation, literal search, digest-guarded apply, compiled-in home templates |
 | `scripts/mutation/prune-project.py` | Create | Mutations proving `prune-project`'s tests |
-| `framework/reference/prune.md` | Edit | Markdown-only project-file walk |
+| `scripts/mutation/prune-project-containment.py` | Create | Mutations proving `prune-project`'s containment tests |
+| `framework/reference/prune.md` | Edit | What a step does with a result: the compiled reset body and heading set, decided sections, the reopen |
 
 ## Trade-offs
 
