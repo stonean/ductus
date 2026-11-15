@@ -817,22 +817,22 @@ MUTATIONS = [
     (
         'M121 impact drift reports below done',
         'src/primitives/check_artifacts.rs',
-        '    if status != "done" {\n        return;\n    }\n    let owed: Vec<String>',
-        '    let _ = status;\n    let owed: Vec<String>',
+        '    if status != "done" {\n        return;\n    }\n    let entries = cross_spec_impact_states',
+        '    let _ = status;\n    let entries = cross_spec_impact_states',
         'check_artifacts::tests::a_done_spec_whose_impact_is_undischarged_is_advisory_drift',
     ),
     (
         'M122 a discharged impact is drift',
         'src/primitives/check_artifacts.rs',
-        '.filter(|entry| entry.state != CrossSpecImpactState::Discharged)',
-        '.filter(|entry| entry.state == entry.state || entry.state == CrossSpecImpactState::Discharged)',
+        '            entry.state != CrossSpecImpactState::Discharged\n                && entry.state != CrossSpecImpactState::OutsideProject\n',
+        '            entry.state != CrossSpecImpactState::OutsideProject\n',
         'check_artifacts::tests::a_done_spec_whose_impact_is_undischarged_is_advisory_drift',
     ),
     (
         'M123 impact drift names only a spec missing a directory',
         'src/primitives/check_artifacts.rs',
-        '.filter(|entry| entry.state != CrossSpecImpactState::Discharged)',
-        '.filter(|entry| entry.state == CrossSpecImpactState::TargetMissing)',
+        '            entry.state != CrossSpecImpactState::Discharged\n                && entry.state != CrossSpecImpactState::OutsideProject\n',
+        '            entry.state == CrossSpecImpactState::TargetMissing\n',
         'check_artifacts::tests::a_done_spec_whose_impact_is_undischarged_is_advisory_drift',
     ),
     (

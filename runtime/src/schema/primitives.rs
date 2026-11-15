@@ -6727,6 +6727,15 @@ pub enum CrossSpecImpactState {
     /// from [`Self::Undischarged`], whose remedy ("add the back-link") is
     /// the wrong advice here.
     SelfReference,
+    /// The named spec's directory, `spec.md`, `scenarios/` or a scenario is a
+    /// symbolic link that resolves outside the project.
+    ///
+    /// Reported with the link in the entry's `detail` and never read, so a
+    /// file outside the project cannot decide the obligation either way
+    /// (`BE-INPUT-004`). Nothing proved a back-link, so it holds `done` as
+    /// [`Self::Undischarged`] does, but its remedy differs: the link is
+    /// replaced by the file's content, not a signpost added.
+    OutsideProject,
 }
 
 /// One `cross-spec-impact:` entry paired with the state the gate found it in.
@@ -6737,6 +6746,10 @@ pub struct CrossSpecImpactEntry {
     pub spec: String,
     /// What the gate found when it looked.
     pub state: CrossSpecImpactState,
+    /// For `outside-project`, why: the link and where it resolves. Absent in
+    /// every other state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 // -- append-question ---------------------------------------------------------

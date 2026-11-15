@@ -65,8 +65,9 @@
 //!   `dispositions:` map produces nothing here: it predates the field, and a
 //!   backfilled map would assert dispositions nobody made.
 //! - **cross-spec-impact-drift** (advisory) — a `done` spec declaring a
-//!   `cross-spec-impact:` entry no back-link discharges, which only the gate
-//!   reads, and only on the way to `done` (spec 079).
+//!   `cross-spec-impact:` entry no back-link discharges, one whose affected
+//!   spec is read through a link leaving the project included, which only the
+//!   gate reads, and only on the way to `done` (spec 079).
 //! - **scenario-open-questions** (blocking at `done`, advisory otherwise)
 //!   — a scenario is an organizational split of the spec, so its
 //!   unresolved questions are the spec's questions for completeness. At
@@ -1191,22 +1192,40 @@ fn check_cross_spec_impact_drift(
     if status != "done" {
         return;
     }
-    let owed: Vec<String> = cross_spec_impact_states(declared, feature, repo, root)
-        .into_iter()
-        .filter(|entry| entry.state != CrossSpecImpactState::Discharged)
-        .map(|entry| entry.spec)
+    let entries = cross_spec_impact_states(declared, feature, repo, root);
+    let outside: Vec<&str> = entries
+        .iter()
+        .filter(|entry| entry.state == CrossSpecImpactState::OutsideProject)
+        .map(|entry| entry.spec.as_str())
         .collect();
-    if owed.is_empty() {
+    let owed: Vec<&str> = entries
+        .iter()
+        .filter(|entry| {
+            entry.state != CrossSpecImpactState::Discharged
+                && entry.state != CrossSpecImpactState::OutsideProject
+        })
+        .map(|entry| entry.spec.as_str())
+        .collect();
+    let mut parts = Vec::new();
+    if !owed.is_empty() {
+        parts.push(format!(
+            "done spec declares an impact on {} with no back-link there — add the signpost, or correct the entry",
+            owed.join(", ")
+        ));
+    }
+    if !outside.is_empty() {
+        parts.push(format!(
+            "{} is read through a link that leaves the project, so nothing proves a back-link there — replace the link with the file's content",
+            outside.join(", ")
+        ));
+    }
+    if parts.is_empty() {
         return;
     }
     findings.push(ArtifactFinding {
         family: "cross-spec-impact-drift".into(),
         severity: AnalyzeSeverity::Advisory,
-        message: format!(
-            "cross-spec impact drift: done spec declares an impact on {} with no back-link \
-             there — add the signpost, or correct the entry",
-            owed.join(", ")
-        ),
+        message: format!("cross-spec impact drift: {}", parts.join("; ")),
         path: rel_path(spec_path, repo),
     });
 }
@@ -3155,6 +3174,46 @@ mod tests {
         assert_eq!(
             impact_findings(&run(&args(), tmp.path()).unwrap()),
             Vec::<String>::new()
+        );
+    }
+
+    /// An affected spec read through a link that leaves the project is named
+    /// as such, and the back-link behind the link discharges nothing.
+    #[cfg(unix)]
+    #[test]
+    fn an_impact_read_through_an_outward_link_is_drift_naming_the_link() {
+        let tmp = tempdir().unwrap();
+        let outer = tempdir().unwrap();
+        seed_done_with(tmp.path(), "done", CLEAN_REVIEW, CLEAN_ANALYZE);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: done\ndependencies: []\ncross-spec-impact: [050-up]\n---\n\n# Demo\n",
+        );
+        fs::create_dir_all(tmp.path().join("specs/050-up")).unwrap();
+        fs::write(
+            outer.path().join("spec.md"),
+            format!(
+                "---\nstatus: done\ndependencies: []\n---\n\nSee [demo](../{FEATURE}/spec.md).\n"
+            ),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("spec.md"),
+            tmp.path().join("specs/050-up/spec.md"),
+        )
+        .unwrap();
+
+        let drift = impact_findings(&run(&args(), tmp.path()).unwrap());
+
+        assert_eq!(drift.len(), 1, "{drift:?}");
+        assert!(
+            drift[0].contains("050-up") && drift[0].contains("leaves the project"),
+            "{drift:?}"
+        );
+        assert!(
+            !drift[0].contains("no back-link there"),
+            "a link out is not a missing signpost: {drift:?}"
         );
     }
 

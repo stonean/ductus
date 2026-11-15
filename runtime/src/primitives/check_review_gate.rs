@@ -1093,17 +1093,23 @@ pub(crate) fn cross_spec_impact_states(
 ) -> Vec<CrossSpecImpactEntry> {
     declared
         .iter()
-        .map(|target| CrossSpecImpactEntry {
-            spec: target.clone(),
-            state: classify_cross_spec_entry(target, feature, repo, specs_root),
+        .map(|target| {
+            let (state, detail) = classify_cross_spec_entry(target, feature, repo, specs_root);
+            CrossSpecImpactEntry {
+                spec: target.clone(),
+                state,
+                detail,
+            }
         })
         .collect()
 }
 
-/// Classify one declared entry. Split out so the ordering of the
-/// disqualifying cases is readable: self-reference, a name that is not a
-/// feature directory, and a directory that is not there are all decided
-/// **before** anything is read, and only a real other spec is searched for the
+/// Classify one declared entry, returning its state and, for
+/// [`CrossSpecImpactState::OutsideProject`], the link it found. Split out so
+/// the ordering of the disqualifying cases is readable: self-reference, a name
+/// that is not a feature directory, a path that leaves the project and a
+/// directory that is not there are all decided **before** anything is read,
+/// and only a real other spec inside the project is searched for the
 /// back-link.
 ///
 /// The name is screened through [`super::parse_feature_dir`] — the single
@@ -1111,7 +1117,13 @@ pub(crate) fn cross_spec_impact_states(
 /// path and asking the filesystem. That ordering is load-bearing, not tidiness:
 /// an entry is a *slug*, and joining an unscreened one would let
 /// `cross-spec-impact: ["../../elsewhere"]` walk out of the spec root and read
-/// a file there. Unlike the `[constitutions]` and `[services]` paths described
+/// a file there. [`super::parse_feature_dir`] rules out `..` (a `.` splits the
+/// name into the branch-scoped form, whose identifier is a slug) and an
+/// absolute name (a sequential name starts with three digits), but not a `/`
+/// inside the slug, nor a symbolic link at the directory, its `spec.md`, its
+/// `scenarios/` or a scenario, so each of those is contained
+/// ([`super::validate_contained`] on each path) before it is probed, listed or
+/// opened. Unlike the `[constitutions]` and `[services]` paths described
 /// under **The config-sourced path boundary** on
 /// [`super::validate_no_traversal`], nothing about this key's design needs
 /// `..`: a slug that is not a feature directory name can name no feature
@@ -1121,38 +1133,82 @@ fn classify_cross_spec_entry(
     feature: &str,
     repo: &Path,
     specs_root: &str,
-) -> CrossSpecImpactState {
+) -> (CrossSpecImpactState, Option<String>) {
+    let state = |state| (state, None);
     if target == feature {
-        return CrossSpecImpactState::SelfReference;
+        return state(CrossSpecImpactState::SelfReference);
     }
     if super::parse_feature_dir(target).is_none() {
-        return CrossSpecImpactState::TargetMissing;
+        return state(CrossSpecImpactState::TargetMissing);
+    }
+    // The slug is text the repository holds, so every path built from it is
+    // contained before it is probed, listed or opened (`BE-INPUT-004`; spec 022
+    // plan §Path arguments, *Paths drawn from committed text*). A path that
+    // leaves the project is reported with the link, never read: a file outside
+    // the project must not decide whether the obligation is met.
+    let outside = |err: PrimitiveError| {
+        (
+            CrossSpecImpactState::OutsideProject,
+            Some(match err {
+                PrimitiveError::InvalidPath { reason, .. } => reason,
+                other => other.to_string(),
+            }),
+        )
+    };
+    // `parse_feature_dir` has already ruled out `..` and an absolute name, the
+    // two a join to the root would hide, so the name needs no screen of its
+    // own; it admits a `/` inside a sequential slug, which the link check
+    // below walks component by component. Containing `spec.md` contains the
+    // directory above it, so the directory is probed only once that check has
+    // passed.
+    let spec_rel = format!("{specs_root}/{target}/spec.md");
+    if let Err(err) = super::validate_contained(repo, &spec_rel) {
+        return outside(err);
     }
     let target_dir = repo.join(specs_root).join(target);
     if !target_dir.is_dir() {
-        return CrossSpecImpactState::TargetMissing;
+        return state(CrossSpecImpactState::TargetMissing);
     }
     if links_back(&target_dir.join("spec.md"), specs_root, feature, 1) {
-        return CrossSpecImpactState::Discharged;
+        return state(CrossSpecImpactState::Discharged);
     }
-    let scenarios = target_dir.join("scenarios");
-    let Ok(entries) = std::fs::read_dir(&scenarios) else {
+    let scenarios_rel = format!("{specs_root}/{target}/scenarios");
+    if let Err(err) = super::validate_contained(repo, &scenarios_rel) {
+        return outside(err);
+    }
+    let Ok(entries) = std::fs::read_dir(repo.join(&scenarios_rel)) else {
         // No scenarios directory, or one that cannot be read. Neither proves
         // a back-link is absent from a file, so this is not a discharge — it
         // is the same `undischarged` the operator resolves by adding one.
-        return CrossSpecImpactState::Undischarged;
+        return state(CrossSpecImpactState::Undischarged);
     };
+    let mut scenarios = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
         if path
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-            && links_back(&path, specs_root, feature, 2)
         {
-            return CrossSpecImpactState::Discharged;
+            scenarios.push((
+                format!("{scenarios_rel}/{}", entry.file_name().to_string_lossy()),
+                path,
+            ));
         }
     }
-    CrossSpecImpactState::Undischarged
+    // Every scenario is contained before any is read, so the verdict never
+    // depends on the order the directory lists them in.
+    for (rel, _) in &scenarios {
+        if let Err(err) = super::validate_contained(repo, rel) {
+            return outside(err);
+        }
+    }
+    if scenarios
+        .iter()
+        .any(|(_, path)| links_back(path, specs_root, feature, 2))
+    {
+        return state(CrossSpecImpactState::Discharged);
+    }
+    state(CrossSpecImpactState::Undischarged)
 }
 
 /// Whether the markdown file at `path` carries a pointer to `feature`.
@@ -1208,7 +1264,15 @@ fn cross_spec_impact_block(
     let undischarged = name(CrossSpecImpactState::Undischarged);
     let missing = name(CrossSpecImpactState::TargetMissing);
     let self_ref = name(CrossSpecImpactState::SelfReference);
-    if undischarged.is_empty() && missing.is_empty() && self_ref.is_empty() {
+    let outside: Vec<String> = entries
+        .iter()
+        .filter(|e| e.state == CrossSpecImpactState::OutsideProject)
+        .map(|e| match &e.detail {
+            Some(link) => format!("{} reads outside the project ({link})", e.spec),
+            None => format!("{} reads outside the project", e.spec),
+        })
+        .collect();
+    if undischarged.is_empty() && missing.is_empty() && self_ref.is_empty() && outside.is_empty() {
         return None;
     }
 
@@ -1222,6 +1286,7 @@ fn cross_spec_impact_block(
     if !self_ref.is_empty() {
         parts.push(format!("{} is this spec itself", self_ref.join(", ")));
     }
+    parts.extend(outside);
 
     let mut guidance = Vec::new();
     if !undischarged.is_empty() {
@@ -1238,6 +1303,16 @@ fn cross_spec_impact_block(
     if !self_ref.is_empty() {
         guidance.push(
             "A spec cannot owe itself a cross-spec change; remove the self-entry.".to_string(),
+        );
+    }
+
+    if entries
+        .iter()
+        .any(|e| e.state == CrossSpecImpactState::OutsideProject)
+    {
+        guidance.push(
+            "An affected spec whose spec.md, scenarios/ or a scenario is a symbolic link leaving the project is never read, so nothing proves it links back: replace the link with the file's content inside the project, then re-run this gate."
+                .to_string(),
         );
     }
 
@@ -1507,6 +1582,7 @@ mod tests {
             vec![CrossSpecImpactEntry {
                 spec: "050-upstream".into(),
                 state: CrossSpecImpactState::Undischarged,
+                detail: None,
             }]
         );
         let guidance = result.guidance.expect("the block carries guidance");
@@ -1531,6 +1607,7 @@ mod tests {
             vec![CrossSpecImpactEntry {
                 spec: "050-upstream".into(),
                 state: CrossSpecImpactState::Discharged,
+                detail: None,
             }],
             "a passing gate still reports what it examined"
         );
@@ -1570,6 +1647,117 @@ mod tests {
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
 
         assert!(result.passed, "{:?}", result.message);
+    }
+
+    const BACK_LINK_SPEC: &str = "---\nstatus: done\ndependencies: []\n---\n\n# Upstream\n\nRequired by [007](../007-gate/spec.md).\n";
+    const BACK_LINK_SCENARIO: &str =
+        "---\nsection: \"Body\"\n---\n\n# A-case\n\nRequired by [007](../../007-gate/spec.md).\n";
+
+    /// The gate under an affected spec that reaches a back-link only through a
+    /// link leaving the project (`BE-INPUT-004`): it reports the link, holds
+    /// `done`, and counts the outside back-link as no discharge.
+    #[cfg(unix)]
+    fn assert_reported_outside(tmp: &Path, link: &str) {
+        let result = run_with_lint(&args(), tmp, clean_lint).unwrap();
+
+        assert!(
+            !result.passed,
+            "the outside back-link discharged the impact"
+        );
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndischargedCrossSpecImpact)
+        );
+        assert_eq!(result.cross_spec_impact.len(), 1);
+        let entry = &result.cross_spec_impact[0];
+        assert_eq!(entry.state, CrossSpecImpactState::OutsideProject);
+        let detail = entry.detail.as_deref().expect("the entry names the link");
+        assert!(detail.contains(link), "{detail}");
+        let message = result.message.expect("the block carries a message");
+        assert!(
+            message.contains("050-upstream reads outside the project") && message.contains(link),
+            "{message}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_md_linked_outside_the_project_is_reported_and_never_read() {
+        let tmp = tempdir().unwrap();
+        let outer = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        fs::create_dir_all(tmp.path().join("specs/050-upstream")).unwrap();
+        fs::write(outer.path().join("spec.md"), BACK_LINK_SPEC).unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("spec.md"),
+            tmp.path().join("specs/050-upstream/spec.md"),
+        )
+        .unwrap();
+
+        assert_reported_outside(tmp.path(), "specs/050-upstream/spec.md");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_directory_linked_outside_the_project_is_reported_and_never_read() {
+        let tmp = tempdir().unwrap();
+        let outer = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        fs::write(outer.path().join("spec.md"), BACK_LINK_SPEC).unwrap();
+        std::os::unix::fs::symlink(outer.path(), tmp.path().join("specs/050-upstream")).unwrap();
+
+        assert_reported_outside(tmp.path(), "specs/050-upstream");
+    }
+
+    /// The directory is contained before it is listed, so the verdict holds
+    /// whatever it holds: a back-link behind the link discharges nothing, and a
+    /// directory with no scenario in it is still a read through a link out
+    /// rather than an absent signpost.
+    #[cfg(unix)]
+    #[test]
+    fn a_scenarios_directory_linked_outside_the_project_is_reported_and_never_read() {
+        for holds_a_back_link in [true, false] {
+            let tmp = tempdir().unwrap();
+            let outer = tempdir().unwrap();
+            seed(tmp.path(), DECLARES_IMPACT);
+            seed_target(tmp.path(), "Body text that names nothing.");
+            let held = if holds_a_back_link {
+                BACK_LINK_SCENARIO
+            } else {
+                "not a scenario\n"
+            };
+            let name = if holds_a_back_link {
+                "a-case.md"
+            } else {
+                "notes.txt"
+            };
+            fs::write(outer.path().join(name), held).unwrap();
+            std::os::unix::fs::symlink(
+                outer.path(),
+                tmp.path().join("specs/050-upstream/scenarios"),
+            )
+            .unwrap();
+
+            assert_reported_outside(tmp.path(), "specs/050-upstream/scenarios");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_linked_outside_the_project_is_reported_and_never_read() {
+        let tmp = tempdir().unwrap();
+        let outer = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(tmp.path(), "Body text that names nothing.");
+        fs::create_dir_all(tmp.path().join("specs/050-upstream/scenarios")).unwrap();
+        fs::write(outer.path().join("a-case.md"), BACK_LINK_SCENARIO).unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("a-case.md"),
+            tmp.path().join("specs/050-upstream/scenarios/a-case.md"),
+        )
+        .unwrap();
+
+        assert_reported_outside(tmp.path(), "specs/050-upstream/scenarios/a-case.md");
     }
 
     /// A scenario's links carry two `../` segments rather than one. Reading
@@ -1615,6 +1803,7 @@ mod tests {
             vec![CrossSpecImpactEntry {
                 spec: "050-upstreem".into(),
                 state: CrossSpecImpactState::TargetMissing,
+                detail: None,
             }]
         );
         let guidance = result.guidance.expect("the block carries guidance");
@@ -1648,6 +1837,7 @@ mod tests {
             vec![CrossSpecImpactEntry {
                 spec: "../../elsewhere".into(),
                 state: CrossSpecImpactState::TargetMissing,
+                detail: None,
             }],
             "a traversing entry must never resolve, discharged or otherwise"
         );
@@ -1670,6 +1860,7 @@ mod tests {
             vec![CrossSpecImpactEntry {
                 spec: "007-gate".into(),
                 state: CrossSpecImpactState::SelfReference,
+                detail: None,
             }]
         );
         let guidance = result.guidance.expect("the block carries guidance");
@@ -1705,10 +1896,12 @@ mod tests {
                 CrossSpecImpactEntry {
                     spec: "050-upstream".into(),
                     state: CrossSpecImpactState::Discharged,
+                    detail: None,
                 },
                 CrossSpecImpactEntry {
                     spec: "051-other".into(),
                     state: CrossSpecImpactState::Undischarged,
+                    detail: None,
                 },
             ]
         );
