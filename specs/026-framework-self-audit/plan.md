@@ -149,7 +149,7 @@ The `run-generator` primitive's existing contract (drift detection on non-zero e
   run: bash scripts/audit/run-all.sh
 ```
 
-The binary is already built earlier in the workflow; the audit reuses that build. Failure of this step fails the PR.
+The binary is already built earlier in the workflow, by its `Build the runtime` step (`cargo build --release --locked`); the audit reuses that build. Failure of this step fails the PR.
 
 **`.github/workflows/runtime-release.yml`** — append a pre-tag gate after the build/test steps, before the matrix release fires:
 

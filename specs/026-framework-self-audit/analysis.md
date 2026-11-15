@@ -1,37 +1,37 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-14T02:54:24Z
-analyzed-against: 17f3a6a459e5252e5038b7c65a4ecd2dcd6652cd
+last-run: 2026-11-15T21:39:03Z
+analyzed-against: dd1a4738a395e597efbd537499dbd191fe40b96f
 hard-fail: 0
 blocking-findings: 0
 advisory: 2
 unexamined: 43
 analyzed-digest:
-  plan.md: 4cd19df4749a98205f5445b5235979ac0880bb04e91b8a1cdda7968bbf4256ff
-  review.md: da760eb3a64bfd43d2905410436eb92c269cbdc987a4a139841ab8b334623a27
+  plan.md: a3ea94a92819fdea25b6a018e4a17d8703dc17666b353c19c221cc8874cef557
+  review.md: 6cbf7058cfb52c13ea478679cac17810da971bcd678888a9b9d1a2480469d529
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 4d4a93fd968898006fa4780beb8088e48616ed1ceae54574ac38a3a02ad9583b
   scenarios/families-follow-the-command-reference-split.md: 2827003a57acd578cd14add059be8c7fcdee0ae80389acad64f282d8c9ffc1ea
-  scenarios/family-10-migration-coverage.md: d2071390e33f8598daed4a07d0e08a52d8569f25b69fa4bb260c85ae77b3d515
+  scenarios/family-10-migration-coverage.md: 6b90b5c3838db4d12ac521c90a4085a841ad8af6f47a7ad44d808fe47b71f3df
   scenarios/family-17-contract-binding.md: 1ab3dfbc5c53ca5ab082b587a299b1951c8dd3c3e29148db5ed3a5df50903faf
   scenarios/family-18-marker-list-parity.md: 296f55313954ec984b5260945b92639d15b8458f707f90e94e0bd1bbc0f052c0
-  scenarios/family-22-adopter-shell-behavior.md: 3959304113aa956aa8cb70a78d703b7145521ea97d7f6e8f2f33c803c1a1fce5
+  scenarios/family-22-adopter-shell-behavior.md: 995c7c45e1918732b886e1174e5b627161bdd3c42ea824a4cbce7b04b70e02ff
   scenarios/family-23-sweep-target-manifest-parity.md: fabc89386b8c36156f41c09b5ae28e5f0cd3130c08abc284fa90dcd37507ebb1
-  scenarios/family-24-rename-sweep-residue.md: 41d6c829f0851a3caab11650d24b7100992667969ee3f21454141b482819e132
+  scenarios/family-24-rename-sweep-residue.md: 3b70ff8b57ef5bbd117ce0bd29752dd15a481d07e28a3fc3505671a2e6507cea
   scenarios/family-25-unbalanced-inline-markup.md: bddc8f9f37f21e3404f24bf77f732d2adc591faa76038983b3b44a41e640e1c6
-  scenarios/family-26-broken-relative-links.md: 60627b24354610f3e0f819abe7d0603faa9644c27e8cee5163a452804bb94b6c
-  scenarios/family-27-done-spec-unchecked-criteria.md: d164ba1fedaababcb88f5a4062b150ae8bd7e017699d7ac6d310292a25489bf9
+  scenarios/family-26-broken-relative-links.md: 9e03cfe250dbffe6128229b1bb064c8b574b61ead93ed1ce5fd2fe12ec8e615d
+  scenarios/family-27-done-spec-unchecked-criteria.md: c7c66e810ae27435c40bb372d7295b101f480e897f91a648db3d0902cacf57b1
   scenarios/family-28-audit-family-registry-parity.md: bf80f1d64718deb87a7dec79c69e9248e8c1ab4a41e65c638488fdd9fcd5e529
-  scenarios/family-34-step-reference-integrity.md: 4175e05f88fcec7a03a63150bf652a3dd352a4e2d48b228a51a3839c0d867656
-  scenarios/family-35-manifest-destination-links.md: 8e94dce4172e2b326612da806327af31777d99b8c6ce89642c9d10a98dc148b3
-  scenarios/family-36-self-url-resolution.md: 23716b0f5c3810890bab089c65258008842869e35616a71b86b663ed231bde18
-  scenarios/family-39-shipped-anchor-resolution.md: c00188dfd875ce2aeda794be6e023221173dd712c949b58f60ac34a80a5e17ca
-  scenarios/family-40-deprecated-rules-are-removed-on-time.md: b0f97a19013851cdabf3172954b6c0a8da12ccc06a46f0183c93bbf50f0227bc
-  scenarios/host-namespace-parity.md: 5d20df476bcd94b0f843e3c44919b19215f5dcc9ddba18af435f2b46e5b194ed
+  scenarios/family-34-step-reference-integrity.md: 4494835543a7ebfa3fe429d732652a658faf6f0b0cc8376daa05cb4e09ad2ca0
+  scenarios/family-35-manifest-destination-links.md: 28297923f8f5f4ec6833696028c4076e247cfadb3d945b0a2446acc18237cc11
+  scenarios/family-36-self-url-resolution.md: 7840a2f17391f0644e2a7e5809cccdfc3e89039e05c1d94f2432e89461b716b3
+  scenarios/family-39-shipped-anchor-resolution.md: c25191adf85b75351517d55c89a55a24a5d083e325f894f680c04ace54401e8f
+  scenarios/family-40-deprecated-rules-are-removed-on-time.md: 689441c4d67ea3b73b147f0bf319db6ef7a50034ea46218ef67799dee0f5732e
+  scenarios/host-namespace-parity.md: e8a67c95e2e596cf9a231bbfa26545c4beee96af1a043fd83608899e16087790
   scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
-  scenarios/readme-command-parity.md: a628c66cde7ce274281f77151f3a6a485c5fd3563b74074bed8d8ba25ff59b75
-  spec.md: 1a648a0d7fa2745b48000778efe8eafba879fcef6ff3cf8162cd96ddc2f69cfb
-  tasks.md: a89dc6842ebea77e560254167bc11d587a541b544483539843bd46562010c690
+  scenarios/readme-command-parity.md: 899fdc8ebb306541496892772ec4540b4be968aed55ee366c87185cdcc5304b6
+  spec.md: 2f20084b5abc6095508e48c9fcb0d8c3437acfed52805db35888d5ffdbd4c2cf
+  tasks.md: f152b5e6062e497c46a29a09274ddb8fb7955f8e45884439c7183e3119a362d2
 unexamined-by-reason:
   never-existed: 4
   not-a-live-claim: 24
@@ -47,14 +47,17 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#CI integration", message: "Plan adds audit steps to framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on dependency-set changes."}
+  BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#CI integration", message: "The plan modifies framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on changes to the dependency manifest or lockfile."}
+  BE-INPUT-004: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/family-34-step-reference-integrity.md#Edge Cases"}
+  SEC-DEPS-001: {verdict: addressed, cite: "plan.md#CI integration"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 1
   deferred: 0
   waived: 2
   undispositioned: 0
@@ -64,10 +67,10 @@ decisions:
     reason: "advisory and no chore: 026's CI work adds `bash scripts/audit/run-all.sh` steps (framework-checks.yml step (h), runtime-release.yml's audit job) that run repo-local scripts and change no dependency set; cargo audit runs in runtime.yml on every runtime/** change (as 024's analysis waived the same finding)"
     decided-at: 2026-11-14T02:33:55Z
     decided-by: rule
-  - key: scenario-consistency — family-26-broken-relative-links Behavior still describes the family's own code-span stripping and line-by-line fence toggling, while link-check-consolidation and family-35 record Family 26 as an entry point delegating to check-corpus-links
+  - key: grounding — Motivation states a descriptive figure about the pre-v0.1.0 review passes (~30 of 45 findings were framework-level drift) with no citation, command or assumption marker
     outcome: waived
-    reason: the requirements the Behavior states, code-span stripping and line-by-line fence toggling, still hold; since link-check-consolidation the family meets them by delegating to check-corpus-links, so the requirement is unchanged and only its implementer moved
-    decided-at: 2026-11-14T02:33:55Z
+    reason: historical motivation for the command, not a claim about how the current code behaves; the figure is hedged with '~' and no criterion or contract rests on it
+    decided-at: 2026-11-15T21:39:03Z
     decided-by: rule
 ---
 
@@ -75,7 +78,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 43 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 43 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -87,8 +90,8 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-DEPS-007: Plan adds audit steps to framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on dependency-set changes. — `specs/026-framework-self-audit/plan.md` — **waived**: advisory and no chore: 026's CI work adds `bash scripts/audit/run-all.sh` steps (framework-checks.yml step (h), runtime-release.yml's audit job) that run repo-local scripts and change no dependency set; cargo audit runs in runtime.yml on every runtime/** change (as 024's analysis waived the same finding)
-- scenario-consistency — family-26-broken-relative-links Behavior still describes the family's own code-span stripping and line-by-line fence toggling, while link-check-consolidation and family-35 record Family 26 as an entry point delegating to check-corpus-links — `specs/026-framework-self-audit/scenarios/family-26-broken-relative-links.md` — **waived**: the requirements the Behavior states, code-span stripping and line-by-line fence toggling, still hold; since link-check-consolidation the family meets them by delegating to check-corpus-links, so the requirement is unchanged and only its implementer moved
+- rule-assessment — BE-DEPS-007: The plan modifies framework-checks.yml and runtime-release.yml (CI configuration) but commits to no automated vulnerability scan on changes to the dependency manifest or lockfile. — `specs/026-framework-self-audit/plan.md` — **waived**: advisory and no chore: 026's CI work adds `bash scripts/audit/run-all.sh` steps (framework-checks.yml step (h), runtime-release.yml's audit job) that run repo-local scripts and change no dependency set; cargo audit runs in runtime.yml on every runtime/** change (as 024's analysis waived the same finding)
+- grounding — Motivation states a descriptive figure about the pre-v0.1.0 review passes (~30 of 45 findings were framework-level drift) with no citation, command or assumption marker — `specs/026-framework-self-audit/spec.md` — **waived**: historical motivation for the command, not a claim about how the current code behaves; the figure is hedged with '~' and no criterion or contract rests on it (decided by the rule)
 
 ## Deferred to other specs
 
@@ -107,4 +110,4 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- grounding — Plan CI integration states as fact that 'The binary is already built earlier in the workflow; the audit reuses that build' with no step or file citation — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
