@@ -78,7 +78,31 @@ fi
 
 # The command sources. An empty glob means the directory is gone or empty,
 # which is a precondition failure rather than a corpus with nothing to check.
-actual="$(for f in "$SRC_DIR"/*.md; do [ -e "$f" ] && basename "$f" .md; done | sort -u)"
+#
+# The glob lists a symbolic link resolving outside the repository like any
+# other file, so each match is contained before it is probed (026 plan, Every
+# family contains the paths it did not write as a literal; BE-INPUT-004), in
+# one python3 call. One resolving outside is reported and not counted.
+verdicts="$(printf '%s\n' "$SRC_DIR"/*.md | contained_each "$ROOT")"
+actual=""
+while IFS="$(printf '\t')" read -r verdict f; do
+  case "$verdict" in
+    inside)
+      if [ -e "$f" ]; then
+        actual="$actual$(basename "$f" .md)"$'\n'
+      fi
+      ;;
+    outside)
+      emit "$f" "resolves outside the repository, so it was not probed and was not counted as a command source" \
+        "replace the symbolic link with the file, or remove it"
+      ;;
+    *)
+      containment_unchecked "$f"
+      exit "$drift"
+      ;;
+  esac
+done <<< "$verdicts"
+actual="$(printf '%s' "$actual" | sort -u)"
 if [ -z "$actual" ]; then
   emit "$SRC_DIR" \
     "no command sources were listed, so the README was checked against nothing" \

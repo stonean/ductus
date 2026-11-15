@@ -120,19 +120,23 @@ if [ "$file_count" -eq 0 ]; then
 fi
 
 # --- Scan -----------------------------------------------------------------
+#
+# A tracked symbolic link resolving outside the repository is reported and
+# never probed or read (026 plan, Every family contains the paths it did not
+# write as a literal; BE-INPUT-004). The whole list is contained in one
+# python3 call, since a process per file costs over a minute on this tree.
+verdicts="$(printf '%s\n' "$files" | contained_each "$ROOT")"
 examined=0
-while IFS= read -r f; do
+while IFS="$(printf '\t')" read -r verdict f; do
   [ -z "$f" ] && continue
-  # A tracked symbolic link resolving outside the repository is reported and
-  # never probed or read (026 plan, BE-INPUT-004).
-  contained "$ROOT" "$f"
-  case $? in
-    1)
+  case "$verdict" in
+    inside) ;;
+    outside)
       emit "$f" "tracked markdown file resolves outside the repository, so it was not read and was not scanned for residue" \
         "replace the symbolic link with the file, or untrack it"
       continue
       ;;
-    2)
+    *)
       containment_unchecked "$f"
       exit "$drift"
       ;;
@@ -154,7 +158,7 @@ while IFS= read -r f; do
       "the project name appears where a verb belongs — residue from a word-boundary rename sweep that replaced the verb \`govern\` with the project noun" \
       "restore the verb (\`govern\`) in this sentence; §spec-lifecycle reads the repair as a correction in a done spec's spec.md, plan.md or tasks.md outside a criterion, open question or unchecked box, and as reopening it in a scenario or data model"
   done <<< "$hits"
-done <<< "$files"
+done <<< "$verdicts"
 
 printf 'sweep-residue: %d markdown file%s examined for the project name in verb position\n' \
   "$examined" "$([ "$examined" -eq 1 ] && echo '' || echo s)" >&2

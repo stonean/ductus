@@ -115,6 +115,36 @@ containment_unchecked() {
     "install python3, which contained in scripts/audit/lib.sh canonicalizes paths with, then run the family again"
 }
 
+# contained_each BASE — `contained` over a list in one python3 call, for a
+# family that holds many paths (a tracked-file list, a glob's matches), where
+# a process per path costs minutes. Reads PATHs from stdin, one per line, and
+# writes one line per PATH: `inside`, `outside` or `unchecked`, a tab, the
+# path. The comparison is `contained`'s. A python3 that is missing, fails, or
+# prints any line that is not a verdict and a path, or a different number of
+# lines than it was given, leaves every path `unchecked`, and a caller treats
+# any word but `inside` and `outside` as `unchecked`: it reports the first
+# through `containment_unchecked` and stops, as for `contained`'s exit 2.
+contained_each() {
+  local base="$1" input verdicts want line
+  input="$(grep -v '^$' || true)"
+  [ -n "$input" ] || return 0
+  want="$(printf '%s\n' "$input" | wc -l | tr -d ' ')"
+  if command -v python3 > /dev/null 2>&1 \
+    && verdicts="$(printf '%s\n' "$input" | python3 -I -c 'import os, sys
+base = os.path.realpath(sys.argv[1])
+for line in sys.stdin.read().split("\n"):
+    if line:
+        inside = os.path.commonpath([base, os.path.realpath(line)]) == base
+        print("inside" if inside else "outside", line, sep="\t")' "$base")" \
+    && [ "$(printf '%s\n' "$verdicts" | grep -cE $'^(inside|outside)\t.')" -eq "$want" ]; then
+    printf '%s\n' "$verdicts"
+  else
+    while IFS= read -r line; do
+      printf 'unchecked\t%s\n' "$line"
+    done <<< "$input"
+  fi
+}
+
 # specs_root — echo the spec root `.ductus/config.toml` configures as
 # `[paths] specs-root` (spec 040), or `specs` when none is set. A family
 # splicing a feature slug under the root reads it here rather than assuming

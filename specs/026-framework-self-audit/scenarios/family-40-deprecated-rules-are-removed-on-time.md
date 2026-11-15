@@ -26,7 +26,7 @@ Family 40, `scripts/audit/deprecation-removal.sh`, reads every tracked `framewor
 - **Every run ends with a coverage line on stderr**: the rule files examined of those tracked, the labels found and compared, and the `version` they were compared with, or what left nothing compared.
 - **A target above `version` is silent.** The rule binds until its release, so 0.60.0 and 0.61.0 report nothing for the four 077 labels, and 0.62.0's bump commit fails the audit until they are removed.
 - **`scripts/tests/test-deprecation-removal.sh` proves it both ways** on fixture trees, each case with the exit and finding it must produce, the cases listed in its header. A case that needs an unreadable file is reported as skipped, never as passed, when the user running it can read a mode-000 file. Its control case does not require the tree to carry a label, so the commit that removes the last deprecated rule does not fail it. `framework-checks.yml` step (p) runs it.
-- **A path the family did not write as a literal is contained first.** Under the rule the plan's path-containment decision states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a tracked rule file.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's decision *Every family contains the paths it did not write as a literal* states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a tracked rule file.
 
 ## Open Questions
 

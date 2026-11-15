@@ -118,16 +118,6 @@ extract_affected_files() {
   # family reported no findings — a silent pass everywhere it was run
   # locally, while CI's gawk found real ones. Extract via RSTART/RLENGTH,
   # which is portable.
-  # Fail loudly rather than returning empty: an awk that cannot run turned
-  # this family into a silent pass (QUAL-CLAIM-001) — no findings and exit
-  # 0, indistinguishable from clean, on every machine whose awk lacked a
-  # GNU extension this script used. It shipped a broken release gate that
-  # was green locally and red in CI.
-  if ! awk 'BEGIN { if (match("x", /x/)) exit 0; exit 1 }' </dev/null; then
-    emit "(precondition)" "awk cannot evaluate match() — Family 7 cannot examine any plan" \
-      "install a POSIX-conformant awk; this family reports nothing without one, which is not the same as clean"
-    return 1
-  fi
   awk '
     # Detect Affected Files heading.
     /^## Affected Files/ { in_section = 1; next }
@@ -142,6 +132,19 @@ extract_affected_files() {
     }
   ' "$plan" | sort -u
 }
+
+# Fail loudly rather than reading every plan as empty: an awk that cannot run
+# turned this family into a silent pass (QUAL-CLAIM-001) — no findings and exit
+# 0, indistinguishable from clean, on every machine whose awk lacked a GNU
+# extension this script used. It shipped a broken release gate that was green
+# locally and red in CI. The probe runs once, here at top level, because an
+# `emit` inside extract_affected_files runs within `$(...)`: its finding would
+# be captured as data and its drift lost.
+if ! awk 'BEGIN { if (match("x", /x/)) exit 0; exit 1 }' </dev/null; then
+  emit "(precondition)" "awk cannot evaluate match() — Family 7 cannot examine any plan" \
+    "install a POSIX-conformant awk; this family reports nothing without one, which is not the same as clean"
+  exit "$drift"
+fi
 
 # Pairwise check.
 for i in "${!non_done_specs[@]}"; do

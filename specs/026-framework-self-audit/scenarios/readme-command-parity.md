@@ -30,6 +30,7 @@ A new audit family asserts that every command shipped to adopters appears in the
 - **A failed listing is a finding, not a clean pass.** If the command directory or the README cannot be read, say so — a corpus that could not be examined must never report as a README documenting everything (`QUAL-CLAIM-001`).
 - **Presence is the assertion, not accuracy.** The family checks that a command is documented, not that its description is current; asserting the latter needs semantic judgment and belongs to a reviewer, not a shell family. State the bound rather than implying wider coverage.
 - **Flag-level parity is a separate question.** Whether the README's rows must enumerate each command's flags — the `/specify` gap that prompted this — is worth deciding explicitly: it is a second assertion over the same artifacts, and folding it in silently would make one family's name describe two checks.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's decision *Every family contains the paths it did not write as a literal* states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a command source the `framework/commands/*.md` glob lists.
 
 ## Open Questions
 

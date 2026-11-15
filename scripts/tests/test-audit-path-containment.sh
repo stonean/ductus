@@ -34,12 +34,13 @@
 # nowhere, and the outside directory B names would be a `blob` URL naming a
 # directory — so each case also requires that finding to be absent.
 #
-# Spec 026 task 7 extends the rule (026 plan, the path-containment decision) to
-# every other family that turns a path it did not write as a literal into a
-# probe, a glob or an open: cases I to R, one per family, each putting a
-# symbolic link resolving into the sibling `repo2` where the family would
-# touch the path, with content there the family would report if it reached it,
-# and requiring the containment finding and not that one:
+# Spec 026 task 7 extends the rule (026 plan, the decision "Every family
+# contains the paths it did not write as a literal") to every other family
+# that turns a path it did not write as a literal into a probe, a glob or an
+# open: cases I to R and T to W, one per family, each putting a symbolic link
+# resolving into the sibling `repo2` where the family would touch the path,
+# with content there the family would report if it reached it, and requiring
+# the containment finding and not that one:
 #   I. Family 7 (sibling-coupling)           a spec.md and a plan.md, under a
 #                                            configured spec root
 #   J. Family 8 (introducing-drift)          a done spec.md, same root
@@ -56,11 +57,27 @@
 #   P. Family 37 (analyze-record-backlog)    a record, the spec root
 #   Q. Family 39 (shipped-anchor-resolution) a tracked markdown file
 #   R. Family 40 (deprecation-removal)       a tracked rule file
+#   T. Family 4 (placeholder-roundtrip)     a command source and a reference
+#                                            file a glob lists, and the command
+#                                            file a reference inherits its
+#                                            marker from
+#   U. Family 9 (primitive-promotion)        a command source a glob lists
+#   V. Family 16 (installer-command-parity)  a command source and a reference
+#                                            file its globs list, and the
+#                                            pointers read from them
+#   W. Family 33 (readme-command-parity)     a command source a glob lists
 #   S. a containment that cannot run: `contained` (scripts/audit/lib.sh) exits
 #      0 inside, 1 outside, and 2 when it could not tell (no python3, one that
-#      fails, one that prints nothing or no verdict), and each family calling
-#      it, run where python3 fails that call alone, reports the path as not
-#      checked and stops, never reporting it as resolving outside
+#      fails, one that prints nothing or no verdict), `contained_each` answers
+#      the same per path of a list, and each family calling either, run where
+#      python3 fails that call alone, reports the path as not checked and
+#      stops, never reporting it as resolving outside (placed last, after T to W)
+#
+# The same file proves the audit fixes of 026's third review that a fixture
+# reaches: I2 (Family 7 fails on an awk that cannot run match(), where it once
+# exited 0 in silence), and L to L4 (Family 12 passes a fixture directory name
+# to python as data, never as source; reports an absent fixtures directory;
+# says on stderr that it found nothing to compare, and what it examined)
 #
 # Needs the release runtime (runtime/target/release/ductus), which 35a runs
 # check-corpus-links from, as framework-checks.yml builds it before this step.
@@ -139,6 +156,21 @@ run_family() {
   out="$("$BASH" "$1/scripts/audit/$2" 2> /dev/null)"
   code=$?
   set -e
+}
+
+# run_family_err DIR SCRIPT — as run_family, and sets err to the family's
+# stderr, where it says what it examined.
+run_family_err() {
+  set +e
+  out="$("$BASH" "$1/scripts/audit/$2" 2> "$WORK/stderr")"
+  code=$?
+  err="$(cat "$WORK/stderr")"
+  set -e
+}
+
+# expect_err NAME PATTERN — the last run_family_err's stderr matches PATTERN.
+expect_err() {
+  if printf '%s' "$err" | grep -qE -- "$2"; then pass "$1"; else fail "$1: stderr did not match /$2/: $err"; fi
 }
 
 # expect NAME CODE PATTERN — the last run exited CODE and its findings match
@@ -280,6 +312,27 @@ expect "I: Family 7 reports a plan.md linking out of the tree" 1 \
   '^sibling-coupling \| features/002-bbb/plan\.md \| resolves outside the repository, so it was not read'
 expect_absent "I: Family 7 never reads them (the pair it would report as a bundling candidate)" 'bundling candidate'
 
+# I2. Family 7 — an awk that cannot evaluate match() is a finding and a failing
+# exit, not a silent pass: the probe runs at top level, where its drift counts.
+# Two mutually linking draft specs, a plan for one only, so the family would
+# otherwise find nothing to compare and exit 0.
+dir="$(new_tree i2 sibling-coupling.sh)"
+mkdir -p "$dir/specs/001-aaa" "$dir/specs/002-bbb" "$WORK/i2/bin-awk"
+printf -- '---\nstatus: draft\ndependencies: []\n---\n# A\n\nSee [b](../002-bbb/spec.md).\n' > "$dir/specs/001-aaa/spec.md"
+printf -- '---\nstatus: draft\ndependencies: []\n---\n# B\n\nSee [a](../001-aaa/spec.md).\n' > "$dir/specs/002-bbb/spec.md"
+printf '# Plan\n\n## Affected Files\n\n| `x/shared.md` | edit |\n' > "$dir/specs/001-aaa/plan.md"
+track "$dir"
+run_family "$dir" sibling-coupling.sh
+expect "I2: Family 7 passes the fixture with a working awk (control)" 0 ""
+printf '#!/bin/sh\ncase "$*" in *%smatch("x"%s*) exit 1 ;; esac\nexec %s "$@"\n' "'" "'" "$(command -v awk)" > "$WORK/i2/bin-awk/awk"
+chmod +x "$WORK/i2/bin-awk/awk"
+set +e
+out="$(PATH="$WORK/i2/bin-awk:$PATH" "$BASH" "$dir/scripts/audit/sibling-coupling.sh" 2> /dev/null)"
+code=$?
+set -e
+expect "I2: Family 7 reports an awk that cannot run match() and exits non-zero" 1 \
+  '^sibling-coupling \| \(precondition\) \| awk cannot evaluate match\(\)'
+
 # J. Family 8 — a done spec.md linking out, under a configured root.
 dir="$(new_tree j introducing-drift.sh)"
 repo2="$(far "$dir")"
@@ -344,6 +397,43 @@ run_family "$dir" fixture-session-shape.sh
 expect "L: Family 12 reports a fixture session file linking out of the tree" 1 \
   '^fixture-session-shape \| runtime/tests/fixtures/f1/\.ductus/session\.toml \| fixture session file resolves outside the repository, so it was not read'
 expect_absent "L: Family 12 never reads it (the legacy key it would report)" 'legacy camelCase'
+run_family_err "$dir" fixture-session-shape.sh
+expect_err "L: Family 12 says on stderr what it examined and what it did not read" \
+  'examined 0 session file\(s\) under runtime/tests/fixtures, 1 not read'
+
+# L2. Family 12 — a fixture directory name is committed text, passed to python
+# as an argument and never spliced into its source. One name holds an
+# apostrophe, which closed the old string and read as a parse failure; the
+# other holds code that ran when the family was run.
+dir="$(new_tree l2 fixture-session-shape.sh)"
+mkdir -p "$dir/runtime/tests/fixtures/it's/.ductus" \
+  "$dir/runtime/tests/fixtures/a').read());__import__('os').system('touch PWNED');x=(('b/.ductus"
+# The code ran only when the text before it opened a file that existed and
+# parsed, so a harmless file `a` sits beside the directory.
+: > "$dir/runtime/tests/fixtures/a"
+printf 'x = 1\n' > "$dir/runtime/tests/fixtures/it's/.ductus/session.toml"
+printf 'x = 1\n' > "$dir/runtime/tests/fixtures/a').read());__import__('os').system('touch PWNED');x=(('b/.ductus/session.toml"
+track "$dir"
+run_family_err "$dir" fixture-session-shape.sh
+expect "L2: Family 12 reads a fixture directory named with quotes and code as data" 0 ""
+if [ -e "$dir/PWNED" ]; then fail "L2: Family 12 ran code from a fixture directory name"; else pass "L2: Family 12 ran no code from a fixture directory name"; fi
+expect_err "L2: Family 12 examined both" 'examined 2 session file\(s\) under runtime/tests/fixtures, 0 not read'
+
+# L3. Family 12 — an absent fixtures directory is a finding, not a clean run.
+dir="$(new_tree l3 fixture-session-shape.sh)"
+track "$dir"
+run_family "$dir" fixture-session-shape.sh
+expect "L3: Family 12 reports an absent fixtures directory" 1 \
+  '^fixture-session-shape \| runtime/tests/fixtures \| the fixtures directory is absent'
+
+# L4. Family 12 — a fixtures directory with no session file is nothing to
+# compare, said on stderr, and not a failure.
+dir="$(new_tree l4 fixture-session-shape.sh)"
+mkdir -p "$dir/runtime/tests/fixtures/f1"
+track "$dir"
+run_family_err "$dir" fixture-session-shape.sh
+expect "L4: Family 12 passes a fixtures directory holding no session file" 0 ""
+expect_err "L4: Family 12 says there was nothing to compare" 'nothing to compare, no session file under runtime/tests/fixtures'
 
 # M. Family 17 — the Agent Registry's config dir, and each entry beneath it.
 # make_ns_tree CASE — a fixture whose registry names one config dir, `.agent`,
@@ -501,6 +591,84 @@ expect "R: Family 40 reports a tracked rule file linking out of the tree" 1 \
   '^deprecation-removal \| framework/rules/b-cross\.md \| tracked but resolves outside the repository, so its deprecation labels were not examined'
 expect_absent "R: Family 40 never hands it to the runtime (which refuses it, so the run fails)" 'read-deprecation-labels exited non-zero'
 
+# T. Family 4 (placeholder-roundtrip) — a command source and a reference file
+# a glob lists, and the command file a reference inherits its marker from.
+dir="$(new_tree t placeholder-roundtrip.sh)"
+repo2="$(far "$dir")"
+mkdir -p "$dir/framework/bootstrap" "$dir/framework/commands" "$dir/framework/reference"
+printf '| `key` | `name` | `config_dir` | `layout` |\n| --- | --- | --- | --- |\n| `a` | A | `.agent` | x |\n' \
+  > "$dir/framework/bootstrap/ductus.md"
+printf '# Ok\n' > "$dir/framework/commands/ok.md"
+printf 'Run /ductus:foo now.\n' > "$repo2/bad.md"
+printf '<!-- audit:ignore-placeholders:file -->\n' > "$repo2/marker.md"
+printf 'Run /ductus:baz now.\n' > "$repo2/ref.md"
+ln -s "$repo2/bad.md" "$dir/framework/commands/lnk.md"
+ln -s "$repo2/marker.md" "$dir/framework/commands/x.md"
+printf 'Run /ductus:bar here.\n' > "$dir/framework/reference/x.md"
+ln -s "$repo2/ref.md" "$dir/framework/reference/y.md"
+track "$dir"
+run_family "$dir" placeholder-roundtrip.sh
+expect "T: Family 4 reports a command source linking out of the tree" 1 \
+  '^placeholder-roundtrip \| framework/commands/lnk\.md \| resolves outside the repository, so it was not read'
+expect "T: Family 4 reports a reference file linking out of the tree" 1 \
+  '^placeholder-roundtrip \| framework/reference/y\.md \| resolves outside the repository, so it was not read'
+expect_absent "T: Family 4 never reads them (the hardcoded names they hold)" 'lnk\.md:[0-9]+|y\.md:[0-9]+'
+expect "T: Family 4 never reads a command file linking out for its file marker" 1 \
+  '^placeholder-roundtrip \| framework/reference/x\.md:1 \| hardcoded `/ductus:`'
+
+# U. Family 9 (primitive-promotion-candidates) — a command source a glob lists.
+dir="$(new_tree u primitive-promotion-candidates.sh)"
+repo2="$(far "$dir")"
+mkdir -p "$dir/framework/commands"
+printf 'foo\n' > "$dir/framework/runtime-tools.txt"
+printf '## Instructions\n\n1. Run `foo`.\n' > "$dir/framework/commands/ok.md"
+printf '## Instructions\n\n1. Do this in prose only.\n' > "$repo2/prose.md"
+ln -s "$repo2/prose.md" "$dir/framework/commands/lnk.md"
+track "$dir"
+run_family "$dir" primitive-promotion-candidates.sh
+expect "U: Family 9 reports a command source linking out of the tree" 1 \
+  '^primitive-promotion \| framework/commands/lnk\.md \| resolves outside the repository, so it was not read'
+expect_absent "U: Family 9 never reads it (the prose-only step it would report)" 'prose-only step'
+
+# V. Family 16 (installer-command-parity) — a command source and a reference
+# file its two globs list, each holding what the family would report.
+dir="$(new_tree v installer-command-parity.sh)"
+repo2="$(far "$dir")"
+mkdir -p "$dir/framework/bootstrap" "$dir/framework/commands" "$dir/framework/reference" "$dir/scripts"
+printf 'audit\n' > "$dir/scripts/maintainer-only-commands.txt"
+printf '| Source | Destination |\n| --- | --- |\n| `framework/commands/ok.md` | `{config_dir}/commands/{project}/ok.md` |\n| `framework/reference/ok.md` | `.ductus/reference/ok.md` |\n' \
+  > "$dir/framework/bootstrap/ductus.md"
+printf 'See .ductus/reference/ok.md.\n' > "$dir/framework/commands/ok.md"
+printf '# Ok\n' > "$dir/framework/reference/ok.md"
+printf 'See .ductus/reference/zzz.md.\n' > "$repo2/cmd.md"
+printf '# Orphan\n' > "$repo2/ref.md"
+ln -s "$repo2/cmd.md" "$dir/framework/commands/lnk.md"
+ln -s "$repo2/ref.md" "$dir/framework/reference/lnkr.md"
+track "$dir"
+run_family "$dir" installer-command-parity.sh
+expect "V: Family 16 reports a command source linking out of the tree" 1 \
+  '^installer-command-parity \| framework/commands/lnk\.md \| resolves outside the repository, so it was not read'
+expect "V: Family 16 reports a reference file linking out of the tree" 1 \
+  '^installer-command-parity \| framework/reference/lnkr\.md \| resolves outside the repository, so it was not read'
+expect_absent "V: Family 16 never counts a command it could not read (no manifest row)" 'has no installer manifest row'
+expect_absent "V: Family 16 never counts a reference it could not read (no command)" 'reference file has no command'
+expect_absent "V: Family 16 never reads a pointer from it (a file no row installs)" 'names \.ductus/reference/zzz'
+
+# W. Family 33 (readme-command-parity) — a command source a glob lists.
+dir="$(new_tree w readme-command-parity.sh)"
+repo2="$(far "$dir")"
+mkdir -p "$dir/framework/commands" "$dir/scripts"
+printf 'audit\n' > "$dir/scripts/maintainer-only-commands.txt"
+printf 'The `/ok` command.\n' > "$dir/README.md"
+printf '# Ok\n' > "$dir/framework/commands/ok.md"
+printf '# Lnk\n' > "$repo2/lnk.md"
+ln -s "$repo2/lnk.md" "$dir/framework/commands/lnk.md"
+track "$dir"
+run_family "$dir" readme-command-parity.sh
+expect "W: Family 33 reports a command source linking out of the tree" 1 \
+  '^readme-command \| framework/commands/lnk\.md \| resolves outside the repository, so it was not probed'
+expect_absent "W: Family 33 never counts it (a command the README omits)" 'is shipped to adopters but appears nowhere'
+
 # S. A containment that cannot run is reported as that, never as outside.
 s_dir="$WORK/s"
 mkdir -p "$s_dir/base/in" "$s_dir/base2" "$s_dir/bin-none" "$s_dir/bin-fail" \
@@ -544,13 +712,43 @@ verdict "answers 2 for a python3 that fails" 2 "$s_dir/bin-fail" "$s_dir/base/in
 verdict "answers 2 for a python3 that prints nothing" 2 "$s_dir/bin-silent" "$s_dir/base/in"
 verdict "answers 2 for a python3 that prints no verdict" 2 "$s_dir/bin-garbled" "$s_dir/base/in"
 
+# each_verdict NAME WANT PATH-OVERRIDE — contained_each over an inside path and
+# a link resolving outside, one verdict line each, with PATH-OVERRIDE ahead of
+# the real PATH when given. The no-python3 case runs with only the tools
+# contained_each calls on PATH, linked into bin-tools.
+mkdir -p "$s_dir/bin-tools"
+for tool in grep wc tr; do ln -s "$(command -v "$tool")" "$s_dir/bin-tools/$tool"; done
+each_verdict() {
+  local got
+  if [ "$3" = "$s_dir/bin-none" ]; then
+    got="$( . "$REPO_ROOT/scripts/audit/lib.sh" && PATH="$s_dir/bin-tools" && printf '%s\n%s\n' "$s_dir/base/in" "$s_dir/base/out" | contained_each "$s_dir/base" )"
+  elif [ -n "$3" ]; then
+    got="$( . "$REPO_ROOT/scripts/audit/lib.sh" && PATH="$3:$PATH" && printf '%s\n%s\n' "$s_dir/base/in" "$s_dir/base/out" | contained_each "$s_dir/base" )"
+  else
+    got="$( . "$REPO_ROOT/scripts/audit/lib.sh" && printf '%s\n%s\n' "$s_dir/base/in" "$s_dir/base/out" | contained_each "$s_dir/base" )"
+  fi
+  if [ "$got" = "$2" ]; then pass "S: contained_each $1"; else fail "S: contained_each $1: got $got, want $2"; fi
+}
+tab="$(printf '\t')"
+each_verdict "answers inside and outside, one line per path" \
+  "inside${tab}$s_dir/base/in
+outside${tab}$s_dir/base/out" ""
+unchecked_both="unchecked${tab}$s_dir/base/in
+unchecked${tab}$s_dir/base/out"
+each_verdict "leaves every path unchecked with no python3 on PATH" "$unchecked_both" "$s_dir/bin-none"
+each_verdict "leaves every path unchecked for a python3 that fails" "$unchecked_both" "$s_dir/bin-fail"
+each_verdict "leaves every path unchecked for a python3 that prints nothing" "$unchecked_both" "$s_dir/bin-silent"
+each_verdict "leaves every path unchecked for a python3 that prints no verdict" "$unchecked_both" "$s_dir/bin-garbled"
+
 # Each family calling contained, over the fixture its own case built, where
 # python3 fails the containment call alone.
 for entry in i:sibling-coupling.sh:sibling-coupling j:introducing-drift.sh:introducing-drift \
   k:migration-coverage.sh:migration-coverage l:fixture-session-shape.sh:fixture-session-shape \
   m1:host-namespace-parity.sh:host-namespace-parity n:rename-sweep-residue.sh:sweep-residue \
   o:done-spec-criteria.sh:done-spec-criteria p:analyze-record-backlog.sh:analyze-record \
-  r:deprecation-removal.sh:deprecation-removal d:manifest-destination-links.sh:manifest-dest; do
+  r:deprecation-removal.sh:deprecation-removal d:manifest-destination-links.sh:manifest-dest \
+  t:placeholder-roundtrip.sh:placeholder-roundtrip u:primitive-promotion-candidates.sh:primitive-promotion \
+  v:installer-command-parity.sh:installer-command-parity w:readme-command-parity.sh:readme-command; do
   case_dir="$WORK/${entry%%:*}/repo"
   script="${entry#*:}"
   label="${script#*:}"

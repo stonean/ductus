@@ -26,7 +26,7 @@ A `/{project}:audit` family runs `resolve-anchor --markers-path framework/consti
 - **What it does not catch, stated rather than implied.** What the check cannot catch is what `resolve-anchor`'s compiled description says it cannot judge (its `unjudged` reasons), plus two consequences of its `qualified` kind that it does not spell out: a line naming any `.md` qualifies every `§` on it, a genuine constitution citation included; and a reference meant for another file resolves against a same-named heading in the citing file, which `qualified` judges against — `ductus.md`'s `§Inputs` beside `/ductus:review` did until `f8db885a` named `review.md` on that line. These are the primitive's classification rules (067's AC2), and the family inherits them.
 - **No exemption marker.** A sanctioned way to silence one reference is a hiding place, the reason 046 refused a grandfather rule for scenario questions, and every reference the corpus carries today resolves without one.
 - **Generated command copies are not a subject.** They sit outside `framework/`, and their repair is their source.
-- **A path the family did not write as a literal is contained first.** Under the rule the plan's path-containment decision states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a tracked markdown file.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's decision *Every family contains the paths it did not write as a literal* states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: a tracked markdown file.
 
 ## Open Questions
 

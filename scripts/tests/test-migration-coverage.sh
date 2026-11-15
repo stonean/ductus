@@ -22,6 +22,10 @@
 #      ids fails
 #   G. an entry not yet committed counts as newest and is compared
 #   H. a shallow clone fails rather than passing
+#   I. an entry with no procedure_file is reported, and its target_paths
+#      are still examined (10b and 10c's unit-separated rows)
+#   J. an entry with no target_paths does not stop 10b for the entries
+#      after it, or 10d (bash 3.2's empty array under `set -u`)
 #
 # The fixture repositories hold their own copy of the check and its lib, so the
 # check reads the fixture's history. The job that runs this needs the git
@@ -151,6 +155,57 @@ entry "$dir" beta 0.60.0; commit "$dir"
 git clone -q --depth 1 "file://$dir" "$WORK/h-shallow"
 run_check "$WORK/h-shallow"
 expect "H: a shallow clone fails rather than passing" 1 "10d cannot run: the checkout is shallow"
+
+# 10b and 10c read their rows with a unit separator, since a tab is IFS
+# whitespace and `read` collapses consecutive tabs: an entry with no
+# procedure_file would otherwise read its target_paths as the procedure_file,
+# and 10b would never examine it. 10b also expands an entry's paths array,
+# which is empty for an entry with no target_paths; bash 3.2 (macOS /bin/bash)
+# fails an empty array under `set -u`, so J needs that shell to fail without
+# the fix.
+dir="$(make_repo i)"
+printf '# There\n' > "$dir/framework/there.md"
+cat > "$dir/framework/migrations.toml" << 'TOML'
+[[migrations]]
+id = "no-proc"
+introduced_in = "0.60.0"
+summary = "s"
+target_paths = ["framework/there.md"]
+TOML
+commit "$dir"
+run_check "$dir"
+expect "I: an entry with no procedure_file is reported as missing it" 1 \
+  "entry 'no-proc' references missing procedure_file: "
+expect "I: that entry's target_paths are still examined" 1 \
+  "entry 'no-proc' claims 'framework/there.md' was removed but it still exists"
+
+dir="$(make_repo j)"
+printf '# There\n' > "$dir/framework/there.md"
+printf '# P1\n' > "$dir/framework/migrations/p1.md"
+printf '# P2\n' > "$dir/framework/migrations/p2.md"
+cat > "$dir/framework/migrations.toml" << 'TOML'
+[[migrations]]
+id = "no-targets"
+introduced_in = "0.60.0"
+summary = "s"
+procedure_file = "framework/migrations/p1.md"
+
+[[migrations]]
+id = "later"
+introduced_in = "0.60.0"
+summary = "s"
+procedure_file = "framework/migrations/p2.md"
+target_paths = ["framework/there.md"]
+TOML
+commit "$dir"
+run_check "$dir"
+expect "J: an entry with no target_paths does not stop the entries after it" 1 \
+  "entry 'later' claims 'framework/there.md' was removed but it still exists"
+if printf '%s' "$err" | grep -q '10d examined: 2 entries'; then
+  pass "J: 10d still runs after it"
+else
+  fail "J: 10d did not run: $err"
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

@@ -46,13 +46,17 @@ if ! python3 -c "import tomllib" 2>/dev/null; then
   emit "$REGISTRY" "python3 lacks tomllib (need Python 3.11+)" "upgrade python3 to 3.11+ and re-run"
   exit 1
 fi
-if ! python3 -c "import tomllib; tomllib.loads(open('$REGISTRY').read())" 2>/dev/null; then
+if ! python3 -c "import sys, tomllib; tomllib.loads(open(sys.argv[1]).read())" "$REGISTRY" 2>/dev/null; then
   emit "$REGISTRY" "registry is not valid TOML" "fix the TOML syntax"
   exit 1
 fi
 
 # Extract per-entry data via python3 + tomllib.
-# Output format, one row per entry: "{id}\t{procedure_file}\t{target_paths_pipe_separated}"
+# Output format, one row per entry: "{id}<US>{procedure_file}<US>{target_paths_pipe_separated}",
+# <US> the unit separator (0x1f). A tab is IFS whitespace, so `read` collapses
+# consecutive tabs: an entry with no procedure_file would read its target_paths
+# as the procedure_file and 10b would never examine it. The separator is not
+# whitespace, so an empty field stays a field.
 ENTRY_DATA=$(python3 <<'PY'
 import tomllib
 with open("framework/migrations.toml", "rb") as f:
@@ -61,7 +65,7 @@ for m in data.get("migrations", []):
     id_ = m.get("id", "")
     pf = m.get("procedure_file", "")
     tps = "|".join(m.get("target_paths", []))
-    print(f"{id_}\t{pf}\t{tps}")
+    print(f"{id_}\x1f{pf}\x1f{tps}")
 PY
 )
 
@@ -93,7 +97,7 @@ fi
 
 # 10c no-broken-procedure-references: every TOML procedure_file path
 # must exist on disk.
-while IFS=$'\t' read -r id pf tps; do
+while IFS=$'\037' read -r id pf tps; do
   [ -n "$id" ] || continue
   # The registry field is committed text, contained before it is probed.
   contained "$ROOT" "$pf"
@@ -117,10 +121,10 @@ done <<< "$ENTRY_DATA"
 # 10b no-stale-target-paths: every framework/-prefixed target_path in an
 # active entry must NOT exist in current framework/.
 # Glob patterns (containing *) are expanded; literal paths use test -e.
-while IFS=$'\t' read -r id pf tps; do
+while IFS=$'\037' read -r id pf tps; do
   [ -n "$id" ] || continue
   IFS='|' read -r -a paths <<< "$tps"
-  for p in "${paths[@]}"; do
+  for p in "${paths[@]+"${paths[@]}"}"; do
     case "$p" in
       framework/*) ;;
       *) continue ;;  # adopter-relative; cannot verify from this repo

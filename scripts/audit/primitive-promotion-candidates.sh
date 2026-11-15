@@ -96,8 +96,25 @@ report_step() {
     "either invoke a runtime primitive, add an <!-- llm:* --> marker, or annotate with <!-- audit:ignore-promotion --> on the preceding line"
 }
 
-# Walk each command file.
-for file in framework/commands/*.md; do
+# Walk each command file. The glob lists a symbolic link resolving outside the
+# repository like any other file, so each match is contained before it is read
+# (026 plan, Every family contains the paths it did not write as a literal;
+# BE-INPUT-004), in one python3 call for the whole list.
+verdicts="$(printf '%s\n' framework/commands/*.md | contained_each "$ROOT")"
+while IFS="$(printf '\t')" read -r verdict file; do
+  case "$verdict" in
+    inside) ;;
+    outside)
+      emit "$file" "resolves outside the repository, so it was not read and its steps were not checked for primitive calls" \
+        "replace the symbolic link with the file, or remove it"
+      continue
+      ;;
+    *)
+      containment_unchecked "$file"
+      exit "$drift"
+      ;;
+  esac
+  [ -f "$file" ] || continue
   if is_legacy "$file"; then
     continue
   fi
@@ -188,6 +205,6 @@ for file in framework/commands/*.md; do
   # file iteration re-initializes every field at the top of the loop.
   report_step "$file" "$step_start_line" "$step_has_ignore" \
     "$step_has_primitive" "$step_has_llm_marker" "$step_buffer"
-done
+done <<< "$verdicts"
 
 exit "$drift"

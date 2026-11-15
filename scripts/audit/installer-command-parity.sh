@@ -49,6 +49,7 @@ audit_family installer-command-parity
 
 DUCTUS="framework/bootstrap/ductus.md"
 SRC_DIR="framework/commands"
+REF_DIR="framework/reference"
 SECTION="$DUCTUS §Per-Agent Scaffolding → Slash commands"
 
 if [ ! -f "$DUCTUS" ]; then
@@ -63,8 +64,35 @@ fi
 manifest="$(grep -oE '^\| `framework/commands/[a-z-]+\.md`' "$DUCTUS" \
   | sed -E 's/.*framework\/commands\/([a-z-]+)\.md.*/\1/' | sort -u)"
 
+# The two directories' globs list a symbolic link resolving outside the
+# repository like any other file, so each match is contained before it is
+# counted, probed or read (026 plan, Every family contains the paths it did not
+# write as a literal; BE-INPUT-004), in one python3 call for the whole list.
+# One resolving outside is reported and left out of both sets.
+src_files=()
+ref_files=()
+verdicts="$(printf '%s\n' "$SRC_DIR"/*.md "$REF_DIR"/*.md | contained_each "$ROOT")"
+while IFS="$(printf '\t')" read -r verdict f; do
+  case "$verdict" in
+    inside)
+      case "$f" in
+        "$REF_DIR"/*) ref_files+=("$f") ;;
+        *) src_files+=("$f") ;;
+      esac
+      ;;
+    outside)
+      emit "$f" "resolves outside the repository, so it was not read and was not counted as a command or a reference" \
+        "replace the symbolic link with the file, or remove it"
+      ;;
+    *)
+      containment_unchecked "$f"
+      exit "$drift"
+      ;;
+  esac
+done <<< "$verdicts"
+
 # Actual source files under framework/commands/.
-actual="$(for f in "$SRC_DIR"/*.md; do basename "$f" .md; done | sort -u)"
+actual="$(for f in "${src_files[@]+"${src_files[@]}"}"; do basename "$f" .md; done | sort -u)"
 
 # Maintainer-only commands intentionally excluded from the adopter manifest.
 # Read from scripts/maintainer-only-commands.txt through lib.sh, so this
@@ -115,13 +143,12 @@ done <<< "$(comm -12 <(printf '%s' "$manifest") <(printf '%s' "$excl"))"
 # reference. Two more are reference-specific: a row must install the file
 # under its own name in `.ductus/reference/` (the command reads it by that
 # path), and a reference file must belong to a command.
-REF_DIR="framework/reference"
 REF_SECTION="$DUCTUS §Shared Files → \`ductus\`-owned shared files"
 
 ref_rows="$(grep -oE '^\| `framework/reference/[a-z-]+\.md` \| `[^`]*` \|' "$DUCTUS")"
 ref_manifest="$(printf '%s\n' "$ref_rows" \
   | sed -nE 's/^\| `framework\/reference\/([a-z-]+)\.md`.*/\1/p' | sort -u)"
-ref_actual="$(for f in "$REF_DIR"/*.md; do [ -f "$f" ] && basename "$f" .md; done | sort -u)"
+ref_actual="$(for f in "${ref_files[@]+"${ref_files[@]}"}"; do [ -f "$f" ] && basename "$f" .md; done | sort -u)"
 # Expected rows = references whose command exists, minus maintainer-only. A
 # reference with no command is reported once, as an orphan below; expecting a
 # row for it too would also tell the author to add the row the orphan finding
@@ -183,6 +210,10 @@ done <<< "$(comm -23 <(printf '%s' "$ref_actual") <(printf '%s' "$actual"))"
 ref_destinations="$(printf '%s\n' "$ref_rows" \
   | sed -nE 's/^\| `[^`]*` \| `\.ductus\/reference\/([a-z0-9-]+)\.md` \|$/\1/p' | sort -u)"
 allowed_pointers="$(printf '%s\n%s\n' "$ref_destinations" "$excl" | grep -v '^$' | sort -u)"
+pointer_hits=""
+if [ "$((${#src_files[@]} + ${#ref_files[@]}))" -gt 0 ]; then
+  pointer_hits="$(grep -HoE '\.ductus/reference/[a-z0-9-]+\.md' "${src_files[@]+"${src_files[@]}"}" "${ref_files[@]+"${ref_files[@]}"}" 2> /dev/null | sort -u)"
+fi
 pointer_count=0
 while IFS= read -r hit; do
   [ -n "$hit" ] || continue
@@ -196,9 +227,7 @@ while IFS= read -r hit; do
       "names .ductus/reference/$name.md, which no Shared Files row installs — the pointer names a file /ductus never ships" \
       "point it at an installed reference (.ductus/reference/<command>.md), or add the | \`framework/reference/$name.md\` | \`.ductus/reference/$name.md\` | row and its source"
   fi
-done <<EOF
-$(grep -oE '\.ductus/reference/[a-z0-9-]+\.md' "$SRC_DIR"/*.md "$REF_DIR"/*.md 2> /dev/null | sort -u)
-EOF
+done <<< "$pointer_hits"
 echo "installer-command-parity: $pointer_count distinct (file, .ductus/reference/<name>.md) pointer(s) checked against $(printf '%s\n' "$ref_destinations" | grep -c .) Shared Files destination(s) and the maintainer-only list" >&2
 if [ "$pointer_count" -eq 0 ]; then
   emit "$SRC_DIR" \

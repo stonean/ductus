@@ -76,7 +76,7 @@ section of a file with known frontmatter, so there is nothing to infer.
   the same rule `derive-dependencies` follows and reports as
   `untracked-skipped`. Silently ignoring one would let a spec escape the check
   by never having been committed.
-- **A path the family did not write as a literal is contained first.** Under the rule the plan's path-containment decision states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: the configured spec root or a tracked `spec.md`.
+- **A path the family did not write as a literal is contained first.** Under the rule the plan's decision *Every family contains the paths it did not write as a literal* states once (`BE-INPUT-004`), any path of these kinds resolving outside the repository is reported and never touched: the configured spec root or a tracked `spec.md`.
 
 ## Open Questions
 

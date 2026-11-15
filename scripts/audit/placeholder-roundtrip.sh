@@ -66,7 +66,25 @@ fi
 
 # Walk every command source and reference file, looking for the patterns.
 # Per-file: skip lines preceded by the ignore comment.
-for file in framework/commands/*.md framework/reference/*.md; do
+#
+# The glob lists a symbolic link resolving outside the repository like any
+# other file, so each match is contained before it is probed or read (026
+# plan, Every family contains the paths it did not write as a literal;
+# BE-INPUT-004), in one python3 call for the whole list.
+verdicts="$(printf '%s\n' framework/commands/*.md framework/reference/*.md | contained_each "$ROOT")"
+while IFS="$(printf '\t')" read -r verdict file; do
+  case "$verdict" in
+    inside) ;;
+    outside)
+      emit "$file" "resolves outside the repository, so it was not read and was not checked for hardcoded placeholders" \
+        "replace the symbolic link with the file, or remove it"
+      continue
+      ;;
+    *)
+      containment_unchecked "$file"
+      exit "$drift"
+      ;;
+  esac
   [ -f "$file" ] || continue
   is_ref=0
   case "$file" in framework/reference/*) is_ref=1 ;; esac
@@ -77,7 +95,10 @@ for file in framework/commands/*.md framework/reference/*.md; do
   fi
   if [ "$is_ref" -eq 1 ]; then
     cmd_file="framework/commands/$(basename "$file")"
-    if [ -f "$cmd_file" ] && grep -q '<!-- audit:ignore-placeholders:file -->' "$cmd_file"; then
+    # The command file is on the contained list above; one resolving outside
+    # is reported on its own turn and never read here.
+    if ! grep -qxF "outside$(printf '\t')$cmd_file" <<< "$verdicts" \
+      && [ -f "$cmd_file" ] && grep -q '<!-- audit:ignore-placeholders:file -->' "$cmd_file"; then
       continue
     fi
   fi
@@ -128,6 +149,6 @@ for file in framework/commands/*.md framework/reference/*.md; do
       emit "$file:$line_no" "hardcoded \`ductus:\` should be \`{project}:\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
     fi
   done < "$file"
-done
+done <<< "$verdicts"
 
 exit "$drift"

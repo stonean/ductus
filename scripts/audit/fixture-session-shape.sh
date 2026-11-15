@@ -41,8 +41,12 @@ fi
 
 FIXTURES_DIR="runtime/tests/fixtures"
 if [ ! -d "$FIXTURES_DIR" ]; then
-  # No fixtures means nothing to check — exit clean.
-  exit 0
+  # An absent fixtures directory is a subject this family could not reach, not
+  # a clean one (QUAL-CLAIM-001): a directory moved or renamed would otherwise
+  # leave the family green while it examines nothing.
+  emit "$FIXTURES_DIR" "the fixtures directory is absent, so no fixture session file was examined, which is not the same as clean" \
+    "restore $FIXTURES_DIR, or realign FIXTURES_DIR in scripts/audit/fixture-session-shape.sh if the fixtures moved"
+  exit "$drift"
 fi
 
 # Find every session file under the fixtures tree, across all three
@@ -53,10 +57,14 @@ fi
 SESSION_FILES=$(find "$FIXTURES_DIR" \( -name ".govern.session.toml" -o -path "*/.ductus/session.toml" -o -path "*/.govern/session.toml" \) -print | sort)
 
 if [ -z "$SESSION_FILES" ]; then
-  # No fixtures use a session file — clean exit.
+  # A fixtures directory holding no session file leaves nothing to compare;
+  # say so, since silence reads the same as a clean examination.
+  echo "fixture-session-shape: nothing to compare, no session file under $FIXTURES_DIR" >&2
   exit 0
 fi
 
+examined=0
+not_read=0
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   # `find` lists a symbolic link named like a session file; one resolving
@@ -67,6 +75,7 @@ while IFS= read -r f; do
     1)
       emit "$f" "fixture session file resolves outside the repository, so it was not read" \
         "replace the symbolic link with the fixture file, or remove it"
+      not_read=$((not_read + 1))
       continue
       ;;
     2)
@@ -74,14 +83,15 @@ while IFS= read -r f; do
       exit "$drift"
       ;;
   esac
-  # 12a parses-as-TOML.
-  if ! python3 -c "import tomllib; tomllib.loads(open('$f').read())" 2>/dev/null; then
-    err=$(python3 -c "import tomllib
+  examined=$((examined + 1))
+  # 12a parses-as-TOML. The path is an argument, never spliced into the
+  # program: a fixture directory name is committed text (BE-INPUT-003).
+  if ! err="$(python3 -c 'import sys, tomllib
 try:
-    tomllib.loads(open('$f').read())
+    tomllib.loads(open(sys.argv[1]).read())
 except Exception as e:
     print(str(e))
-" 2>&1)
+    sys.exit(1)' "$f" 2>&1)"; then
     emit "$f" "fixture session TOML fails to parse: $err" \
       "fix the TOML syntax in $f"
     continue
@@ -111,5 +121,7 @@ except Exception as e:
       "anchor the .gitignore pattern (e.g., '/.govern.session.toml' instead of '.govern.session.toml'), then 'git add -f' the fixture and commit"
   fi
 done <<< "$SESSION_FILES"
+
+echo "fixture-session-shape: examined $examined session file(s) under $FIXTURES_DIR, $not_read not read (resolve outside the repository)" >&2
 
 exit "$drift"

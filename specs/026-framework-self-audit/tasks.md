@@ -46,12 +46,11 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 2. Record the review and analysis of the 071 reopen's fixes
 
-Handoff (2026-11-15). Tasks 5, 6 and 7 have landed; 5 and 6 were reviewed at `713c1ca7` and `368249a9`. Owed, in order:
+Handoff (2026-11-15). Tasks 5, 6 and 7 have landed, and 026's third review, over the window since `368249a9`, is recorded with its fixes: Families 4, 9, 16 and 33 brought under the containment rule, `contained_each` in `scripts/audit/lib.sh`, and the window's defects. Owed, in order:
 
-1. 026's third review, over the window since `368249a9`: task 7's ten family scripts and `scripts/audit/manifest-destination-links.sh`, whose task-5 containment call now tells a containment that could not run from a path resolving outside; `scripts/audit/lib.sh`'s three-way `contained`, `containment_unchecked` and `specs_root`; `scripts/tests/test-audit-path-containment.sh` (cases I to S) and `scripts/tests/test-deprecation-removal.sh`; `scripts/audit/README.md`; the plan's new decision *Every family contains the paths it did not write as a literal*; and the eight scenarios it touched. Fix two pre-existing defects there as chores, since task 7's implementer found them outside its task: `scripts/audit/migration-coverage.sh` Family 10b expands an empty `paths` array under `set -u`, an unbound-variable error on bash 3.2 for an entry with no `target_paths`; and in `scripts/audit/sibling-coupling.sh` the `emit` inside `extract_affected_files` runs within `$(...)`, so its finding is captured as data and never printed.
-2. The 26 ticked criteria verified against the tree.
-3. The analysis, all 310 rules judged, since `plan.md` and the scenarios changed. BE-PAYLOAD-001 is now met by the design: `check-step-references` by task 6, `resolve-anchor` and `read-deprecation-labels` by 067 task 35 (`7f40a52e`), so the owner's 2026-11-15 deferral of that part to 067 task 35 is discharged and needs no stored decision. BE-INPUT-004 is met by task 7's plan decision. BE-DEPS-007 keeps its stored waiver.
-4. The completion gate, then the owner's `done` decision.
+1. The 26 ticked criteria verified against the tree.
+2. The analysis, all 310 rules judged, since `plan.md` and the scenarios changed. BE-PAYLOAD-001 is now met by the design: `check-step-references` by task 6, `resolve-anchor` and `read-deprecation-labels` by 067 task 35 (`7f40a52e`), so the owner's 2026-11-15 deferral of that part to 067 task 35 is discharged and needs no stored decision. BE-INPUT-004 is met by the plan's decision *Every family contains the paths it did not write as a literal*. BE-DEPS-007 keeps its stored waiver.
+3. The completion gate, then the owner's `done` decision.
 
 - **Done when**: 026's review and analysis are recorded and not stale, and every criterion is re-verified against the tree
 
