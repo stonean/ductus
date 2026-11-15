@@ -3165,6 +3165,68 @@ mod tests {
         assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
     }
 
+    /// `resolve-anchor` and `read-deprecation-labels` past the read size get
+    /// their lists back from their list files through the counts they carry
+    /// (067 task 35): the real primitives' file forms, so a step reads
+    /// `references`, `unresolved`, `labels` and `unreadable` whole.
+    #[test]
+    fn resolve_anchor_and_read_deprecation_labels_get_their_lists_back() {
+        let tmp = tempdir().unwrap();
+        fs::write(tmp.path().join("markers.md"), "<!-- §known -->\n").unwrap();
+        fs::write(tmp.path().join("citing.md"), "See §known and §unknown.\n").unwrap();
+        fs::write(
+            tmp.path().join("r.md"),
+            "### BE-OLD-001\n\n**DEPRECATED in 0.60.0:** moved; removed in 0.62.0.\n",
+        )
+        .unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+
+        let anchors = crate::primitives::resolve_anchor::run(
+            &crate::schema::primitives::ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("markers.md".into()),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let mut value = serde_json::to_value(&anchors).unwrap();
+        assert_eq!(value["form"], "file");
+        assert!(value.get("references").is_none());
+        let restored = restore_lists("resolve-anchor", &mut value, tmp.path()).unwrap();
+        assert_eq!(restored, ["references", "unresolved"]);
+        assert_eq!(value["references"].as_array().unwrap().len(), 2);
+        assert_eq!(value["unresolved"], serde_json::json!(["unknown"]));
+
+        // A list file lacking a list its result counts halts the walk.
+        let mut value = serde_json::to_value(&anchors).unwrap();
+        let file = value["lists-file"].as_str().unwrap().to_string();
+        fs::write(tmp.path().join(file), r#"{"references": []}"#).unwrap();
+        assert!(matches!(
+            restore_lists("resolve-anchor", &mut value, tmp.path()),
+            Err(PayloadError::ListsFileUnreadable { .. })
+        ));
+
+        let labels = crate::primitives::read_deprecation_labels::run(
+            &crate::schema::primitives::ReadDeprecationLabelsArgs {
+                rule_files: vec!["r.md".into(), "gone.md".into()],
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let mut value = serde_json::to_value(&labels).unwrap();
+        assert_eq!(value["form"], "file");
+        assert!(value.get("labels").is_none());
+        let restored = restore_lists("read-deprecation-labels", &mut value, tmp.path()).unwrap();
+        assert_eq!(restored, ["labels", "unreadable"]);
+        assert_eq!(value["labels"].as_array().unwrap().len(), 1);
+        assert_eq!(value["unreadable"], serde_json::json!(["gone.md"]));
+    }
+
     /// `discover-rule-files` past the read size gets its `notices` back from
     /// its list file, with or without `rules`, so the notice lines a walk
     /// emits are the whole list (022 task 32): the real primitive's file form,

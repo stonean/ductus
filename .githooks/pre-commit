@@ -134,8 +134,8 @@ fi
 # (`scripts/audit/adopter-shell-behavior.sh`) holds the *shipped* copy of this
 # pattern in agreement with the runtime, by driving it against fixtures named
 # `1000-thousandth` and `1234.1-staged`. It does not reach this file, which is a
-# separate one, so this copy is held by a reader — keep the two alternations
-# identical when either changes.
+# separate one, so Family 41 (`scripts/audit/feature-dir-grammar-parity.sh`)
+# holds this copy's alternation identical to the shipped one.
 staged_names="$(git diff --cached --name-only)"
 staged_specs="$(printf '%s\n' "$staged_names" \
   | { grep -E "^[^/]+/(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"

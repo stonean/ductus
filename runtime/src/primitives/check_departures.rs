@@ -245,7 +245,7 @@ fn judge_citations(
     if entries.iter().all(|entry| entry.cited_lines.is_none()) {
         return Ok(());
     }
-    let anchors = resolve_anchor::run(
+    let anchors = resolve_anchor::compute(
         &ResolveAnchorArgs {
             path: spec_rel.to_owned(),
             markers_path: paths::constitution_path(repo).map(str::to_owned),

@@ -41,7 +41,7 @@ The families and their severity tiers are `check-artifacts`' compiled descriptio
 - `scenario-consistency` — scenario [`scenario-consistency-reads-tasks-history`](scenarios/scenario-consistency-reads-tasks-history.md), from 000's `scenario-without-task-visibility`.
 - `scenario-open-questions` — at `done`, `/{project}:analyze --fix` reverts the spec `done → in-progress`. There is no grandfather rule, and the list is `read-spec`'s, so this finding, `check-review-gate`'s block and the count the user sees cannot disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 - `link-adjacent-drift` — scenario [`link-adjacent-drift-family`](scenarios/link-adjacent-drift-family.md).
-- `criterion-path-existence` — scenarios [`criterion-path-existence-family`](scenarios/criterion-path-existence-family.md) and [`status-gated-families-are-not-silent`](scenarios/status-gated-families-are-not-silent.md).
+- `criterion-path-existence` — a candidate whose path leaves the project lexically (a `..`) or runs through a symbolic link that resolves outside it (`BE-INPUT-004`) is never probed, and is recorded `outside-project`; the shared link check of the sibling-link family judges the link ([`sibling-symlink-trust-boundary`](scenarios/sibling-symlink-trust-boundary.md)). `body-path-existence` reports the same. Scenarios [`criterion-path-existence-family`](scenarios/criterion-path-existence-family.md) and [`status-gated-families-are-not-silent`](scenarios/status-gated-families-are-not-silent.md).
 - `body-path-existence` — scenario [`body-path-existence-family`](scenarios/body-path-existence-family.md); the transition markers are below.
 - `criterion-labels` — the enforcement half of `label-criteria`, since a criterion typed in an editor never touches a primitive.
 - `disposition-drift` — scenario `disposition-drift-is-advisory`.
@@ -136,16 +136,25 @@ Result:
     { "anchor": "Design", "line": 106, "resolved": true, "kind": "intra-document" },
     { "anchor": "Grounding", "line": 63, "resolved": true, "kind": "cross-document" }
   ],
+  "references-count": 4,
   "unresolved": [],
+  "unresolved-count": 0,
   "qualified": 136,
   "intra-document": 6,
   "cross-document": 29,
   "anchor-target-unjudgeable": 4,
-  "anchor-target-unreadable": 0
+  "anchor-target-unreadable": 0,
+  "form": "inline"
 }
 ```
 
+The result is bounded (`BE-PAYLOAD-001`, 067 task 35): `references` and `unresolved` are inline while the result fits `[artifacts] read-size-bytes`, and past it `form` is `file`, both are absent, `references-count` and `unresolved-count` stay inline in both forms, and `lists-file` names the JSON file under `.ductus/results/resolve-anchor/{path's file stem}/` holding the two lists whole. Every caller reads them from `lists-file` in the file form: `/{project}:audit` Family 39, `/{project}:analyze` step 4 and the `ductus exec` walker (`restore_lists`).
+
 `ductus resolve-anchor --help` is canonical for the scan: the four kinds and the order they are decided in, how a document and a heading are named, what a reference that cannot be judged carries, and what an empty `unresolved` means. `/ductus:analyze` passes the constitution as `markers-path`, since a spec carries no markers of its own. The kinds are specified by scenarios [`anchor-reference-kinds`](scenarios/anchor-reference-kinds.md), [`pointers-into-shipped-files-are-judged`](scenarios/pointers-into-shipped-files-are-judged.md) and [`shared-constitution-references-are-judged`](scenarios/shared-constitution-references-are-judged.md); a registered shared constitution's markers are read through `resolve-constitutions`' loader.
+
+## `read-deprecation-labels` — the deprecation labels of rule files
+
+Args: `rule-files`, the rule files to read, as `/{project}:audit` Family 40 passes every tracked `framework/rules/*.md`. The result's `labels` holds one entry per line containing `**DEPRECATED`, `unreadable` the rule files that could not be read, and `examined` the files read (scenario [`deprecation-labels-are-read-by-the-runtime`](scenarios/deprecation-labels-are-read-by-the-runtime.md); `ductus read-deprecation-labels --help` is canonical for how a label is read and graded). The result is bounded (`BE-PAYLOAD-001`, 067 task 35): `labels` and `unreadable` are inline while the result fits `[artifacts] read-size-bytes`, and past it `form` is `file`, both are absent, `labels-count` and `unreadable-count` stay inline in both forms, and `lists-file` names the JSON file under `.ductus/results/read-deprecation-labels/paths/` holding the two lists whole. Family 40 reads them from `lists-file` in the file form.
 
 ## `check-rule-ids` — verify cited rule IDs exist and aren't deprecated
 
@@ -230,7 +239,7 @@ Result:
 }
 ```
 
-`scope` is `spec-corpus` (every `.md` under the configured spec root, what the shipped pre-commit hook checks) or `repository` (every tracked `.md`, `/{project}:audit` Family 26's subject, enumerated from the git index). `check-corpus-links`' compiled description (`ductus check-corpus-links --help`) states how links resolve, what is excluded by construction and counted, and when an empty `broken` is clean; the generated-copy exclusions are traced to scenarios [`every-agents-generated-copies-are-excluded`](scenarios/every-agents-generated-copies-are-excluded.md) and [`generated-reference-copies-are-excluded`](scenarios/generated-reference-copies-are-excluded.md). Read-only, and it reports rather than repairs (scenario [`adopter-corpus-link-integrity`](scenarios/adopter-corpus-link-integrity.md)).
+`scope` is `spec-corpus` (every `.md` under the configured spec root, what the shipped pre-commit hook checks) or `repository` (every tracked `.md`, `/{project}:audit` Family 26's subject, enumerated from the git index). `check-corpus-links`' compiled description (`ductus check-corpus-links --help`) states how links resolve, what is excluded by construction and counted, and when an empty `broken` is clean; the generated-copy exclusions are traced to scenarios [`every-agents-generated-copies-are-excluded`](scenarios/every-agents-generated-copies-are-excluded.md) and [`generated-reference-copies-are-excluded`](scenarios/generated-reference-copies-are-excluded.md). Read-only, and it reports rather than repairs (scenario [`adopter-corpus-link-integrity`](scenarios/adopter-corpus-link-integrity.md)). Links are contained to the repository's work tree when the project sits in a git repository (a project in a subdirectory links up into its repository, spec 059), else to the project root (`BE-INPUT-004`): a target that leaves that base lexically, or whose path runs through a symbolic link resolving outside it (the shared link check, as `check-artifacts`' path probes), is reported in `broken` with guidance saying so and is never probed. A tracked markdown file, or a directory the spec-corpus walk would list, that is or lies under such a link is never read or listed and is recorded in `skipped` with reason `outward-link`. A target inside the base resolves lexically as before.
 
 ## `check-orphaned-references` — adopter-owned files pointing at paths that are gone
 

@@ -317,6 +317,34 @@ its version and date.
 
 ### Changed
 
+- **`resolve-anchor`'s and `read-deprecation-labels`' results are bounded
+  (spec 067 task 35, `BE-PAYLOAD-001`).** `resolve-anchor`'s `references` and
+  `unresolved`, and `read-deprecation-labels`' `labels` and `unreadable`, grow
+  with the references or labels in the files they read. They stay inline
+  while the result fits `[artifacts] read-size-bytes`; past it `form` is
+  `file`, the lists are absent and each has its `-count` inline
+  (`references-count`, `unresolved-count`, `labels-count`,
+  `unreadable-count`), and `lists-file` names the file under
+  `.ductus/results/` holding them whole. Families 39 and 40, `/analyze` step 4
+  and the `ductus exec` walker read the lists from that file, and a file
+  `/audit` cannot read, or one lacking a list, is a `(precondition)` finding.
+
+- **`check-corpus-links` refuses a link out of the repository (spec 067 task
+  33, `BE-INPUT-004`).** Links are contained to the repository's work tree
+  when the project sits in a git repository (a project in a subdirectory links
+  up into its repository), else to the project root. A target that leaves it
+  lexically, or whose path runs through a symbolic link resolving outside it,
+  is reported in `broken`, never probed. A tracked markdown file, or a
+  spec-root directory, that is or lies under such a link is never read or
+  listed and is recorded in `skipped` as `outward-link`. A target inside the
+  base resolves as before.
+
+- **`check-artifacts`' path probes refuse a link out of the project (spec 067
+  task 33, `BE-INPUT-004`).** `criterion-path-existence` and
+  `body-path-existence` no longer stat a path that runs through a symbolic
+  link resolving outside the project, as the sibling-link family never
+  follows one; such a candidate is recorded `outside-project`.
+
 - **`check-step-references`' result is bounded (spec 026 task 6,
   `BE-PAYLOAD-001`).** Its lists, `findings`, `examined`, `with-steps`,
   `not-a-procedure` and `skipped`, grow with the command files it reads. They

@@ -296,6 +296,14 @@ jobs:
       - name: (v) Workflow-step runner reports each step's own status
         run: bash scripts/tests/test-run-workflow-steps.sh
 
+      # (w) Family 41 holds the dogfooded feature-directory grammar to the
+      # shipped hook's (spec 067, task 34). Step (h) runs it over the tree,
+      # where the three copies agree, so a family that compared nothing
+      # would pass there. The test builds fixture trees and shows the family
+      # fails on a diverged copy of each and on a parse that finds no grammar.
+      - name: (w) Feature-directory grammar copies agree
+        run: bash scripts/tests/test-feature-dir-grammar-parity.sh
+
       # (x) Families 35 and 36 canonicalize each path they turn from committed
       # text and contain it by whole path components before copying, probing
       # or reading it (spec 026 task 5, BE-INPUT-004). Step (h) runs both over
@@ -316,6 +324,17 @@ jobs:
       # as a precondition finding.
       - name: (y) Step-reference family reads the bounded result
         run: bash scripts/tests/test-step-reference-integrity.sh
+
+      # (z) Families 39 and 40 read resolve-anchor's and
+      # read-deprecation-labels' lists from the file `lists-file` names past
+      # `[artifacts] read-size-bytes` (spec 067 task 35, BE-PAYLOAD-001).
+      # Step (h) runs both over this repository, whose results fit inline, so
+      # a family that lost the file-form read would pass there. The test
+      # builds fixture trees, given the runtime built above, forces the file
+      # form with a small read size, and shows each family reports the same
+      # findings, and a list file it cannot read as a precondition finding.
+      - name: (z) Anchor and deprecation-label families read the bounded results
+        run: bash scripts/tests/test-anchor-and-label-families.sh
 
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the

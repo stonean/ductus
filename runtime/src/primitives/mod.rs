@@ -2497,6 +2497,18 @@ impl ProjectRepository {
         Ok(Self { repository, prefix })
     }
 
+    /// The work tree's root, spelled as `project` is spelled: `project` with
+    /// the components of its place in the work tree removed. `project` is the
+    /// path [`Self::discover`] was given. Spelled so, never as git's own
+    /// `workdir`, it compares lexically with every path built from `project`.
+    pub(crate) fn work_tree_root(&self, project: &Path) -> PathBuf {
+        let mut root = project.to_path_buf();
+        for _ in self.prefix.split('/').filter(|part| !part.is_empty()) {
+            root.pop();
+        }
+        root
+    }
+
     /// `rel`, a `/`-separated path from the project root, as git names it.
     pub(crate) fn to_git(&self, rel: &str) -> String {
         format!("{}{rel}", self.prefix)

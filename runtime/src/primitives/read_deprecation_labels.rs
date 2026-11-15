@@ -20,14 +20,79 @@ use regex::Regex;
 use crate::primitives::rule_sections::{heading_id_regex, section_label_lines};
 use crate::primitives::{Result, contained_path, parse_atx_heading, read_text};
 use crate::schema::primitives::{
-    DeprecationLabel, LabelFollows, MalformedLabel, ReadDeprecationLabelsArgs,
+    DeprecationLabel, LabelFollows, ListsForm, MalformedLabel, ReadDeprecationLabelsArgs,
     ReadDeprecationLabelsResult,
 };
 
 /// Where the form of a label is stated, cited by every fix.
 const FORM: &str = "specs/008-security-rules/data-model.md, the Deprecated field";
 
-/// Execute the `read-deprecation-labels` primitive.
+/// Execute the `read-deprecation-labels` primitive: [`compute`], returned
+/// through [`bound`].
+///
+/// # Errors
+///
+/// Those [`compute`] and [`bound`] return.
+pub fn run(args: &ReadDeprecationLabelsArgs, repo: &Path) -> Result<ReadDeprecationLabelsResult> {
+    bound(compute(args, repo)?, repo)
+}
+
+/// A read of rule files' labels, whole: what `read-deprecation-labels`
+/// reports before its result is bounded. Each field is
+/// [`ReadDeprecationLabelsResult`]'s of the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Labels {
+    /// See [`ReadDeprecationLabelsResult::labels`].
+    pub labels: Vec<DeprecationLabel>,
+    /// See [`ReadDeprecationLabelsResult::unreadable`].
+    pub unreadable: Vec<String>,
+    /// See [`ReadDeprecationLabelsResult::examined`].
+    pub examined: usize,
+}
+
+/// `read` as the primitive's result: inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with `labels` and `unreadable` in the file it
+/// names and only their counts inline (`bounded_lists::place`; spec 067 task
+/// 35, `BE-PAYLOAD-001`).
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+pub fn bound(read: Labels, repo: &Path) -> Result<ReadDeprecationLabelsResult> {
+    let lists = serde_json::json!({
+        "labels": read.labels,
+        "unreadable": read.unreadable,
+    });
+    let mut result = ReadDeprecationLabelsResult {
+        labels_count: read.labels.len(),
+        labels: Some(read.labels),
+        unreadable_count: read.unreadable.len(),
+        unreadable: Some(read.unreadable),
+        examined: read.examined,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    if let Some(file) = super::bounded_lists::place(
+        repo,
+        "read-deprecation-labels",
+        LISTS_SCOPE,
+        &result,
+        &lists,
+    )? {
+        result.form = ListsForm::File;
+        result.labels = None;
+        result.unreadable = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// The path segment this primitive's list file sits under, in place of the
+/// feature `bounded_lists::place` keys others by, since a read takes paths.
+const LISTS_SCOPE: &str = "paths";
+
+/// Read the labels of every rule file `args` names, every list whole.
 ///
 /// # Errors
 ///
@@ -35,7 +100,7 @@ const FORM: &str = "specs/008-security-rules/data-model.md, the Deprecated field
 /// is read, when a rule file path is absolute, climbs out with `..` or leaves
 /// the project through a symlink ([`contained_path`]). A file that cannot be
 /// read is reported in `unreadable`, not as an error.
-pub fn run(args: &ReadDeprecationLabelsArgs, repo: &Path) -> Result<ReadDeprecationLabelsResult> {
+pub fn compute(args: &ReadDeprecationLabelsArgs, repo: &Path) -> Result<Labels> {
     let paths = args
         .rule_files
         .iter()
@@ -52,7 +117,7 @@ pub fn run(args: &ReadDeprecationLabelsArgs, repo: &Path) -> Result<ReadDeprecat
         examined += 1;
         labels.extend(read_file(name, &content));
     }
-    Ok(ReadDeprecationLabelsResult {
+    Ok(Labels {
         labels,
         unreadable,
         examined,
@@ -230,12 +295,12 @@ mod tests {
 
     use super::*;
 
-    fn read(files: &[(&str, &str)]) -> ReadDeprecationLabelsResult {
+    fn read(files: &[(&str, &str)]) -> Labels {
         let tmp = tempfile::tempdir().unwrap();
         for (name, body) in files {
             std::fs::write(tmp.path().join(name), body).unwrap();
         }
-        run(
+        compute(
             &ReadDeprecationLabelsArgs {
                 rule_files: files.iter().map(|(n, _)| (*n).to_string()).collect(),
             },
@@ -334,7 +399,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join("bad.md"), b"### BE-X-001\n\xff\n").unwrap();
         std::fs::write(tmp.path().join("good.md"), DUE).unwrap();
-        let result = run(
+        let result = compute(
             &ReadDeprecationLabelsArgs {
                 rule_files: vec!["bad.md".into(), "good.md".into(), "missing.md".into()],
             },
@@ -349,12 +414,91 @@ mod tests {
     #[test]
     fn a_path_leaving_the_project_is_an_error() {
         let tmp = tempfile::tempdir().unwrap();
-        let err = run(
+        let err = compute(
             &ReadDeprecationLabelsArgs {
                 rule_files: vec!["../x.md".into()],
             },
             tmp.path(),
         );
         assert!(err.is_err());
+    }
+
+    /// Two rule files, one labelled and one that does not exist, so each
+    /// list holds an entry.
+    fn bounded_args() -> ReadDeprecationLabelsArgs {
+        ReadDeprecationLabelsArgs {
+            rule_files: vec!["r.md".into(), "gone.md".into()],
+        }
+    }
+
+    fn bounded_project() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("r.md"), DUE).unwrap();
+        tmp
+    }
+
+    fn read_size(repo: &Path, bytes: usize) {
+        std::fs::create_dir_all(repo.join(".ductus")).unwrap();
+        std::fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+
+    /// Under the read size both lists are in the result with their counts,
+    /// and no list file is written.
+    #[test]
+    fn the_lists_are_inline_while_the_result_fits() {
+        let tmp = bounded_project();
+        let result = run(&bounded_args(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.lists_file, None);
+        assert_eq!(result.labels.as_ref().unwrap().len(), 1);
+        assert_eq!(result.labels_count, 1);
+        assert_eq!(result.unreadable, Some(vec!["gone.md".to_string()]));
+        assert_eq!(result.unreadable_count, 1);
+        assert_eq!(result.examined, 1);
+        assert!(!tmp.path().join(".ductus/results").exists());
+    }
+
+    /// A result exactly at the read size fits; one byte under it moves both
+    /// lists whole to the file the result names, their counts staying.
+    #[test]
+    fn the_lists_are_in_a_file_past_the_read_size() {
+        let tmp = bounded_project();
+        let whole = run(&bounded_args(), tmp.path()).unwrap();
+        let size = serde_json::to_vec(&whole).unwrap().len();
+        read_size(tmp.path(), size);
+        assert_eq!(
+            run(&bounded_args(), tmp.path()).unwrap().form,
+            ListsForm::Inline
+        );
+        read_size(tmp.path(), size - 1);
+        let bounded = run(&bounded_args(), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(bounded.labels, None);
+        assert_eq!(bounded.unreadable, None);
+        assert_eq!(bounded.labels_count, 1);
+        assert_eq!(bounded.unreadable_count, 1);
+        assert_eq!(bounded.examined, 1);
+        let file = bounded.lists_file.clone().unwrap();
+        assert!(
+            file.starts_with(".ductus/results/read-deprecation-labels/paths/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["labels"],
+            serde_json::to_value(&whole.labels).unwrap()
+        );
+        assert_eq!(lists["unreadable"], serde_json::json!(["gone.md"]));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "read-deprecation-labels",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
     }
 }

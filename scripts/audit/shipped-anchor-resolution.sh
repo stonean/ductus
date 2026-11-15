@@ -57,6 +57,13 @@
 # a constitution marker also resolves. The counts go to stderr so a clean
 # exit says what it examined.
 #
+# Past `[artifacts] read-size-bytes` the primitive moves `references` and
+# `unresolved` to the file its `lists-file` names, relative to the repository
+# root where this family runs (067 task 35, BE-PAYLOAD-001). The loop reads
+# them there, and a file it cannot read, or one lacking a list, is a
+# `(precondition)` finding saying that file's references were not checked,
+# never an empty result.
+#
 # An empty enumeration, an unreachable runtime, and a file whose result could
 # not be read or parsed are each findings. A family that examined nothing must
 # not exit like one that examined everything.
@@ -150,8 +157,26 @@ for path in (line.strip() for line in sys.stdin):
         continue
     try:
         data = json.loads(run.stdout[run.stdout.find("{"):])
+    except (ValueError, TypeError):
+        print("unexamined\t%s\tunparseable result" % path)
+        continue
+    # Past [artifacts] read-size-bytes the lists are in the file lists-file
+    # names (067 task 35): read them there, or say nothing was checked. A list
+    # the file lacks would read as none found, so it halts too.
+    if isinstance(data, dict) and data.get("form") == "file":
+        try:
+            with open(data["lists-file"], encoding="utf-8") as handle:
+                lists = json.load(handle)
+            missing = [key for key in ("references", "unresolved") if not isinstance(lists.get(key), list)]
+            if missing:
+                raise ValueError("it holds no %s list" % ", ".join(missing))
+            data.update(lists)
+        except (KeyError, TypeError, OSError, ValueError) as err:
+            print("precondition\t%s\t%s" % (path, str(err).replace("\t", " ")))
+            continue
+    try:
         references = data["references"]
-    except (ValueError, KeyError, TypeError):
+    except (KeyError, TypeError):
         print("unexamined\t%s\tunparseable result" % path)
         continue
     examined += 1
@@ -217,6 +242,11 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, int
           emit "$f1" \
             "the § reference beginning \`§$f2\` names a document that exists but could not be read, so it was not judged" \
             "make the named document readable, or correct the path the line names"
+          ;;
+        precondition)
+          emit "(precondition)" \
+            "resolve-anchor moved its lists to a file that could not be read ($f2), so no § reference in $f1 was checked" \
+            "run '$bin resolve-anchor --path $f1 --markers-path $MARKERS' by hand and read the file its lists-file names"
           ;;
         unexamined)
           emit "$f1" \

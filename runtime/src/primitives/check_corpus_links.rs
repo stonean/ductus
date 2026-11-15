@@ -24,6 +24,13 @@
 //! removal is named in prose instead of linked — and a rewrite that guessed
 //! wrong is worse than a report that is precise.
 //!
+//! A link is contained (`BE-INPUT-004`, spec 067 task 33) to the repository's
+//! work tree when the project sits in a git repository, so a project in a
+//! subdirectory still links up into its repository, else to the project root:
+//! a target that leaves that base lexically, or passes through a symbolic link
+//! resolving outside it, is reported broken and never probed, and a file or
+//! directory that is or lies under such a link is never read or listed.
+//!
 //! Defined by `specs/067-analyze-and-audit-checks/scenarios/adopter-corpus-link-integrity.md`.
 
 use std::path::{Component, Path, PathBuf};
@@ -136,12 +143,13 @@ pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> 
         ..CorpusLinks::default()
     };
 
+    let containment = Containment::new(repo);
     let mut files = Vec::new();
     let mut walk_skips = Vec::new();
     let listed = match args.scope {
         LinkScope::SpecCorpus => collect_markdown(
             &specs_dir,
-            repo,
+            (repo, &containment),
             MAX_WALK_DEPTH,
             &mut files,
             &mut walk_skips,
@@ -178,6 +186,15 @@ pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> 
             result.excluded_by_construction += 1;
             continue;
         }
+        // A file that is, or lies under, a link out of the base is never
+        // read (`BE-INPUT-004`): what it holds is the checkout's neighbour's.
+        if containment.leaves(&path) {
+            result.skipped.push(CorpusLinkSkip {
+                path: relative,
+                reason: OUTWARD_LINK.into(),
+            });
+            continue;
+        }
         let Ok(text) = std::fs::read_to_string(&path) else {
             result.skipped.push(CorpusLinkSkip {
                 path: relative,
@@ -187,7 +204,7 @@ pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> 
         };
         result.examined.push(relative.clone());
         let here = path.parent().unwrap_or(repo).to_path_buf();
-        scan_file(&text, &relative, &here, repo, &mut result);
+        scan_file(&text, &relative, (&here, repo, &containment), &mut result);
     }
 
     if result.examined.is_empty() && result.skipped.is_empty() {
@@ -306,7 +323,7 @@ const MAX_WALK_DEPTH: u32 = 32;
 /// should be.
 fn collect_markdown(
     dir: &Path,
-    repo: &Path,
+    (repo, containment): (&Path, &Containment),
     depth_budget: u32,
     out: &mut Vec<PathBuf>,
     skipped: &mut Vec<CorpusLinkSkip>,
@@ -317,6 +334,15 @@ fn collect_markdown(
     for entry in entries.filter_map(std::result::Result::ok) {
         let path = entry.path();
         if path.is_dir() {
+            // A directory that is, or lies under, a link out of the base is
+            // not listed: its files are the same refusal, recorded once.
+            if containment.leaves(&path) {
+                skipped.push(CorpusLinkSkip {
+                    path: rel_path(&path, repo),
+                    reason: OUTWARD_LINK.into(),
+                });
+                continue;
+            }
             if depth_budget == 0 {
                 skipped.push(CorpusLinkSkip {
                     path: rel_path(&path, repo),
@@ -324,7 +350,7 @@ fn collect_markdown(
                 });
                 continue;
             }
-            if !collect_markdown(&path, repo, depth_budget - 1, out, skipped) {
+            if !collect_markdown(&path, (repo, containment), depth_budget - 1, out, skipped) {
                 skipped.push(CorpusLinkSkip {
                     path: rel_path(&path, repo),
                     reason: "directory-unreadable".into(),
@@ -338,7 +364,12 @@ fn collect_markdown(
 }
 
 /// Scan one file's body for broken relative links, appending to `result`.
-fn scan_file(text: &str, relative: &str, here: &Path, repo: &Path, result: &mut CorpusLinks) {
+fn scan_file(
+    text: &str,
+    relative: &str,
+    place: (&Path, &Path, &Containment),
+    result: &mut CorpusLinks,
+) {
     let mut fm_seen = false;
     let mut in_fm = false;
     let mut in_fence = false;
@@ -378,7 +409,7 @@ fn scan_file(text: &str, relative: &str, here: &Path, repo: &Path, result: &mut 
         // belongs to `derive-dependencies`, where it decides whether a link
         // induces an edge; a link inside a sunset banner still has to resolve.
         for target in link_targets(line) {
-            classify(target, relative, idx + 1, here, repo, result);
+            classify(target, (relative, idx + 1), place, result);
         }
     }
 }
@@ -415,10 +446,8 @@ fn link_targets(line: &str) -> Vec<&str> {
 /// Decide what one link target is, and record it when it is broken.
 fn classify(
     target: &str,
-    relative: &str,
-    line: usize,
-    here: &Path,
-    repo: &Path,
+    (relative, line): (&str, usize),
+    (here, repo, containment): (&Path, &Path, &Containment),
     result: &mut CorpusLinks,
 ) {
     // Scheme-bearing targets and bare fragments are out of scope: nothing on
@@ -446,14 +475,24 @@ fn classify(
     // its repository the two differ, and this check keeps the project's.
     // Never canonicalized: canonicalization would make the result depend on
     // symlinks, so the same corpus would answer differently in two checkouts.
+    // A target that leaves the base, lexically or through a link out of it, is
+    // reported and never probed (`BE-INPUT-004`): the answer would depend on
+    // what lies outside the checkout.
     let base = if rel.starts_with('/') { repo } else { here };
-    if lexical_join(base, rel).exists() {
+    let target_path = lexical_join(base, rel);
+    let reach = containment.judge(&target_path);
+    if matches!(reach, Reach::Inside) && target_path.exists() {
         return;
     }
     // The one-directory-up hint is meaningless for a root-absolute target:
     // its base is fixed, so there is no depth to have got wrong.
     let deeper = lexical_join(base, &format!("../{rel}"));
-    let guidance = if !rel.starts_with('/') && deeper.exists() {
+    let guidance = if let Some(refusal) = reach.guidance(containment.subject) {
+        refusal
+    } else if !rel.starts_with('/')
+        && matches!(containment.judge(&deeper), Reach::Inside)
+        && deeper.exists()
+    {
         format!("the target resolves one directory up — write `../{rel}`")
     } else {
         "confirm the target still exists; if a later spec removed it, name it in prose instead of \
@@ -466,6 +505,95 @@ fn classify(
         target: target.to_string(),
         guidance,
     });
+}
+
+/// The skip reason for a file or directory that is, or lies under, a symbolic
+/// link resolving outside the [`Containment`]: never read, never listed.
+const OUTWARD_LINK: &str = "outward-link";
+
+/// What a link, or a file, may reach: the repository's work tree when the
+/// project sits in a git repository, else the project root. A project in a
+/// subdirectory (spec 059) links up into its repository and a renderer
+/// resolves those links, so the project root would make each one broken.
+struct Containment {
+    /// The base, spelled as the project root is, so a lexically joined target
+    /// compares with it by whole components.
+    root: PathBuf,
+    /// `root` resolved through the shared link check; `None` when it cannot be
+    /// resolved, which counts as leaving, since nothing under it can be judged.
+    canonical: Option<PathBuf>,
+    /// What the base is called in a finding.
+    subject: &'static str,
+}
+
+/// Where a path lies against a [`Containment`].
+enum Reach {
+    /// Inside the base, with no link on the way resolving outside it.
+    Inside,
+    /// Outside the base lexically.
+    Leaves,
+    /// Passes through a symbolic link resolving outside the base, as the
+    /// shared link check words it.
+    ThroughLink(String),
+}
+
+impl Reach {
+    /// The guidance for a path that does not stay inside, `None` for one that
+    /// does.
+    fn guidance(&self, subject: &str) -> Option<String> {
+        match self {
+            Reach::Inside => None,
+            Reach::Leaves => Some(format!(
+                "the target leaves the {subject}, so it resolves nowhere a reader of the corpus \
+                 can follow and is not probed"
+            )),
+            Reach::ThroughLink(reason) => Some(format!(
+                "the target passes through a symbolic link that resolves outside the {subject}, \
+                 so its answer would depend on what lies outside the checkout; it is not \
+                 followed ({reason})"
+            )),
+        }
+    }
+}
+
+impl Containment {
+    fn new(repo: &Path) -> Self {
+        let (root, subject) = match super::ProjectRepository::discover(repo) {
+            Ok(repository) => (repository.work_tree_root(repo), "repository"),
+            Err(_) => (repo.to_path_buf(), "project"),
+        };
+        let canonical = super::canonical_base(&root).ok();
+        Self {
+            root,
+            canonical,
+            subject,
+        }
+    }
+
+    /// Judge `path`, a lexically resolved path under or beside the base.
+    fn judge(&self, path: &Path) -> Reach {
+        let Ok(inside) = path.strip_prefix(&self.root) else {
+            return Reach::Leaves;
+        };
+        let Some(canonical) = &self.canonical else {
+            return Reach::Leaves;
+        };
+        let rel = inside
+            .components()
+            .map(|part| part.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/");
+        match super::check_links_on(&self.root, canonical, &rel) {
+            Ok(()) => Reach::Inside,
+            Err(super::PrimitiveError::InvalidPath { reason, .. }) => Reach::ThroughLink(reason),
+            Err(other) => Reach::ThroughLink(other.to_string()),
+        }
+    }
+
+    /// Whether `path` stays out of reach: outside the base, or on a link out.
+    fn leaves(&self, path: &Path) -> bool {
+        !matches!(self.judge(path), Reach::Inside)
+    }
 }
 
 /// Whether `target` carries a URL scheme (`https:`, `mailto:`, …).
@@ -1143,5 +1271,170 @@ mod tests {
             "# Demo\n\n[unterminated](../041-gone/spec.md\n",
         );
         assert_eq!(run_at(tmp.path()).broken, [] as [BrokenCorpusLink; 0]);
+    }
+
+    /// A project `outer/project` beside `outer/x.md`, a file outside it.
+    fn project_beside_a_file() -> (tempfile::TempDir, PathBuf) {
+        let outer = tempdir().unwrap();
+        let project = outer.path().join("project");
+        fs::create_dir(&project).unwrap();
+        write(outer.path(), "x.md", "# Outside\n");
+        (outer, project)
+    }
+
+    #[test]
+    fn a_target_that_leaves_the_project_lexically_is_broken_and_not_probed() {
+        // `BE-INPUT-004`: `../../../x.md` from `specs/042-demo/` is the file
+        // beside the project, which exists; it must not answer.
+        let (_outer, project) = project_beside_a_file();
+        write(
+            &project,
+            "specs/042-demo/spec.md",
+            "# Demo\n\n[out](../../../x.md)\n",
+        );
+        let result = run_at(&project);
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert!(
+            result.broken[0].guidance.contains("leaves the project"),
+            "{}",
+            result.broken[0].guidance
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_target_through_a_link_out_of_the_project_is_broken_and_not_followed() {
+        let (outer, project) = project_beside_a_file();
+        write(outer.path(), "shared/data.md", "# Data\n");
+        std::os::unix::fs::symlink(outer.path().join("shared"), project.join("shared")).unwrap();
+        write(
+            &project,
+            "specs/042-demo/spec.md",
+            "# Demo\n\n[out](../../shared/data.md)\n",
+        );
+        let result = run_at(&project);
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert!(
+            result.broken[0].guidance.contains("symbolic link")
+                && result.broken[0].guidance.contains("`shared`"),
+            "{}",
+            result.broken[0].guidance
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_that_stays_inside_the_project_is_followed() {
+        let (_outer, project) = project_beside_a_file();
+        write(&project, "docs/real/data.md", "# Data\n");
+        std::os::unix::fs::symlink(project.join("docs/real"), project.join("alias")).unwrap();
+        write(
+            &project,
+            "specs/042-demo/spec.md",
+            "# Demo\n\n[in](../../alias/data.md)\n",
+        );
+        let result = run_at(&project);
+        assert!(result.broken.is_empty(), "{:?}", result.broken);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_markdown_file_that_is_a_link_out_of_the_project_is_skipped_and_not_read() {
+        // The file's own links are broken, and would be reported were it read.
+        let (outer, project) = project_beside_a_file();
+        write(outer.path(), "note.md", "# Note\n\n[gone](./nowhere.md)\n");
+        write(&project, "specs/042-demo/spec.md", "# Demo\n");
+        fs::create_dir_all(project.join("specs/043-linked")).unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("note.md"),
+            project.join("specs/043-linked/spec.md"),
+        )
+        .unwrap();
+        let result = run_at(&project);
+        assert_eq!(
+            result.skipped,
+            vec![CorpusLinkSkip {
+                path: "specs/043-linked/spec.md".into(),
+                reason: "outward-link".into(),
+            }]
+        );
+        assert_eq!(result.examined, vec!["specs/042-demo/spec.md".to_string()]);
+        assert!(result.broken.is_empty(), "{:?}", result.broken);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_directory_that_is_a_link_out_of_the_project_is_skipped_and_not_listed() {
+        let (outer, project) = project_beside_a_file();
+        write(
+            outer.path(),
+            "linked/spec.md",
+            "# Linked\n\n[gone](./nowhere.md)\n",
+        );
+        write(&project, "specs/042-demo/spec.md", "# Demo\n");
+        std::os::unix::fs::symlink(
+            outer.path().join("linked"),
+            project.join("specs/043-linked"),
+        )
+        .unwrap();
+        let result = run_at(&project);
+        assert_eq!(
+            result.skipped,
+            vec![CorpusLinkSkip {
+                path: "specs/043-linked".into(),
+                reason: "outward-link".into(),
+            }]
+        );
+        assert_eq!(result.examined, vec!["specs/042-demo/spec.md".to_string()]);
+        assert!(result.broken.is_empty(), "{:?}", result.broken);
+    }
+
+    #[test]
+    fn a_project_in_a_repository_subdirectory_resolves_a_link_into_its_repository() {
+        // Spec 059: the base is the work tree's root, so a link up into the
+        // repository resolves as a renderer resolves it, while one past the
+        // repository is broken and says so.
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let (_repo, project) = git_fixture::subdirectory_project(tmp.path());
+        write(tmp.path(), "other/doc.md", "# Other\n");
+        write(
+            &project,
+            "specs/042-demo/spec.md",
+            "# Demo\n\n[in](../../../other/doc.md) [out](../../../../x.md)\n",
+        );
+        let result = run_at(&project);
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert_eq!(result.broken[0].target, "../../../../x.md");
+        assert!(
+            result.broken[0].guidance.contains("leaves the repository"),
+            "{}",
+            result.broken[0].guidance
+        );
+    }
+
+    #[test]
+    fn the_one_directory_up_hint_is_not_probed_outside_the_base() {
+        // `x.md` beside the project exists, and `../x.md` from the project's
+        // own README would find it: the hint must not be offered.
+        let (_outer, project) = project_beside_a_file();
+        let repo = git2::Repository::init(&project).unwrap();
+        write(&project, "README.md", "# Proj\n\n[gone](x.md)\n");
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("README.md")).unwrap();
+        index.write().unwrap();
+        let result = compute(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            &project,
+        )
+        .unwrap();
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert!(
+            !result.broken[0].guidance.contains("one directory up"),
+            "{}",
+            result.broken[0].guidance
+        );
     }
 }

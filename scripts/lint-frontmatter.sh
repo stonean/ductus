@@ -46,10 +46,10 @@ shopt -s nullglob
 # Pattern rather than a runtime call, and the reason is this lint's own job:
 # it exists to find malformed frontmatter, so it must keep working on a
 # corpus a frontmatter-parsing primitive would refuse to read. Its agreement
-# with `parse_feature_dir` is held by a reader rather than by a check: audit
-# Family 22 drives the shipped pre-commit hook against both directory forms,
-# but nothing exercises this pattern. Keep it identical to the hooks' when
-# either changes.
+# with `parse_feature_dir` is held through the shipped pre-commit hook: audit
+# Family 22 drives that hook against both directory forms, and Family 41
+# (`scripts/audit/feature-dir-grammar-parity.sh`) holds this pattern identical
+# to the hook's.
 FEATURE_DIR_RE='^(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)-'
 
 errors=0

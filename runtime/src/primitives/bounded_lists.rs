@@ -43,6 +43,23 @@ pub(crate) const ALL_SPECS: &str = "all-specs";
 /// written moments before, stays.
 pub(crate) const STALE_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// The segment a list file sits under for a primitive that takes one document
+/// path: the path's file stem, or `document` when the stem is empty or holds a
+/// character outside letters, digits, `-` and `_` (spec 080's data model,
+/// *Bounded results*).
+pub(crate) fn path_key(path: &str) -> &str {
+    Path::new(path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| {
+            !stem.is_empty()
+                && stem
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        })
+        .unwrap_or("document")
+}
+
 /// The counts a bounded result carries that do not name their list as
 /// `{list}-count`, by primitive: `Some` names the list the count is of, and
 /// `None` marks a count of no list, which the result carries in both forms.

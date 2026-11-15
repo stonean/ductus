@@ -97,10 +97,78 @@ use crate::primitives::{
     Result, SkipScanner, contained_path, inline_code_spans, read_text, resolve_path,
 };
 use crate::schema::primitives::{
-    AnchorReference, ConstitutionOutcome, ResolveAnchorArgs, ResolveAnchorResult,
+    AnchorReference, ConstitutionOutcome, ListsForm, ResolveAnchorArgs, ResolveAnchorResult,
 };
 
-/// Execute the `resolve-anchor` primitive.
+/// Execute the `resolve-anchor` primitive: [`compute`], returned through
+/// [`bound`].
+///
+/// # Errors
+///
+/// Those [`compute`] and [`bound`] return.
+pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult> {
+    bound(compute(args, repo)?, &args.path, repo)
+}
+
+/// A reference scan, whole: what `resolve-anchor` reports before its result
+/// is bounded. Each field is [`ResolveAnchorResult`]'s of the same name.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Anchors {
+    /// See [`ResolveAnchorResult::references`].
+    pub references: Vec<AnchorReference>,
+    /// See [`ResolveAnchorResult::unresolved`].
+    pub unresolved: Vec<String>,
+    /// See [`ResolveAnchorResult::qualified`].
+    pub qualified: u32,
+    /// See [`ResolveAnchorResult::intra_document`].
+    pub intra_document: u32,
+    /// See [`ResolveAnchorResult::cross_document`].
+    pub cross_document: u32,
+    /// See [`ResolveAnchorResult::anchor_target_unjudgeable`].
+    pub anchor_target_unjudgeable: u32,
+    /// See [`ResolveAnchorResult::anchor_target_unreadable`].
+    pub anchor_target_unreadable: u32,
+}
+
+/// `scan` as the primitive's result: inline while it fits `[artifacts]
+/// read-size-bytes`, and past it with `references` and `unresolved` in the
+/// file it names and only their counts inline (`bounded_lists::place`; spec
+/// 067 task 35, `BE-PAYLOAD-001`). The file sits under the scanned path's
+/// file stem.
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a malformed read size or a list
+/// file that cannot be written.
+pub fn bound(scan: Anchors, path: &str, repo: &Path) -> Result<ResolveAnchorResult> {
+    let lists = serde_json::json!({
+        "references": scan.references,
+        "unresolved": scan.unresolved,
+    });
+    let mut result = ResolveAnchorResult {
+        references_count: scan.references.len(),
+        references: Some(scan.references),
+        unresolved_count: scan.unresolved.len(),
+        unresolved: Some(scan.unresolved),
+        qualified: scan.qualified,
+        intra_document: scan.intra_document,
+        cross_document: scan.cross_document,
+        anchor_target_unjudgeable: scan.anchor_target_unjudgeable,
+        anchor_target_unreadable: scan.anchor_target_unreadable,
+        form: ListsForm::Inline,
+        lists_file: None,
+    };
+    let key = super::bounded_lists::path_key(path);
+    if let Some(file) = super::bounded_lists::place(repo, "resolve-anchor", key, &result, &lists)? {
+        result.form = ListsForm::File;
+        result.references = None;
+        result.unresolved = None;
+        result.lists_file = Some(file);
+    }
+    Ok(result)
+}
+
+/// Scan every `§` reference in the file `args` names, every list whole.
 ///
 /// # Errors
 ///
@@ -113,7 +181,7 @@ use crate::schema::primitives::{
 /// with `resolve-constitutions`' own error: the registry is the loading policy
 /// for registered documents, and a malformed one must never read as an empty
 /// one.
-pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult> {
+pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
     let path = contained_path(repo, &args.path)?;
     let markers_file = args
         .markers_path
@@ -223,7 +291,7 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
 
     let mut unresolved: Vec<String> = tally.unresolved.into_iter().collect();
     unresolved.sort();
-    Ok(ResolveAnchorResult {
+    Ok(Anchors {
         references: tally.references,
         unresolved,
         qualified: tally.qualified,
@@ -974,7 +1042,7 @@ mod tests {
     #[test]
     fn resolves_constitution_anchors() {
         let repo = fixture_repo();
-        let result = run(
+        let result = compute(
             &ResolveAnchorArgs {
                 path: "framework/constitution.md".into(),
                 markers_path: None,
@@ -996,11 +1064,11 @@ mod tests {
     }
 
     /// Helper: scan `body` against a markers file declaring `§known`.
-    fn classify(body: &str) -> ResolveAnchorResult {
+    fn classify(body: &str) -> Anchors {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join("markers.md"), "<!-- §known -->\n").unwrap();
         std::fs::write(tmp.path().join("citing.md"), body).unwrap();
-        run(
+        compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("markers.md".into()),
@@ -1117,7 +1185,7 @@ mod tests {
             "See [§known](markers.md#known) and `markers.md` §missing.\n",
         )
         .unwrap();
-        let r = run(
+        let r = compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("markers.md".into()),
@@ -1151,7 +1219,7 @@ mod tests {
             "See [§known](../constitution.md#known) and [§gone](../constitution.md#gone).\n",
         )
         .unwrap();
-        let r = run(
+        let r = compute(
             &ResolveAnchorArgs {
                 path: "framework/reference/citing.md".into(),
                 markers_path: Some("framework/constitution.md".into()),
@@ -1199,7 +1267,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("only-markers.md");
         std::fs::write(&path, "# only markers\n\n<!-- §foo -->\n<!-- §bar -->\n").unwrap();
-        let result = run(
+        let result = compute(
             &ResolveAnchorArgs {
                 path: path
                     .strip_prefix(tmp.path())
@@ -1220,7 +1288,7 @@ mod tests {
     /// one, and a slash-command row below the section mapping
     /// `.ductus/reference/y.md` — which must not count, being outside it.
     /// `bootstrap` false leaves the installer out, as in an adopter.
-    fn judge_in(bootstrap: bool, body: &str) -> ResolveAnchorResult {
+    fn judge_in(bootstrap: bool, body: &str) -> Anchors {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
@@ -1244,7 +1312,7 @@ mod tests {
         )
         .unwrap();
         std::fs::write(root.join("citing.md"), body).unwrap();
-        run(
+        compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("markers.md".into()),
@@ -1254,11 +1322,11 @@ mod tests {
         .unwrap()
     }
 
-    fn judge(body: &str) -> ResolveAnchorResult {
+    fn judge(body: &str) -> Anchors {
         judge_in(true, body)
     }
 
-    fn kinds(r: &ResolveAnchorResult) -> Vec<&str> {
+    fn kinds(r: &Anchors) -> Vec<&str> {
         r.references.iter().map(|x| x.kind.as_str()).collect()
     }
 
@@ -1504,7 +1572,7 @@ mod tests {
             for path in paths {
                 let name = path.file_name().unwrap().to_string_lossy().into_owned();
                 let rel = format!("{dir}/{name}");
-                let r = run(
+                let r = compute(
                     &ResolveAnchorArgs {
                         path: rel.clone(),
                         markers_path: Some("framework/constitution.md".into()),
@@ -1533,7 +1601,7 @@ mod tests {
     /// `constitution.md` carries the markers `§a-b` and `§a-b-c`; the project's
     /// own markers file is `.ductus/constitution.md` with `§known`. `body` is
     /// written to `specs/001-x/spec.md` and scanned.
-    fn scan_registered(config: &str, body: &str) -> ResolveAnchorResult {
+    fn scan_registered(config: &str, body: &str) -> Anchors {
         let tmp = tempfile::tempdir().unwrap();
         let project = tmp.path().join("project");
         let shared = tmp.path().join("shared");
@@ -1548,7 +1616,7 @@ mod tests {
         std::fs::write(project.join(".ductus/config.toml"), config).unwrap();
         std::fs::write(project.join(".ductus/constitution.md"), "<!-- §known -->\n").unwrap();
         std::fs::write(project.join("specs/001-x/spec.md"), body).unwrap();
-        run(
+        compute(
             &ResolveAnchorArgs {
                 path: "specs/001-x/spec.md".into(),
                 markers_path: Some(".ductus/constitution.md".into()),
@@ -1647,7 +1715,7 @@ mod tests {
              See `framework/constitution.md` §gone.\n",
         )
         .unwrap();
-        let r = run(
+        let r = compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("framework/constitution.md".into()),
@@ -1675,7 +1743,7 @@ mod tests {
     /// A tree holding `docs/guide.md` (heading `Install`), `docs/locked.md`,
     /// `scripts/run.sh` and the markers file `markers.md` (`§known`); `body`
     /// is written to `citing.md` and scanned.
-    fn scan_tree(body: &str) -> ResolveAnchorResult {
+    fn scan_tree(body: &str) -> Anchors {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         std::fs::create_dir_all(root.join("docs")).unwrap();
@@ -1685,7 +1753,7 @@ mod tests {
         std::fs::write(root.join("docs/locked.md"), "# Locked\n\n## Install\n").unwrap();
         std::fs::write(root.join("scripts/run.sh"), "#!/bin/sh\n").unwrap();
         std::fs::write(root.join("citing.md"), body).unwrap();
-        run(
+        compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("markers.md".into()),
@@ -1695,7 +1763,7 @@ mod tests {
         .unwrap()
     }
 
-    fn verdicts(r: &ResolveAnchorResult) -> Vec<(&str, bool, Option<&str>)> {
+    fn verdicts(r: &Anchors) -> Vec<(&str, bool, Option<&str>)> {
         r.references
             .iter()
             .map(|x| (x.anchor.as_str(), x.resolved, x.unjudged.as_deref()))
@@ -1776,7 +1844,7 @@ mod tests {
             return;
         }
         std::fs::write(root.join("citing.md"), "See `locked.md` §Install.\n").unwrap();
-        let r = run(
+        let r = compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("markers.md".into()),
@@ -1852,7 +1920,7 @@ mod tests {
             "Per `.ductus/constitution.md` §known and §gone.\n",
         )
         .unwrap();
-        let r = run(
+        let r = compute(
             &ResolveAnchorArgs {
                 path: "citing.md".into(),
                 markers_path: Some("framework/constitution.md".into()),
@@ -1881,7 +1949,7 @@ mod tests {
             "# Constitution\n\n<!-- §known -->\n## Known\n",
         )
         .unwrap();
-        let result = run(
+        let result = compute(
             &ResolveAnchorArgs {
                 path: "spec.md".into(),
                 markers_path: Some("constitution.md".into()),
@@ -1895,6 +1963,87 @@ mod tests {
                 .references
                 .iter()
                 .any(|r| r.anchor == "known" && r.resolved)
+        );
+    }
+
+    /// A project whose `citing.md` holds two references against a markers
+    /// file declaring `§known`, one of which resolves.
+    fn bounded_project() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("markers.md"), "<!-- §known -->\n").unwrap();
+        std::fs::write(tmp.path().join("citing.md"), "See §known and §unknown.\n").unwrap();
+        tmp
+    }
+
+    fn bounded_args() -> ResolveAnchorArgs {
+        ResolveAnchorArgs {
+            path: "citing.md".into(),
+            markers_path: Some("markers.md".into()),
+        }
+    }
+
+    fn read_size(repo: &Path, bytes: usize) {
+        std::fs::create_dir_all(repo.join(".ductus")).unwrap();
+        std::fs::write(
+            repo.join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = {bytes}\n"),
+        )
+        .unwrap();
+    }
+
+    /// Under the read size both lists are in the result with their counts,
+    /// and no list file is written.
+    #[test]
+    fn the_lists_are_inline_while_the_result_fits() {
+        let tmp = bounded_project();
+        let result = run(&bounded_args(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::Inline);
+        assert_eq!(result.lists_file, None);
+        assert_eq!(result.references.as_ref().unwrap().len(), 2);
+        assert_eq!(result.references_count, 2);
+        assert_eq!(result.unresolved, Some(vec!["unknown".to_string()]));
+        assert_eq!(result.unresolved_count, 1);
+        assert!(!tmp.path().join(".ductus/results").exists());
+    }
+
+    /// A result exactly at the read size fits; one byte under it moves both
+    /// lists whole to the file the result names, their counts staying.
+    #[test]
+    fn the_lists_are_in_a_file_past_the_read_size() {
+        let tmp = bounded_project();
+        let whole = run(&bounded_args(), tmp.path()).unwrap();
+        let size = serde_json::to_vec(&whole).unwrap().len();
+        read_size(tmp.path(), size);
+        assert_eq!(
+            run(&bounded_args(), tmp.path()).unwrap().form,
+            ListsForm::Inline
+        );
+        read_size(tmp.path(), size - 1);
+        let bounded = run(&bounded_args(), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(bounded.references, None);
+        assert_eq!(bounded.unresolved, None);
+        assert_eq!(bounded.references_count, 2);
+        assert_eq!(bounded.unresolved_count, 1);
+        assert_eq!(bounded.qualified, whole.qualified);
+        assert_eq!(bounded.intra_document, whole.intra_document);
+        let file = bounded.lists_file.clone().unwrap();
+        assert!(
+            file.starts_with(".ductus/results/resolve-anchor/citing/"),
+            "{file}"
+        );
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["references"],
+            serde_json::to_value(&whole.references).unwrap()
+        );
+        assert_eq!(lists["unresolved"], serde_json::json!(["unknown"]));
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "resolve-anchor",
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
         );
     }
 }

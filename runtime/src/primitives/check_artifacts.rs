@@ -1835,7 +1835,8 @@ fn check_criterion_path_existence(
             // A trailing slash marks a directory reference; either kind of
             // entry satisfies the criterion.
             // Resolved lexically before any probe: a candidate whose `..`
-            // leaves the project is never stat'd (`BE-INPUT-004`), only
+            // leaves the project, or whose path runs through a link that
+            // does (below), is never stat'd (`BE-INPUT-004`), only
             // recorded as `outside-project`, a gap in what the run could see:
             // `root-absent` says a top-level segment is missing here, which a
             // suspect citation is not.
@@ -1850,6 +1851,18 @@ fn check_criterion_path_existence(
                 continue;
             };
             let trimmed = trimmed.as_str();
+            // A symbolic link on the way that resolves outside the project is
+            // never followed: `exists()` would stat the file it leads to
+            // (`BE-INPUT-004`).
+            if leaves_project_by_link(repo, trimmed) {
+                record_skip(
+                    skipped,
+                    "criterion-path-existence",
+                    OUTSIDE_PROJECT,
+                    &candidate,
+                );
+                continue;
+            }
             if repo.join(trimmed).exists() {
                 continue;
             }
@@ -2412,7 +2425,8 @@ struct BodyCandidate {
 /// The acceptance criteria are skipped (the criterion family owns them), as are
 /// fenced blocks and HTML comments. Candidates follow the criterion grammar,
 /// with a `#fragment` stripped; one starting `../` resolves from the citing
-/// file's directory, and one that climbs out of the project is recorded `outside-project`. A
+/// file's directory, and one that climbs out of the project, lexically or through a
+/// symbolic link, is recorded `outside-project`. A
 /// history that cannot be consulted fails safe, as `scenario-consistency`
 /// does: each remaining candidate is recorded `no-readable-state` and nothing
 /// is flagged.
@@ -2459,6 +2473,10 @@ fn check_body_path_existence(
                     record_skip(skipped, BODY_PATH_FAMILY, OUTSIDE_PROJECT, &candidate);
                     continue;
                 };
+                if leaves_project_by_link(repo, &resolved) {
+                    record_skip(skipped, BODY_PATH_FAMILY, OUTSIDE_PROJECT, &candidate);
+                    continue;
+                }
                 if resolved.is_empty() || repo.join(&resolved).exists() {
                     continue;
                 }
@@ -2582,11 +2600,25 @@ fn lexical_in_project(path: &str, base: &Path, repo: &Path) -> Option<String> {
     Some(rel.to_string_lossy().replace('\\', "/"))
 }
 
+/// Whether `rel`, a project-relative path [`lexical_in_project`] resolved,
+/// passes through a symbolic link that resolves outside the project: the
+/// half of `BE-INPUT-004` a lexical test cannot do, and the same notion of
+/// outward as the sibling-link family's ([`super::OutwardLinks`]), judged by
+/// the shared link check. A project root that cannot be resolved counts as
+/// leaving, since nothing under it can be judged, so the candidate is
+/// recorded `outside-project` rather than probed.
+fn leaves_project_by_link(repo: &Path, rel: &str) -> bool {
+    super::canonical_base(repo)
+        .and_then(|canonical| super::check_links_on(repo, &canonical, rel))
+        .is_err()
+}
+
 /// A candidate's project-relative path, its `#fragment` stripped and any
 /// trailing slash dropped. A candidate starting `..` resolves from `from_dir`,
 /// any other from the project root; either way the resolution is lexical.
-/// `None` when it leaves the project, which the caller records as an
-/// `outside-project` skip.
+/// `None` when it leaves the project lexically, which the caller records as an
+/// `outside-project` skip (a link out is judged separately,
+/// [`leaves_project_by_link`]).
 fn resolve_body_path(candidate: &str, from_dir: &Path, repo: &Path) -> Option<String> {
     let file_part = candidate.split('#').next()?.trim_end_matches('/');
     let base = if file_part.starts_with("..") {
@@ -5628,6 +5660,68 @@ mod tests {
             .map(|s| (s.reason.as_str(), s.path.as_str()))
             .collect();
         assert_eq!(skips, vec![("outside-project", "specs/../../secret.txt")]);
+        assert!(
+            result.findings.iter().all(|f| f.family != BODY_PATH_FAMILY),
+            "{:?}",
+            result.findings
+        );
+    }
+
+    /// A project holding `shared/data.txt`, a link to a file outside it, and
+    /// `shared/real.txt`, a plain file; both exist when stat'd.
+    #[cfg(unix)]
+    fn project_with_an_outward_link() -> (tempfile::TempDir, std::path::PathBuf) {
+        let (outer, project) = project_beside_a_file();
+        fs::create_dir(project.join("shared")).unwrap();
+        fs::write(project.join("shared/real.txt"), "inside\n").unwrap();
+        std::os::unix::fs::symlink(
+            outer.path().join("secret.txt"),
+            project.join("shared/data.txt"),
+        )
+        .unwrap();
+        (outer, project)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_criterion_path_through_a_link_out_of_the_project_is_recorded_not_probed() {
+        // `BE-INPUT-004`: the lexical screen passes `shared/data.txt`, and
+        // `exists()` would follow the link to a file outside the project.
+        let (_outer, project) = project_with_an_outward_link();
+        seed_with_criteria(
+            &project,
+            "done",
+            "- [x] The file exists at `shared/data.txt`, beside `shared/real.txt`\n",
+        );
+        let result = run(&args(), &project).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+        let skips: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == "criterion-path-existence")
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect();
+        assert_eq!(skips, vec![("outside-project", "shared/data.txt")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_body_path_through_a_link_out_of_the_project_is_recorded_not_probed() {
+        let (_outer, project) = project_with_an_outward_link();
+        seed_with_criteria(&project, "done", "- [x] Something holds\n");
+        write(
+            &project,
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Plan\n\nReads `shared/data.txt` and `shared/real.txt` on every run.\n",
+        );
+        let result = run(&args(), &project).unwrap();
+        let skips: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == BODY_PATH_FAMILY)
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect();
+        assert_eq!(skips, vec![("outside-project", "shared/data.txt")]);
         assert!(
             result.findings.iter().all(|f| f.family != BODY_PATH_FAMILY),
             "{:?}",

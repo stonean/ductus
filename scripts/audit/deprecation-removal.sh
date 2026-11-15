@@ -112,7 +112,15 @@ fi
 #   L  file  line  rules  deprecated-in  target
 #                                             a label naming a target, for the
 #                                             comparison with version (40b)
+#   P  reason                                 the lists file could not be read
 #   C  found  compared                        the counts, last
+# Past `[artifacts] read-size-bytes` the primitive moves `labels` and
+# `unreadable` to the file its `lists-file` names, relative to the repository
+# root where this family runs (067 task 35, BE-PAYLOAD-001). The render reads
+# them there, and a file it cannot read, or one lacking a list, is a record
+# `P` the loop turns into a `(precondition)` finding saying no label was
+# compared, never an empty result.
+#
 # A function, not `$(python3 - <<EOF ...)`: bash 3.2 misparses a heredoc
 # inside a command substitution. `-I` keeps the repository root off
 # sys.path, so no file there shadows the standard library.
@@ -124,6 +132,17 @@ import sys
 SEP = "\x1f"
 FORM = "specs/008-security-rules/data-model.md, the Deprecated field"
 result = json.loads(sys.argv[1])
+if result.get("form") == "file":
+    try:
+        with open(result["lists-file"], encoding="utf-8") as handle:
+            lists = json.load(handle)
+        missing = [key for key in ("labels", "unreadable") if not isinstance(lists.get(key), list)]
+        if missing:
+            raise ValueError("it holds no %s list" % ", ".join(missing))
+        result.update(lists)
+    except (KeyError, TypeError, OSError, ValueError) as err:
+        print(SEP.join(("P", str(err).replace(SEP, " "))))
+        raise SystemExit(0)
 for name in result["unreadable"]:
     print(SEP.join(("U", name)))
 compared = 0
@@ -198,6 +217,7 @@ if ! records=$(render_labels "$result"); then
 fi
 
 sep=$(printf '\037')
+precondition=0
 found=""
 compared=""
 undecodable=0
@@ -207,6 +227,11 @@ while IFS="$sep" read -r kind a b c d e; do
       emit "$a" "not UTF-8, so its deprecation labels were not examined" \
         "re-save $a as UTF-8, which the runtime reads"
       undecodable=$((undecodable + 1))
+      ;;
+    P)
+      emit "(precondition)" "read-deprecation-labels moved its lists to a file that could not be read ($a), so no deprecation label was compared" \
+        "run $bin read-deprecation-labels directly and read the file its lists-file names"
+      precondition=1
       ;;
     M) emit "$a" "$b" "$c" ;;
     L)
@@ -230,6 +255,10 @@ done << EOF
 $records
 EOF
 
+if [ "$precondition" -eq 1 ]; then
+  coverage "nothing compared: the list file read-deprecation-labels named could not be read"
+  exit "$drift"
+fi
 if [ -z "$found" ]; then
   emit "scripts/audit/deprecation-removal.sh" "the label parse printed no counts, so its result cannot be trusted" \
     "run the family directly and read its output"

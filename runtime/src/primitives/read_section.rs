@@ -61,16 +61,7 @@ pub fn run(args: &ReadSectionArgs, repo: &Path) -> Result<ReadSectionResult> {
         lists_file: None,
     };
     let lists = serde_json::json!({ "sections": &result.sections });
-    let key = Path::new(&args.path)
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .filter(|stem| {
-            !stem.is_empty()
-                && stem
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-        })
-        .unwrap_or("document");
+    let key = super::bounded_lists::path_key(&args.path);
     if let Some(file) = super::bounded_lists::place(repo, "read-section", key, &result, &lists)? {
         result.form = ListsForm::File;
         result.sections = None;

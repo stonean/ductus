@@ -582,8 +582,9 @@ pub struct AnalyzeBlock {
     ///   lacks). Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
     ///   `no-readable-state`, `outside-project` (a path family's candidate
-    ///   whose lexical resolution leaves the project, recorded and never
-    ///   probed), `artifact-unreadable`, and the gaps no check
+    ///   whose resolution leaves the project, lexically or through a
+    ///   symbolic link, recorded and never probed), `artifact-unreadable`, and
+    ///   the gaps no check
     ///   decided on: `referrer-unreadable` (a referrer
     ///   `check-orphaned-references` could not read),
     ///   `rule-citations-not-checked` (citations `check-rule-ids` checked
@@ -2976,19 +2977,28 @@ fn default_anchor_kind() -> String {
     "markers".to_string()
 }
 
-/// Result for `resolve-anchor`.
+/// Result for `resolve-anchor`. Inline up to `[artifacts] read-size-bytes`,
+/// and past it with `references` and `unresolved` in the file `lists-file`
+/// names, their counts inline (spec 067 task 35).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ResolveAnchorResult {
-    /// All anchor references found in the file.
-    pub references: Vec<AnchorReference>,
+    /// All anchor references found in the file. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub references: Option<Vec<AnchorReference>>,
+    /// Entries in `references`, in either form.
+    pub references_count: usize,
     /// Anchor names of the references that were judged and did not resolve.
     ///
     /// A `markers`, `cross-document` or judged `qualified` reference
     /// contributes. An empty list therefore means "every reference this
     /// primitive judged resolved" — never "every `§` in this file is fine":
-    /// the two unjudged counts below say what it could not judge.
-    pub unresolved: Vec<String>,
+    /// the two unjudged counts below say what it could not judge. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unresolved: Option<Vec<String>>,
+    /// Entries in `unresolved`, in either form.
+    pub unresolved_count: usize,
     /// References on a line naming another document that 071's
     /// `cross-document` rule does not judge, judged against the readable
     /// documents the line names, the citing file's headings and the markers
@@ -3022,6 +3032,14 @@ pub struct ResolveAnchorResult {
     /// `anchor-target-unreadable`, could not be read.
     #[serde(default)]
     pub anchor_target_unreadable: u32,
+    /// Where `references` and `unresolved` are: in this result, or past the
+    /// read size in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the two lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- traverse-deps -----------------------------------------------------------
@@ -3633,19 +3651,35 @@ pub struct DeprecationLabel {
     pub malformed: Option<MalformedLabel>,
 }
 
-/// Result for `read-deprecation-labels`.
+/// Result for `read-deprecation-labels`. Inline up to `[artifacts]
+/// read-size-bytes`, and past it with `labels` and `unreadable` in the file
+/// `lists-file` names, their counts inline (spec 067 task 35).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReadDeprecationLabelsResult {
     /// One entry per line containing `**DEPRECATED`, file by file in the order
-    /// given, by line.
-    pub labels: Vec<DeprecationLabel>,
+    /// given, by line. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<DeprecationLabel>>,
+    /// Entries in `labels`, in either form.
+    pub labels_count: usize,
     /// Rule files that could not be read (including one that is not UTF-8),
-    /// never counted in `examined`.
-    pub unreadable: Vec<String>,
+    /// never counted in `examined`. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unreadable: Option<Vec<String>>,
+    /// Entries in `unreadable`, in either form.
+    pub unreadable_count: usize,
     /// How many rule files were read: the denominator `labels` is asserted
     /// against.
     pub examined: usize,
+    /// Where `labels` and `unreadable` are: in this result, or past the read
+    /// size in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the two lists whole, from the
+    /// project root: a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- check-promotion-coverage ------------------------------------------------
@@ -6908,7 +6942,8 @@ pub struct SkippedTarget {
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,
     /// `target-unparseable`, `no-readable-state`, `outside-project` (a path
-    /// family's candidate whose lexical resolution leaves the project),
+    /// family's candidate whose resolution leaves the project, lexically or
+    /// through a symbolic link),
     /// `root-absent`, `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`,
     /// `never-existed`, `status-gated` (a path family that does not examine a
     /// spec at its status, the target its `spec.md`), or `gitignored` (a
@@ -7541,8 +7576,9 @@ pub struct CheckCorpusLinksResult {
     pub examined: Option<Vec<String>>,
     /// Entries in `examined`, in either form.
     pub examined_count: usize,
-    /// Files that could not be read. Never silent: an unreadable file is a
-    /// file whose links were never checked. Absent in the file form.
+    /// Files that could not be read, or that are or lie under a symbolic link
+    /// out of the base (`outward-link`, never read). Never silent: such a file
+    /// is one whose links were never checked. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skipped: Option<Vec<CorpusLinkSkip>>,
     /// Entries in `skipped`, in either form.
@@ -8974,7 +9010,8 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = ResolveAnchorResult {
-            references: vec![
+            references_count: 2,
+            references: Some(vec![
                 AnchorReference {
                     anchor: "runtime-boundary".into(),
                     line: 459,
@@ -8989,13 +9026,16 @@ mod tests {
                     kind: "qualified".into(),
                     unjudged: Some("anchor-target-unjudgeable".into()),
                 },
-            ],
-            unresolved: vec![],
+            ]),
+            unresolved: Some(vec![]),
+            unresolved_count: 0,
             qualified: 1,
             intra_document: 0,
             cross_document: 0,
             anchor_target_unjudgeable: 1,
             anchor_target_unreadable: 0,
+            form: ListsForm::Inline,
+            lists_file: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["qualified"], 1);
