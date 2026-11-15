@@ -1074,6 +1074,19 @@ its version and date.
 
 ### Fixed
 
+- **`process-waivers` flattens every notice it prints (spec 066's review).**
+  The notice for a waiver retained because the run did not read its file
+  interpolated the stored path raw, so a control or line-separator character
+  in it reached the operator; it now goes through the same flattening as the
+  other notices, as 066's scenario `process-waivers-notices-flatten-stored-text`
+  requires.
+- **`compute-review-scope` calls a path deleted only when it is gone (spec
+  066's review).** Any error reading a window path's metadata used to count
+  it as deleted, so a present file under a directory the review cannot search
+  left the scope and was named deleted. Only not-found, or a parent that is
+  now a file, is a deletion; a path whose metadata cannot be read for another
+  reason stays in the scope.
+
 - **A fenced block inside a rule no longer cuts its Verification (spec 060's
   review).** The rule-section reader took a `#`-led line inside a fence (a
   shell or YAML comment) for a heading, which closed the rule and listed the

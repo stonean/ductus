@@ -40,7 +40,7 @@ MUTATIONS = [
     (
         'M4 a changed file present on disk is called deleted',
         'src/primitives/compute_review_scope.rs',
-        '        .filter(|path| std::fs::symlink_metadata(repo.join(path)).is_err())',
+        '        .filter(|path| {\n            matches!(\n                std::fs::symlink_metadata(repo.join(path)),\n                Err(error) if matches!(\n                    error.kind(),\n                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory\n                )\n            )\n        })',
         '        .filter(|_| true)',
         'compute_review_scope::tests::a_two_path_cell_and_a_deleted_file_resolve_as_the_scenario_says',
     ),
@@ -78,5 +78,19 @@ MUTATIONS = [
         '        deleted: Some(scope.deleted.clone()),',
         '        deleted: Some(Vec::new()),',
         'compute_review_scope::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
+    ),
+    (
+        'M10 any metadata error is a deletion again, so a permission-denied path leaves the scope',
+        'src/primitives/compute_review_scope.rs',
+        '                Err(error) if matches!(\n                    error.kind(),\n                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory\n                )',
+        '                Err(_)',
+        'compute_review_scope::tests::an_unreadable_path_is_not_deleted',
+    ),
+    (
+        'M11 a path under a file is no longer deleted',
+        'src/primitives/compute_review_scope.rs',
+        '                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory',
+        '                    std::io::ErrorKind::NotFound',
+        'compute_review_scope::tests::a_path_under_a_file_is_deleted',
     ),
 ]

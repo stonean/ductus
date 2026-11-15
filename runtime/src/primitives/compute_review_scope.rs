@@ -168,10 +168,21 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // `modified-since` and `deleted` (066 scenario
     // `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
     // The working tree decides, as the review reads it: a file deleted and
-    // recreated, or removed from the index alone, is present.
+    // recreated, or removed from the index alone, is present. Only a path the
+    // tree says is not there is deleted: one present but unreadable (permission
+    // denied) stays in the scope, since a review owes it a read the same as any
+    // other; a path under a parent that became a file cannot exist, so it is gone.
     let deleted: BTreeSet<String> = modified_since
         .iter()
-        .filter(|path| std::fs::symlink_metadata(repo.join(path)).is_err())
+        .filter(|path| {
+            matches!(
+                std::fs::symlink_metadata(repo.join(path)),
+                Err(error) if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                )
+            )
+        })
         .cloned()
         .collect();
 
@@ -1555,6 +1566,51 @@ mod tests {
         for path in ["src/back.rs", "src/kept.rs"] {
             assert!(result.scope.contains(&path.to_string()), "{path}");
         }
+    }
+
+    /// A path under a directory the review cannot search is present, not deleted:
+    /// the working tree answers permission denied, not not-found, so it stays in
+    /// `scope` and out of `deleted`. A path whose parent became a file cannot exist,
+    /// so it is deleted.
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_path_is_not_deleted() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _repo, _parent) = repo_in_progress_with_an_untouched_file();
+        let locked = tmp.path().join("src");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
+        let unsearchable = fs::symlink_metadata(locked.join("old.rs")).is_err();
+        let result = compute(&args("001-x", None), tmp.path());
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(
+            unsearchable,
+            "permissions do not bind (running as root?): no path can be made unreadable"
+        );
+        let result = result.unwrap();
+        assert!(
+            result.modified_since.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+        assert!(
+            result.scope.contains(&"src/old.rs".to_string()),
+            "{result:?}"
+        );
+        assert!(result.deleted.is_empty(), "{:?}", result.deleted);
+    }
+
+    /// A path whose parent directory is now a file can no longer exist, so it is
+    /// deleted, though the working tree answers not-a-directory.
+    #[cfg(unix)]
+    #[test]
+    fn a_path_under_a_file_is_deleted() {
+        let (tmp, _repo, _parent) = repo_in_progress_with_an_untouched_file();
+        fs::remove_dir_all(tmp.path().join("src")).unwrap();
+        write(&tmp.path().join("src"), "not a directory\n");
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.deleted, ["src/old.rs"]);
+        assert!(!result.scope.contains(&"src/old.rs".to_string()));
     }
 
     fn head_sha(repo: &Repository) -> String {

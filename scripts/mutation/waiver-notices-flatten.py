@@ -50,4 +50,11 @@ MUTATIONS = [
         '            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {\n                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
         'process_waivers::tests::the_departure_expiry_notice_flattens_stored_text',
     ),
+    (
+        'M6 the retained-unread notice prints the raw why text',
+        'src/primitives/process_waivers.rs',
+        '— {shown_why} ({shown_reason})"',
+        '— {why} ({shown_reason})"',
+        'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
+    ),
 ]

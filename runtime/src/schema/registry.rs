@@ -114,9 +114,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
 ///
 /// - `run-generator` hands any project file to `bash`, so any ductus tool
 ///   that writes a project file would otherwise make it run any command
-///   (022 task 14, the owner's answer (b)). 022 task 18 is to keep its CLI
-///   and `exec` forms out of the shell allow `/ductus` seeds; until it is
-///   applied, that allow reaches them.
+///   (022 task 14, the owner's answer (b)).
 pub const CLI_ONLY_PRIMITIVES: &[&str] = &["run-generator"];
 
 /// The prefix Claude Code gives each served tool: `mcp__`, the server's name

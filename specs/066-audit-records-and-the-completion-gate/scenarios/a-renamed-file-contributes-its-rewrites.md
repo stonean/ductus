@@ -11,7 +11,8 @@ Review staleness was judged by two implementations of one rule: Family 19
 `SweepIndex::build` (`runtime/src/primitives/mechanical_sweep.rs`).
 [review-staleness-on-done-specs](review-staleness-on-done-specs.md) records why
 there were two, and why `mechanical_sweep_parity` held them together until
-Family 19 came to call the runtime (066 plan, *Family 19 calls the runtime*).
+Family 19 came to call the runtime (owner, 2026-11-04; spec 081 later retired
+Family 19 and the primitive it called).
 
 They still built different repo-wide rewrite sets. Family 19 ran `git diff`,
 which detected renames under git's default config, so a renamed file was diffed

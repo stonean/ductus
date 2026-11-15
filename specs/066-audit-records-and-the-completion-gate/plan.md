@@ -4,13 +4,9 @@ Implements [066 — Audit Records and the Completion Gate](spec.md).
 
 ## Overview
 
-No runtime behavior changes. The primitives this spec specifies already ship under 022; the work moves their contract here — sixteen scenarios, the data-model sections for the seven primitives, and five acceptance criteria — and gives two primitives the documented shapes they never had.
+The primitives this spec specifies ship under 022; the work moves their contract here — the scenarios, the data-model sections for the seven primitives, and five acceptance criteria — gives two primitives the documented shapes they never had, and records the bounded-result and review-scope changes made since.
 
 ## Technical Decisions
-
-### Family 19 calls the runtime
-
-`/{project}:audit` Family 19 (`scripts/audit/review-freshness.sh`) reports each `done` spec's review freshness from a runtime primitive built on `analyze_subjects::review_freshness`, rather than reimplementing that rule in shell and Python beside it (owner, 2026-11-04). The rule meets all three §runtime-boundary eligibility criteria, and the constraint that kept a second implementation, a self-audit job with no Rust toolchain, no longer holds: `framework-checks.yml` builds the runtime before the audit, `runtime-release.yml`'s `audit` job installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, and 15 of the 41 audit scripts already call the binary. A record with no `reviewed-digest`, which the script's commit-diff proxy judged, reports as undeterminable, a distinct state that does not pass; no `done` spec was on that arm on 2026-11-04 (0 of 35). Spec 081 (owner, 2026-11-11) reversed this: it retired `check-review-freshness` and Family 19 with the review-staleness gate check, so no audit family asks a review's freshness.
 
 ### One subject per spec, and the dependency runs one way
 

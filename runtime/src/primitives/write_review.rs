@@ -810,13 +810,12 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// `compute-review-scope` call, which returns a hard error with no result and
 /// reads as *nothing in scope*. The resulting record (`0/0/0`, `scope: 0`,
 /// `examined` absent, `blocking: false`) is self-consistent and invisible to
-/// every gate: Family 31 cannot see it because both of its `examined` arms
-/// guard on `total > 0`, and `check-review-gate` cannot because the review is
+/// every gate: `check-review-gate` cannot see it because the review is
 /// non-blocking. Deriving the
 /// denominator unconditionally closes it with no new check: a genuinely empty
 /// scope still resolves to 0, while a false one now carries the real `scope: N`
-/// beside a zero `examined`, which is exactly the shape Family 31 already
-/// reports as `examined-nothing`.
+/// beside a zero `examined`, a record no reader can take for a review that
+/// read its scope.
 ///
 /// The paths the scope left out come with it, each with the specs that claimed
 /// it, so the record names what it did not read. An `unread` entry the scope
@@ -3516,8 +3515,7 @@ mod tests {
         // a caller that reached this branch by misreading an over-cap
         // `compute-review-scope` error as "nothing in scope" recorded
         // `scope: 0` beside a zero `examined` — a record byte-identical to an
-        // honest empty review, and invisible to Family 31 (both `examined`
-        // arms guard on `total > 0`) and to `check-review-gate` (it is
+        // honest empty review, and invisible to `check-review-gate` (it is
         // non-blocking).
         //
         // Deriving unconditionally is what makes the two distinguishable: the

@@ -242,8 +242,10 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
                 .get_or_init(|| RunScope::resolve(&args.feature, args.since.as_deref(), repo))
                 .why_unread(file, repo)
             {
+                // `why` interpolates the stored file, so it is flattened with the rest.
+                let shown_why = super::flatten_line(&why);
                 notices.push(format!(
-                    "waiver retained: rule {shown_rule} at {shown_file} — {why} ({shown_reason})"
+                    "waiver retained: rule {shown_rule} at {shown_file} — {shown_why} ({shown_reason})"
                 ));
                 retained.push(anchor);
             } else {
@@ -848,6 +850,18 @@ mod tests {
                 "{notice:?}"
             );
         }
+
+        // An existing file outside the window reaches the `why_unread` branch, whose
+        // text names the stored file.
+        let tmp = setup_after("001-x", planted, &["src/gone\u{85}.ts"], &[]);
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices,
+            [
+                "waiver retained: rule R [2J1 at src/gone .ts — this run did not read `src/gone .ts` (why so\tthen)"
+            ]
+        );
+        assert_eq!(result.retained[0].file, file);
     }
 
     /// The notice for a departure waiver whose spec holds no entry for its rule prints
