@@ -56,7 +56,7 @@ Claude Code defers each MCP tool's schema until the agent searches for it. Each 
 
 ### Bounded tool results
 
-Every primitive whose result grows with the corpus bounds its size or pages it (`BE-PAYLOAD-001`), so no result crosses a host limit as the corpus grows. The bound is the configured read size, `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), the size spec 063 already uses for one read. A project on a host with a smaller limit lowers it. A result that does not grow with the corpus is bounded by what it reads: `render-help`'s guide, and `hook help`'s reason, is the installed help copy's guide, one file the framework generates for each release, 6,223 characters on the fixture (`research.md`, *Result sizes (AC14)*).
+Every primitive whose result grows with the corpus bounds its size or pages it (`BE-PAYLOAD-001`), so no result crosses a host limit as the corpus grows. The bound is the configured read size, `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default), the size spec 063 already uses for one read. A project on a host with a smaller limit lowers it. A result that does not grow with the corpus is bounded by what it reads: `render-help`'s guide, and `hook help`'s reason, is the installed help copy's guide, one file the framework generates for each release, a 6,236-character result on the fixture (`research.md`, *Result sizes (AC14)*).
 
 ## Edge Cases
 
