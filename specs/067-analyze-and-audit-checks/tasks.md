@@ -1,5 +1,5 @@
 ---
-next-task: 35
+next-task: 36
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -41,3 +41,11 @@ Owed when this lands, in the same change: 067's `plan.md` decision "A path that 
 - [ ] It is proven to fail on a deliberately diverged fixture of each copy, and to pass on the tree
 
 - **Done when**: Both copies are held to the shipped hook's grammar by a check that fails on a diverged fixture of each and passes on the tree, and 067's next review reads the change.
+
+## 35. resolve-anchor's and read-deprecation-labels' results are bounded (BE-PAYLOAD-001, from 026's analysis)
+
+- [ ] `resolve-anchor`'s and `read-deprecation-labels`' result lists go through `bounded_lists::place`: inline while the result fits `[artifacts] read-size-bytes`, and past it in the file `lists-file` names, each list's count inline. Today neither has a file form, and each grows with the references or labels in the files it reads. `/{project}:audit` Family 39 (`scripts/audit/shipped-anchor-resolution.sh`) calls `resolve-anchor` and Family 40 (`scripts/audit/deprecation-removal.sh`) calls `read-deprecation-labels`. The owner deferred 026's BE-PAYLOAD-001 (MUST) analysis finding here on 2026-11-15; 026's `analysis.md` records the deferral, with its reason that the families' stdout report is the CI log `/audit` exits on, not a response the rule governs
+- [ ] Both descriptions and 067's data model state the bound, and every caller reads the lists from `lists-file` in the file form: Families 39 and 40, `/{project}:analyze` step 4, and the exec walker
+- [ ] A test proves the inline form under the read size and the file form past it for each primitive, each failing under its mutant, and `framework-checks.yml` step (u) passes
+
+- **Done when**: Both results return inline, or in a lists-file past the read size, with every caller reading the file form, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
