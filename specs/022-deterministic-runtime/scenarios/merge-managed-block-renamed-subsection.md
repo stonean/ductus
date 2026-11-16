@@ -106,5 +106,9 @@ lookahead finds nothing and the walk stops where it always did.
   replay closes the class, since a later change that would strand fails before
   release, where a migration covers only the retirement it was written for. The
   accepted cost is that an adopter group within three groups of a coincidental
-  canonical match, not two, is consumed. None of this repairs a `--ref=main`
-  adopter whose `.gitignore` a run since 2026-11-10 already stranded.
+  canonical match, not two, is consumed. A `--ref=main` adopter whose
+  `.gitignore` a run since 2026-11-10 already stranded keeps the old block's
+  tail below the new one until it is edited by hand: waived by the owner on
+  2026-11-16, since `--ref=main` opts into `main`'s exposure between releases
+  (`framework/bootstrap/ductus.md` §Runtime acquisition, Branch 2), no released
+  version strands, and every pattern still resolves through the new block.
