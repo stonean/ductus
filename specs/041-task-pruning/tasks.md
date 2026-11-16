@@ -1,5 +1,5 @@
 ---
-next-task: 27
+next-task: 28
 ---
 
 # 041 — Spec Directory Pruning Tasks
@@ -21,3 +21,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test proves the inline form under the read size and the file form past it for a single feature, failing under its mutant
 
 - **Done when**: Every list `prune-tasks` and `prune-plan` return is bounded and the design says so, proven by a test its mutant turns red; the whole `cargo test` passes; and 041's next review reads the change.
+
+## 27. prune's applies guard their read-modify-write (BE-TXN-002, from 041's analysis; owner decision)
+
+- [ ] `prune-tasks`', `prune-plan`'s and `prune-project`'s applies guard the window between reading a file and renaming the result over it, by a compare before persist: the file is read again just before the rename, and the write is refused when it changed since the apply read it, so an `append-task`, `mark-task` or other writer landing in between is never dropped. Today each reads, computes and calls `write_atomic` with no guard (`prune_tasks.rs` `reduce`, then `Reduction::write`), and only `append-task` takes a lock (022 task 35). The guard is one shared helper in `runtime/src/primitives/mod.rs`, 022's surface, which 022's plan states. The owner decided on 2026-11-15 to fix 041's analysis finding (BE-TXN-002, MUST) here rather than waive it by a departure entry
+- [ ] 041's spec Edge Cases, *Concurrent invocations*, names the guard in place of "the last writer wins" and drops the claim that every runtime primitive that rewrites a spec artifact does so; 041's data model and plan state what a refused write reports; `PRUNE_TASKS`', `PRUNE_PLAN`'s and `PRUNE_PROJECT`'s descriptions state it; and the plan's sentence that every list either prune primitive returns is held to the read size names the lists it covers, since `stale-sections` and `prune-project`'s `stale-entries`, `created` and `kept` echo the caller's own input
+- [ ] A test per primitive in which the file changes between the apply's read and its write shows the write refused and the other writer's change kept, each failing under its mutant
+
+- **Done when**: No prune apply overwrites a change made between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 041's next review reads the change.
