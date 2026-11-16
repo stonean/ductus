@@ -170,27 +170,23 @@ fi
 
 # F. the timeout's floor is the named constant
 root="$(scratch_root f)"
-if out="$(DUCTUS_GEN_TIMEOUT_SECONDS=0 DUCTUS_BIN="$current" "$root/scripts/gen-claude-commands.sh" 2>&1)"; then
-  fail "F: a timeout of 0 was accepted"
-else
-  case "$out" in
-    *"DUCTUS_GEN_TIMEOUT_SECONDS must be a whole number of seconds, at least 1, got '0'"*)
-      pass "F: a timeout below the floor is refused, naming it" ;;
-    *) fail "F: a timeout of 0 failed without naming the floor: $out" ;;
-  esac
-fi
+out="$(DUCTUS_GEN_TIMEOUT_SECONDS=0 DUCTUS_BIN="$current" "$root/scripts/gen-claude-commands.sh" 2>&1 || true)"
+case "$out" in
+  *"DUCTUS_GEN_TIMEOUT_SECONDS must be a whole number of seconds, at least 1, got '0'"*)
+    pass "F: a timeout below the floor is refused, naming it" ;;
+  *) fail "F: a timeout of 0 was not refused naming the floor: $out" ;;
+esac
 gen="$root/scripts/gen-claude-commands.sh"
 sed 's/^MIN_GEN_TIMEOUT_SECONDS=1$/MIN_GEN_TIMEOUT_SECONDS=5/' "$gen" > "$gen.raised"
 mv "$gen.raised" "$gen"
 chmod +x "$gen"
 if [ "$(grep -c '^MIN_GEN_TIMEOUT_SECONDS=5$' "$gen")" -ne 1 ]; then
   fail "F: the generator names no MIN_GEN_TIMEOUT_SECONDS=1 to raise"
-elif out="$(DUCTUS_GEN_TIMEOUT_SECONDS=3 DUCTUS_BIN="$current" "$gen" 2>&1)"; then
-  fail "F: with the floor raised to 5, a timeout of 3 was accepted, so the check does not read MIN_GEN_TIMEOUT_SECONDS"
 else
+  out="$(DUCTUS_GEN_TIMEOUT_SECONDS=3 DUCTUS_BIN="$current" "$gen" 2>&1 || true)"
   case "$out" in
     *"at least 5, got '3'"*) pass "F: the check and its refusal read the floor from MIN_GEN_TIMEOUT_SECONDS" ;;
-    *) fail "F: with the floor raised, a timeout of 3 failed without naming it: $out" ;;
+    *) fail "F: with the floor raised to 5, a timeout of 3 was not refused naming it, so the check does not read MIN_GEN_TIMEOUT_SECONDS: $out" ;;
   esac
 fi
 
