@@ -106,7 +106,7 @@ made the review record unmigratable.
 
 Each file the primitive replaces (`review.md`, `analysis.md`, then `spec.md`)
 is read through a `ReadSnapshot` and written only when unchanged since that
-read (`BE-TXN-002`; 022's plan, §Compare before persist, owns the lock and its
+read (`BE-TXN-002`; `specs/022-deterministic-runtime/plan.md` §Compare before persist, owns the lock and its
 bounds). `spec.md` is written last, so a block never leaves it before its
 artifact holds it.
 

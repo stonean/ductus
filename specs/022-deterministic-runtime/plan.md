@@ -103,7 +103,7 @@ Tool calls run concurrently. The locked rmcp handles each request in a task of i
 
 State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) write to a tempfile created via `tempfile::NamedTempFile::new_in(parent_dir)`. The tempfile is written, flushed, fsynced, then renamed over the target with `tempfile::NamedTempFile::persist`. POSIX rename is atomic within the same filesystem; placing the tempfile in the same directory guarantees that property. Windows rename semantics are weaker but acceptable for this use case — adopters running on Windows accept the small atomicity gap, and a partial write is recovered from git.
 
-### Compare before persist: a guarded rewrite refuses a file that changed since its read
+### Compare before persist
 
 A primitive that reads a project file, computes, and renames the result over it loses any change another writer made in between (`BE-TXN-002`). The shared guard is `ReadSnapshot` in `runtime/src/primitives/mod.rs`: `ReadSnapshot::read` goes through `validate_contained` and keeps the bytes it read, or that the file was absent, and `write_if_unchanged` consumes that read, so a caller cannot supply the wrong "expected" content. A file absent at the read is an expected state, and the write then refuses if the file exists by then. A rewrite keeps the destination's mode, as `write_atomic_bytes` does.
 

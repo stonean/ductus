@@ -123,8 +123,8 @@ parsing frontmatter has already failed.
 **The sweep guards each write (`BE-TXN-002`).** `relocate-audit-records` reads
 `spec.md` and each artifact through the shared `ReadSnapshot`
 (`runtime/src/primitives/mod.rs`) and writes each only when it is unchanged
-since its read, artifacts first and `spec.md` last. 022's plan, §Compare before
-persist, states the compare-and-set lock and its bounds; the data model's
+since its read, artifacts first and `spec.md` last. `specs/022-deterministic-runtime/plan.md` §Compare before persist
+states the compare-and-set lock and its bounds; the data model's
 *Errors* table states what a refusal leaves. A refusal after an earlier write
 is `RelocationIncomplete`, an error rather than a result field because
 `changed: false` already means converged; the re-run is safe because the merge
