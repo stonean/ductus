@@ -55,7 +55,7 @@ use crate::primitives::departures::Entry;
 use crate::primitives::rule_verdicts::{self, Currency};
 use crate::primitives::write_review::{yaml_quoted, yaml_string};
 use crate::primitives::{
-    PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter, write_atomic,
+    PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -132,7 +132,20 @@ fn refuse_while_implementation_is_open(
 ///   the prior `analysis.md` opens and never closes, for the same reasons. A
 ///   prior `analysis.md` that opens no block carries no decisions and is
 ///   overwritten.
+/// - [`PrimitiveError::ChangedSinceRead`] when `analysis.md` changed, appeared
+///   or went after this call read it: nothing is written, and the caller re-runs
+///   the write (`BE-TXN-002`, `BE-TXN-004`).
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
+    run_between(args, repo, &mut || {})
+}
+
+/// [`run`], calling `between` just before the record is written, the point a
+/// test changes the record to prove the write refuses it (`BE-TXN-002`).
+fn run_between(
+    args: &WriteAnalysisArgs,
+    repo: &Path,
+    between: &mut dyn FnMut(),
+) -> Result<WriteAnalysisResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
@@ -143,6 +156,13 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         });
     }
 
+    // The record as this run first reads it, before any helper reads its
+    // lists: the write below renames over it only while it still holds these
+    // bytes (`BE-TXN-002`).
+    let record = super::ReadSnapshot::read(
+        repo,
+        &format!("{root}/{}/{}", args.feature, super::ANALYSIS_RECORD_FILE),
+    )?;
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
 
     let spec_path = feature_dir.join("spec.md");
@@ -264,7 +284,8 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // The record is written first: its absence is what a later gate reads as
     // "never analyzed", so a read size that does not parse, which halts the
     // bounding below as it halts every bounded result, must not suppress it.
-    write_atomic(&analysis_path, &report)?;
+    between();
+    record.write_if_unchanged(&report)?;
     bounded(
         repo,
         &args.feature,
@@ -1622,6 +1643,37 @@ mod tests {
         let stored =
             decisions::read_decisions(&tmp.path().join("specs/042-demo"), "analysis.md").unwrap();
         assert!(stored.iter().all(|d| d.gating == Some(true)), "{stored:?}");
+    }
+
+    /// A record written by another writer after this run read it is kept: the
+    /// write is refused, never renamed over it (`BE-TXN-002`).
+    #[test]
+    fn a_record_written_after_it_was_read_is_refused_and_kept() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        run(&args(), tmp.path()).unwrap();
+        let record = tmp.path().join("specs/042-demo/analysis.md");
+        let theirs = "---\nspec: 042-demo\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(&args(), tmp.path(), &mut || {
+            fs::write(&record, theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == std::path::Path::new("specs/042-demo/analysis.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// The same run, nothing changing in between, writes.
+    #[test]
+    fn a_record_unchanged_since_it_was_read_is_written() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        run(&args(), tmp.path()).unwrap();
+        let mut a = args();
+        a.analyzed_at = "2026-09-06T18:00:00Z".into();
+        run_between(&a, tmp.path(), &mut || {}).unwrap();
+        assert!(analysis_md(&tmp).contains("2026-09-06T18:00:00Z"));
     }
 
     fn args() -> WriteAnalysisArgs {

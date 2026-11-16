@@ -49,6 +49,17 @@ its version and date.
   A writer that does not go through the guard takes no lock and can still land between the
   re-read and the rename.
 
+- **BREAKING: `write-review` and `write-analysis` write their record only when it is unchanged since they read it (spec 066 task 24; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  Each read `review.md` or `analysis.md` through several helpers (the waivers,
+  decisions and rule verdicts it carries forward) and renamed the regenerated
+  record over it with no guard, so a record written in between lost them. Each
+  now takes a `ReadSnapshot` (041 task 27) before its first read and writes
+  through `write_if_unchanged`; a record changed, created or removed since is
+  kept and the call fails with `changed-since-read` naming the path, so the
+  command re-runs the write from its argument files. A writer that does not go through
+  the guard takes no lock and can still land between the re-read and the rename.
+  Breaking under `BE-COMPAT-001`: a new error where a write used to succeed.
+
 - **BREAKING: the pre-`done` gate reads an affected spec only through paths contained in the project (spec 066 task 23, from 067's review; `BE-INPUT-004`).**
   `check-review-gate` contains each affected spec's `spec.md`,
   `scenarios/` directory and scenarios before it probes, lists or opens them:

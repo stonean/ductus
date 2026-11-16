@@ -38,6 +38,12 @@ The sections moved from 022 keep every argument and result shape and every field
 
 **`BE-COMPAT-001`:** `check-review-gate`'s `cross-spec-impact[].state` gains `outside-project`, a new value of a response enum the schema does not document as open to new values, and the entry gains the optional `detail`, omitted when absent. The value is **breaking**; the field is additive. It ships with the pending minor bump (pre-1.0, the compatibility boundary).
 
+### The two record writes are guarded (`BE-TXN-002`)
+
+`write-review` and `write-analysis` each take a `ReadSnapshot` of their record before any helper reads its lists, and rename the regenerated record over it with `write_if_unchanged` (`runtime/src/primitives/mod.rs`; the lock and its bounds are 022's plan §Compare before persist, the helper 041's task 27). A record written in between is kept and the call fails with `changed-since-read`; `/ductus:review` and `/ductus:analyze` re-run the write from the run's argument files, which reads the record again. The owner closed the class on 2026-11-16 by fixing each owner's primitives rather than waiving them. Rejected: plumbing the snapshot's text into each reader, since a change after the snapshot refuses whichever helper read it.
+
+**`BE-COMPAT-001`:** a write that used to succeed over a record changed since its read now fails with the new operational error `changed-since-read`, **breaking** at the call's contract, shipping with the pending minor bump alongside 041's.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -59,6 +65,8 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/bounded_lists.rs` | Specify | The read-size bound `compute-review-scope` and `diff-cross-spec` share (scenario `scope-results-have-a-bounded-size`) |
 | `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 | `runtime/src/primitives/check_artifacts.rs` | Specify | The cross-spec-impact-drift message that names an affected spec read through a link out (task 23) |
+| `runtime/src/schema/descriptions.rs` | Specify | `WRITE_REVIEW`'s and `WRITE_ANALYSIS`' statement of the guard (task 24) |
+| `scripts/mutation/compare-and-set-066.py` | Create | The mutation list proving each record write refuses a record changed since its read (task 24) |
 | `scripts/mutation/gate-cross-spec-containment.py` | Create | The mutation list proving the gate contains each path it builds from a cross-spec-impact slug (task 23) |
 
 ## Data Model

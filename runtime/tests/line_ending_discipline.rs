@@ -85,17 +85,6 @@ const EXEMPT: &[(&str, &str)] = &[
          scope-results-have-a-bounded-size)",
     ),
     (
-        "write_review.rs",
-        "renders review.md wholesale from a fixed skeleton on every run — generated state with \
-         no prior content to preserve. It stopped rewriting spec.md when the review record moved \
-         into review.md (spec 057), and that spec rewrite was the only in-place edit it made",
-    ),
-    (
-        "write_analysis.rs",
-        "renders analysis.md wholesale on every run, for the reason write_review.rs is exempt; \
-         its spec.md rewrite retired with the same relocation",
-    ),
-    (
         "migrate_session_file.rs",
         "relocates and re-renders the generated session file; same reasoning as write-session",
     ),

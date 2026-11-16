@@ -23,7 +23,7 @@ use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::departures::Attribution;
 use crate::primitives::{
     PrimitiveError, Result, WaiverPaths, analyze_subjects, fix_rounds, read_text, rel_path,
-    split_frontmatter, write_atomic,
+    split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -478,8 +478,42 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 /// - [`PrimitiveError::Yaml`] when `spec.md`'s frontmatter fails to parse, or
 ///   the prior `review.md`'s frontmatter, `waivers:`, or `decisions:` list
 ///   does.
+/// - [`PrimitiveError::ChangedSinceRead`] when `review.md` changed, appeared or
+///   went after this call read it: nothing is written, and the caller re-runs
+///   the write (`BE-TXN-002`, `BE-TXN-004`).
 /// - [`PrimitiveError::Io`] on read/write failure.
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
+    run_between(args, repo, &mut || {})
+}
+
+/// `review.md` as this run first reads it, taken before any helper reads the
+/// lists it keeps: the write renames over it only while it still holds these
+/// bytes (`BE-TXN-002`).
+fn record_snapshot(repo: &Path, root: &str, feature: &str) -> Result<super::ReadSnapshot> {
+    super::ReadSnapshot::read(
+        repo,
+        &format!("{root}/{feature}/{}", super::REVIEW_RECORD_FILE),
+    )
+}
+
+/// Rename `report` over the record `record` read, calling `between` first, and
+/// only while the record is unchanged (`BE-TXN-002`).
+fn write_record(
+    record: &super::ReadSnapshot,
+    report: &str,
+    between: &mut dyn FnMut(),
+) -> Result<()> {
+    between();
+    record.write_if_unchanged(report)
+}
+
+/// [`run`], calling `between` just before the record is written, the point a
+/// test changes the record to prove the write refuses it (`BE-TXN-002`).
+fn run_between(
+    args: &WriteReviewArgs,
+    repo: &Path,
+    between: &mut dyn FnMut(),
+) -> Result<WriteReviewResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_arguments(args)?;
@@ -491,6 +525,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
             feature: args.feature.clone(),
         });
     }
+    let record = record_snapshot(repo, &root, &args.feature)?;
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
     // The denominator `examined` is a claim against — see `resolve_scope`.
     let (scope, excluded) = resolve_scope(args, repo)?;
@@ -605,7 +640,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // written here — the record it used to carry now lives in `review.md`
     // alone (spec 057), which also retires the two-writes-must-not-diverge
     // hazard the ordering comment above was built around.
-    write_atomic(&review_path, &report)?;
+    write_record(&record, &report, between)?;
 
     // The analyze row `/{project}:review` renders (spec 047 AC12), computed
     // AFTER the write above and against the working tree — which is the whole
@@ -6267,6 +6302,45 @@ mod tests {
         assert!(error.to_string().contains("never closes"), "{error}");
         assert!(matches!(error, PrimitiveError::UnclosedFrontmatter { .. }));
         assert_eq!(fs::read_to_string(&path).unwrap(), damaged);
+    }
+
+    /// A record written by another writer after this run read it is kept: the
+    /// write is refused, never renamed over it (`BE-TXN-002`).
+    #[test]
+    fn a_record_written_after_it_was_read_is_refused_and_kept() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        run(&args, tmp.path()).unwrap();
+        let record = tmp.path().join("specs/001-x/review.md");
+        let theirs = "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(&args, tmp.path(), &mut || {
+            fs::write(&record, theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == std::path::Path::new("specs/001-x/review.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// The same run, nothing changing in between, writes.
+    #[test]
+    fn a_record_unchanged_since_it_was_read_is_written() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        run(&args, tmp.path()).unwrap();
+        let record = tmp.path().join("specs/001-x/review.md");
+        args.reviewed_at = "2026-07-03T12:00:00Z".into();
+        run_between(&args, tmp.path(), &mut || {}).unwrap();
+        assert!(
+            fs::read_to_string(&record)
+                .unwrap()
+                .contains("2026-07-03T12:00:00Z")
+        );
     }
 }
 
