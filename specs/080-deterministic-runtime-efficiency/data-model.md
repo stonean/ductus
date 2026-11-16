@@ -191,27 +191,7 @@ A primitive bounded through `bounded_lists::place`, the grows-set and `discover-
 - each moved list is present only in the inline form, where `scenario-files-unreadable`, `cross-spec-impact` and `dashboard`'s session lists are also absent when empty, as before, and `derive-dependencies`' `unwritable` is too;
 - in the file form, `lists-file` names `.ductus/results/{primitive}/{key}/{sha256}.json`, which holds the lists whole under their inline keys, pretty-printed, so a list of strings holds one entry per line. `{key}` is the feature argument, `rewrite-spec-links`' `from`, `all-specs` for a corpus-wide result, `repository` for `check-corpus-links`' repository scope, `paths` for `lint-markdown`, and the path's file stem for `read-section`, or `document` when the stem is empty or holds a character outside letters, digits, `-` and `_`.
 
-A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependencies` with `write`, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Each member's row is added to this table as it lands.
-
-| Primitive | Lists moved |
-| --- | --- |
-| `read-spec` | `sections`, `acceptance-criteria`, `open-questions`, `scenario-open-questions`, `scenario-files-unreadable`; the result carries no audit record in either form |
-| `read-tasks` | `tasks` |
-| `read-section` | `sections` |
-| `derive-boundary` | `boundary` |
-| `lint-markdown` | `violations` |
-| `prune-tasks` | `sections` for one feature; `features`, `skipped` under `all` |
-| `prune-plan` | `sections` for one feature; `features`, `skipped` under `all` (041 task 26) |
-| `dashboard` | `specs`, `tags-union`; `session-notices` and `session-unreadable` when non-empty, each with a count present only in the file form, since the expiry sweep leaves a session file it cannot parse; `config`'s `unknown-keys`, under `config` in the file, its count inline there in both forms (022 task 32) |
-| `check-review-gate` | `violations`, `cross-spec-impact`, `analyze-stale-paths` |
-| `check-artifacts` | `findings`, `skipped` |
-| `check-corpus-links` | `broken`, `examined`, `skipped` |
-| `check-unfolded-specs` | `unfolded` |
-| `rewrite-spec-links` | `rewritten`, `skipped`, `kept-tails`, `mentions` |
-| `discover-rule-files` | `notices` (022 task 32); `rule-files`, with `rules`; a non-empty `unreadable`, its count absent at zero (from 080's analysis) |
-| `derive-dependencies` | `updated`, `unwritten`, `untracked-skipped`, `absent`, `cycles`, `unparseable`, `unwritable`, the last absent inline when empty and its count absent at zero in both forms |
-| `derive-routing-candidates` | `candidates` |
-| `traverse-deps` | `dependencies`, `cycles` |
+A call that writes, `rewrite-spec-links`, an applied prune or `derive-dependencies` with `write`, has written when its result is bounded, so a list file that cannot be written fails a call whose writes stand. Which lists a primitive moves, and any exception to the shape above, are in its compiled description (`ductus <name> --help`; `runtime/src/schema/descriptions.rs`), the canonical source of a primitive's behavior (`framework/constitution.md` §drift-prevention), and in the data model of the spec that owns it.
 
 `render-status` is bounded in a shape of its own, given under *`render-status`* above: its view stays inline, cut, and its file holds the whole view, with no count.
 

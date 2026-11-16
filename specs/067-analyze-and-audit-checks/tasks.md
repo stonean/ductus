@@ -56,4 +56,6 @@ Owed when this lands, in the same change: 067's `plan.md` decision "A path that 
 - [x] 067's data model states what a refused spec reports and its plan names the guard; `DERIVE_DEPENDENCIES`' and `DERIVE_REFERENCES`' descriptions in `runtime/src/schema/descriptions.rs` state it
 - [x] A test per primitive in which a `spec.md` changes between its read and its write shows it unwritten, named in the result and the other writer's change kept, each failing under its mutant
 
+The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it runs each derivation under `set -euo pipefail`, so a refused spec's non-zero exit stops the commit and its stderr line shows. Its header comment names only the `unwritable` exit, which stays true, and is left as it is, since an edit under `framework/bootstrap/` owes a real adopter bootstrap.
+
 - **Done when**: Neither derivation's write overwrites a change made between its read and its write, and a spec it refuses is named in the result, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.

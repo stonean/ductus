@@ -17,4 +17,6 @@ around it; 13-14 the sweeps; 15-16 verification and the declared obligations.
 - [x] 057's data model states what a refused write reports and its plan names the guard; `RELOCATE_AUDIT_RECORDS`' description in `runtime/src/schema/descriptions.rs` states it
 - [x] A test in which each file changes between its read and its write shows the write refused and the other writer's change kept, each failing under its mutant
 
+The migration `framework/migrations/audit-record-relocate.md` is not edited to name the new errors (owner, 2026-11-16): the error text names the files written and refused and says a re-run is safe, an agent running the step reports a primitive's error, and only an adopter upgrading from before 057 can reach it, since one who ran the migration never runs it again and a fresh adoption has no blocks to relocate.
+
 - **Done when**: No relocation overwrites a change made between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 057's next review reads the change.
