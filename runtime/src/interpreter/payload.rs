@@ -1627,10 +1627,18 @@ fn load_constitution_excerpts(
     command_name: &str,
     repo: &Path,
 ) -> Result<ConstitutionExcerptScan, PayloadError> {
-    let Some(command_path) = locate_command_file(command_name, repo)? else {
-        return Ok(ConstitutionExcerptScan::unexaminable(format!(
-            "command-file-missing: {command_name}"
-        )));
+    let command_path = match locate_command_file(command_name, repo)? {
+        CommandFile::Found(path) => path,
+        CommandFile::Missing => {
+            return Ok(ConstitutionExcerptScan::unexaminable(format!(
+                "command-file-missing: {command_name}"
+            )));
+        }
+        CommandFile::OutsideProject(rel) => {
+            return Ok(ConstitutionExcerptScan::unexaminable(format!(
+                "command-file-outside-project: {rel}"
+            )));
+        }
     };
     let Ok(command_content) = std::fs::read_to_string(&command_path) else {
         // Repo-relative: the label rides in an outbound payload, and an
@@ -1673,7 +1681,19 @@ fn load_constitution_excerpts(
     Ok(scan)
 }
 
-fn locate_command_file(command_name: &str, repo: &Path) -> Result<Option<PathBuf>, PayloadError> {
+/// What [`locate_command_file`] found for a command.
+#[derive(Debug)]
+enum CommandFile {
+    /// The first candidate that is a file.
+    Found(PathBuf),
+    /// No candidate is a file.
+    Missing,
+    /// The candidate, repo-relative, that leaves the project: reached before
+    /// any later one was probed, and left unread (BE-INPUT-004; 022 task 40).
+    OutsideProject(String),
+}
+
+fn locate_command_file(command_name: &str, repo: &Path) -> Result<CommandFile, PayloadError> {
     crate::primitives::screen_command_name(command_name)
         .map_err(PayloadError::InvalidCommandName)?;
     let host = Host::load(repo)?;
@@ -1684,12 +1704,19 @@ fn locate_command_file(command_name: &str, repo: &Path) -> Result<Option<PathBuf
     rels.extend(host.command_file_candidates(command_name));
     rels.push(format!("framework/bootstrap/{command_name}.md"));
     for rel in rels {
+        match Host::contain_candidate(repo, &rel) {
+            Ok(()) => {}
+            Err(crate::primitives::PrimitiveError::InvalidPath { .. }) => {
+                return Ok(CommandFile::OutsideProject(rel));
+            }
+            Err(err) => return Err(err.into()),
+        }
         let candidate = repo.join(rel);
         if candidate.is_file() {
-            return Ok(Some(candidate));
+            return Ok(CommandFile::Found(candidate));
         }
     }
-    Ok(None)
+    Ok(CommandFile::Missing)
 }
 
 /// The outcome of a constitution-excerpt load: what was read, and what could
@@ -4182,8 +4209,52 @@ mod tests {
             assert!(err.to_string().contains(name), "{err}");
         }
         assert!(
-            locate_command_file("smoke", tmp.path()).unwrap().is_some(),
+            matches!(
+                locate_command_file("smoke", tmp.path()).unwrap(),
+                CommandFile::Found(_)
+            ),
             "a slug still resolves"
+        );
+    }
+
+    /// An installed copy that is a link leaving the project is left unread and
+    /// named as an unexaminable cause, never followed (spec 022 task 40).
+    #[cfg(unix)]
+    #[test]
+    fn a_command_file_linked_outside_the_project_is_not_read() {
+        let tmp = tempdir().unwrap();
+        let outside = tempdir().unwrap();
+        fs::write(
+            outside.path().join("smoke.md"),
+            "# smoke\n\n## Scope Boundaries\n\n- Reference: §grounding\n",
+        )
+        .unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/session.toml"),
+            "cli-config-dir = \".pi\"\n",
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[host]\nproject = \"acme\"\n",
+        )
+        .unwrap();
+        fs::create_dir_all(tmp.path().join(".pi/prompts")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("smoke.md"),
+            tmp.path().join(".pi/prompts/acme-smoke.md"),
+        )
+        .unwrap();
+        match locate_command_file("smoke", tmp.path()).unwrap() {
+            CommandFile::OutsideProject(rel) => assert_eq!(rel, ".pi/prompts/acme-smoke.md"),
+            other => panic!("expected the link refused, got {other:?}"),
+        }
+        let scan = load_constitution_excerpts("smoke", tmp.path()).unwrap();
+        assert!(scan.excerpts.is_empty(), "{scan:?}");
+        assert_eq!(
+            scan.unexaminable,
+            vec!["command-file-outside-project: .pi/prompts/acme-smoke.md".to_owned()]
         );
     }
 

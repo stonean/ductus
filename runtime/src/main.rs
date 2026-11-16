@@ -818,32 +818,53 @@ fn has_own_record(repo: &std::path::Path, identity: Option<&ductus::session::Ide
         .is_some_and(|identity| ductus::session::own_path(repo, identity).exists())
 }
 
-/// The files `ductus exec` tries for `command`, in order. The name is already screened.
-fn exec_candidates(
+/// The first of [`exec_candidates`] that exists, or the exec error code and
+/// message to halt with. Each candidate is contained before it is probed, so
+/// a link at an installed copy is never followed (BE-INPUT-004; 022 task 40):
+/// one leaving the project halts the lookup there.
+fn locate_exec_command(
     command: &str,
     host: &ductus::host::Host,
     repo: &std::path::Path,
-) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        repo.join("framework/commands")
-            .join(format!("{command}.md")),
-    ];
+) -> Result<PathBuf, (&'static str, String)> {
+    let candidates = exec_candidates(command, host);
+    for rel in &candidates {
+        if let Err(err) = ductus::host::Host::contain_candidate(repo, rel) {
+            return Err((
+                "command-file-outside-project",
+                format!("command file outside the project: {err}"),
+            ));
+        }
+        let candidate = repo.join(rel);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    let tried = candidates
+        .iter()
+        .map(|rel| repo.join(rel).display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err((
+        "command-not-found",
+        format!("command file not found (tried {tried})"),
+    ))
+}
+
+/// The files `ductus exec` tries for `command`, in order, repo-relative. The
+/// name is already screened; each candidate is contained before it is probed
+/// ([`locate_exec_command`]).
+fn exec_candidates(command: &str, host: &ductus::host::Host) -> Vec<String> {
+    let mut candidates = vec![format!("framework/commands/{command}.md")];
     // Installed command file under the adopter's config dir — `commands/`
     // (claude-style) or flat `prompts/` (pi); see
     // `Host::command_file_candidates`.
-    candidates.extend(
-        host.command_file_candidates(command)
-            .into_iter()
-            .map(|rel| repo.join(rel)),
-    );
+    candidates.extend(host.command_file_candidates(command));
     // Bootstrap procedures (`/ductus` and its successors) live outside
     // the project-installable command namespace because they're invoked
     // before any framework files exist in the adopter's project. See
     // spec 022 scenario `ductus-bootstrap`.
-    candidates.push(
-        repo.join("framework/bootstrap")
-            .join(format!("{command}.md")),
-    );
+    candidates.push(format!("framework/bootstrap/{command}.md"));
     candidates
 }
 
@@ -866,18 +887,15 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             return ExitCode::from(1);
         }
     };
-    let candidates = exec_candidates(command, &host, repo);
-    let Some(path) = candidates.iter().find(|p| p.exists()) else {
-        let tried = candidates
-            .iter()
-            .map(|p| p.display().to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        let message = format!("command file not found (tried {tried})");
-        emit_exec_error("command-not-found", &message);
-        eprintln!("ductus exec: {message}");
-        return ExitCode::from(1);
+    let path = match locate_exec_command(command, &host, repo) {
+        Ok(path) => path,
+        Err((code, message)) => {
+            emit_exec_error(code, &message);
+            eprintln!("ductus exec: {message}");
+            return ExitCode::from(1);
+        }
     };
+    let path = path.as_path();
 
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,

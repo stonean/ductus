@@ -555,6 +555,41 @@ fn exec_resolves_command_via_session_file_cli_config_dir() {
     assert_eq!(envelopes[0]["primitive"], "read-spec");
 }
 
+/// An installed command file that is a link leaving the project is refused
+/// before it is read, and no step runs (spec 022 task 40, from 064's
+/// analysis): the pi fixture's `.pi/prompts/acme-smoke.md`, linked to a copy
+/// outside the project, which would otherwise walk to `complete`.
+#[cfg(unix)]
+#[test]
+fn exec_refuses_a_command_file_linked_outside_the_project() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-pi-session");
+    copy_dir_recursive(&fixture, tmp.path());
+    let installed = tmp.path().join(".pi/prompts/acme-smoke.md");
+    fs::copy(&installed, outside.path().join("acme-smoke.md")).unwrap();
+    fs::remove_file(&installed).unwrap();
+    std::os::unix::fs::symlink(outside.path().join("acme-smoke.md"), &installed).unwrap();
+
+    let output = ductus_command(runtime_binary())
+        .arg("exec")
+        .arg("smoke")
+        .arg("feature=001-basic")
+        .current_dir(tmp.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn runtime");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    assert!(stdout.contains("command-file-outside-project"), "{stdout}");
+    assert!(stderr.contains(".pi/prompts/acme-smoke.md"), "{stderr}");
+    assert!(!stdout.contains("\"progress\""), "a step ran: {stdout}");
+}
+
 #[test]
 fn exec_emits_terminal_error_envelope_on_unparseable_command_file() {
     ensure_binary_built();

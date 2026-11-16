@@ -144,7 +144,7 @@ Older tiers are never removed by a primitive — the bootstrap migration is the 
 1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code), tried first;
 2. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
 
-Each adopter installs into one layout; walking both resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
+Each adopter installs into one layout; walking both resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)). `Host::load` refuses a `cli-config-dir` or `project` that is not one path component, naming the file it came from, and each callsite contains a candidate before probing it, never reading one that leaves the project (task 40; plan §Path arguments).
 
 ## Primitive request/response schemas
 
@@ -714,7 +714,7 @@ Request payload:
 }
 ```
 
-`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, a host could not tell "no constitutional context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
+`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `command-file-outside-project: {path}` for a candidate leaving the project, which is never read (task 40), `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, a host could not tell "no constitutional context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
 
 Response payload:
 

@@ -24,6 +24,12 @@
 //! [`Host::command_file_candidates`], which covers the two layouts:
 //! `claude-style`'s `commands/` (Claude Code) and `pi`'s flat
 //! project-hyphenated `prompts/` (spec 064 — `.pi/prompts/{project}-{name}.md`).
+//!
+//! Both values are joined into those paths, so [`Host::load`] refuses one
+//! that is not a single path component, naming the file it came from, and
+//! each callsite runs [`Host::contain_candidate`] on a candidate before it
+//! probes or reads it, so a symbolic link leaving the project is never
+//! followed (`BE-INPUT-004`; spec 022 task 40, from 064's analysis).
 
 use std::path::Path;
 
@@ -87,21 +93,26 @@ impl Host {
     pub fn load(repo: &Path) -> Result<Self> {
         let defaults = Self::defaults(repo);
         let host_block = Self::load_host_block(repo)?;
+        let config_path = paths::config_path(repo);
         // `project` is shared across the team — it names the slash-command
         // namespace and is identical for every contributor — so it stays in
         // the committed config file's `[host]` block.
-        let project = host_block
-            .as_ref()
-            .and_then(|b| b.project.clone())
-            .unwrap_or(defaults.project);
+        let project = match host_block.as_ref().and_then(|b| b.project.clone()) {
+            Some(project) => screen_component(project, "project", &config_path)?,
+            None => defaults.project,
+        };
         // `cli-config-dir` is per-contributor: teammates on one project may
         // each use a different agent (`.claude` / `.pi`), so it must NOT live
         // in committed config. Prefer the gitignored session file; fall back
         // to the config file's `[host]` value for adopters predating the
         // relocation; then the default.
-        let cli_config_dir = Self::load_session_cli_config_dir(repo)?
-            .or_else(|| host_block.and_then(|b| b.cli_config_dir))
-            .unwrap_or(defaults.cli_config_dir);
+        let cli_config_dir = match Self::load_session_cli_config_dir(repo)? {
+            Some(dir) => screen_component(dir, "cli-config-dir", &paths::session_path(repo))?,
+            None => match host_block.and_then(|b| b.cli_config_dir) {
+                Some(dir) => screen_component(dir, "cli-config-dir", &config_path)?,
+                None => defaults.cli_config_dir,
+            },
+        };
         Ok(Self {
             cli_config_dir,
             project,
@@ -175,6 +186,22 @@ impl Host {
         ]
     }
 
+    /// Refuse `rel`, one of a command's candidate files relative to `repo`,
+    /// when it leaves the project, lexically or through a symbolic link,
+    /// before it is probed or read (`BE-INPUT-004`; spec 022 task 40, from
+    /// 064's analysis). Every candidate a reader tries is checked, the
+    /// `framework/commands/` and `framework/bootstrap/` ones included, since
+    /// an installed copy or a directory above it can be a link. A link that
+    /// stays inside the project is followed, as everywhere else.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::InvalidPath`] naming `rel` when it leaves the project
+    /// or cannot be resolved; [`PrimitiveError::Io`] when `repo` cannot be.
+    pub fn contain_candidate(repo: &Path, rel: &str) -> Result<()> {
+        crate::primitives::validate_contained(repo, rel)
+    }
+
     fn defaults(repo: &Path) -> Self {
         let project = repo
             .file_name()
@@ -191,6 +218,26 @@ impl Host {
 struct HostFile {
     #[serde(default)]
     host: Option<HostBlock>,
+}
+
+/// `value`, read as `key` from `file`, when it is one path component: not
+/// empty, `.` or `..`, and holding no `/`, `\` or NUL. A command file's path
+/// is built from `project` and `cli-config-dir`, so a value carrying a
+/// separator or `..` would move it anywhere (`BE-INPUT-004`; spec 022 task
+/// 40). Both name a directory inside the project, so the config-sourced
+/// boundary on `validate_no_traversal`, which trusts a committed path naming
+/// a checkout outside it, does not cover them.
+fn screen_component(value: String, key: &str, file: &Path) -> Result<String> {
+    if value.is_empty() || value == "." || value == ".." || value.contains(['/', '\\', '\0']) {
+        return Err(PrimitiveError::InvalidPath {
+            path: value,
+            reason: format!(
+                "`{key}` in {} must be one path component (not empty, `.` or `..`, and no `/`, `\\` or NUL), since command files' paths are built from it",
+                file.display()
+            ),
+        });
+    }
+    Ok(value)
 }
 
 #[derive(Deserialize, Default)]
@@ -412,6 +459,111 @@ mod tests {
             ],
             "pi session identity resolves the flat prompts/ candidate last"
         );
+    }
+
+    /// Each value a command file's path is built from is refused, naming its
+    /// file, when it is not one path component (spec 022 task 40).
+    #[test]
+    fn a_value_that_is_not_one_path_component_halts_naming_its_file() {
+        let cases = [
+            // (config, session, refused key, file named)
+            (
+                "[host]\nproject = \"../outside\"\n",
+                None,
+                "project",
+                "config.toml",
+            ),
+            (
+                "[host]\ncli-config-dir = \"a/b\"\n",
+                None,
+                "cli-config-dir",
+                "config.toml",
+            ),
+            (
+                "",
+                Some("cli-config-dir = \"../outside\"\n"),
+                "cli-config-dir",
+                "session.toml",
+            ),
+            (
+                "",
+                Some("cli-config-dir = \"..\"\n"),
+                "cli-config-dir",
+                "session.toml",
+            ),
+            (
+                "[host]\nproject = \"a\\\\b\"\n",
+                None,
+                "project",
+                "config.toml",
+            ),
+            ("[host]\nproject = \"\"\n", None, "project", "config.toml"),
+        ];
+        for (config, session, key, file) in cases {
+            let repo = tmp_repo("ductus-fixture");
+            std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+            std::fs::write(repo.path().join(".ductus/config.toml"), config).unwrap();
+            if let Some(session) = session {
+                std::fs::write(repo.path().join(".ductus/session.toml"), session).unwrap();
+            }
+            let err = Host::load(repo.path()).unwrap_err();
+            assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
+            let text = err.to_string();
+            assert!(
+                text.contains(&format!("`{key}`")) && text.contains(file),
+                "{text}"
+            );
+        }
+    }
+
+    /// A value that is one component loads as before, a dotted one included.
+    #[test]
+    fn a_one_component_value_loads() {
+        let repo = tmp_repo("ductus-fixture");
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/config.toml"),
+            "[host]\nproject = \"my.proj\"\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/session.toml"),
+            "cli-config-dir = \".pi\"\n",
+        )
+        .unwrap();
+        let host = Host::load(repo.path()).unwrap();
+        assert_eq!(
+            (host.cli_config_dir.as_str(), host.project.as_str()),
+            (".pi", "my.proj")
+        );
+    }
+
+    /// A candidate that is, or runs through, a link leaving the project is
+    /// refused; one inside it, or absent, is not (spec 022 task 40).
+    #[cfg(unix)]
+    #[test]
+    fn contain_candidate_refuses_a_link_leaving_the_project() {
+        let repo = tmp_repo("ductus-fixture");
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("help.md"), "outside\n").unwrap();
+        std::fs::create_dir_all(repo.path().join(".pi/prompts")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("help.md"),
+            repo.path().join(".pi/prompts/acme-help.md"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(outside.path(), repo.path().join(".claude")).unwrap();
+        for rel in [".pi/prompts/acme-help.md", ".claude/commands/acme/help.md"] {
+            let err = Host::contain_candidate(repo.path(), rel).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidPath { .. }),
+                "{rel}: {err}"
+            );
+        }
+        std::fs::write(repo.path().join(".pi/prompts/acme-status.md"), "inside\n").unwrap();
+        for rel in [".pi/prompts/acme-status.md", ".pi/prompts/acme-absent.md"] {
+            Host::contain_candidate(repo.path(), rel).unwrap();
+        }
     }
 
     #[test]

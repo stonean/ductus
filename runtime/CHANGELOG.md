@@ -1299,6 +1299,22 @@ its version and date.
 
 ### Fixed
 
+- **BREAKING: an installed command file is read only from inside the project
+  (spec 022 task 40, from 064's analysis; BE-INPUT-004).** `ductus exec`, the
+  `writeCode` payload's constitution excerpts, `render-help` (and `ductus hook
+  help`) and the MCP server's always-loaded `target` copy built each candidate
+  path from `cli-config-dir` and `[host] project` unscreened, and opened the
+  file with no containment, so a symbolic link at an installed copy, or a `..`
+  in either value, served a file from outside the project. `Host::load` now
+  refuses a value that is not one path component (not empty, `.` or `..`, and
+  no `/`, `\` or NUL) with an invalid-path error naming the file it came from,
+  and each reader contains a candidate before it probes it: `ductus exec`
+  halts with the new error code `command-file-outside-project`, `render-help`
+  returns an invalid-path error naming the candidate, the excerpt load records
+  `command-file-outside-project: {path}` among its unexaminable causes, and the
+  always-loaded copy is reported unread, so the server still starts. A config
+  whose `project` or `cli-config-dir` held a separator, which never named an
+  installed copy a release writes, now halts.
 - **`merge-managed-block` replaces an upgraded `.gitignore` block whole when a
   release retired three of its subsections (spec 022 task 39).** Its
   `line-prefix` walk stepped over at most two consecutive unmatched groups, and

@@ -46,11 +46,17 @@ pub fn run(_args: &RenderHelpArgs, repo: &Path) -> Result<RenderHelpResult> {
 /// # Errors
 ///
 /// - [`PrimitiveError::CommandCopyNotFound`] when no candidate holds a copy.
+/// - [`PrimitiveError::InvalidPath`] when a candidate leaves the project,
+///   which is never read ([`Host::contain_candidate`]), or `[host] project`
+///   or `cli-config-dir` is not one path component ([`Host::load`]).
 /// - [`PrimitiveError::Io`] when a copy exists but cannot be read.
 /// - [`PrimitiveError::MalformedCommandCopy`] when the copy holds no guide.
 pub fn guide(repo: &Path) -> Result<String> {
     let candidates = Host::load(repo)?.command_file_candidates(HELP_COMMAND);
     for path in &candidates {
+        // Refused before it is read, so a link leaving the project is never
+        // followed (BE-INPUT-004; 022 task 40).
+        Host::contain_candidate(repo, path)?;
         let full = repo.join(path);
         let source = match std::fs::read_to_string(&full) {
             Ok(source) => source,
@@ -266,6 +272,29 @@ Print the following guide exactly:
         assert_eq!(command, "help");
         assert!(tried.contains(".claude/commands/acme/help.md"), "{tried}");
         assert!(tried.contains(".claude/prompts/acme-help.md"), "{tried}");
+    }
+
+    /// A copy that is a link leaving the project, at either layout's candidate,
+    /// is refused unread, never served as the guide (spec 022 task 40).
+    #[cfg(unix)]
+    #[test]
+    fn a_copy_linked_outside_the_project_is_refused_unread() {
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("help.md"), COPY).unwrap();
+        for (dir, copy) in [
+            (".claude", ".claude/commands/acme/help.md"),
+            (".pi", ".pi/prompts/acme-help.md"),
+        ] {
+            let tmp = project(dir);
+            let path = tmp.path().join(copy);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::os::unix::fs::symlink(outside.path().join("help.md"), &path).unwrap();
+            let err = guide(tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { path, .. } if path == copy),
+                "{copy}: {err:?}"
+            );
+        }
     }
 
     /// A copy that holds no guide is an error naming the copy.

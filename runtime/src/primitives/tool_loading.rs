@@ -429,7 +429,8 @@ pub enum AlwaysLoaded {
         /// The paths tried, repo-relative, in resolution order.
         candidates: Vec<String>,
     },
-    /// The copy at `path` could not be read or parsed, so no tool is flagged.
+    /// The copy at `path` could not be read or parsed, or leaves the project
+    /// and was not read ([`Host::contain_candidate`]), so no tool is flagged.
     Unreadable {
         /// The copy, repo-relative.
         path: String,
@@ -462,6 +463,14 @@ impl AlwaysLoaded {
         };
         let candidates = host.command_file_candidates(ALWAYS_LOADED_COMMAND);
         for path in &candidates {
+            // A copy leaving the project is reported unread, never followed,
+            // and the server still starts (BE-INPUT-004; 022 task 40).
+            if let Err(err) = Host::contain_candidate(repo, path) {
+                return Self::Unreadable {
+                    path: path.clone(),
+                    reason: err.to_string(),
+                };
+            }
             let source = match std::fs::read_to_string(repo.join(path)) {
                 Ok(source) => source,
                 Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
@@ -847,6 +856,32 @@ mod tests {
             notice.contains("names 2 primitives"),
             "the parse error is the reason: {notice}"
         );
+    }
+
+    /// A copy that is a link leaving the project is reported unread, never
+    /// derived, and flags nothing (spec 022 task 40). Followed, it would
+    /// derive two tools.
+    #[cfg(unix)]
+    #[test]
+    fn a_copy_linked_outside_the_project_is_reported_unread() {
+        let tmp = project(None);
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(
+            outside.path().join("target.md"),
+            "## Instructions\n\n1. Invoke `resolve-session`.\n2. Invoke `write-session`.\n",
+        )
+        .unwrap();
+        let dir = tmp.path().join(".claude/commands/acme");
+        fs::create_dir_all(&dir).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("target.md"), dir.join("target.md"))
+            .unwrap();
+        let found = AlwaysLoaded::resolve(tmp.path());
+        let AlwaysLoaded::Unreadable { path, reason } = &found else {
+            panic!("expected the link reported unread, got {found:?}");
+        };
+        assert_eq!(path, ".claude/commands/acme/target.md");
+        assert!(reason.contains("outside"), "{reason}");
+        assert!(found.tools().is_empty());
     }
 
     /// A copy whose steps name no tool flags none, and says so, so an empty
