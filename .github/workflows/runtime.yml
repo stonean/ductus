@@ -262,7 +262,7 @@ jobs:
           #!/usr/bin/env bash
           export HOME=/c/ductus-probe/home
           cd /c/ductus-probe || exit 1
-          { echo "user: $(whoami)"; MSYS2_ARG_CONV_EXCL='*' whoami.exe /groups; } > /c/ductus-probe/who.txt 2>&1
+          { echo "user: $(whoami)"; MSYS2_ARG_CONV_EXCL='*' /c/Windows/System32/whoami.exe /groups; } > /c/ductus-probe/who.txt 2>&1
           bash /c/ductus-probe/measure.sh /c/ductus-probe/ductus.exe > /c/ductus-probe/out.txt 2>&1
           echo "$?" > /c/ductus-probe/rc.txt
           EOF
