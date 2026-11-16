@@ -89,18 +89,20 @@ fi
 # Every wait on the runtime is bounded (BE-TIMEOUT-001): it is a local,
 # deterministic process, so a call that outlasts the bound is hung, and the
 # pre-commit hook that runs this would otherwise wait on it with no end.
-# DUCTUS_GEN_TIMEOUT_SECONDS overrides the bound, in whole seconds.
+# DUCTUS_GEN_TIMEOUT_SECONDS overrides the bound, in whole seconds, from
+# MIN_GEN_TIMEOUT_SECONDS up (CFG-CONST-004).
 DEFAULT_GEN_TIMEOUT_SECONDS=120
+MIN_GEN_TIMEOUT_SECONDS=1
 runtime_timeout="${DUCTUS_GEN_TIMEOUT_SECONDS:-$DEFAULT_GEN_TIMEOUT_SECONDS}"
 refuse_timeout() {
-  echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_SECONDS must be a positive whole number of seconds, got '$runtime_timeout'." >&2
+  echo "gen-claude-commands: DUCTUS_GEN_TIMEOUT_SECONDS must be a whole number of seconds, at least $MIN_GEN_TIMEOUT_SECONDS, got '$runtime_timeout'." >&2
   exit 1
 }
 case "$runtime_timeout" in
   '' | *[!0-9]*) refuse_timeout ;;
 esac
 # All digits, so a decimal comparison; `00` is zero too.
-if [ "$runtime_timeout" -eq 0 ]; then refuse_timeout; fi
+if [ "$runtime_timeout" -lt "$MIN_GEN_TIMEOUT_SECONDS" ]; then refuse_timeout; fi
 # Run "$@" as a background job that a watchdog stops once the bound passes,
 # since macOS ships no timeout(1). The watchdog holds none of the caller's
 # output, so a command substitution around this does not wait on its sleep.

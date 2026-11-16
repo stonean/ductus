@@ -19,6 +19,9 @@
 #      description that drops the field fails here rather than at a commit
 #   E. a runtime that never answers is stopped once DUCTUS_GEN_TIMEOUT_SECONDS
 #      passes, and the generator exits non-zero naming it (BE-TIMEOUT-001)
+#   F. a DUCTUS_GEN_TIMEOUT_SECONDS below MIN_GEN_TIMEOUT_SECONDS is refused,
+#      naming the floor, and the check reads that constant: a scratch copy whose
+#      floor is raised refuses a value the shipped floor allows (CFG-CONST-004)
 #
 # Usage: scripts/tests/test-gen-claude-commands.sh
 # D needs a release build: runtime/target/release/ductus, or DUCTUS_BIN.
@@ -162,6 +165,32 @@ else
       fi
       ;;
     *) fail "E: the generator failed without naming the bound: $out" ;;
+  esac
+fi
+
+# F. the timeout's floor is the named constant
+root="$(scratch_root f)"
+if out="$(DUCTUS_GEN_TIMEOUT_SECONDS=0 DUCTUS_BIN="$current" "$root/scripts/gen-claude-commands.sh" 2>&1)"; then
+  fail "F: a timeout of 0 was accepted"
+else
+  case "$out" in
+    *"DUCTUS_GEN_TIMEOUT_SECONDS must be a whole number of seconds, at least 1, got '0'"*)
+      pass "F: a timeout below the floor is refused, naming it" ;;
+    *) fail "F: a timeout of 0 failed without naming the floor: $out" ;;
+  esac
+fi
+gen="$root/scripts/gen-claude-commands.sh"
+sed 's/^MIN_GEN_TIMEOUT_SECONDS=1$/MIN_GEN_TIMEOUT_SECONDS=5/' "$gen" > "$gen.raised"
+mv "$gen.raised" "$gen"
+chmod +x "$gen"
+if [ "$(grep -c '^MIN_GEN_TIMEOUT_SECONDS=5$' "$gen")" -ne 1 ]; then
+  fail "F: the generator names no MIN_GEN_TIMEOUT_SECONDS=1 to raise"
+elif out="$(DUCTUS_GEN_TIMEOUT_SECONDS=3 DUCTUS_BIN="$current" "$gen" 2>&1)"; then
+  fail "F: with the floor raised to 5, a timeout of 3 was accepted, so the check does not read MIN_GEN_TIMEOUT_SECONDS"
+else
+  case "$out" in
+    *"at least 5, got '3'"*) pass "F: the check and its refusal read the floor from MIN_GEN_TIMEOUT_SECONDS" ;;
+    *) fail "F: with the floor raised, a timeout of 3 failed without naming it: $out" ;;
   esac
 fi
 
