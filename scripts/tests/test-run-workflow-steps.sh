@@ -21,8 +21,9 @@
 #   I. a step is bound by its own timeout-minutes, else its job's, the whole
 #      process group is killed, and a malformed bound exits 2
 #   K. a working directory outside the repository exits 2 before any step
-#      runs: a relative escape, a job's absolute path, and a sibling whose
-#      name has the root's as a prefix
+#      runs: a relative escape, a job's absolute path, a sibling whose name
+#      has the root's as a prefix, and a link under the root that points out
+#      of it
 #
 # Usage: scripts/tests/test-run-workflow-steps.sh
 
@@ -356,14 +357,35 @@ jobs:
 EOF
 run k3 "$WORK/escape-sibling.yml"
 k3=$rc
+# A link under the root that points out of it: a lexical check passes it, so
+# a copy of the runner runs under a fake root holding one (the runner takes
+# its root from its own location).
+fake="$WORK/fakeroot"
+mkdir -p "$fake/scripts" "$WORK/link-target"
+cp "$RUNNER" "$fake/scripts/run-workflow-steps.py"
+ln -s "$WORK/link-target" "$fake/linkdir"
+cat > "$WORK/escape-link.yml" <<EOF
+on: push
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: A step in a directory that is a link out of the repository
+        working-directory: linkdir
+        run: touch "$WORK/escape-link-ran"
+EOF
+k4=0
+python3 -I "$fake/scripts/run-workflow-steps.py" --log-dir "$WORK/logs-k4" "$WORK/escape-link.yml" > "$WORK/k4.out" 2>&1 || k4=$?
 if [ "$k1" -eq 2 ] && has k1 "working-directory '..' resolves outside the repository" \
   && [ "$k2" -eq 2 ] && has k2 "resolves outside the repository" \
   && [ "$k3" -eq 2 ] && has k3 "working-directory '$sibling' resolves outside the repository" \
   && [ ! -e "$WORK/escape-inside-ran" ] && [ ! -e "$WORK/escape-ran" ] \
-  && [ ! -e "$WORK/escape-abs-ran" ] && [ ! -e "$WORK/escape-sibling-ran" ]; then
+  && [ ! -e "$WORK/escape-abs-ran" ] && [ ! -e "$WORK/escape-sibling-ran" ] \
+  && [ "$k4" -eq 2 ] && has k4 "working-directory 'linkdir' resolves outside the repository" \
+  && [ ! -e "$WORK/escape-link-ran" ]; then
   pass "K. a working directory outside the repository exits 2 before any step runs"
 else
-  fail "K. containment (exits $k1, $k2, $k3): $(cat "$WORK/k1.out" "$WORK/k2.out" "$WORK/k3.out")"
+  fail "K. containment (exits $k1, $k2, $k3, $k4): $(cat "$WORK/k1.out" "$WORK/k2.out" "$WORK/k3.out" "$WORK/k4.out")"
 fi
 
 if [ "$failures" -gt 0 ]; then
