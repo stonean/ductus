@@ -1306,7 +1306,7 @@ its version and date.
   check cannot read still holds no decision, so a decision it may have held counts
   as new, and each run's `run-decisions` entry now names how many such records it
   met as `records-unread`, absent at zero (`QUAL-CLAIM-001`).
-- **Six descriptions say what the code does (spec 079's review).**
+- **Seven descriptions say what the code does (spec 079's review).**
   `process-waivers` counts a plan-named file as read only through a plan entry
   the scope holds; `derive-dependencies` and `derive-references` report a spec
   behind a link leaving the project as unparseable; `resolve-anchor`'s empty
