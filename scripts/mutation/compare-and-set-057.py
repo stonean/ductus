@@ -1,5 +1,5 @@
 """Mutation list for spec 057 task 27 (`BE-TXN-002`): `relocate-audit-records`
-writes `review.md`, `analysis.md` and `spec.md` through the shared
+writes each artifact, in the order its block appears in `spec.md`, and then `spec.md` through the shared
 compare-before-persist guard (`ReadSnapshot`, `runtime/src/primitives/mod.rs`),
 and reports a relocation left half done by name. Each mutation removes the
 guard from one write, or the half-done report from one refusal; the tests in
@@ -35,7 +35,7 @@ MUTATIONS = [
     (
         'M3 a refused spec.md after the artifacts were written reads as a plain refusal',
         'src/primitives/relocate_audit_records.rs',
-        '            Err(PrimitiveError::ChangedSinceRead { path }) => {\n                return Err(PrimitiveError::RelocationIncomplete {\n                    written,\n                    refused: path,\n                });\n            }\n            Err(err) => return Err(err),\n        }\n        Ok(RelocateAuditRecordsResult {',
+        '            Err(PrimitiveError::ChangedSinceRead { path }) => {\n                return Err(PrimitiveError::RelocationIncomplete {\n                    written,\n                    refused: path,\n                    disagreements,\n                });\n            }\n            Err(err) => return Err(err),\n        }\n        Ok(RelocateAuditRecordsResult {',
         '            Err(err) => return Err(err),\n        }\n        Ok(RelocateAuditRecordsResult {',
         'relocate_audit_records::tests::a_spec_changed_since_its_read_leaves_a_named_half_done_relocation',
     ),
@@ -49,15 +49,29 @@ MUTATIONS = [
     (
         'M5 the half-done error forgets which files were written',
         'src/primitives/relocate_audit_records.rs',
-        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written,\n                        refused: path,\n                    });',
-        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written: Vec::new(),\n                        refused: path,\n                    });',
+        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written,\n                        refused: path,\n                        disagreements,\n                    });',
+        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written: Vec::new(),\n                        refused: path,\n                        disagreements,\n                    });',
         'relocate_audit_records::tests::a_later_artifact_changed_since_its_read_leaves_a_named_half_done_relocation',
     ),
     (
         'M6 spec.md is written before the artifacts, so a refused artifact drops its block',
         'src/primitives/relocate_audit_records.rs',
-        '        let mut written: Vec<PathBuf> = Vec::new();\n        for artifact in &self.artifacts {',
-        '        let mut written: Vec<PathBuf> = Vec::new();\n        self.spec_snapshot.write_if_unchanged(&self.rewritten)?;\n        for artifact in &self.artifacts {',
+        '        let mut disagreements: Vec<String> = Vec::new();\n        for artifact in self.artifacts {',
+        '        let mut disagreements: Vec<String> = Vec::new();\n        self.spec_snapshot.write_if_unchanged(&self.rewritten)?;\n        for artifact in self.artifacts {',
         'relocate_audit_records::tests::an_artifact_changed_since_its_read_is_refused_and_nothing_is_written',
+    ),
+    (
+        'M7 the half-done error forgets the disagreements of the files it wrote',
+        'src/primitives/relocate_audit_records.rs',
+        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written,\n                        refused: path,\n                        disagreements,\n                    });',
+        '                    return Err(PrimitiveError::RelocationIncomplete {\n                        written,\n                        refused: path,\n                        disagreements: Vec::new(),\n                    });',
+        'relocate_audit_records::tests::a_half_done_relocation_refused_at_an_artifact_names_the_disagreements_too',
+    ),
+    (
+        'M8 the half-done error for a refused spec.md forgets the disagreements',
+        'src/primitives/relocate_audit_records.rs',
+        '                    written,\n                    refused: path,\n                    disagreements,\n                });\n            }\n            Err(err) => return Err(err),\n        }\n        Ok(RelocateAuditRecordsResult {',
+        '                    written,\n                    refused: path,\n                    disagreements: Vec::new(),\n                });\n            }\n            Err(err) => return Err(err),\n        }\n        Ok(RelocateAuditRecordsResult {',
+        'relocate_audit_records::tests::a_half_done_relocation_names_the_disagreements_of_the_files_it_wrote',
     ),
 ]

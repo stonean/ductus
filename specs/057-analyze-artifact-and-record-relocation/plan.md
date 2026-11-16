@@ -128,7 +128,15 @@ states the compare-and-set lock and its bounds; the data model's
 *Errors* table states what a refusal leaves. A refusal after an earlier write
 is `RelocationIncomplete`, an error rather than a result field because
 `changed: false` already means converged; the re-run is safe because the merge
-is idempotent.
+is idempotent. The error carries the `disagreements` found for the files
+already written, since the re-run finds those copies equal and reports none:
+without them a half-done relocation would smooth the evidence this section
+says is named. `BE-COMPAT-001`'s Verification asks a plan to classify a change
+as additive or breaking: both new errors are classified breaking, since a sweep
+that used to write now refuses a file changed since its read, which the
+Statement's list of breaking changes does not name, so this is the
+conservative classification. It is made within major version zero, so it takes
+no major bump, for the reason the relocation's classification below gives.
 
 ### The migration must not reopen a `done` spec
 

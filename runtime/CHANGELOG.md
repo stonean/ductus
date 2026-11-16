@@ -70,12 +70,13 @@ its version and date.
   The sweep read `spec.md` and each artifact, then renamed the result over
   each with no guard, so a writer landing between a read and its rename was
   dropped. It now reads through `ReadSnapshot` (`runtime/src/primitives/mod.rs`,
-  spec 041 task 27) and writes `review.md`, `analysis.md` and then `spec.md`
+  spec 041 task 27) and writes each artifact, in the order its block appears in `spec.md`, and then `spec.md`
   only when each is unchanged, under the project-wide compare-and-set lock;
   the other writer's change stays. A refusal before anything is written is the
   `changed-since-read` error. A refusal after an earlier file was written is
   the new error `relocation-incomplete` (`PrimitiveError::RelocationIncomplete`),
-  naming the files written and the file refused; `spec.md` still carries its
+  naming the files written, the file refused and the disagreements found for the files
+  written (a re-run finds those copies equal and reports none); `spec.md` still carries its
   blocks, so re-running finishes the relocation. Breaking under
   `BE-COMPAT-001`: two new operational errors where the sweep used to write.
   A writer that does not go through the guard takes no lock and can still land between the

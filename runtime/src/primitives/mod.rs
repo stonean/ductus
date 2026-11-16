@@ -144,14 +144,20 @@ pub enum PrimitiveError {
         "relocation left half done: {} written; {refused} changed since it was read, so it \
          was not written and the other writer's change stands, and spec.md was not rewritten, so \
          it still carries the record blocks: re-run the command, which merges again and is \
-         safe to repeat",
-        join_paths(.written)
+         safe to repeat{}",
+        join_paths(.written),
+        disagreement_note(.disagreements)
     )]
     RelocationIncomplete {
         /// The files already replaced, project-relative, in write order.
         written: Vec<PathBuf>,
         /// The file refused, as the caller named it (project-relative).
         refused: PathBuf,
+        /// Every `file:key` where the spec block and an existing artifact
+        /// disagreed, for the files in `written`. The re-run finds those two
+        /// copies equal and reports none, so the error is the only place this
+        /// evidence survives a half-done relocation.
+        disagreements: Vec<String>,
     },
     /// YAML parse failure for a frontmatter block.
     #[error("YAML parse error in {path}: {source}")]
@@ -1331,6 +1337,20 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
         )?;
     }
     Ok(())
+}
+
+/// The sentence a half-done relocation's message ends with when the files it
+/// wrote disagreed with the spec block, or nothing when none did.
+fn disagreement_note(disagreements: &[String]) -> String {
+    if disagreements.is_empty() {
+        String::new()
+    } else {
+        format!(
+            ". The spec block won these keys in the files written, and a re-run reports \
+             none of them, so they are named here: {}",
+            disagreements.join(", ")
+        )
+    }
 }
 
 /// The paths, comma separated, for an error message.

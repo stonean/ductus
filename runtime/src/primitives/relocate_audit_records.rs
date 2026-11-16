@@ -70,8 +70,9 @@ use crate::schema::primitives::{RelocateAuditRecordsArgs, RelocateAuditRecordsRe
 ///   changed since it was read: nothing was written.
 /// - [`PrimitiveError::RelocationIncomplete`] when a later file changed since
 ///   it was read, after earlier ones were written: the error names the files
-///   written and the one refused, and `spec.md` still carries the blocks, so
-///   a re-run finishes the relocation.
+///   written, the one refused and the disagreements found for the files
+///   written, and `spec.md` still carries the blocks, so a re-run finishes the
+///   relocation.
 pub fn run(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<RelocateAuditRecordsResult> {
     match plan(args, repo)? {
         Plan::Converged(result) => Ok(result),
@@ -87,11 +88,13 @@ enum Plan {
     Pending(Box<Relocation>),
 }
 
-/// One artifact to write: its snapshot, project-relative path and new content.
+/// One artifact to write: its snapshot, project-relative path, new content and
+/// the keys on which its existing copy disagreed with the spec block.
 struct ArtifactWrite {
     snapshot: ReadSnapshot,
     rel: String,
     rendered: String,
+    disagreements: Vec<String>,
 }
 
 /// A relocation read and computed, holding the snapshot each of its files
@@ -101,7 +104,6 @@ struct Relocation {
     spec_snapshot: ReadSnapshot,
     artifacts: Vec<ArtifactWrite>,
     rewritten: String,
-    disagreements: Vec<String>,
 }
 
 /// Read the spec and each artifact its blocks move to, and compute every
@@ -144,11 +146,11 @@ fn plan(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<Plan> {
     }
 
     let mut artifacts = Vec::new();
-    let mut disagreements = Vec::new();
     for (key, lines) in &blocks {
         let (file, heading) = artifact_for(key);
         let rel = format!("{root}/{}/{file}", args.feature);
         let snapshot = ReadSnapshot::read(repo, &rel)?;
+        let mut disagreements = Vec::new();
         let rendered = render_artifact(
             snapshot.text()?,
             &rel,
@@ -162,6 +164,7 @@ fn plan(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<Plan> {
             snapshot,
             rel,
             rendered,
+            disagreements,
         });
     }
 
@@ -188,7 +191,6 @@ fn plan(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<Plan> {
         spec_snapshot,
         artifacts,
         rewritten,
-        disagreements,
     })))
 }
 
@@ -197,17 +199,24 @@ impl Relocation {
     /// was read. A refusal before anything is written is the plain
     /// [`PrimitiveError::ChangedSinceRead`]; one after is
     /// [`PrimitiveError::RelocationIncomplete`], since a half-done relocation
-    /// must not read as a refused one. `spec.md` goes last so no block leaves
+    /// must not read as a refused one, and it carries the disagreements found
+    /// for the files already written: a re-run merges again, finds the two
+    /// copies equal and reports none. `spec.md` goes last so no block leaves
     /// it before its artifact holds it.
     fn write(self) -> Result<RelocateAuditRecordsResult> {
         let mut written: Vec<PathBuf> = Vec::new();
-        for artifact in &self.artifacts {
+        let mut disagreements: Vec<String> = Vec::new();
+        for artifact in self.artifacts {
             match artifact.snapshot.write_if_unchanged(&artifact.rendered) {
-                Ok(()) => written.push(artifact.rel.as_str().into()),
+                Ok(()) => {
+                    written.push(artifact.rel.as_str().into());
+                    disagreements.extend(artifact.disagreements);
+                }
                 Err(PrimitiveError::ChangedSinceRead { path }) if !written.is_empty() => {
                     return Err(PrimitiveError::RelocationIncomplete {
                         written,
                         refused: path,
+                        disagreements,
                     });
                 }
                 Err(err) => return Err(err),
@@ -219,6 +228,7 @@ impl Relocation {
                 return Err(PrimitiveError::RelocationIncomplete {
                     written,
                     refused: path,
+                    disagreements,
                 });
             }
             Err(err) => return Err(err),
@@ -229,7 +239,7 @@ impl Relocation {
                 .iter()
                 .map(|path| path.to_string_lossy().into_owned())
                 .collect(),
-            disagreements: self.disagreements,
+            disagreements,
             changed: true,
         })
     }
@@ -682,7 +692,7 @@ mod tests {
         })
         .unwrap_err();
         assert!(
-            matches!(&err, PrimitiveError::RelocationIncomplete { written, refused }
+            matches!(&err, PrimitiveError::RelocationIncomplete { written, refused, .. }
                 if written == &[PathBuf::from("specs/001-x/review.md")]
                     && refused == Path::new("specs/001-x/analysis.md")),
             "{err:?}"
@@ -702,6 +712,62 @@ mod tests {
         assert_eq!(fs::read_to_string(dir.join("spec.md")).unwrap(), SPEC);
     }
 
+    /// A half-done relocation keeps the disagreements found for the files it
+    /// wrote: the artifact written already carries the block's values, so the
+    /// re-run finds the two copies equal and reports none, and the error is the
+    /// only record that they ever differed (spec 057, "named, never smoothed").
+    #[test]
+    fn a_half_done_relocation_names_the_disagreements_of_the_files_it_wrote() {
+        let tmp = repo(SPEC);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            "---\nspec: 001-x\nmust-violations: 9\n---\n\n# Review — 001-x\n",
+        )
+        .unwrap();
+        let theirs = SPEC.replace("next-criterion: 7", "next-criterion: 8");
+        let err = relocate_with(&tmp, |dir| {
+            fs::write(dir.join("spec.md"), &theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::RelocationIncomplete { disagreements, .. }
+                if disagreements == &["review.md:must-violations".to_string()]),
+            "{err:?}"
+        );
+        assert!(
+            err.to_string().contains("review.md:must-violations"),
+            "{err}"
+        );
+        // The evidence is gone from the tree: the re-run reports none.
+        fs::write(dir.join("spec.md"), SPEC).unwrap();
+        let rerun = run(&args(), tmp.path()).unwrap();
+        assert!(rerun.disagreements.is_empty(), "{rerun:?}");
+    }
+
+    /// The same evidence is kept when a later artifact, not `spec.md`, is the
+    /// file refused.
+    #[test]
+    fn a_half_done_relocation_refused_at_an_artifact_names_the_disagreements_too() {
+        let tmp = repo(SPEC);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            "---\nspec: 001-x\nmust-violations: 9\n---\n\n# Review — 001-x\n",
+        )
+        .unwrap();
+        let theirs = "---\nspec: 001-x\nadvisory: 9\n---\n\n# Analysis — 001-x\n";
+        let err = relocate_with(&tmp, |dir| {
+            fs::write(dir.join("analysis.md"), theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::RelocationIncomplete { disagreements, .. }
+                if disagreements == &["review.md:must-violations".to_string()]),
+            "{err:?}"
+        );
+    }
+
     /// A `spec.md` that changed after the relocation read it is not written
     /// over, after both artifacts were: the error names them and the refused
     /// spec, and the other writer's `spec.md` stands.
@@ -715,7 +781,7 @@ mod tests {
         })
         .unwrap_err();
         assert!(
-            matches!(&err, PrimitiveError::RelocationIncomplete { written, refused }
+            matches!(&err, PrimitiveError::RelocationIncomplete { written, refused, .. }
                 if written.len() == 2 && refused == Path::new("specs/001-x/spec.md")),
             "{err:?}"
         );
