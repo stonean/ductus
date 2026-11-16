@@ -24,7 +24,7 @@
 import { mkdtempSync, mkdirSync, symlinkSync, rmSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -130,6 +130,16 @@ function killRuntime(dir) {
   execFileSync("pkill", ["-f", `${join(dir, ".ductus/bin/ductus")} mcp`]);
 }
 
+// Whether a `ductus mcp` started from this case's pointer is still running.
+function runtimeRunning(dir) {
+  try {
+    execFileSync("pgrep", ["-f", `${join(dir, ".ductus/bin/ductus")} mcp`], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 let loaded = 0;
 async function load(dir) {
   process.chdir(dir);
@@ -150,7 +160,7 @@ async function load(dir) {
   mod.default(api);
   await sleep(100); // pi fires session_start right after loading extensions
   handlers.session_start?.({}, ctx);
-  return { tools, notices, commands, messages };
+  return { tools, notices, commands, messages, handlers };
 }
 
 // The one message a registered command sent: displayed, and triggering no turn.
@@ -345,6 +355,52 @@ await check("a runtime without render-status registers no status command", async
   await sleep(200);
   if (commands.size !== 1 || !commands.has("stub-help"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+});
+
+// Spec 064, scenario the-bridge-closes-its-server-at-shutdown: pi's extension
+// docs require an idempotent session_shutdown handler for any resource an
+// extension starts.
+await check("session_shutdown stops the runtime, a second one does nothing, and the next call respawns it", async () => {
+  const dir = project();
+  const { tools, handlers } = await load(dir);
+  await until(5000, () => tools.size > 0);
+  const tool = tools.get("ductus__check-artifact-size");
+  await within(5000, tool.execute("t1", ARGS));
+  if (!runtimeRunning(dir)) throw new Error("no runtime was running before the shutdown");
+  if (!handlers.session_shutdown) throw new Error("the bridge registers no session_shutdown handler");
+  await handlers.session_shutdown({ reason: "quit" }, {});
+  await handlers.session_shutdown({ reason: "quit" }, {});
+  await until(3000, () => !runtimeRunning(dir));
+  // The runtime answers ARGS with its own error, so the respawn shows as an
+  // answer that is not one of the bridge's own envelopes.
+  const res = await within(5000, tool.execute("t2", ARGS));
+  const text = res.content?.[0]?.text ?? "";
+  if (!text.includes("feature directory not found") || /shut down|exited|run \/ductus/.test(text))
+    throw new Error(`no respawn after the shutdown: ${JSON.stringify(res)}`);
+  if (!runtimeRunning(dir)) throw new Error("the call answered but no runtime is running");
+});
+
+// A print-mode `pi -p` exits once its prompts are done, so a process that
+// loaded the bridge and made a call must exit by itself, not be held open by
+// the runtime child and its pipes.
+await check("a process that loaded the bridge and made a call exits by itself", async () => {
+  const dir = project();
+  const driver = join(dir, "driver.mjs");
+  writeFileSync(driver, `import { pathToFileURL } from "node:url";
+process.chdir(${JSON.stringify(dir)});
+const tools = new Map();
+const api = { on: () => {}, registerTool: (t) => tools.set(t.name, t), registerCommand: () => {}, sendMessage: () => {} };
+const mod = await import(pathToFileURL(${JSON.stringify(join(dir, ".pi", "extensions", "ductus.ts"))}).href);
+mod.default(api);
+const start = Date.now();
+while (tools.size === 0 && Date.now() - start < 5000) await new Promise((r) => setTimeout(r, 20));
+const res = await tools.get("ductus__check-artifact-size").execute("t1", ${JSON.stringify(ARGS)});
+console.log(res.content?.[0]?.text ? "called" : "empty");
+`);
+  const run = spawnSync(process.execPath, [driver], { encoding: "utf8", timeout: 10000 });
+  if (run.signal) throw new Error(`still running after 10 s, stopped by ${run.signal}; stdout ${JSON.stringify(run.stdout.trim())}`);
+  if (run.status !== 0 || run.stdout.trim() !== "called") throw new Error(`exit ${run.status}: ${run.stdout} ${run.stderr}`);
+  await until(3000, () => !runtimeRunning(dir));
 });
 
 console.log(results.join("\n"));

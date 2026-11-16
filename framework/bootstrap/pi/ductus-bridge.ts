@@ -181,6 +181,14 @@ class DuctusServer {
     /* stderr is ignored rather than piped: a pipe nobody reads fills and
      * blocks the child. */
     const proc = spawn(this.pointerPath, ["mcp"], { stdio: ["pipe", "pipe", "ignore"] });
+    /* Unreferenced, with both pipes, so the child never holds pi's process
+     * open: a print-mode run exits once its prompts are done, and so does a
+     * run that never starts a session. A call in flight keeps pi alive through
+     * its own timer. When pi exits, the child's stdin closes and it stops
+     * (spec 064, scenario the-bridge-closes-its-server-at-shutdown). */
+    proc.unref();
+    (proc.stdin as unknown as { unref?: () => void } | null)?.unref?.();
+    (proc.stdout as unknown as { unref?: () => void } | null)?.unref?.();
     this.child = proc;
     this.lineBuffer = "";
     /* Decoded as a UTF-8 stream, not chunk by chunk: a multi-byte character a
@@ -274,6 +282,15 @@ class DuctusServer {
       if (this.connection === connection) this.connection = null;
     });
     return connection;
+  }
+
+  /** Stop the child, if one runs, for pi's session_shutdown. Idempotent, and a
+   *  later call respawns it, as after a death. */
+  stop() {
+    const proc = this.child;
+    if (!proc) return;
+    this.drop("the ductus bridge was shut down");
+    proc.kill();
   }
 
   async listTools(): Promise<McpTool[]> {
@@ -428,5 +445,12 @@ export default function (pi: ExtensionAPI) {
     } catch (err) {
       ctx.ui.notify(err instanceof CommandsUnregistered ? err.message : unavailable(err), "error");
     }
+  });
+
+  /* pi's extension docs ask for an idempotent session_shutdown handler that
+   * closes what an extension started; the runtime child is the one resource
+   * the bridge holds. */
+  pi.on("session_shutdown", async () => {
+    server.stop();
   });
 }
