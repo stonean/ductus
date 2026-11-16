@@ -1,15 +1,15 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-15T21:43:33Z
-analyzed-against: d4233d57ac0eee794638f3dceda2d2f1e0419395
+last-run: 2026-11-16T13:54:28Z
+analyzed-against: 7ba38698b07cf4a05c9907e02fb1cdf473195c86
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 9
 analyzed-digest:
-  data-model.md: caa0867d6f2877c365207d3fa64ce9f5d660844f577b53e014ec32e19fc2d917
-  plan.md: 2b88085e12037fb2efb067a3d5ea4f33fe11dc84acf26d98a49cae913ef01316
-  review.md: 167d716267361b810487a2d1c13147801bdf9b4d518bb23cf0fb9d92ce6eacf8
+  data-model.md: 3f4ad82314fc938bc24fc39aa9faad7e788c76a12e2c45bf6a2906f2fa9982ab
+  plan.md: 5cf6928613498b59a3aca9b72f3e176031da77e3ef03145b362561f7246603a9
+  review.md: 71ac5b9178a4d734c7a34ee8fe7a06834734d07caf92db9dec26436f960e3c80
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -31,12 +31,12 @@ analyzed-digest:
   scenarios/review-staleness-on-done-specs.md: e0c14689fc666e2658b2cf7f9891b0f00d717aee8bd3c871717d54ed7ff6900c
   scenarios/scope-results-have-a-bounded-size.md: 99120b144942e06b365e220c30085592a02c477c548e6336f8c23400e1ee4c9d
   scenarios/the-committed-tree-horizon.md: 046b6a8dcef5f85bdb9083308311729911f5afa49f0351c0505bc558b5adb96b
-  scenarios/the-cross-spec-impact-gate.md: b85c2d557733a29beb8084823a9156e13b283090a283203aa14dcaa85afed3c1
+  scenarios/the-cross-spec-impact-gate.md: f94b4a47110ad23eab638e824f87b4a50b926e3df6ae70fe18d0261a8377cb35
   scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: e9fa9c1d0483fb69ab0aaf8c08032dbc8d201d4a0d9be448eb97d82102ce4b2b
-  tasks.md: 958ef887aa551e587cf7f6c41c8efb8acea2da42914c95d3e1cd20d384fecc84
+  spec.md: e01a4ef9684b13d0b2ec683b49b75699e36b908ebf911391937f6b6c9a6f1e46
+  tasks.md: 07f3c393f54fd47dbeba9b2423e64b8ff1d8d4aa867e723076c8963e157a0542
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
@@ -54,18 +54,22 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
-  BE-ERR-002: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
-  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
-  BE-INPUT-004: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
+  BE-ERR-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-INPUT-002: {verdict: addressed, cite: "scenarios/the-fix-round-loop-is-recorded-and-gated.md#Behavior"}
+  BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-011: {verdict: addressed, cite: "scenarios/process-waivers-notices-flatten-stored-text.md#Behavior"}
+  BE-LOCK-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
-  CFG-ENV-008: {verdict: addressed, cite: "scenarios/scope-results-have-a-bounded-size.md#Edge Cases"}
+  BE-RACE-003: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-TXN-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -75,7 +79,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -104,4 +108,4 @@ dispositions:
 
 ## Fixed in this run
 
-- grounding — plan.md Affected Files states 'The sixteen scenarios moved from 022' as a count, but scenarios/ now holds 27 files; the enumeration has drifted from the tree — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+*None.*
