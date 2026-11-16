@@ -43,9 +43,3 @@ Blocked on task 1: the store tests run against the migrated schema.
 - **Done when**: the README link resolves to the new path.
 
 -->
-
-## 2. Review and analyze the correction spec 079 made
-
-Spec 079 task 10 corrected `data-model.md`, which described a host reading a section by hand; a data-model edit stales the review. It owes `/ductus:review`, then `/ductus:analyze`, then the completion gate, which run once no box in this file is open (spec 079).
-
-- **Done when**: a review and an analysis are recorded on this spec, and `/ductus:implement` has returned it to `done`.
