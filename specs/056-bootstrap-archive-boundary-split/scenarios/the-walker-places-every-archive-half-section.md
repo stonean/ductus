@@ -22,6 +22,7 @@ section: "What the run reads, and when"
 
 - **A migration that moves the config file.** `govern-dir-consolidate` makes `.ductus/config.toml` the active config file for every later step, so the placement keeps Pre-run Migrations ahead of every walker step that reads or writes the active config file, step 6's host block included.
 - **A halt in steps 5–9.** The Security Audit and Hook Installation have already run, so a later halt skips neither.
+- **A host that walks only the numbered steps.** Step 4 itself names the Security Audit and Hook Installation at their places. When only the paragraph above the steps placed them, two of three scratch-adopter hosts on 2026-11-16 ran Hook Installation after step 10; the third walked every section in place.
 - **`specs/templates/spec.md`, which step 4 writes and the Frontmatter Migration's `specs/**/spec.md` glob matches.** The migration runs before step 4 and skips a file that already carries frontmatter, so the template is untouched in either order.
 
 ## Open Questions
