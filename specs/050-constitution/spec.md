@@ -196,8 +196,8 @@ found a criterion ticked and false, and a second that would have fired the
 instant the spec closed. Every one was found by reading the criteria against the
 tree by hand.
 
-Adopters run the same pipeline, tick the same criteria, and get the same
-`done`-only scoping, so they inherit the same blind spot. The rule is therefore
+Adopters run the same pipeline, tick the same criteria, and inherit the gap
+that remains: a false claim whose paths resolve. The rule is therefore
 a constitution rule: verify a spec's ticked criteria against the tree before
 closing it.
 
