@@ -1,14 +1,14 @@
 ---
 spec: 057-analyze-artifact-and-record-relocation
-last-run: 2026-11-16T14:01:05Z
-analyzed-against: 3ed84fe1748b1968e4738c76f70af9872bf72f14
+last-run: 2026-11-16T14:08:15Z
+analyzed-against: 234c6bc7010f79b88cb853ae1ce3f74543de2ebc
 hard-fail: 0
-blocking-findings: 1
+blocking-findings: 0
 advisory: 4
 unexamined: 5
 analyzed-digest:
   data-model.md: 22d5694ca1d392b9a0096e8ac6db5a88f785467a3234557c1859c9e99c5df050
-  plan.md: e76c56e10ac55fa3f2b75f1386eb4de52dbe377cd7e32fc54716a8835e6fd9a3
+  plan.md: ffb608dbcfc532d37b8b8f09dd36b2f248462d0349c46f4e65e8c7edf474d0ec
   review.md: 160cda4637a41288c50df4efba8d17297cad6a450d53c698da2f9f5b2fc4f3d7
   spec.md: 54d95f190dd90199987ca4fe114a8275409cac4fd8675affb72de89295af9e81
   tasks.md: 5ba7ae3f4aac7b32c5aacfc6dd642c2c6c5a44f2d261ce2d17c1f871939be100
@@ -29,23 +29,20 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Trade-offs"}
   BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#Affected Files", message: "The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes."}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#Errors"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#Errors"}
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`relocate-audit-records` result"}
   BE-INPUT-004: {verdict: addressed, cite: "data-model.md#`relocate-audit-records` result"}
-  BE-LOCK-001: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`relocate-audit-records` result"}
-  BE-RACE-003: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
-  BE-TXN-002: {verdict: finding, tier: must, at: "plan.md#Why the runtime work is sequenced additively", message: "process-waivers and invalidate-review change file to read-modify-write review.md, and write-review/write-analysis rewrite files they read, but the plan names a lost-update guard only for relocate-audit-records"}
+  BE-TXN-002: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
   BE-TXN-004: {verdict: addressed, cite: "data-model.md#Errors"}
-blocking: true
+blocking: false
 dispositions:
-  fixed: 2
+  fixed: 1
   deferred: 0
   waived: 4
-  undispositioned: 1
+  undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-DEPS-007: The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes."
     outcome: waived
@@ -73,7 +70,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 1 blocking, 4 advisory; blocking. 5 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 4 waived, 1 undispositioned. An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 5 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -81,14 +78,14 @@ decisions:
 
 ## Blocking findings
 
-- rule-assessment — BE-TXN-002: process-waivers and invalidate-review change file to read-modify-write review.md, and write-review/write-analysis rewrite files they read, but the plan names a lost-update guard only for relocate-audit-records — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **undispositioned**
+*None.*
 
 ## Advisory findings
 
-- rule-assessment — BE-DEPS-007: The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes. — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: 057's dependency change is a version bump in runtime/Cargo.toml and Cargo.lock, and the CI template change adds no dependency; the scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's audit job runs cargo audit on any push touching runtime/**), and where it runs is the project's choice under the rule's Not-flagged clause. (decided by the rule)
-- grounding — Motivation states corpus measurements (54 spec directories, average 37.5 frontmatter lines, 231 for 022, every spec carrying a review.md) as fact with no command, query or method — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **waived**: A dated historical measurement ('at the time of writing') whose subject, the pre-relocation frontmatter, no longer exists, so no command could reproduce it now; its denominator and unit are stated, and it motivates the change without gating any criterion. (decided by the rule)
-- grounding — The plan describes a probe against spec 047 and says three raw parsers own `waivers` with serde(flatten), without citing the probe's command or naming the three parsers — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: The plan cites process_waivers.rs:65 and invalidate_review.rs:94 for two of the parsers and schema/primitives.rs for the Value constraint, so the claim is mostly grounded; the probe was a one-off measurement behind a design decision, and no criterion rests on it. (decided by the rule)
-- task-consistency — tasks.md's introduction still describes tasks 1-16 ('Tasks 2-8 are the runtime; 9-12 the migration...') though only task 27 remains; the prose references pruned tasks — `specs/057-analyze-artifact-and-record-relocation/tasks.md` — **waived**: tasks.md is ephemeral (the constitution's tasks phase), and its spent-task prose is what /{project}:prune's reset removes; no gate reads it and it adds no requirement. (decided by the rule)
+- rule-assessment — BE-DEPS-007: The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes. — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: 057's dependency change is a version bump in runtime/Cargo.toml and Cargo.lock, and the CI template change adds no dependency; the scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's audit job runs cargo audit on any push touching runtime/**), and where it runs is the project's choice under the rule's Not-flagged clause.
+- grounding — Motivation states corpus measurements (54 spec directories, average 37.5 frontmatter lines, 231 for 022, every spec carrying a review.md) as fact with no command, query or method — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **waived**: A dated historical measurement ('at the time of writing') whose subject, the pre-relocation frontmatter, no longer exists, so no command could reproduce it now; its denominator and unit are stated, and it motivates the change without gating any criterion.
+- grounding — The plan describes a probe against spec 047 and says three raw parsers own `waivers` with serde(flatten), without citing the probe's command or naming the three parsers — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: The plan cites process_waivers.rs:65 and invalidate_review.rs:94 for two of the parsers and schema/primitives.rs for the Value constraint, so the claim is mostly grounded; the probe was a one-off measurement behind a design decision, and no criterion rests on it.
+- task-consistency — tasks.md's introduction still describes tasks 1-16 ('Tasks 2-8 are the runtime; 9-12 the migration...') though only task 27 remains; the prose references pruned tasks — `specs/057-analyze-artifact-and-record-relocation/tasks.md` — **waived**: tasks.md is ephemeral (the constitution's tasks phase), and its spent-task prose is what /{project}:prune's reset removes; no gate reads it and it adds no requirement.
 
 ## Deferred to other specs
 
@@ -105,5 +102,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-PAYLOAD-001: The result lists `relocated` and `disagreements` (and RelocationIncomplete's) state no maximum; bound is only implicit in the two record schemas. — `specs/057-analyze-artifact-and-record-relocation/data-model.md` — **fixed**
-- rule-assessment — BE-INPUT-004: relocate-audit-records takes a spec path and writes review.md, analysis.md and spec.md under it, and no artifact commits that path to canonicalization and containment or points at the project's containment mechanism — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
+- rule-assessment — BE-TXN-002: process-waivers and invalidate-review change file to read-modify-write review.md, and write-review/write-analysis rewrite files they read, but the plan names a lost-update guard only for relocate-audit-records — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
