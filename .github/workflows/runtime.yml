@@ -205,6 +205,97 @@ jobs:
           "$probe/ductus${ext}" --version
           rm "$archive" "${archive}.sha256"
 
+  # Spec 048, task 32: the measurement in build-and-test runs as the runner's
+  # own user, which is elevated and has Developer Mode on, so no run reached
+  # Windows unelevated without Developer Mode. This job turns Developer Mode
+  # off, adds a local user outside Administrators, and runs the same script as
+  # that user. The script prints its own elevation and Developer Mode reading,
+  # so the log shows whether the user really ran without either. A separate job
+  # rather than a step, so its log is readable before the test suite ends.
+  windows-unelevated:
+    name: measure unelevated, Developer Mode off (windows-latest)
+    runs-on: windows-latest
+    # Bounds the whole job (BE-TIMEOUT-001): a cached release build and one
+    # run of the script, which bounds each of its own waits.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Pinned — keep in sync with runtime/rust-toolchain.toml, as in
+      # build-and-test, whose comment says why `components` is listed.
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.100.0
+          components: clippy, rustfmt
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            runtime/target
+          key: ${{ runner.os }}-runtime-${{ hashFiles('runtime/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-runtime-
+
+      - name: cargo build --release --locked
+        working-directory: runtime
+        run: cargo build --release --locked
+
+      # The user gets its own copy of the binary and the script in a directory
+      # it is granted, and a scratch HOME, since the script writes
+      # $HOME/.ductus/bin and refuses an existing store.
+      - name: Stage the binary and the script for the user
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe=/c/ductus-probe
+          mkdir -p "$probe/home"
+          cp runtime/target/release/ductus.exe "$probe/ductus.exe"
+          cp scripts/measure-replace-under-server.sh "$probe/measure.sh"
+          cat > "$probe/run.sh" << 'EOF'
+          #!/usr/bin/env bash
+          export HOME=/c/ductus-probe/home
+          cd /c/ductus-probe || exit 1
+          { echo "user: $(whoami)"; MSYS2_ARG_CONV_EXCL='*' whoami.exe /groups; } > /c/ductus-probe/who.txt 2>&1
+          bash /c/ductus-probe/measure.sh /c/ductus-probe/ductus.exe > /c/ductus-probe/out.txt 2>&1
+          echo "$?" > /c/ductus-probe/rc.txt
+          EOF
+
+      # Windows PowerShell, for New-LocalUser. The password is generated here,
+      # used once, and never printed.
+      - name: Run the measurement as a non-administrator with Developer Mode off
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          reg add 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 0 /f
+          if ($LASTEXITCODE -ne 0) { throw "reg add exited $LASTEXITCODE" }
+          $name = 'ductusprobe'
+          $plain = [guid]::NewGuid().ToString('N') + 'Aa1!'
+          $secure = ConvertTo-SecureString $plain -AsPlainText -Force
+          New-LocalUser -Name $name -Password $secure -PasswordNeverExpires -AccountNeverExpires | Out-Null
+          $admins = Get-LocalGroupMember -Group Administrators | Where-Object { $_.Name -like "*\$name" }
+          if ($admins) { throw "$name is in Administrators" }
+          icacls 'C:\ductus-probe' /grant "${name}:(OI)(CI)F" | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "icacls exited $LASTEXITCODE" }
+          $cred = New-Object System.Management.Automation.PSCredential($name, $secure)
+          $p = Start-Process -FilePath 'C:\Program Files\Git\bin\bash.exe' -ArgumentList '/c/ductus-probe/run.sh' -Credential $cred -WorkingDirectory 'C:\ductus-probe' -LoadUserProfile -Wait -PassThru
+          "launcher exit: $($p.ExitCode)"
+
+      # Fails only when the script could not measure (it exits non-zero only
+      # then) or never ran, never on a measured outcome.
+      - name: The user's groups and the measurement
+        shell: bash
+        run: |
+          set -uo pipefail
+          probe=/c/ductus-probe
+          cat "$probe/who.txt" || true
+          cat "$probe/out.txt" || true
+          test -f "$probe/rc.txt" || { echo "the measurement never ran as the user" >&2; exit 1; }
+          rc="$(tr -d '\r\n' < "$probe/rc.txt")"
+          echo "measurement exit: $rc"
+          [ "$rc" = "0" ]
+
   # Dependency vulnerability scan (BE-DEPS-001). Fails on any RUSTSEC
   # advisory affecting the resolved Cargo.lock graph; a deliberate
   # exception requires an `[advisories] ignore` entry in
