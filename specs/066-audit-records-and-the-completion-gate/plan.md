@@ -66,6 +66,9 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 | `runtime/src/primitives/check_artifacts.rs` | Specify | The cross-spec-impact-drift message that names an affected spec read through a link out (task 23) |
 | `runtime/src/schema/descriptions.rs` | Specify | `WRITE_REVIEW`'s and `WRITE_ANALYSIS`' statement of the guard (task 24) |
+| `framework/commands/review.md` | Specify | Step 11 says what a `changed-since-read` refusal means and to re-run the write (task 24) |
+| `framework/commands/analyze.md` | Specify | Step 21 says the same for `write-analysis` (task 24) |
+| `runtime/tests/line_ending_discipline.rs` | Specify | The two writers' line-ending exemptions follow their write calls onto the guard (task 24; 022 task 38 widens the subject to guarded writes) |
 | `scripts/mutation/compare-and-set-066.py` | Create | The mutation list proving each record write refuses a record changed since its read (task 24) |
 | `scripts/mutation/gate-cross-spec-containment.py` | Create | The mutation list proving the gate contains each path it builds from a cross-spec-impact slug (task 23) |
 

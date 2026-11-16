@@ -58,4 +58,18 @@ MUTATIONS = [
         '    between();\n    let _ = &record;\n    return Err(PrimitiveError::ChangedSinceRead { path: analysis_path.clone() });\n',
         'primitives::write_analysis::tests::a_record_unchanged_since_it_was_read_is_written',
     ),
+    (
+        'M7 write-review takes a second snapshot just before the write, after the point a test changes the record',
+        'src/primitives/write_review.rs',
+        '    write_record(&record, &report, between)?;\n',
+        '    let record = record_snapshot(repo, &root, &args.feature)?;\n    write_record(&record, &report, between)?;\n',
+        'primitives::write_review::tests::a_record_written_just_after_the_snapshot_is_refused_and_kept',
+    ),
+    (
+        'M8 write-analysis takes a second snapshot just before the write, after the point a test changes the record',
+        'src/primitives/write_analysis.rs',
+        '    between();\n    record.write_if_unchanged(&report)?;\n',
+        '    let record = super::ReadSnapshot::read(\n        repo,\n        &format!("{root}/{}/{}", args.feature, super::ANALYSIS_RECORD_FILE),\n    )?;\n    between();\n    record.write_if_unchanged(&report)?;\n',
+        'primitives::write_analysis::tests::a_record_written_just_after_the_snapshot_is_refused_and_kept',
+    ),
 ]

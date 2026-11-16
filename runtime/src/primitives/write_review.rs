@@ -483,7 +483,7 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 ///   the write (`BE-TXN-002`, `BE-TXN-004`).
 /// - [`PrimitiveError::Io`] on read/write failure.
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
-    run_between(args, repo, &mut || {})
+    run_between(args, repo, &mut || {}, &mut || {})
 }
 
 /// `review.md` as this run first reads it, taken before any helper reads the
@@ -507,11 +507,14 @@ fn write_record(
     record.write_if_unchanged(report)
 }
 
-/// [`run`], calling `between` just before the record is written, the point a
-/// test changes the record to prove the write refuses it (`BE-TXN-002`).
+/// [`run`], calling `after_snapshot` just after the record is read and before
+/// any helper reads it, and `between` just before the record is written: the
+/// two points a test changes the record to prove the snapshot's position and
+/// the write's refusal (`BE-TXN-002`).
 fn run_between(
     args: &WriteReviewArgs,
     repo: &Path,
+    after_snapshot: &mut dyn FnMut(),
     between: &mut dyn FnMut(),
 ) -> Result<WriteReviewResult> {
     let root = paths::Paths::load(repo)?.specs_root;
@@ -525,7 +528,7 @@ fn run_between(
             feature: args.feature.clone(),
         });
     }
-    let record = record_snapshot(repo, &root, &args.feature)?;
+    let record = record_snapshot(repo, &root, &args.feature).inspect(|_| after_snapshot())?;
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
     // The denominator `examined` is a claim against — see `resolve_scope`.
     let (scope, excluded) = resolve_scope(args, repo)?;
@@ -574,9 +577,7 @@ fn run_between(
     // it rejects, halted the run at `Paths::load` above, since the spec root
     // is unknown (spec 022 task 12).
     let governance_section = render_unexamined_governance(repo);
-    // Read the spec and resolve the surviving waivers BEFORE either render:
-    // the report now carries the full record, waivers included, so both homes
-    // are rendered from one computation rather than two.
+    // Resolve the surviving waivers BEFORE the render: the report carries them.
     // Validate the spec's frontmatter before anything is written.
     //
     // This parse used to happen as a by-product of reading waivers out of the
@@ -6314,13 +6315,59 @@ mod tests {
         run(&args, tmp.path()).unwrap();
         let record = tmp.path().join("specs/001-x/review.md");
         let theirs = "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Theirs\n";
-        let err = run_between(&args, tmp.path(), &mut || {
+        let err = run_between(&args, tmp.path(), &mut || {}, &mut || {
             fs::write(&record, theirs).unwrap();
         })
         .unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::ChangedSinceRead { path }
                 if path == std::path::Path::new("specs/001-x/review.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// A record changed just after the snapshot, before any helper reads it, is
+    /// still refused: the snapshot sits before the helpers' first read.
+    #[test]
+    fn a_record_written_just_after_the_snapshot_is_refused_and_kept() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        run(&args, tmp.path()).unwrap();
+        let record = tmp.path().join("specs/001-x/review.md");
+        let theirs = "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(
+            &args,
+            tmp.path(),
+            &mut || fs::write(&record, theirs).unwrap(),
+            &mut || {},
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == std::path::Path::new("specs/001-x/review.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// A run that found no record at its snapshot refuses when another writer
+    /// created one before the write.
+    #[test]
+    fn a_record_created_after_an_absent_snapshot_is_refused_and_kept() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        let record = tmp.path().join("specs/001-x/review.md");
+        assert!(!record.exists());
+        let theirs = "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(&args, tmp.path(), &mut || {}, &mut || {
+            fs::write(&record, theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { .. }),
             "{err:?}"
         );
         assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
@@ -6335,7 +6382,7 @@ mod tests {
         run(&args, tmp.path()).unwrap();
         let record = tmp.path().join("specs/001-x/review.md");
         args.reviewed_at = "2026-07-03T12:00:00Z".into();
-        run_between(&args, tmp.path(), &mut || {}).unwrap();
+        run_between(&args, tmp.path(), &mut || {}, &mut || {}).unwrap();
         assert!(
             fs::read_to_string(&record)
                 .unwrap()

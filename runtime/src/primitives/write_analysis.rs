@@ -136,14 +136,17 @@ fn refuse_while_implementation_is_open(
 ///   or went after this call read it: nothing is written, and the caller re-runs
 ///   the write (`BE-TXN-002`, `BE-TXN-004`).
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
-    run_between(args, repo, &mut || {})
+    run_between(args, repo, &mut || {}, &mut || {})
 }
 
-/// [`run`], calling `between` just before the record is written, the point a
-/// test changes the record to prove the write refuses it (`BE-TXN-002`).
+/// [`run`], calling `after_snapshot` just after the record is read and before
+/// any helper reads it, and `between` just before the record is written: the
+/// two points a test changes the record to prove the snapshot's position and
+/// the write's refusal (`BE-TXN-002`).
 fn run_between(
     args: &WriteAnalysisArgs,
     repo: &Path,
+    after_snapshot: &mut dyn FnMut(),
     between: &mut dyn FnMut(),
 ) -> Result<WriteAnalysisResult> {
     let root = paths::Paths::load(repo)?.specs_root;
@@ -163,6 +166,7 @@ fn run_between(
         repo,
         &format!("{root}/{}/{}", args.feature, super::ANALYSIS_RECORD_FILE),
     )?;
+    after_snapshot();
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
 
     let spec_path = feature_dir.join("spec.md");
@@ -267,7 +271,8 @@ fn run_between(
     // same state on disk. That is the byte-identical failure `write-analysis`
     // was built to end, one level out. The refusals are the ones above: a spec
     // or a prior record whose frontmatter this run cannot read, or a rule directory
-    // it cannot list.
+    // it cannot list; and the guarded write below, which refuses a record another
+    // writer changed since this run read it.
     let report = render_analysis(
         args,
         &Derived {
@@ -1653,13 +1658,55 @@ mod tests {
         run(&args(), tmp.path()).unwrap();
         let record = tmp.path().join("specs/042-demo/analysis.md");
         let theirs = "---\nspec: 042-demo\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\n---\n\n# Theirs\n";
-        let err = run_between(&args(), tmp.path(), &mut || {
+        let err = run_between(&args(), tmp.path(), &mut || {}, &mut || {
             fs::write(&record, theirs).unwrap();
         })
         .unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::ChangedSinceRead { path }
                 if path == std::path::Path::new("specs/042-demo/analysis.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// A record changed just after the snapshot, before any helper reads it, is
+    /// still refused: the snapshot sits before the helpers' first read.
+    #[test]
+    fn a_record_written_just_after_the_snapshot_is_refused_and_kept() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        run(&args(), tmp.path()).unwrap();
+        let record = tmp.path().join("specs/042-demo/analysis.md");
+        let theirs = "---\nspec: 042-demo\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(
+            &args(),
+            tmp.path(),
+            &mut || fs::write(&record, theirs).unwrap(),
+            &mut || {},
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == std::path::Path::new("specs/042-demo/analysis.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
+    }
+
+    /// A run that found no record at its snapshot refuses when another writer
+    /// created one before the write.
+    #[test]
+    fn a_record_created_after_an_absent_snapshot_is_refused_and_kept() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let record = tmp.path().join("specs/042-demo/analysis.md");
+        assert!(!record.exists());
+        let theirs = "---\nspec: 042-demo\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\n---\n\n# Theirs\n";
+        let err = run_between(&args(), tmp.path(), &mut || {}, &mut || {
+            fs::write(&record, theirs).unwrap();
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { .. }),
             "{err:?}"
         );
         assert_eq!(fs::read_to_string(&record).unwrap(), theirs);
@@ -1672,7 +1719,7 @@ mod tests {
         run(&args(), tmp.path()).unwrap();
         let mut a = args();
         a.analyzed_at = "2026-09-06T18:00:00Z".into();
-        run_between(&a, tmp.path(), &mut || {}).unwrap();
+        run_between(&a, tmp.path(), &mut || {}, &mut || {}).unwrap();
         assert!(analysis_md(&tmp).contains("2026-09-06T18:00:00Z"));
     }
 
