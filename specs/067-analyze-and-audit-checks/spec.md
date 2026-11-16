@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 next-criterion: 5
 cross-spec-impact: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
