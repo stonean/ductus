@@ -196,7 +196,8 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
 3 already promoted, 28 project-only — 54 total**, of which the project-only table
 now holds 25: `072-governing-documents-stay-within-one-read` removed the rows of
-three entries it retired, as the note beside that table says.
+three entries it retired, as the note beside that table says, and the promoted
+table 22, as the note beside it says.
 
 **Entries are keyed by their `AGENTS.md` lead phrase, with the survey's positional
 ID kept in parentheses as a historical marker.** The positional ID was the original
@@ -264,6 +265,8 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 `done` until `036` links back rather than resting on prose.
 
 #### Second round — promote
+
+Four rows have since left this table: *`unexamined` cannot be measured while the spec is `in-progress`*, retired with its rule (`63527403`; the amendment under **Relocated to a command reference**); *`set-status` takes `--from` and `--to`*, moved by `079-review-and-analysis-work-converges` to `set-status`'s compiled description (`ad4fae5b`, row dropped by `fcb13a75`); *a spec's review diff base moves forward on every reopen*, retired by 079's task 2 (`b23b020c`); and *only a spec's durable contracts stale its review*, retired by `081-reviews-and-checks-follow-what-changed` (`33688944`, rows dropped by `debcc8cf`).
 
 | Entry | Reason |
 | --- | --- |
@@ -410,6 +413,8 @@ Seven practices an adopter reported as true of every project, classified one at 
 
 ### Promoted — universal
 
+The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges` (`ad4fae5b`) to `create-scenario`'s compiled description, is gone (`fcb13a75`).
+
 | Entry | Reason |
 | --- | --- |
 | A spec does not reach `done` with an outstanding SHOULD — every review finding is resolved or waived first, not only the MUST ones (survey W4) | Every adopter runs the review command and inherits its blocking semantics; a spec sitting at `done` with an unaddressed finding is indistinguishable from unfinished work anywhere |
@@ -422,7 +427,7 @@ Seven practices an adopter reported as true of every project, classified one at 
 | Use the `Write` tool, not Bash redirects, for `.ductus/session.toml` (survey W18) | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants |
 | Re-open a `done` spec via `set-status` when the only intent is to reflect on-disk edits, not via `/{project}:amend` (survey W21) | The back-edge and the refinement loop are both adopter-facing |
 | Add a rule to its surface's home spec via the back-edge — do not spawn a new spec for it (survey W22) | Adopters own rule files and hit the same spec-proliferation pressure |
-| A canonical table living on a `done` spec syncs with no back-edge only from its `spec.md`, `plan.md` or `tasks.md` — one in its data model or a scenario reopens it (survey W24) | Follows from the canonical-sources map, which adopters receive |
+| A canonical table living on a `done` spec syncs with no back-edge only from its `spec.md` outside the criteria, `plan.md` or `tasks.md` — one in its data model or a scenario reopens it (survey W24) | Follows from the canonical-sources map, which adopters receive |
 | A CI check that reads git history needs `fetch-depth: 0` (survey W27) | **R** — the shipped adopter CI template runs exactly such a check, so this is adopter-facing already |
 | A new test that reads git history or shells out to a repo script is a change to the workflow that runs it, not just to the suite (survey W28) | **R** — same family as W27; stated as history/inputs rather than this repo's workflow filenames |
 | When an item routes to a chore, fix it — do not park it (survey W29) | The groom command and its five routes ship unchanged |
@@ -477,7 +482,7 @@ Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-st
 
 ### Relocated to a command reference — 2026-10-26
 
-The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified. **Amended 2026-11-11:** the *`unexamined` cannot be measured while the spec is `in-progress`* entry was retired with its rule when 067's `status-gated-families-are-not-silent` ran the path families at `in-progress`, so its row here and its promote row above are gone, leaving 24 promote rows.
+The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified. **Amended 2026-11-11:** the *`unexamined` cannot be measured while the spec is `in-progress`* entry was retired with its rule when 067's `status-gated-families-are-not-silent` ran the path families at `in-progress`, so its row here and its promote row above are gone.
 
 | Entry | Reason |
 | --- | --- |
