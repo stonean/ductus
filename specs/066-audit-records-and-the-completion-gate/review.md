@@ -1,30 +1,34 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-15T23:58:46Z
-reviewed-against: efc517e908f1b12dd05bd75522d99f8b3a132988
-diff-base: c016f6f57da340ff6aa09fcc18051106cdbc77a5
+last-run: 2026-11-16T13:45:39Z
+reviewed-against: c1ffa247f3039322c8663fa2f296322fd0477134
+diff-base: 9179ec97aef0e8d0cdfadf11c5fbdd7a5323297d
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 7
-scope: 13
+examined: 6
+scope: 16
 unread:
+  - .claude/commands/ductus/analyze.md
+  - .claude/commands/ductus/review.md
+  - .pi/prompts/ductus-analyze.md
+  - .pi/prompts/ductus-review.md
+  - framework/commands/analyze.md
+  - framework/commands/review.md
   - runtime/CHANGELOG.md
-  - runtime/src/primitives/check_artifacts.rs
-  - runtime/src/primitives/check_review_gate.rs
+  - runtime/src/primitives/write_analysis.rs
+  - runtime/src/primitives/write_review.rs
   - runtime/src/schema/descriptions.rs
-  - runtime/src/schema/primitives.rs
-  - scripts/mutation/reopen-measure.py
-excluded: 155
+excluded: 70
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
-re-reads: 2
+fix-rounds: 1
+re-reads: 1
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 9e677d71ef3a2215087ceeb8b86880a2467a5c18ef3c65730a07f38e0b8a0410
+  data-model.md: 3f4ad82314fc938bc24fc39aa9faad7e788c76a12e2c45bf6a2906f2fa9982ab
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -52,9 +56,9 @@ reviewed-digest:
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 3
   deferred: 0
-  waived: 6
+  waived: 3
   undispositioned: 0
 decisions:
   - key: "other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md`"
@@ -187,15 +191,30 @@ decisions:
     reason: the sentence cites 022's data model for the claim and was written in the commit that delivered it; any correction lands in 022's directory, which is outside this review's files, and nothing in 066's code depends on it
     decided-at: 2026-11-15T23:51:40Z
     decided-by: rule
+  - key: other — after the guard, write_review.rs and write_analysis.rs no longer call write_atomic, so dropping their two EXEMPT entries is correct and forced (no_exemption_outlives_its_writer would fail otherwise), but the same migration takes every guarded writer out of every_text_writer_accounts_for_line_endings' subject, whose module doc still says write_atomic_bytes callers copy bytes; prune_plan.rs, prune_tasks.rs, invalidate_review.rs and relocate_audit_records.rs already contain no write_atomic( call in their non-test code and so are not examined at all, and a writer of an authored file that moves onto write_if_unchanged without one leaves the lint green and unexamined. — `runtime/tests/line_ending_discipline.rs:37`
+    outcome: waived
+    reason: the lint and its module doc belong to 051's rewrites-preserve-line-endings scenario, and the class migration that widens the blind spot is 022 task 38's (which adds a test holding raw writes to an allowlist); nothing in 066's two writers is affected, since both render their record whole and carry no authored text to preserve. The fix would land in specs/051-branch-scoped-spec-numbering and specs/022-deterministic-runtime, outside 066.
+    decided-at: 2026-11-16T13:45:39Z
+    decided-by: rule
+  - key: other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137`
+    outcome: waived
+    reason: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both.
+    decided-at: 2026-11-16T13:45:39Z
+    decided-by: rule
+  - key: other — the handling path both commands state re-runs only the write call from the same arguments, so the arguments derived from the earlier read of the record (review step 8's applied and expired waivers and step 9's expired-decisions; analyze step 18's expired-decisions) are reused after another writer changed the record, and a waiver or decision that writer stored is then neither classified nor expired until the next run; a new-waivers item that writer already stored is refused as InvalidArgument rather than ChangedSinceRead. — `framework/commands/analyze.md:93`
+    outcome: waived
+    reason: BE-TXN-004 accepts reporting the conflict to the caller as a handling path and the sentence says to report it first; 066's plan chooses the re-run from the run's argument files and rejects plumbing the snapshot text into readers, and the next run re-derives every classification from the record as it then stands.
+    decided-at: 2026-11-16T13:45:39Z
+    decided-by: rule
 ---
 
 # Review — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-066's review of task 23, the window from `c016f6f5`, 066's last review, to `efc517e9`. One agent ran all five passes, reading all nine loaded backend and cross rule files whole. It read 7 of the 13 scope entries whole: 066's spec, plan, data model, tasks and analysis record, the cross-spec-impact gate scenario and the new mutation list. The six others were read at task 23's hunks, with every function they touch whole: `classify_cross_spec_entry`, `cross_spec_impact_states`, `links_back` and `cross_spec_impact_block` in the gate; the cross-spec-impact-drift family in check-artifacts; the state and entry types; the two descriptions; the CHANGELOG entry; and the three re-anchored mutants. It drove the gate on a fixture: a spec.md linked out reads outside-project, a missing spec target-missing, and an in-project link discharged. One MUST, fixed in the run: a scenario name that is not UTF-8 was contained under a lossy spelling and opened under its own, so a link out by that name was read (`BE-INPUT-004`). Such a name now has no contained spelling (`scenario_rel`) and reads outside-project, with a unit test and mutant M5, and a Linux-only end-to-end test, since APFS refuses the name. Two chores fixed: the CHANGELOG entry's BREAKING lead and the BE-COMPAT-001 wording, and the plan's Affected Files rows. The rule waived the other observations, each with its reason. Round 1's re-read found the fix had stranded links_back's doc comment above scenario_rel; round 2 restored it and extended the outside-project state's doc comment and AC5 to the non-UTF-8 case, and its re-read was clean.
+066's review of task 24 (`91771eec`), which puts `write-review` and `write-analysis` on the compare-and-set guard. One agent ran all five passes and read all nine loaded backend and cross rule files whole. It read 6 of the 16 scope entries whole: the review golden, the line-ending lint, the guard's mutation list, and 066's data model, plan and tasks; and 066's spec and all 25 scenarios, outside the scope. The four generated mirrors were compared with their sources by script and are counted unread; `write_review.rs`, `write_analysis.rs`, `descriptions.rs`, the CHANGELOG and the two command sources were read at the window's hunks with `run`, `run_between`, the touched steps and both descriptions whole. One finding, `QUAL-TEST-001` (should, low confidence): no test failed when the snapshot was taken after the helpers' first read; the fix round gives each `run_between` a hook at a fixed point just after the snapshot, with a test per primitive and mutants M7 and M8 (a second snapshot just before the write) that only those tests kill, so it no longer fires. Six observations: three chores fixed (the data model says each primitive takes a snapshot before any helper reads the record, not that it reads it once; `write_analysis.rs`' comment names the guarded write's refusal; the plan's Affected Files names the other files task 24 changed), and three waived by the rule with their reasons. The fix round was made in a worktree, its whole mutation list run there (8 of 8 killed) and the whole `cargo test` passed, then landed in the main tree. An independent agent re-read the round against the whole contract: spec, data model and all 25 scenarios, 141,634 bytes, read whole; clean, with `plan.md` exempt as an analysis subject, and the loop's closing round was empty. Of the four stored decisions the reviewer re-judged, three stand and are carried; the fourth, keyed on `process_decisions.rs` outside the scope, is retained, since the review checked only its `write-review` clause.
 
-2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
 ## MUST violations (blocking)
 
@@ -219,14 +238,12 @@ decisions:
 
 ## Observations
 
-- convention — the task 23 changelog entry is a breaking change but does not lead with the BREAKING marker every other breaking Unreleased entry carries, and plan.md and the entry both say the closed set is one the data model documents as closed, which neither the data model nor the CrossSpecImpactState doc comments say; BE-COMPAT-001's own test is a response enum the schema does not document as open, which holds, so the classification stands and only the wording is false — `runtime/CHANGELOG.md:13-23` — **fixed** (decided by the rule)
-- other — the plan's Affected Files table does not list runtime/src/primitives/check_artifacts.rs (changed for the drift message and its test) or scripts/mutation/gate-cross-spec-containment.py (the new mutation list), both delivered by task 23 and named in the commit — `specs/066-audit-records-and-the-completion-gate/plan.md:43-60` — **fixed** (decided by the rule)
-- other — the new gate tests prove each of the three containments but not three neighbours: no test holds two scenarios (one linked outside, one linking back inside) to show the verdict does not depend on listing order, which the commit and plan state as the reason every scenario is contained before any is read; none shows a symbolic link that stays inside the project is still read and discharges; none asserts the outside-project guidance clause. A mutant that interleaves containment with the read, or refuses every link, survives — `runtime/src/primitives/check_review_gate.rs:1648-1760` — **waived**: each behavior the four tests and four mutants name is killed by reading (M1 to M4 each remove one containment and a named test asserts the state, the detail and the message); the order claim holds by construction of the separate loop, and a test of it would depend on read_dir order the OS controls, so it would fail only some of the time under its mutant. QUAL-TEST-001 judges a test that cannot fail, and none of the five does (decided by the rule)
-- other — classify_cross_spec_entry's outside closure maps every error validate_contained returns to the outside-project state, including a symbolic-link loop, a lexical refusal of the spec root and an Io error resolving the project root itself, each reported as reads outside the project with the error text as detail — `runtime/src/primitives/check_review_gate.rs:1149-1158` — **waived**: each such state holds done the same, nothing was read, and the detail carries the true reason; the spec root is validated before the gate runs and the project root exists, so the Io arm is unreachable in practice. A fourth state would add a response value with no distinct remedy (decided by the rule)
-- other — the gate could have contained the affected spec in one call with validate_feature_path, which walks the directory and refuses on any outward link under it; the commit contains three path kinds by hand instead — `runtime/src/primitives/check_review_gate.rs:1150-1207` — **waived**: validate_feature_path refuses the whole call on a link in any file under the directory, including files the gate never reads (research.md, a data model), and returns an error rather than a per-entry state; using it would widen what the gate refuses and lose the outside-project result the spec requires (QUAL-DELEG-001's shape: the shared check enforces more than the local one needed) (decided by the rule)
-- perf — each validate_contained call re-resolves the canonicalized project root, so one entry costs two calls plus one per scenario, each a resolve of the root and a symlink_metadata walk of the path — `runtime/src/primitives/check_review_gate.rs:1171-1205` — **waived**: an affected spec holds tens of scenarios and a spec declares a handful of entries, so the count is a small constant against the file reads the gate already makes for each; no measurement shows a cost and a shared canonical-base parameter would add a second containment entry point to mod.rs (decided by the rule)
-- other — framework/reference/analyze.md and docs/analyze.md describe the cross-spec-impact-drift family as an entry no back-link discharges and do not name the new link-out message; the state inherited from the gate is a subset of that wording — `framework/reference/analyze.md:343` — **waived**: the sentence stays true, since an entry read through a link out is one no back-link discharges, and the compiled CHECK_ARTIFACTS description, which is the canonical source for a family's behavior, carries the new message; the fix would land in framework and docs files outside 066's directory for a wording that is not false (decided by the rule)
-- other — the data-model Size paragraph 19234246 changed (compute-review-scope) states that performReview's request names every in-scope file whole, by content, by path alone, or in the lists file; that is 022 tasks 36 and 37's exec behavior, outside 066's primitives, and was not checked against the exec walker's code in this review — `specs/066-audit-records-and-the-completion-gate/data-model.md:51` — **waived**: the sentence cites 022's data model for the claim and was written in the commit that delivered it; any correction lands in 022's directory, which is outside this review's files, and nothing in 066's code depends on it (decided by the rule)
+- other — 066's data model says write-review reads review.md once, and write-analysis reads analysis.md once, before any helper reads the lists it keeps, but each primitive reads the record several times: the snapshot, then each helper (load_review_record, read_recorded_waivers, read_decisions; rule_verdicts::standing and decisions::read_decisions for analysis), then the re-read under the lock. The sentence contradicts itself, since helpers read after the once. — `specs/066-audit-records-and-the-completion-gate/data-model.md:136` — **fixed** (decided by the rule)
+- convention — write_analysis.rs's comment before render_analysis says the record is written on every run it is not refused and lists the refusals as the ones above (an unreadable spec or prior record, an unlistable rule directory); the guard adds a refusal after them, ChangedSinceRead, so the list is stale. The Errors doc and descriptions.rs were updated, the comment was not. — `runtime/src/primitives/write_analysis.rs:268` — **fixed** (decided by the rule)
+- other — 066's plan Affected Files table lists descriptions.rs and the mutation list as task 24's files but not the rest of what the commit changed: framework/commands/review.md (step 11), framework/commands/analyze.md (step 21) and runtime/tests/line_ending_discipline.rs, so the plan's table understates the surface a later window's plan-affected scope draws on. — `specs/066-audit-records-and-the-completion-gate/plan.md:68` — **fixed** (decided by the rule)
+- other — after the guard, write_review.rs and write_analysis.rs no longer call write_atomic, so dropping their two EXEMPT entries is correct and forced (no_exemption_outlives_its_writer would fail otherwise), but the same migration takes every guarded writer out of every_text_writer_accounts_for_line_endings' subject, whose module doc still says write_atomic_bytes callers copy bytes; prune_plan.rs, prune_tasks.rs, invalidate_review.rs and relocate_audit_records.rs already contain no write_atomic( call in their non-test code and so are not examined at all, and a writer of an authored file that moves onto write_if_unchanged without one leaves the lint green and unexamined. — `runtime/tests/line_ending_discipline.rs:37` — **waived**: the lint and its module doc belong to 051's rewrites-preserve-line-endings scenario, and the class migration that widens the blind spot is 022 task 38's (which adds a test holding raw writes to an allowlist); nothing in 066's two writers is affected, since both render their record whole and carry no authored text to preserve. The fix would land in specs/051-branch-scoped-spec-numbering and specs/022-deterministic-runtime, outside 066. (decided by the rule)
+- other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137` — **waived**: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both. (decided by the rule)
+- other — the handling path both commands state re-runs only the write call from the same arguments, so the arguments derived from the earlier read of the record (review step 8's applied and expired waivers and step 9's expired-decisions; analyze step 18's expired-decisions) are reused after another writer changed the record, and a waiver or decision that writer stored is then neither classified nor expired until the next run; a new-waivers item that writer already stored is refused as InvalidArgument rather than ChangedSinceRead. — `framework/commands/analyze.md:93` — **waived**: BE-TXN-004 accepts reporting the conflict to the caller as a handling path and the sentence says to report it first; 066's plan chooses the re-run from the run's argument files and rejects plumbing the snapshot text into readers, and the next run re-derives every classification from the record as it then stands. (decided by the rule)
 
 ## Skipped passes
 
@@ -234,161 +251,76 @@ decisions:
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/analyze.md` — 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
-- `.claude/commands/ductus/prune.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `.ductus/reference/analyze.md` — 067-analyze-and-audit-checks
-- `.ductus/reference/audit.md` — 067-analyze-and-audit-checks
-- `.ductus/reference/fold.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `.ductus/reference/prune.md` — 041-task-pruning
-- `.githooks/pre-commit` — 067-analyze-and-audit-checks
-- `.github/workflows/framework-checks.yml` — 026-framework-self-audit, 067-analyze-and-audit-checks
-- `.pi/prompts/ductus-analyze.md` — 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
-- `.pi/prompts/ductus-prune.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `docs/analyze.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/bootstrap/ductus-procedure.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/commands/analyze.md` — 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
-- `framework/commands/prune.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `framework/reference/analyze.md` — 067-analyze-and-audit-checks
-- `framework/reference/audit.md` — 067-analyze-and-audit-checks
-- `framework/reference/fold.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/reference/prune.md` — 041-task-pruning
-- `runtime/src/host.rs` — 022-deterministic-runtime
-- `runtime/src/interpreter/mod.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/interpreter/payload.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/main.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/append_task.rs` — 022-deterministic-runtime, 041-task-pruning
-- `runtime/src/primitives/bounded_lists.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_command_flags.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_corpus_links.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_departures.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_orphaned_references.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_promotion_coverage.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_rule_ids.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_step_references.rs` — 026-framework-self-audit
-- `runtime/src/primitives/check_unfolded_specs.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/derive_dependencies.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/derive_references.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/label_criteria.rs` — 041-task-pruning
-- `runtime/src/primitives/mark_task.rs` — 041-task-pruning
-- `runtime/src/primitives/migrate_session_file.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/mod.rs` — 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks
-- `runtime/src/primitives/prune_plan.rs` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/prune_project.rs` — 041-task-pruning
-- `runtime/src/primitives/prune_tasks.rs` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/read_deprecation_labels.rs` — 067-analyze-and-audit-checks
-- `runtime/src/primitives/read_section.rs` — 067-analyze-and-audit-checks
-- `runtime/src/primitives/read_spec.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/resolve_anchor.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/rewrite_spec_links.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/tasks_counter.rs` — 041-task-pruning
-- `runtime/src/primitives/traverse_deps.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/validate_frontmatter.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/schema/extensions.rs` — 022-deterministic-runtime
-- `runtime/src/schema/paths.rs` — 022-deterministic-runtime
-- `runtime/src/session.rs` — 022-deterministic-runtime
-- `runtime/tests/mcp.rs` — 041-task-pruning
-- `runtime/tests/walker.rs` — 022-deterministic-runtime
-- `scripts/audit/README.md` — 026-framework-self-audit, 067-analyze-and-audit-checks
-- `scripts/audit/analyze-record-backlog.sh` — 026-framework-self-audit
-- `scripts/audit/command-flag-hint-parity.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/deprecation-removal.sh` — 022-deterministic-runtime, 026-framework-self-audit, 067-analyze-and-audit-checks
-- `scripts/audit/done-spec-criteria.sh` — 026-framework-self-audit
-- `scripts/audit/feature-dir-grammar-parity.sh` — 067-analyze-and-audit-checks
-- `scripts/audit/fixture-session-shape.sh` — 026-framework-self-audit
-- `scripts/audit/host-namespace-parity.sh` — 026-framework-self-audit
-- `scripts/audit/installer-command-parity.sh` — 026-framework-self-audit
-- `scripts/audit/introducing-drift.sh` — 026-framework-self-audit
-- `scripts/audit/lib.sh` — 026-framework-self-audit
-- `scripts/audit/manifest-destination-links.sh` — 026-framework-self-audit
-- `scripts/audit/migration-coverage.sh` — 026-framework-self-audit
-- `scripts/audit/placeholder-roundtrip.sh` — 026-framework-self-audit
-- `scripts/audit/primitive-promotion-candidates.sh` — 026-framework-self-audit
-- `scripts/audit/promotion-coverage.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/readme-command-parity.sh` — 026-framework-self-audit
-- `scripts/audit/rename-sweep-residue.sh` — 026-framework-self-audit
-- `scripts/audit/run-all.sh` — 067-analyze-and-audit-checks
-- `scripts/audit/self-url-resolution.sh` — 026-framework-self-audit
-- `scripts/audit/shipped-anchor-resolution.sh` — 022-deterministic-runtime, 026-framework-self-audit, 067-analyze-and-audit-checks
-- `scripts/audit/sibling-coupling.sh` — 026-framework-self-audit
-- `scripts/audit/step-reference-integrity.sh` — 026-framework-self-audit
-- `scripts/lint-frontmatter.sh` — 067-analyze-and-audit-checks
-- `scripts/mutation/anchor-and-label-results-bounded.py` — 067-analyze-and-audit-checks
-- `scripts/mutation/append-task-lost-update.py` — 022-deterministic-runtime
-- `scripts/mutation/containment-and-bounds-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/corpus-link-containment.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/criterion-body-path-links.py` — 067-analyze-and-audit-checks
-- `scripts/mutation/exec-requests-bounded.py` — 022-deterministic-runtime
-- `scripts/mutation/outward-link-reads-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/owner-reviews-067-checks.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/owner-reviews-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/prune-plan-bounded.py` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `scripts/mutation/prune-project-containment.py` — 041-task-pruning
-- `scripts/mutation/prune-result-keys.py` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `scripts/mutation/prune-review-fixes-041.py` — 041-task-pruning
-- `scripts/mutation/pruned-task-number.py` — 041-task-pruning
-- `scripts/mutation/root-prefixed-references.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/scope-results-bounded.py` — 022-deterministic-runtime
-- `scripts/mutation/session-file-containment.py` — 022-deterministic-runtime
-- `scripts/mutation/step-references-bounded.py` — 026-framework-self-audit
-- `scripts/mutation/suffixed-task-number.py` — 041-task-pruning
-- `scripts/tests/test-anchor-and-label-families.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/tests/test-audit-path-containment.sh` — 026-framework-self-audit
-- `scripts/tests/test-deprecation-removal.sh` — 026-framework-self-audit
-- `scripts/tests/test-feature-dir-grammar-parity.sh` — 067-analyze-and-audit-checks
-- `scripts/tests/test-migration-coverage.sh` — 026-framework-self-audit
-- `scripts/tests/test-step-reference-integrity.sh` — 026-framework-self-audit
-- `specs/020-code-review/analysis.md` — 020-code-review, 022-deterministic-runtime
-- `specs/020-code-review/spec.md` — 020-code-review
-- `specs/022-deterministic-runtime/data-model.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/tasks.md` — 020-code-review, 022-deterministic-runtime, 041-task-pruning, 067-analyze-and-audit-checks
-- `specs/026-framework-self-audit/analysis.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/review.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-24-rename-sweep-residue.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-26-broken-relative-links.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-27-done-spec-unchecked-criteria.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-35-manifest-destination-links.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-36-self-url-resolution.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-39-shipped-anchor-resolution.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/host-namespace-parity.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/readme-command-parity.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/tasks.md` — 026-framework-self-audit
-- `specs/041-task-pruning/data-model.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `specs/041-task-pruning/plan.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `specs/041-task-pruning/review.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `specs/041-task-pruning/scenarios/a-pruned-task-number-is-never-reissued.md` — 041-task-pruning
-- `specs/041-task-pruning/scenarios/a-suffixed-task-number-is-a-task.md` — 041-task-pruning
-- `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md` — 041-task-pruning
-- `specs/041-task-pruning/scenarios/prune-walks-the-project-files.md` — 041-task-pruning
-- `specs/041-task-pruning/spec.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
+- `.claude/commands/ductus/consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `.claude/commands/ductus/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `.claude/commands/ductus/prune.md` — 022-deterministic-runtime, 041-task-pruning
+- `.ductus/reference/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `.pi/prompts/ductus-consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `.pi/prompts/ductus-fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `.pi/prompts/ductus-prune.md` — 022-deterministic-runtime, 041-task-pruning
+- `AGENTS.md` — 041-task-pruning, 050-constitution
+- `framework/commands/consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `framework/commands/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `framework/commands/prune.md` — 022-deterministic-runtime, 041-task-pruning
+- `framework/reference/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `runtime/src/main.rs` — 067-analyze-and-audit-checks
+- `runtime/src/primitives/bounded_lists.rs` — 022-deterministic-runtime
+- `runtime/src/primitives/derive_dependencies.rs` — 067-analyze-and-audit-checks
+- `runtime/src/primitives/derive_references.rs` — 067-analyze-and-audit-checks
+- `runtime/src/primitives/invalidate_review.rs` — 051-branch-scoped-spec-numbering
+- `runtime/src/primitives/mod.rs` — 022-deterministic-runtime, 041-task-pruning, 057-analyze-artifact-and-record-relocation
+- `runtime/src/primitives/prune_plan.rs` — 022-deterministic-runtime, 041-task-pruning
+- `runtime/src/primitives/prune_project.rs` — 022-deterministic-runtime, 041-task-pruning
+- `runtime/src/primitives/prune_tasks.rs` — 022-deterministic-runtime, 041-task-pruning
+- `runtime/src/primitives/relocate_audit_records.rs` — 057-analyze-artifact-and-record-relocation
+- `runtime/src/primitives/rewrite_spec_links.rs` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `runtime/src/schema/paths.rs` — 022-deterministic-runtime, 041-task-pruning
+- `runtime/src/schema/primitives.rs` — 022-deterministic-runtime, 041-task-pruning, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 067-analyze-and-audit-checks
+- `runtime/src/session.rs` — 022-deterministic-runtime, 041-task-pruning
+- `runtime/tests/mcp.rs` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 067-analyze-and-audit-checks
+- `scripts/mutation/compare-and-set-041.py` — 022-deterministic-runtime, 041-task-pruning
+- `scripts/mutation/compare-and-set-051.py` — 051-branch-scoped-spec-numbering
+- `scripts/mutation/compare-and-set-057.py` — 057-analyze-artifact-and-record-relocation
+- `scripts/mutation/compare-and-set-067.py` — 067-analyze-and-audit-checks
+- `scripts/mutation/containment-and-bounds-067.py` — 067-analyze-and-audit-checks
+- `scripts/mutation/owner-reviews-067.py` — 067-analyze-and-audit-checks
+- `scripts/mutation/prune-project-containment.py` — 022-deterministic-runtime, 041-task-pruning
+- `scripts/mutation/prune-project.py` — 022-deterministic-runtime, 041-task-pruning
+- `scripts/mutation/rewrite-spec-links.py` — 051-branch-scoped-spec-numbering
+- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 041-task-pruning, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/022-deterministic-runtime/tasks.md` — 022-deterministic-runtime, 041-task-pruning, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/041-task-pruning/analysis.md` — 041-task-pruning
+- `specs/041-task-pruning/data-model.md` — 022-deterministic-runtime, 041-task-pruning
+- `specs/041-task-pruning/plan.md` — 022-deterministic-runtime, 041-task-pruning
+- `specs/041-task-pruning/review.md` — 022-deterministic-runtime, 041-task-pruning
+- `specs/041-task-pruning/spec.md` — 022-deterministic-runtime, 041-task-pruning
 - `specs/041-task-pruning/tasks.md` — 022-deterministic-runtime, 041-task-pruning
-- `specs/060-exec-analyze-assesses-each-loaded-rule/analysis.md` — 060-exec-analyze-assesses-each-loaded-rule, 075-agents-md-holds-what-every-session-needs
-- `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — 060-exec-analyze-assesses-each-loaded-rule
-- `specs/067-analyze-and-audit-checks/data-model.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/plan.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/review.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/anchor-reference-kinds.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-historical-roots.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/shared-constitution-references-are-judged.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/sibling-link-grammar-is-the-shared-one.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/spec.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/tasks.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/075-agents-md-holds-what-every-session-needs/analysis.md` — 060-exec-analyze-assesses-each-loaded-rule, 075-agents-md-holds-what-every-session-needs
-- `specs/075-agents-md-holds-what-every-session-needs/spec.md` — 075-agents-md-holds-what-every-session-needs
-- `specs/080-deterministic-runtime-efficiency/analysis.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/data-model.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/spec.md` — 041-task-pruning, 080-deterministic-runtime-efficiency
+- `specs/050-constitution/analysis.md` — 050-constitution
+- `specs/050-constitution/plan.md` — 050-constitution
+- `specs/050-constitution/review.md` — 050-constitution
+- `specs/050-constitution/scenarios/the-constitution-fits-one-read.md` — 050-constitution
+- `specs/050-constitution/spec.md` — 050-constitution
+- `specs/051-branch-scoped-spec-numbering/data-model.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/051-branch-scoped-spec-numbering/plan.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/051-branch-scoped-spec-numbering/review.md` — 051-branch-scoped-spec-numbering
+- `specs/051-branch-scoped-spec-numbering/scenarios/the-spec-root-is-read-before-the-first-write.md` — 051-branch-scoped-spec-numbering
+- `specs/051-branch-scoped-spec-numbering/spec.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/051-branch-scoped-spec-numbering/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/052-spec-supersession-and-consolidation/spec.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/057-analyze-artifact-and-record-relocation/plan.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/057-analyze-artifact-and-record-relocation/review.md` — 057-analyze-artifact-and-record-relocation
+- `specs/057-analyze-artifact-and-record-relocation/spec.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
+- `specs/067-analyze-and-audit-checks/analysis.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/data-model.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/plan.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/review.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/scenarios/derive-references-results-are-bounded.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/spec.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
+- `specs/080-deterministic-runtime-efficiency/data-model.md` — 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks, 080-deterministic-runtime-efficiency
 
 ## Unexamined governance
 
