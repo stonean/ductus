@@ -569,15 +569,12 @@ buys nothing here.
   its result shape are all about one artifact, and a plan reduction's apply is
   a list of host-chosen removals rather than a mode. Cost: a second pass through
   the seven registration sites, and a second schema. Accepted.
-- **The advisory rides `prune-plan`, not a `check-artifacts` family.** A new
-  family would, when this was decided, have been registered in 022's data model,
-  then the registry of check families, a durable contract whose edit would have
-  reopened 022 for a full re-review of 105
-  scenarios and a 1,529-line data model; feature-specific primitives already
-  live with their feature (`prune-tasks` here, 062's session primitives in
-  062). Cost: the advisory is documented in `framework/commands/analyze.md`
-  and this spec's data model rather than beside the other families.
-  Accepted, and `AGENTS.md`'s routing entry is corrected to match.
+- **The advisory rides `prune-plan`, not a `check-artifacts` family.** The
+  advisory judges one spec's plan, and a feature-specific check lives with its
+  feature's primitive (`prune-tasks` here, 062's session primitives in 062), as
+  `AGENTS.md`'s routing entry says. Cost: the advisory is documented in
+  `framework/commands/analyze.md` and this spec's data model rather than beside
+  the other families. Accepted.
 - **Removal is digest-guarded.** Rejected removing by heading alone: a
   section edited between preview and apply would lose content the host never
   judged. Cost: a stale preview refuses the apply, and the run re-previews.
