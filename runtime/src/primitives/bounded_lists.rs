@@ -3,8 +3,9 @@
 //!
 //! A result over a host's tool-output cap arrives as an error with no result
 //! at all. So each primitive whose result grows with the corpus or with a
-//! history, `research.md`'s grows-set and spec 080's `data-model.md`
-//! *Bounded results* table, returns inline while its serialized form fits
+//! history (spec 080's `research.md` grows-set), in the shape spec 080's
+//! `data-model.md` *Bounded results* gives, returns inline while its
+//! serialized form fits
 //! `[artifacts] read-size-bytes`, the size spec 063 treats as one read,
 //! 50,000 bytes by default. Past it, the lists are written whole to a file the
 //! result names, with their counts inline. `render-status` keeps its cut view
