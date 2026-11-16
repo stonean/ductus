@@ -236,11 +236,11 @@ project-wide advisory lock and renames the result over it only when the two
 reads match. A file changed since the read is **refused, never forced**: it is
 left as the other writer made it (an `append-task`, a `mark-task`, an editor),
 and the host re-runs the command to read it as it now is (`BE-TXN-004`). The
-lock makes the compare and the rename atomic among runtime writers, so two
-cannot both pass; it is taken after `append-task`'s lock when a caller holds
+lock makes the compare and the rename atomic among the writers that go through
+the guard, so two cannot both pass; it is taken after `append-task`'s lock when a caller holds
 both, waits no longer than the session lock's timeout, and is held for one
-re-read and one rename. A writer outside the runtime takes no lock, so one that
-lands between the re-read and the rename is still replaced: the guard narrows
+re-read and one rename. A writer that does not go through the guard takes no lock, so one
+that lands between the re-read and the rename is still replaced: the guard narrows
 that window and does not close it. The helper, its strategy and its bounds are
 022's plan (*Technical Decisions*, the compare-and-set guard).
 

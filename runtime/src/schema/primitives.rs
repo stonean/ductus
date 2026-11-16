@@ -8757,6 +8757,10 @@ mod tests {
         let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
         assert_eq!(value["features"][0]["status"], "done");
         assert_eq!(value["skipped"][0]["reason"], "no-plan-file");
+        assert_eq!(
+            serde_json::to_value(SkipReason::ChangedSinceRead).unwrap(),
+            "changed-since-read"
+        );
         assert_eq!(round_trip(&walked), walked);
     }
 

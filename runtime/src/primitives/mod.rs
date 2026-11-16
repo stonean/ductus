@@ -1329,8 +1329,8 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
 /// stalled project. A compare alone is not atomic, though: two runtime
 /// writers could both pass it and the later rename drop the earlier one's
 /// change. The re-read and the rename therefore run under one project-wide
-/// advisory lock ([`crate::session::lock_compare_and_set`]), so among runtime
-/// writers exactly one passes the compare. **Lock order and bounds
+/// advisory lock ([`crate::session::lock_compare_and_set`]), so among writers
+/// that go through this guard exactly one passes the compare. **Lock order and bounds
 /// (`BE-LOCK-002`).** A caller that holds `append-task`'s lock takes this one
 /// second, and nothing takes them the other way. The wait is
 /// [`crate::session::SESSION_LOCK_TIMEOUT`]; the hold is one re-read and one
@@ -1338,9 +1338,10 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
 /// [`PrimitiveError::ChangedSinceRead`], which the caller reports so the
 /// operator re-runs the command.
 ///
-/// **Residual.** A writer outside the runtime (an editor, an agent's own edit
-/// tool) takes no lock, and can still land between the re-read and the
-/// rename: its change is then replaced. The guard narrows that window to one
+/// **Residual.** A writer that does not go through this guard (an editor, an
+/// agent's own edit tool, or a primitive that writes without it) takes no
+/// lock, and can still land between the re-read and the rename: its change is
+/// then replaced. The guard narrows that window to one
 /// re-read and one rename; it does not close it.
 #[derive(Debug)]
 pub(crate) struct ReadSnapshot {
@@ -1433,7 +1434,7 @@ impl ReadSnapshot {
         timeout: std::time::Duration,
         hook: &mut dyn FnMut(Stage),
     ) -> Result<()> {
-        let _lock = crate::session::lock_compare_and_set_within(&self.repo, timeout)?;
+        let _lock = crate::session::lock_compare_and_set(&self.repo, timeout)?;
         hook(Stage::BeforeReread);
         validate_contained(&self.repo, &self.rel)?;
         let path = self.repo.join(&self.rel);

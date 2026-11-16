@@ -40,7 +40,7 @@ MUTATIONS = [
     (
         'M4 the compare and the rename hold no lock',
         'src/primitives/mod.rs',
-        '        let _lock = crate::session::lock_compare_and_set_within(&self.repo, timeout)?;\n',
+        '        let _lock = crate::session::lock_compare_and_set(&self.repo, timeout)?;\n',
         '        let _lock = timeout;\n',
         'primitives::tests::two_runtime_writers_cannot_both_pass_the_compare',
     ),
@@ -106,5 +106,12 @@ MUTATIONS = [
         '    if !write_new_atomic(path, body)? {\n',
         '    if !crate::primitives::write_atomic(path, body).map(|()| true)? {\n',
         'prune_project::tests::a_home_another_writer_created_is_kept_and_never_replaced',
+    ),
+    (
+        'M14 the skip reason a host matches on is renamed on the wire',
+        'src/schema/primitives.rs',
+        '    /// (`BE-TXN-002`, `BE-TXN-004`).\n    ChangedSinceRead,\n',
+        '    /// (`BE-TXN-002`, `BE-TXN-004`).\n    #[serde(rename = "changed")]\n    ChangedSinceRead,\n',
+        'schema::primitives::tests::prune_plan_round_trip',
     ),
 ]

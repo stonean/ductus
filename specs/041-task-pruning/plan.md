@@ -276,8 +276,8 @@ sections outside the record, never with file sizes. No client pagination is
 provided, and the lists either primitive returns that grow with the corpus (a
 single feature's `sections`, a walk's `features` and `skipped`) are held to
 `[artifacts] read-size-bytes` through a `lists-file`, as `ductus prune-tasks
---help` and `ductus prune-plan --help` state (`BE-PAYLOAD-001`). Three lists are
-not, each echoing the caller's own input and so bounded by it: `prune-plan`'s
+--help` and `ductus prune-plan --help` state (`BE-PAYLOAD-001`). The lists that are
+not held each echo the caller's own input and so are bounded by it: `prune-plan`'s
 `stale-sections`, and `prune-project`'s `stale-entries`, `created` and `kept`
 (the `remove`, `replace` and `create` lists the caller sent). `prune-project`'s
 `entries` and the search's `outside-project` move to a `lists-file` as its data

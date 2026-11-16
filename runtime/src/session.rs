@@ -441,18 +441,14 @@ pub fn lock_append_task(repo: &Path) -> Result<SessionLock> {
 /// guarded file, since a hold lasts one re-read and one rename. When a caller
 /// holds [`lock_append_task`] too it took that one first. The directory is
 /// created and self-ignored, and the wait, its bound and its refusal of a link
-/// leaving the project are [`lock_append_task`]'s.
+/// leaving the project are [`lock_append_task`]'s. It waits at most `timeout`:
+/// [`SESSION_LOCK_TIMEOUT`] in production, shortened by a test to meet a holder
+/// without waiting it out.
 ///
 /// # Errors
 ///
 /// As [`lock`], for `.ductus/locks`.
-pub fn lock_compare_and_set(repo: &Path) -> Result<SessionLock> {
-    lock_compare_and_set_within(repo, SESSION_LOCK_TIMEOUT)
-}
-
-/// [`lock_compare_and_set`], waiting at most `timeout`, which a test shortens
-/// to meet a holder without waiting out [`SESSION_LOCK_TIMEOUT`].
-pub(crate) fn lock_compare_and_set_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
+pub(crate) fn lock_compare_and_set(repo: &Path, timeout: Duration) -> Result<SessionLock> {
     lock_file_waiting(
         repo,
         &repo.join(paths::LOCKS_DIR),

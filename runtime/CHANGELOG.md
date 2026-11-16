@@ -27,9 +27,9 @@ its version and date.
   `changed-since-read`; `prune-project` goes on past a refused file and reports
   `written` and `refused` (two new result fields), with `applied` `false` once
   any is refused. A home it creates is written create-only, so one that
-  appeared since the apply looked is `kept`. A writer outside the runtime takes
-  no lock, and one landing between the re-read and the rename is still
-  replaced. Breaking under `BE-COMPAT-001`: a new value of `skipped`'s
+  appeared since the apply looked is `kept`. A writer that does not go through
+  the guard takes no lock, and one landing between the re-read and the rename
+  is still replaced. Breaking under `BE-COMPAT-001`: a new value of `skipped`'s
   response enum, and a new error where an apply used to write. The helper is
   reused by the other primitives that read a project file and replace it
   (spec 022 task 38, 066 task 24, 067 task 36, 051 task 37, 057 task 27).
