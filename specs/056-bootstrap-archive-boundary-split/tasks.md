@@ -8,7 +8,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 9. The walker places every archive-half section
 
-- [ ] Implement the behavior described in `scenarios/the-walker-places-every-archive-half-section.md`
+- [x] Implement the behavior described in `scenarios/the-walker-places-every-archive-half-section.md`
 
 Implemented in `824546a6` (landed on `main` 2026-11-12): the box stays open for the done-when's scratch-adopter bootstrap walked in the stated order.
 
