@@ -133,6 +133,26 @@ pub enum PrimitiveError {
         /// The file, as the caller named it (project-relative).
         path: PathBuf,
     },
+    /// A relocation that wrote some of its files was refused on the next: the
+    /// refused file changed since the primitive read it
+    /// ([`ReadSnapshot::write_if_unchanged`], `BE-TXN-002`), so it was not
+    /// written and the other writer's change stands. Distinct from
+    /// [`PrimitiveError::ChangedSinceRead`], which says nothing was written:
+    /// here the files named in `written` are already replaced, so the
+    /// operation is left half done and the message says so (`BE-TXN-004`).
+    #[error(
+        "relocation left half done: {} written; {refused} changed since it was read, so it \
+         was not written and the other writer's change stands, and spec.md was not rewritten, so \
+         it still carries the record blocks: re-run the command, which merges again and is \
+         safe to repeat",
+        join_paths(.written)
+    )]
+    RelocationIncomplete {
+        /// The files already replaced, project-relative, in write order.
+        written: Vec<PathBuf>,
+        /// The file refused, as the caller named it (project-relative).
+        refused: PathBuf,
+    },
     /// YAML parse failure for a frontmatter block.
     #[error("YAML parse error in {path}: {source}")]
     Yaml {
@@ -1311,6 +1331,15 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
         )?;
     }
     Ok(())
+}
+
+/// The paths, comma separated, for an error message.
+fn join_paths(paths: &[PathBuf]) -> String {
+    paths
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// A project file as a read-modify-write read it, held so the write that

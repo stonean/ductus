@@ -102,6 +102,22 @@ The migration primitive's report, per spec.
 not refused: every pre-migration spec has a `review.md`, so refusal would have
 made the review record unmigratable.
 
+### Errors
+
+Each file the primitive replaces (`review.md`, `analysis.md`, then `spec.md`)
+is read through a `ReadSnapshot` and written only when unchanged since that
+read (`BE-TXN-002`; 022's plan, §Compare before persist, owns the lock and its
+bounds). `spec.md` is written last, so a block never leaves it before its
+artifact holds it.
+
+| Error | When | State left |
+| --- | --- | --- |
+| `ChangedSinceRead { path }` (`changed-since-read`) | The first file to be written changed since it was read | Nothing written; the other writer's change stands |
+| `RelocationIncomplete { written, refused }` (`relocation-incomplete`) | A later file changed since it was read, after the files in `written` were replaced | `written` replaced, `refused` and `spec.md` not; `spec.md` still carries the blocks, so a re-run, which merges again, finishes it |
+
+Both are errors, not result fields: `changed: false` reads as converged, so a
+refusal carried in an `Ok` result could be mistaken for it.
+
 ## `Frontmatter` — `specs/{feature}/spec.md`
 
 | Field | Change |

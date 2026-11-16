@@ -34,6 +34,21 @@ its version and date.
   reused by the other primitives that read a project file and replace it
   (spec 022 task 38, 066 task 24, 067 task 36, 051 task 37, 057 task 27).
 
+- **BREAKING: `relocate-audit-records` writes a file only when it is unchanged since it read it (spec 057 task 27; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  The sweep read `spec.md` and each artifact, then renamed the result over
+  each with no guard, so a writer landing between a read and its rename was
+  dropped. It now reads through `ReadSnapshot` (`runtime/src/primitives/mod.rs`,
+  spec 041 task 27) and writes `review.md`, `analysis.md` and then `spec.md`
+  only when each is unchanged, under the project-wide compare-and-set lock;
+  the other writer's change stays. A refusal before anything is written is the
+  `changed-since-read` error. A refusal after an earlier file was written is
+  the new error `relocation-incomplete` (`PrimitiveError::RelocationIncomplete`),
+  naming the files written and the file refused; `spec.md` still carries its
+  blocks, so re-running finishes the relocation. Breaking under
+  `BE-COMPAT-001`: two new operational errors where the sweep used to write.
+  A writer that does not go through the guard takes no lock and can still land between the
+  re-read and the rename.
+
 - **BREAKING: the pre-`done` gate reads an affected spec only through paths contained in the project (spec 066 task 23, from 067's review; `BE-INPUT-004`).**
   `check-review-gate` contains each affected spec's `spec.md`,
   `scenarios/` directory and scenarios before it probes, lists or opens them:
