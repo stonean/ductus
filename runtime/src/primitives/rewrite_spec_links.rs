@@ -294,8 +294,8 @@ impl Sweep<'_> {
             match file.snapshot.write_if_unchanged(&rewrite.text) {
                 Ok(()) => true,
                 // The file changed since it was read: it stands as the other
-                // writer left it, so its mentions are the ones it still holds,
-                // and the sweep did not complete (`BE-TXN-004`).
+                // writer left it, its mentions are those of the text the sweep
+                // read, and the sweep did not complete (`BE-TXN-004`).
                 Err(PrimitiveError::ChangedSinceRead { .. }) => {
                     self.refused.push(shown.clone());
                     false

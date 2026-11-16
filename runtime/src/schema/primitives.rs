@@ -8149,9 +8149,9 @@ pub struct SourceMention {
 /// **examined and nothing pointed here**. A non-empty `skipped` names
 /// files that were not read, which the claim does not cover; and empty
 /// with `examined` zero means no file was scanned at all, which is not the
-/// same claim (`QUAL-CLAIM-001`). A non-empty `refused` means the sweep did not
-/// complete: no empty `rewritten` or clean re-run is claimed until a run
-/// lists none.
+/// same claim (`QUAL-CLAIM-001`). A non-zero `refused-count`, inline in both
+/// forms, means the sweep did not complete: no empty `rewritten` or clean
+/// re-run is claimed until a run's `refused-count` is zero.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksResult {
@@ -8168,7 +8168,7 @@ pub struct RewriteSpecLinksResult {
     /// still naming the retiring directory, and is not in `rewritten`. A non-empty list means the sweep did
     /// **not** complete: run it again, which reads each file as it now is and
     /// re-points what still names the directory (`BE-TXN-004`); retire the
-    /// directory only once a run lists none. The `kept-tails` of the files the
+    /// directory only once a run's `refused-count` is zero. The `kept-tails` of the files the
     /// first run wrote are not repeated by the second. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refused: Option<Vec<String>>,

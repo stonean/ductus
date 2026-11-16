@@ -1836,7 +1836,7 @@ fn bounded_members() -> Vec<(&'static str, Value, &'static [&'static str])> {
         (
             "rewrite-spec-links",
             json!({ "from": slug(2), "to": SUBJECT }),
-            &["rewritten", "skipped", "kept-tails", "mentions"],
+            &["rewritten", "refused", "skipped", "kept-tails", "mentions"],
         ),
         (
             "derive-dependencies",
