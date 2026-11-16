@@ -5,8 +5,10 @@
 // What it covers: the bridge's transport and lifecycle — tool registration
 // from the live tools/list, a round-tripped call, a multi-byte character split
 // across two chunks, the missing-binary load path, respawn after the
-// runtime exits, recovery after a call fails, and retiring a runtime that
-// stops answering — and the `{project}-status` and `{project}-help` commands
+// runtime exits, recovery after a call fails, retiring a runtime that stops
+// answering, stopping the runtime at session_shutdown, failing the call in
+// flight and any queued behind it there, and a process that loaded the bridge
+// exiting by itself — and the `{project}-status` and `{project}-help` commands
 // it registers under the namespace `render-help` gives at load, each showing
 // its answer, or a failure, as a displayed message that triggers no turn.
 // What it does not: pi's own extension loader (jiti), how pi renders a
@@ -126,14 +128,17 @@ const SPLIT_INSIDE_A_DASH = `
   raw(line.subarray(0, cut));
   setTimeout(() => raw(line.subarray(cut)), 50);`;
 
+// The command line of a `ductus mcp` started from this case's pointer.
+const runtimeCommand = (dir) => `${join(dir, ".ductus/bin/ductus")} mcp`;
+
 function killRuntime(dir) {
-  execFileSync("pkill", ["-f", `${join(dir, ".ductus/bin/ductus")} mcp`]);
+  execFileSync("pkill", ["-f", runtimeCommand(dir)]);
 }
 
 // Whether a `ductus mcp` started from this case's pointer is still running.
 function runtimeRunning(dir) {
   try {
-    execFileSync("pgrep", ["-f", `${join(dir, ".ductus/bin/ductus")} mcp`], { stdio: "ignore" });
+    execFileSync("pgrep", ["-f", runtimeCommand(dir)], { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -378,6 +383,26 @@ await check("session_shutdown stops the runtime, a second one does nothing, and 
   if (!text.includes("feature directory not found") || /shut down|exited|run \/ductus/.test(text))
     throw new Error(`no respawn after the shutdown: ${JSON.stringify(res)}`);
   if (!runtimeRunning(dir)) throw new Error("the call answered but no runtime is running");
+});
+
+// The scenario's first Edge Case, and a call queued behind it: neither may
+// wait out its timeout or respawn the runtime after the shutdown.
+await check("session_shutdown fails the call in flight and the one queued behind it, respawning nothing", async () => {
+  const dir = project({ binary: stubRuntime("/* never answers */") });
+  const { tools, handlers } = await load(dir);
+  await until(5000, () => tools.size > 0);
+  const tool = tools.get("ductus__probe");
+  const inFlight = tool.execute("t1", {});
+  const queued = tool.execute("t2", {});
+  await sleep(200);
+  await handlers.session_shutdown({ reason: "quit" }, {});
+  const [first, second] = await within(3000, Promise.all([inFlight, queued]));
+  for (const [label, res] of [["in flight", first], ["queued", second]]) {
+    if (!res.isError || !res.content[0].text.includes("shut down"))
+      throw new Error(`the ${label} call did not fail with the shutdown: ${JSON.stringify(res)}`);
+  }
+  await sleep(200);
+  if (runtimeRunning(dir)) throw new Error("a runtime was running after the shutdown: the queued call respawned it");
 });
 
 // A print-mode `pi -p` exits once its prompts are done, so a process that

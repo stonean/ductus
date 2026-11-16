@@ -51,7 +51,10 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
 - spawns `.ductus/bin/ductus mcp` (resolved relative to the working tree; the
   pointer `/ductus` already materializes) when it loads, with the argument vector
   `["mcp"]` and no shell (`spawn` in `framework/bootstrap/pi/ductus-bridge.ts`;
-  BE-INPUT-003), keeps it alive, and
+  BE-INPUT-003), keeps it alive, unreferenced with both its pipes so it never
+  holds pi's process open, stops it at `session_shutdown`, failing the call in
+  flight and every call queued behind it
+  ([the-bridge-closes-its-server-at-shutdown](scenarios/the-bridge-closes-its-server-at-shutdown.md)), and
   respawns it on the first call after it exits — or after a request times out,
   which retires a runtime that stopped answering. Every request to the runtime is
   bounded by the named constant `REQUEST_TIMEOUT_MS` (120 s), well above what the

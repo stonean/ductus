@@ -77,6 +77,7 @@ interface ExtensionAPI {
       ctx: { ui: { notify(message: string, level: "error"): void } },
     ) => unknown,
   ): void;
+  on(event: "session_shutdown", handler: (event: unknown, ctx: unknown) => unknown): void;
   registerTool(tool: {
     name: string;
     label: string;
@@ -160,6 +161,9 @@ class DuctusServer {
   private nextId = 1;
   /** Calls run one at a time, in the order pi issues them. */
   private callChain: Promise<unknown> = Promise.resolve();
+  /** Advanced by stop(): a call issued before a shutdown and still queued
+   *  fails with it rather than respawn the runtime after it. */
+  private generation = 0;
 
   constructor(pointerPath: string) {
     this.pointerPath = pointerPath;
@@ -284,9 +288,11 @@ class DuctusServer {
     return connection;
   }
 
-  /** Stop the child, if one runs, for pi's session_shutdown. Idempotent, and a
-   *  later call respawns it, as after a death. */
+  /** Stop the child, if one runs, for pi's session_shutdown, failing the call
+   *  in flight and every call queued behind it. Idempotent, and a call issued
+   *  later respawns it, as after a death. */
   stop() {
+    this.generation += 1;
     const proc = this.child;
     if (!proc) return;
     this.drop("the ductus bridge was shut down");
@@ -308,7 +314,12 @@ class DuctusServer {
   }
 
   callTool(name: string, args: Record<string, Json>): Promise<ToolResult> {
-    const call = this.callChain.then(() => this.invoke(name, args));
+    const generation = this.generation;
+    const call = this.callChain.then(() =>
+      generation === this.generation
+        ? this.invoke(name, args)
+        : failure(`ductus: ${name} failed: the ductus bridge was shut down`),
+    );
     /* The chain continues past a failed call; the caller still sees it. */
     this.callChain = call.catch(() => undefined);
     return call;
