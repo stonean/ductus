@@ -53,6 +53,7 @@ pub mod extract_archive;
 pub mod fetch_archive;
 pub(crate) mod fix_rounds;
 pub mod gate_confirm;
+pub(crate) mod guarded;
 pub(crate) mod host_config;
 pub(crate) mod inbox_standing;
 pub mod invalidate_review;

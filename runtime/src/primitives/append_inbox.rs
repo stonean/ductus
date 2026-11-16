@@ -26,8 +26,8 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, SkipScanner, bullet_text, count_inbox_bullets, rel_path,
-    strip_bullet_marker, write_atomic,
+    ReadSnapshot, Result, SkipScanner, bullet_text, count_inbox_bullets, guarded, rel_path,
+    strip_bullet_marker,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendInboxArgs, AppendInboxResult};
@@ -44,30 +44,30 @@ const PROJECT_TEMPLATE: &str = "framework/templates/project/inbox.md";
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidArgument`] when `text` is empty,
+/// Returns [`super::PrimitiveError::InvalidArgument`] when `text` is empty,
 /// whitespace-only, or carries an embedded newline (structure injection
 /// into `inbox.md`) — the rule `remove-inbox-item` applies too, so every
 /// bullet written here can be removed (see [`super::validate_inbox_text`]).
-/// Filesystem failures surface as [`PrimitiveError::Io`].
+/// [`super::PrimitiveError::ChangedSinceRead`] when `inbox.md` changed (or, for the
+/// first bullet, appeared) between the read and the write: nothing is written
+/// (`BE-TXN-002`), and the operator runs it again. Filesystem failures surface
+/// as [`super::PrimitiveError::Io`].
 pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
     super::validate_inbox_text("append-inbox", "text", &args.text)?;
 
     let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
 
-    let (existing, created) = match std::fs::read_to_string(&inbox_path) {
-        Ok(text) => (text, false),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => (creation_base(repo), true),
-        Err(source) => {
-            return Err(PrimitiveError::Io {
-                path: inbox_path,
-                source,
-            });
-        }
+    // The first bullet reads an absent file: the snapshot then expects it
+    // still absent, so a file another writer created meanwhile is kept.
+    let snapshot = ReadSnapshot::read(repo, &rel_path(&inbox_path, repo))?;
+    let (existing, created) = match snapshot.text()? {
+        Some(text) => (text.to_string(), false),
+        None => (creation_base(repo), true),
     };
 
     let new_content = append_bullet(&existing, &strip_bullet_marker(&args.text));
-    write_atomic(&inbox_path, &new_content)?;
+    guarded::write_guarded(&snapshot, &new_content)?;
 
     Ok(AppendInboxResult {
         path: rel_path(&inbox_path, repo),
@@ -164,6 +164,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use std::fs;
     use tempfile::tempdir;
 
@@ -336,5 +337,64 @@ mod tests {
         assert_eq!(result.path, "governance/inbox.md");
         assert!(tmp.path().join("governance/inbox.md").is_file());
         assert!(!tmp.path().join("specs").exists());
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn an_inbox_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("specs/inbox.md");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, "# Inbox\n\n- [ ] first\n").unwrap();
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(&args("second"), tmp.path())
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/inbox.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
+    }
+
+    /// The first bullet reads an absent inbox: one another writer creates
+    /// meanwhile is kept, never written over.
+    #[test]
+    fn an_inbox_created_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("specs/inbox.md");
+        let theirs = file.clone();
+        let err = guarded::between_read_and_write(
+            move || {
+                fs::create_dir_all(theirs.parent().unwrap()).unwrap();
+                fs::write(&theirs, "# Inbox\n\n- [ ] theirs\n").unwrap();
+            },
+            || run(&args("mine"), tmp.path()),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::ChangedSinceRead { .. }),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            "# Inbox\n\n- [ ] theirs\n"
+        );
     }
 }

@@ -75,7 +75,7 @@ use std::path::Path;
 use serde_json::{Map, Value, json};
 
 use crate::host::Host;
-use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
+use crate::primitives::{PrimitiveError, ReadSnapshot, Result, guarded, rel_path};
 use crate::schema::paths::Paths;
 use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 
@@ -94,6 +94,9 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///   bootstrap-substituted `{cli-config-dir}/settings.local.json`); no
 ///   caller needs an out-of-repo destination.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
+/// - [`PrimitiveError::ChangedSinceRead`] when the settings file changed, or
+///   appeared, between the read and the write: nothing is written
+///   (`BE-TXN-002`) and the caller runs it again.
 /// - Under `canonical`, [`PrimitiveError::Toml`] when the config or session
 ///   file `Host::load` and `Paths::load` read does not parse, and
 ///   [`PrimitiveError::InvalidSpecsRoot`] for an invalid `[paths] specs-root`,
@@ -128,16 +131,10 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
     validate_revoke_disjoint(&allow, &revoke)?;
     refuse_beyond_ceiling(&args.allow)?;
 
-    let existing = match target_path.try_exists() {
-        Ok(true) => Some(read_text(&target_path)?),
-        Ok(false) => None,
-        Err(source) => {
-            return Err(PrimitiveError::Io {
-                path: target_path.clone(),
-                source,
-            });
-        }
-    };
+    // A file absent at the read is a valid read: the snapshot then expects it
+    // still absent, so one another writer created meanwhile is kept.
+    let snapshot = ReadSnapshot::read(repo, &rel_path(&target_path, repo))?;
+    let existing = snapshot.text()?.map(str::to_string);
 
     let MergeOutcome {
         post_value,
@@ -162,7 +159,7 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
 
     if action != "unchanged" {
         let serialized = serialize_pretty(&post_value);
-        write_atomic(&target_path, &serialized)?;
+        guarded::write_guarded(&snapshot, &serialized)?;
     }
 
     Ok(MergePermissionsResult {
@@ -1788,5 +1785,60 @@ mod tests {
             matches!(&err, PrimitiveError::InvalidPath { reason, .. } if reason.contains(".mcp.json")),
             "{err:?}"
         );
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_settings_file_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join(".pi/settings.json");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, "{}\n").unwrap();
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(&args(".pi/settings.json", &["Edit"], &[]), tmp.path())
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new(".pi/settings.json")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
+    }
+
+    /// A settings file absent at the read must still be absent at the write.
+    #[test]
+    fn a_settings_file_created_after_the_read_is_refused_and_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join(".pi/settings.json");
+        let theirs = file.clone();
+        let err = guarded::between_read_and_write(
+            move || {
+                fs::create_dir_all(theirs.parent().unwrap()).unwrap();
+                fs::write(&theirs, "{\"theirs\":true}\n").unwrap();
+            },
+            || run(&args(".pi/settings.json", &["Edit"], &[]), tmp.path()),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::ChangedSinceRead { .. }),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&file).unwrap(), "{\"theirs\":true}\n");
     }
 }

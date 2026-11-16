@@ -49,7 +49,7 @@
 
 use std::path::Path;
 
-use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
+use crate::primitives::{PrimitiveError, ReadSnapshot, Result, guarded, rel_path};
 use crate::schema::primitives::{MergeManagedBlockArgs, MergeManagedBlockResult};
 
 const DEFAULT_MARKER: &str = "ductus-managed";
@@ -73,6 +73,9 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   (spec 022 task 11; [`super::host_config::check_no_destination`]). No
 ///   `/ductus` step writes a block there.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
+/// - [`PrimitiveError::ChangedSinceRead`] when the file changed, or appeared,
+///   between the read and the write: nothing is written (`BE-TXN-002`) and the
+///   caller runs it again.
 /// - [`PrimitiveError::MalformedMarkers`] when an `html-comment` style
 ///   file has a BEGIN marker without an END (or vice versa).
 /// - [`PrimitiveError::UnknownManifestStrategy`] when `marker-style`
@@ -109,16 +112,10 @@ pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBloc
     let style = parse_style(&style_str)?;
     let normalized_block = normalize_block(&args.block);
 
-    let existing = match path.try_exists() {
-        Ok(true) => Some(read_text(&path)?),
-        Ok(false) => None,
-        Err(source) => {
-            return Err(PrimitiveError::Io {
-                path: path.clone(),
-                source,
-            });
-        }
-    };
+    // A file absent at the read is a valid read: the snapshot then expects it
+    // still absent, so one another writer created meanwhile is kept.
+    let snapshot = ReadSnapshot::read(repo, &rel_path(&path, repo))?;
+    let existing = snapshot.text()?.map(str::to_string);
 
     let (new_content, action_static, dedup_lines) = compute_merge(
         existing.as_deref(),
@@ -128,7 +125,7 @@ pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBloc
         &path,
     )?;
     if let Some(content) = &new_content {
-        write_atomic(&path, content)?;
+        guarded::write_guarded(&snapshot, content)?;
     }
 
     let (dedup_removed, dedup_removed_lines) = match style {
@@ -1718,8 +1715,10 @@ Thumbs.db";
         let body = fs::read_to_string(tmp.path().join(".govern.toml")).unwrap();
         assert!(body.contains("[pinned]"), "legacy sections preserved");
         assert!(body.contains("project = \"ductus\""));
+        // The write guard's lock lives under `.ductus/locks/`; what must not
+        // appear is a config file there.
         assert!(
-            !tmp.path().join(".ductus").exists(),
+            !tmp.path().join(".ductus/config.toml").exists(),
             "no partial .ductus/ file created while the legacy config lingers"
         );
     }
@@ -1804,5 +1803,56 @@ Thumbs.db";
             fs::read_to_string(repo.join(".claude/commands/acme/g.md")).unwrap(),
             command
         );
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_file_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("CLAUDE.md");
+        fs::write(&file, "# Mine\n").unwrap();
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(&args(&file, "block body", None), tmp.path())
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("CLAUDE.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
+    }
+
+    /// A file absent at the read must still be absent at the write.
+    #[test]
+    fn a_file_created_after_the_read_is_refused_and_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("CLAUDE.md");
+        let theirs = file.clone();
+        let err = guarded::between_read_and_write(
+            move || fs::write(&theirs, "# Theirs\n").unwrap(),
+            || run(&args(&file, "block body", None), tmp.path()),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::ChangedSinceRead { .. }),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&file).unwrap(), "# Theirs\n");
     }
 }

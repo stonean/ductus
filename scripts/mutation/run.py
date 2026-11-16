@@ -14,7 +14,8 @@ ast.literal_eval and never executed. Each mutation is a tuple
   old     the exact text the mutation replaces, or a list of texts replaced
           together; each must occur in the file exactly once
   new     the replacement, or a list matching old
-  filter  the test-name filters passed to `cargo test --lib --locked --`
+  filter  the test-name filters passed to `cargo test --lib --locked --`, or,
+          when it starts `--test NAME`, to `cargo test --locked --test NAME --`
 
 EXPECTED_SURVIVORS maps an id to the reason no portable test can kill it.
 
@@ -81,8 +82,13 @@ def run_one(mutation):
     started = time.monotonic()
     try:
         target.write_text(mutated, encoding="utf-8")
+        words = filt.split()
+        if words[:1] == ["--test"]:
+            command = ["cargo", "test", "--locked", "--test", words[1], "--", *words[2:]]
+        else:
+            command = ["cargo", "test", "--lib", "--locked", "--", *words]
         result = subprocess.run(
-            ["cargo", "test", "--lib", "--locked", "--", *filt.split()],
+            command,
             cwd=RUNTIME,
             capture_output=True,
             text=True,

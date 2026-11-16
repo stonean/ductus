@@ -34,9 +34,11 @@
 //! parser rather than a lint; the seam is recorded here instead of being
 //! left for the next reader to discover the way this one was.
 //!
-//! **Subject**: files under `runtime/src/primitives/` that call
-//! `write_atomic(` or `write_new_atomic(` — the text writers, the second
-//! creating a file only where none exists (spec 022, task 33).
+//! **Subject**: files under `runtime/src/primitives/` that make one of
+//! [`WRITE_CALLS`] — the text writers: `write_atomic(`, `write_new_atomic(`
+//! (creating a file only where none exists, spec 022 task 33), and the
+//! guarded `write_if_unchanged(` / `write_guarded(` that a primitive reading
+//! the file it rewrites writes through (spec 022 task 38).
 //! `write_atomic_bytes` is deliberately
 //! out of scope: its callers copy bytes (template installs, archive
 //! extraction), and bytes are preserved by construction.
@@ -97,6 +99,18 @@ const EXEMPT: &[(&str, &str)] = &[
         "writes settings JSON through the serializer, which owns its own formatting",
     ),
     (
+        "write_review.rs",
+        "renders review.md whole from typed fields on every run (the record is regenerated \
+         wholesale, never a file a person edits), so it has no prior endings to preserve; it \
+         joined the subject when it moved onto the guard (spec 022 task 38)",
+    ),
+    (
+        "write_analysis.rs",
+        "renders analysis.md whole from typed fields on every run (the record is regenerated \
+         wholesale, never a file a person edits), so it has no prior endings to preserve; it \
+         joined the subject when it moved onto the guard (spec 022 task 38)",
+    ),
+    (
         "merge_managed_block.rs",
         "tracks each line's terminator alongside the line (`has_newline`) rather than re-joining, \
          so endings never leave the data; covered by its own CRLF case",
@@ -127,6 +141,7 @@ fn every_text_writer_accounts_for_line_endings() {
     let dir = primitives_dir();
     let mut examined: Vec<String> = Vec::new();
     let mut writers: Vec<String> = Vec::new();
+    let mut guarded_writers: Vec<String> = Vec::new();
     let mut offenders: Vec<String> = Vec::new();
 
     let mut entries: Vec<PathBuf> = fs::read_dir(&dir)
@@ -139,7 +154,7 @@ fn every_text_writer_accounts_for_line_endings() {
 
     for path in &entries {
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
-        if name == "mod.rs" {
+        if name == "mod.rs" || name == "guarded.rs" {
             // The helpers' own home, not a primitive.
             continue;
         }
@@ -150,6 +165,9 @@ fn every_text_writer_accounts_for_line_endings() {
             continue;
         }
         writers.push(name.clone());
+        if writes_guarded(body) {
+            guarded_writers.push(name.clone());
+        }
         if EXEMPT.iter().any(|(f, _)| *f == name) {
             continue;
         }
@@ -169,6 +187,14 @@ fn every_text_writer_accounts_for_line_endings() {
         "expected many text writers; found {writers:?}"
     );
 
+    // The subject is built from the write calls the code makes, and most
+    // primitives now make a guarded one: a subject that lost them would pass
+    // with the corpus almost unexamined.
+    assert!(
+        guarded_writers.len() >= 15,
+        "expected many guarded text writers; found {guarded_writers:?}"
+    );
+
     assert!(
         offenders.is_empty(),
         "these primitives write a text file without accounting for its line endings:\n  {}\n\n\
@@ -179,10 +205,31 @@ fn every_text_writer_accounts_for_line_endings() {
     );
 }
 
-/// Whether `body` calls one of the text writers: `write_atomic`, or
-/// `write_new_atomic`, which creates a file only where none exists.
+/// The calls that persist text, which is what makes a file a writer: the raw
+/// `write_atomic` and `write_new_atomic` (creates a file only where none
+/// exists), and the guarded writes that replaced the raw one in every
+/// primitive that reads a file it rewrites (spec 022 task 38, `BE-TXN-002`):
+/// `ReadSnapshot::write_if_unchanged` and `guarded::write_guarded`, which
+/// forwards to it. A subject drawn from the raw call alone loses each primitive
+/// the day it takes the guard.
+const WRITE_CALLS: &[&str] = &[
+    "write_atomic(",
+    "write_new_atomic(",
+    "write_if_unchanged(",
+    "write_guarded(",
+];
+
+/// The guarded writes among [`WRITE_CALLS`].
+const GUARDED_CALLS: &[&str] = &["write_if_unchanged(", "write_guarded("];
+
+/// Whether `body` calls one of the text writers ([`WRITE_CALLS`]).
 fn writes_text(body: &str) -> bool {
-    body.contains("write_atomic(") || body.contains("write_new_atomic(")
+    WRITE_CALLS.iter().any(|call| body.contains(call))
+}
+
+/// Whether `body` writes through the guard ([`GUARDED_CALLS`]).
+fn writes_guarded(body: &str) -> bool {
+    GUARDED_CALLS.iter().any(|call| body.contains(call))
 }
 
 /// An `EXEMPT` entry naming a file that no longer writes text is stale — it

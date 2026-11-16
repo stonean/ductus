@@ -16,9 +16,7 @@
 
 use std::path::Path;
 
-use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, section_line_indices, write_atomic,
-};
+use crate::primitives::{PrimitiveError, Result, guarded, rel_path, section_line_indices};
 use crate::schema::paths;
 use crate::schema::primitives::{LabelAssignment, LabelCriteriaArgs, LabelCriteriaResult};
 
@@ -41,7 +39,9 @@ const NEXT_FIELD: &str = "next-criterion:";
 /// never closes, [`PrimitiveError::InvalidNextCriterion`] when the
 /// stored counter is not a positive integer (a corrupted counter may mean a
 /// label was already reissued, so the pass refuses rather than repairing it
-/// in place), or [`PrimitiveError::Io`] for filesystem failures.
+/// in place), [`PrimitiveError::ChangedSinceRead`] when `spec.md` changed
+/// between the read and the write (nothing is written; run it again), or
+/// [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
@@ -53,7 +53,7 @@ pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult>
         });
     }
     let spec_path = feature_dir.join("spec.md");
-    let content = read_text(&spec_path)?;
+    let (snapshot, content) = guarded::read_required(repo, &rel_path(&spec_path, repo))?;
     let lines: Vec<&str> = content.split_inclusive('\n').collect();
 
     let fm = frontmatter_bounds(&lines).ok_or_else(|| {
@@ -126,7 +126,7 @@ pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult>
     }
 
     let new_content = render(&lines, &fm, &labelled_lines, counter);
-    write_atomic(&spec_path, &new_content)?;
+    guarded::write_guarded(&snapshot, &new_content)?;
 
     Ok(LabelCriteriaResult {
         assigned,
@@ -488,5 +488,36 @@ mod tests {
         assert!(text.contains("next-criterion: 2\r\n"), "{text:?}");
         assert!(!text.contains("next-criterion: 2\n"));
         assert!(text.contains("- [ ] AC1: First.\r\n"));
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_spec_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        write_spec(tmp.path(), UNLABELLED);
+        let file = tmp.path().join("specs/feat/spec.md");
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || run(&args(), tmp.path()))
+            .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/feat/spec.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }

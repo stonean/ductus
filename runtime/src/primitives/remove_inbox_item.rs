@@ -5,12 +5,13 @@
 //! the file by hand. The first bullet whose text (via the shared
 //! [`bullet_text`] grammar) equals the given `item`, trimmed, is removed;
 //! a no-match — or a missing inbox file — is a clean domain outcome
-//! (`removed: false`), never an operational error. The write is atomic.
+//! (`removed: false`), never an operational error. The write is atomic, and
+//! refused when `inbox.md` changed since the read (`BE-TXN-002`).
 
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, count_inbox_bullets, iter_bullets, rel_path, write_atomic,
+    ReadSnapshot, Result, count_inbox_bullets, guarded, iter_bullets, rel_path,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{RemoveInboxItemArgs, RemoveInboxItemResult};
@@ -19,11 +20,13 @@ use crate::schema::primitives::{RemoveInboxItemArgs, RemoveInboxItemResult};
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidArgument`] when `item` is empty,
+/// Returns [`super::PrimitiveError::InvalidArgument`] when `item` is empty,
 /// whitespace-only, or carries an embedded newline — the rule `append-inbox`
 /// applies, so every bullet it writes can be removed (see
-/// [`super::validate_inbox_text`]). Filesystem failures other than a missing
-/// inbox surface as [`PrimitiveError::Io`].
+/// [`super::validate_inbox_text`]), and [`super::PrimitiveError::ChangedSinceRead`]
+/// when `inbox.md` changed between the read and the write: nothing is written
+/// (`BE-TXN-002`), and the operator runs it again. Filesystem failures other
+/// than a missing inbox surface as [`super::PrimitiveError::Io`].
 pub fn run(args: &RemoveInboxItemArgs, repo: &Path) -> Result<RemoveInboxItemResult> {
     super::validate_inbox_text("remove-inbox-item", "item", &args.item)?;
     let target = args.item.trim();
@@ -31,28 +34,20 @@ pub fn run(args: &RemoveInboxItemArgs, repo: &Path) -> Result<RemoveInboxItemRes
     let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
 
-    let existing = match std::fs::read_to_string(&inbox_path) {
-        Ok(text) => text,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            // Nothing to remove — a clean domain outcome, not an error.
-            return Ok(RemoveInboxItemResult {
-                path: rel_path(&inbox_path, repo),
-                removed: false,
-                remaining_count: 0,
-            });
-        }
-        Err(source) => {
-            return Err(PrimitiveError::Io {
-                path: inbox_path,
-                source,
-            });
-        }
+    let snapshot = ReadSnapshot::read(repo, &rel_path(&inbox_path, repo))?;
+    let Some(existing) = snapshot.text()?.map(str::to_string) else {
+        // Nothing to remove — a clean domain outcome, not an error.
+        return Ok(RemoveInboxItemResult {
+            path: rel_path(&inbox_path, repo),
+            removed: false,
+            remaining_count: 0,
+        });
     };
 
     match remove_bullet(&existing, target) {
         Some(new_content) => {
             let remaining = count_inbox_bullets(&new_content);
-            write_atomic(&inbox_path, &new_content)?;
+            guarded::write_guarded(&snapshot, &new_content)?;
             Ok(RemoveInboxItemResult {
                 path: rel_path(&inbox_path, repo),
                 removed: true,
@@ -110,6 +105,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use std::fs;
     use tempfile::tempdir;
 
@@ -275,5 +271,39 @@ mod tests {
         let result = run(&args("routed item"), tmp.path()).unwrap();
         assert!(result.removed);
         assert_eq!(result.path, "governance/inbox.md");
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn an_inbox_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("specs/inbox.md");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, "# Inbox\n\n- [ ] first\n- [ ] second\n").unwrap();
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(&args("first"), tmp.path())
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/inbox.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }

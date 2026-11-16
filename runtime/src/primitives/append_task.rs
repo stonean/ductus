@@ -6,15 +6,19 @@
 //! Creates `tasks.md` with a derived heading when absent. Atomic write via
 //! tempfile + rename, with the read and the write held under one advisory
 //! lock (`BE-TXN-002`, [`crate::session::lock_append_task`]) so concurrent
-//! calls on one `tasks.md` each land their task.
+//! calls on one `tasks.md` each land their task, and the write goes through
+//! the compare-before-persist guard ([`crate::primitives::ReadSnapshot`]) so
+//! a `mark-task`, `prune-tasks` or other runtime writer that holds no such
+//! lock and lands in between is kept, the append refused (plan §Compare
+//! before persist).
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::primitives::{
-    PhaseRange, PrimitiveError, Result, TaskNumber, TasksStructure, detect_tasks_structure,
-    iter_phase_ranges, parse_atx_heading, read_text, rel_path, split_frontmatter,
-    strip_bullet_marker, validate_slug, write_atomic,
+    PhaseRange, PrimitiveError, ReadSnapshot, Result, TaskNumber, TasksStructure,
+    detect_tasks_structure, guarded, iter_phase_ranges, parse_atx_heading, read_text, rel_path,
+    split_frontmatter, strip_bullet_marker, validate_slug,
 };
 use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 
@@ -28,7 +32,9 @@ use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 /// feature directory does not exist, [`PrimitiveError::MalformedTasks`] when
 /// the `next-task:` counter is not a positive integer, its frontmatter never
 /// closes, or no number or counter can follow the highest `u32::MAX` one, or
-/// [`PrimitiveError::Io`] for filesystem failures.
+/// [`PrimitiveError::ChangedSinceRead`] when another writer replaced
+/// `tasks.md` between the read and the write (nothing is written; run it
+/// again), or [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     super::validate_feature_path(repo, &args.feature_path)?;
     // A feature path may name any directory inside the project, so refuse one
@@ -88,18 +94,21 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     // (`BE-TXN-002`). Held until `run` returns, dedup returns included, so a
     // call that waited reads what the call before it wrote.
     let _lock = crate::session::lock_append_task(repo)?;
-    let (existing, created_now) = match read_text(&tasks_path) {
-        Ok(text) => (text, false),
-        Err(PrimitiveError::Io { source, .. }) if source.kind() == std::io::ErrorKind::NotFound => {
-            let heading = derive_tasks_heading(&feature_dir);
-            let intro = if feature_dir.join("plan.md").exists() {
-                "Tasks derived from the [plan](plan.md). Complete in order."
-            } else {
-                "Tasks. Complete in order."
-            };
-            (format!("{heading}\n\n{intro}\n"), true)
-        }
-        Err(err) => return Err(err),
+    // The lock excludes only other `append-task` calls. The snapshot, taken
+    // inside it, makes the write refuse when a `mark-task`, `prune-tasks` or
+    // any other runtime writer replaced `tasks.md` since the read, so that
+    // writer's change is kept (`BE-TXN-002`; plan §Compare before persist).
+    let snapshot = ReadSnapshot::read(repo, &rel_path(&tasks_path, repo))?;
+    let (existing, created_now) = if let Some(text) = snapshot.text()? {
+        (text.to_string(), false)
+    } else {
+        let heading = derive_tasks_heading(&feature_dir);
+        let intro = if feature_dir.join("plan.md").exists() {
+            "Tasks derived from the [plan](plan.md). Complete in order."
+        } else {
+            "Tasks. Complete in order."
+        };
+        (format!("{heading}\n\n{intro}\n"), true)
     };
 
     // Dedup guard: a `slug` renders a pointer at `scenarios/{slug}.md`, so
@@ -162,7 +171,7 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         None => new_content,
     };
     let new_content = super::with_line_ending(&new_content, super::line_ending_of(&existing));
-    write_atomic(&tasks_path, &new_content)?;
+    guarded::write_guarded(&snapshot, &new_content)?;
 
     Ok(AppendTaskResult {
         task_number: next_number.to_string(),
@@ -1679,5 +1688,73 @@ mod tests {
         let result = waiter.join().unwrap();
         assert!(result.appended && result.created);
         assert!(fs::read_to_string(&tasks_path).unwrap().contains("Waits"));
+    }
+
+    /// A `mark-task` landing between the read and the write holds no
+    /// `append-task` lock, so only the guard keeps it: the append is
+    /// refused, the tick stays, and a re-run lands the task (`BE-TXN-002`).
+    #[test]
+    fn a_mark_task_between_the_read_and_the_write_keeps_both_changes() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(
+            &tasks,
+            "# 042\n\n## 1. First\n\n- [ ] Only subtask.\n- **Done when**: ticked.\n",
+        )
+        .unwrap();
+        let repo = tmp.path().to_path_buf();
+        let err = guarded::between_read_and_write(
+            move || {
+                crate::primitives::mark_task::run(
+                    &crate::schema::primitives::MarkTaskArgs {
+                        feature: "042-foo".into(),
+                        task_number: "1".into(),
+                        subtask_index: 0,
+                        checked: true,
+                    },
+                    &repo,
+                )
+                .unwrap();
+            },
+            || {
+                run(
+                    &args(
+                        "specs/042-foo",
+                        "Implement retry",
+                        "the scenario is implemented.",
+                    ),
+                    tmp.path(),
+                )
+            },
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::ChangedSinceRead { .. }),
+            "{err:?}"
+        );
+        let after_refusal = fs::read_to_string(&tasks).unwrap();
+        assert!(
+            after_refusal.contains("- [x] Only subtask."),
+            "{after_refusal}"
+        );
+        assert!(
+            !after_refusal.contains("Implement retry"),
+            "{after_refusal}"
+        );
+
+        let rerun = run(
+            &args(
+                "specs/042-foo",
+                "Implement retry",
+                "the scenario is implemented.",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(rerun.appended);
+        let landed = fs::read_to_string(&tasks).unwrap();
+        assert!(landed.contains("- [x] Only subtask."), "{landed}");
+        assert!(landed.contains("Implement retry"), "{landed}");
     }
 }

@@ -15,8 +15,8 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, SkipScanner, TasksStructure, detect_tasks_structure, parse_atx_heading,
-    parse_done_when, read_text, rel_path, write_atomic,
+    PrimitiveError, Result, SkipScanner, TasksStructure, detect_tasks_structure, guarded,
+    parse_atx_heading, parse_done_when, rel_path,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{CheckboxToggleResult, MarkTaskArgs};
@@ -28,15 +28,18 @@ use super::checkbox::{find_checkbox_line, flip_checkbox_at};
 /// Locates the subtask at `args.subtask_index` (0-based) within the task
 /// numbered `args.task_number` and flips its checkbox to `args.checked`.
 /// State-modifying writes use `tempfile`'s create-then-rename pattern; a
-/// crash mid-write leaves the target file unchanged.
+/// crash mid-write leaves the target file unchanged, and the write is refused
+/// when `tasks.md` changed since the read (`BE-TXN-002`).
 ///
 /// # Errors
 ///
 /// Returns [`PrimitiveError::FeatureNotFound`] when the feature directory
 /// is missing, [`PrimitiveError::TaskNotFound`] when the heading does not
 /// match, [`PrimitiveError::SubtaskOutOfRange`] when the subtask index
-/// exceeds the number of subtasks found, or [`PrimitiveError::Io`] for any
-/// filesystem failure.
+/// exceeds the number of subtasks found, [`PrimitiveError::ChangedSinceRead`]
+/// when `tasks.md` changed between the read and the write (nothing is
+/// written; run it again), or [`PrimitiveError::Io`] for any filesystem
+/// failure.
 pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
@@ -48,7 +51,7 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
         });
     }
     let tasks_path = feature_dir.join("tasks.md");
-    let content = read_text(&tasks_path)?;
+    let (snapshot, content) = guarded::read_required(repo, &rel_path(&tasks_path, repo))?;
 
     let task_level: u8 = match detect_tasks_structure(&content) {
         TasksStructure::Flat => 2,
@@ -107,7 +110,7 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     // already-checked last subtask), and an unchanged block must produce
     // no write at all so a re-run is a clean no-op.
     if new_content != content {
-        write_atomic(&tasks_path, &new_content)?;
+        guarded::write_guarded(&snapshot, &new_content)?;
     }
 
     Ok(CheckboxToggleResult {
@@ -843,5 +846,46 @@ mod tests {
         assert_eq!(heading_task_number("11a. Task"), Some("11a".into()));
         assert_eq!(heading_task_number("3a quick wins"), None);
         assert_eq!(heading_task_number("11ab. Task"), None);
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_tasks_file_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        write_fixture(tmp.path());
+        let file = tmp.path().join("specs/feat/tasks.md");
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(
+                &MarkTaskArgs {
+                    feature: "feat".into(),
+                    task_number: "1".into(),
+                    subtask_index: 0,
+                    checked: true,
+                },
+                tmp.path(),
+            )
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/feat/tasks.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }

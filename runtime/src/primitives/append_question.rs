@@ -34,8 +34,8 @@ use std::path::Path;
 
 use crate::primitives::set_status::locate_status_field;
 use crate::primitives::{
-    PrimitiveError, Result, read_spec, read_text, rel_path, split_frontmatter_with_offset,
-    strip_bullet_marker, validate_single_line, validate_slug, write_atomic,
+    PrimitiveError, Result, guarded, read_spec, rel_path, split_frontmatter_with_offset,
+    strip_bullet_marker, validate_single_line, validate_slug,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendQuestionArgs, AppendQuestionResult};
@@ -68,8 +68,10 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 /// multi-line, [`PrimitiveError::FeatureNotFound`] when the feature
 /// directory is missing, [`PrimitiveError::Io`] when the target artifact
 /// is unreadable, [`PrimitiveError::MissingFrontmatter`] when it lacks
-/// `---` fences, or [`PrimitiveError::UnclosedFrontmatter`] when its block
-/// never closes. A duplicate question is the `appended: false` domain
+/// `---` fences, [`PrimitiveError::UnclosedFrontmatter`] when its block
+/// never closes, or [`PrimitiveError::ChangedSinceRead`] when it changed
+/// between the read and the write (`BE-TXN-002`: nothing is written; run it
+/// again). A duplicate question is the `appended: false` domain
 /// outcome, not an error.
 pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResult> {
     let root = paths::Paths::load(repo)?.specs_root;
@@ -106,7 +108,7 @@ pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResul
         None => (feature_dir.join("spec.md"), true),
     };
 
-    let content = read_text(&target_path)?;
+    let (snapshot, content) = guarded::read_required(repo, &rel_path(&target_path, repo))?;
     let (fm_text, body, fm_start) = split_frontmatter_with_offset(&content, &target_path)?;
 
     // Dedup against exactly the entries read-spec's parser reports, with
@@ -142,7 +144,7 @@ pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResul
     }
 
     let (new_content, section_created) = insert_question(&new_content, question);
-    write_atomic(&target_path, &new_content)?;
+    guarded::write_guarded(&snapshot, &new_content)?;
 
     Ok(AppendQuestionResult {
         path: rel_path(&target_path, repo),
@@ -618,5 +620,41 @@ mod tests {
         let result = run(&args("Rooted right?"), tmp.path()).unwrap();
         assert_eq!(result.path, "governance/009-quest/spec.md");
         assert!(result.status_reverted);
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_spec_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        seed_spec(
+            tmp.path(),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# 009\n\n## Open Questions\n\n- Existing question?\n",
+        );
+        let file = tmp.path().join("specs/009-quest/spec.md");
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(&args("What about retries?"), tmp.path())
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/009-quest/spec.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }

@@ -2,9 +2,7 @@
 
 use std::path::Path;
 
-use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, section_line_indices, write_atomic,
-};
+use crate::primitives::{PrimitiveError, Result, guarded, rel_path, section_line_indices};
 use crate::schema::paths;
 use crate::schema::primitives::{CheckboxToggleResult, MarkCriterionArgs};
 
@@ -16,14 +14,16 @@ const ACCEPTANCE_HEADING: &str = "Acceptance Criteria";
 ///
 /// Locates the acceptance criterion at `args.criterion_index` (0-based,
 /// ordered as in the spec body) and flips its checkbox to `args.checked`.
-/// Uses the same atomic create-then-rename write pattern as `mark-task`.
+/// Uses the same atomic create-then-rename write pattern as `mark-task`,
+/// refused when `spec.md` changed since the read (`BE-TXN-002`).
 ///
 /// # Errors
 ///
 /// Returns [`PrimitiveError::FeatureNotFound`] when the feature directory is
 /// missing, [`PrimitiveError::CriterionOutOfRange`] when the index exceeds
-/// the number of criteria, or [`PrimitiveError::Io`] for filesystem
-/// failures.
+/// the number of criteria, [`PrimitiveError::ChangedSinceRead`] when
+/// `spec.md` changed between the read and the write (nothing is written; run
+/// it again), or [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
@@ -35,7 +35,7 @@ pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult
         });
     }
     let spec_path = feature_dir.join("spec.md");
-    let content = read_text(&spec_path)?;
+    let (snapshot, content) = guarded::read_required(repo, &rel_path(&spec_path, repo))?;
     let lines: Vec<&str> = content.split_inclusive('\n').collect();
 
     let checkbox_lines = collect_checkbox_line_indices(&lines);
@@ -52,7 +52,7 @@ pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult
     }
 
     if previous != args.checked {
-        write_atomic(&spec_path, &new_content)?;
+        guarded::write_guarded(&snapshot, &new_content)?;
     }
 
     Ok(CheckboxToggleResult {
@@ -401,5 +401,46 @@ mod tests {
             tf.write_all(b"INTERRUPTED CONTENT").unwrap();
         }
         assert_eq!(original, fs::read_to_string(&spec_path).unwrap());
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_spec_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        write_fixture(tmp.path());
+        let file = tmp.path().join("specs/feat/spec.md");
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(
+                &MarkCriterionArgs {
+                    feature: "feat".into(),
+                    criterion_index: Some(0),
+                    label: None,
+                    checked: true,
+                },
+                tmp.path(),
+            )
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/feat/spec.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }

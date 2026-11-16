@@ -69,6 +69,6 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 9. Run **§Cross-spec impact check** in `.ductus/reference/plan.md`, then invoke `gate-confirm` with a prompt that presents its result and a summary of the plan body and the task breakdown and asks the user to approve the transition from clarified to planned. On confirmation, continue to step 10; on denial, the walker exits cleanly without modifying the spec.
 
-10. Invoke `set-status` to flip the spec frontmatter's status from clarified to planned; the primitive guards against a stale "from" value so concurrent edits surface as an operational error rather than a silent overwrite.
+10. Invoke `set-status` to flip the spec frontmatter's status from clarified to planned; the primitive guards against a stale "from" value and refuses a write over a `spec.md` another writer changed since it read it, so concurrent edits surface as an operational error rather than a silent overwrite; on that error, report the conflict and run the step again.
 
 11. Invoke `lint-markdown` a second time. Any violations surface as advisory findings the user resolves before running `/ductus:implement` — markdownlint is advisory, never a transition blocker.

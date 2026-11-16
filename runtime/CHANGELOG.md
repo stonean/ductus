@@ -10,6 +10,23 @@ its version and date.
 
 ### Added
 
+- **BREAKING: `append-question`, `append-task`, `label-criteria`, `mark-criterion`, `mark-task`, `set-status`, `append-inbox`, `remove-inbox-item`, `merge-managed-block` and `merge-permissions` write a file only when it is unchanged since they read it (spec 022 task 38; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  Each read its file, computed the replacement and renamed it over the file
+  with no guard, so a change another writer landed in between was dropped.
+  Each now reads through the shared `ReadSnapshot` guard (041 task 27) and
+  renames only when a re-read under the project-wide lock matches; otherwise
+  it returns a changed-since-read error naming the file and writes nothing,
+  and the caller runs it again. `append-inbox`, `merge-managed-block` and
+  `merge-permissions` also refuse a file that appeared after they read it
+  absent. `append-task` keeps its advisory lock, which excludes only other
+  `append-task` calls, and the guard covers the `mark-task` or `prune-tasks`
+  that takes no lock. Any writer that does not go through the guard still
+  takes no lock, so the window narrows to one re-read and one rename and is not
+  closed. `merge-status-hook` stays unguarded under spec 080's departure. A new
+  unit test fails when a non-test `write_atomic` or `write_atomic_bytes` call
+  sits outside the guard and a named allowlist, and `line_ending_discipline`'s
+  subject now counts the guarded writes, so a primitive does not leave the lint
+  by taking the guard.
 - **BREAKING: `derive-dependencies` and `derive-references` write a spec only when it is unchanged since they read it (spec 067 task 36; the owner's BE-TXN-002 class decision, 2026-11-16).**
   Each read a `spec.md`, spliced its frontmatter and renamed the result over
   it with no guard, so a writer landing between the read and the rename was

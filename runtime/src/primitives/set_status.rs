@@ -2,9 +2,7 @@
 
 use std::path::Path;
 
-use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, split_frontmatter_with_offset, write_atomic,
-};
+use crate::primitives::{PrimitiveError, Result, guarded, rel_path, split_frontmatter_with_offset};
 use crate::schema::paths;
 use crate::schema::primitives::{SetStatusArgs, SetStatusResult};
 use crate::schema::status::ALLOWED_STATUSES;
@@ -16,7 +14,8 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// constitution's lifecycle set (`draft|clarified|planned|in-progress|done`);
 /// transition-edge legality stays with procedures. The atomic
 /// create-then-rename pattern leaves `spec.md` unchanged on a crash
-/// mid-write.
+/// mid-write, and the write is refused when `spec.md` changed since the read
+/// (`BE-TXN-002`).
 ///
 /// # Errors
 ///
@@ -26,8 +25,10 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// when the spec lacks `---` fences, [`PrimitiveError::UnclosedFrontmatter`]
 /// when its block never closes, [`PrimitiveError::StatusFieldMissing`]
 /// when no `status:` key is present, [`PrimitiveError::StatusMismatch`]
-/// when `args.from` does not match disk, or [`PrimitiveError::Io`] for
-/// filesystem failures.
+/// when `args.from` does not match the status read,
+/// [`PrimitiveError::ChangedSinceRead`] when `spec.md` changed between the
+/// read and the write (nothing is written; run it again), or
+/// [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &SetStatusArgs, repo: &Path) -> Result<SetStatusResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
@@ -48,7 +49,7 @@ pub fn run(args: &SetStatusArgs, repo: &Path) -> Result<SetStatusResult> {
         });
     }
     let spec_path = feature_dir.join("spec.md");
-    let content = read_text(&spec_path)?;
+    let (snapshot, content) = guarded::read_required(repo, &rel_path(&spec_path, repo))?;
     // The offset is the length of the opener fence the splitter actually
     // matched (`---\n` vs `---\r\n`); hardcoding the LF form would splice
     // one byte early on CRLF checkouts and corrupt the frontmatter.
@@ -73,7 +74,7 @@ pub fn run(args: &SetStatusArgs, repo: &Path) -> Result<SetStatusResult> {
     new_content.push_str(&content[absolute_end..]);
 
     if args.to != args.from {
-        write_atomic(&spec_path, &new_content)?;
+        guarded::write_guarded(&snapshot, &new_content)?;
     }
 
     Ok(SetStatusResult {
@@ -315,5 +316,45 @@ mod tests {
             tf.write_all(b"INTERRUPTED CONTENT").unwrap();
         }
         assert_eq!(original, fs::read_to_string(&spec_path).unwrap());
+    }
+
+    /// Appends a line to the file as a second writer landing between the
+    /// primitive's read and its write would.
+    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+        let path = path.to_path_buf();
+        move || {
+            let mut text = std::fs::read_to_string(&path).unwrap();
+            text.push_str("\nTheirs.\n");
+            std::fs::write(&path, text).unwrap();
+        }
+    }
+
+    /// A change another writer lands between the read and the write is kept:
+    /// the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_spec_changed_after_the_read_is_refused_and_kept() {
+        let tmp = tempdir().unwrap();
+        write_spec(tmp.path(), "clarified");
+        let file = tmp.path().join("specs/feat/spec.md");
+        let before = fs::read_to_string(&file).unwrap();
+        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+            run(
+                &SetStatusArgs {
+                    feature: "feat".into(),
+                    from: "clarified".into(),
+                    to: "planned".into(),
+                },
+                tmp.path(),
+            )
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/feat/spec.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            format!("{before}\nTheirs.\n")
+        );
     }
 }
