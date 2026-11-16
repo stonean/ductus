@@ -21,10 +21,14 @@ EXPECTED_SURVIVORS maps an id to the reason no portable test can kill it.
 
 Each selected mutation is written over its file, the filtered unit tests run
 in the dev profile, and the file is restored, even when the run is
-interrupted. A mutation is KILLED when a test fails, SURVIVED when every test
-passes, and an ERROR when cargo fails another way (a compile error, say),
-which is never counted as killed. runtime/src is copied before the first
-mutation and compared with the copy after the last.
+interrupted by an exception or Ctrl-C. A run killed outright (SIGKILL, or an
+agent stopped mid-run) skips the restore and leaves its mutant applied: compare
+runtime/src with the newest ductus-mutation-* copy under $TMPDIR and restore
+the differing file from it before trusting the tree. A mutation is KILLED when
+a test fails, SURVIVED when every test passes, and an ERROR when cargo fails
+another way (a compile error, say), which is never counted as killed.
+runtime/src is copied before the first mutation and compared with the copy
+after the last.
 
 --check validates every selected anchor and exits without running cargo.
 
