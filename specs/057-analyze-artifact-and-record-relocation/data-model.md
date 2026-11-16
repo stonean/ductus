@@ -102,6 +102,21 @@ The migration primitive's report, per spec.
 not refused: every pre-migration spec has a `review.md`, so refusal would have
 made the review record unmigratable.
 
+**The result is bounded by construction** (`BE-PAYLOAD-001`). One call reads
+one `spec.md`: `relocated` holds at most its two artifacts, `review.md` and
+`analysis.md`, and `disagreements` at most one entry per key of the two blocks
+that call read, so the result grows with one spec's two record blocks and never
+with the corpus. `specs/080-deterministic-runtime-efficiency/research.md`
+measured it at 68 characters on both of its corpora and left it out of the set
+whose results grow, so it has no lists-file form.
+
+**The feature path is contained** (`BE-INPUT-004`). Before anything is read,
+`validate_feature_argument` screens the `feature` argument, contains it in the
+spec root, and walks the directory for a link that leaves the project; every
+file the call then reads or writes goes through `ReadSnapshot`, whose read, and
+whose re-read under the lock before the rename, check again that the path stays
+inside the project (`specs/022-deterministic-runtime/plan.md` §Path arguments: a lexical screen, then canonical containment).
+
 ### Errors
 
 Each file the primitive replaces (the artifacts in the order their blocks appear in `spec.md`, then `spec.md`)
