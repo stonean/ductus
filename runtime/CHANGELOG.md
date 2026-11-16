@@ -24,6 +24,24 @@ its version and date.
   A writer that does not go through the guard takes no lock, so the window narrows to one
   re-read and one rename and is not closed. Read-only runs are unchanged.
 
+- **BREAKING: `invalidate-review` and `rewrite-spec-links` write a file only when it is unchanged since they read it (spec 051 task 37; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  Both read a project file and renamed the result over it with no guard, so a
+  `write-review` or an editor landing in between was dropped; for
+  `rewrite-spec-links` the window spanned the whole sweep, since every file is
+  read before the first is written. Each now reads through the shared
+  `ReadSnapshot` (spec 041 task 27) and writes only when the file still holds
+  what it read. `invalidate-review` fails with the `changed-since-read` error
+  naming `review.md`, writing nothing, so the fold runs the step again.
+  `rewrite-spec-links` goes on past a refused file and reports it in the new
+  `refused` result field (`refused-count` inline, moved to the lists file past
+  `[artifacts] read-size-bytes` with the other lists), never counting it
+  `rewritten`; a non-empty `refused` is an unfinished sweep, and
+  `/ductus:fold` and `/ductus:consolidate` run it again before
+  `retire-feature`. Breaking under `BE-COMPAT-001`: two new result fields, and
+  a new error where `invalidate-review` used to write. A writer that does not go through
+  the guard takes no lock and, landing between the re-read and the rename, is
+  still replaced.
+
 - **BREAKING: a prune apply writes a file only when it is unchanged since it read it (spec 041 task 27, from 041's analysis; the owner's BE-TXN-002 class decision, 2026-11-16).**
   `prune-tasks`, `prune-plan` and `prune-project` each read a file, compute and
   renamed the result over it with no guard, so an `append-task`, `mark-task` or

@@ -8149,7 +8149,9 @@ pub struct SourceMention {
 /// **examined and nothing pointed here**. A non-empty `skipped` names
 /// files that were not read, which the claim does not cover; and empty
 /// with `examined` zero means no file was scanned at all, which is not the
-/// same claim (`QUAL-CLAIM-001`).
+/// same claim (`QUAL-CLAIM-001`). A non-empty `refused` means the sweep did not
+/// complete: no empty `rewritten` or clean re-run is claimed until a run
+/// lists none.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksResult {
@@ -8160,6 +8162,18 @@ pub struct RewriteSpecLinksResult {
     pub rewritten: Option<Vec<RewrittenFile>>,
     /// Entries in `rewritten`, in either form.
     pub rewritten_count: usize,
+    /// Files whose rewrite was **refused** because each changed after the sweep
+    /// read it and before it wrote it (`BE-TXN-002`), project-relative, in the
+    /// order of the sweep. Each is left exactly as the other writer made it,
+    /// still naming the retiring directory, and is not in `rewritten`. A non-empty list means the sweep did
+    /// **not** complete: run it again, which reads each file as it now is and
+    /// re-points what still names the directory (`BE-TXN-004`); retire the
+    /// directory only once a run lists none. The `kept-tails` of the files the
+    /// first run wrote are not repeated by the second. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<Vec<String>>,
+    /// Entries in `refused`, in either form.
+    pub refused_count: usize,
     /// Files scanned — each markdown file under the spec root outside the
     /// retiring directory, and each referrer outside the spec root, that was
     /// read. The subject the empty case describes. A referrer that was not
@@ -8221,11 +8235,11 @@ pub struct RewriteSpecLinksResult {
     pub mentions: Option<Vec<SourceMention>>,
     /// Entries in `mentions`, in either form.
     pub mentions_count: usize,
-    /// Where the four lists are: in this result, or past `[artifacts]
+    /// Where the five lists are: in this result, or past `[artifacts]
     /// read-size-bytes` in the file `lists-file` names (spec 080, AC7).
     #[serde(default)]
     pub form: ListsForm,
-    /// In the file form, the file holding the four lists whole, from the
+    /// In the file form, the file holding the five lists whole, from the
     /// project root: a JSON object with their keys.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,

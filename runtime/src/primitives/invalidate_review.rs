@@ -23,12 +23,18 @@
 //! Converges on a re-run: a spec with no current review is
 //! `invalidated: false`, a domain outcome rather than an error, so an
 //! interrupted fold completes by being run again (spec 051, AC24, AC29).
+//!
+//! **The rewrite is guarded** (`BE-TXN-002`; spec 051 task 37). The primitive
+//! takes a [`ReadSnapshot`] of `review.md` before it reads the record, and
+//! writes the invalidated text through [`ReadSnapshot::write_if_unchanged`],
+//! so a `write-review` or an editor change landing in between
+//! is never replaced: the call fails with
+//! [`PrimitiveError::ChangedSinceRead`], nothing is written, and the fold
+//! re-runs the step, which reads the record as it now is.
 
 use std::path::Path;
 
-use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, split_frontmatter, write_atomic,
-};
+use crate::primitives::{PrimitiveError, ReadSnapshot, Result, rel_path, split_frontmatter};
 use crate::schema::paths;
 use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 
@@ -47,6 +53,39 @@ use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 /// A spec that records no current review is **not** an error — it is
 /// `invalidated: false`, already in the state this primitive produces.
 pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewResult> {
+    let (result, pending) = plan(args, repo)?;
+    if let Some(pending) = pending {
+        pending.write()?;
+    }
+    Ok(result)
+}
+
+/// The invalidated record, held with the read it was computed from.
+struct Pending {
+    snapshot: ReadSnapshot,
+    updated: String,
+}
+
+impl Pending {
+    /// Write the record over the file only when it still holds what was read.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::ChangedSinceRead`] when `review.md` changed since the
+    /// read; the other writer's change stands.
+    fn write(&self) -> Result<()> {
+        self.snapshot.write_if_unchanged(&self.updated)
+    }
+}
+
+/// Read the record and decide: the result the call reports, and the write it
+/// still owes when a review was recorded. The read is the guard's snapshot,
+/// taken before anything else reads `review.md`, so a change after it — the
+/// waiver read and the record load included — is refused at the write.
+fn plan(
+    args: &InvalidateReviewArgs,
+    repo: &Path,
+) -> Result<(InvalidateReviewResult, Option<Pending>)> {
     let root = paths::Paths::load(repo)?.specs_root;
     super::validate_feature_argument(repo, &root, &args.feature)?;
 
@@ -63,6 +102,7 @@ pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewR
     // anything.
     let review_path = feature_dir.join(crate::primitives::REVIEW_RECORD_FILE);
     let path = rel_path(&review_path, repo);
+    let snapshot = ReadSnapshot::read(repo, &path)?;
     // An invalidation says the *review* is out of date, not that a recorded
     // judgement was withdrawn, so waivers are carried across the write.
     let recorded_waivers: Vec<crate::primitives::write_review::RawWaiverFull> =
@@ -75,32 +115,39 @@ pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewR
         .as_present()
         .and_then(|record| record.last_run.clone())
     else {
-        return Ok(InvalidateReviewResult {
-            invalidated: false,
-            path,
-            previous_last_run: None,
-        });
+        return Ok((
+            InvalidateReviewResult {
+                invalidated: false,
+                path,
+                previous_last_run: None,
+            },
+            None,
+        ));
     };
 
-    invalidate_record_artifact(&feature_dir, &recorded_waivers)?;
-
-    Ok(InvalidateReviewResult {
+    // The record loaded, so the file was there; if the snapshot saw none, it
+    // appeared after the read, which is a change since it.
+    let Some(content) = snapshot.text()? else {
+        return Err(PrimitiveError::ChangedSinceRead { path: path.into() });
+    };
+    let updated = invalidated_record(content, &review_path, &recorded_waivers)?;
+    let result = InvalidateReviewResult {
         invalidated: true,
         path,
         previous_last_run: Some(previous),
-    })
+    };
+    Ok((result, Some(Pending { snapshot, updated })))
 }
 
-/// Rewrite `review.md`'s frontmatter with a nulled record, preserving its
-/// waivers and its report body.
+/// `content`, a `review.md` as it was read, with its frontmatter's record
+/// nulled and its waivers and report body preserved.
 ///
-/// An absent artifact is a no-op, on the same reasoning the spec-block path
-/// applies to a missing block: there is no record to invalidate, and writing
-/// one whose every field is null would add noise rather than state.
-fn invalidate_record_artifact(
-    feature_dir: &Path,
+/// `path` names the file in a frontmatter error.
+fn invalidated_record(
+    content: &str,
+    review_path: &Path,
     waivers: &[crate::primitives::write_review::RawWaiverFull],
-) -> Result<()> {
+) -> Result<String> {
     // `dispositions` goes with the run's other counts: a record reading
     // `last-run: null` that still carried the invalidated run's disposition
     // counts would state outcomes of a run it says never happened. So does
@@ -136,12 +183,7 @@ fn invalidate_record_artifact(
         "round-waivers",
     ];
 
-    let review_path = feature_dir.join(crate::primitives::REVIEW_RECORD_FILE);
-    if !review_path.is_file() {
-        return Ok(());
-    }
-    let content = read_text(&review_path)?;
-    let (fm_text, body) = split_frontmatter(&content, &review_path)?;
+    let (fm_text, body) = split_frontmatter(content, review_path)?;
 
     // Keep every key that is not a review scalar — `spec`, `scenario`, and any
     // adopter addition — so an invalidation narrows the record rather than
@@ -168,18 +210,17 @@ fn invalidate_record_artifact(
     fm.push_str("blocking: false\n");
     crate::primitives::write_review::render_waivers_at(&mut fm, waivers, "");
 
-    let updated = super::with_line_ending(
+    Ok(super::with_line_ending(
         &format!("---\n{}\n---\n{body}", fm.trim_end_matches('\n')),
-        super::line_ending_of(&content),
-    );
-    write_atomic(&review_path, &updated)
+        super::line_ending_of(content),
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use super::run;
+    use super::{plan, run};
     use crate::primitives::PrimitiveError;
     use crate::schema::primitives::InvalidateReviewArgs;
     use std::fs;
@@ -417,6 +458,37 @@ mod tests {
             fs::read_to_string(tmp.path().join("specs/050-alpha/spec.md")).unwrap(),
             before
         );
+    }
+
+    /// A review another writer recorded after the invalidation read the file
+    /// is kept: the write is refused, never made over it (`BE-TXN-002`).
+    #[test]
+    fn a_record_changed_after_it_was_read_is_refused_and_the_other_writers_bytes_stand() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_reviewed(tmp.path());
+        let (result, pending) = plan(&args("050-alpha"), tmp.path()).unwrap();
+        assert!(result.invalidated, "the plan would write");
+        let theirs = RECORD.replace("2026-08-01T00:00:00Z", "2026-08-02T00:00:00Z");
+        fs::write(tmp.path().join("specs/050-alpha/review.md"), &theirs).unwrap();
+
+        let err = pending.unwrap().write().unwrap_err();
+
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == Path::new("specs/050-alpha/review.md")),
+            "{err:?}"
+        );
+        assert_eq!(review_md(tmp.path()), theirs);
+    }
+
+    /// The same invalidation, nothing changing in between, writes.
+    #[test]
+    fn an_unchanged_record_is_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_reviewed(tmp.path());
+        let (_, pending) = plan(&args("050-alpha"), tmp.path()).unwrap();
+        pending.unwrap().write().unwrap();
+        assert!(review_md(tmp.path()).contains("last-run: null"));
     }
 
     #[test]

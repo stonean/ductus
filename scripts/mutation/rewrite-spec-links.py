@@ -56,7 +56,7 @@ MUTATIONS = [
         'M5 system.md rewritten again after the walk, its pre-read copy not taken out',
         'src/primitives/rewrite_spec_links.rs',
         '                let referrer = pending.remove(index);\n',
-        '                let referrer = PendingFile {\n                    path: pending[index].path.clone(),\n                    content: pending[index].content.clone(),\n                    passes: pending[index].passes,\n                    prefixes: pending[index].prefixes,\n                };\n',
+        '                let referrer = PendingFile {\n                    path: pending[index].path.clone(),\n                    snapshot: ReadSnapshot::read(\n                        self.repo,\n                        &repo_relative(self.repo, &pending[index].path),\n                    )?,\n                    passes: pending[index].passes,\n                    prefixes: pending[index].prefixes,\n                };\n',
         'rewrite_spec_links',
     ),
     (
@@ -111,16 +111,16 @@ MUTATIONS = [
     (
         'M13 the referrers outside the spec root are read but never written',
         'src/primitives/rewrite_spec_links.rs',
-        '    for referrer in pending {\n        sweep.rewrite(\n            &referrer.path,\n            &referrer.content,\n            referrer.passes,\n            referrer.prefixes,\n        )?;\n    }\n',
-        '    let _ = pending;\n',
+        '    files.append(&mut pending);\n',
+        '    let _ = &pending;\n',
         'rewrite_spec_links',
     ),
     # -- the fix round on findings 1-4 and 8 ------------------------------------
     (
         'M14 a non-UTF-8 referrer raised as an error, not skipped',
         'src/primitives/rewrite_spec_links.rs',
-        '            let Ok(content) = String::from_utf8(bytes) else {\n                self.skip(shown, check_orphaned_references::UNREADABLE_AS_TEXT);\n                continue;\n            };\n',
-        '            let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {\n                path: path.clone(),\n                source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n            })?;\n',
+        '            if not_text.is_some() {\n                self.skip(shown, check_orphaned_references::UNREADABLE_AS_TEXT);\n                continue;\n            }\n',
+        '            if let Some(err) = not_text {\n                return Err(PrimitiveError::Io {\n                    path: path.clone(),\n                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                });\n            }\n',
         'rewrite_spec_links',
     ),
     (
@@ -133,8 +133,8 @@ MUTATIONS = [
     (
         'M16 the referrers read after the spec-root files are written',
         'src/primitives/rewrite_spec_links.rs',
-        '    let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;\n    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    for file in under_root {\n        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;\n    }\n',
-        '    let mut pending = Vec::new();\n    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    for file in under_root {\n        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;\n    }\n    pending.extend(sweep.read_referrers(&referrers, &specs_dir)?);\n',
+        '    let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;\n    let mut files = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    files.append(&mut pending);\n    Ok(Planned { sweep, files })\n',
+        '    let mut pending = Vec::new();\n    let files = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    for file in &files {\n        sweep.rewrite(file)?;\n    }\n    pending.extend(sweep.read_referrers(&referrers, &specs_dir)?);\n    Ok(Planned {\n        sweep,\n        files: pending,\n    })\n',
         'rewrite_spec_links',
     ),
     (
@@ -289,8 +289,8 @@ MUTATIONS = [
     (
         'M39 each markdown file under the spec root written as it is read',
         'src/primitives/rewrite_spec_links.rs',
-        '                files.push(PendingFile {\n                    path: path.to_path_buf(),\n                    content,\n                    passes: Passes::Links,\n                    prefixes: &[],\n                });\n',
-        '                self.rewrite(path, &content, Passes::Links, &[])?;\n',
+        '                files.push(PendingFile {\n                    path: path.to_path_buf(),\n                    snapshot,\n                    passes: Passes::Links,\n                    prefixes: &[],\n                });\n',
+        '                self.rewrite(&PendingFile {\n                    path: path.to_path_buf(),\n                    snapshot,\n                    passes: Passes::Links,\n                    prefixes: &[],\n                })?;\n',
         'rewrite_spec_links',
     ),
     # -- the same scenario's re-read round: a file the rewrite cannot read stops
@@ -298,8 +298,8 @@ MUTATIONS = [
     (
         'M40 a non-UTF-8 markdown file under the spec root skipped instead of stopping the run',
         'src/primitives/rewrite_spec_links.rs',
-        '                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {\n                    path: path.to_path_buf(),\n                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                })?;\n',
-        '                let Ok(content) = String::from_utf8(bytes) else {\n                    continue;\n                };\n',
+        '                if let Some(err) = not_text {\n                    return Err(PrimitiveError::Io {\n                        path: path.to_path_buf(),\n                        source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                    });\n                }\n',
+        '                if not_text.is_some() {\n                    continue;\n                }\n',
         'rewrite_spec_links',
     ),
     (
@@ -313,7 +313,7 @@ MUTATIONS = [
         'M42 a pending referrer under the spec root written as the walk meets it',
         'src/primitives/rewrite_spec_links.rs',
         '                let referrer = pending.remove(index);\n                files.push(referrer);\n',
-        '                let referrer = pending.remove(index);\n                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;\n',
+        '                let referrer = pending.remove(index);\n                self.rewrite(&referrer)?;\n',
         'rewrite_spec_links',
     ),
     # -- the second re-read round: a symbolic link under the spec root is

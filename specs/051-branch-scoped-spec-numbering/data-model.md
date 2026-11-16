@@ -75,12 +75,13 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `from` | in | string | The retiring or renamed feature directory name. |
 | `to` | in | string | The fold target — a feature, optionally with a scenario slug. |
 | `rewritten` | out | list of `{path, count}` | Files re-pointed, as `ductus rewrite-spec-links --help` describes. |
+| `refused` | out | list of paths | Files whose rewrite was refused because each changed after the sweep read it (*The write guard*); never also in `rewritten`. Non-empty means the sweep did not complete. |
 | `examined` | out | integer | Files scanned (`ductus rewrite-spec-links --help`). |
 | `skipped` | out | list of `{path, reason}` | Referrers and other files left as they are, and the reads that stop the run: the reasons are `ductus rewrite-spec-links --help`'s. |
 | `kept-tails` | out | list of `{path, line, reference}` | References re-pointed whose kept tail names a file the fold did not write, or a `scenarios/` tail the retiring directory does not hold (never listed on that account once the directory is gone), as `ductus rewrite-spec-links --help` defines. |
 | `mentions` | out | list of `{path, line}` | Lines of the examined files that still name the retiring directory, as `ductus rewrite-spec-links --help` defines. Only the examined files are searched. |
 
-Each list holds at most one entry per file, per reference, or per line, under the spec root and in the five referrers, so it is bounded by the project's own tree rather than by history (022 `plan.md`'s `BE-PAYLOAD-001` statement).
+Each list, `refused` included, holds at most one entry per file, per reference, or per line, under the spec root and in the five referrers, so it is bounded by the project's own tree rather than by history (022 `plan.md`'s `BE-PAYLOAD-001` statement); past `[artifacts] read-size-bytes` `refused` moves to the lists file with the others, its `refused-count` staying inline.
 
 ### `retire-feature` (new)
 
@@ -103,7 +104,7 @@ Refusals, `allow-sequential` and the already-gone outcome are in `ductus retire-
 | `path` | out | string | Repo-relative spec path, present either way. |
 | `previous-last-run` | out | optional string | The `last-run` that was cleared, verbatim: an ISO-8601 UTC date-time with `Z` (RFC 3339), as the review record's schema states, so the caller can say *what* it invalidated. |
 
-What invalidation resets and keeps, waivers included, is in `ductus invalidate-review --help`.
+What invalidation resets and keeps, waivers included, is in `ductus invalidate-review --help`. A `review.md` that changed after the call read it fails the call with the `changed-since-read` error (*The write guard*).
 
 It exists because a review is owed when the scope holds code (spec 081), and also when the spec has no review record or one that holds `done` until a review runs (`compute-review-scope`'s `review-owed`), so a fold-back that routes only artifacts into the upstream spec leaves none owed on the diff alone and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it invalidates the record, which owes one, rather than leaving the gate to infer it.
 
@@ -121,6 +122,19 @@ Reported separately from `created` because the two answer different questions �
 | --- | --- | --- | --- |
 | `unfolded` | out | list of `{feature, identifier, folds-into, status}` | `folds-into` null when the spec declares none. One entry per branch-scoped directory, so the list is bounded by the project's tree (022 `plan.md`'s `BE-PAYLOAD-001` statement). |
 | `examined` | out | integer | Directories scanned. |
+
+## The write guard
+
+`invalidate-review` and `rewrite-spec-links` are read-modify-writes, so each guards the window between its read and its rename (`BE-TXN-002`) with the shared compare before persist, `ReadSnapshot` in `runtime/src/primitives/mod.rs`: a file changed since it was read is **refused, never forced**, left as the other writer made it (a `write-review`, an editor), and the operator re-runs. Its strategy, lock order, bounds and residual are 022's `plan.md` §Compare before persist; the guard is shared with the prune primitives (041 task 27). What a refusal reports:
+
+- **`invalidate-review`** — one file: the call fails with the `changed-since-read` operational error naming `review.md`, and nothing is written. `/{project}:fold` runs the step again, which reads the record as it now is.
+- **`rewrite-spec-links`** — a sweep reads every referrer and every spec-root file before it writes the first, so each file's window spans the whole sweep. A file that changed in between goes in `refused`, is not counted `rewritten`, and the sweep goes on to the rest; its `mentions` are read from the file as it stands. Any other write error still stops the sweep. A non-empty `refused` is the sweep not having finished: `/{project}:fold` and `/{project}:consolidate` stop before `retire-feature` and run the sweep again, which reads each refused file as it now is and re-points what still names the directory, so the retry converges. The `kept-tails` of the files a first run wrote are not listed again, since nothing in them names the directory any more.
+
+| Code | Condition |
+| --- | --- |
+| `changed-since-read` | `invalidate-review`'s `review.md` changed between its read and its write: nothing is written and the other writer's change stands; the fold runs the step again |
+
+`rewrite-spec-links` reports its refusals in `refused` and raises no error for one. **`BE-COMPAT-001`:** breaking, as 041's prune applies were — two new result fields, `refused` and `refused-count`, on `rewrite-spec-links`, and a new error where `invalidate-review` used to write.
 
 ## Notes
 

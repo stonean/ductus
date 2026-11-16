@@ -13,6 +13,7 @@ section: "Fold-back on merge"
 - Every markdown file under the spec root, outside the retiring directory, is read before anything is written, as every referrer already is.
 - One that is not a referrer and cannot be read as UTF-8 text, or a directory under the spec root that cannot be listed, stops the run before anything is written, naming it. A file the rewrite cannot read may hold a link it would leave dangling once the directory is retired, so nothing in the fold's result would name it, and the orphan check never reads it.
 - A write that fails part-way still leaves the files before it re-pointed and loses that run's `kept-tails`. The resumption rows of `/{project}:fold` and `/{project}:consolidate` say so, and a run stopped there reports its kept tails as unknown, not as none.
+- A file another writer changed after the sweep read it is refused, not failed: the sweep writes the rest and names it in `refused`, and running the step again re-reads and re-points it.
 
 ## Edge Cases
 

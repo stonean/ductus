@@ -98,6 +98,21 @@
 //! part-way still leaves the files before it rewritten, and that run's
 //! `kept-tails` are lost with it.
 //!
+//! **Each rewrite is guarded** (`BE-TXN-002`; spec 051 task 37). The window
+//! between a file's read and its write spans the whole sweep, since every
+//! file is read before the first is written, so each is read into a
+//! [`ReadSnapshot`] and written through
+//! [`ReadSnapshot::write_if_unchanged`]. A file that changed in between is
+//! left as the other writer made it and named in `refused`, never counted
+//! `rewritten`, and the sweep goes on to the rest (`BE-TXN-004`): the result
+//! then says which files it wrote and which it refused, and the sweep did
+//! not complete. Running it again reads each file as it now is and
+//! re-points what still names the retiring directory, so a refusal costs a
+//! re-run and nothing else; the `kept-tails` of the files the first run wrote
+//! are not repeated by it, since nothing in them names the directory any more.
+//! A writer that does not go through the guard takes no lock and can still land between the
+//! guard's re-read and its rename (`ReadSnapshot`'s residual).
+//!
 //! **Kept tails.** A feature-only target keeps each reference's tail, which
 //! is right for `spec.md`, where a body-edit fold writes, and for
 //! `scenarios/{slug}.md`, since the fold carries each scenario across under
@@ -127,7 +142,7 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use crate::primitives::{
-    PrimitiveError, Result, check_orphaned_references, spec_links, write_atomic,
+    PrimitiveError, ReadSnapshot, Result, check_orphaned_references, spec_links,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -211,7 +226,10 @@ impl Passes {
 /// under the spec root — and the passes it takes.
 struct PendingFile {
     path: PathBuf,
-    content: String,
+    /// The file as it was read, which its rewrite is guarded against
+    /// (`BE-TXN-002`): taken before anything else reads the file, and
+    /// UTF-8 text by the time a `PendingFile` exists.
+    snapshot: ReadSnapshot,
     passes: Passes,
     /// The prefixes naming the project root from it, for the token pass
     /// ([`check_orphaned_references::root_prefixes`]).
@@ -231,40 +249,61 @@ struct Sweep<'a> {
     /// target's directory ([`depth_in_target`]).
     specs_dir: PathBuf,
     rewritten: Vec<RewrittenFile>,
+    /// Files whose rewrite was refused because each changed since the sweep
+    /// read it (`BE-TXN-002`), left as the other writer made them.
+    refused: Vec<String>,
     examined: u32,
     skipped: Vec<ReferrerSkip>,
     kept_tails: Vec<KeptTail>,
     mentions: Vec<SourceMention>,
 }
 
+impl PendingFile {
+    /// The text read, which [`Sweep::read_referrers`] and
+    /// [`Sweep::read_spec_root`] checked as UTF-8 before building the file.
+    fn text(&self) -> Result<&str> {
+        self.snapshot.text()?.ok_or_else(|| PrimitiveError::Io {
+            path: self.path.clone(),
+            source: std::io::Error::from(std::io::ErrorKind::NotFound),
+        })
+    }
+}
+
 impl Sweep<'_> {
-    /// Rewrite one file's content in place, recording it when anything in it
-    /// moved, and record each line that still names `from` once it has.
-    /// `prefixes` are the token pass's, so none for a file that takes only
-    /// the link pass.
-    fn rewrite(
-        &mut self,
-        path: &Path,
-        content: &str,
-        passes: Passes,
-        prefixes: &[&str],
-    ) -> Result<()> {
+    /// Rewrite one file from the content read, recording it when anything in
+    /// it moved, and record each line that still names `from` once it has.
+    /// The write is guarded (`BE-TXN-002`): a file that changed since the sweep
+    /// read it is left as the other writer made it and named in `refused`, and
+    /// the sweep goes on to the next file. Any other write error stops it.
+    fn rewrite(&mut self, file: &PendingFile) -> Result<()> {
         self.examined = self.examined.saturating_add(1);
+        let content = file.text()?;
         let rewrite = rewrite_content(
             content,
             self.from,
             &self.target,
             &self.root,
-            passes,
-            prefixes,
-            depth_in_target(&self.specs_dir, path, &self.target.feature),
+            file.passes,
+            file.prefixes,
+            depth_in_target(&self.specs_dir, &file.path, &self.target.feature),
         );
-        let shown = repo_relative(self.repo, path);
-        let text = if rewrite.count == 0 {
-            content
+        let shown = repo_relative(self.repo, &file.path);
+        let written = if rewrite.count == 0 {
+            false
         } else {
-            &rewrite.text
+            match file.snapshot.write_if_unchanged(&rewrite.text) {
+                Ok(()) => true,
+                // The file changed since it was read: it stands as the other
+                // writer left it, so its mentions are the ones it still holds,
+                // and the sweep did not complete (`BE-TXN-004`).
+                Err(PrimitiveError::ChangedSinceRead { .. }) => {
+                    self.refused.push(shown.clone());
+                    false
+                }
+                Err(other) => return Err(other),
+            }
         };
+        let text = if written { &rewrite.text } else { content };
         self.mentions.extend(
             lines_naming(text, self.from)
                 .into_iter()
@@ -273,10 +312,9 @@ impl Sweep<'_> {
                     line,
                 }),
         );
-        if rewrite.count == 0 {
+        if !written {
             return Ok(());
         }
-        write_atomic(path, &rewrite.text)?;
         self.kept_tails.extend(
             rewrite
                 .kept_tails
@@ -370,17 +408,16 @@ impl Sweep<'_> {
             } else if !referrers.iter().any(|referrer| referrer == path) {
                 // Not a referrer. One that is but is not pending was listed in
                 // `skipped`, and is passed over unread.
-                let bytes = std::fs::read(path).map_err(|source| PrimitiveError::Io {
-                    path: path.to_path_buf(),
-                    source,
-                })?;
-                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {
-                    path: path.to_path_buf(),
-                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),
-                })?;
+                let (snapshot, not_text) = self.snapshot_of(path)?;
+                if let Some(err) = not_text {
+                    return Err(PrimitiveError::Io {
+                        path: path.to_path_buf(),
+                        source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),
+                    });
+                }
                 files.push(PendingFile {
                     path: path.to_path_buf(),
-                    content,
+                    snapshot,
                     passes: Passes::Links,
                     prefixes: &[],
                 });
@@ -450,14 +487,11 @@ impl Sweep<'_> {
                     source: std::io::Error::other("exists but is not a regular file"),
                 });
             }
-            let bytes = std::fs::read(&path).map_err(|source| PrimitiveError::Io {
-                path: path.clone(),
-                source,
-            })?;
-            let Ok(content) = String::from_utf8(bytes) else {
+            let (snapshot, not_text) = self.snapshot_of(&path)?;
+            if not_text.is_some() {
                 self.skip(shown, check_orphaned_references::UNREADABLE_AS_TEXT);
                 continue;
-            };
+            }
             // Under the spec root (`system.md`), the walk rewrites it, with
             // its body links as well as its path tokens.
             let passes = if path.starts_with(specs_dir) {
@@ -467,12 +501,28 @@ impl Sweep<'_> {
             };
             pending.push(PendingFile {
                 path,
-                content,
+                snapshot,
                 passes,
                 prefixes: check_orphaned_references::root_prefixes(shown),
             });
         }
         Ok(pending)
+    }
+
+    /// Read `path` for a rewrite: the snapshot its write is guarded against
+    /// (`BE-TXN-002`), taken before anything else reads the file, and the
+    /// error when it is not UTF-8 text. The caller decides what that means: a
+    /// referrer is skipped, a spec-root file stops the run.
+    fn snapshot_of(&self, path: &Path) -> Result<(ReadSnapshot, Option<std::str::Utf8Error>)> {
+        let snapshot = ReadSnapshot::read(self.repo, &repo_relative(self.repo, path))?;
+        let Some(bytes) = snapshot.bytes() else {
+            return Err(PrimitiveError::Io {
+                path: path.to_path_buf(),
+                source: std::io::Error::from(std::io::ErrorKind::NotFound),
+            });
+        };
+        let not_text = std::str::from_utf8(bytes).err();
+        Ok((snapshot, not_text))
     }
 
     fn skip(&mut self, shown: &str, reason: &str) {
@@ -484,7 +534,7 @@ impl Sweep<'_> {
 }
 
 /// Execute the `rewrite-spec-links` primitive: [`compute`], returned inline
-/// while it fits `[artifacts] read-size-bytes`, and past it with its four
+/// while it fits `[artifacts] read-size-bytes`, and past it with its five
 /// lists in the file it names and only their counts inline
 /// (`bounded_lists::place`; spec 080, AC7).
 ///
@@ -500,9 +550,15 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     // The read size bounds the result only once the sweep has written, so a
     // malformed one halts here, with nothing rewritten.
     super::check_artifact_size::resolve_threshold(repo)?;
-    let sweep = compute(args, repo)?;
+    bounded(compute(args, repo)?, repo, &args.from)
+}
+
+/// [`Swept`] as the result: inline while it fits the read size, and past it
+/// the five lists in the file `place` writes.
+fn bounded(sweep: Swept, repo: &Path, from: &str) -> Result<RewriteSpecLinksResult> {
     let lists = serde_json::json!({
         "rewritten": sweep.rewritten,
+        "refused": sweep.refused,
         "skipped": sweep.skipped,
         "kept-tails": sweep.kept_tails,
         "mentions": sweep.mentions,
@@ -510,6 +566,8 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     let mut result = RewriteSpecLinksResult {
         rewritten_count: sweep.rewritten.len(),
         rewritten: Some(sweep.rewritten),
+        refused_count: sweep.refused.len(),
+        refused: Some(sweep.refused),
         examined: sweep.examined,
         skipped_count: sweep.skipped.len(),
         skipped: Some(sweep.skipped),
@@ -521,10 +579,11 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         lists_file: None,
     };
     if let Some(file) =
-        super::bounded_lists::place(repo, "rewrite-spec-links", &args.from, &result, &lists)?
+        super::bounded_lists::place(repo, "rewrite-spec-links", from, &result, &lists)?
     {
         result.form = ListsForm::File;
         result.rewritten = None;
+        result.refused = None;
         result.skipped = None;
         result.kept_tails = None;
         result.mentions = None;
@@ -538,6 +597,7 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Swept {
     pub(crate) rewritten: Vec<RewrittenFile>,
+    pub(crate) refused: Vec<String>,
     pub(crate) examined: u32,
     pub(crate) skipped: Vec<ReferrerSkip>,
     pub(crate) kept_tails: Vec<KeptTail>,
@@ -561,11 +621,56 @@ pub(crate) struct Swept {
 /// root cannot be read as UTF-8 text, or a directory under it cannot be
 /// listed, each before anything is written; or when a file cannot be
 /// written, part-way through and so after the files before it were written.
+/// A file that changed between the sweep's read and its write is not an
+/// error: it is left as the other writer made it, named in `refused`, and
+/// the sweep goes on to the next file (`BE-TXN-002`, `BE-TXN-004`).
 /// A referrer that is not UTF-8 text is not an error: it is listed in
 /// `skipped`, as a referrer resolving outside the project is, and as a
 /// symbolic link is, whether a referrer or one below the spec root named
 /// `*.md` or to a directory; a spec root that is itself a link is followed.
 pub(crate) fn compute(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept> {
+    plan(args, repo)?.write()
+}
+
+/// A sweep whose every file is read, the files to write held with the reads
+/// their writes are guarded against (`BE-TXN-002`). Between [`plan`] and
+/// [`Planned::write`] is the window the guard covers, which a test changes a
+/// file in.
+struct Planned<'a> {
+    sweep: Sweep<'a>,
+    /// The files to rewrite, in the order they are written: those under the
+    /// spec root in path order, then the referrers outside it.
+    files: Vec<PendingFile>,
+}
+
+impl Planned<'_> {
+    /// Rewrite each file, then report. A file that changed since it was read is
+    /// named in `refused` and the rest are still written ([`Sweep::rewrite`]).
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::Io`] for a write that fails, part-way through and so
+    /// after the files before it were written; the errors [`compute`] lists.
+    fn write(mut self) -> Result<Swept> {
+        for file in &self.files {
+            self.sweep.rewrite(file)?;
+        }
+        let sweep = self.sweep;
+        Ok(Swept {
+            rewritten: sweep.rewritten,
+            refused: sweep.refused,
+            examined: sweep.examined,
+            skipped: sweep.skipped,
+            kept_tails: sweep.kept_tails,
+            mentions: sweep.mentions,
+        })
+    }
+}
+
+/// Read the whole sweep: every argument checked, every referrer and every
+/// markdown file under the spec root read, and nothing written. The errors
+/// are [`compute`]'s that come before a write.
+fn plan<'a>(args: &'a RewriteSpecLinksArgs, repo: &'a Path) -> Result<Planned<'a>> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "rewrite-spec-links".into(),
@@ -636,6 +741,7 @@ pub(crate) fn compute(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept>
         root: check_orphaned_references::spec_root_prefix(&layout),
         specs_dir: specs_dir.clone(),
         rewritten: Vec::new(),
+        refused: Vec::new(),
         examined: 0,
         skipped: Vec::new(),
         kept_tails: Vec::new(),
@@ -653,26 +759,9 @@ pub(crate) fn compute(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<Swept>
     // and returns no `kept-tails`, and a re-run cannot report those files'
     // kept tails either, since nothing in them names `from` any more.
     let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;
-    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
-    for file in under_root {
-        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;
-    }
-    for referrer in pending {
-        sweep.rewrite(
-            &referrer.path,
-            &referrer.content,
-            referrer.passes,
-            referrer.prefixes,
-        )?;
-    }
-
-    Ok(Swept {
-        rewritten: sweep.rewritten,
-        examined: sweep.examined,
-        skipped: sweep.skipped,
-        kept_tails: sweep.kept_tails,
-        mentions: sweep.mentions,
-    })
+    let mut files = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
+    files.append(&mut pending);
+    Ok(Planned { sweep, files })
 }
 
 /// `path` relative to the repo root, with forward slashes.
@@ -1193,7 +1282,7 @@ fn names_a_file_the_fold_did_not_write(tail: &[&str]) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use super::{SKIP_LINK, SKIP_OUTSIDE, Swept, compute};
+    use super::{SKIP_LINK, SKIP_OUTSIDE, Swept, bounded, compute, plan};
     use crate::primitives::{PrimitiveError, Result};
     use crate::schema::primitives::{ReferrerSkip, RewriteSpecLinksArgs};
     use std::fs;
@@ -1262,6 +1351,161 @@ mod tests {
             read(tmp.path(), "060-beta/spec.md"),
             beta,
             "nothing rewritten"
+        );
+    }
+
+    const BETA: &str =
+        "---\nstatus: done\ndependencies: []\n---\n\nSee [s](../1234.1-staged/spec.md).\n";
+    const GAMMA: &str =
+        "---\nstatus: done\ndependencies: []\n---\n\nSee [g](../1234.1-staged/spec.md).\n";
+
+    fn seed_two_referrers(repo: &Path) {
+        seed_target(repo, "050-alpha");
+        write(repo, "060-beta/spec.md", BETA);
+        write(repo, "070-gamma/spec.md", GAMMA);
+        write_root(repo, "CLAUDE.md", "@specs/1234.1-staged/spec.md\n");
+    }
+
+    /// A file another writer changed after the sweep read it is kept as they
+    /// left it and named in `refused`; the files the sweep did not lose a race
+    /// on are still rewritten, and the result says which is which
+    /// (`BE-TXN-002`, `BE-TXN-004`).
+    #[test]
+    fn a_file_changed_after_the_sweep_read_it_is_refused_and_the_others_are_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let sweep_args = args("1234.1-staged", "050-alpha");
+        let planned = plan(&sweep_args, tmp.path()).unwrap();
+        let theirs = format!("{BETA}\nA line the other writer added about 1234.1-staged.\n");
+        write(tmp.path(), "060-beta/spec.md", &theirs);
+
+        let swept = planned.write().unwrap();
+
+        assert_eq!(swept.refused, ["specs/060-beta/spec.md"]);
+        assert_eq!(read(tmp.path(), "060-beta/spec.md"), theirs);
+        assert_eq!(
+            rewritten_paths(&swept),
+            ["specs/070-gamma/spec.md", "CLAUDE.md"]
+        );
+        assert!(read(tmp.path(), "070-gamma/spec.md").contains("../050-alpha/spec.md"));
+        assert_eq!(
+            read_root(tmp.path(), "CLAUDE.md"),
+            "@specs/050-alpha/spec.md\n"
+        );
+        // The refused file still names the directory, so it is among the
+        // mentions, and the sweep counted it examined.
+        assert!(
+            swept
+                .mentions
+                .iter()
+                .any(|mention| mention.path == "specs/060-beta/spec.md"),
+            "{:?}",
+            swept.mentions
+        );
+        assert_eq!(swept.examined, 4);
+    }
+
+    /// The re-run a refusal asks for reads the file as it now is and
+    /// re-points it, so the sweep converges.
+    #[test]
+    fn running_the_sweep_again_after_a_refusal_rewrites_the_refused_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let sweep_args = args("1234.1-staged", "050-alpha");
+        let planned = plan(&sweep_args, tmp.path()).unwrap();
+        let theirs = format!("{BETA}\nAdded meanwhile.\n");
+        write(tmp.path(), "060-beta/spec.md", &theirs);
+        assert_eq!(planned.write().unwrap().refused.len(), 1);
+
+        let second = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert!(second.refused.is_empty(), "{:?}", second.refused);
+        assert_eq!(rewritten_paths(&second), ["specs/060-beta/spec.md"]);
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(beta.contains("../050-alpha/spec.md") && beta.contains("Added meanwhile."));
+    }
+
+    /// The same sweep with nothing changing in between refuses nothing.
+    #[test]
+    fn a_sweep_over_unchanged_files_refuses_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let swept = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+        assert!(swept.refused.is_empty(), "{:?}", swept.refused);
+        assert_eq!(swept.rewritten.len(), 3);
+    }
+
+    /// A referrer outside the spec root is guarded as the ones under it are.
+    #[test]
+    fn a_referrer_outside_the_spec_root_changed_after_it_was_read_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let sweep_args = args("1234.1-staged", "050-alpha");
+        let planned = plan(&sweep_args, tmp.path()).unwrap();
+        let theirs = "@specs/1234.1-staged/spec.md\nAn import added meanwhile.\n";
+        write_root(tmp.path(), "CLAUDE.md", theirs);
+
+        let swept = planned.write().unwrap();
+
+        assert_eq!(swept.refused, ["CLAUDE.md"]);
+        assert_eq!(read_root(tmp.path(), "CLAUDE.md"), theirs);
+        assert_eq!(swept.rewritten.len(), 2);
+    }
+
+    /// The refused files reach the result beside the rewritten ones, inline
+    /// and with their count.
+    #[test]
+    fn the_result_names_each_refused_file_beside_the_rewritten_ones() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let sweep_args = args("1234.1-staged", "050-alpha");
+        let planned = plan(&sweep_args, tmp.path()).unwrap();
+        write(
+            tmp.path(),
+            "070-gamma/spec.md",
+            &format!("{GAMMA}\nMore.\n"),
+        );
+
+        let result = bounded(planned.write().unwrap(), tmp.path(), "1234.1-staged").unwrap();
+
+        assert_eq!(result.refused_count, 1);
+        assert_eq!(
+            result.refused.as_deref(),
+            Some(&["specs/070-gamma/spec.md".to_string()][..])
+        );
+        assert_eq!(result.rewritten_count, 2);
+    }
+
+    /// Past the read size the refused files move to the lists file with the
+    /// others, their count staying inline.
+    #[test]
+    fn past_the_read_size_the_refused_files_move_to_the_lists_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100\n",
+        )
+        .unwrap();
+        let sweep_args = args("1234.1-staged", "050-alpha");
+        let planned = plan(&sweep_args, tmp.path()).unwrap();
+        write(
+            tmp.path(),
+            "070-gamma/spec.md",
+            &format!("{GAMMA}\nMore.\n"),
+        );
+
+        let result = bounded(planned.write().unwrap(), tmp.path(), "1234.1-staged").unwrap();
+
+        assert_eq!(result.form, crate::schema::primitives::ListsForm::File);
+        assert!(result.refused.is_none());
+        assert_eq!(result.refused_count, 1);
+        let lists = fs::read_to_string(tmp.path().join(result.lists_file.unwrap())).unwrap();
+        let lists: serde_json::Value = serde_json::from_str(&lists).unwrap();
+        assert_eq!(
+            lists["refused"],
+            serde_json::json!(["specs/070-gamma/spec.md"])
         );
     }
 
