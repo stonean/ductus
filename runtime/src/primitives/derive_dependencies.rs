@@ -44,12 +44,12 @@ use crate::primitives::spec_links::{
     continues_key, flow_value_end, frontmatter_parses, harvestable_lines,
     has_unterminated_frontmatter, is_frontmatter_fence,
 };
-use crate::primitives::{Result, read_text, rel_path, write_atomic};
+use crate::primitives::{PrimitiveError, ReadSnapshot, Result, rel_path};
 use crate::schema::paths;
 use crate::schema::primitives::{DeriveDependenciesArgs, DeriveDependenciesResult, ListsForm};
 
 /// Execute the `derive-dependencies` primitive: [`compute`], returned inline
-/// while it fits `[artifacts] read-size-bytes`, and past it with its seven
+/// while it fits `[artifacts] read-size-bytes`, and past it with its
 /// lists in the file it names and only their counts inline ([`bound`]; spec
 /// 080, AC7).
 ///
@@ -85,13 +85,15 @@ pub struct Derived {
     pub unparseable: Vec<String>,
     /// As [`DeriveDependenciesResult`]'s `unwritable`, whole.
     pub unwritable: Vec<String>,
+    /// As [`DeriveDependenciesResult`]'s `refused`, whole.
+    pub refused: Vec<String>,
     /// As [`DeriveDependenciesResult`]'s `specs-root`, whole.
     pub specs_root: String,
     /// As [`DeriveDependenciesResult`]'s `wrote`, whole.
     pub wrote: bool,
 }
 
-/// `derived` held to `[artifacts] read-size-bytes`: past it, its seven lists go
+/// `derived` held to `[artifacts] read-size-bytes`: past it, its lists go
 /// to the file it names, with their counts inline (`bounded_lists::place`).
 ///
 /// # Errors
@@ -107,6 +109,7 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         "cycles": derived.cycles,
         "unparseable": derived.unparseable,
         "unwritable": derived.unwritable,
+        "refused": derived.refused,
     });
     let mut result = DeriveDependenciesResult {
         drift: derived.drift,
@@ -127,6 +130,9 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         // unwritable reads as it did before the list existed.
         unwritable_count: derived.unwritable.len(),
         unwritable: Some(derived.unwritable).filter(|list| !list.is_empty()),
+        // Absent when empty, as `unwritable` is.
+        refused_count: derived.refused.len(),
+        refused: Some(derived.refused).filter(|list| !list.is_empty()),
         specs_root: derived.specs_root,
         wrote: derived.wrote,
         form: ListsForm::Inline,
@@ -147,6 +153,7 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
         result.cycles = None;
         result.unparseable = None;
         result.unwritable = None;
+        result.refused = None;
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -154,6 +161,12 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
 
 /// Derive every tracked spec's `dependencies:` and the graph's cycles,
 /// writing the rewrite under `write`.
+///
+/// Each spec is read through a [`ReadSnapshot`] and written back only when it
+/// is unchanged since (`BE-TXN-002`, `BE-TXN-004`): a spec another writer
+/// changed in between is left as that writer made it, named in `refused`, and
+/// never counted in `updated`; the walk goes on to the next spec. The
+/// strategy, lock order and bounds are 022's plan §Compare before persist.
 ///
 /// # Errors
 ///
@@ -168,6 +181,17 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveDependenciesResult> 
 /// outcome** reported in the result, not an error: the caller decides whether
 /// it blocks.
 pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
+    compute_between(args, repo, &mut |_| {})
+}
+
+/// [`compute`], calling `before_write` with each spec's path after it is read
+/// and its rewrite computed and before it is written, which a test replaces to
+/// change a file in that window.
+fn compute_between(
+    args: &DeriveDependenciesArgs,
+    repo: &Path,
+    before_write: &mut dyn FnMut(&str),
+) -> Result<Derived> {
     super::check_artifact_size::resolve_threshold(repo)?;
     let specs_root = paths::Paths::load(repo)?.specs_root;
     let specs_dir = repo.join(&specs_root);
@@ -185,6 +209,7 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
     let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
     let mut unwritable = Vec::new();
+    let mut refused = Vec::new();
     let mut absent = Vec::new();
     let mut read_count: usize = 0;
 
@@ -207,22 +232,29 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
             absent.push(spec.clone());
             continue;
         }
+        // The snapshot is taken before the first read of the file, so any
+        // change after it makes the write below refuse (`BE-TXN-002`).
+        let snapshot = ReadSnapshot::read(repo, spec)?;
+        let Some(content) = snapshot.text()? else {
+            // Gone between the `is_file` check and the read: absent, as above.
+            absent.push(spec.clone());
+            continue;
+        };
         read_count += 1;
         let own_slug = super::spec_feature_slug(spec, &specs_root).unwrap_or_default();
-        let content = read_text(&path)?;
-        if has_unterminated_frontmatter(&content) {
+        if has_unterminated_frontmatter(content) {
             // No closing fence means the splice below has no anchor, so the
             // spec is left alone. Say so rather than letting it read as clean.
             unparseable.push(spec.clone());
             continue;
         }
 
-        let deps = harvest(&content, &specs_root);
+        let deps = harvest(content, &specs_root);
         graph.insert(own_slug, deps.iter().cloned().collect());
 
-        let rewritten = splice_dependencies(&content, &deps);
+        let rewritten = splice_dependencies(content, &deps);
         if rewritten == content {
-            if !deps.is_empty() && !has_dependencies_key(&content) {
+            if !deps.is_empty() && !has_dependencies_key(content) {
                 // Links to siblings and no key to hold them: the splice leaves
                 // the key where the author decides, so the index cannot be
                 // written here and only an edit by hand fixes it. Named, so
@@ -252,7 +284,17 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
             continue;
         }
         if args.write {
-            write_atomic(&path, &rewritten)?;
+            before_write(spec);
+            match snapshot.write_if_unchanged(&rewritten) {
+                Ok(()) => {}
+                // Another writer changed the spec since it was read: leave
+                // it as they made it, name it, and go on (`BE-TXN-004`).
+                Err(PrimitiveError::ChangedSinceRead { .. }) => {
+                    refused.push(spec.clone());
+                    continue;
+                }
+                Err(other) => return Err(other),
+            }
         }
         updated.push(spec.clone());
     }
@@ -267,6 +309,7 @@ pub fn compute(args: &DeriveDependenciesArgs, repo: &Path) -> Result<Derived> {
         untracked_skipped: untracked,
         unparseable,
         unwritable,
+        refused,
         absent,
         cycles,
         specs_root: rel_path(&specs_dir, repo),
@@ -604,6 +647,137 @@ mod tests {
 
     fn spec(deps_line: &str, body: &str) -> String {
         format!("---\nstatus: done\n{deps_line}\n---\n\n{body}\n")
+    }
+
+    /// A refused spec is listed inline while the result fits, absent with its
+    /// count when none, and moves to the list file, count inline, past the
+    /// read size (spec 067, task 36).
+    #[test]
+    fn a_refused_spec_is_listed_inline_and_moves_to_the_list_file_past_the_read_size() {
+        let tmp = tempfile::tempdir().unwrap();
+        let derived = |refused: Vec<String>| Derived {
+            drift: false,
+            updated: vec![],
+            unwritten: vec![],
+            examined: 1,
+            untracked_skipped: vec![],
+            absent: vec![],
+            cycles: vec![],
+            unparseable: vec![],
+            unwritable: vec![],
+            refused,
+            specs_root: "specs".into(),
+            wrote: true,
+        };
+        let inline = bound(tmp.path(), derived(vec!["specs/001-a/spec.md".into()])).unwrap();
+        assert_eq!(
+            inline.refused,
+            Some(vec!["specs/001-a/spec.md".to_string()])
+        );
+        assert_eq!(inline.refused_count, 1);
+        let clean = bound(tmp.path(), derived(vec![])).unwrap();
+        assert_eq!((clean.refused, clean.refused_count), (None, 0));
+
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 1\n",
+        )
+        .unwrap();
+        let moved = bound(tmp.path(), derived(vec!["specs/001-a/spec.md".into()])).unwrap();
+        assert_eq!(moved.form, ListsForm::File);
+        assert_eq!(moved.refused, None, "`refused` left the inline result");
+        assert_eq!(moved.refused_count, 1);
+        let lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(moved.lists_file.unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(lists["refused"], serde_json::json!(["specs/001-a/spec.md"]));
+    }
+
+    /// Two drifted specs in a repository; returns the tree, `001-a` and
+    /// `002-b` (both link `003-c`, and carry a stale `dependencies: []`).
+    fn two_drifted() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let a = tmp.path().join("specs/001-a/spec.md");
+        let b = tmp.path().join("specs/002-b/spec.md");
+        let c = tmp.path().join("specs/003-c/spec.md");
+        git_fixture::write(&a, &spec("dependencies: []", "[c](../003-c/spec.md)"));
+        git_fixture::write(&b, &spec("dependencies: []", "[c](../003-c/spec.md)"));
+        git_fixture::write(&c, &spec("dependencies: []", "nothing"));
+        git_fixture::commit_all(&repository, "feat: specs");
+        (tmp, a, b)
+    }
+
+    /// A spec that changed between its read and its write is not written, is
+    /// named in `refused` and never in `updated`, and the other writer's
+    /// change stands; the other drifted spec is still written (`BE-TXN-002`,
+    /// `BE-TXN-004`; spec 067, task 36).
+    #[test]
+    fn a_spec_changed_after_it_was_read_is_refused_and_the_rest_is_written() {
+        let (tmp, a, b) = two_drifted();
+        let theirs = spec("dependencies: []", "[c](../003-c/spec.md)\n\nTheir edit.");
+        let args = DeriveDependenciesArgs {
+            write: true,
+            staged: false,
+        };
+        let result = compute_between(&args, tmp.path(), &mut |spec| {
+            if spec == "specs/001-a/spec.md" {
+                std::fs::write(&a, &theirs).unwrap();
+            }
+        })
+        .unwrap();
+        assert_eq!(result.refused, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.updated, vec!["specs/002-b/spec.md"]);
+        assert!(!result.updated.contains(&"specs/001-a/spec.md".to_string()));
+        assert_eq!(std::fs::read_to_string(&a).unwrap(), theirs);
+        assert!(
+            std::fs::read_to_string(&b)
+                .unwrap()
+                .contains("dependencies: [003-c]")
+        );
+    }
+
+    /// With nothing changing between the reads and the writes, every drifted
+    /// spec is written and none is refused.
+    #[test]
+    fn an_unchanged_spec_is_written_and_none_is_refused() {
+        let (tmp, a, b) = two_drifted();
+        let args = DeriveDependenciesArgs {
+            write: true,
+            staged: false,
+        };
+        let result = compute(&args, tmp.path()).unwrap();
+        assert_eq!(result.refused, Vec::<String>::new());
+        assert_eq!(
+            result.updated,
+            vec!["specs/001-a/spec.md", "specs/002-b/spec.md"]
+        );
+        for path in [a, b] {
+            assert!(
+                std::fs::read_to_string(path)
+                    .unwrap()
+                    .contains("dependencies: [003-c]")
+            );
+        }
+    }
+
+    /// A report-only run writes nothing, so it refuses nothing even when a
+    /// file changes under it.
+    #[test]
+    fn a_report_only_run_refuses_nothing() {
+        let (tmp, a, _) = two_drifted();
+        let args = DeriveDependenciesArgs {
+            write: false,
+            staged: false,
+        };
+        let result = compute_between(&args, tmp.path(), &mut |_| {
+            std::fs::write(&a, "changed").unwrap();
+        })
+        .unwrap();
+        assert_eq!(result.refused, Vec::<String>::new());
     }
 
     /// A malformed `[artifacts] read-size-bytes` halts a writing call before

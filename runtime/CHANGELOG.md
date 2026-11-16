@@ -10,6 +10,20 @@ its version and date.
 
 ### Added
 
+- **BREAKING: `derive-dependencies` and `derive-references` write a spec only when it is unchanged since they read it (spec 067 task 36; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  Each read a `spec.md`, spliced its frontmatter and renamed the result over
+  it with no guard, so a writer landing between the read and the rename was
+  dropped. Each now reads every spec through the shared `ReadSnapshot` guard
+  (041 task 27) and, under `write`, renames only when a re-read under the
+  project-wide lock matches. A spec that changed is left as the other writer
+  made it and named in the new `refused` list (with `refused-count`, both
+  absent at zero; the list is absent in the file form and in the lists file
+  whole), never counted in `updated`; the walk goes on, so the other drifted
+  specs are written. The CLI exits non-zero on a refused spec and names each on
+  stderr, so the pre-commit hook stops and the next run reads it as it now is.
+  A writer that does not go through the guard takes no lock, so the window narrows to one
+  re-read and one rename and is not closed. Read-only runs are unchanged.
+
 - **BREAKING: a prune apply writes a file only when it is unchanged since it read it (spec 041 task 27, from 041's analysis; the owner's BE-TXN-002 class decision, 2026-11-16).**
   `prune-tasks`, `prune-plan` and `prune-project` each read a file, compute and
   renamed the result over it with no guard, so an `append-task`, `mark-task` or

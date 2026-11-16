@@ -460,18 +460,21 @@ where
 
 /// Whether `derive-dependencies` exits non-zero: a cycle, a rewrite that could
 /// not be written (a stale index nothing here can fix, on a report-only run
-/// and a writing one alike), or drift on a report-only run, which is the CI
-/// check ("the committed indexes are stale"). On a writing run the drift was
-/// just resolved, so it is not a failure.
+/// and a writing one alike), a spec another writer changed before the rewrite
+/// landed (`refused`, `BE-TXN-002`), or drift on a report-only run, which is
+/// the CI check ("the committed indexes are stale"). On a writing run the
+/// drift was just resolved, so it is not a failure.
 fn derive_dependencies_blocks(r: &DeriveDependenciesResult) -> bool {
-    r.cycles_count > 0 || r.unwritable_count > 0 || (!r.wrote && r.drift)
+    r.cycles_count > 0 || r.unwritable_count > 0 || r.refused_count > 0 || (!r.wrote && r.drift)
 }
 
 /// Whether `derive-references` exits non-zero: a rewrite that could not be
-/// written, or drift on a report-only run. It reads `unwritable-count`, which
-/// both forms carry, so a list the bound moved to a file still blocks.
+/// written, a spec another writer changed before the rewrite landed
+/// (`refused`, `BE-TXN-002`), or drift on a report-only run. It reads
+/// `unwritable-count` and `refused-count`, which both forms carry, so a list
+/// the bound moved to a file still blocks.
 fn derive_references_blocks(r: &DeriveReferencesResult) -> bool {
-    r.unwritable_count > 0 || (!r.wrote && r.drift)
+    r.unwritable_count > 0 || r.refused_count > 0 || (!r.wrote && r.drift)
 }
 
 /// The stderr line for each spec whose `key` rewrite the re-parse guard
@@ -494,6 +497,30 @@ fn unwritable_lines(primitive: &str, key: &str, specs: &[String]) -> Vec<String>
 fn report_unwritable(primitive: &str, key: &str, specs: &[String]) {
     let mut stderr = io::stderr().lock();
     for line in unwritable_lines(primitive, key, specs) {
+        let _ = writeln!(stderr, "{line}");
+    }
+}
+
+/// The stderr line for each spec whose `key` rewrite was refused because
+/// another writer changed the file after it was read, so an author whose
+/// commit the hook stops knows which spec and that running again reads it as
+/// it now is (`BE-TXN-004`).
+fn refused_lines(primitive: &str, key: &str, specs: &[String]) -> Vec<String> {
+    specs
+        .iter()
+        .map(|spec| {
+            format!(
+                "{primitive}: {spec}: changed while the derived `{key}:` was being written, so it was left as it is; run again."
+            )
+        })
+        .collect()
+}
+
+/// Write [`refused_lines`] to stderr, dropping a write that fails for
+/// [`report_unwritable`]'s reason.
+fn report_refused(primitive: &str, key: &str, specs: &[String]) {
+    let mut stderr = io::stderr().lock();
+    for line in refused_lines(primitive, key, specs) {
         let _ = writeln!(stderr, "{line}");
     }
 }
@@ -1168,6 +1195,7 @@ fn main() -> ExitCode {
             if let Ok(derived) = &derived {
                 report_cycles(&derived.cycles);
                 report_unwritable("derive-dependencies", "dependencies", &derived.unwritable);
+                report_refused("derive-dependencies", "dependencies", &derived.refused);
             }
             let outcome =
                 derived.and_then(|derived| primitives::derive_dependencies::bound(&repo, derived));
@@ -1186,6 +1214,7 @@ fn main() -> ExitCode {
             let derived = primitives::derive_references::compute(&args, &repo);
             if let Ok(derived) = &derived {
                 report_unwritable("derive-references", "references", &derived.unwritable);
+                report_refused("derive-references", "references", &derived.refused);
             }
             let outcome =
                 derived.and_then(|derived| primitives::derive_references::bound(&repo, derived));
@@ -1255,7 +1284,8 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{
-        Cli, derive_dependencies_blocks, derive_references_blocks, seed_context, unwritable_lines,
+        Cli, derive_dependencies_blocks, derive_references_blocks, refused_lines, seed_context,
+        unwritable_lines,
     };
     use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
 
@@ -1277,6 +1307,8 @@ mod tests {
             unparseable_count: 0,
             unwritable: None,
             unwritable_count: 0,
+            refused: None,
+            refused_count: 0,
             specs_root: "specs".into(),
             wrote: false,
             form: ListsForm::Inline,
@@ -1299,6 +1331,8 @@ mod tests {
             unparseable_count: 0,
             unwritable: None,
             unwritable_count: 0,
+            refused: None,
+            refused_count: 0,
             absent: Some(vec![]),
             absent_count: 0,
             specs_root: "specs".into(),
@@ -1367,6 +1401,49 @@ mod tests {
             refs.unwritable_count = 1;
             assert!(derive_references_blocks(&refs), "references, wrote {wrote}");
         }
+    }
+
+    /// A refused spec fails both derivations on a writing run, and past the
+    /// read size, where the list is in the file, the count still blocks
+    /// (`BE-TXN-002`; spec 067, task 36).
+    #[test]
+    fn a_refused_spec_blocks_both_derivations_in_either_form() {
+        for form in [ListsForm::Inline, ListsForm::File] {
+            let mut deps = dependencies_result();
+            deps.wrote = true;
+            assert!(!derive_dependencies_blocks(&deps), "clean, {form:?}");
+            deps.form = form;
+            deps.refused = None;
+            deps.refused_count = 1;
+            assert!(derive_dependencies_blocks(&deps), "dependencies, {form:?}");
+
+            let mut refs = references_result();
+            refs.wrote = true;
+            assert!(!derive_references_blocks(&refs), "clean, {form:?}");
+            refs.form = form;
+            refs.refused = None;
+            refs.refused_count = 1;
+            assert!(derive_references_blocks(&refs), "references, {form:?}");
+        }
+    }
+
+    /// One stderr line per refused spec, naming the spec and the key and
+    /// saying to run again.
+    #[test]
+    fn each_refused_spec_gets_one_line_naming_it_and_saying_to_run_again() {
+        let lines = refused_lines(
+            "derive-dependencies",
+            "dependencies",
+            &["specs/001-a/spec.md".to_string()],
+        );
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].starts_with("derive-dependencies: specs/001-a/spec.md:"));
+        assert!(lines[0].contains("`dependencies:`"), "{}", lines[0]);
+        assert!(lines[0].contains("run again"), "{}", lines[0]);
+        assert_eq!(
+            refused_lines("derive-dependencies", "dependencies", &[]),
+            [] as [String; 0]
+        );
     }
 
     /// One stderr line per unwritable spec, naming the spec and the key and

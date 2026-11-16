@@ -12,7 +12,7 @@ Found by 017's analysis on 2026-11-14 as `BE-PAYLOAD-001` (MUST) on 017's scenar
 
 ## Behavior
 
-- `derive-references` holds its result to `[artifacts] read-size-bytes` in the shape `derive-dependencies` takes (`specs/080-deterministic-runtime-efficiency/data-model.md` §Bounded results): inline while it fits, and past it each of the six lists moves to the file `lists-file` names, with its count inline in both forms and `unwritable`'s exception as `derive-dependencies` has it.
+- `derive-references` holds its result to `[artifacts] read-size-bytes` in the shape `derive-dependencies` takes (`specs/080-deterministic-runtime-efficiency/data-model.md` §Bounded results): inline while it fits, and past it each of its lists moves to the file `lists-file` names, with its count inline in both forms and `unwritable`'s exception as `derive-dependencies` has it.
 - The CLI gates and reports on the whole derivation, as `derive-dependencies`' does: a spec in `unwritable` moved to the file still makes the CLI exit non-zero and is still named on stderr.
 - A writing run has written by the time its result is bounded, so a list file that cannot be written fails a call whose writes stand.
 - The primitive's compiled description and this spec's data model, §`derive-dependencies` / `derive-references`, state the bound.

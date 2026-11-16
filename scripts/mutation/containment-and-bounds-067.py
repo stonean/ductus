@@ -38,15 +38,15 @@ MUTATIONS = [
     (
         'M3 a spec with sibling links and no dependencies: key reads in sync',
         'src/primitives/derive_dependencies.rs',
-        '            if !deps.is_empty() && !has_dependencies_key(&content) {',
-        '            if false && !deps.is_empty() && !has_dependencies_key(&content) {',
+        '            if !deps.is_empty() && !has_dependencies_key(content) {',
+        '            if false && !deps.is_empty() && !has_dependencies_key(content) {',
         'derive_dependencies::tests::a_spec_with_sibling_links_and_no_key_is_unwritable',
     ),
     (
         'M4 a spec that links nothing is called unwritable for lacking the key',
         'src/primitives/derive_dependencies.rs',
-        '            if !deps.is_empty() && !has_dependencies_key(&content) {',
-        '            if !has_dependencies_key(&content) {',
+        '            if !deps.is_empty() && !has_dependencies_key(content) {',
+        '            if !has_dependencies_key(content) {',
         'derive_dependencies::tests::a_spec_with_sibling_links_and_no_key_is_unwritable',
     ),
     (

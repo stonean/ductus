@@ -2656,6 +2656,17 @@ pub struct DeriveDependenciesResult {
     /// Entries in `unwritable`, in either form; absent when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub unwritable_count: usize,
+    /// Specs whose rewrite was derived but not written under `write` because
+    /// the file changed after it was read, so another writer's change stands
+    /// (`BE-TXN-002`, spec 067 task 36). Never counted in `updated` and
+    /// never in sync: the derived `dependencies:` of each is still stale. The CLI
+    /// exits non-zero, naming each on stderr, so a hook stops; running again
+    /// reads the file as it now is. Absent when empty, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<Vec<String>>,
+    /// Entries in `refused`, in either form; absent when zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub refused_count: usize,
     /// Repo-relative spec-root directory the run enumerated (spec 040), so a
     /// caller can tell a genuinely empty corpus from a misconfigured root.
     pub specs_root: String,
@@ -2664,7 +2675,7 @@ pub struct DeriveDependenciesResult {
     /// Where the lists are: in this result, or, past the read size, in the
     /// file `lists-file` names (spec 080, AC7).
     pub form: ListsForm,
-    /// In the file form, the file holding the seven lists whole, from the
+    /// In the file form, the file holding the lists whole, from the
     /// project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
@@ -2694,7 +2705,7 @@ pub struct DeriveReferencesArgs {
 }
 
 /// Result for `derive-references`: inline up to `[artifacts]
-/// read-size-bytes`, and past it with its six lists in the file `lists-file`
+/// read-size-bytes`, and past it with its lists in the file `lists-file`
 /// names and their counts inline, as `derive-dependencies`' (spec 067,
 /// scenario `derive-references-results-are-bounded`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -2770,6 +2781,17 @@ pub struct DeriveReferencesResult {
     /// Entries in `unwritable`, in either form; absent when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub unwritable_count: usize,
+    /// Specs whose rewrite was derived but not written under `write` because
+    /// the file changed after it was read, so another writer's change stands
+    /// (`BE-TXN-002`, spec 067 task 36). Never counted in `updated` and
+    /// never in sync: the derived `references:` of each is still stale. The CLI
+    /// exits non-zero, naming each on stderr, so a hook stops; running again
+    /// reads the file as it now is. Absent when empty, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<Vec<String>>,
+    /// Entries in `refused`, in either form; absent when zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub refused_count: usize,
     /// Specs tracked in the git index but absent from the worktree — deleted
     /// without the deletion being staged. Nothing can be derived from them, so
     /// they are named rather than dropped: they are excluded from `examined`,
@@ -2788,7 +2810,7 @@ pub struct DeriveReferencesResult {
     /// Where the lists are: in this result, or, past the read size, in the
     /// file `lists-file` names (spec 067, task 32).
     pub form: ListsForm,
-    /// In the file form, the file holding the six lists whole, from the
+    /// In the file form, the file holding the lists whole, from the
     /// project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,

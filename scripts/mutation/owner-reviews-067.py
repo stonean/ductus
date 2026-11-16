@@ -159,8 +159,8 @@ MUTATIONS = [
     (
         'M17 a tracked spec absent from disk is not named in absent',
         'src/primitives/derive_dependencies.rs',
-        '            absent.push(spec.clone());\n            continue;',
-        '            let _ = &absent;\n            continue;',
+        'was never read.\n            absent.push(spec.clone());\n            continue;',
+        'was never read.\n            let _ = &absent;\n            continue;',
         'derive_dependencies::tests::a_tracked_but_absent_spec_is_named_not_counted',
     ),
     (
@@ -370,8 +370,8 @@ MUTATIONS = [
     (
         'M46 derive-references reports an unterminated fence as unwritable',
         'src/primitives/derive_references.rs',
-        '        if has_unterminated_frontmatter(&content) {\n            unparseable.push(spec.clone());',
-        '        if has_unterminated_frontmatter(&content) {\n            unwritable.push(spec.clone());',
+        '        if has_unterminated_frontmatter(content) {\n            unparseable.push(spec.clone());',
+        '        if has_unterminated_frontmatter(content) {\n            unwritable.push(spec.clone());',
         'derive_references::tests::an_unterminated_fence_is_unparseable_not_unwritable',
     ),
     (
@@ -713,15 +713,15 @@ MUTATIONS = [
     (
         'M94 derive-references leaves unwritable inline in the file form',
         'src/primitives/derive_references.rs',
-        '        result.unwritable = None;\n        result.absent = None;\n        result.lists_file = Some(file);',
-        '        result.absent = None;\n        result.lists_file = Some(file);',
+        '        result.unwritable = None;\n        result.refused = None;\n        result.absent = None;\n        result.lists_file = Some(file);',
+        '        result.refused = None;\n        result.absent = None;\n        result.lists_file = Some(file);',
         'derive_references::tests::past_the_read_size_every_list_moves_to_the_list_file',
     ),
     (
         'M95 derive-references rewrites specs before it reads the read size',
         'src/primitives/derive_references.rs',
-        'pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {\n    super::check_artifact_size::resolve_threshold(repo)?;\n',
-        'pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {\n',
+        ') -> Result<Derived> {\n    super::check_artifact_size::resolve_threshold(repo)?;\n',
+        ') -> Result<Derived> {\n',
         'derive_references::tests::a_malformed_read_size_halts_a_writing_call_before_any_write',
     ),
 ]
