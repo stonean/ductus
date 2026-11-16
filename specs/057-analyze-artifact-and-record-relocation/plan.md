@@ -138,6 +138,17 @@ Statement's list of breaking changes does not name, so this is the
 conservative classification. It is made within major version zero, so it takes
 no major bump, for the reason the relocation's classification below gives.
 
+**The other writers of the relocated records are guarded where they are owned
+(`BE-TXN-002`).** This spec moves where `write-review`, `write-analysis`,
+`invalidate-review` and `process-waivers` read and write the records, not how
+they write them. `write-review` and `write-analysis` replace `review.md` and
+`analysis.md` only when each is unchanged since its read, as
+`specs/066-audit-records-and-the-completion-gate/data-model.md` states for each
+(*The write is guarded*); `invalidate-review` does the same for `review.md`, as
+`specs/051-branch-scoped-spec-numbering/data-model.md` §The write guard states;
+and `process-waivers` reads `review.md` and writes no project file, only its
+lists file under `.ductus/results/` past the read size.
+
 ### The migration must not reopen a `done` spec
 
 Moving a frontmatter block changes no criterion text and no body prose, so it is
