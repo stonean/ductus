@@ -8,7 +8,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 14. Implement scenario: a-projects-own-constitution-is-not-relocated
 
-- [ ] Implement the behavior described in `scenarios/a-projects-own-constitution-is-not-relocated.md`
+- [x] Implement the behavior described in `scenarios/a-projects-own-constitution-is-not-relocated.md`
 
 Handoff (2026-10-29). After this task, re-review 027, since the scenario is a durable contract, then re-analyze: the record is at `c0952038`, last `unexamined` not-a-live-claim 4, root-absent 5, ships-to-adopter 1, and its four stored waivers still fire. Then verify all 30 ticked criteria against the tree before proposing done.
 
