@@ -81,7 +81,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 ### Adopter state
 
-- [x] AC6: `.ductus/config.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry. **Since spec 071's task 20, a greenfield run (no config file at any tier and no spec root) is the exception: it seeds the field with the newest active entry's id and runs nothing.**
+- [x] AC6: `.ductus/config.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry. **Since spec 071's task 20, a greenfield run (no config file at any tier and no spec root) is an exception: it seeds the field with the newest active entry's id and runs nothing. Since this spec's task 16 a first adoption is one too (scenario `a-first-adoption-runs-no-migration`).**
 - [x] AC7: On `/ductus` re-run against an adopter whose `last_applied` equals the newest active entry's `id`, the migration loop performs zero filesystem reads beyond loading the registry and reports zero migrations applied.
 - [x] AC8: On `/ductus` re-run against an adopter whose `last_applied` is older than the newest entry, only entries newer than `last_applied` (per SemVer comparison on `introduced_in`, lexicographic tie-break on `id`) execute.
 - [x] AC9: After each migration completes successfully, `last_applied` is updated to that entry's `id` before the next entry begins. An aborted batch resumes from the next-pending entry on the following `/ductus` run.
