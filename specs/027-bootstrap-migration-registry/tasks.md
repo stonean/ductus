@@ -1,5 +1,5 @@
 ---
-next-task: 16
+next-task: 18
 ---
 
 # 027 — Bootstrap Migration Registry Tasks
@@ -15,3 +15,22 @@ Handoff (2026-10-29). After this task, re-review 027, since the scenario is a du
 Implemented in `364c330b` (landed on `main` 2026-11-12): the box stays open for the done-when's scratch-adopter bootstrap, in which a repository with its own root `constitution.md` keeps it and the run prints the declined line, and a legacy ductus copy still relocates.
 
 - **Done when**: The scenario's open question is resolved, a repository with specs/ and its own constitution.md keeps it through a bootstrap run (verified with a scratch-adopter bootstrap), and a legacy ductus copy still relocates.
+
+## 16. A first adoption runs no migration, and the closing summary names each spec it cannot read
+
+- [ ] Implement the behavior described in `scenarios/a-first-adoption-runs-no-migration.md`
+- [ ] `framework/bootstrap/ductus-procedure.md` §Pre-run Migrations: a run Pre-flight Checks decided is a first adoption applies nothing, asks nothing, and seeds `last_applied` with the newest active entry, as a greenfield run does
+- [ ] §Post-Scaffolding Output names each feature `spec.md` under the spec root with no frontmatter, one line apiece, as one `/{project}:analyze` reads as a hard fail until it gets frontmatter
+- [ ] 027's spec.md §Adopter State states the first-adoption case beside the greenfield one
+- [ ] A scratch-adopter first adoption into a project with specs of its own, lacking frontmatter, runs no migration and names each such spec
+
+- **Done when**: the scenario's behavior is in the procedure, §Adopter State says it, and a scratch-adopter first adoption with frontmatter-less specs of its own ends with no migration run and each such spec named.
+
+## 17. A migration fills the substitution keys left literal in AGENTS.md and CLAUDE.md
+
+- [ ] Implement the behavior described in `scenarios/seed-files-keep-no-literal-placeholder.md`
+- [ ] A `framework/migrations/` entry, `introduced_in` 0.60.0 with an id sorting after `strip-inbox-guidance`, fills each remaining `{project-name}`, `{One-line project description.}` and `{project}` in `AGENTS.md` and `CLAUDE.md` from the config, leaves every other brace token, a pinned file and a key with no value as the scenario says, and reports each file it changed
+- [ ] `framework/migrations.toml` lists it, and `scripts/audit/run-all.sh`'s migration-coverage family passes
+- [ ] A scratch-adopter upgrade from `ductus-v0.59.0` ends with both files holding no literal substitution key
+
+- **Done when**: the migration is in the registry, Family 10 passes, and a scratch-adopter upgrade from ductus-v0.59.0 ends with no literal substitution key in AGENTS.md or CLAUDE.md.
