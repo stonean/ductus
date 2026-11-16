@@ -46,11 +46,19 @@ has not ended — the unmatched group is a retired framework subsection sitting
 *inside* it, and is consumed and replaced. When nothing later aligns, the group
 is the first adopter group past the block and the walk stops, exactly as before.
 
-**The lookahead is bounded.** A framework release retires a subsection or two at
-a time; an adopter tail is arbitrarily long. An unbounded scan would reach a
-pattern an adopter pasted far below, decide the block extended that far, and
-consume everything above it — reintroducing the deletion the trailing-append
-scenario exists to prevent. The bound is small and its value is stated in code.
+**The lookahead is bounded.** It steps over at most three consecutive unmatched
+groups, the most any template change has retired at once: the agent removal
+retired the Auggie, Antigravity and OpenCode subsections together. An adopter
+tail is arbitrarily long, and an unbounded scan would reach a pattern an adopter
+pasted far below, decide the block extended that far, and consume everything
+above it — reintroducing the deletion the trailing-append scenario exists to
+prevent. The bound is small and its value is stated in code.
+
+**Every released template merges cleanly into the shipped one.** Each distinct
+`.gitignore` template a release has shipped is a test fixture, and merged into
+the current template it must leave nothing below the block. The current
+template must itself be one of the fixtures, so a change to it adds itself and
+is checked against every older one before it can ship.
 
 **The trailing-append invariant is unchanged.** Adopter content following the
 managed block is still never consumed by group alignment: appended canonical
@@ -62,9 +70,10 @@ lookahead finds nothing and the walk stops where it always did.
 - The renamed subsection is the *first* group after the marker: already handled
   by the existing full-rewrite branch (nothing has been consumed yet), and that
   path is unchanged.
-- A run of three or more consecutive unmatched groups: past the bound, treated as
-  adopter territory and preserved. A framework release that retires that many
-  subsections at once should ship a migration rather than rely on inference.
+- A run of four or more consecutive unmatched groups: past the bound, treated as
+  adopter territory and preserved. A template change that retires that many at
+  once fails the replay of the released templates, so it raises the bound or
+  ships a migration before it can release.
 - An adopter group that shares a pattern with a canonical group and sits within
   the bound: consumed. This is the accepted cost of the bound, and it is narrow —
   the dedup pass already deletes exact pattern duplicates found in adopter
@@ -86,3 +95,16 @@ lookahead finds nothing and the walk stops where it always did.
   infer the extent it is trying to replace. The inference has to be correct
   either way; adding the marker is a separate change that this one does not
   block.
+- **Is a bound of two enough, with a migration for any release that retires
+  more?** No. The agent removal retired three subsections at once and shipped no
+  migration, so an upgrade stranded the old block's tail for every adopter
+  installed since `gvrn-v0.13.0`: replayed on 2026-11-16 into `d296f1e3`'s
+  template, 7 of the 11 distinct released templates left 24 to 34 lines below the
+  block, and at a bound of three all 11 merged cleanly. Found by 012 task 12's
+  scratch-adopter upgrade from `ductus-v0.59.0`. The owner chose a bound of three
+  and the replay of every released template over a migration (2026-11-16): the
+  replay closes the class, since a later change that would strand fails before
+  release, where a migration covers only the retirement it was written for. The
+  accepted cost is that an adopter group within three groups of a coincidental
+  canonical match, not two, is consumed. None of this repairs a `--ref=main`
+  adopter whose `.gitignore` a run since 2026-11-10 already stranded.

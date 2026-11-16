@@ -41,6 +41,10 @@ on:
       - 'framework/templates/project/system.md'
       - 'framework/templates/project/events.md'
       - 'framework/templates/project/errors.md'
+      # src/primitives/merge_managed_block.rs replays every released
+      # .gitignore template into this one and holds it to its fixtures
+      # (spec 022 task 39), so an edit to it is an edit to their subject.
+      - 'framework/templates/project/gitignore'
       # src/primitives/mod.rs's shell-spec-pattern test reads the three files
       # carrying the spec-directory pattern and holds each to the grammar, so
       # an edit to one of them is an edit to its subject. tests/consolidate_hook.rs
@@ -90,6 +94,7 @@ on:
       - 'framework/templates/project/system.md'
       - 'framework/templates/project/events.md'
       - 'framework/templates/project/errors.md'
+      - 'framework/templates/project/gitignore'
       - '.githooks/pre-commit'
       - 'framework/bootstrap/hooks/ductus-pre-commit'
       - 'scripts/lint-frontmatter.sh'

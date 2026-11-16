@@ -492,11 +492,14 @@ fn walk_body_extent(text: &str, body_start: usize, expected_block: &str) -> usiz
 }
 
 /// How many consecutive unmatched on-disk groups the walk will step over
-/// looking for the rest of the managed block. A framework release retires a
-/// subsection or two at a time; anything longer is far more likely to be
-/// adopter content that happens to precede a coincidental match, and
-/// consuming it would delete it.
-const MAX_SKIPPED_RETIRED_GROUPS: usize = 2;
+/// looking for the rest of the managed block: the most any template change has
+/// retired at once, the agent removal's Auggie, Antigravity and `OpenCode`
+/// subsections. Anything longer is far more likely to be adopter content that
+/// happens to precede a coincidental match, and consuming it would delete it.
+/// The tests replay every released `.gitignore` template into the shipped one,
+/// so a change that retires more fails before it ships (scenario
+/// `merge-managed-block-renamed-subsection`; owner decision, 2026-11-16).
+const MAX_SKIPPED_RETIRED_GROUPS: usize = 3;
 
 /// Whether any on-disk group at or after `from` still aligns with one of the
 /// `remaining` canonical groups — the signal that the managed block continues
@@ -1453,10 +1456,12 @@ Thumbs.db";
 
     #[test]
     fn line_prefix_long_unmatched_run_is_treated_as_adopter_territory() {
-        // The bound on the retired-group lookahead. Three consecutive
-        // unmatched on-disk groups is not a retired framework run; consuming
-        // them to reach a coincidental match far below would delete adopter
-        // content, which is the failure the trailing-append scenario records.
+        // The bound on the retired-group lookahead. Four consecutive
+        // unmatched on-disk groups is not a retired framework run (the agent
+        // removal's three is the longest a template change has retired);
+        // consuming them to reach a coincidental match far below would delete
+        // adopter content, which is the failure the trailing-append scenario
+        // records.
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
         std::fs::write(
@@ -1474,6 +1479,9 @@ Thumbs.db";
              # Mine C\n\
              mine-c\n\
              \n\
+             # Mine D\n\
+             mine-d\n\
+             \n\
              # OS\n\
              .DS_Store\n",
         )
@@ -1481,7 +1489,7 @@ Thumbs.db";
         let canonical = "# Env\n.env\n\n# OS\n.DS_Store";
         run(&args(&path, canonical, Some("line-prefix")), tmp.path()).unwrap();
         let out = std::fs::read_to_string(&path).unwrap();
-        for adopter in ["mine-a", "mine-b", "mine-c"] {
+        for adopter in ["mine-a", "mine-b", "mine-c", "mine-d"] {
             assert!(
                 out.contains(adopter),
                 "adopter content beyond the lookahead bound must survive: {adopter}\n{out}"
@@ -1854,5 +1862,95 @@ Thumbs.db";
             "{err:?}"
         );
         assert_eq!(fs::read_to_string(&file).unwrap(), "# Theirs\n");
+    }
+
+    // -- every released .gitignore template merges into the shipped one ------
+    // (scenario `merge-managed-block-renamed-subsection`, 022 task 39)
+
+    /// The marker `framework/bootstrap/ductus.md` step 5 passes for `.gitignore`.
+    const GITIGNORE_MARKER: &str = "ductus";
+
+    /// The `.gitignore` templates releases have shipped, one fixture per
+    /// distinct template under `tests/fixtures/gitignore-releases/`, each named
+    /// after the first release that shipped it and `unreleased` for the
+    /// current one. Fails loudly when the set is missing or thinned, so the
+    /// replay below can never pass over nothing.
+    fn released_gitignore_templates() -> Vec<(String, String)> {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gitignore-releases");
+        let mut templates: Vec<(String, String)> = fs::read_dir(&dir)
+            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+            .map(|entry| {
+                let entry = entry.unwrap();
+                (
+                    entry.file_name().to_string_lossy().into_owned(),
+                    fs::read_to_string(entry.path()).unwrap(),
+                )
+            })
+            .collect();
+        templates.sort();
+        assert!(
+            templates.len() >= 12,
+            "{} holds {} templates; v0.1.0 to ductus-v0.59.0 shipped 11 and the current one is the 12th",
+            dir.display(),
+            templates.len()
+        );
+        templates
+    }
+
+    fn shipped_gitignore_template() -> String {
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/templates/project/gitignore");
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+    }
+
+    /// An adopter upgrading from any release gets exactly the shipped block,
+    /// with nothing of its old block stranded below it. Each fixture is written
+    /// as the merge first writes it, then merged with the shipped template. At a
+    /// bound of two, 7 of the 11 released templates, every one from
+    /// `gvrn-v0.13.0` on, stranded the Auggie, Antigravity and `OpenCode`
+    /// subsections the agent removal retired together.
+    #[test]
+    fn every_released_gitignore_template_merges_cleanly_into_the_shipped_one() {
+        let block = normalize_block(&shipped_gitignore_template());
+        let fresh = format_fresh(MarkerStyle::LinePrefix, GITIGNORE_MARKER, &block);
+        let path = Path::new(".gitignore");
+        let mut stranded = Vec::new();
+        for (name, old) in released_gitignore_templates() {
+            let on_disk = format_fresh(
+                MarkerStyle::LinePrefix,
+                GITIGNORE_MARKER,
+                &normalize_block(&old),
+            );
+            let (merged, _, _) = compute_merge(
+                Some(&on_disk),
+                MarkerStyle::LinePrefix,
+                GITIGNORE_MARKER,
+                &block,
+                path,
+            )
+            .unwrap();
+            let merged = merged.unwrap_or(on_disk);
+            if merged.trim_end() != fresh.trim_end() {
+                stranded.push(name);
+            }
+        }
+        assert!(
+            stranded.is_empty(),
+            "merging these released templates into the shipped one left lines below the block: {stranded:?}"
+        );
+    }
+
+    /// A change to the shipped template must add it to the fixtures, so the
+    /// replay above checks every released template against it before it ships.
+    #[test]
+    fn the_shipped_gitignore_template_is_among_the_released_fixtures() {
+        let shipped = shipped_gitignore_template();
+        assert!(
+            released_gitignore_templates()
+                .iter()
+                .any(|(_, template)| *template == shipped),
+            "framework/templates/project/gitignore matches no fixture in runtime/tests/fixtures/gitignore-releases/: \
+             add it as `unreleased`, first renaming the previous `unreleased` after the release that shipped it"
+        );
     }
 }

@@ -1299,6 +1299,16 @@ its version and date.
 
 ### Fixed
 
+- **`merge-managed-block` replaces an upgraded `.gitignore` block whole when a
+  release retired three of its subsections (spec 022 task 39).** Its
+  `line-prefix` walk stepped over at most two consecutive unmatched groups, and
+  the agent removal retired the Auggie, Antigravity and OpenCode subsections
+  together, so an upgrade wrote the new block above the old one's tail and left
+  those sections and the tail's emptied comment headers below it. Replayed into
+  the shipped template, 7 of the 11 distinct templates releases have shipped,
+  every one from `gvrn-v0.13.0` on, did so. The walk now steps over three, and a
+  test merges every released template into the shipped one and fails when a
+  template change is not added to its fixtures.
 - **`measure-reopenings` never takes a keyless decision for a carried one, and
   says how many records its carry check could not read (spec 079's review).** A
   person's decision naming no key matched any keyless entry with its outcome in

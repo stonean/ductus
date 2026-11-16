@@ -1,5 +1,5 @@
 ---
-next-task: 39
+next-task: 40
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -75,3 +75,11 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] `runtime/tests/line_ending_discipline.rs` counts as a writer every primitive that persists through `ReadSnapshot::write_if_unchanged`, not only a `write_atomic(` caller, so a primitive moved onto the guard stays under the lint; it fails loudly when it finds no writer, its exemption list stays honest, and a mutant that drops a guarded writer from its subject turns it red. 066's review found the subject shrinking with each migration (066 task 24 dropped two exemptions; `prune_plan.rs`, `prune_tasks.rs`, `invalidate_review.rs` and `relocate_audit_records.rs` no longer call `write_atomic(`) on 2026-11-16, and the fix lands with this task's allowlist test
 
 - **Done when**: No runtime-core primitive overwrites a change made between its read and its write, and no raw write lies outside the helper and the allowlist, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 39. merge-managed-block steps over three retired subsections, and every released .gitignore template merges cleanly (owner decision)
+
+- [x] `MAX_SKIPPED_RETIRED_GROUPS` in `runtime/src/primitives/merge_managed_block.rs` is 3, and its doc comment and `walk_body_extent`'s say why: the agent removal retired the Auggie, Antigravity and OpenCode subsections at once, with no migration, so 012 task 12's scratch-adopter upgrade from `ductus-v0.59.0` stranded the old block's tail. Replayed on 2026-11-16, 7 of the 11 distinct released templates stranded 24 to 34 lines at a bound of two and none at three. Scenario `merge-managed-block-renamed-subsection` records the decision (owner, 2026-11-16)
+- [x] The 11 distinct `.gitignore` templates a release has shipped, `v0.1.0` to `ductus-v0.59.0`, and the current one are fixtures under `runtime/tests/fixtures/gitignore-releases/`. A test merges each into the shipped `framework/templates/project/gitignore` and finds nothing below the block, and turns red at a bound of two; a second test fails when the shipped template is not among the fixtures, so a template change adds itself
+- [x] `runtime.yml`'s pull-request and push paths include `framework/templates/project/gitignore`, since the replay test reads it
+
+- **Done when**: every released template merges cleanly into the shipped one, proven by a replay test its mutant (a bound of two) turns red; a shipped template missing from the fixtures fails a test; the whole `cargo test` passes; and 022's next review reads the change.
