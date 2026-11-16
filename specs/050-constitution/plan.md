@@ -464,7 +464,7 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | A change to a shared runtime surface lands in the spec that requires it, and `cross-spec-impact:` holds that spec's `done` until the surface's owner links back — 022 owns the runtime core and its shared surfaces, 066 the audit records and the completion gate, 067 the analyze and audit checks; a feature-specific primitive lives with its feature (survey W23) | Names this repository's own spec |
 | Backtick a primitive in an `## Instructions` step only when the walker can actually supply its arguments (survey W25) | Concerns authoring framework command sources |
 | Do not invoke `cargo build` twice in one shell command and read only the second output (survey W26) | A cargo-specific shell trap in this repo's toolchain |
-| A real adopter run is the only test of composition this project has (survey W33) | About testing this framework against adopters |
+| No real adopter run exists: your own scratch-adopter bootstrap and the tests test composition (owner, 2026-11-16) (survey W33) | About testing this framework against adopters |
 | A run summary is evidence about what that agent wrote, not about what the framework does — verify every other claim against the source (survey W34) | Restates §grounding's prefer-the-source rule for a narrow case; the general rule already ships |
 | Use `npx markdownlint-cli2` to run markdown linting — do not suggest installing it globall (survey G1) | Tooling preference, not a rule |
 | The command generator substitutes `{project}` → `ductus` and `{cli-config-dir}` → `.claude (survey G2) | Framework build step |
