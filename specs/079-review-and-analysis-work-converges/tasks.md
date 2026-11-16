@@ -8,9 +8,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 37. Measure what stored rule verdicts save when a sweep reopens `done` specs (B3)
 
-- [ ] The owner chose to record this here on 2026-11-13 (B3): corpus-wide sweeps reopen `done` specs in bulk, and each reopened spec's next analysis judges every rule again unless its stored verdicts are current; whether that re-judging changes any verdict could not be measured, since no analysis had yet stored verdicts across a sweep
+- [x] The owner chose to record this here on 2026-11-13 (B3): corpus-wide sweeps reopen `done` specs in bulk, and each reopened spec's next analysis judges every rule again unless its stored verdicts are current; whether that re-judging changes any verdict could not be measured, since no analysis had yet stored verdicts across a sweep
 - [x] Measure how many re-judged verdicts differ from the stored ones over the committed re-check pairs whose later run reused no verdict, stating the population, the denominator (rules judged) and the method. The owner chose this population on 2026-11-16 in place of the first corpus-wide sweep, since none had reopened `done` specs that store verdicts; the figure is in `research.md` under its task 37 heading
-- [ ] Put the figure to the owner with what it implies for reusing verdicts across a sweep-started reopening, and record the decision
+- [x] Put the figure to the owner with what it implies for reusing verdicts across a sweep-started reopening, and record the decision
 
 - **Done when**: the measurement is recorded in 079's artifacts with its method, population and units, and the owner's decision on it is recorded beside it
 
