@@ -40,6 +40,8 @@
 #   Y. check 3: a toolchain equal to the latest stable is current
 #   Z. check 3: a toolchain behind the latest stable is behind, and one ahead
 #      of it is current
+#   AA. an `npm install -g` of a scoped package behind npm's latest is behind
+#   AB. an `npm install -g` with no version is behind
 #
 # Usage: scripts/tests/test-check-runtime-currency.sh
 
@@ -106,6 +108,7 @@ jobs:
           printf '%s\n' 'ziglang==0.17.0 --hash=sha256:$(printf '%064d' 9)' > r.txt
           pip3 install --require-hashes -r r.txt
           cargo install --locked cargo-zigbuild --version 0.23.4
+          npm install -g @scope/tool@1.2.3
   reuse:
     uses: ./.github/workflows/other.yml
 EOF
@@ -128,6 +131,7 @@ printf '%s\t%s\n' \
   https://crates.io/api/v1/crates/cargo-audit cargo-audit.json \
   https://crates.io/api/v1/crates/cargo-zigbuild cargo-zigbuild.json \
   https://pypi.org/pypi/ziglang/json ziglang.json \
+  https://registry.npmjs.org/@scope%2ftool/latest scope-tool.json \
   https://github.com/stonean/ductus/releases/download/ductus-v0.59.11/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256 \
   ductus.sha256 >"$BASE/stub/curl.tsv"
 # api <path> <json> serves https://api.github.com/<path> from stub/api-<path>.json,
@@ -151,6 +155,7 @@ api repos/stonean/ductus/releases/latest '{"tag_name":"ductus-v0.59.11"}'
 printf '{"crate":{"max_stable_version":"0.22.2"}}\n' >"$BASE/stub/cargo-audit.json"
 printf '{"crate":{"max_stable_version":"0.23.4"}}\n' >"$BASE/stub/cargo-zigbuild.json"
 printf '{"info":{"version":"0.17.0"}}\n' >"$BASE/stub/ziglang.json"
+printf '{"version":"1.2.3"}\n' >"$BASE/stub/scope-tool.json"
 printf '%064d  ductus-x86_64-unknown-linux-gnu.tar.gz\n' 7 >"$BASE/stub/ductus.sha256"
 
 # probe <case> [sed-edit-of-a-fixture-file ...] runs the pins check in a copy of
@@ -182,7 +187,7 @@ echo "Running check-runtime-currency pins tests..."
 
 probe a-control
 expect "A: a fixture matching upstream is current" 0 \
-  "pins: current (5 action pin(s) and 5 tool pin(s) across 2 file(s))"
+  "pins: current (5 action pin(s) and 6 tool pin(s) across 2 file(s))"
 
 probe b-release 'stub/api-repos_actions_setup-node_releases_latest.json|s|v6.5.0|v7.1.0|'
 expect "B: a newer release is behind" 1 \
@@ -286,6 +291,12 @@ expect "Z: a toolchain behind the latest stable is behind" 1 \
   "toolchain: behind — runtime/rust-toolchain.toml pins 1.99.1, latest stable is 1.100.0"
 toolchain z-ahead 1.98.0
 expect "Z: a toolchain ahead of the latest stable is current" 0 "toolchain: current (1.99.1)"
+
+probe aa-npm 'stub/scope-tool.json|s|1.2.3|1.3.0|'
+expect "AA: an npm install -g behind npm is behind" 1 "@scope/tool pins 1.2.3, latest is 1.3.0"
+
+probe ab-npmnover 'repo/.github/workflows/ci.yml|s|@scope/tool@1.2.3|@scope/tool|'
+expect "AB: an npm install -g with no version is behind" 1 "npm install -g @scope/tool has no pinned version"
 
 echo
 if [ "$failures" -ne 0 ]; then

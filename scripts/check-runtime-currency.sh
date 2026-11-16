@@ -167,7 +167,8 @@ fi
 # with upstream, and this is that comparison (022 task 3). An action pin is
 # current when its tag is the action's latest release and still names the
 # pinned commit; a tool pin is current when its version is the latest its
-# registry reports (crates.io's newest stable version, PyPI's latest, or this
+# registry reports (crates.io's newest stable version, PyPI's latest, npm's
+# `latest` tag, or this
 # repository's latest release for the adopter CI template's runtime, whose
 # sha256 must also be the one that release published); and
 # every `toolchain:` input must equal rust-toolchain.toml's channel, which
@@ -176,8 +177,9 @@ fi
 # upstream points at that day.
 #
 # It reads the forms this repository's workflows use: `uses:`, taiki-e's
-# `tool:`, `cargo install`, pip requirements, `toolchain:` and the template's
-# DUCTUS_* pair. A download written in any other form is not seen.
+# `tool:`, `cargo install`, `npm install -g`, pip requirements, `toolchain:`
+# and the template's DUCTUS_* pair. A download written in any other form is
+# not seen.
 #
 # It reports and never edits. A red run names each pin and where it is, and
 # the bump lands as its own commit like any other fix this script names.
@@ -204,6 +206,11 @@ latest_crate() {
 }
 latest_pypi() {
   fetch "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
+}
+# npm's registry takes a scoped name with its slash encoded.
+latest_npm() {
+  fetch -A "$ua" "https://registry.npmjs.org/$(printf '%s' "$1" | sed 's|/|%2f|')/latest" 2>/dev/null |
+    jq -r '.version // empty' 2>/dev/null
 }
 # The GitHub REST API, through the same bounded fetch. GH_TOKEN, which
 # runtime-currency.yml passes, raises the anonymous rate limit.
@@ -236,6 +243,7 @@ check_tool() {
   case "$1" in
     crate) latest=$(latest_crate "$2") ;;
     pypi) latest=$(latest_pypi "$2") ;;
+    npm) latest=$(latest_npm "$2") ;;
     ductus-release) latest=$(latest_ductus_release) ;;
   esac
   if [ -z "$latest" ]; then
@@ -261,6 +269,7 @@ if want pins; then
     # dropped: one grep rather than a pass of subprocesses over every line.
     candidates='^[[:space:]]*(-[[:space:]]+)?(uses|tool|DUCTUS_VERSION|DUCTUS_SHA256|toolchain):[[:space:]]'
     candidates+='|(^|[^[:alnum:]_-])(cargo|pip3?) install[[:space:]]|==[0-9][^[:space:]]*[[:space:]]+--hash=sha256:'
+    candidates+='|(^|[^[:alnum:]_-])npm install[[:space:]]+(-g|--global)[[:space:]]'
     (cd "$root" && grep -H -n -E "$candidates" "${pin_files[@]}" |
       grep -v -E '^[^:]+:[0-9]+:[[:space:]]*#') >"$tmp/lines.txt"
 
@@ -308,6 +317,20 @@ if want pins; then
           note_behind "cargo install $name has no pinned version ($where)"
         else
           printf 'crate\t%s\t%s\t%s\n' "$name" "$version" "$where" >>"$tmp/tools.tsv"
+        fi
+        continue
+      fi
+
+      # `npm install -g` must name an exact version, `name@version`; a scoped
+      # name's own leading `@` is not a version separator.
+      if printf '%s\n' "$text" | grep -qE '(^|[^[:alnum:]_-])npm install[[:space:]]+(-g|--global)[[:space:]]'; then
+        spec=$(printf '%s\n' "$text" | sed -E 's/.*npm install[[:space:]]+(-g|--global)[[:space:]]+([^[:space:]]+).*/\2/')
+        name=${spec%@*}
+        version=${spec##*@}
+        if [ -n "$name" ] && [ "$name" != "$spec" ] && printf '%s\n' "$version" | grep -qE '^[0-9]'; then
+          printf 'npm\t%s\t%s\t%s\n' "$name" "$version" "$where" >>"$tmp/tools.tsv"
+        else
+          note_behind "npm install -g $spec has no pinned version ($where)"
         fi
         continue
       fi
