@@ -12,6 +12,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Resolve the scenario's open question with `/ductus:clarify`
 - [x] Implement the behavior described in `scenarios/a-language-with-no-template-of-its-name.md`
 - [x] `framework/bootstrap/ductus.md`'s `.gitignore` merge step 5, and its byte copy `framework/bootstrap/govern.md`, carry the decided rule and name each unappended language in the closing summary
-- [ ] A scratch-adopter bootstrap naming TypeScript shows the decided outcome
+- [x] A scratch-adopter bootstrap naming TypeScript shows the decided outcome
 
 - **Done when**: the scenario's open question is resolved, the step follows it, and a scratch-adopter bootstrap naming TypeScript ends as the scenario states.
