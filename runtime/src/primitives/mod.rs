@@ -117,6 +117,22 @@ pub enum PrimitiveError {
         #[source]
         source: std::io::Error,
     },
+    /// A guarded rewrite found its file changed since the caller read it
+    /// ([`ReadSnapshot::write_if_unchanged`], `BE-TXN-002`): another writer
+    /// landed between the read and the write. Nothing was written, so that
+    /// writer's change stands; the handling path is to report the conflict to
+    /// the caller, who re-runs the command to read the file as it now is
+    /// (`BE-TXN-004`). Distinct from [`PrimitiveError::Io`], so a caller
+    /// writing several files can tell a refused file from a failed one and
+    /// report which it wrote and which it refused.
+    #[error(
+        "{path} changed since it was read, so it was not written and the other writer's \
+         change stands: re-run the command to read the file as it now is"
+    )]
+    ChangedSinceRead {
+        /// The file, as the caller named it (project-relative).
+        path: PathBuf,
+    },
     /// YAML parse failure for a frontmatter block.
     #[error("YAML parse error in {path}: {source}")]
     Yaml {
@@ -1295,6 +1311,152 @@ pub(crate) fn write_atomic_bytes(path: &Path, content: &[u8]) -> Result<()> {
         )?;
     }
     Ok(())
+}
+
+/// A project file as a read-modify-write read it, held so the write that
+/// replaces it can refuse when the file changed since (`BE-TXN-002`).
+///
+/// The guard is a compare-and-set: [`ReadSnapshot::read`] keeps the bytes it
+/// read, or that the file was absent, and [`ReadSnapshot::write_if_unchanged`]
+/// reads the file again and renames the new content over it only when that
+/// read matches. The caller cannot supply the "expected" content, only the
+/// snapshot its own read produced. A caller that reads no file reads an
+/// absent one: the write then refuses when the file exists by then.
+///
+/// **Strategy and rationale (`BE-LOCK-001`).** Optimistic: a reader holds no
+/// lock while it computes, which for a prune or a corpus rewrite is long, so a
+/// writer landing in between costs one refused write and a re-run, never a
+/// stalled project. A compare alone is not atomic, though: two runtime
+/// writers could both pass it and the later rename drop the earlier one's
+/// change. The re-read and the rename therefore run under one project-wide
+/// advisory lock ([`crate::session::lock_compare_and_set`]), so among runtime
+/// writers exactly one passes the compare. **Lock order and bounds
+/// (`BE-LOCK-002`).** A caller that holds `append-task`'s lock takes this one
+/// second, and nothing takes them the other way. The wait is
+/// [`crate::session::SESSION_LOCK_TIMEOUT`]; the hold is one re-read and one
+/// rename. **Handling path (`BE-TXN-004`).** A refusal is
+/// [`PrimitiveError::ChangedSinceRead`], which the caller reports so the
+/// operator re-runs the command.
+///
+/// **Residual.** A writer outside the runtime (an editor, an agent's own edit
+/// tool) takes no lock, and can still land between the re-read and the
+/// rename: its change is then replaced. The guard narrows that window to one
+/// re-read and one rename; it does not close it.
+#[derive(Debug)]
+pub(crate) struct ReadSnapshot {
+    repo: PathBuf,
+    rel: String,
+    /// The bytes read, or `None` when the file was absent.
+    observed: Option<Vec<u8>>,
+}
+
+/// The points in [`ReadSnapshot::write_if_unchanged`] where a test changes
+/// the file, as `session.rs`'s `lock_waiting` takes `pause`. Production
+/// passes a no-op.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Stage {
+    /// The lock is held; the re-read has not begun.
+    BeforeReread,
+    /// The compare passed; the rename has not begun.
+    BeforeRename,
+}
+
+impl ReadSnapshot {
+    /// Read `rel`, under the project root `repo`, for a rewrite. The path
+    /// goes through [`validate_contained`] first, so a link leaving the
+    /// project is refused, never followed. A file that is not there is a
+    /// valid, expected read.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::InvalidPath`] for a path [`validate_contained`]
+    /// refuses; [`PrimitiveError::Io`] for a read failing for any reason but
+    /// the file being absent.
+    pub(crate) fn read(repo: &Path, rel: &str) -> Result<Self> {
+        validate_contained(repo, rel)?;
+        Ok(Self {
+            repo: repo.to_path_buf(),
+            rel: rel.to_string(),
+            observed: read_observed(&repo.join(rel))?,
+        })
+    }
+
+    /// The bytes read, or `None` when the file was absent.
+    pub(crate) fn bytes(&self) -> Option<&[u8]> {
+        self.observed.as_deref()
+    }
+
+    /// The text read, or `None` when the file was absent.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::Io`] when the file is not UTF-8.
+    pub(crate) fn text(&self) -> Result<Option<&str>> {
+        self.observed
+            .as_deref()
+            .map(|bytes| {
+                std::str::from_utf8(bytes).map_err(|err| PrimitiveError::Io {
+                    path: self.rel.as_str().into(),
+                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),
+                })
+            })
+            .transpose()
+    }
+
+    /// Replace the file with `content`, only when it still holds what
+    /// [`ReadSnapshot::read`] saw, keeping its mode as [`write_atomic_bytes`]
+    /// does. Under the compare-and-set lock it reads the file again, through
+    /// the same containment check, and renames `content` over it when the two
+    /// reads match; a file absent at the read must still be absent.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::ChangedSinceRead`] when the file changed, was
+    /// created, or went; the file is left as the other writer made it.
+    /// [`PrimitiveError::Io`] when the lock cannot be taken within
+    /// [`crate::session::SESSION_LOCK_TIMEOUT`], or the re-read or write
+    /// fails; [`PrimitiveError::InvalidPath`] when the path now leaves the
+    /// project.
+    pub(crate) fn write_if_unchanged(&self, content: impl AsRef<[u8]>) -> Result<()> {
+        self.write_within(
+            content.as_ref(),
+            crate::session::SESSION_LOCK_TIMEOUT,
+            &mut |_| {},
+        )
+    }
+
+    /// [`ReadSnapshot::write_if_unchanged`], waiting at most `timeout` for the
+    /// lock and calling `hook` at each [`Stage`].
+    fn write_within(
+        &self,
+        content: &[u8],
+        timeout: std::time::Duration,
+        hook: &mut dyn FnMut(Stage),
+    ) -> Result<()> {
+        let _lock = crate::session::lock_compare_and_set_within(&self.repo, timeout)?;
+        hook(Stage::BeforeReread);
+        validate_contained(&self.repo, &self.rel)?;
+        let path = self.repo.join(&self.rel);
+        if read_observed(&path)? != self.observed {
+            return Err(PrimitiveError::ChangedSinceRead {
+                path: self.rel.as_str().into(),
+            });
+        }
+        hook(Stage::BeforeRename);
+        write_atomic_bytes(&path, content)
+    }
+}
+
+/// The bytes at `path`, or `None` when nothing is there.
+fn read_observed(path: &Path) -> Result<Option<Vec<u8>>> {
+    match std::fs::read(path) {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(PrimitiveError::Io {
+            path: path.into(),
+            source,
+        }),
+    }
 }
 
 /// Write `content` to `path` only when nothing lives there, atomically: the
@@ -4633,6 +4795,161 @@ mod tests {
             .collect();
         names.sort();
         assert_eq!(names, ["nested", "taken.md"], "no tempfile is left behind");
+    }
+
+    /// A tree with the guarded file `f.md` holding `before`.
+    fn guarded(before: &str) -> (tempfile::TempDir, ReadSnapshot) {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("f.md"), before).unwrap();
+        let snap = ReadSnapshot::read(tmp.path(), "f.md").unwrap();
+        (tmp, snap)
+    }
+
+    /// A file that changed between the read and the write is refused, and the
+    /// other writer's bytes survive (`BE-TXN-002`).
+    #[test]
+    fn a_file_changed_since_its_read_is_refused_and_the_other_writers_bytes_survive() {
+        let (tmp, snap) = guarded("before");
+        std::fs::write(tmp.path().join("f.md"), "theirs").unwrap();
+        let err = snap.write_if_unchanged("ours").unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("f.md")),
+            "{err:?}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("f.md")).unwrap(),
+            "theirs"
+        );
+    }
+
+    /// An unchanged file is replaced, and an in-place rewrite keeps its mode.
+    #[cfg(unix)]
+    #[test]
+    fn an_unchanged_file_is_replaced_and_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, snap) = guarded("before");
+        let file = tmp.path().join("f.md");
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o644)).unwrap();
+        snap.write_if_unchanged("ours").unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "ours");
+        assert_eq!(
+            std::fs::metadata(&file).unwrap().permissions().mode() & 0o777,
+            0o644
+        );
+    }
+
+    /// A file absent at the read is created when it is still absent, and a
+    /// file that exists by the write is refused and left alone.
+    #[test]
+    fn a_file_absent_at_its_read_must_still_be_absent_at_its_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let first = ReadSnapshot::read(tmp.path(), "sub/new.md").unwrap();
+        assert!(first.bytes().is_none() && first.text().unwrap().is_none());
+        first.write_if_unchanged("ours").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("sub/new.md")).unwrap(),
+            "ours"
+        );
+
+        let raced = ReadSnapshot::read(tmp.path(), "other.md").unwrap();
+        std::fs::write(tmp.path().join("other.md"), "theirs").unwrap();
+        assert!(matches!(
+            raced.write_if_unchanged("ours").unwrap_err(),
+            PrimitiveError::ChangedSinceRead { .. }
+        ));
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("other.md")).unwrap(),
+            "theirs"
+        );
+    }
+
+    /// A file deleted since its read is refused, not recreated.
+    #[test]
+    fn a_file_deleted_since_its_read_is_refused() {
+        let (tmp, snap) = guarded("before");
+        std::fs::remove_file(tmp.path().join("f.md")).unwrap();
+        assert!(matches!(
+            snap.write_if_unchanged("ours").unwrap_err(),
+            PrimitiveError::ChangedSinceRead { .. }
+        ));
+        assert!(!tmp.path().join("f.md").exists());
+    }
+
+    /// A change landing after the lock is taken and before the re-read is
+    /// seen by the re-read, however the caller's read went.
+    #[test]
+    fn the_reread_sees_a_change_made_once_the_lock_is_held() {
+        let (tmp, snap) = guarded("before");
+        let file = tmp.path().join("f.md");
+        let mut hook = |stage| {
+            if stage == Stage::BeforeReread {
+                std::fs::write(&file, "theirs").unwrap();
+            }
+        };
+        let err = snap
+            .write_within(b"ours", crate::session::SESSION_LOCK_TIMEOUT, &mut hook)
+            .unwrap_err();
+        assert!(matches!(err, PrimitiveError::ChangedSinceRead { .. }));
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "theirs");
+    }
+
+    /// Two runtime writers that read the same bytes cannot both persist: a
+    /// second writer arriving while the first holds the lock between its
+    /// compare and its rename cannot take the lock, so it never reaches its
+    /// own compare, and the first writer's content stands (`BE-LOCK-001`).
+    #[test]
+    fn two_runtime_writers_cannot_both_pass_the_compare() {
+        let (tmp, first) = guarded("before");
+        let second = ReadSnapshot::read(tmp.path(), "f.md").unwrap();
+        let file = tmp.path().join("f.md");
+        let mut second_outcome = None;
+        let mut hook = |stage| {
+            if stage == Stage::BeforeRename {
+                second_outcome =
+                    Some(second.write_within(b"second", std::time::Duration::ZERO, &mut |_| {}));
+            }
+        };
+        first
+            .write_within(b"first", crate::session::SESSION_LOCK_TIMEOUT, &mut hook)
+            .unwrap();
+        let second_outcome = second_outcome.expect("the hook ran at the rename");
+        assert!(
+            matches!(second_outcome, Err(PrimitiveError::Io { .. })),
+            "the second writer waits for the lock and gives up: {second_outcome:?}"
+        );
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "first");
+        // Once the first writer's lock is released the second compares, sees
+        // the first's content, and is refused.
+        assert!(matches!(
+            second.write_if_unchanged("second").unwrap_err(),
+            PrimitiveError::ChangedSinceRead { .. }
+        ));
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "first");
+    }
+
+    /// The re-read goes through the containment check the first read did: a
+    /// path that now resolves outside the project is refused, not followed.
+    #[cfg(unix)]
+    #[test]
+    fn the_write_is_refused_through_a_link_leaving_the_project() {
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("target.md"), "outside").unwrap();
+        let (tmp, snap) = guarded("before");
+        let file = tmp.path().join("f.md");
+        std::fs::remove_file(&file).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("target.md"), &file).unwrap();
+        assert!(matches!(
+            snap.write_if_unchanged("ours").unwrap_err(),
+            PrimitiveError::InvalidPath { .. }
+        ));
+        assert_eq!(
+            std::fs::read_to_string(outside.path().join("target.md")).unwrap(),
+            "outside"
+        );
+        assert!(matches!(
+            ReadSnapshot::read(tmp.path(), "f.md").unwrap_err(),
+            PrimitiveError::InvalidPath { .. }
+        ));
     }
 
     #[cfg(unix)]

@@ -15,6 +15,14 @@
 //! identifier built at runtime does not appear, which is why the walk words
 //! zero hits as *no literal occurrence found*.
 //!
+//! A rewrite guards the window between its read and its rename
+//! (`BE-TXN-002`): each file is read once into a [`ReadSnapshot`], and its
+//! rewrite is refused, never forced, when the file changed since. The apply
+//! goes on to the other files and reports which it wrote and which it
+//! refused. A home to create is written create-only ([`write_new_atomic`]),
+//! which refuses to replace whatever a writer put there first, so a created
+//! home needs no snapshot.
+//!
 //! Every open the primitive makes goes through `validate_contained`
 //! (BE-INPUT-004): a project file that is, or lies under, a symbolic link
 //! resolving outside the project is `outside-project` and neither read nor
@@ -30,8 +38,8 @@ use crate::primitives::check_artifact_size::{
     PROJECT_FILES_KEY, project_subjects, resolve_threshold,
 };
 use crate::primitives::{
-    PrimitiveError, Result, SkipScanner, bounded_lists, hex, inline_code_spans, line_ending_of,
-    parse_atx_heading, tracked_project_paths, validate_contained, write_atomic,
+    PrimitiveError, ReadSnapshot, Result, SkipScanner, bounded_lists, hex, inline_code_spans,
+    line_ending_of, parse_atx_heading, tracked_project_paths, validate_contained, write_new_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -66,6 +74,11 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 
 /// Segment, search and — on `apply` — write the four project files.
 ///
+/// A rewrite whose file changed since it was read is not an error: it is
+/// refused, left as the other writer made it, and named in the result's
+/// `refused`, while the other files are written and named in `written`
+/// (`BE-TXN-002`, `BE-TXN-004`).
+///
 /// # Errors
 ///
 /// - [`PrimitiveError::MissingArgument`] when `apply` lists nothing to do.
@@ -86,23 +99,34 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 ///   error fails a call whose writes stand; running the preview again reads
 ///   the changed files.
 pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
+    run_between(args, repo, || {})
+}
+
+/// [`run`], calling `before_write` after everything is read and computed and
+/// before the first write, which a test replaces to change a file in that
+/// window.
+fn run_between(
+    args: &PruneProjectArgs,
+    repo: &Path,
+    before_write: impl FnOnce(),
+) -> Result<PruneProjectResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     let subjects = project_subjects(&root);
     check_args(args, &subjects)?;
     let (threshold, notices) = resolve_threshold(repo)?;
 
     let mut files = Vec::new();
-    let mut contents = Vec::new();
+    let mut snapshots = Vec::new();
     let mut segments: Vec<Segment> = Vec::new();
     for (kind, rel) in &subjects {
-        let (mut file, content) = read_subject(repo, *kind, rel, threshold.bytes);
-        if let Some(text) = &content {
+        let (mut file, snapshot) = read_subject(repo, *kind, rel, threshold.bytes);
+        if let Some(text) = snapshot.as_ref().and_then(|s| s.text().ok().flatten()) {
             let (found, tail) = segment(rel, *kind, text);
             segments.extend(found);
             file.unexamined_tail = tail;
         }
         files.push(file);
-        contents.push(content);
+        snapshots.push(snapshot);
     }
 
     let search = if args.apply {
@@ -115,14 +139,20 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     let applied = args.apply && stale_entries.is_empty();
     let mut created = Vec::new();
     let mut kept = Vec::new();
+    let mut written = Vec::new();
+    let mut refused = Vec::new();
     if applied {
         // Every home to create is checked before anything is written, so a
         // refused one never leaves half an apply on disk.
         for kind in &args.create {
             validate_contained(repo, &home(&root, *kind).0)?;
         }
+        before_write();
         for (idx, (_, rel)) in subjects.iter().enumerate() {
-            let Some(content) = &contents[idx] else {
+            let Some(snapshot) = &snapshots[idx] else {
+                continue;
+            };
+            let Some(content) = snapshot.text()? else {
                 continue;
             };
             let edits: Vec<&(usize, Option<&str>)> = claimed
@@ -132,19 +162,25 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
             if edits.is_empty() {
                 continue;
             }
-            write_contained(repo, rel, &rewrite(content, &segments, &edits))?;
+            match snapshot.write_if_unchanged(rewrite(content, &segments, &edits)) {
+                Ok(()) => written.push(rel.clone()),
+                // The file changed since it was read: leave it as the other
+                // writer made it, and go on to the others (`BE-TXN-004`).
+                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push(rel.clone()),
+                Err(other) => return Err(other),
+            }
         }
         for kind in &args.create {
             let (rel, body) = home(&root, *kind);
-            let path = repo.join(&rel);
-            if path.exists() {
+            if create_home(&repo.join(&rel), body)? {
+                created.push(*kind);
+            } else {
                 kept.push(*kind);
-                continue;
             }
-            create_home(&path, body)?;
-            created.push(*kind);
         }
     }
+    // An apply that refused a file did not write everything it listed.
+    let applied = applied && refused.is_empty();
 
     let entries: Vec<ProjectEntry> = segments.into_iter().map(|seg| seg.entry).collect();
     let mut result = PruneProjectResult {
@@ -159,6 +195,8 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
         stale_entries,
         created,
         kept,
+        written,
+        refused,
         notices,
     };
     // `hits` ride inside their entries, so the one list moves whole: a hit
@@ -225,13 +263,14 @@ fn check_args(args: &PruneProjectArgs, subjects: &[(ProjectFileKind, String); 4]
 /// Read one subject. A file that is not there is `absent`; one that is, or
 /// lies under, a symbolic link resolving outside the project is
 /// `outside-project` and is never opened; one that is there but cannot be
-/// read as text is `unreadable`. Neither contributes entries.
+/// read as text is `unreadable`. Neither contributes entries. A file read as
+/// text comes back as the [`ReadSnapshot`] its rewrite compares against.
 fn read_subject(
     repo: &Path,
     kind: ProjectFileKind,
     rel: &str,
     limit: u64,
-) -> (ProjectFile, Option<String>) {
+) -> (ProjectFile, Option<ReadSnapshot>) {
     let file = |state, bytes: Option<u64>| ProjectFile {
         path: rel.to_string(),
         kind,
@@ -240,22 +279,21 @@ fn read_subject(
         over_limit: bytes.map(|bytes| bytes > limit),
         unexamined_tail: None,
     };
-    match validate_contained(repo, rel) {
-        Ok(()) => {}
+    // The snapshot's read goes through `validate_contained`, so a link
+    // leaving the project is refused before any open.
+    let snapshot = match ReadSnapshot::read(repo, rel) {
+        Ok(snapshot) => snapshot,
         Err(PrimitiveError::InvalidPath { .. }) => {
             return (file(ProjectFileState::OutsideProject, None), None);
         }
         Err(_) => return (file(ProjectFileState::Unreadable, None), None),
-    }
-    match std::fs::read(repo.join(rel)) {
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            (file(ProjectFileState::Absent, None), None)
-        }
-        Err(_) => (file(ProjectFileState::Unreadable, None), None),
-        Ok(bytes) => {
+    };
+    match snapshot.bytes() {
+        None => (file(ProjectFileState::Absent, None), None),
+        Some(bytes) => {
             let size = bytes.len() as u64;
-            match String::from_utf8(bytes) {
-                Ok(text) => (file(ProjectFileState::Present, Some(size)), Some(text)),
+            match snapshot.text() {
+                Ok(_) => (file(ProjectFileState::Present, Some(size)), Some(snapshot)),
                 Err(_) => (file(ProjectFileState::Unreadable, None), None),
             }
         }
@@ -715,24 +753,15 @@ fn rewrite(content: &str, segments: &[Segment], edits: &[&(usize, Option<&str>)]
     out
 }
 
-/// Rewrite a project file, after re-checking that its path still resolves
-/// inside the project. `read_subject` yields no text for a file behind an outward
-/// link, so this closes only the window between that read and the write.
-fn write_contained(repo: &Path, rel: &str, body: &str) -> Result<()> {
-    validate_contained(repo, rel)?;
-    write_atomic(&repo.join(rel), body)
-}
-
-/// Write a missing home from its template, at mode `0644` on Unix:
-/// `write_atomic` leaves a new file at its tempfile's `0600`.
-fn create_home(path: &Path, body: &str) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|source| PrimitiveError::Io {
-            path: parent.into(),
-            source,
-        })?;
+/// Create a missing home from its template, at mode `0644` on Unix
+/// (`write_new_atomic` leaves a new file at its tempfile's `0600`). Returns
+/// `false`, writing nothing, when the home already exists, including one a
+/// writer created since the caller looked: a create never replaces a file,
+/// so it needs no [`ReadSnapshot`] (`BE-TXN-002`).
+fn create_home(path: &Path, body: &str) -> Result<bool> {
+    if !write_new_atomic(path, body)? {
+        return Ok(false);
     }
-    write_atomic(path, body)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -743,7 +772,7 @@ fn create_home(path: &Path, body: &str) -> Result<()> {
             },
         )?;
     }
-    Ok(())
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -1333,22 +1362,114 @@ Codes use `snake_case`.
         assert_eq!(fs::read_to_string(&target).unwrap(), AGENTS);
     }
 
+    /// An apply listing a removal in `AGENTS.md` and one in `specs/errors.md`.
+    fn two_file_removal(dir: &Path) -> PruneProjectArgs {
+        let before = preview(dir);
+        let agents = entries_of(&before, "AGENTS.md")
+            .into_iter()
+            .find(|e| e.kind == EntryKind::Block && e.section.as_deref() == Some("Gotchas"))
+            .unwrap();
+        let errors = segment("specs/errors.md", ProjectFileKind::Errors, ERRORS).0[1]
+            .entry
+            .digest
+            .clone();
+        PruneProjectArgs {
+            apply: true,
+            remove: vec![
+                EntryRemoval {
+                    path: "AGENTS.md".into(),
+                    digest: agents.digest.clone(),
+                },
+                EntryRemoval {
+                    path: "specs/errors.md".into(),
+                    digest: errors,
+                },
+            ],
+            ..PruneProjectArgs::default()
+        }
+    }
+
+    /// A file changed after the apply read it is refused and left as the other
+    /// writer made it; the file nobody touched is still written, and the
+    /// result names each (`BE-TXN-002`, `BE-TXN-004`).
+    #[test]
+    fn a_file_changed_after_the_apply_read_it_is_refused_and_the_rest_is_written() {
+        let dir = project();
+        let args = two_file_removal(dir.path());
+        let theirs = format!("{AGENTS}- Added by another writer.\n");
+        let result = run_between(&args, dir.path(), || {
+            fs::write(dir.path().join("AGENTS.md"), &theirs).unwrap();
+        })
+        .unwrap();
+        assert!(!result.applied, "a refused file means not fully applied");
+        assert_eq!(result.refused, vec!["AGENTS.md".to_string()]);
+        assert_eq!(result.written, vec!["specs/errors.md".to_string()]);
+        assert_eq!(
+            fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
+            theirs
+        );
+        assert!(
+            !fs::read_to_string(dir.path().join("specs/errors.md"))
+                .unwrap()
+                .contains("auth_token_expired")
+        );
+    }
+
+    /// With nothing changing between the read and the write, every file is
+    /// written and none is refused.
+    #[test]
+    fn an_unchanged_apply_writes_every_file_and_refuses_none() {
+        let dir = project();
+        let args = two_file_removal(dir.path());
+        let result = run(&args, dir.path()).unwrap();
+        assert!(result.applied);
+        assert_eq!(
+            result.written,
+            vec!["AGENTS.md".to_string(), "specs/errors.md".to_string()]
+        );
+        assert_eq!(result.refused, Vec::<String>::new());
+    }
+
+    /// A home another writer created since the apply looked is kept, never
+    /// replaced by the template.
+    #[test]
+    fn a_home_another_writer_created_is_kept_and_never_replaced() {
+        let dir = project();
+        let args = PruneProjectArgs {
+            apply: true,
+            create: vec![ProjectHome::System],
+            ..PruneProjectArgs::default()
+        };
+        let result = run_between(&args, dir.path(), || {
+            fs::write(dir.path().join("specs/system.md"), "theirs\n").unwrap();
+        })
+        .unwrap();
+        assert_eq!(result.kept, vec![ProjectHome::System]);
+        assert_eq!(result.created, Vec::<ProjectHome>::new());
+        assert_eq!(
+            fs::read_to_string(dir.path().join("specs/system.md")).unwrap(),
+            "theirs\n"
+        );
+    }
+
+    /// The write re-checks containment: a project file swapped for a link
+    /// leaving the project after it was read is refused, and the file the
+    /// link names is untouched.
     #[cfg(unix)]
     #[test]
-    fn a_rewrite_is_refused_through_a_link_leaving_the_project() {
+    fn a_file_swapped_for_an_outward_link_after_its_read_is_refused() {
         let dir = project();
+        let args = two_file_removal(dir.path());
         let outside = TempDir::new().unwrap();
         let target = outside.path().join("elsewhere.md");
         write(&target, "before\n");
-        link(&target, &dir.path().join("linked.md"));
-        let err = write_contained(dir.path(), "linked.md", "after\n").unwrap_err();
+        let err = run_between(&args, dir.path(), || {
+            fs::remove_file(dir.path().join("AGENTS.md")).unwrap();
+            link(&target, &dir.path().join("AGENTS.md"));
+        })
+        .unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
         assert_eq!(fs::read_to_string(&target).unwrap(), "before\n");
-        write_contained(dir.path(), "AGENTS.md", "inside\n").unwrap();
-        assert_eq!(
-            fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
-            "inside\n"
-        );
     }
 
     #[cfg(unix)]

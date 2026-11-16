@@ -19,14 +19,14 @@
 //! runtime (`apply: true`) or withheld (`apply: false` preview).
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 
 use crate::primitives::{
-    PrimitiveError, Result, SkipScanner, TasksStructure, checkbox, detect_tasks_structure,
-    join_blocks, list_feature_dirs, parse_atx_heading, read_text, rel_path, split_frontmatter,
-    split_numbered_heading, write_atomic,
+    PrimitiveError, ReadSnapshot, Result, SkipScanner, TasksStructure, checkbox,
+    detect_tasks_structure, join_blocks, list_feature_dirs, parse_atx_heading, read_text, rel_path,
+    split_frontmatter, split_numbered_heading,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -120,6 +120,12 @@ impl Block {
 ///   an `all` walk, for each spec it lists.
 /// - [`PrimitiveError::Io`] / [`PrimitiveError::Yaml`] on filesystem or
 ///   frontmatter failure.
+///
+/// - [`PrimitiveError::ChangedSinceRead`] when a single feature's `tasks.md`
+///   changed between the apply's read and its write (`BE-TXN-002`): nothing is
+///   written, and the other writer's change stands. A walk reports such a
+///   feature in `skipped` instead and goes on, so its result names what it
+///   wrote and what it refused.
 ///
 /// Each error writes nothing to the feature it fires on. An applying `all`
 /// walk computes every feature's reduction and reads every status before it
@@ -264,8 +270,27 @@ pub(crate) fn one_feature_or_all<'a>(
 /// Every reduction is computed and every status read before the first
 /// write, so a feature that fails either stops the walk with the corpus
 /// untouched (scenario `a-path-argument-resolves-inside-its-base`: such a
-/// walk is refused as a whole).
+/// walk is refused as a whole). A reduction whose file changed after it was
+/// read is refused by [`Reduction::write`] and listed in `skipped` as
+/// `changed-since-read`; the walk goes on, so every other feature's reduction
+/// is written and the result names both.
 fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<PruneTasksLine>> {
+    write_walk(plan_walk(args, repo, root)?)
+}
+
+/// A walk's reductions, computed and not yet written.
+struct PlannedWalk {
+    /// Feature directories walked.
+    examined: usize,
+    /// Each feature with something to reduce, its reduction and its status.
+    pending: Vec<(String, Reduction, String)>,
+    /// Features with no `tasks.md`.
+    skipped: Vec<SkippedFeature>,
+}
+
+/// The first half of [`walk`]: every feature's reduction and status, with
+/// nothing written.
+fn plan_walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PlannedWalk> {
     let names = list_feature_dirs(&repo.join(root));
     let mut pending = Vec::new();
     let mut skipped = Vec::new();
@@ -289,15 +314,37 @@ fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prun
             Err(other) => return Err(other),
         }
     }
+    Ok(PlannedWalk {
+        examined: names.len(),
+        pending,
+        skipped,
+    })
+}
+
+/// The second half of [`walk`]: write each reduction, listing in `skipped`
+/// the ones [`PrimitiveError::ChangedSinceRead`] refuses.
+fn write_walk(planned: PlannedWalk) -> Result<PruneWalk<PruneTasksLine>> {
+    let PlannedWalk {
+        examined,
+        pending,
+        mut skipped,
+    } = planned;
     let mut features = Vec::with_capacity(pending.len());
     for (feature, reduction, status) in pending {
-        features.push(PruneWalkEntry {
-            feature,
-            summary: PruneTasksLine::new(reduction.write()?, status),
-        });
+        match reduction.write() {
+            Ok(summary) => features.push(PruneWalkEntry {
+                feature,
+                summary: PruneTasksLine::new(summary, status),
+            }),
+            Err(PrimitiveError::ChangedSinceRead { .. }) => skipped.push(SkippedFeature {
+                feature,
+                reason: SkipReason::ChangedSinceRead,
+            }),
+            Err(other) => return Err(other),
+        }
     }
     Ok(PruneWalk {
-        examined: u32::try_from(names.len()).unwrap_or(u32::MAX),
+        examined: u32::try_from(examined).unwrap_or(u32::MAX),
         features_count: features.len(),
         features: Some(features),
         skipped_count: skipped.len(),
@@ -319,15 +366,21 @@ fn summarize(
 struct Reduction {
     /// The summary, its `applied` saying whether [`Reduction::write`] writes.
     summary: PruneTasksSummary,
-    tasks_path: PathBuf,
+    /// `tasks.md` as the reduction read it, which the write compares against.
+    snapshot: ReadSnapshot,
     new_content: String,
 }
 
 impl Reduction {
     /// Write the reduction when the call applies it, and return its summary.
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::ChangedSinceRead`] when `tasks.md` changed since the
+    /// reduction read it: nothing is written (`BE-TXN-002`).
     fn write(self) -> Result<PruneTasksSummary> {
         if self.summary.applied {
-            write_atomic(&self.tasks_path, &self.new_content)?;
+            self.snapshot.write_if_unchanged(&self.new_content)?;
         }
         Ok(self.summary)
     }
@@ -350,7 +403,13 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
             feature: feature.to_string(),
         });
     }
-    let content = read_text(&tasks_path)?;
+    let snapshot = ReadSnapshot::read(repo, &format!("{root}/{feature}/tasks.md"))?;
+    let Some(content) = snapshot.text()?.map(str::to_string) else {
+        return Err(PrimitiveError::TasksFileMissing {
+            root: root.to_string(),
+            feature: feature.to_string(),
+        });
+    };
 
     // The `--reset` status gate reads the spec status before touching tasks.
     let (mode, gate, status) = if args.reset {
@@ -413,7 +472,7 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
             sections: Some(sections),
             path: rel_path(&tasks_path, repo),
         },
-        tasks_path,
+        snapshot,
         new_content,
     })
 }
@@ -1073,6 +1132,74 @@ mod tests {
         assert_eq!(result.gate, PruneGate::Allowed);
         assert!(result.applied);
         assert_eq!(result.status.as_deref(), Some("in-progress"));
+    }
+
+    /// A task appended by another writer after the apply read the file is
+    /// kept: the apply is refused, never written over it (`BE-TXN-002`).
+    #[test]
+    fn an_apply_refuses_a_file_changed_after_it_was_read() {
+        let (_tmp, repo) = write_repo(FLAT, Some("in-progress"));
+        let tasks = repo.join("specs/041-task-pruning/tasks.md");
+        let reduction = reduce(
+            "041-task-pruning",
+            &args(false, false, true),
+            &repo,
+            "specs",
+        )
+        .unwrap();
+        assert!(reduction.summary.applied, "the reduction would write");
+        let theirs = format!("{FLAT}\n## 4. Appended meanwhile\n\n- [ ] e\n");
+        fs::write(&tasks, &theirs).unwrap();
+        let err = reduction.write().unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == Path::new("specs/041-task-pruning/tasks.md")),
+            "{err:?}"
+        );
+        assert_eq!(fs::read_to_string(&tasks).unwrap(), theirs);
+    }
+
+    /// The same apply, nothing changing in between, writes.
+    #[test]
+    fn an_apply_over_an_unchanged_file_writes() {
+        let (_tmp, repo) = write_repo(FLAT, Some("in-progress"));
+        let summary = run(&args(false, false, true), &repo).unwrap();
+        assert!(summary.applied);
+        let written = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert!(!written.contains("Done task") && written.contains("Pending task"));
+    }
+
+    /// A walk that finds one feature's file changed after it read it writes the
+    /// others and lists that one in `skipped` as `changed-since-read`, its file
+    /// as the other writer left it.
+    #[test]
+    fn a_walk_refuses_a_changed_feature_and_writes_the_others() {
+        let tmp = corpus(&[
+            ("002-first", "in-progress", Some(FLAT)),
+            ("003-second", "in-progress", Some(FLAT)),
+        ]);
+        let planned = plan_walk(&all(false, false, true), tmp.path(), "specs").unwrap();
+        let theirs = format!("{FLAT}\n## 4. Appended meanwhile\n\n- [ ] e\n");
+        fs::write(tmp.path().join("specs/002-first/tasks.md"), &theirs).unwrap();
+        let walked = write_walk(planned).unwrap();
+        let written: Vec<&str> = walked
+            .features
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|entry| entry.feature.as_str())
+            .collect();
+        assert_eq!(written, ["003-second"]);
+        let skipped = walked.skipped.unwrap();
+        assert_eq!(skipped.len(), 1);
+        assert_eq!(skipped[0].feature, "002-first");
+        assert_eq!(skipped[0].reason, SkipReason::ChangedSinceRead);
+        assert_eq!(
+            fs::read_to_string(tmp.path().join("specs/002-first/tasks.md")).unwrap(),
+            theirs
+        );
+        let second = fs::read_to_string(tmp.path().join("specs/003-second/tasks.md")).unwrap();
+        assert!(!second.contains("Done task"));
     }
 
     #[test]

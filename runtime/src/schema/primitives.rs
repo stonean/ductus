@@ -4850,8 +4850,10 @@ pub struct PruneWalk<T> {
     pub features: Option<Vec<PruneWalkEntry<T>>>,
     /// Entries in `features`, in either form.
     pub features_count: usize,
-    /// Each feature without the artifact, with the reason. Absent in the file
-    /// form.
+    /// Each feature passed over, with the reason: one without the artifact, or
+    /// an applying `prune-tasks` walk's one whose `tasks.md` changed after the
+    /// walk read it, which was refused and not written (`BE-TXN-002`). Absent
+    /// in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skipped: Option<Vec<SkippedFeature>>,
     /// Entries in `skipped`, in either form.
@@ -4875,7 +4877,7 @@ pub struct PruneWalkEntry<T> {
 pub struct SkippedFeature {
     /// Feature directory name.
     pub feature: String,
-    /// What the feature lacks.
+    /// What the feature lacks, or why its write was refused.
     pub reason: SkipReason,
 }
 
@@ -4887,6 +4889,11 @@ pub enum SkipReason {
     NoTasksFile,
     /// The feature has no `plan.md`.
     NoPlanFile,
+    /// An applying walk's reduction of the feature's `tasks.md` was computed,
+    /// and the file changed before the write: it was not written, and the
+    /// other writer's change stands. A re-run reads the file as it now is
+    /// (`BE-TXN-002`, `BE-TXN-004`).
+    ChangedSinceRead,
 }
 
 // -- prune-plan --------------------------------------------------------------
@@ -5332,7 +5339,10 @@ pub struct PruneProjectResult {
     /// reads no source.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub search: Option<ProjectSearch>,
-    /// Whether the apply wrote. `false` on a preview and on a refused apply.
+    /// Whether the apply wrote everything it listed. `false` on a preview,
+    /// on an apply refused as stale (nothing written, creations included),
+    /// and on one where a file changed after it was read (`refused` names it,
+    /// `written` the files that were written anyway).
     pub applied: bool,
     /// Each listed removal or replacement with no entry of that path and
     /// digest left to claim. Non-empty means the whole apply was refused and
@@ -5340,8 +5350,20 @@ pub struct PruneProjectResult {
     pub stale_entries: Vec<EntryRemoval>,
     /// The homes created from their template.
     pub created: Vec<ProjectHome>,
-    /// The homes listed in `create` that already existed, left as they are.
+    /// The homes listed in `create` that already existed, left as they are,
+    /// including one a writer created since the apply looked.
     pub kept: Vec<ProjectHome>,
+    /// The project files an apply rewrote, in subject order, each
+    /// project-relative.
+    #[serde(default)]
+    pub written: Vec<String>,
+    /// The project files an apply refused to rewrite because each changed
+    /// after the apply read it (`BE-TXN-002`), in subject order. Each is left
+    /// as the other writer made it, and its listed removals and replacements
+    /// are unapplied: re-run the preview and the apply to read it as it now
+    /// is. The rest of the apply was written.
+    #[serde(default)]
+    pub refused: Vec<String>,
     /// Each key in `[artifacts]` no reader recognizes, named as
     /// `check-artifact-size` names it (`CFG-ENV-012`).
     #[serde(default)]
@@ -8913,6 +8935,8 @@ mod tests {
             stale_entries: Vec::new(),
             created: Vec::new(),
             kept: Vec::new(),
+            written: vec!["AGENTS.md".into()],
+            refused: vec!["specs/errors.md".into()],
             notices: Vec::new(),
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
@@ -8930,6 +8954,7 @@ mod tests {
         assert_eq!(value["search"]["files-searched"], 312);
         assert_eq!(value["search"]["outside-project"][0], "docs/linked.md");
         assert_eq!(value["search"]["outside-project-count"], 1);
+        assert_eq!(value["refused"], serde_json::json!(["specs/errors.md"]));
         assert_eq!(round_trip(&result), result);
     }
 

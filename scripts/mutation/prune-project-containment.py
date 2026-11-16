@@ -1,7 +1,8 @@
 """Mutation list for spec 041 task 25: `prune-project`'s opens are contained
 (BE-INPUT-004). Each mutant removes one containment site of
-`runtime/src/primitives/prune_project.rs`, and its test builds a symbolic link
-leaving the project.
+`runtime/src/primitives/prune_project.rs`, or of the `ReadSnapshot` read and
+write it goes through (`runtime/src/primitives/mod.rs`), and its test builds a
+symbolic link leaving the project.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/prune-project-containment.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -17,17 +18,17 @@ EXPECTED_SURVIVORS = {}
 MUTATIONS = [
     (
         'M1 a project file is read through a link leaving the project',
-        'src/primitives/prune_project.rs',
-        '    match validate_contained(repo, rel) {\n        Ok(()) => {}\n        Err(PrimitiveError::InvalidPath { .. }) => {\n            return (file(ProjectFileState::OutsideProject, None), None);',
-        '    match Ok::<(), PrimitiveError>(()) {\n        Ok(()) => {}\n        Err(PrimitiveError::InvalidPath { .. }) => {\n            return (file(ProjectFileState::OutsideProject, None), None);',
+        'src/primitives/mod.rs',
+        '        validate_contained(repo, rel)?;\n        Ok(Self {',
+        '        Ok(Self {',
         'prune_project::tests::a_linked_agents_md_is_outside_project_and_an_apply_writes_nothing prune_project::tests::a_linked_spec_root_makes_its_files_outside_project_and_refuses_a_create',
     ),
     (
         'M2 a rewrite writes through a link leaving the project',
-        'src/primitives/prune_project.rs',
-        '    validate_contained(repo, rel)?;\n    write_atomic(&repo.join(rel), body)',
-        '    write_atomic(&repo.join(rel), body)',
-        'prune_project::tests::a_rewrite_is_refused_through_a_link_leaving_the_project',
+        'src/primitives/mod.rs',
+        '        hook(Stage::BeforeReread);\n        validate_contained(&self.repo, &self.rel)?;\n',
+        '        hook(Stage::BeforeReread);\n',
+        'prune_project::tests::a_file_swapped_for_an_outward_link_after_its_read_is_refused',
     ),
     (
         'M3 a home to create is not checked before the apply writes',

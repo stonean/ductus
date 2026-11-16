@@ -91,6 +91,13 @@ pub(crate) const LOCKS_DIR: &str = ".ductus/locks";
 /// `tasks.md` (`BE-TXN-002`). The file carries no content.
 pub(crate) const APPEND_TASK_LOCK: &str = ".ductus/locks/append-task.lock";
 
+/// The advisory lock [`crate::primitives::ReadSnapshot::write_if_unchanged`]
+/// holds across its re-read of a file and the rename that replaces it
+/// (`BE-TXN-002`). One lock for every file the runtime guards this way. A
+/// writer that holds [`APPEND_TASK_LOCK`] takes this one second, never the
+/// other way round. The file carries no content.
+pub(crate) const COMPARE_AND_SET_LOCK: &str = ".ductus/locks/compare-and-set.lock";
+
 /// Session locations in resolution order, newest first. See [`CONFIG_CHAIN`].
 pub(crate) const SESSION_CHAIN: [&str; 3] =
     [SESSION_FILE, LEGACY_DIR_SESSION_FILE, LEGACY_SESSION_FILE];

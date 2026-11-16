@@ -169,7 +169,8 @@ Args:
 - `reset` — `false` = keep-pending; `true` = full reset.
 - `force` — override the `reset` status gate on a non-`done` spec.
 - `apply` — `false` = preview (compute + classify, **no write**); `true` =
-  write the reduced file atomically.
+  write the reduced file atomically, **only when it is unchanged since the
+  apply read it** (see *The write guard*).
 
 Result for one feature (a **compact summary — never the file body**):
 
@@ -226,6 +227,40 @@ Result for one feature (a **compact summary — never the file body**):
   `ductus prune-tasks --help`; a malformed read size halts the call before
   any write.
 
+### The write guard
+
+Every apply of the three primitives is a read-modify-write, so each guards the
+window between its read and its rename (`BE-TXN-002`) by a compare before
+persist: it keeps what it read, and the write reads the file again under one
+project-wide advisory lock and renames the result over it only when the two
+reads match. A file changed since the read is **refused, never forced**: it is
+left as the other writer made it (an `append-task`, a `mark-task`, an editor),
+and the host re-runs the command to read it as it now is (`BE-TXN-004`). The
+lock makes the compare and the rename atomic among runtime writers, so two
+cannot both pass; it is taken after `append-task`'s lock when a caller holds
+both, waits no longer than the session lock's timeout, and is held for one
+re-read and one rename. A writer outside the runtime takes no lock, so one that
+lands between the re-read and the rename is still replaced: the guard narrows
+that window and does not close it. The helper, its strategy and its bounds are
+022's plan (*Technical Decisions*, the compare-and-set guard).
+
+What a refusal reports:
+
+- **A single file** — `prune-tasks` for one feature and `prune-plan` — fails
+  the call with the `changed-since-read` operational error naming the file; no
+  result summary is returned and nothing is written.
+- **A `prune-tasks` walk** (`all` with `apply`) writes every other spec and
+  lists each refused spec in `skipped` with reason `changed-since-read`, so its
+  `features` (the lines whose `applied` is `true`) and its `skipped` say what it
+  wrote and what it refused.
+- **`prune-project`**, which rewrites up to four files, goes on past a refused
+  file and reports `written` (the files rewritten) and `refused` (the files
+  changed since the read, each with its listed removals and replacements
+  unapplied); `applied` is `true` only when nothing was refused. A home to
+  `create` is written create-only, which refuses to replace any file, so a home
+  that appeared since the apply looked is `kept` and needs no read to compare
+  against.
+
 ### Operational errors
 
 Reported as `error` envelopes (not result fields). The primitive writes
@@ -237,6 +272,7 @@ running it again resumes:
 | --- | --- |
 | `feature-not-found` | feature directory absent under the spec-root |
 | `tasks-file-missing` | feature directory exists but has no `tasks.md` (the command directs the user to `/{project}:plan` when there is no `plan.md` either, and otherwise reduces the plan and reports the missing task list); a walk skips such a spec instead |
+| `changed-since-read` | an apply's `tasks.md` changed between its read and its write: nothing is written and the other writer's change stands; a walk lists the spec in `skipped` instead |
 | `malformed-tasks` | file has no `# …` heading (reset cannot preserve identity), or its frontmatter never closes or carries a `next-task:` that is not a positive integer, or its highest task number is `4294967295`, which no counter can follow |
 | `missing-spec-file` / `status-field-missing` / `missing-frontmatter` | `spec.md` is absent, opens no frontmatter, or its frontmatter has no `status`, when a `reset` reads it for its gate or a walk reads it for a spec it lists |
 | `yaml` | that `spec.md` frontmatter does not parse |
@@ -389,7 +425,10 @@ Result (a **compact summary — never a section's text**):
   any write.
 
 A removal whose sections are removed has its seams normalized as keep-pending's
-are, and is written with `write_atomic`, preserving the file's line endings.
+are, and is written only when `plan.md` is unchanged since the apply read it
+(*The write guard* above), preserving the file's line endings. A digest that no
+longer matches is `stale-sections`; a change anywhere else in the file, which
+leaves every listed digest matching, is the `changed-since-read` error.
 
 ### Operational errors
 
@@ -401,6 +440,7 @@ Reported as `error` envelopes; the primitive writes nothing when any fires, exce
 | `missing-spec-file` / `status-field-missing` / `missing-frontmatter` | `spec.md` is absent, opens no frontmatter, or its frontmatter has no `status` |
 | `missing-argument` | `apply` with an empty `remove`; neither `feature` nor `all` |
 | `invalid-argument` | `remove` without `apply`, or naming a design-record section, which prune never removes; both `feature` and `all`; `all` with `apply` |
+| `changed-since-read` | an apply's `plan.md` changed between its read and its write, in a section it does not list as much as in one it does: nothing is written and the other writer's change stands; the host previews again |
 | `yaml` | `analysis.md`'s `decisions:` list does not parse — read as empty, it would propose every section already decided |
 | `git` | a call against a `done` spec cannot read HEAD for the reopen trigger |
 | `invalid-read-size` / `toml` | `[artifacts] read-size-bytes` is not a whole number of bytes, at least 1, or the config does not parse; the message reads ``invalid `[artifacts] read-size-bytes` in <config path>: <value> — …``. Read before any write, so an applying call halts before it removes anything |
@@ -454,7 +494,8 @@ summary above at the top level, and a walk carries only the walk:
   `true` even when it has no such section or no `plan.md`, so a reopen from
   edits made before the run reaches the corpus preview.
 - `skipped` — for `prune-tasks`, each spec without a `tasks.md`
-  (`no-tasks-file`); for `prune-plan`, each spec without a `plan.md` and
+  (`no-tasks-file`), and under `apply` each spec whose `tasks.md` changed
+  after the walk read it (`changed-since-read`; *The write guard*); for `prune-plan`, each spec without a `plan.md` and
   nothing else to report (`no-plan-file`). Any other error stops the walk, as
   it would stop a single-feature call. A `prune-tasks` walk reads a listed
   spec's status before an apply writes its reduction, so a status that will
@@ -549,7 +590,9 @@ Result (never an entry's text):
   "applied": false,
   "stale-entries": [],
   "created": [],
-  "kept": []
+  "kept": [],
+  "written": [],
+  "refused": []
 }
 ```
 
@@ -559,9 +602,10 @@ Result (never an entry's text):
 - `form`, `entries-count`, `lists-file` — `entries`, each with its `hits`, and the search's `outside-project` are inline while the result serialized fits `[artifacts] read-size-bytes` (a result exactly at it fits), and `form` is `inline`. Past it `form` is `file`, `entries` and the search's `outside-project` are absent, and `lists-file` names the file holding them whole, from the project root: a JSON object with the key `entries`, and the key `outside-project` when the search ran, written by the bounding `check-artifact-size` and `prune-tasks` use, under `.ductus/results/prune-project/project-files/`. `entries-count` and the search's `outside-project-count` are inline in both forms. `hits` move with their entry, never apart from it, since each entry is a record whether or not it has hits. Both a preview and an apply bound the result, and an apply has written by the time a list file that cannot be written fails the call.
 - `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason`, as `ductus prune-project --help` states; in the `unavailable` case no entry carries `hits`. It is absent on an apply, which reads no source. A ran search also carries `outside-project`, the tracked files it left unread because each is, or lies under, a symbolic link resolving outside the project (project-relative paths, in search order; not counted in `files-searched`), with `outside-project-count`. Each candidate is checked only when an identifier is searched for, since otherwise nothing is read.
 - `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**, which `ductus prune-project --help` states; its refusal includes `create`. Duplicate digests each claim a distinct entry.
-- `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are.
+- `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are, one created by another writer since the apply looked included.
+- `written` and `refused` — the project files an apply rewrote, and those it refused because each changed after the apply read it (*The write guard*), each in subject order and project-relative. A refused file is left as the other writer made it, its listed removals and replacements unapplied, and the rest of the apply is written. `applied` is `false` when `refused` is non-empty.
 
-An apply removes or replaces the listed entries, then collapses the blank lines at each changed seam to at most one, rewriting nothing else in the file and preserving its line endings. It writes each changed file with `write_atomic`, after re-checking its path with `validate_contained`. Before an apply writes anything, every listed `create` home is checked the same way, and one that is, or lies under, a symbolic link resolving outside the project fails the whole call with `invalid-path`, so a refused create never leaves half an apply on disk. A created home gets the framework template's text, compiled into the primitive as the `--reset` body is and held to `framework/templates/project/{kind}.md` by a unit test. It is written with mode `0644` on Unix, since `write_atomic` leaves a new file at its tempfile's `0600`.
+An apply removes or replaces the listed entries, then collapses the blank lines at each changed seam to at most one, rewriting nothing else in the file and preserving its line endings. It writes each changed file only when it is unchanged since the apply read it (*The write guard*), the read and the write both going through `validate_contained`. Before an apply writes anything, every listed `create` home is checked the same way, and one that is, or lies under, a symbolic link resolving outside the project fails the whole call with `invalid-path`, so a refused create never leaves half an apply on disk. A created home gets the framework template's text, compiled into the primitive as the `--reset` body is and held to `framework/templates/project/{kind}.md` by a unit test. It is written create-only (`write_new_atomic`), at mode `0644` on Unix, since the tempfile it persists is `0600`.
 
 ### Operational errors
 
@@ -570,13 +614,14 @@ An apply removes or replaces the listed entries, then collapses the blank lines 
 | `missing-argument` | `apply` with `remove`, `replace` and `create` all empty |
 | `invalid-argument` | `remove`, `replace` or `create` without `apply`; a listed `path` that is not one of the four subjects |
 | `invalid-path` | an apply lists a `create` home whose path is, or lies under, a symbolic link resolving outside the project; nothing is written |
+| `invalid-path` | a project file became, or now lies under, a symbolic link resolving outside the project between the apply's read and its write; that file is not written, and the call fails |
 | `check-artifact-size`'s invalid-threshold error | `[artifacts] read-size-bytes` is not a positive whole number, or `artifacts` is not a table |
 
 ## Notes
 
 - All paths are repo-relative with `/` separators on every platform.
-- The write uses the shared `write_atomic` (tempfile + rename); a crash
-  mid-write leaves `tasks.md` unchanged, and no backup sidecar is produced
-  (recovery is git history).
+- The write is a tempfile + rename guarded by a compare before persist
+  (*The write guard*); a crash mid-write leaves `tasks.md` unchanged, and no
+  backup sidecar is produced (recovery is git history).
 - `size-before`/`size-after` report both line and byte counts so the command
   can render a "materially smaller" summary without seeing the content.

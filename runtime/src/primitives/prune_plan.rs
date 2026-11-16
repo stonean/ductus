@@ -24,8 +24,8 @@ use crate::primitives::prune_tasks::{one_feature_or_all, read_status, size_of};
 use crate::primitives::read_tasks::adds_unchecked_box;
 use crate::primitives::write_analysis::finding_key_of;
 use crate::primitives::{
-    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, SkipScanner, hex, join_blocks,
-    line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path, write_atomic,
+    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, ReadSnapshot, Result, SkipScanner,
+    hex, join_blocks, line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -147,6 +147,9 @@ fn segment(content: &str) -> Vec<Block> {
 /// - [`PrimitiveError::InvalidReadSize`] / [`PrimitiveError::Toml`] when
 ///   `[artifacts] read-size-bytes` is malformed or the config does not parse,
 ///   before any write.
+/// - [`PrimitiveError::ChangedSinceRead`] when `plan.md` changed between the
+///   apply's read and its write (`BE-TXN-002`): nothing is written and the
+///   other writer's change stands, so the host re-runs the preview.
 /// - [`PrimitiveError::Io`] on filesystem failure.
 ///
 /// Each error writes nothing, except a list file that cannot be written after
@@ -259,6 +262,19 @@ fn summarize(
     repo: &Path,
     root: &str,
 ) -> Result<PrunePlanSummary> {
+    summarize_between(feature, args, repo, root, || {})
+}
+
+/// [`summarize`], calling `before_write` after everything is read and
+/// computed and before the write, which a test replaces to change `plan.md`
+/// in that window.
+fn summarize_between(
+    feature: &str,
+    args: &PrunePlanArgs,
+    repo: &Path,
+    root: &str,
+    before_write: impl FnOnce(),
+) -> Result<PrunePlanSummary> {
     super::validate_feature_argument(repo, root, feature)?;
     let feature_dir = repo.join(root).join(feature);
     if !feature_dir.is_dir() {
@@ -271,17 +287,25 @@ fn summarize(
     let plan_path = feature_dir.join("plan.md");
     let tasks_rel = format!("{root}/{feature}/tasks.md");
 
-    let content = if plan_path.is_file() {
-        Some(read_text(&plan_path)?)
+    // The snapshot is what the write compares against (`BE-TXN-002`).
+    let snapshot = if plan_path.is_file() {
+        Some(ReadSnapshot::read(
+            repo,
+            &format!("{root}/{feature}/plan.md"),
+        )?)
     } else {
         None
     };
-    let blocks = content.as_deref().map(segment).unwrap_or_default();
+    let content = match &snapshot {
+        Some(snapshot) => snapshot.text()?,
+        None => None,
+    };
+    let blocks = content.map(segment).unwrap_or_default();
     let stored = read_decisions(&feature_dir, ANALYSIS_RECORD_FILE)?;
     let (examined, outside) = outside_record(&blocks, &stored);
     let (claimed, stale_sections) = claim(&outside, &args.remove);
 
-    let before = content.as_deref().unwrap_or_default();
+    let before = content.unwrap_or_default();
     let ending = line_ending_of(before);
     let without = |drop: &[usize]| -> String {
         if drop.is_empty() {
@@ -322,8 +346,9 @@ fn summarize(
     } else {
         None
     };
-    if applied {
-        write_atomic(&plan_path, &after)?;
+    before_write();
+    if applied && let Some(snapshot) = &snapshot {
+        snapshot.write_if_unchanged(&after)?;
     }
 
     Ok(PrunePlanSummary {
@@ -664,6 +689,29 @@ mod tests {
         assert_eq!(result.size_after.bytes, written.len());
         // Only a call against a `done` spec computes the trigger.
         assert!(result.reopen_required.is_none());
+    }
+
+    /// A change to a section the apply does not touch, landing after the apply
+    /// read the plan, is kept: the apply is refused, never written over it
+    /// (`BE-TXN-002`). The digests of the listed sections still match, so only
+    /// the compare before the rename sees it.
+    #[test]
+    fn an_apply_refuses_a_plan_changed_after_it_was_read() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(PLAN));
+        let previewed = run(&preview(), tmp.path()).unwrap();
+        let args = apply(&[&previewed.sections.as_ref().unwrap()[0]]);
+        let theirs = PLAN.replace("Rejected X.", "Rejected X, and Y.");
+        let err = summarize_between(FEATURE, &args, tmp.path(), "specs", || {
+            write(&feature_dir(tmp.path()).join("plan.md"), &theirs);
+        })
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::ChangedSinceRead { path }
+                if path == Path::new("specs/041-task-pruning/plan.md")),
+            "{err:?}"
+        );
+        assert_eq!(plan_text(tmp.path()), theirs);
     }
 
     #[test]

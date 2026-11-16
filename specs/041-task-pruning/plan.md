@@ -56,7 +56,8 @@ plus `all: bool` (see *`--all` repeats a one-spec reduction per spec*).
 classification, and gate decision and returns the compact summary (counts,
 per-section classification, size before/after) **without writing and without
 ever returning the file body**. `apply: true` recomputes and writes the
-reduced `tasks.md` via the shared `write_atomic` (tempfile + rename). Keeping
+reduced `tasks.md` by a tempfile + rename guarded against a concurrent writer
+(*An apply refuses a file that changed since it read it*). Keeping
 the body inside the runtime on both passes is the token-reduction contract
 that motivated making the primitive do its own write (resolved
 runtime-eligibility question). The command calls preview → renders summary →
@@ -103,8 +104,18 @@ choices the scenario left open:
   `malformed-tasks` and write nothing.
 
 All other `tasks.md` readers are line scanners that match headings and
-checkboxes, so the block needs no change in them; a test proves `read-tasks`
-and `mark-task` agree with and without it.
+checkboxes, so the block needs no change in them. Read at its source, that is
+`read_tasks.rs`' `parse_tasks`, `unchecked_lines` and `describe_unchecked`
+(behind `read-tasks`, `check-artifacts`, `decisions`, the review gate, the
+review and analysis records, `classify-spec-edit` and `measure-reopenings`),
+`mark_task.rs`, and `check_stuck.rs`' `first_incomplete_subtask_index`, each
+matching ATX headings and checkbox lines through `SkipScanner`; `dashboard`
+reads only whether the file exists, and `validate-frontmatter`'s `artifact_kind`
+has no row for `tasks.md`, so it is never checked as one. The block shifts
+`first_incomplete_subtask_index`'s line index, so a prune that adds one reads to
+`check-stuck` as the file having advanced, which a rewritten file has. A test
+proves `read-tasks` and `mark-task` agree with and without it
+(`the_counter_block_changes_nothing_the_other_readers_see`).
 
 ### A suffixed task number is a task
 
@@ -177,7 +188,8 @@ An apply with nothing listed, a list without an apply, and a listed
 design-record heading are refused before anything is read, the last because
 prune never removes a design-record section. Seams normalize as
 keep-pending's do, through a renderer the two primitives share in `mod.rs`,
-and the write is `write_atomic`. `apply` and `remove` default, as
+and the write is the guarded one (*An apply refuses a file that changed since
+it read it*). `apply` and `remove` default, as
 `prune-tasks`' `apply` does (`PruneTasksArgs.apply`, `#[serde(default)]`), so
 a dispatch with neither argument is always a preview.
 
@@ -261,10 +273,16 @@ heading. Either way a walk never carries a file body or a section's text: a
 `prune-plan` walk a summary only for a spec with something to report, with
 per-section metadata only, so its size grows with the number of specs and of
 sections outside the record, never with file sizes. No client pagination is
-provided, and every list either primitive returns (a single feature's
-`sections`, a walk's `features` and `skipped`) is held to `[artifacts]
-read-size-bytes` through a `lists-file`, as `ductus prune-tasks --help` and
-`ductus prune-plan --help` state (`BE-PAYLOAD-001`).
+provided, and the lists either primitive returns that grow with the corpus (a
+single feature's `sections`, a walk's `features` and `skipped`) are held to
+`[artifacts] read-size-bytes` through a `lists-file`, as `ductus prune-tasks
+--help` and `ductus prune-plan --help` state (`BE-PAYLOAD-001`). Three lists are
+not, each echoing the caller's own input and so bounded by it: `prune-plan`'s
+`stale-sections`, and `prune-project`'s `stale-entries`, `created` and `kept`
+(the `remove`, `replace` and `create` lists the caller sent). `prune-project`'s
+`entries` and the search's `outside-project` move to a `lists-file` as its data
+model states, and its `written` and `refused` name at most the four project
+files.
 `prune-tasks` with `all` and `apply` writes every feature's
 reduction under one confirmation; `prune-plan` with `all` is preview-only and
 refuses `apply`, before it checks the `remove` list, because each plan
@@ -379,8 +397,10 @@ serve `prune-tasks`; `prune-plan` adds no variant, since a missing plan is its
 pairing and a listed design-record section, and for the `feature`/`all`
 exclusivity, `force` with `all`, and `apply` with `all` on `prune-plan`;
 `Yaml` for `spec.md` frontmatter or an `analysis.md` decisions list that does
-not parse; and `Git` for a HEAD the reopen trigger cannot read. A digest
-mismatch is the `stale-sections` domain outcome, not an error. Each error
+not parse; `Git` for a HEAD the reopen trigger cannot read; and
+`ChangedSinceRead { path }` (`changed-since-read`) when an apply's file changed
+between its read and its write. A digest mismatch is the `stale-sections` domain
+outcome, not an error. Each error
 writes nothing to the spec it fires on; an applying `prune-tasks` walk keeps
 the reductions it already wrote to the specs it reached before the error, and
 running the walk again resumes.
@@ -410,6 +430,34 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 `runtime/tests/mcp.rs` holds the manifest set-equal to the registry, and
 `main::tests::every_registry_primitive_has_a_clap_subcommand` pins the CLI.
 
+### An apply refuses a file that changed since it read it
+
+All three applies are read-modify-writes, so each guards the window between its
+read and its rename (`BE-TXN-002`): an `append-task`, `mark-task` or other
+writer landing in it must not be dropped. The guard is the shared compare before
+persist in `runtime/src/primitives/mod.rs` (`ReadSnapshot`), and 022's plan
+states its strategy and rationale (`BE-LOCK-001`), the lock order, timeout and
+hold bound (`BE-LOCK-002`) and the residual. Each apply reads through
+`ReadSnapshot::read`, so what it compares against is what it read, and writes
+through `write_if_unchanged`.
+
+A refusal is the handling path `BE-TXN-004` asks for: report the conflict, and
+the host re-runs the command against the file as it now is.
+
+- **`prune-tasks`, one feature** — the `changed-since-read` error, nothing
+  written. **A walk** reduces every spec before it writes any, then writes each
+  and lists a refused spec in `skipped` with reason `changed-since-read`; the
+  other specs stand written, and its `features` say which.
+- **`prune-plan`** — the `changed-since-read` error. It differs from
+  `stale-sections`, which is a changed *listed section* and a domain outcome
+  inside the result; a change anywhere else in the file leaves every listed
+  digest matching and only the compare sees it.
+- **`prune-project`** — a refused file goes in `refused`, the files rewritten in
+  `written`, and the apply goes on to the rest, so each file's move stands or
+  falls on its own file. `applied` is `false` once any file is refused. A home to
+  `create` is written with `write_new_atomic`, which never replaces a file, so
+  it needs no snapshot: one that appeared since the apply looked is `kept`.
+
 ### `prune-project` — the four project files
 
 `/{project}:prune --project` (scenario `prune-walks-the-project-files`, for 075) reduces `AGENTS.md`, `system.md`, `events.md` and `errors.md`. It is split as the plan walk is: a primitive segments, digests, searches and writes, and the host proposes each entry's home by 075's definitions. The entry grammar, the schema and the errors are in `data-model.md` §`prune-project`.
@@ -417,9 +465,9 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 - **A primitive of its own, not a mode of `prune-plan`.** Its unit is an entry in one of four project-level files, not a design-record section of one feature's plan, and it takes no feature.
 - **Never the text.** A preview returns locators, sizes and digests, as `prune-plan` does. An apply refuses the whole write when any listed entry changed since the preview, because the host judged its moves against the text it read.
 - **The literal search runs in the runtime.** Without it, whether a catalog entry is still true would rest on the operator's memory. It reads each tracked file once, outside the spec-root, and reports hits per identifier. A repository that cannot be opened is `unavailable`, never zero hits.
-- **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs them as the files themselves. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
+- **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs each as the file itself: `framework/bootstrap/ductus.md` §Project-specific shared files maps `framework/templates/project/system.md`, `errors.md` and `events.md` to `specs/system.md`, `errors.md` and `events.md`, and only the spec templates land under `specs/templates/`. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
 - **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
-- **Every open is contained** (BE-INPUT-004; 075's analysis deferred it here). Each open goes through `validate_contained` against the project root: a project file that is, or lies under, a symbolic link leaving the project reads `outside-project` and is neither read nor written; a tracked file the search would read through one is left unread and named in the search's `outside-project`; every `create` home is checked before an apply writes anything and a refused one fails the whole call, so no half an apply is left; a rewrite re-checks its path just before `write_atomic`.
+- **Every open is contained** (BE-INPUT-004; 075's analysis deferred it here). Each open goes through `validate_contained` against the project root: a project file that is, or lies under, a symbolic link leaving the project reads `outside-project` and is neither read nor written; a tracked file the search would read through one is left unread and named in the search's `outside-project`; every `create` home is checked before an apply writes anything and a refused one fails the whole call, so no half an apply is left; a rewrite re-checks its path under the write guard's re-read (*An apply refuses a file that changed since it read it*).
 - **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit to a `done` spec that `classify-spec-edit` reads as reopening is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
 
 ### Title and slug
@@ -441,7 +489,9 @@ buys nothing here.
 | `runtime/src/primitives/append_task.rs` | Edit | Assigns the larger of the counter and the highest present plus one, and advances a counter the file carries |
 | `scripts/mutation/pruned-task-number.py` | Create | Mutations proving the counter's tests |
 | `runtime/src/primitives/prune_plan.rs` | Create | Segmentation, classification, finding key, digest-guarded removal, reopen trigger |
-| `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses; `TaskNumber` and the suffix grammar |
+| `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses; `TaskNumber` and the suffix grammar; `ReadSnapshot`, the compare-before-persist guard the three applies write through, and `PrimitiveError::ChangedSinceRead` |
+| `runtime/src/session.rs`, `runtime/src/schema/paths.rs` | Edit | `lock_compare_and_set`, the lock the guard holds across its re-read and rename, and its path |
+| `scripts/mutation/compare-and-set-041.py` | Create | Mutations proving the guard's tests and each apply's refusal test |
 | `runtime/src/primitives/mark_task.rs` | Edit | `heading_task_number` reads the number through the shared grammar |
 | `runtime/src/primitives/read_tasks.rs` | Edit | Its tests list a suffixed task |
 | `runtime/src/primitives/check_artifacts.rs` | Edit | Numbering compared by `TaskNumber` |

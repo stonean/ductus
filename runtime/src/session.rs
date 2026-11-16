@@ -434,6 +434,34 @@ pub fn lock_append_task(repo: &Path) -> Result<SessionLock> {
     )
 }
 
+/// Take the exclusive advisory lock a guarded rewrite holds across its re-read
+/// of a file and the rename that replaces it (`BE-TXN-002`,
+/// [`crate::primitives::ReadSnapshot::write_if_unchanged`]), on
+/// `.ductus/locks/compare-and-set.lock`: one lock for the project's every
+/// guarded file, since a hold lasts one re-read and one rename. When a caller
+/// holds [`lock_append_task`] too it took that one first. The directory is
+/// created and self-ignored, and the wait, its bound and its refusal of a link
+/// leaving the project are [`lock_append_task`]'s.
+///
+/// # Errors
+///
+/// As [`lock`], for `.ductus/locks`.
+pub fn lock_compare_and_set(repo: &Path) -> Result<SessionLock> {
+    lock_compare_and_set_within(repo, SESSION_LOCK_TIMEOUT)
+}
+
+/// [`lock_compare_and_set`], waiting at most `timeout`, which a test shortens
+/// to meet a holder without waiting out [`SESSION_LOCK_TIMEOUT`].
+pub(crate) fn lock_compare_and_set_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
+    lock_file_waiting(
+        repo,
+        &repo.join(paths::LOCKS_DIR),
+        &repo.join(paths::COMPARE_AND_SET_LOCK),
+        timeout,
+        std::thread::sleep,
+    )
+}
+
 /// [`lock`], waiting at most `timeout`.
 fn lock_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
     lock_waiting(repo, timeout, std::thread::sleep)
@@ -457,7 +485,7 @@ fn lock_waiting(
 
 /// Take the exclusive advisory lock on `path`, in the self-ignoring directory
 /// `dir`, waiting at most `timeout` and pausing through `pause`. The one loop
-/// behind [`lock`] and [`lock_append_task`].
+/// behind [`lock`], [`lock_append_task`] and [`lock_compare_and_set`].
 fn lock_file_waiting(
     repo: &Path,
     dir: &Path,

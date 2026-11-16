@@ -10,6 +10,30 @@ its version and date.
 
 ### Added
 
+- **BREAKING: a prune apply writes a file only when it is unchanged since it read it (spec 041 task 27, from 041's analysis; the owner's BE-TXN-002 class decision, 2026-11-16).**
+  `prune-tasks`, `prune-plan` and `prune-project` each read a file, compute and
+  renamed the result over it with no guard, so an `append-task`, `mark-task` or
+  other writer landing between the read and the rename was dropped. Each now
+  reads through the new shared guard, `ReadSnapshot` in
+  `runtime/src/primitives/mod.rs`, which keeps what it read (or that the file
+  was absent) and, on write, takes one project-wide lock
+  (`.ductus/locks/compare-and-set.lock`, taken after `append-task`'s when a
+  caller holds both, waiting at most `SESSION_LOCK_TIMEOUT`), reads the file
+  again through the same containment check and renames only when the two reads
+  match; the other writer's change stays. A refusal is the new operational
+  error `changed-since-read` naming the path. A single-feature `prune-tasks` or
+  a `prune-plan` apply fails with it; an `all` `prune-tasks` apply writes every
+  other spec and lists the refused one in `skipped` with the new reason
+  `changed-since-read`; `prune-project` goes on past a refused file and reports
+  `written` and `refused` (two new result fields), with `applied` `false` once
+  any is refused. A home it creates is written create-only, so one that
+  appeared since the apply looked is `kept`. A writer outside the runtime takes
+  no lock, and one landing between the re-read and the rename is still
+  replaced. Breaking under `BE-COMPAT-001`: a new value of `skipped`'s
+  response enum, and a new error where an apply used to write. The helper is
+  reused by the other primitives that read a project file and replace it
+  (spec 022 task 38, 066 task 24, 067 task 36, 051 task 37, 057 task 27).
+
 - **BREAKING: the pre-`done` gate reads an affected spec only through paths contained in the project (spec 066 task 23, from 067's review; `BE-INPUT-004`).**
   `check-review-gate` contains each affected spec's `spec.md`,
   `scenarios/` directory and scenarios before it probes, lists or opens them:

@@ -102,8 +102,8 @@ MUTATIONS = [
     (
         'M13 a create overwrites a home that is already there',
         'src/primitives/prune_project.rs',
-        '            if path.exists() {',
-        '            if false && path.exists() {',
+        '    if !write_new_atomic(path, body)? {\n',
+        '    if !crate::primitives::write_atomic(path, body).map(|()| true)? {\n',
         'prune_project::tests::an_apply_creates_a_missing_home_and_keeps_a_present_one',
     ),
     (
