@@ -27,6 +27,10 @@ job that states none and not GitHub's. A positive number, a fraction included,
 is accepted; anything else exits 2. When the bound passes, the whole group is
 killed and the step is recorded FAIL as timed out.
 
+A step's working directory is resolved, symbolic links followed, and must lie
+inside the repository root, compared by whole path components; one outside it
+exits 2 before any step runs, since a workflow's text names it (`BE-INPUT-004`).
+
 Each workflow's count of `run:` steps found, run and skipped is printed. The
 exit status is 1 when any step FAILs, and also when a workflow yields no
 `run:` step, so a parse that found nothing never reads as a pass; 2 for a
@@ -216,6 +220,16 @@ def timeout_minutes(raw):
     return minutes if math.isfinite(minutes) and minutes > 0 else None
 
 
+def contained(named):
+    """The directory `named` resolves to from the repository root, symbolic
+    links followed, or None when that lies outside the root. The comparison is
+    by whole path components, so a sibling sharing the root's name as a prefix
+    is outside it."""
+    root = os.path.realpath(ROOT)
+    resolved = os.path.realpath(ROOT / named)
+    return Path(resolved) if os.path.commonpath([root, resolved]) == root else None
+
+
 def run_bounded(script, cwd, env, log, minutes):
     """Run `script` under bash in its own process group, output to `log`.
     Returns its exit status, or None when `minutes` passed and the whole group
@@ -274,6 +288,14 @@ def main(argv):
                     file=sys.stderr,
                 )
                 return 2
+            named = step["workdir"] or step["job_workdir"] or "."
+            step["cwd"] = contained(named)
+            if step["cwd"] is None:
+                print(
+                    f"{workflow}: working-directory {named!r} resolves outside the repository",
+                    file=sys.stderr,
+                )
+                return 2
     totals = {"PASS": 0, "FAIL": 0, "SKIP": 0}
     empty = []
     counts = []
@@ -298,7 +320,7 @@ def main(argv):
                 skipped += 1
                 totals["SKIP"] += 1
                 continue
-            workdir = ROOT / (step["workdir"] or step["job_workdir"] or ".")
+            workdir = step["cwd"]
             log = log_dir / f"{base}-{n + 1:02d}.log"
             minutes = timeout_minutes(step["timeout"])
             rc = run_bounded(step["run"], workdir, {**os.environ, **step["env"]}, log, minutes)

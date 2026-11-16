@@ -20,6 +20,9 @@
 #      winning), and an expression in any of them reads SKIP
 #   I. a step is bound by its own timeout-minutes, else its job's, the whole
 #      process group is killed, and a malformed bound exits 2
+#   K. a working directory outside the repository exits 2 before any step
+#      runs: a relative escape, a job's absolute path, and a sibling whose
+#      name has the root's as a prefix
 #
 # Usage: scripts/tests/test-run-workflow-steps.sh
 
@@ -309,6 +312,58 @@ if [ "$rc" -eq 2 ] && has j "badtimeout.yml" && has j "'soon'" && [ ! -e "$WORK/
   pass "I. a malformed timeout-minutes exits 2, naming the workflow and value"
 else
   fail "I. malformed timeout (exit $rc): $(cat "$WORK/j.out")"
+fi
+
+# K
+cat > "$WORK/escape.yml" <<EOF
+on: push
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: A step inside the repository
+        run: touch "$WORK/escape-inside-ran"
+      - name: A step above the repository
+        working-directory: ..
+        run: touch "$WORK/escape-ran"
+EOF
+run k1 "$WORK/escape.yml"
+k1=$rc
+cat > "$WORK/escape-abs.yml" <<EOF
+on: push
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: $WORK
+    steps:
+      - name: A step in a job outside the repository
+        run: touch "$WORK/escape-abs-ran"
+EOF
+run k2 "$WORK/escape-abs.yml"
+k2=$rc
+sibling="../$(basename "$REPO_ROOT")2"
+cat > "$WORK/escape-sibling.yml" <<EOF
+on: push
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: A step in a sibling sharing the root's name
+        working-directory: $sibling
+        run: touch "$WORK/escape-sibling-ran"
+EOF
+run k3 "$WORK/escape-sibling.yml"
+k3=$rc
+if [ "$k1" -eq 2 ] && has k1 "working-directory '..' resolves outside the repository" \
+  && [ "$k2" -eq 2 ] && has k2 "resolves outside the repository" \
+  && [ "$k3" -eq 2 ] && has k3 "working-directory '$sibling' resolves outside the repository" \
+  && [ ! -e "$WORK/escape-inside-ran" ] && [ ! -e "$WORK/escape-ran" ] \
+  && [ ! -e "$WORK/escape-abs-ran" ] && [ ! -e "$WORK/escape-sibling-ran" ]; then
+  pass "K. a working directory outside the repository exits 2 before any step runs"
+else
+  fail "K. containment (exits $k1, $k2, $k3): $(cat "$WORK/k1.out" "$WORK/k2.out" "$WORK/k3.out")"
 fi
 
 if [ "$failures" -gt 0 ]; then
