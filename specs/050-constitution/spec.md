@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 cross-spec-impact: [036-quality-cross-rules, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
 next-criterion: 24
