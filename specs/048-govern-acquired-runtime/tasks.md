@@ -6,8 +6,6 @@ next-task: 33
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-Phase 1 is independently safe and lands first so later work is written against a release surface that already behaves as it assumes. Phase 2 builds acquisition. Phase 3 flips the requirement — its tasks land as one change, because a constitution declaring the runtime mandatory while commands still describe fallbacks is a window where the canonical source and the commands disagree.
-
 ## Phase A — Follow-on scenarios
 
 ### 28. Record the 2026-10-29 review, analyze, and pass the completion gate

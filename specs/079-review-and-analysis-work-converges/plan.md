@@ -97,6 +97,10 @@ The bytes come from the sentences these replace, the two-paths text, and sentenc
 
 AC10, AC11 and AC16 landed with their decisions. The window and `--since` entries that AC5 and AC6 retire are removed in the task that lands them, and the fix-round entries are re-read then.
 
+### The workflow-step runner
+
+`scripts/run-workflow-steps.py` is the declared command for running a workflow's steps locally (task 38). It runs each `run:` step from the repository root, or the working directory its job or step names, under `bash --noprofile --norc -eo pipefail`, and reads PASS or FAIL from the step's own exit status, going on past a failure. A step it cannot run as CI does reads SKIP with the reason: one carrying an `if:`, or whose script or `env:` holds a `${{ }}` expression, which only GitHub expands. The workflow's, the job's and the step's literal `env:` values are applied, the later winning, so a step whose environment carries a secret, such as `runtime-release.yml`'s `cargo publish`, is a SKIP and never runs with the operator's credentials. Each step runs under a bound (`BE-TIMEOUT-001`): its own `timeout-minutes`, else its job's, else `DEFAULT_TIMEOUT_MINUTES` (60), the runner's own; past it the step's process group is killed and the step reads FAIL. A workflow yielding no step fails the run, so a parse that found nothing never reads as a pass.
+
 ### The change is breaking
 
 `BE-COMPAT-001` asks a plan to classify a change to a primitive's interface or result. This spec's narrowings and removals are **breaking**, and what it only adds is additive:
@@ -145,7 +149,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/tests/fix_rounds.rs` | Modify | Another spec's commit between rounds |
 | `runtime/tests/review_command.rs` | Modify | Only a gating deferral reaches `gate-confirm` |
 | `runtime/tests/walker.rs` | Modify | A bounded-result fixture's commit names its spec |
-| `runtime/tests/mcp.rs` | Modify | A description equals its subcommand's `about` |
+| `runtime/tests/mcp.rs` | Modify | A description equals its subcommand's `about`, and holds the detail specs point at |
 | `runtime/CHANGELOG.md` | Modify | Each change |
 | `scripts/audit/marker-list-parity.sh` | Modify | A comment names the reference |
 | `scripts/mutation/scope-attribution.py` | Create | Mutation list for attribution, window and scope |
@@ -181,6 +185,9 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `docs/slash-commands.md` | Modify | Dispositions, reopen |
 | `README.md` | Modify | Confirmation claim |
 | `AGENTS.md` | Modify | Retired window and fix-round entries |
+| `scripts/run-workflow-steps.py` | Create | Runs each `run:` step of the workflows given and reads its own exit status (task 38) |
+| `scripts/tests/test-run-workflow-steps.sh` | Create | Each state the runner reports |
+| `.github/workflows/framework-checks.yml` | Modify | Step (v) runs that test |
 | `specs/020-code-review/tasks.md` | Modify | Task 16 closes through this spec |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | The largest set of corrected claims |
 | `specs/058-findings-route-at-discovery/spec.md` | Modify | Dispositions, with a back-link |

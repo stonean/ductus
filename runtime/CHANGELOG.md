@@ -636,7 +636,8 @@ its version and date.
   `framework/bootstrap/ductus.md` decides what is shipped, and where it is
   absent nothing is judged cross-document; how a document and a heading are
   named; and that prose naming a document without its file stays reported, so
-  an empty `unresolved` with both counts at zero means every `§` resolved.
+  an empty `unresolved` with both counts at zero means every judged `§`
+  reference resolved.
   Description only: no result changes.
 - **`check-artifacts`' description states its families' behavior rules (spec
   079, task 36).** `data-model.md` is never required; a spec with no `tasks.md`
@@ -646,7 +647,8 @@ its version and date.
   ones; the body path family's `never-existed` and `not-a-live-claim` skips;
   how a plan references its spec and lists a file; and that the label,
   integrity and plan families run at every status and add nothing to
-  `skipped`. Description only: no result changes.
+  `skipped` but a `plan.md` that exists and could not be read. Description
+  only: no result changes.
 - **`read-re-read` says a demoted finding stays in `findings` as a NOTE, and
   `write-review` says a fix round's `excluded` is `brief-re-read`'s (spec 079,
   task 36).** Descriptions only; no result changes.
@@ -654,8 +656,9 @@ its version and date.
   workflow's `dtolnay/rust-toolchain` input moved together; MSRV stays 1.89.
 - **Compiled descriptions state what the specs that point at them used to carry
   (spec 079, task 36).** `write-session`'s peer `last-used` is the record's
-  used-at verbatim; `process-waivers` retains a non-firing waiver on a file a
-  plan names, and, under an unreadable scope, on a deleted file; `rewrite-spec-links`
+  used-at verbatim; `process-waivers` counts a file a plan entry in the scope
+  names as read, and, under an unreadable scope, retains a non-firing waiver on a
+  deleted file; `rewrite-spec-links`
   lists no scenario tail in `kept-tails` once the retiring directory is gone;
   `resolve-anchor` ranks `anchor-target-unreadable` before
   `anchor-target-unjudgeable`, for qualified references; `brief-re-read`,
@@ -716,9 +719,9 @@ its version and date.
   notice rules, `retarget-sessions` its arguments, `dashboard` each spec's
   scenario question and fold fields, `append-task` what its dedup keys on,
   `write-review` that a run's own earlier write never refuses its empty scope,
-  `rewrite-spec-links` what `examined` leaves out, `start-fix-rounds`,
-  `brief-re-read` and `check-prescriptions` the brief's contents, the inline
-  counts and the missing-`round.toml` case, `check-artifact-size` what
+  `rewrite-spec-links` what `examined` leaves out, `start-fix-rounds` what
+  `files` counts, `brief-re-read` the brief's contents and the inline counts,
+  `check-prescriptions` the missing-`round.toml` case, `check-artifact-size` what
   `--staged` names on stderr, `read-deprecation-labels` its section-run rule and
   `classify-spec-edit` the absent `spec.md`. Text only.
 
@@ -1296,6 +1299,21 @@ its version and date.
 
 ### Fixed
 
+- **`measure-reopenings` never takes a keyless decision for a carried one, and
+  says how many records its carry check could not read (spec 079's review).** A
+  person's decision naming no key matched any keyless entry with its outcome in
+  another spec's record, so it was dropped as carried. Another spec's record the
+  check cannot read still holds no decision, so a decision it may have held counts
+  as new, and each run's `run-decisions` entry now names how many such records it
+  met as `records-unread`, absent at zero (`QUAL-CLAIM-001`).
+- **Six descriptions say what the code does (spec 079's review).**
+  `process-waivers` counts a plan-named file as read only through a plan entry
+  the scope holds; `derive-dependencies` and `derive-references` report a spec
+  behind a link leaving the project as unparseable; `resolve-anchor`'s empty
+  result covers the references its scan judges; `read-deprecation-labels` calls
+  a digit-led target that is not `MAJOR.MINOR.PATCH` malformed; `write-review`
+  names an empty `diff-base` among the empty-scope routes; and `write-session`
+  says `own-path` is absent on a host-config write. Text only.
 - **`prune-tasks` and `append-task` no longer write a counter their own reader
   refuses, and a `#` comment in `tasks.md`'s frontmatter is no heading (spec
   041's review).** A task numbered `4294967295` made `prune-tasks --apply`

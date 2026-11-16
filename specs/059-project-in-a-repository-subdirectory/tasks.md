@@ -4,7 +4,7 @@ next-task: 23
 
 # 059 — Project in a repository subdirectory Tasks
 
-Tasks derived from the [plan](plan.md). Complete in order. Tasks 1–9 and 16 are runtime work, verified through the built binary rather than the MCP tools, which answer with the binary the session started on. Every new test is shown to fail with its conversion removed before it is trusted.
+Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 22. Analyze the corrections spec 079 made
 

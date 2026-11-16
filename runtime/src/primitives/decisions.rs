@@ -838,7 +838,7 @@ pub(crate) fn merge(
 /// before spec 076 carries becomes its current one, so a re-render never
 /// writes `routed` or `discarded`; anything else, a malformed value included,
 /// is kept as it was written.
-fn rendered_outcome(outcome: Option<&str>) -> Option<&str> {
+pub(crate) fn rendered_outcome(outcome: Option<&str>) -> Option<&str> {
     match outcome.map(str::trim) {
         Some("routed") => Some("deferred"),
         Some("discarded") => Some("waived"),

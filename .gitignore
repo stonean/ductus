@@ -38,6 +38,8 @@
 # than relying on a contributor's global ignore, which not everyone has.
 node_modules/
 
-# Python bytecode the mutation harness (scripts/mutation/) leaves when its
-# modules are imported. Per-machine build output.
-scripts/mutation/__pycache__/
+# Python bytecode left wherever a script's module is imported: the mutation
+# harness (scripts/mutation/), or an agent loading scripts/run-workflow-steps.py.
+# Per-machine build output, which would otherwise count as uncommitted work in
+# every open spec's review scope.
+__pycache__/

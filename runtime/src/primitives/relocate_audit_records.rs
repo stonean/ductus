@@ -34,8 +34,8 @@
 //! and each disagreeing key is **reported**: 031 and 041 are exactly why a
 //! migration must not resolve that difference quietly.
 //!
-//! `analysis.md` has no such case — it never existed before this — so its
-//! half is a plain write.
+//! `analysis.md` almost never exists before this, so its half is nearly always a
+//! plain write; one that exists is merged the same way, by the same `render_artifact`.
 //!
 //! [§runtime-boundary]: https://github.com/stonean/ductus/blob/main/framework/constitution.md#runtime-boundary
 

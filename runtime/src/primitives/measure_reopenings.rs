@@ -25,7 +25,7 @@ use git2::{Commit, ErrorCode, ObjectType, Oid, Repository, Sort, Tree};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-use crate::primitives::decisions::{RULE_DECIDER, RawDecision, same_key};
+use crate::primitives::decisions::{RULE_DECIDER, RawDecision, rendered_outcome, same_key};
 use crate::primitives::read_tasks::unchecked_lines;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, ProjectRepository, REVIEW_RECORD_FILE, Result, flatten_line,
@@ -308,6 +308,8 @@ struct Run {
     decisions_by_person: usize,
     /// The keys and outcomes of those decisions, which the carry check reads.
     person_decisions: Vec<(String, String)>,
+    /// The other specs' records the carry check could not read for this run.
+    records_unread: usize,
     /// The oldest commit the walk has met that wrote this run, set as it observes.
     first_write: Option<Oid>,
 }
@@ -318,7 +320,17 @@ fn run_decisions(record: DecisionRecord, runs: &[Run]) -> impl Iterator<Item = R
         record,
         last_run: run.stamp.clone(),
         decisions_by_person: run.decisions_by_person,
+        records_unread: run.records_unread,
     })
+}
+
+/// What one feature directory's records hold for the carry check.
+#[derive(Default)]
+struct Held {
+    /// The key and outcome of each decision the records store.
+    decisions: Vec<(String, String)>,
+    /// The records present that could not be read, which hold no decision here.
+    unread: usize,
 }
 
 /// A record as a tree holds it.
@@ -397,7 +409,7 @@ impl StoredDecisions {
     }
 }
 
-/// An entry's key, `""` for one naming none, which no other record's key equals.
+/// An entry's key, `""` for one naming none, which the carry check never matches.
 fn stored_key(decision: &RawDecision) -> String {
     decision.key.clone().unwrap_or_default()
 }
@@ -405,11 +417,10 @@ fn stored_key(decision: &RawDecision) -> String {
 /// An entry's outcome under the current names: a record written before spec 076 spells
 /// them `routed` and `discarded`.
 fn outcome_of(decision: &RawDecision) -> String {
-    match decision.outcome.as_deref().map(str::trim) {
-        Some("routed") => "deferred".to_string(),
-        Some("discarded") => "waived".to_string(),
-        other => other.unwrap_or_default().to_string(),
-    }
+    rendered_outcome(decision.outcome.as_deref())
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_string()
 }
 
 /// Parse a record's bytes, with `fields` reading its `last-run` and whether it left
@@ -441,6 +452,7 @@ fn record_state<T: DeserializeOwned>(
         gating,
         decisions_by_person,
         person_decisions,
+        records_unread: 0,
         first_write: None,
     })
 }
@@ -470,7 +482,7 @@ struct History<'a> {
     statuses: HashMap<Oid, Option<String>>,
     reviews: HashMap<Oid, RecordState>,
     analyses: HashMap<Oid, RecordState>,
-    held: HashMap<Oid, Rc<Vec<(String, String)>>>,
+    held: HashMap<Oid, Rc<Held>>,
 }
 
 impl<'a> History<'a> {
@@ -488,30 +500,33 @@ impl<'a> History<'a> {
 
     /// The key and outcome of every decision either record of a feature directory
     /// stores, whoever made it, read once per directory version. A record that does not
-    /// parse holds none, so a decision it might have held counts as new.
-    fn decisions_held(&mut self, directory: Oid) -> Result<Rc<Vec<(String, String)>>> {
+    /// parse holds none, so a decision it might have held counts as new, and it is
+    /// counted unread, so the result says the check did not reach it (`QUAL-CLAIM-001`).
+    fn decisions_held(&mut self, directory: Oid) -> Result<Rc<Held>> {
         if let Some(cached) = self.held.get(&directory) {
             return Ok(Rc::clone(cached));
         }
-        let mut held = Vec::new();
+        let mut held = Held::default();
         for name in [REVIEW_RECORD_FILE, ANALYSIS_RECORD_FILE] {
             let Some(bytes) = self.file_in(directory, name)? else {
                 continue;
             };
-            let Ok(text) = std::str::from_utf8(&bytes) else {
+            let stored = std::str::from_utf8(&bytes)
+                .ok()
+                .and_then(|text| split_frontmatter(text, Path::new(name)).ok())
+                .and_then(|(frontmatter, _)| {
+                    serde_norway::from_str::<StoredDecisions>(frontmatter).ok()
+                });
+            let Some(stored) = stored else {
+                held.unread += 1;
                 continue;
             };
-            let Ok((frontmatter, _)) = split_frontmatter(text, Path::new(name)) else {
-                continue;
-            };
-            if let Ok(stored) = serde_norway::from_str::<StoredDecisions>(frontmatter) {
-                held.extend(
-                    stored
-                        .decisions
-                        .iter()
-                        .map(|decision| (stored_key(decision), outcome_of(decision))),
-                );
-            }
+            held.decisions.extend(
+                stored
+                    .decisions
+                    .iter()
+                    .map(|decision| (stored_key(decision), outcome_of(decision))),
+            );
         }
         let held = Rc::new(held);
         self.held.insert(directory, Rc::clone(&held));
@@ -722,19 +737,26 @@ impl OpenPass {
                 continue;
             };
             let mut held = Vec::new();
+            let mut unread = 0;
             for parent in history.repository.find_commit(first)?.parents() {
                 for (name, directory) in history.directories_of(&parent)?.iter() {
                     if name != feature {
-                        held.extend(history.decisions_held(*directory)?.iter().cloned());
+                        let other = history.decisions_held(*directory)?;
+                        held.extend(other.decisions.iter().cloned());
+                        unread += other.unread;
                     }
                 }
             }
+            // A keyless entry names no decision, so no other record can have held it.
             let carried = run
                 .person_decisions
                 .iter()
-                .filter(|(key, outcome)| held.iter().any(|(k, o)| same_key(k, key) && o == outcome))
+                .filter(|(key, outcome)| {
+                    !key.is_empty() && held.iter().any(|(k, o)| same_key(k, key) && o == outcome)
+                })
                 .count();
             run.decisions_by_person -= carried;
+            run.records_unread = unread;
         }
         Ok(())
     }
@@ -1073,11 +1095,13 @@ mod tests {
                         record: DecisionRecord::Review,
                         last_run: "2026-01-01T00:00:00Z".to_string(),
                         decisions_by_person: 0,
+                        records_unread: 0,
                     },
                     RunDecisions {
                         record: DecisionRecord::Analysis,
                         last_run: "2026-01-01T00:00:01Z".to_string(),
                         decisions_by_person: 0,
+                        records_unread: 0,
                     },
                 ],
             }
@@ -1405,11 +1429,13 @@ mod tests {
                     record: DecisionRecord::Review,
                     last_run: when.to_string(),
                     decisions_by_person: 1,
+                    records_unread: 0,
                 },
                 RunDecisions {
                     record: DecisionRecord::Analysis,
                     last_run: analysis_when.to_string(),
                     decisions_by_person: 1,
+                    records_unread: 0,
                 },
             ]
         );
@@ -1462,7 +1488,7 @@ mod tests {
 
     /// A key another spec's record holds, decided again with another
     /// outcome, is a new decision: the carrying run counts it as its own
-    /// (spec 079 task 35's limit, the Resolved Question on what counts).
+    /// (spec 079, AC17 and the Resolved Question on what counts).
     #[test]
     fn a_carried_key_decided_again_with_another_outcome_counts_as_new() {
         let fixture = Fixture::new();
@@ -1502,6 +1528,87 @@ mod tests {
             .map(|r| (r.feature.as_str(), r.decisions_by_person))
             .collect();
         assert_eq!(by_person, [(FEATURE, 1), ("013-b", 1)], "{measurement:?}");
+    }
+
+    /// A decision that names no key names no decision another record could hold, so a
+    /// person's keyless decision counts in its own run even when another spec's record
+    /// holds a keyless entry with the same outcome.
+    #[test]
+    fn a_keyless_decision_is_never_carried() {
+        let fixture = Fixture::new();
+        let keyless = |at: &str| {
+            format!(
+                "decisions:\n  - outcome: waived\n    reason: r\n    decided-at: {at}\n    decided-by: owner@example.com\n"
+            )
+        };
+        let (first, second) = ("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z");
+        let other = |file: &str, body: &str| {
+            write(&fixture.root.join("specs").join("013-b").join(file), body);
+            commit_all(&fixture.repository, "work(013): step");
+        };
+        let flip = |status: &str| other("spec.md", &spec(status).replace("012", "013"));
+        flip("in-progress");
+        other(
+            "review.md",
+            &review(first, &keyless(first)).replace(FEATURE, "013-b"),
+        );
+        flip("done");
+
+        fixture.status("in-progress");
+        fixture.commit("review.md", &review(second, &keyless(second)));
+        fixture.status("done");
+
+        let measurement = fixture.measure();
+        let by_person: Vec<(&str, usize)> = measurement
+            .reopenings
+            .iter()
+            .map(|r| (r.feature.as_str(), r.decisions_by_person))
+            .collect();
+        assert_eq!(by_person, [(FEATURE, 1), ("013-b", 1)], "{measurement:?}");
+    }
+
+    /// Another spec's record the carry check cannot read holds no decision, so a decision
+    /// it may have held counts as new, and the run says how many such records it met
+    /// (`QUAL-CLAIM-001`); a run whose check read every record says nothing.
+    #[test]
+    fn a_record_the_carry_check_cannot_read_is_counted_unread() {
+        let fixture = Fixture::new();
+        let decision = |key: &str, at: &str| {
+            format!(
+                "decisions:\n  - key: {key}\n    outcome: waived\n    reason: r\n    decided-at: {at}\n    decided-by: owner@example.com\n"
+            )
+        };
+        write(
+            &fixture.root.join("specs/013-b/review.md"),
+            "---\nspec: 013-b\ndecisions: [\n---\n",
+        );
+        commit_all(&fixture.repository, "work(013): an unreadable record");
+
+        fixture.status("in-progress");
+        let when = "2026-01-02T00:00:00Z";
+        fixture.commit("review.md", &review(when, &decision("shared", when)));
+        fixture.status("done");
+
+        let reopening = fixture.only_reopening();
+        assert_eq!(reopening.decisions_by_person, 1);
+        assert_eq!(reopening.run_decisions[0].records_unread, 1);
+        let rendered = serde_json::to_value(&reopening.run_decisions[0]).unwrap();
+        assert_eq!(rendered["records-unread"], 1);
+
+        write(
+            &fixture.root.join("specs/013-b/review.md"),
+            "---\nspec: 013-b\n---\n",
+        );
+        commit_all(&fixture.repository, "work(013): the record mended");
+        fixture.status("in-progress");
+        let later = "2026-01-03T00:00:00Z";
+        fixture.commit("review.md", &review(later, &decision("again", later)));
+        fixture.status("done");
+        let measurement = fixture.measure();
+        let last = measurement.reopenings.last().unwrap();
+        assert_eq!(last.run_decisions[0].records_unread, 0, "{measurement:?}");
+        let rendered = serde_json::to_value(&last.run_decisions[0]).unwrap();
+        assert!(rendered.get("records-unread").is_none(), "{rendered}");
     }
 
     #[test]

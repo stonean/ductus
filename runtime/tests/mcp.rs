@@ -593,7 +593,7 @@ fn descriptions_hold_the_resolve_anchor_details_067_points_at() {
         ),
         (
             descriptions::RESOLVE_ANCHOR,
-            "means every `§` in the file resolved",
+            "means every `§` reference the scan judges resolved",
         ),
     ];
     let missing: Vec<_> = held

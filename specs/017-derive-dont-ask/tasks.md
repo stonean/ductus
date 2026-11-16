@@ -6,8 +6,6 @@ next-task: 47
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-The work is grouped into seven phases. Each phase ends with a natural commit boundary. Tasks within a phase can usually be done in one session; cross-phase dependencies are noted at the phase level.
-
 ## Phase A — Follow-on scenarios
 
 ### 46. The hook stops a commit whose markdown `--fix` cannot repair (owner decision, 2026-11-13)

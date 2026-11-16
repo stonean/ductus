@@ -15,6 +15,11 @@
 #   E. a step whose script holds a `${{ }}` expression reads SKIP and is not run
 #   F. a step runs from its job's `working-directory`, and a step's own wins
 #   G. a workflow file that cannot be read exits 2
+#   B+. the run goes on past a FAIL, and a step runs under -e and pipefail
+#   H. env: reaches a step from the workflow, job and step levels (later
+#      winning), and an expression in any of them reads SKIP
+#   I. a step is bound by its own timeout-minutes, else its job's, the whole
+#      process group is killed, and a malformed bound exits 2
 #
 # Usage: scripts/tests/test-run-workflow-steps.sh
 
@@ -65,6 +70,14 @@ jobs:
         run: |
           echo "the failure's own output"
           exit 3
+      - name: A step after the failure
+        run: true
+      - name: A multi-line step whose first command fails
+        run: |
+          false
+          true
+      - name: A pipeline whose first command fails
+        run: false | true
 EOF
 
 cat > "$WORK/gated.yml" <<EOF
@@ -134,6 +147,9 @@ run b "$WORK/failing.yml"
 log="$WORK/logs-b/failing.yml-02.log"
 if [ "$rc" -eq 1 ] && has b "PASS failing.yml :: A step that passes" \
   && has b "FAIL failing.yml :: A step that fails — exit 3" \
+  && has b "PASS failing.yml :: A step after the failure" \
+  && has b "FAIL failing.yml :: A multi-line step whose first command fails" \
+  && has b "FAIL failing.yml :: A pipeline whose first command fails" \
   && grep -qF "the failure's own output" "$log" 2>/dev/null; then
   pass "B. a failing step reads FAIL from its own status, and the run exits 1"
 else
@@ -182,6 +198,117 @@ if [ "$rc" -eq 2 ] && has g "cannot read"; then
   pass "G. an unreadable workflow exits 2"
 else
   fail "G. unreadable workflow (exit $rc): $(cat "$WORK/g.out")"
+fi
+
+# H
+cat > "$WORK/env.yml" <<EOF
+on: push
+env:
+  WF_VAL: from-workflow
+  OVERRIDDEN: workflow
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      JOB_VAL: from-job
+      OVERRIDDEN: job
+    steps:
+      - name: Literal values at every level
+        env:
+          STEP_VAL: "from-step"
+        run: |
+          printf '%s|%s|%s|%s' "\$WF_VAL" "\$JOB_VAL" "\$STEP_VAL" "\$OVERRIDDEN" > "$WORK/env-got"
+      - name: Step expression
+        env:
+          SECRET: \${{ secrets.TOKEN }}
+        run: touch "$WORK/env-step-expr-ran"
+      - name: Ungated step
+        run: true
+  second:
+    runs-on: ubuntu-latest
+    env:
+      JOB_SECRET: \${{ secrets.TOKEN }}
+    steps:
+      - name: Job expression
+        run: touch "$WORK/env-job-expr-ran"
+EOF
+run h "$WORK/env.yml"
+if [ "$rc" -eq 0 ] && [ "$(cat "$WORK/env-got" 2>/dev/null)" = "from-workflow|from-job|from-step|job" ] \
+  && has h "SKIP env.yml :: Step expression — its env: holds a \${{ }} expression" \
+  && has h "SKIP env.yml :: Job expression — its env: holds a \${{ }} expression" \
+  && [ ! -e "$WORK/env-step-expr-ran" ] && [ ! -e "$WORK/env-job-expr-ran" ]; then
+  pass "H. env: reaches a step at each level, and an expression in it reads SKIP"
+else
+  fail "H. env (exit $rc, got $(cat "$WORK/env-got" 2>/dev/null)): $(cat "$WORK/h.out")"
+fi
+
+# I
+cat > "$WORK/timeout.yml" <<EOF
+on: push
+jobs:
+  stepbound:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Step with its own bound
+        timeout-minutes: 0.02
+        run: |
+          sleep 300 &
+          echo \$! > "$WORK/grandchild-pid"
+          sleep 30
+  jobbound:
+    runs-on: ubuntu-latest
+    timeout-minutes: 0.02
+    steps:
+      - name: Step under the job's bound
+        run: sleep 30
+  quick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Step inside its bound
+        run: true
+EOF
+start=$SECONDS
+run i "$WORK/timeout.yml"
+elapsed=$((SECONDS - start))
+gpid=$(cat "$WORK/grandchild-pid" 2>/dev/null || echo "")
+gone=no
+if [ -n "$gpid" ]; then
+  # Give the killed group a moment to be reaped.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$gpid" 2>/dev/null || { gone=yes; break; }
+    sleep 0.3
+  done
+fi
+if [ "$rc" -eq 1 ] && [ "$elapsed" -lt 25 ] && [ "$gone" = yes ] \
+  && has i "FAIL timeout.yml :: Step with its own bound — timed out after 0.02 minutes" \
+  && has i "FAIL timeout.yml :: Step under the job's bound — timed out after 0.02 minutes" \
+  && has i "PASS timeout.yml :: Step inside its bound" \
+  && has i "summary: PASS 1, FAIL 2, SKIP 0"; then
+  pass "I. a step is killed, group and all, at its own or its job's bound"
+else
+  if [ -n "$gpid" ] && kill -0 "$gpid" 2>/dev/null; then
+    kill "$gpid"
+  fi
+  fail "I. timeout (exit $rc, ${elapsed}s, grandchild gone: $gone): $(cat "$WORK/i.out")"
+fi
+
+cat > "$WORK/badtimeout.yml" <<EOF
+on: push
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: soon
+    steps:
+      - name: A step
+        run: touch "$WORK/badtimeout-ran"
+EOF
+run j "$WORK/badtimeout.yml"
+if [ "$rc" -eq 2 ] && has j "badtimeout.yml" && has j "'soon'" && [ ! -e "$WORK/badtimeout-ran" ]; then
+  pass "I. a malformed timeout-minutes exits 2, naming the workflow and value"
+else
+  fail "I. malformed timeout (exit $rc): $(cat "$WORK/j.out")"
 fi
 
 if [ "$failures" -gt 0 ]; then

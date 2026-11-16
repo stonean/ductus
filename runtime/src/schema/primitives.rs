@@ -5634,8 +5634,8 @@ pub struct SessionPeer {
     pub feature: String,
     /// The other session's scenario, when it targets one.
     pub scenario: Option<String>,
-    /// When the other session last resolved or wrote its target
-    /// (ISO 8601 UTC); absent when its file does not record it.
+    /// When the other session last resolved or wrote its target: its record's used-at
+    /// verbatim, ISO 8601 UTC when the runtime wrote it; null when it holds none.
     pub last_used: Option<String>,
 }
 
@@ -6346,6 +6346,11 @@ pub struct RunDecisions {
     /// Stored decisions and waivers stamped with this run's time that a person recorded,
     /// less decisions another spec's record already held with the same key and outcome.
     pub decisions_by_person: usize,
+    /// Other specs' records at the parents of the run's first write that the carry check
+    /// could not read, so a decision one of them held counts here as new. Absent at
+    /// zero, and counted only for a run that recorded a person's decision.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub records_unread: usize,
 }
 
 /// One closed reopening that could not be counted.
