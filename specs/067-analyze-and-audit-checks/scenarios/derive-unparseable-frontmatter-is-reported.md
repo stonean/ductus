@@ -59,7 +59,7 @@ indentless sequence was spliced into invalid frontmatter and reported
 the data model records.
 
 The contract a caller can then rely on: **an empty `updated` means
-examined-and-clean only when `unparseable` and `unwritable` are also empty.** That is the same
+examined-and-clean only when `unparseable`, `unwritable` and `refused` are also empty.** That is the same
 pairing `check-artifacts` established with `skipped` and `derive-boundary`
 with `guidance`, so this introduces no new idea — it applies the existing one
 where it was missing.

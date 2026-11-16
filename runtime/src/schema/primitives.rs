@@ -2634,7 +2634,7 @@ pub struct DeriveDependenciesResult {
     /// error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable` and `unwritable` are also empty
+    /// only when `unparseable`, `unwritable` and `refused` are also empty
     /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
     /// `skipped`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2761,7 +2761,7 @@ pub struct DeriveReferencesResult {
     /// error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable` and `unwritable` are also empty
+    /// only when `unparseable`, `unwritable` and `refused` are also empty
     /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
     /// `skipped`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]

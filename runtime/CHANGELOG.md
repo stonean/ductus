@@ -17,8 +17,8 @@ its version and date.
   (041 task 27) and, under `write`, renames only when a re-read under the
   project-wide lock matches. A spec that changed is left as the other writer
   made it and named in the new `refused` list (with `refused-count`, both
-  absent at zero; the list is absent in the file form and in the lists file
-  whole), never counted in `updated`; the walk goes on, so the other drifted
+  absent at zero; the list is absent in the file form, where the lists file
+  holds it whole), never counted in `updated`; the walk goes on, so the other drifted
   specs are written. The CLI exits non-zero on a refused spec and names each on
   stderr, so the pre-commit hook stops and the next run reads it as it now is.
   A writer that does not go through the guard takes no lock, so the window narrows to one
