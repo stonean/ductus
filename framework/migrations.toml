@@ -336,3 +336,24 @@ target_paths = [
   "specs/inbox.md",
 ]
 procedure_file = "framework/migrations/strip-inbox-guidance.md"
+
+[[migrations]]
+id = "substitute-seed-placeholders"
+introduced_in = "0.60.0"
+# The id sorts after strip-inbox-guidance on the tie-break, and must: this
+# entry was pushed after that one, so a --ref=main adopter who ran /ductus
+# between the two recorded that id as last_applied, and an id sorting before
+# it would never run for them.
+# No sunset_after. `AGENTS.md` and `CLAUDE.md` are installed once and never
+# rewritten, so an adopter who skips this window keeps the literal
+# placeholders, and nothing else would ever fill them.
+# Independent of the other 0.60.0 entries: it reads only the three tokens,
+# which none of them writes or reads.
+summary = "Fill {project-name}, {One-line project description.} and {project} where a bootstrap through 0.59.11 left them literal in AGENTS.md and CLAUDE.md (spec 027)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "AGENTS.md",
+  "CLAUDE.md",
+]
+procedure_file = "framework/migrations/substitute-seed-placeholders.md"
