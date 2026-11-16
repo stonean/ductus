@@ -1,5 +1,5 @@
 ---
-next-task: 38
+next-task: 39
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -65,3 +65,11 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] A test proves each form, failing under its mutant, and a parity golden is re-blessed only where its shape moved
 
 - **Done when**: No `ductus exec` extension request is larger than `[artifacts] read-size-bytes` inline, bodies and lists alike, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 38. The runtime-core writers guard their read-modify-write (BE-TXN-002, owner decision)
+
+- [ ] `append-question`, `label-criteria`, `mark-criterion`, `mark-task`, `set-status`, `append-inbox`, `remove-inbox-item` and `merge-managed-block` guard the window between reading their file and renaming the result over it with the compare-before-persist helper 041's task 27 adds to `runtime/src/primitives/mod.rs`: the file is read again just before the rename, and the write is refused when it changed since the primitive read it. Today each reads, computes and calls `write_atomic` with no guard, and `set-status`'s `from` check compares only the value it read. `append-task` takes the guard too, beside its lock: the lock (task 35) excludes only other `append-task` calls, so today a `mark-task` or `prune-tasks` rename landing between its read and its write drops its appended task, or it drops theirs. The owner decided on 2026-11-16 to close the BE-TXN-002 class by fixing each owner's primitives rather than waiving them: a measurement that session found 20 unguarded read-modify-writes of a project file, eight of them 022's. Run after 041's task 27 lands
+- [ ] 022's data model states what a refused write reports for each of these primitives, and its plan names the guard; each one's description in `runtime/src/schema/descriptions.rs` states it; and `scenarios/ask-consolidation.md`'s edge case "Concurrent invocation against the same `tasks.md`" states that the lock and the guard together cover a writer that takes no lock
+- [ ] A test per primitive in which the file changes between its read and its write shows the write refused and the other writer's change kept, and a test in which a `mark-task` lands between an `append-task`'s read and write keeps both changes, each failing under its mutant
+
+- **Done when**: No runtime-core primitive overwrites a change made between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.

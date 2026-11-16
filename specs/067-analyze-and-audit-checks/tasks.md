@@ -1,5 +1,5 @@
 ---
-next-task: 36
+next-task: 37
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -49,3 +49,11 @@ Owed when this lands, in the same change: 067's `plan.md` decision "A path that 
 - [x] A test proves the inline form under the read size and the file form past it for each primitive, each failing under its mutant, and `framework-checks.yml` step (u) passes
 
 - **Done when**: Both results return inline, or in a lists-file past the read size, with every caller reading the file form, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 36. derive-dependencies and derive-references guard their write (BE-TXN-002, owner decision)
+
+- [ ] Under `write`, `derive-dependencies` and `derive-references` guard the window between reading each `spec.md` and renaming its rewritten frontmatter over it with the compare-before-persist helper 041's task 27 adds to `runtime/src/primitives/mod.rs`: the file is read again just before the rename, and a spec that changed since it was read is not written and is named in the result, never counted as written or in sync, so the pre-commit hook can stop on it. Today each reads, splices and calls `write_atomic` with no guard. The owner decided on 2026-11-16 to close the BE-TXN-002 class by fixing each owner's primitives rather than waiving them. Run after 041's task 27 lands and before 067's next analysis, so its design-subject edits are judged once
+- [ ] 067's data model states what a refused spec reports and its plan names the guard; `DERIVE_DEPENDENCIES`' and `DERIVE_REFERENCES`' descriptions in `runtime/src/schema/descriptions.rs` state it
+- [ ] A test per primitive in which a `spec.md` changes between its read and its write shows it unwritten, named in the result and the other writer's change kept, each failing under its mutant
+
+- **Done when**: Neither derivation's write overwrites a change made between its read and its write, and a spec it refuses is named in the result, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.

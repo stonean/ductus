@@ -1,5 +1,5 @@
 ---
-next-task: 24
+next-task: 25
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -13,3 +13,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test with an outward link (the affected spec's `spec.md`, and its `scenarios/` directory) shows the gate reports it and reads nothing through it, and turns red under its mutant
 
 - **Done when**: The gate never reads an affected spec through a link leaving the project, proven by a test its mutant turns red; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 24. write-review and write-analysis guard their read-modify-write (BE-TXN-002, owner decision)
+
+- [ ] `write-review` and `write-analysis` guard the window between reading `review.md` or `analysis.md` and renaming the regenerated record over it with the compare-before-persist helper 041's task 27 adds to `runtime/src/primitives/mod.rs`: the file is read again just before the rename, and the write is refused when it changed since the primitive read it. Each carries lists from the prior record (`write-review` its `waivers:` and `decisions:`, `write-analysis` its `decisions:` and its still-current rule verdicts), so today a record written between its read and its rename loses them. The owner decided on 2026-11-16 to close the BE-TXN-002 class by fixing each owner's primitives rather than waiving them. Run after 041's task 27 lands and before 066's next analysis, so its design-subject edits are judged once
+- [ ] 066's data model states what a refused write reports and its plan names the guard; `WRITE_REVIEW`'s and `WRITE_ANALYSIS`'s descriptions in `runtime/src/schema/descriptions.rs` state it
+- [ ] A test per primitive in which the record changes between its read and its write shows the write refused and the other writer's record kept, each failing under its mutant
+
+- **Done when**: Neither record write overwrites a record written between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 066's next review reads the change.
