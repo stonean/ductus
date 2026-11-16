@@ -17,12 +17,13 @@ section: "What the run reads, and when"
 - The Frontmatter Migration runs after Pre-run Migrations and before step 4's Shared Files pass, converting the spec corpus before this release's files land.
 - The Security Audit runs directly after step 4's Shared Files pass, and Hook Installation directly after step 4's Per-Agent Scaffolding passes, both before step 5, as their own sections already require.
 - The stale-branch list's disclaimer points at those placements.
+- Step 4 is walked as lettered sub-steps, 4a to 4e: the Shared Files call; Shared constitution imports and Memory routing; the Security Audit; the Per-Agent calls; Hook Installation. Every section the step runs has a numbered place of its own.
 
 ## Edge Cases
 
 - **A migration that moves the config file.** `govern-dir-consolidate` makes `.ductus/config.toml` the active config file for every later step, so the placement keeps Pre-run Migrations ahead of every walker step that reads or writes the active config file, step 6's host block included.
 - **A halt in steps 5–9.** The Security Audit and Hook Installation have already run, so a later halt skips neither.
-- **A host that walks only the numbered steps.** Step 4 itself names the Security Audit and Hook Installation at their places. When only the paragraph above the steps placed them, two of three scratch-adopter hosts on 2026-11-16 ran Hook Installation after step 10; the third walked every section in place.
+- **A host that walks only the numbered steps.** Every scratch-adopter host on 2026-11-16 walked steps 1 to 11 in order, and each section it misplaced was one only prose named. With only the paragraph above the steps placing them, two of three ran Hook Installation after step 10. With a sentence in step 4 naming them, one of two still ran it after step 5. The five runs put Shared constitution imports and Memory routing, which no step placed, in three different spots. So each now has a lettered sub-step (owner decision, 2026-11-16).
 - **`specs/templates/spec.md`, which step 4 writes and the Frontmatter Migration's `specs/**/spec.md` glob matches.** The migration runs before step 4 and skips a file that already carries frontmatter, so the template is untouched in either order.
 
 ## Open Questions
