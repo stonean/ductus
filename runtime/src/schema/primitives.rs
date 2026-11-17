@@ -4516,8 +4516,13 @@ pub struct LabelAssignment {
 #[serde(rename_all = "kebab-case")]
 pub struct LabelCriteriaResult {
     /// Labels assigned by this run, in body order. Empty when every
-    /// criterion was already labelled.
-    pub assigned: Vec<LabelAssignment>,
+    /// criterion was already labelled. Absent in the file form, which moves
+    /// it to the list file, since it grows with a spec's unlabelled
+    /// criteria (BE-PAYLOAD-001, 022 task 42).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assigned: Option<Vec<LabelAssignment>>,
+    /// Entries in `assigned`, in either form.
+    pub assigned_count: usize,
     /// The counter written to frontmatter — the label the next criterion
     /// will receive. Always greater than every label present in the body.
     pub next_criterion: u32,
@@ -4527,6 +4532,13 @@ pub struct LabelCriteriaResult {
     /// labelled" from "labelled just now", so a caller can report the
     /// no-op rather than an assignment it did not make.
     pub changed: bool,
+    /// Where `assigned` is: in this result, or past the read size in the
+    /// file `lists-file` names.
+    pub form: ListsForm,
+    /// In the file form, the file holding `assigned` whole, from the project
+    /// root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
 }
 
 // -- append-task -------------------------------------------------------------

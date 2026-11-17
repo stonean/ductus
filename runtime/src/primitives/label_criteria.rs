@@ -18,7 +18,9 @@ use std::path::Path;
 
 use crate::primitives::{PrimitiveError, Result, guarded, rel_path, section_line_indices};
 use crate::schema::paths;
-use crate::schema::primitives::{LabelAssignment, LabelCriteriaArgs, LabelCriteriaResult};
+use crate::schema::primitives::{
+    LabelAssignment, LabelCriteriaArgs, LabelCriteriaResult, ListsForm,
+};
 
 use super::checkbox::find_checkbox_line;
 
@@ -81,12 +83,12 @@ pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult>
     // an absent `next-criterion` means "no labels assigned yet", which is a
     // truthful state rather than a defect to pre-empt.
     if criteria.is_empty() {
-        return Ok(LabelCriteriaResult {
-            assigned: Vec::new(),
-            next_criterion: stored.unwrap_or(1),
-            path: rel_path(&spec_path, repo),
-            changed: false,
-        });
+        return Ok(result(
+            Vec::new(),
+            stored.unwrap_or(1),
+            rel_path(&spec_path, repo),
+            false,
+        ));
     }
 
     let body_max = criteria.iter().filter_map(|(_, _, label)| *label).max();
@@ -117,23 +119,50 @@ pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult>
 
     let counter_current = stored == Some(counter);
     if assigned.is_empty() && counter_current {
-        return Ok(LabelCriteriaResult {
-            assigned,
-            next_criterion: counter,
-            path: rel_path(&spec_path, repo),
-            changed: false,
-        });
+        return Ok(result(assigned, counter, rel_path(&spec_path, repo), false));
     }
 
     let new_content = render(&lines, &fm, &labelled_lines, counter);
+    // Bounded before the write, so a list file that cannot be written or a
+    // malformed read size refuses the call with the spec untouched.
+    let mut labelled = result(assigned, counter, rel_path(&spec_path, repo), true);
+    bound(repo, &args.feature, &mut labelled)?;
     guarded::write_guarded(&snapshot, &new_content)?;
+    Ok(labelled)
+}
 
-    Ok(LabelCriteriaResult {
-        assigned,
-        next_criterion: counter,
-        path: rel_path(&spec_path, repo),
-        changed: true,
-    })
+/// The result with `assigned` inline.
+fn result(
+    assigned: Vec<LabelAssignment>,
+    next_criterion: u32,
+    path: String,
+    changed: bool,
+) -> LabelCriteriaResult {
+    LabelCriteriaResult {
+        assigned_count: assigned.len(),
+        assigned: Some(assigned),
+        next_criterion,
+        path,
+        changed,
+        form: ListsForm::Inline,
+        lists_file: None,
+    }
+}
+
+/// `result` held to `[artifacts] read-size-bytes`: past it `assigned`, one
+/// entry per criterion labelled, moves whole to the file `lists-file` names
+/// and only its count stays inline, as `read-spec`'s criteria do
+/// (`bounded_lists::place`; `BE-PAYLOAD-001`, 022 task 42).
+fn bound(repo: &Path, feature: &str, result: &mut LabelCriteriaResult) -> Result<()> {
+    let lists = serde_json::json!({ "assigned": &result.assigned });
+    if let Some(file) =
+        super::bounded_lists::place(repo, "label-criteria", feature, &*result, &lists)?
+    {
+        result.assigned = None;
+        result.form = ListsForm::File;
+        result.lists_file = Some(file);
+    }
+    Ok(())
 }
 
 /// Where a spec's frontmatter closes, and the line ending that closing line
@@ -305,6 +334,10 @@ mod tests {
         }
     }
 
+    fn assigned(result: &LabelCriteriaResult) -> &[LabelAssignment] {
+        result.assigned.as_deref().unwrap()
+    }
+
     fn spec_text(tmp: &Path) -> String {
         fs::read_to_string(tmp.join("specs/feat/spec.md")).unwrap()
     }
@@ -320,8 +353,7 @@ mod tests {
         assert!(result.changed);
         assert_eq!(result.next_criterion, 4);
         assert_eq!(
-            result
-                .assigned
+            assigned(&result)
                 .iter()
                 .map(|a| a.label.as_str())
                 .collect::<Vec<_>>(),
@@ -344,8 +376,8 @@ mod tests {
         let after_first = spec_text(tmp.path());
 
         let result = run(&args(), tmp.path()).unwrap();
-        assert!(!result.changed, "idempotent: {:?}", result.assigned);
-        assert_eq!(result.assigned, [] as [LabelAssignment; 0]);
+        assert!(!result.changed, "idempotent: {:?}", assigned(&result));
+        assert_eq!(assigned(&result), [] as [LabelAssignment; 0]);
         assert_eq!(spec_text(tmp.path()), after_first);
     }
 
@@ -358,9 +390,9 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
 
-        assert_eq!(result.assigned.len(), 1);
-        assert_eq!(result.assigned[0].label, "AC25");
-        assert_eq!(result.assigned[0].criterion_index, 1);
+        assert_eq!(assigned(&result).len(), 1);
+        assert_eq!(assigned(&result)[0].label, "AC25");
+        assert_eq!(assigned(&result)[0].criterion_index, 1);
         let text = spec_text(tmp.path());
         assert!(text.contains("- [x] AC7: Labelled by hand."));
         assert!(text.contains("- [x] AC24: Also by hand."));
@@ -380,7 +412,7 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
 
-        assert_eq!(result.assigned[0].label, "AC4");
+        assert_eq!(assigned(&result)[0].label, "AC4");
         assert_eq!(result.next_criterion, 5);
         // No criterion carries AC3 as its label. The prose mentioning the
         // deleted AC3 stays, which is the point of anchoring the label
@@ -397,7 +429,7 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
 
-        assert_eq!(result.assigned[0].label, "AC12");
+        assert_eq!(assigned(&result)[0].label, "AC12");
         assert!(spec_text(tmp.path()).contains("next-criterion: 13"));
     }
 
@@ -412,7 +444,7 @@ mod tests {
         let result = run(&args(), tmp.path()).unwrap();
 
         assert!(!result.changed);
-        assert_eq!(result.assigned, [] as [LabelAssignment; 0]);
+        assert_eq!(assigned(&result), [] as [LabelAssignment; 0]);
         assert_eq!(spec_text(tmp.path()), before, "no counter is created");
     }
 
@@ -425,7 +457,7 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
 
-        assert_eq!(result.assigned[0].label, "AC1");
+        assert_eq!(assigned(&result)[0].label, "AC1");
         assert!(
             spec_text(tmp.path()).contains("- [ ] AC1: Supersedes AC5: the rule in 017"),
             "the label anchors after the checkbox, not at the first AC-shaped token"
@@ -519,5 +551,90 @@ mod tests {
             fs::read_to_string(&file).unwrap(),
             format!("{before}\nTheirs.\n")
         );
+    }
+
+    /// The next label is `max(highest label in the body + 1, next-criterion)`:
+    /// with no stored counter it is one past the body maximum, and with a
+    /// stored counter below that it is the body maximum plus one, never the
+    /// counter (fbb62dfe; 022 task 42, F11).
+    #[test]
+    fn the_next_label_is_one_past_the_body_maximum_when_the_counter_is_absent_or_behind() {
+        for (counter, label) in [("", "AC25"), ("next-criterion: 3\n", "AC25")] {
+            let tmp = tempdir().unwrap();
+            write_spec(
+                tmp.path(),
+                &format!(
+                    "---\nstatus: done\ndependencies: []\n{counter}---\n\n# feat\n\n## Acceptance Criteria\n\n- [x] AC24: Labelled by hand.\n- [ ] Unlabelled.\n"
+                ),
+            );
+            let result = run(&args(), tmp.path()).unwrap();
+            assert_eq!(assigned(&result)[0].label, label, "{counter:?}");
+            assert_eq!(result.next_criterion, 26, "{counter:?}");
+            assert!(spec_text(tmp.path()).contains("- [ ] AC25: Unlabelled."));
+        }
+    }
+
+    /// Past the read size `assigned` moves whole to the file `lists-file`
+    /// names, its count inline, and the spec is labelled all the same
+    /// (`BE-PAYLOAD-001`; 022 task 42, F14).
+    #[test]
+    fn past_the_read_size_assigned_moves_to_the_file() {
+        let tmp = tempdir().unwrap();
+        let criteria: Vec<String> = (0..200)
+            .map(|n| format!("- [ ] Criterion {n}.\n"))
+            .collect();
+        let criteria = criteria.concat();
+        write_spec(
+            tmp.path(),
+            &format!(
+                "---\nstatus: draft\ndependencies: []\n---\n\n# feat\n\n## Acceptance Criteria\n\n{criteria}"
+            ),
+        );
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 2000\n",
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.assigned.is_none(), "assigned stayed inline");
+        assert_eq!(result.assigned_count, 200);
+        assert!(result.changed);
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 2000, "{size} bytes");
+        let lists: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(result.lists_file.as_deref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(lists["assigned"].as_array().unwrap().len(), 200);
+        assert_eq!(lists["assigned"][0]["label"], "AC1");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "label-criteria",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
+        assert!(spec_text(tmp.path()).contains("- [ ] AC200: Criterion 199."));
+    }
+
+    /// A malformed read size refuses the call before the spec is written, so
+    /// a result that cannot be bounded never follows a write it cannot report
+    /// (`BE-PAYLOAD-001`; 022 task 42, F14).
+    #[test]
+    fn a_malformed_read_size_refuses_the_call_with_the_spec_untouched() {
+        let tmp = tempdir().unwrap();
+        write_spec(tmp.path(), UNLABELLED);
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 0\n",
+        )
+        .unwrap();
+        let err = run(&args(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidReadSize { .. }),
+            "{err:?}"
+        );
+        assert_eq!(spec_text(tmp.path()), UNLABELLED);
     }
 }

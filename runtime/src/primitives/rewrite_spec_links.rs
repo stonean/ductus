@@ -392,8 +392,11 @@ impl Sweep<'_> {
             // clean result. A referrer that is a link was listed when the
             // referrers were read.
             if entry.depth() > 0 && entry.file_type().is_symlink() {
-                let holds_markdown =
-                    path.extension().is_some_and(|ext| ext == "md") || path.is_dir();
+                // A link leaving the project is judged before its target is
+                // stat-ed, and listed without testing it (`BE-INPUT-004`).
+                let holds_markdown = path.extension().is_some_and(|ext| ext == "md")
+                    || super::leaves_project(self.repo, &repo_relative(self.repo, path))
+                    || path.is_dir();
                 if holds_markdown && !referrers.iter().any(|referrer| referrer == path) {
                     self.skip(&repo_relative(self.repo, path), SKIP_LINK);
                 }
@@ -678,6 +681,12 @@ fn plan<'a>(args: &'a RewriteSpecLinksArgs, repo: &'a Path) -> Result<Planned<'a
             reason: "must name the retiring or renamed feature directory".into(),
         });
     }
+    // `from` is held to the feature-directory membership rule `to`'s feature
+    // half is, before anything is read (`BE-INPUT-002`; spec 051, scenario
+    // `a-fold-target-is-held-to-the-name-grammar`): it is matched against the
+    // first path segment of every link in the corpus, so `.`, `spec.md` or a
+    // name with a separator would re-point links that name no feature.
+    super::validate_session_feature("rewrite-spec-links", "from", &args.from)?;
     // Both arguments reach a filesystem path below — `from` as a path
     // component to skip, `to` as the directory whose existence is checked —
     // so neither may carry a parent-directory escape (BE-INPUT-004).
@@ -685,6 +694,11 @@ fn plan<'a>(args: &'a RewriteSpecLinksArgs, repo: &'a Path) -> Result<Planned<'a
     super::validate_feature_argument(repo, &layout.specs_root, &args.from)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.to)?;
     let mut target = FoldTarget::parse(&args.to)?;
+    // `to` as one string names a scenario's file for a `{feature}/{slug}`
+    // target, so that walk never lists the feature directory: walked on its
+    // own, a link in it that leaves the project refuses the call before
+    // `spec.md` is probed (`BE-INPUT-004`).
+    super::validate_feature_argument(repo, &layout.specs_root, &target.feature)?;
     // Both halves of `to` are written into every referrer, the executable
     // hook and `CLAUDE.md`'s imports among them, so each is held to its
     // grammar rather than only kept from escaping (`BE-INPUT-002`; spec 051,
@@ -1758,19 +1772,21 @@ mod tests {
     }
 
     /// BE-INPUT-004: neither argument may escape the spec root, since both
-    /// reach a filesystem path.
+    /// reach a filesystem path. `to` is refused by the path screen, and
+    /// `from`, held to the feature-directory grammar before any path is
+    /// built, as a name that is none.
     #[test]
     fn a_traversing_argument_is_refused() {
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
 
-        for (from, to) in [("../../etc", "050-alpha"), ("1234.1-staged", "../../etc")] {
-            let err = run(&args(from, to), tmp.path()).unwrap_err();
-            assert!(
-                matches!(err, PrimitiveError::InvalidPath { .. }),
-                "expected a path refusal for ({from:?}, {to:?}), got {err:?}"
-            );
-        }
+        let err = run(&args("../../etc", "050-alpha"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "from"),
+            "{err:?}"
+        );
+        let err = run(&args("1234.1-staged", "../../etc"), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
     }
 
     #[test]
@@ -3186,5 +3202,74 @@ mod tests {
         assert!(quiet.rewritten.is_empty(), "{:?}", quiet.rewritten);
         assert!(quiet.skipped.is_empty(), "{:?}", quiet.skipped);
         assert_eq!(quiet.examined, 2);
+    }
+
+    /// `from` is held to the feature-directory membership rule `to`'s feature
+    /// half is, before anything is read: a dot, a file name, a name with a
+    /// separator or a bare word names no feature, and would re-point every
+    /// `./` link in the corpus, or every link to a file of that name
+    /// (`BE-INPUT-002`; 022 task 42, F5).
+    #[test]
+    fn a_from_that_names_no_feature_directory_is_refused_with_the_corpus_untouched() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let beta =
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [x](./notes.md), [s](spec.md).\n";
+        write(tmp.path(), "060-beta/spec.md", beta);
+        for from in [".", "spec.md", "a/b", "notes", "..", "060-beta/spec.md"] {
+            let err = run(&args(from, "050-alpha"), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "from")
+                    || matches!(&err, PrimitiveError::InvalidPath { .. }),
+                "{from}: {err:?}"
+            );
+            assert_eq!(read(tmp.path(), "060-beta/spec.md"), beta, "{from}");
+        }
+    }
+
+    /// A scenario target's feature directory is walked for outward links as a
+    /// feature target's is, so its `spec.md` is not probed through a link
+    /// leaving the project (`BE-INPUT-004`; 022 task 42, F6).
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_targets_spec_linked_outside_the_project_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(tmp.path(), "060-beta/spec.md", BETA);
+        let _outside = crate::primitives::outward::file(
+            tmp.path(),
+            "specs/050-alpha/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# target\n",
+        );
+        for to in ["050-alpha", "050-alpha/eviction"] {
+            let err = run(&args("1234.1-staged", to), tmp.path()).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidPath { .. }),
+                "{to}: {err:?}"
+            );
+        }
+        assert_eq!(read(tmp.path(), "060-beta/spec.md"), BETA);
+    }
+
+    /// A link below the spec root that leaves the project is listed as
+    /// skipped without testing what it points at, so a link to an outside
+    /// file is named as one to an outside directory is (`BE-INPUT-004`; 022
+    /// task 42, F7).
+    #[cfg(unix)]
+    #[test]
+    fn a_link_out_of_the_project_below_the_spec_root_is_listed_without_a_stat() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_two_referrers(tmp.path());
+        let _outside = crate::primitives::outward::file(tmp.path(), "specs/notes", "outside\n");
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|skip| skip.path == "specs/notes" && skip.reason == SKIP_LINK),
+            "{:?}",
+            result.skipped
+        );
     }
 }

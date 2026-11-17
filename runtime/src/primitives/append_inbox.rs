@@ -85,6 +85,12 @@ pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
 /// Base content for a freshly-created inbox: the project template's
 /// content when it exists on disk, else the bare heading.
 fn creation_base(repo: &Path) -> String {
+    // A template that is, or lies under, a link leaving the project is not
+    // read: the fallback heading starts the file, as for one that is absent
+    // (`BE-INPUT-004`).
+    if super::leaves_project(repo, PROJECT_TEMPLATE) {
+        return FALLBACK_HEADING.to_string();
+    }
     std::fs::read_to_string(repo.join(PROJECT_TEMPLATE))
         .unwrap_or_else(|_| FALLBACK_HEADING.to_string())
 }
@@ -420,5 +426,22 @@ mod tests {
             fs::read_to_string(&file).unwrap(),
             "# Inbox\n\n- [ ] theirs\n"
         );
+    }
+
+    /// A creation template that is a link leaving the project is not read:
+    /// the fallback heading starts the inbox, as for an absent one
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_template_linked_outside_the_project_is_not_read() {
+        let repo = tempdir().unwrap();
+        fs::create_dir_all(repo.path().join("framework/templates/project")).unwrap();
+        fs::write(repo.path().join(PROJECT_TEMPLATE), "# Real template\n\n").unwrap();
+        assert_eq!(creation_base(repo.path()), "# Real template\n\n");
+
+        let repo = tempdir().unwrap();
+        let _outside =
+            crate::primitives::outward::file(repo.path(), PROJECT_TEMPLATE, "# Outside\n\n");
+        assert_eq!(creation_base(repo.path()), FALLBACK_HEADING);
     }
 }

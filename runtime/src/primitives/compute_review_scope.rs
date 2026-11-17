@@ -23,7 +23,7 @@
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
-use std::path::{Component, Path};
+use std::path::Path;
 
 use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
 use regex::Regex;
@@ -430,9 +430,11 @@ fn hold_in_scope<'a>(
     scope: &mut BTreeSet<String>,
     excluded: &mut BTreeMap<String, Vec<String>>,
 ) {
-    for path in
-        paths.filter(|path| stays_in_project(path) && repo.join(path).symlink_metadata().is_ok())
-    {
+    // A path that leaves the project, by a `..`, an absolute form or a link,
+    // is not probed: it stays where it was (`BE-INPUT-004`).
+    for path in paths.filter(|path| {
+        !super::leaves_project(repo, path) && repo.join(path).symlink_metadata().is_ok()
+    }) {
         excluded.remove(path);
         scope.insert(path.clone());
     }
@@ -529,13 +531,6 @@ impl RunScope {
                 .then(|| format!("this run did not read `{path}`")),
         }
     }
-}
-
-/// Whether a path a record names stays under the project root.
-fn stays_in_project(path: &str) -> bool {
-    Path::new(path)
-        .components()
-        .all(|part| matches!(part, Component::Normal(_) | Component::CurDir))
 }
 
 /// The `last-run` a pre-057 `spec.md` states in its `review:` frontmatter block,
@@ -684,6 +679,18 @@ impl WindowClaims {
     }
 }
 
+/// The Affected Files entries of the plan `directory` holds. A claimant whose
+/// `plan.md` is, or lies under, a link leaving the project has it unread, and
+/// names no path (`BE-INPUT-004`).
+fn claimant_plan(repo: &Path, specs_root: &str, directory: &str) -> Result<PlanEntries> {
+    if super::leaves_project(repo, &format!("{specs_root}/{directory}/plan.md")) {
+        return Ok(PlanEntries::new(&[]));
+    }
+    Ok(PlanEntries::new(&read_plan_affected(
+        &repo.join(specs_root).join(directory),
+    )?))
+}
+
 /// Walk `base..HEAD` and apply AC6's rule to each commit. A feature directory
 /// [`parse_feature_dir`] does not recognize can be claimed by no commit, so
 /// nothing is left to another spec and every changed path stays in scope.
@@ -772,8 +779,10 @@ fn attribute_window(
                 if let Some(directory) = attributor.directory_of(claimant)
                     && !plans.contains_key(directory)
                 {
-                    let entries = read_plan_affected(&repo.join(specs_root).join(directory))?;
-                    plans.insert(directory.to_string(), PlanEntries::new(&entries));
+                    plans.insert(
+                        directory.to_string(),
+                        claimant_plan(repo, specs_root, directory)?,
+                    );
                 }
             }
         }
@@ -4159,5 +4168,42 @@ mod tests {
         ] {
             assert!(!plan.names(miss), "{miss}");
         }
+    }
+
+    /// A path held in scope is not probed through a link leaving the project:
+    /// it stays where it was (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_path_through_a_link_outside_the_project_is_not_held_in_scope() {
+        let repo = tempfile::tempdir().unwrap();
+        write(&repo.path().join("here.md"), "x\n");
+        let _outside = crate::primitives::outward::dir(repo.path(), "linked", |dir| {
+            std::fs::write(dir.join("there.md"), "y\n").unwrap();
+        });
+        let paths = ["here.md".to_string(), "linked/there.md".to_string()];
+        let mut scope = BTreeSet::new();
+        let mut excluded = BTreeMap::new();
+        hold_in_scope(paths.iter(), repo.path(), &mut scope, &mut excluded);
+        assert_eq!(scope.into_iter().collect::<Vec<_>>(), ["here.md"]);
+    }
+
+    /// Another claimant's `plan.md` that is a link leaving the project is not
+    /// read to decide whose a path of an unnamed commit is: the path is
+    /// unplanned there, and goes to every claimant (`BE-INPUT-004`; 022
+    /// task 42).
+    #[cfg(unix)]
+    #[test]
+    fn another_claimants_plan_linked_outside_the_project_is_not_read() {
+        let (tmp, repo, _) = two_specs(&["src/x.rs"], &[]);
+        let plan = fs::read_to_string(tmp.path().join("specs/001-x/plan.md")).unwrap();
+        fs::remove_file(tmp.path().join("specs/001-x/plan.md")).unwrap();
+        let _outside = crate::primitives::outward::file(tmp.path(), "specs/001-x/plan.md", &plan);
+        write(&tmp.path().join("specs/001-x/notes.md"), "x\n");
+        write(&tmp.path().join("specs/002-y/notes.md"), "y\n");
+        write(&tmp.path().join("src/x.rs"), "fn x() {}\n");
+        commit_all(&repo, "chore: touches both specs and names neither");
+
+        let scope_y = y(&tmp);
+        assert!(has(&scope_y, "src/x.rs"), "{:?}", scope_y.scope);
     }
 }

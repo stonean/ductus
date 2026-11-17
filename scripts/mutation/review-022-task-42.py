@@ -15,7 +15,8 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
 The containment tests are Unix only (they plant a symbolic link), so on
-Windows M1-M15, M17 and M24 would survive.
+Windows M1-M12, M14-M26, M29, M30 and M38 would survive; M13 and M28 are
+killed by tests that plant none.
 """
 
 EXPECTED_SURVIVORS = {}
@@ -127,6 +128,13 @@ MUTATIONS = [
         'discover_rule_files::tests::a_rules_directory_linked_outside_the_project_is_refused_not_listed',
     ),
     (
+        'M16 the shipped-destination manifest is read through a link outside the project',
+        'src/primitives/check_artifacts.rs',
+        '    if super::leaves_project(repo, manifest) {\n        return BTreeSet::new();\n    }\n',
+        '',
+        'check_artifacts::tests::a_manifest_linked_outside_the_project_derives_no_destinations',
+    ),
+    (
         'M17 the migrations registry is read through a link outside the project',
         'src/primitives/check_orphaned_references.rs',
         '    if super::leaves_project(repo, "framework/migrations.toml") {\n        return None;\n    }\n',
@@ -134,10 +142,122 @@ MUTATIONS = [
         'check_orphaned_references::tests::a_registry_linked_outside_the_project_is_not_read',
     ),
     (
+        'M18 the inbox creation template is read through a link outside the project',
+        'src/primitives/append_inbox.rs',
+        '    if super::leaves_project(repo, PROJECT_TEMPLATE) {\n        return FALLBACK_HEADING.to_string();\n    }\n',
+        '',
+        'append_inbox::tests::a_template_linked_outside_the_project_is_not_read',
+    ),
+    (
+        'M19 a path through a link outside the project is probed and held in review scope',
+        'src/primitives/compute_review_scope.rs',
+        '        !super::leaves_project(repo, path) && repo.join(path).symlink_metadata().is_ok()\n',
+        '        repo.join(path).symlink_metadata().is_ok()\n',
+        'compute_review_scope::tests::a_path_through_a_link_outside_the_project_is_not_held_in_scope',
+    ),
+    (
+        'M20 another claimants plan is read through a link outside the project',
+        'src/primitives/compute_review_scope.rs',
+        '    if super::leaves_project(repo, &format!("{specs_root}/{directory}/plan.md")) {\n        return Ok(PlanEntries::new(&[]));\n    }\n',
+        '',
+        'compute_review_scope::tests::another_claimants_plan_linked_outside_the_project_is_not_read',
+    ),
+    (
+        'M21 a routing candidate reads the status of a spec linked outside the project',
+        'src/primitives/derive_routing_candidates.rs',
+        '    if crate::primitives::leaves_project(repo, &spec_rel) {\n        return String::new();\n    }\n',
+        '',
+        'derive_routing_candidates::tests::a_spec_linked_outside_the_project_is_not_read',
+    ),
+    (
+        'M22 the runtime home reads a plan linked outside the project',
+        'src/primitives/derive_routing_candidates.rs',
+        '        !crate::primitives::leaves_project(repo, &format!("{specs_root}/{slug}/plan.md"))\n            && crate::primitives::compute_review_scope::read_plan_affected(&specs_dir.join(slug))',
+        '        crate::primitives::compute_review_scope::read_plan_affected(&specs_dir.join(slug))',
+        'derive_routing_candidates::tests::a_spec_linked_outside_the_project_is_not_read',
+    ),
+    (
+        'M23 the framework reference sources are stat-ed through a link outside the base',
+        'src/primitives/check_corpus_links.rs',
+        '    let generates_references =\n        !containment.leaves(&reference_sources) && reference_sources.is_dir();',
+        '    let generates_references = reference_sources.is_dir();',
+        'check_corpus_links::tests::a_reference_sources_directory_linked_outside_is_not_probed',
+    ),
+    (
         'M24 a project file linked outside the project is measured',
         'src/primitives/check_artifact_size.rs',
         '            if super::leaves_project(repo, &rel) {\n                records.push(record(ProjectSizeState::Unreadable, None));\n                continue;\n            }\n',
         '',
         'check_artifact_size::tests::a_project_file_linked_outside_the_project_is_unreadable_not_measured',
+    ),
+    (
+        'M25 check-step-references lists a command directory linked outside the project',
+        'src/primitives/check_step_references.rs',
+        '    let listing = if super::leaves_project(repo, COMMANDS_DIR) {\n        Err(std::io::Error::other("it leaves the project"))\n    } else {\n        std::fs::read_dir(repo.join(COMMANDS_DIR))\n    };\n',
+        '    let listing = std::fs::read_dir(repo.join(COMMANDS_DIR));\n',
+        'check_step_references::tests::a_source_linked_outside_the_project_is_skipped_not_read',
+    ),
+    (
+        'M26 check-step-references reads a command file linked outside the project',
+        'src/primitives/check_step_references.rs',
+        '        if super::leaves_project(repo, &rel) {\n            skipped.push(StepReferenceSkip {\n                path: rel,\n                reason: "could not be read: it leaves the project".to_string(),\n            });\n            continue;\n        }\n',
+        '',
+        'check_step_references::tests::a_source_linked_outside_the_project_is_skipped_not_read',
+    ),
+    (
+        'M28 rewrite-spec-links takes a from that names no feature directory',
+        'src/primitives/rewrite_spec_links.rs',
+        '    super::validate_session_feature("rewrite-spec-links", "from", &args.from)?;\n',
+        '',
+        'rewrite_spec_links::tests::a_from_that_names_no_feature_directory_is_refused_with_the_corpus_untouched',
+    ),
+    (
+        'M29 rewrite-spec-links probes a scenario targets spec.md through a link outside the project',
+        'src/primitives/rewrite_spec_links.rs',
+        '    super::validate_feature_argument(repo, &layout.specs_root, &target.feature)?;\n',
+        '',
+        'rewrite_spec_links::tests::a_scenario_targets_spec_linked_outside_the_project_is_refused',
+    ),
+    (
+        'M30 rewrite-spec-links stats a link leaving the project below the spec root',
+        'src/primitives/rewrite_spec_links.rs',
+        '                    || super::leaves_project(self.repo, &repo_relative(self.repo, path))\n',
+        '',
+        'rewrite_spec_links::tests::a_link_out_of_the_project_below_the_spec_root_is_listed_without_a_stat',
+    ),
+    (
+        'M34 label-criteria keeps assigned inline past the read size',
+        'src/primitives/label_criteria.rs',
+        '    bound(repo, &args.feature, &mut labelled)?;\n    guarded::write_guarded(&snapshot, &new_content)?;\n',
+        '    guarded::write_guarded(&snapshot, &new_content)?;\n',
+        'label_criteria::tests::past_the_read_size_assigned_moves_to_the_file',
+    ),
+    (
+        'M35 label-criteria writes the spec before its result can be bounded',
+        'src/primitives/label_criteria.rs',
+        '    bound(repo, &args.feature, &mut labelled)?;\n    guarded::write_guarded(&snapshot, &new_content)?;\n',
+        '    guarded::write_guarded(&snapshot, &new_content)?;\n    bound(repo, &args.feature, &mut labelled)?;\n',
+        'label_criteria::tests::a_malformed_read_size_refuses_the_call_with_the_spec_untouched',
+    ),
+    (
+        'M36 the next label is the body maximum, not one past it, with no stored counter',
+        'src/primitives/label_criteria.rs',
+        '        (Some(max_label), None) => max_label + 1,\n',
+        '        (Some(max_label), None) => max_label,\n',
+        'label_criteria::tests::the_next_label_is_one_past_the_body_maximum_when_the_counter_is_absent_or_behind',
+    ),
+    (
+        'M37 the next label is the body maximum, not one past it, under a counter behind it',
+        'src/primitives/label_criteria.rs',
+        '        (Some(max_label), Some(next)) => next.max(max_label + 1),\n',
+        '        (Some(max_label), Some(next)) => next.max(max_label),\n',
+        'label_criteria::tests::the_next_label_is_one_past_the_body_maximum_when_the_counter_is_absent_or_behind',
+    ),
+    (
+        'M38 a rule directory linked outside the project fails routing instead of being skipped',
+        'src/primitives/derive_routing_candidates.rs',
+        '        Err(crate::primitives::PrimitiveError::InvalidPath { reason, .. }) => {',
+        '        Err(crate::primitives::PrimitiveError::InvalidPath { reason, .. }) if false => {',
+        'derive_routing_candidates::tests::a_rule_directory_linked_outside_the_project_is_skipped_by_name',
     ),
 ]

@@ -291,13 +291,14 @@ Result:
     { "label": "AC34", "criterion-index": 12 },
     { "label": "AC35", "criterion-index": 13 }
   ],
+  "assigned-count": 2,
   "next-criterion": 36,
   "changed": true,
   "path": "specs/022-deterministic-runtime/spec.md"
 }
 ```
 
-`assigned` lists only the criteria this run labelled, with each one's 0-based index in body order; `next-criterion` is the counter as written back, always above every label in the body; `changed` says whether the file was written. Assignment takes **`max(highest label in body + 1, next-criterion)`**, never `max(body) + 1` alone, so a deleted criterion's label is never reissued. A spec with no frontmatter fence, or a `next-criterion` that is not a positive integer, is refused rather than repaired; an absent or empty Acceptance Criteria section is a no-op that creates no counter. The write is atomic and the pass idempotent (scenario `criterion-label-assignment`).
+`assigned` lists only the criteria this run labelled, with each one's 0-based index in body order; `next-criterion` is the counter as written back, always above every label in the body; `changed` says whether the file was written. Past `[artifacts] read-size-bytes` `assigned` moves to the file `lists-file` names, with `assigned-count` inline and `form` present on every call, and a malformed read size refuses the call before the spec is written (task 42; `BE-PAYLOAD-001`). Assignment takes **`max(highest label in body + 1, next-criterion)`**, never `max(body) + 1` alone, so a deleted criterion's label is never reissued. A spec with no frontmatter fence, or a `next-criterion` that is not a positive integer, is refused rather than repaired; an absent or empty Acceptance Criteria section is a no-op that creates no counter. The write is atomic and the pass idempotent (scenario `criterion-label-assignment`).
 
 ### `set-status` — update spec frontmatter status field
 

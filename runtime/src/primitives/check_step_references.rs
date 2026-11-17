@@ -171,7 +171,15 @@ fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
     let mut references_out_of_subject: u32 = 0;
 
     let mut paths: Vec<std::path::PathBuf> = Vec::new();
-    match std::fs::read_dir(repo.join(COMMANDS_DIR)) {
+    // A source directory or file that is, or lies under, a link leaving the
+    // project is not listed or read: a skip names it, never a clean result
+    // (`BE-INPUT-004`).
+    let listing = if super::leaves_project(repo, COMMANDS_DIR) {
+        Err(std::io::Error::other("it leaves the project"))
+    } else {
+        std::fs::read_dir(repo.join(COMMANDS_DIR))
+    };
+    match listing {
         Ok(entries) => {
             let mut dir_paths: Vec<_> = entries
                 .filter_map(std::result::Result::ok)
@@ -197,6 +205,13 @@ fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
 
     for path in &paths {
         let rel = rel_path(path, repo);
+        if super::leaves_project(repo, &rel) {
+            skipped.push(StepReferenceSkip {
+                path: rel,
+                reason: "could not be read: it leaves the project".to_string(),
+            });
+            continue;
+        }
         let content = match read_text(path) {
             Ok(text) => text,
             Err(err) => {
@@ -646,6 +661,45 @@ mod tests {
             "check-step-references",
             &serde_json::to_value(&bounded).unwrap(),
             &lists,
+        );
+    }
+
+    /// A command source directory, a command file and a bootstrap file that
+    /// are links leaving the project are skipped by name and never read, so
+    /// the scan cannot read as clean over them (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_source_linked_outside_the_project_is_skipped_not_read() {
+        let steps = "# C\n\n## Instructions\n\n1. a\n2. b\n3. c, see step 9.\n";
+        let args = CheckStepReferencesArgs {};
+
+        let repo = tempfile::tempdir().unwrap();
+        let _dir = crate::primitives::outward::dir(repo.path(), COMMANDS_DIR, |dir| {
+            std::fs::write(dir.join("c.md"), steps).unwrap();
+        });
+        let found = compute(&args, repo.path());
+        assert!(found.examined.is_empty(), "{found:?}");
+        assert_eq!(found.skipped[0].path, COMMANDS_DIR);
+
+        let repo = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join(COMMANDS_DIR)).unwrap();
+        let _file =
+            crate::primitives::outward::file(repo.path(), &format!("{COMMANDS_DIR}/c.md"), steps);
+        let found = compute(&args, repo.path());
+        assert!(found.examined.is_empty(), "{found:?}");
+        assert!(found.findings.is_empty(), "{found:?}");
+        assert!(
+            found.skipped.iter().any(|s| s.path.ends_with("c.md")),
+            "{found:?}"
+        );
+
+        let repo = tempfile::tempdir().unwrap();
+        let _file = crate::primitives::outward::file(repo.path(), BOOTSTRAP_FILES[0], steps);
+        let found = compute(&args, repo.path());
+        assert!(found.examined.is_empty(), "{found:?}");
+        assert!(
+            found.skipped.iter().any(|s| s.path == BOOTSTRAP_FILES[0]),
+            "{found:?}"
         );
     }
 }

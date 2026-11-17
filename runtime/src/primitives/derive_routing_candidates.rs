@@ -210,10 +210,10 @@ fn derive_runtime_work(
         });
         return Ok(());
     }
-    match runtime_home(&specs_dir) {
+    match runtime_home(repo, &layout.specs_root) {
         Some(slug) => {
             let feature_dir = specs_dir.join(&slug);
-            let status = read_status(&feature_dir);
+            let status = read_status(repo, &layout.specs_root, &slug);
             candidates.push(RoutingCandidate {
                 route: "scenario".into(),
                 source: "runtime-work".into(),
@@ -255,15 +255,19 @@ fn runtime_signal(description: &str) -> Option<String> {
 /// The feature whose `plan.md` claims a `runtime/` path under Affected Files —
 /// the spec that owns the runtime in *this* corpus. The lowest-numbered match
 /// wins so the answer is stable; `None` when no spec claims it.
-fn runtime_home(specs_dir: &Path) -> Option<String> {
-    list_feature_dirs(specs_dir).into_iter().find(|slug| {
-        // An unreadable plan claims nothing here, as it always has: routing
-        // candidates are advice, and this caller's contract predates the
-        // error `compute-review-scope` now raises for it.
-        crate::primitives::compute_review_scope::read_plan_affected(&specs_dir.join(slug))
-            .unwrap_or_default()
-            .iter()
-            .any(|path| path.starts_with(RUNTIME_PATH_PREFIX))
+fn runtime_home(repo: &Path, specs_root: &str) -> Option<String> {
+    let specs_dir = repo.join(specs_root);
+    list_feature_dirs(&specs_dir).into_iter().find(|slug| {
+        // A plan that is, or lies under, a link leaving the project is not
+        // read (`BE-INPUT-004`). An unreadable plan claims nothing here, as it
+        // always has: routing candidates are advice, and this caller's
+        // contract predates the error `compute-review-scope` now raises for
+        // it.
+        !crate::primitives::leaves_project(repo, &format!("{specs_root}/{slug}/plan.md"))
+            && crate::primitives::compute_review_scope::read_plan_affected(&specs_dir.join(slug))
+                .unwrap_or_default()
+                .iter()
+                .any(|path| path.starts_with(RUNTIME_PATH_PREFIX))
     })
 }
 
@@ -278,7 +282,21 @@ fn derive_rule_surfaces(
     examined: &mut Vec<String>,
     skipped: &mut Vec<RoutingSkip>,
 ) -> Result<()> {
-    let (dir, dir_rel) = crate::primitives::discover_rule_files::resolve_rules_dir(repo)?;
+    // A rule directory that leaves the project is refused by the shared
+    // resolution; routing is advice, so it is a skip that names why, never an
+    // empty surface list (`BE-INPUT-004`).
+    let (dir, dir_rel) = match crate::primitives::discover_rule_files::resolve_rules_dir(repo) {
+        Ok(resolved) => resolved,
+        Err(crate::primitives::PrimitiveError::InvalidPath { reason, .. }) => {
+            skipped.push(RoutingSkip {
+                source: "rule-surface".into(),
+                reason: format!("rule-file directory leaves the project: {reason}"),
+                path: "rules".into(),
+            });
+            return Ok(());
+        }
+        Err(other) => return Err(other),
+    };
     let Some(dir) = dir else {
         // No rule directory at all is a real, examined answer: this project
         // has no rule surfaces, so none can be a home. A fresh adopter is
@@ -362,7 +380,7 @@ fn derive_spec_corpus(
             continue;
         }
         let feature_dir = specs_dir.join(&slug);
-        let status = read_status(&feature_dir);
+        let status = read_status(repo, &layout.specs_root, &slug);
         candidates.push(RoutingCandidate {
             route: "scenario".into(),
             source: "spec-corpus".into(),
@@ -385,13 +403,18 @@ fn slug_words(slug: &str) -> &str {
 /// A spec's frontmatter `status`, or empty when the file is absent or its
 /// frontmatter unreadable. Empty is a truthful "not known" — it only softens
 /// the confirmation prompt (no reopen is claimed), never fabricates one.
-fn read_status(feature_dir: &Path) -> String {
-    let Ok(content) = std::fs::read_to_string(feature_dir.join("spec.md")) else {
+fn read_status(repo: &Path, specs_root: &str, slug: &str) -> String {
+    let spec_rel = format!("{specs_root}/{slug}/spec.md");
+    // A spec that is, or lies under, a link leaving the project is not read:
+    // its status is not known here (`BE-INPUT-004`).
+    if crate::primitives::leaves_project(repo, &spec_rel) {
+        return String::new();
+    }
+    let spec = repo.join(&spec_rel);
+    let Ok(content) = std::fs::read_to_string(&spec) else {
         return String::new();
     };
-    let Ok((frontmatter, _)) =
-        crate::primitives::split_frontmatter(&content, &feature_dir.join("spec.md"))
-    else {
+    let Ok((frontmatter, _)) = crate::primitives::split_frontmatter(&content, &spec) else {
         return String::new();
     };
     frontmatter
@@ -730,5 +753,62 @@ mod tests {
             _ => 2,
         });
         assert_eq!(sources, sorted, "{:?}", first.candidates);
+    }
+
+    /// A spec directory that is a link leaving the project is not read for
+    /// its status or its plan: the status is not known and the plan claims
+    /// nothing (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_linked_outside_the_project_is_not_read() {
+        let repo = tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs/001-a", |dir| {
+            fs::write(
+                dir.join("spec.md"),
+                "---\nstatus: done\ndependencies: []\n---\n\n# a\n",
+            )
+            .unwrap();
+            fs::write(
+                dir.join("plan.md"),
+                "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n| `runtime/src/x.rs` | Edit |\n",
+            )
+            .unwrap();
+        });
+        assert_eq!(read_status(repo.path(), "specs", "001-a"), "");
+        assert_eq!(runtime_home(repo.path(), "specs"), None);
+
+        let repo = tempdir().unwrap();
+        write(
+            &repo.path().join("specs/001-a/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# a\n",
+        );
+        write(
+            &repo.path().join("specs/001-a/plan.md"),
+            "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n| `runtime/src/x.rs` | Edit |\n",
+        );
+        assert_eq!(read_status(repo.path(), "specs", "001-a"), "done");
+        assert_eq!(runtime_home(repo.path(), "specs").as_deref(), Some("001-a"));
+    }
+
+    /// A rule directory that is a link leaving the project is skipped by name,
+    /// not listed and not mistaken for a project with no rule surfaces
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_rule_directory_linked_outside_the_project_is_skipped_by_name() {
+        let repo = tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs/rules", |dir| {
+            fs::write(dir.join("quality-cross.md"), "# rules\n").unwrap();
+        });
+        let derived = run(&args("quality"), repo.path()).unwrap();
+        assert!(
+            derived
+                .skipped
+                .iter()
+                .any(|skip| skip.source == "rule-surface" && skip.reason.contains("leaves")),
+            "{:?}",
+            derived.skipped
+        );
+        assert!(derived.candidates.is_empty(), "{:?}", derived.candidates);
     }
 }

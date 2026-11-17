@@ -2097,7 +2097,14 @@ const NON_ASSERTION_MARKERS: [&str; 15] = [
 /// Family 18 of `/{project}:audit` guards the inverse direction for the marker
 /// list; here the safe default is built into the return value.
 pub(crate) fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
-    let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/ductus.md")) else {
+    // A manifest that is, or lies under, a link leaving the project is not
+    // read: the empty set is the adopter's answer too, and only ever adds
+    // findings (`BE-INPUT-004`).
+    let manifest = "framework/bootstrap/ductus.md";
+    if super::leaves_project(repo, manifest) {
+        return BTreeSet::new();
+    }
+    let Ok(text) = std::fs::read_to_string(repo.join(manifest)) else {
         return BTreeSet::new();
     };
     let mut out = manifest_destinations(&text);
@@ -6649,5 +6656,26 @@ mod tests {
     #[test]
     fn a_spec_with_no_plan_skips_plan_consistency() {
         assert_eq!(integrity("clarified", GOOD_BODY, None), vec![]);
+    }
+
+    /// A manifest that is a link leaving the project is not read: the set is
+    /// empty, as it is for an adopter, whatever the outside file declares
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_manifest_linked_outside_the_project_derives_no_destinations() {
+        let repo = tempfile::tempdir().unwrap();
+        seed_manifest(repo.path());
+        assert!(!adopter_destinations(repo.path()).is_empty());
+
+        let manifest =
+            std::fs::read_to_string(repo.path().join("framework/bootstrap/ductus.md")).unwrap();
+        std::fs::remove_file(repo.path().join("framework/bootstrap/ductus.md")).unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            "framework/bootstrap/ductus.md",
+            &manifest,
+        );
+        assert!(adopter_destinations(repo.path()).is_empty());
     }
 }

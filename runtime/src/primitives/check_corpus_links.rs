@@ -187,7 +187,11 @@ pub fn compute(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CorpusLinks> 
     result.skipped.append(&mut walk_skips);
     // A framework checkout carries the sources the `.ductus/reference/`
     // copies are generated from; anywhere else those files are installed.
-    let generates_references = repo.join(REFERENCE_SOURCES).is_dir();
+    // The probe is of a fixed name, so it is judged first: a link leaving the
+    // base is not stat-ed through (`BE-INPUT-004`).
+    let reference_sources = repo.join(REFERENCE_SOURCES);
+    let generates_references =
+        !containment.leaves(&reference_sources) && reference_sources.is_dir();
 
     for path in files {
         let relative = rel_path(&path, repo);
@@ -1483,5 +1487,39 @@ mod tests {
             "{}",
             result.broken[0].guidance
         );
+    }
+
+    /// The framework's reference sources are probed through no link leaving
+    /// the base: a `framework/reference` that is one does not make this a
+    /// framework checkout, so the installed references stay examined
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_reference_sources_directory_linked_outside_is_not_probed() {
+        let args = CheckCorpusLinksArgs {
+            scope: LinkScope::Repository,
+        };
+        let installed = |tmp: &tempfile::TempDir| {
+            std::fs::create_dir_all(tmp.path().join(".ductus/reference")).unwrap();
+            std::fs::write(
+                tmp.path().join(".ductus/reference/x.md"),
+                "[gone](missing.md)\n",
+            )
+            .unwrap();
+            let repository = git2::Repository::init(tmp.path()).unwrap();
+            crate::primitives::git_fixture::commit_all(&repository, "seed");
+        };
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir_all(tmp.path().join(REFERENCE_SOURCES)).unwrap();
+        installed(&tmp);
+        let result = compute(&args, tmp.path()).unwrap();
+        assert_eq!(result.excluded_by_construction, 1, "{result:?}");
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        let _outside = crate::primitives::outward::dir(tmp.path(), REFERENCE_SOURCES, |_| {});
+        installed(&tmp);
+        let result = compute(&args, tmp.path()).unwrap();
+        assert_eq!(result.excluded_by_construction, 0, "{result:?}");
     }
 }

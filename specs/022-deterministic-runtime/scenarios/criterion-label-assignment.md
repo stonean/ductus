@@ -20,6 +20,7 @@ A primitive scans a spec's Acceptance Criteria and returns the labels it assigne
 - Each unlabelled criterion receives the next label, taken from `max(highest label in body + 1, next-criterion)` and incremented per assignment, in body order.
 - The label is written after the checkbox and before the criterion's text (`- [ ] AC7: …`), leaving the text itself untouched.
 - `next-criterion` is written back to the frontmatter, always greater than every label in the body. It is never lowered, including when the pass runs on a spec whose highest-labelled criterion was deleted.
+- The result is held to `[artifacts] read-size-bytes`: past it `assigned`, one entry per criterion labelled, moves whole to a list file with its count inline, as `read-spec`'s criteria do.
 - With nothing to assign, the pass is a no-op: no write, no frontmatter churn, and a result that says so rather than reporting a clean write it did not perform.
 
 ### Label-aware addressing

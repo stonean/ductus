@@ -431,6 +431,14 @@ its version and date.
 
 ### Changed
 
+- **BREAKING: `label-criteria`'s `assigned` moves to the list file past
+  `[artifacts] read-size-bytes` (spec 022 task 42; `BE-PAYLOAD-001`, from the
+  review of 2026-11-17).** The list grows with a spec's unlabelled criteria
+  and was returned inline in both forms. It is now absent in the file form,
+  with `assigned-count` inline in both, and the result gains `form` and
+  `lists-file`. `label-criteria` bounds its result before it writes the spec,
+  so a malformed read size refuses the call with the spec untouched.
+
 - **067's primitives contain every path drawn from committed text, and five results are bounded (spec 067's review, `BE-INPUT-004`, `BE-PAYLOAD-001`).** A path a primitive builds from text the repository holds is refused before it is probed, listed or opened, as a path argument is, and reported as the primitive reports an unreadable one, never read:
   - `derive-dependencies` and `derive-references` name a tracked spec that is or runs through a link leaving the project in `unparseable`, and `--write` never replaces it with a regular file holding the outside content. `derive-references` still reads a registered service's `.ductus/config.toml` outside the project, by contract (specs 030 and 040).
   - `validate-frontmatter` reports a `scenarios/`, scenario, `review.md` or `analysis.md` that leaves the project as a hard-fail finding, and a `scenarios/` that exists and cannot be listed as one saying no scenario was checked, where it read as `clean: true`.
@@ -1357,10 +1365,18 @@ its version and date.
   `.ductus/config.toml` in every reader (`Host::load`, `Paths::load` and seven
   primitives), each feature directory `dashboard` lists and the scenario path
   its session names, the rule directory (`discover-rule-files` and
-  `write-analysis` refuse it, and the exec analyze walk halts naming it), the
-  spec root's `inbox.md`, a `references:` entry's `spec` under a service
-  checkout (reported `status-unreadable`), `check-orphaned-references`'
-  migration registry and `check-artifact-size`'s project files.
+  `write-analysis` refuse it, the exec analyze walk halts naming it, and
+  `derive-routing-candidates` records a skip), the spec root's `inbox.md`, a
+  `references:` entry's `spec` under a service checkout (reported
+  `status-unreadable`), `check-orphaned-references`' migration registry,
+  `check-artifact-size`'s project files, and the fixed-name sources of
+  `check-step-references`, `check-corpus-links`, `check-artifacts`,
+  `append-inbox`, `compute-review-scope` and `derive-routing-candidates`.
+  `rewrite-spec-links` walks a scenario target's feature directory, lists a
+  link below the spec root that leaves the project without testing what it
+  points at, and holds `from` to the feature-directory name rule before it
+  reads anything (`BE-INPUT-002`): `--from .` re-pointed every `./` link in a
+  fixture corpus, and now exits with an invalid-argument error.
 - **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
   from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
   check before the marker was stripped, so it was written as an empty bullet
