@@ -16,7 +16,7 @@ Each command template in `framework/commands/` is copied to `.claude/commands/du
 
 ### The per-language `.gitignore` fetch is bounded
 
-`/ductus` fetches each language's patterns from `raw.githubusercontent.com/github/gitignore` with `curl --proto '=https' --tlsv1.2 --connect-timeout {connect-timeout} --max-time {request-timeout}`, HTTPS only at TLS 1.2 or later and bounded as **Source resolution**'s fetches are (`framework/bootstrap/ductus.md`, §Collect Project Inputs' `.gitignore` merge and **Derived paths**). Stated here because this spec owns the merge, and the bound came from 022 task 18's and 061's work.
+`/ductus` fetches each language's patterns from `raw.githubusercontent.com/github/gitignore` with `curl --proto '=https' --tlsv1.2 --connect-timeout {connect-timeout} --max-time {request-timeout}`, HTTPS only at TLS 1.2 or later and bounded as **Source resolution**'s fetches are (`framework/bootstrap/ductus.md`, §Shared Files' **.gitignore** merge, step 5, and **Derived paths**). Stated here because this spec owns the merge, and the bound came from 022 task 18's and 061's work.
 
 ### Session file path
 
