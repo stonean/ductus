@@ -13,7 +13,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Implement the behavior described in `scenarios/a-first-adoption-with-existing-specs-is-not-an-update.md`
 
-Implemented in `02bbda81` (landed on `main` 2026-11-12): the box stays open for the done-when's scratch-adopter bootstrap, which must print "No earlier adoption found — running as a first adoption." and the first-run next steps on a first-adoption subject with existing specs, and the update message naming `{spec-root}/templates/spec.md` on a subject holding only that file. For a `pi` layout the signal includes a `{config_dir}/prompts/{govern|ductus|<project>}-*.md` file other than `ductus.md`, the layout analogue of the command directory.
+Implemented in `02bbda81` (landed on `main` 2026-11-12), and verified by the scratch-adopter bootstraps `2a4a2fab` records. For a `pi` layout the signal includes a `{config_dir}/prompts/{govern|ductus|<project>}-*.md` file, the layout analogue of the command directory.
 
 - **Done when**: the scenario's described behavior is correctly implemented, the spec's §Pre-flight Checks no longer reads an existing spec root as adoption, and a scratch-adopter bootstrap of a first-adoption subject with existing specs shows the first-run next steps
 

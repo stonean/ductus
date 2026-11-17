@@ -82,7 +82,7 @@ If `framework/migrations.toml` contains two entries with the same `id`, or if an
 
 ## Frontmatter Migration
 
-If `specs/` does not exist (first run), skip this section — there is nothing to migrate.
+If `specs/` does not exist (a greenfield run), skip this section — there is nothing to migrate.
 
 Bring existing spec and scenario files into the YAML frontmatter format declared in `framework/constitution.md` §text-first-artifacts. Migration is idempotent: re-running on an already-migrated project produces no further metadata changes.
 
@@ -378,7 +378,7 @@ If the **Pre-flight Phase** recorded any selected agent as `pinned-divergent` (t
 
 > {agent}: ductus.md pinned, upstream has changed.
 
-The advisory is omitted when no agent is `pinned-divergent` — adopters whose pinned version still matches upstream see nothing; adopters with no pin see nothing. The check's `stale` path aborts before this output is ever produced, so the advisory is only ever about pinned files.
+The advisory is omitted when no agent is `pinned-divergent` — adopters whose pinned version still matches upstream see nothing; adopters with no pin see nothing. The running agent's `stale` path aborts before this output is ever produced, and another agent's stale copy is reported among the agents updated, so the advisory is only ever about pinned files.
 
 ### Security audit summary
 
