@@ -128,7 +128,7 @@ Rationale does not move as one class. (`specs/inbox.md` puts it at 17–25% of t
 
 - [x] AC1: `framework/bootstrap/ductus.md` contains no step that requires the framework archive, and every step it does contain resolves within it — including both executable forward-dependencies named in §The boundary.
 - [x] AC2: The archive half ships under `framework/bootstrap/`, is reachable from the extracted tree by the path the installed half names, and appears in no manifest that writes into an adopter's agent directory.
-- [x] AC3: `install.sh` places only the installed half, for every one of its four agent arms, and its frontmatter-delimiter payload check still passes against it.
+- [x] AC3: `install.sh` places only the installed half, for every one of its agent arms, and its frontmatter-delimiter payload check still passes against it. It had four arms when this shipped, and has two, `claude` and `pi`, since `b1d319f1` dropped the others.
 - [x] AC4: The `ductus` self-install step writes only the installed half, at each layout's install path, and the Post-Write Integrity Check's body assertion holds against it for every layout.
 - [x] AC5: The self-update check byte-compares the installed half alone; no staleness check is defined for the archive half, and its freshness is stated to come from the archive fetch.
 - [x] AC6: `framework/bootstrap/govern.md` is byte-identical to the post-split `framework/bootstrap/ductus.md`, so audit Family 21 passes unchanged; no `govern-procedure.md` counterpart is created beside it.

@@ -45,7 +45,7 @@ Adopter-side cleanup for conventions that have been removed or renamed since the
 
 **Take the pre-run status first.** Before step 1, run `git status --porcelain -- specs/` (project-relative) and keep its output for the rest of the run. Nothing earlier in the run writes under `specs/`, so it is the tree as the adopter left it, and the **Frontmatter Migration**'s precheck judges it rather than a fresh status. When this section ends, whichever step ends it, run the same command again: each path that second output lists and the pre-run status does not is one this run's migrations made dirty, which **Post-Scaffolding Output** lists.
 
-1. Read `framework/migrations.toml` from the fetched archive. If the file is missing or malformed (TOML parse error), abort with `Failed to read framework/migrations.toml; cannot run pre-run migrations.` and do not continue.
+1. Read `framework/migrations.toml` from the fetched archive. If the file is missing or malformed (TOML parse error), abort with `Failed to read framework/migrations.toml; cannot run pre-run migrations.` and do not continue. Then apply the **Duplicate-id and reference-integrity guard** below, before any later step.
 2. Resolve the **active config file** once for this run (write policy: **Project Configuration**) and read its `[migrations].last_applied` (treat an absent `[migrations]` section as null). Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
 3. Filter the registry to entries where both:
 
@@ -263,7 +263,7 @@ The two frontmatter derivations are **runtime primitives**, not shipped scripts:
 
 ### Migration from spec-017 hook
 
-Adopters who installed the pre-commit hook under spec 017 have a single ductus-managed file at `.githooks/pre-commit` carrying the `# managed-by: ductus` sentinel on line 2. The new layout splits that file into a ductus-owned inner script and an adopter-owned outer stub at the same path. Migration runs **before** the detection ladder above and **before** the manifest passes for the two hook files, so the manifest's `update`/`create` strategies see the post-rename layout.
+Adopters who installed the pre-commit hook under spec 017 have a single ductus-managed file at `.githooks/pre-commit` carrying the `# managed-by: ductus` sentinel on line 2. The new layout splits that file into a ductus-owned inner script and an adopter-owned outer stub at the same path. Migration runs **before** the detection ladder above and **before** the manifest passes for the two hook files, at the start of `ductus.md` §Instructions step 4a, so the manifest's `update`/`create` strategies see the post-rename layout.
 
 Trigger:
 

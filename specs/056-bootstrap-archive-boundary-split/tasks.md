@@ -10,6 +10,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Implement the behavior described in `scenarios/the-walker-places-every-archive-half-section.md`
 
-Implemented in `824546a6` (landed on `main` 2026-11-12): the box stays open for the done-when's scratch-adopter bootstrap walked in the stated order.
+Implemented in `824546a6` (landed on `main` 2026-11-12), `0f5be269` and `9a753a97`, and verified by the scratch-adopter bootstrap `579bd9b8` records.
 
 - **Done when**: the scenario's described behavior is correctly implemented and verified by a scratch-adopter bootstrap walked in the stated order
