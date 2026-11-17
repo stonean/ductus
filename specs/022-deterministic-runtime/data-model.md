@@ -959,7 +959,7 @@ Schemas evolve in lockstep with the runtime binary per §runtime-boundary's lock
 
 ## Notes
 
-- All paths in request/response payloads are repo-relative (use `/` separators on all platforms), except the `path` `merge-managed-block` and `merge-permissions` echo, which is absolute, and `merge-permissions`' `directories-added`, which names the absolute directories a canonical call appended to `permissions.additionalDirectories`, in the platform's own separators, since that setting holds absolute paths (spec 080).
+- A path in a request/response payload is repo-relative (use `/` separators on all platforms), except in three kinds. A staging path is absolute and strictly inside a temporary directory, as plan §Path arguments states: `fetch-archive`'s destination and the `path` it returns, `extract-archive`'s archive and destination and the `dest` it returns, and an `apply-manifest` `source-root` that names a staging directory. `resolve-constitutions` echoes a registered checkout's `path` exactly as the config writes it. The `path` `merge-managed-block` and `merge-permissions` echo is absolute, and `merge-permissions`' `directories-added` names the absolute directories a canonical call appended to `permissions.additionalDirectories`, in the platform's own separators, since that setting holds absolute paths (spec 080).
 - All timestamps are ISO-8601 UTC strings.
 - All commit shas are 40-character lowercase hex strings.
 - Unknown JSON fields in incoming envelopes are ignored. Unknown fields in outgoing envelopes are not emitted (forward-compatibility is reserved for future spec evolution, not stowaway fields).
