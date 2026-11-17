@@ -84,7 +84,10 @@ pub(crate) fn run_as(
     let mut lists = serde_json::json!({
         "specs": &result.specs,
         "tags-union": &result.tags_union,
-        "config": { "unknown-keys": &result.config.unknown_keys },
+        "config": {
+            "unknown-keys": &result.config.unknown_keys,
+            "disabled-rule-files": &result.config.disabled_rule_files,
+        },
     });
     if !result.session_notices.is_empty() {
         lists["session-notices"] = serde_json::json!(&result.session_notices);
@@ -103,6 +106,7 @@ pub(crate) fn run_as(
         result.specs = None;
         result.tags_union = None;
         result.config.unknown_keys = None;
+        result.config.disabled_rule_files = None;
         if !result.session_notices.is_empty() {
             result.session_notices_count = Some(result.session_notices.len());
             result.session_notices = Vec::new();
@@ -453,7 +457,8 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         return Ok((
             DashboardConfig {
                 present: false,
-                disabled_rule_files: Vec::new(),
+                disabled_rule_files: Some(Vec::new()),
+                disabled_rule_files_count: 0,
                 unknown_keys: Some(Vec::new()),
                 unknown_keys_count: 0,
             },
@@ -474,7 +479,7 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         .map(ToString::to_string)
         .collect();
     let parsed: DuctusConfig = toml::from_str(&content).map_err(toml_error)?;
-    let disabled_rule_files = parsed
+    let disabled_rule_files: Vec<String> = parsed
         .review
         .map(|r| r.disabled_rule_files)
         .unwrap_or_default()
@@ -484,7 +489,8 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
     Ok((
         DashboardConfig {
             present: true,
-            disabled_rule_files,
+            disabled_rule_files_count: disabled_rule_files.len(),
+            disabled_rule_files: Some(disabled_rule_files),
             unknown_keys_count: unknown_keys.len(),
             unknown_keys: Some(unknown_keys),
         },
@@ -765,6 +771,51 @@ mod tests {
         let moved = file["config"]["unknown-keys"].as_array().unwrap();
         assert_eq!(moved.len(), 200);
         assert_eq!(moved[0], "[rules] stray-000");
+    }
+
+    /// Past the read size `config`'s `disabled-rule-files` moves to the list
+    /// file beside `unknown-keys`, with its count inline, so the file form
+    /// stays within the bound however many entries the config lists
+    /// (`BE-PAYLOAD-001`; 022 task 42, from the review of 2026-11-17).
+    #[test]
+    fn the_file_form_moves_the_disabled_rule_files() {
+        use std::fmt::Write as _;
+        let tmp = TempDir::new().unwrap();
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let entries = (0..200).fold(String::new(), |mut entries, n| {
+            let _ = write!(
+                entries,
+                "[[review.disabled-rule-files]]\nfile = \"rule-{n:03}-cross.md\"\nreason = \"a reason that is long enough\"\n"
+            );
+            entries
+        });
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            format!("[artifacts]\nread-size-bytes = 2000\n\n{entries}"),
+        )
+        .unwrap();
+
+        let result =
+            super::run_as(&DashboardArgs::default(), tmp.path(), None, fixed_now()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.config.disabled_rule_files.is_none(), "{result:?}");
+        assert_eq!(result.config.disabled_rule_files_count, 200);
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 2000, "{size} bytes");
+        let file: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(result.lists_file.as_deref().unwrap()))
+                .unwrap(),
+        )
+        .unwrap();
+        let moved = file["config"]["disabled-rule-files"].as_array().unwrap();
+        assert_eq!(moved.len(), 200);
+        assert_eq!(moved[0], "rule-000-cross.md");
     }
 
     fn fixed_now() -> SystemTime {
@@ -1419,7 +1470,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert!(!result.config.present);
-        assert_eq!(result.config.disabled_rule_files, [] as [String; 0]);
+        assert_eq!(result.config.disabled_rule_files.as_deref(), Some(&[][..]));
     }
 
     #[test]
@@ -1428,7 +1479,7 @@ mod tests {
         std::fs::write(tmp.path().join(".govern.toml"), "# empty\n").unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert!(result.config.present);
-        assert_eq!(result.config.disabled_rule_files, [] as [String; 0]);
+        assert_eq!(result.config.disabled_rule_files.as_deref(), Some(&[][..]));
     }
 
     #[test]
@@ -1448,8 +1499,12 @@ reason = "Deferred until v2 perf budget lands."
         assert!(result.config.present);
         assert_eq!(
             result.config.disabled_rule_files,
-            vec!["accessibility-frontend.md", "performance-frontend.md"]
+            Some(vec![
+                "accessibility-frontend.md".to_string(),
+                "performance-frontend.md".to_string()
+            ])
         );
+        assert_eq!(result.config.disabled_rule_files_count, 2);
     }
 
     #[test]

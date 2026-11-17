@@ -313,7 +313,7 @@ struct RuleFacts {
 
 impl RuleFacts {
     fn load(repo: &Path, spec_rel: &str) -> Result<Self> {
-        let discovered = discover_rule_files::run(
+        let (discovered, _) = discover_rule_files::compute(
             &DiscoverRuleFilesArgs {
                 all: true,
                 ..DiscoverRuleFilesArgs::default()
@@ -323,6 +323,7 @@ impl RuleFacts {
         let files: Vec<String> = discovered
             .selected
             .iter()
+            .flatten()
             .map(|name| format!("{}/{name}", discovered.rules_dir))
             .collect();
         let mut tiers = HashMap::new();
@@ -933,6 +934,26 @@ mod tests {
             &serde_json::to_value(&bounded).unwrap(),
             &lists,
         );
+    }
+
+    /// The tiers come from the whole selection of rule files, never from a
+    /// `discover-rule-files` result bounded to a list file, which holds none
+    /// inline (`BE-PAYLOAD-001`; 022 task 42, F10).
+    #[test]
+    fn the_tiers_are_read_whatever_the_read_size() {
+        let tmp = project(
+            "",
+            "- departs: `DM-MUST-001`\n  - reason: r\n  - cited: §shared-exceptions\n",
+        );
+        read_size(&tmp, 10);
+        let whole = compute(
+            &CheckDeparturesArgs {
+                feature: FEATURE.into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(whole.0[0].tier, Some(FindingTier::Must), "{whole:?}");
     }
 
     #[test]

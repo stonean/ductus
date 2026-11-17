@@ -737,8 +737,12 @@ pub struct DiscoverRuleFilesResult {
     pub rules_dir: String,
     /// Selected rule-file basenames, sorted, after surface selection and the
     /// disabled-rule-files filter, or every rule file in the directory under
-    /// `all`.
-    pub selected: Vec<String>,
+    /// `all`. Absent in the file form, which moves it to the list file, since
+    /// it grows with the rule directory (BE-PAYLOAD-001, 022 task 42).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected: Option<Vec<String>>,
+    /// Entries in `selected`, in either form.
+    pub selected_count: usize,
     /// Ordered stdout notice lines to emit verbatim: a line per unknown key
     /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
     /// warnings, then disabled-rule-file notices, then a line per `*.md`
@@ -770,9 +774,9 @@ pub struct DiscoverRuleFilesResult {
     /// file `lists-file` names (spec 080, AC7; `notices`, and so every call,
     /// since 022 task 32).
     pub form: ListsForm,
-    /// In the file form, the file holding `notices`, with `rules` its
-    /// `rule-files`, and with `verdicts` its `reusable` and `judge` lists,
-    /// whole, from the project root.
+    /// In the file form, the file holding `selected` and `notices`, with
+    /// `rules` its `rule-files`, and with `verdicts` its `reusable` and
+    /// `judge` lists, whole, from the project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// With `all`, `rules` and `feature`: which stored rule verdicts a run
@@ -3227,8 +3231,14 @@ pub struct DashboardConfig {
     /// `true` when the resolved config file exists.
     pub present: bool,
     /// Basenames from `[[review.disabled-rule-files]]`. Empty when the
-    /// section is absent or its array is empty.
-    pub disabled_rule_files: Vec<String>,
+    /// section is absent or its array is empty. Absent in `dashboard`'s file
+    /// form, which moves it to the list file under `config`, as it does
+    /// `unknown-keys` (022 task 42); the pipeline view's model always holds
+    /// it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled_rule_files: Option<Vec<String>>,
+    /// Entries in `disabled-rule-files`, in either form.
+    pub disabled_rule_files_count: usize,
     /// Every key in a `ductus`-owned section that no reader recognizes, as
     /// `{location} {key}` — `[rules] surface`, or
     /// `[[review.disabled-rule-files]] entry [0] approved-by` — with a key

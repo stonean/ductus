@@ -22,8 +22,8 @@ MUTATIONS = [
     (
         'M1 discover-rule-files leaves notices inline in the file form',
         'src/primitives/discover_rule_files.rs',
-        '        result.form = ListsForm::File;\n        result.notices = None;\n',
-        '        result.form = ListsForm::File;\n',
+        '        result.selected = None;\n        result.notices = None;\n',
+        '        result.selected = None;\n',
         'discover_rule_files::tests::past_the_read_size_the_notices_move_to_the_file',
     ),
     (
@@ -50,7 +50,7 @@ MUTATIONS = [
     (
         'M5 dashboard writes no unknown-keys to the list file',
         'src/primitives/dashboard.rs',
-        '        "config": { "unknown-keys": &result.config.unknown_keys },\n',
+        '            "unknown-keys": &result.config.unknown_keys,\n',
         '',
         'dashboard::tests::the_file_form_moves_the_unknown_config_keys',
     ),

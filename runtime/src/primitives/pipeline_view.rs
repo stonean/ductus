@@ -559,26 +559,28 @@ fn config_items(data: &ViewData<'_>) -> Vec<Item> {
     };
     let mut items = Vec::new();
     let config = data.config;
-    if config.present && !config.disabled_rule_files.is_empty() {
+    // The model always holds the names: only `dashboard`'s file form moves
+    // them, and the view renders from the model.
+    let disabled_rule_files = config.disabled_rule_files.as_deref().unwrap_or_default();
+    if config.present && !disabled_rule_files.is_empty() {
         // Each basename is committed config, rendered on one line so a
         // newline in it cannot forge a view line (`BE-INPUT-011`), as
         // `discover-rule-files` renders the same values.
-        let shown: Vec<String> = config
-            .disabled_rule_files
+        let shown: Vec<String> = disabled_rule_files
             .iter()
             .map(|file| view_text(file))
             .collect();
         items.push(cut(
             format!(
                 "Disabled rule files: {} ({}) — {}",
-                config.disabled_rule_files.len(),
+                disabled_rule_files.len(),
                 data.config_name,
                 shown.join(", ")
             ),
             Cut::DisabledRuleFiles,
             format!(
                 "Disabled rule files: {} ({})",
-                config.disabled_rule_files.len(),
+                disabled_rule_files.len(),
                 data.config_name
             ),
         ));
@@ -1078,7 +1080,8 @@ mod tests {
                 tags: vec!["pipeline".to_string()],
                 config: DashboardConfig {
                     present: true,
-                    disabled_rule_files: Vec::new(),
+                    disabled_rule_files: Some(Vec::new()),
+                    disabled_rule_files_count: 0,
                     unknown_keys: Some(Vec::new()),
                     unknown_keys_count: 0,
                 },
@@ -1472,7 +1475,8 @@ mod tests {
             tags_union: &tags,
             config: &DashboardConfig {
                 present: true,
-                disabled_rule_files: vec!["a-cross.md".to_string(), "b-cross.md".to_string()],
+                disabled_rule_files: Some(vec!["a-cross.md".to_string(), "b-cross.md".to_string()]),
+                disabled_rule_files_count: 2,
                 unknown_keys: Some(vec!["[review] stray".to_string()]),
                 unknown_keys_count: 1,
             },

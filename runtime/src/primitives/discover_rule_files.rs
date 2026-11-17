@@ -98,6 +98,22 @@ fn classify(basename: &str) -> Surface {
 /// - With `all`, `rules` and `feature`, [`PrimitiveError::FeatureNotFound`] and the
 ///   feature-argument refusals of `validate_feature_argument`.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
+    let (mut result, notices) = compute(args, repo)?;
+    bound(repo, &mut result, notices)?;
+    Ok(result)
+}
+
+/// The selection whole, with the `notices` [`bound`] then holds to the read
+/// size: for a caller that reads `selected` itself and so must not see it
+/// moved to a list file.
+///
+/// # Errors
+///
+/// Every error [`run`] returns but those of `bounded_lists::place`.
+pub(crate) fn compute(
+    args: &DiscoverRuleFilesArgs,
+    repo: &Path,
+) -> Result<(DiscoverRuleFilesResult, Vec<String>)> {
     for (argument, given) in [
         ("verification", args.verification),
         ("extra-files", !args.extra_files.is_empty()),
@@ -182,18 +198,18 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
 
     let mut result = DiscoverRuleFilesResult {
         rules_dir: rules_dir_rel,
-        selected,
+        selected_count: selected.len(),
+        selected: Some(selected),
         ..DiscoverRuleFilesResult::default()
     };
     if args.rules {
         list_rules(args, repo, &mut result, &mut notices)?;
     }
-    bound(repo, &mut result, notices)?;
-    Ok(result)
+    Ok((result, notices))
 }
 
 /// `result` held to `[artifacts] read-size-bytes` once `notices` is whole:
-/// inline while it fits, and past it with `notices`, with `rules` its
+/// inline while it fits, and past it with `selected` and `notices`, with `rules` its
 /// `rule-files` and a non-empty `unreadable`, and with `verdicts` its
 /// `reusable` and `judge`, in the file it names and only their counts inline
 /// (`bounded_lists::place`; spec 080, AC7, and 022 task 32 for `notices`, a
@@ -203,7 +219,10 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
     result.notices = Some(notices);
     result.unreadable_count = result.unreadable.len();
     result.form = ListsForm::Inline;
-    let mut lists = serde_json::json!({ "notices": &result.notices });
+    let mut lists = serde_json::json!({
+        "selected": &result.selected,
+        "notices": &result.notices,
+    });
     if let Some(rule_files) = &result.rule_files {
         lists["rule-files"] = serde_json::json!(rule_files);
     }
@@ -222,6 +241,7 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
         &lists,
     )? {
         result.form = ListsForm::File;
+        result.selected = None;
         result.notices = None;
         result.rule_files = None;
         result.unreadable = Vec::new();
@@ -245,8 +265,8 @@ fn list_rules(
     result: &mut DiscoverRuleFilesResult,
     notices: &mut Vec<String>,
 ) -> Result<()> {
-    let mut files: Vec<String> = result
-        .selected
+    let chosen = result.selected.as_deref().unwrap_or_default();
+    let mut files: Vec<String> = chosen
         .iter()
         .map(|name| format!("{}/{name}", result.rules_dir))
         .collect();
@@ -258,7 +278,7 @@ fn list_rules(
     // The files a run records its rule verdicts over: the selected ones, which
     // under `all` is every file in the directory, never the extra files.
     let mut loaded: Vec<LoadedRuleFile> = Vec::new();
-    let selected = result.selected.len();
+    let selected = chosen.len();
     for (index, file) in files.into_iter().enumerate() {
         let content = match std::fs::read_to_string(repo.join(&file)) {
             Ok(content) => content,
@@ -734,6 +754,11 @@ mod tests {
         tmp
     }
 
+    /// The selection, which every inline result holds.
+    fn selected_of(result: &DiscoverRuleFilesResult) -> Vec<String> {
+        result.selected.clone().unwrap()
+    }
+
     fn args(detected: &[&str]) -> DiscoverRuleFilesArgs {
         DiscoverRuleFilesArgs {
             detected_surfaces: detected.iter().map(|s| (*s).to_string()).collect(),
@@ -765,7 +790,7 @@ mod tests {
         let tmp = setup(THREE, None);
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(
-            result.selected,
+            selected_of(&result),
             vec![
                 "accessibility-frontend.md",
                 "quality-cross.md",
@@ -786,7 +811,7 @@ mod tests {
         let tmp = setup(THREE, Some("[rules]\nsurfaces = [\"backend\"]\n"));
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(
-            result.selected,
+            selected_of(&result),
             vec!["quality-cross.md", "security-backend.md"]
         );
     }
@@ -795,7 +820,7 @@ mod tests {
     fn empty_surfaces_is_cross_only() {
         let tmp = setup(THREE, Some("[rules]\nsurfaces = []\n"));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert_eq!(result.selected, vec!["quality-cross.md"]);
+        assert_eq!(selected_of(&result), vec!["quality-cross.md"]);
     }
 
     #[test]
@@ -803,7 +828,7 @@ mod tests {
         let tmp = setup(THREE, None);
         let result = run(&args(&["frontend"]), tmp.path()).unwrap();
         assert_eq!(
-            result.selected,
+            selected_of(&result),
             vec!["accessibility-frontend.md", "quality-cross.md"]
         );
     }
@@ -814,7 +839,7 @@ mod tests {
         let tmp = setup(THREE, Some("[rules]\nsurfaces = [\"backend\"]\n"));
         let result = run(&args(&["frontend"]), tmp.path()).unwrap();
         assert_eq!(
-            result.selected,
+            selected_of(&result),
             vec!["quality-cross.md", "security-backend.md"]
         );
     }
@@ -866,7 +891,7 @@ mod tests {
     fn unrecognized_suffix_loads_for_all_stacks_with_warning() {
         let tmp = setup(&["security-backend.md", "internal-notes.md"], None);
         let result = run(&args(&["backend"]), tmp.path()).unwrap();
-        assert!(result.selected.contains(&"internal-notes.md".to_string()));
+        assert!(selected_of(&result).contains(&"internal-notes.md".to_string()));
         assert_eq!(
             result.notices.as_deref().unwrap()[0],
             "rule file internal-notes.md has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md"
@@ -878,11 +903,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"accessibility-frontend.md\"\nreason = \"Internal admin UI; not yet adopting WCAG AA.\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(
-            !result
-                .selected
-                .contains(&"accessibility-frontend.md".to_string())
-        );
+        assert!(!selected_of(&result).contains(&"accessibility-frontend.md".to_string()));
         assert!(result.notices.as_deref().unwrap().contains(
             &"disabled-rule-file: accessibility-frontend.md — Internal admin UI; not yet adopting WCAG AA. (.govern.toml)".to_string()
         ));
@@ -1075,7 +1096,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"Not adopting this file yet, PROJ-1.\"\napproved-by = \"ops@example.com\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(!result.selected.contains(&"quality-cross.md".to_string()));
+        assert!(!selected_of(&result).contains(&"quality-cross.md".to_string()));
         // Reported as informational all the same (spec 019).
         assert_eq!(
             result.notices.as_deref().unwrap()[0],
@@ -1133,7 +1154,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"アクセシビリティ対応は第三四半期\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(!result.selected.contains(&"quality-cross.md".to_string()));
+        assert!(!selected_of(&result).contains(&"quality-cross.md".to_string()));
     }
 
     #[test]
@@ -1141,7 +1162,7 @@ mod tests {
         let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"First entry, this one applies.\"\n\n[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"Second entry, should be ignored.\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(!result.selected.contains(&"quality-cross.md".to_string()));
+        assert!(!selected_of(&result).contains(&"quality-cross.md".to_string()));
         assert!(result.notices.as_deref().unwrap().contains(
             &"duplicate disabled-rule-file: quality-cross.md — entry [1] ignored".to_string()
         ));
@@ -1182,7 +1203,7 @@ mod tests {
         std::fs::write(rules.join("quality-cross.md"), "# rule\n").unwrap();
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(result.rules_dir, "specs/rules");
-        assert_eq!(result.selected, vec!["quality-cross.md"]);
+        assert_eq!(selected_of(&result), vec!["quality-cross.md"]);
     }
 
     #[test]
@@ -1190,7 +1211,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(result.rules_dir, "");
-        assert_eq!(result.selected, [] as [String; 0]);
+        assert_eq!(selected_of(&result), [] as [String; 0]);
         assert_eq!(
             result.notices.as_deref().unwrap(),
             vec!["loading rule files: "]
@@ -1288,7 +1309,7 @@ mod tests {
                     file = \"security-backend.md\"\nreason = \"Not adopting it on this surface yet.\"\n";
         let tmp = setup(THREE, Some(toml));
         let review = run(&args(&[]), tmp.path()).unwrap();
-        assert_eq!(review.selected, vec!["quality-cross.md"]);
+        assert_eq!(selected_of(&review), vec!["quality-cross.md"]);
         let all = run(
             &DiscoverRuleFilesArgs {
                 all: true,
@@ -1298,7 +1319,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            all.selected,
+            selected_of(&all),
             vec![
                 "accessibility-frontend.md",
                 "quality-cross.md",
@@ -1332,7 +1353,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(all.selected, vec!["quality-cross.md"]);
+        assert_eq!(selected_of(&all), vec!["quality-cross.md"]);
         assert!(
             all.notices.as_deref().unwrap().iter().any(|notice| notice
                 == "rule file linked-cross.md is not a regular file — not loaded; replace it with the file itself"),
@@ -1405,7 +1426,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert_eq!(all.selected.len(), 3);
+        assert_eq!(selected_of(&all).len(), 3);
     }
 
     /// `verification` and `extra-files` add to what `rules` lists, so either
@@ -1554,6 +1575,44 @@ mod tests {
                 &lists,
             );
         }
+    }
+
+    /// Past the read size `selected`, a name per selected file, moves to the
+    /// file with the notices, its count inline, whatever the call asks for:
+    /// it grows with the rule directory, and the result is held to the read
+    /// size (`BE-PAYLOAD-001`; 022 task 42, F10). `compute` keeps it whole
+    /// for a caller that reads it itself.
+    #[test]
+    fn past_the_read_size_selected_moves_to_the_file() {
+        let names: Vec<String> = (0..300).map(|n| format!("rule-{n:03}-cross.md")).collect();
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        let tmp = setup(&refs, None);
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 2000\n",
+        )
+        .unwrap();
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        assert!(result.selected.is_none(), "selected stayed inline");
+        assert_eq!(result.selected_count, 300);
+        let size = serde_json::to_vec(&result).unwrap().len();
+        assert!(size <= 2000, "{size} bytes");
+        let file = result.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(lists["selected"].as_array().unwrap().len(), 300);
+        assert_eq!(lists["selected"][0], "rule-000-cross.md");
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "discover-rule-files",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
+
+        let (whole, _) = compute(&args(&[]), tmp.path()).unwrap();
+        assert_eq!(whole.selected.as_deref().map(<[String]>::len), Some(300));
     }
 
     /// Past the read size a non-empty `unreadable` moves to the file with the

@@ -431,13 +431,18 @@ its version and date.
 
 ### Changed
 
-- **BREAKING: `label-criteria`'s `assigned` moves to the list file past
-  `[artifacts] read-size-bytes` (spec 022 task 42; `BE-PAYLOAD-001`, from the
-  review of 2026-11-17).** The list grows with a spec's unlabelled criteria
-  and was returned inline in both forms. It is now absent in the file form,
-  with `assigned-count` inline in both, and the result gains `form` and
-  `lists-file`. `label-criteria` bounds its result before it writes the spec,
-  so a malformed read size refuses the call with the spec untouched.
+- **BREAKING: `discover-rule-files`' `selected`, `dashboard`'s
+  `config.disabled-rule-files` and `label-criteria`'s `assigned` move to the
+  list file past `[artifacts] read-size-bytes` (spec 022 task 42;
+  `BE-PAYLOAD-001`, from the review of 2026-11-17).** Each list grows with its
+  input (a rule directory, a config, a spec's unlabelled criteria) and was
+  returned inline in both forms. Each is now absent in the file form, with
+  `selected-count`, `disabled-rule-files-count` (under `config`) and
+  `assigned-count` inline in both, and `label-criteria`'s result gains `form`
+  and `lists-file`. `label-criteria` bounds its result before it writes the
+  spec, so a malformed read size refuses the call with the spec untouched. A
+  caller that reads `selected` itself takes `discover_rule_files::compute`, as
+  `check-departures` now does.
 
 - **067's primitives contain every path drawn from committed text, and five results are bounded (spec 067's review, `BE-INPUT-004`, `BE-PAYLOAD-001`).** A path a primitive builds from text the repository holds is refused before it is probed, listed or opened, as a path argument is, and reported as the primitive reports an unreadable one, never read:
   - `derive-dependencies` and `derive-references` name a tracked spec that is or runs through a link leaving the project in `unparseable`, and `--write` never replaces it with a regular file holding the outside content. `derive-references` still reads a registered service's `.ductus/config.toml` outside the project, by contract (specs 030 and 040).

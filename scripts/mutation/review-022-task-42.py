@@ -15,8 +15,8 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
 The containment tests are Unix only (they plant a symbolic link), so on
-Windows M1-M12, M14-M26, M29, M30 and M38 would survive; M13 and M28 are
-killed by tests that plant none.
+Windows every mutation but M13, M28 and M31-M37 would survive: their tests
+plant no link.
 """
 
 EXPECTED_SURVIVORS = {}
@@ -224,6 +224,27 @@ MUTATIONS = [
         '                    || super::leaves_project(self.repo, &repo_relative(self.repo, path))\n',
         '',
         'rewrite_spec_links::tests::a_link_out_of_the_project_below_the_spec_root_is_listed_without_a_stat',
+    ),
+    (
+        'M31 discover-rule-files keeps selected inline past the read size',
+        'src/primitives/discover_rule_files.rs',
+        '        result.form = ListsForm::File;\n        result.selected = None;\n',
+        '        result.form = ListsForm::File;\n',
+        'discover_rule_files::tests::past_the_read_size_selected_moves_to_the_file',
+    ),
+    (
+        'M32 check-departures reads the selection from a result bounded to a list file',
+        'src/primitives/check_departures.rs',
+        '        let (discovered, _) = discover_rule_files::compute(',
+        '        let discovered = discover_rule_files::run(',
+        'check_departures::tests::the_tiers_are_read_whatever_the_read_size',
+    ),
+    (
+        'M33 dashboard keeps config disabled-rule-files inline past the read size',
+        'src/primitives/dashboard.rs',
+        '        result.config.disabled_rule_files = None;\n',
+        '',
+        'dashboard::tests::the_file_form_moves_the_disabled_rule_files',
     ),
     (
         'M34 label-criteria keeps assigned inline past the read size',
