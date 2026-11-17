@@ -8,7 +8,8 @@
 # non-comment line is a repo-relative path to a file in one of those two
 # trees.
 #
-# Entries are of two kinds, and they are not retired the same way:
+# Entries are of kinds that are not retired the same way (the two below, and
+# the host-run entry, described where it is listed):
 #
 #   TRANSITIONAL — a slash command not yet rewritten to the parseable
 #   conventions. Removed as each is rewritten (spec 022's tasks 12-17 and
