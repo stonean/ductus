@@ -111,7 +111,11 @@ fi
 #    that cries wolf gets ignored.
 if probe g-block-needs 's|^    needs: publish$|    needs:\
       - publish|'; then
-  pass "G: the block-sequence needs form is accepted"
+  if cmp -s "$WORKFLOW" "$WORK/g-block-needs/.github/workflows/runtime-release.yml"; then
+    fail "G: the edit matched nothing, so the block-sequence form was not tested"
+  else
+    pass "G: the block-sequence needs form is accepted"
+  fi
 else
   fail "G: block-sequence needs misread: $(cat "$WORK/g-block-needs/out")"
 fi
@@ -121,7 +125,11 @@ fi
 #    release-upload mention inside the trigger block, which used to surface as
 #    a finding against a job named "push".
 if probe h-on-block "s|^      - 'ductus-v\*'\$|      - 'ductus-v*'  # softprops/action-gh-release|"; then
-  pass "H: on:'s children are not read as jobs"
+  if cmp -s "$WORKFLOW" "$WORK/h-on-block/.github/workflows/runtime-release.yml"; then
+    fail "H: the edit matched nothing, so the on: block was not tested"
+  else
+    pass "H: on:'s children are not read as jobs"
+  fi
 else
   fail "H: a key under on: was read as a job: $(cat "$WORK/h-on-block/out")"
 fi

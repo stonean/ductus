@@ -13,6 +13,10 @@
 #   C. a `.ductus/config.toml` that does not parse fails, naming the file, even
 #      where the basename matches the installed namespace
 #   D. a malformed legacy `.govern/config.toml`, the tier in use, fails naming it
+#   E. a `[host] project` that is empty, `.`, `..`, holds a separator or is not a
+#      string, which `Host::load` refuses (task 40), fails naming the file even
+#      where the basename matches the installed namespace (022 task 44)
+#   F. a renamed `[host] project` key fails the contract assertion (022 task 44)
 #
 # Usage: scripts/tests/test-host-namespace-parity.sh
 
@@ -82,14 +86,37 @@ mkdir -p "$dir/.ductus"
 printf '[host\nproject = "acme"\n' > "$dir/.ductus/config.toml"
 run_family "$dir"
 expect "C: an unparseable .ductus/config.toml fails naming it, the basename matching" 1 \
-  '^host-namespace-parity \| \.ductus/config\.toml \| cannot be read or does not parse as TOML'
+  '^host-namespace-parity \| \.ductus/config\.toml \| cannot be read, does not parse as TOML, or names a \[host\] project'
 
 dir="$(make_tree d acme)"
 mkdir -p "$dir/.govern"
 printf 'project = = "acme"\n' > "$dir/.govern/config.toml"
 run_family "$dir"
 expect "D: an unparseable legacy .govern/config.toml fails naming it" 1 \
-  '^host-namespace-parity \| \.govern/config\.toml \| cannot be read or does not parse as TOML'
+  '^host-namespace-parity \| \.govern/config\.toml \| cannot be read, does not parse as TOML, or names a \[host\] project'
+
+# A `[host] project` that `Host::load` refuses (task 40) halts the family too.
+n=0
+for bad in 'project = ""' 'project = "."' 'project = ".."' 'project = "a/b"' 'project = "a\\b"' 'project = 3'; do
+  n=$((n + 1))
+  dir="$(make_tree "e$n" acme)"
+  mkdir -p "$dir/.ductus"
+  printf '[host]\n%s\n' "$bad" > "$dir/.ductus/config.toml"
+  run_family "$dir"
+  expect "E: [host] $bad fails naming the file, the basename matching" 1 \
+    '^host-namespace-parity \| \.ductus/config\.toml \| cannot be read, does not parse as TOML, or names a \[host\] project'
+done
+
+# The contract assertion greps the key's declaration, so a renamed key fails it.
+dir="$(make_tree f acme)"
+sed 's/project: Option<String>/renamed: Option<String>/' "$REPO_ROOT/runtime/src/host.rs" > "$dir/runtime/src/host.rs"
+if cmp -s "$REPO_ROOT/runtime/src/host.rs" "$dir/runtime/src/host.rs"; then
+  fail "F: the sed edit matched nothing"
+else
+  run_family "$dir"
+  expect "F: a renamed [host] project key fails the contract assertion" 1 \
+    '^host-namespace-parity \| runtime/src/host\.rs \| the \[host\] project key'
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

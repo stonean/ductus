@@ -244,18 +244,25 @@ mod tests {
     }
 
     #[test]
-    fn dropping_named_tempfile_leaves_no_destination() {
-        use std::io::Write;
+    #[cfg(unix)]
+    fn a_failed_write_leaves_no_destination_and_no_tempfile() {
+        use crate::primitives::unwritable_dir::{entries, while_unwritable};
         let tmp = tempdir().unwrap();
         make_feature(tmp.path(), "specs/042-foo");
         let scenarios_dir = tmp.path().join("specs/042-foo/scenarios");
         fs::create_dir_all(&scenarios_dir).unwrap();
-        let dest = scenarios_dir.join("interrupted.md");
-        {
-            let mut tf = tempfile::NamedTempFile::new_in(&scenarios_dir).unwrap();
-            tf.write_all(b"INTERRUPTED").unwrap();
-        }
-        assert!(!dest.exists());
+        let before = entries(&scenarios_dir);
+        let err = while_unwritable(&scenarios_dir, || {
+            run(&args("specs/042-foo", "interrupted", None), tmp.path())
+        })
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert!(!scenarios_dir.join("interrupted.md").exists());
+        assert_eq!(
+            before,
+            entries(&scenarios_dir),
+            "a tempfile was left behind"
+        );
     }
 
     /// Minimal frontmatter shape for the YAML round-trip assertion.

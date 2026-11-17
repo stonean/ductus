@@ -603,16 +603,10 @@ fn stage_fixture(command: &str, fixture: &str) -> tempfile::TempDir {
             ),
         ]);
         substitute_in_session(tmp.path(), "{MOCK_HTTP}", &server.url());
-        // `fetch-archive` and `extract-archive` take a staging path inside the
-        // system temp directory, absolute, as `/ductus` passes its `{tempdir}`
-        // (spec 022 task 9). The fixture stages under a tempdir, so its own
-        // root is one; the seed spells it as a TOML literal string, which
-        // reads a Windows path's backslashes as they are.
-        substitute_in_session(tmp.path(), "{REPO}", &tmp.path().display().to_string());
         // The archive primitives' write destination must lie OUTSIDE the
         // working directory (spec 022 task 17 q2): `/ductus` extracts into a
         // fresh `{tempdir}` separate from the project, never into it. The
-        // fixture's working directory is `{REPO}` (the exec's cwd), so its
+        // fixture's working directory is the exec's cwd, so its
         // staging directory is a sibling tempdir, `{STAGING}`, held alive for
         // the process (leaked like the MockHttp thread above — the install
         // case runs once per suite).

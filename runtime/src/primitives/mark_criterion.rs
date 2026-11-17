@@ -389,18 +389,28 @@ mod tests {
     }
 
     #[test]
-    fn dropping_named_tempfile_leaves_target_unchanged() {
-        use std::io::Write;
+    #[cfg(unix)]
+    fn a_failed_write_leaves_the_spec_unchanged_and_no_tempfile() {
+        use crate::primitives::unwritable_dir::{entries, while_unwritable};
         let tmp = tempdir().unwrap();
         write_fixture(tmp.path());
-        let spec_path = tmp.path().join("specs/feat/spec.md");
-        let original = fs::read_to_string(&spec_path).unwrap();
-        {
-            let parent = spec_path.parent().unwrap();
-            let mut tf = tempfile::NamedTempFile::new_in(parent).unwrap();
-            tf.write_all(b"INTERRUPTED CONTENT").unwrap();
-        }
-        assert_eq!(original, fs::read_to_string(&spec_path).unwrap());
+        let dir = tmp.path().join("specs/feat");
+        let before = entries(&dir);
+        let err = while_unwritable(&dir, || {
+            run(
+                &MarkCriterionArgs {
+                    feature: "feat".into(),
+                    criterion_index: Some(0),
+                    label: None,
+                    checked: true,
+                },
+                tmp.path(),
+            )
+        })
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert_eq!(SPEC, fs::read_to_string(dir.join("spec.md")).unwrap());
+        assert_eq!(before, entries(&dir), "a tempfile was left behind");
     }
 
     /// Appends a line to the file as a second writer landing between the

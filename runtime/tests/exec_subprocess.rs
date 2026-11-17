@@ -652,19 +652,34 @@ fn exec_emits_terminal_error_envelope_on_unparseable_command_file() {
 fn exec_returns_nonzero_when_command_file_missing() {
     ensure_binary_built();
     let tmp = tempfile::tempdir().unwrap();
-    let status = ductus_command(runtime_binary())
+    let output = ductus_command(runtime_binary())
         .arg("exec")
         .arg("nonexistent")
         .current_dir(tmp.path())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .status()
+        .output()
         .expect("spawn runtime");
-    assert!(
-        !status.success(),
-        "expected nonzero exit on missing command"
-    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    let last_line = stdout
+        .lines()
+        .rfind(|l| !l.trim().is_empty())
+        .expect("a terminal envelope on stdout");
+    let envelope: Value =
+        serde_json::from_str(last_line).expect("terminal line is a JSON envelope");
+    assert_eq!(envelope["type"], "error");
+    assert_eq!(envelope["code"], "command-not-found");
+    let message = envelope["message"].as_str().unwrap();
+    for tried in [
+        "framework/commands/nonexistent.md",
+        ".claude/commands/",
+        "framework/bootstrap/nonexistent.md",
+    ] {
+        assert!(message.contains(tried), "{tried} is not in: {message}");
+    }
 }
 
 /// On macOS `mktemp -d -t` makes its directory in the per-user temp

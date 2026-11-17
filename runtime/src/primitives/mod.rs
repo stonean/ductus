@@ -99,6 +99,8 @@ pub mod start_fix_rounds;
 pub(crate) mod tasks_counter;
 pub mod tool_loading;
 pub mod traverse_deps;
+#[cfg(all(test, unix))]
+pub(crate) mod unwritable_dir;
 pub mod validate_frontmatter;
 pub mod write_analysis;
 pub mod write_review;

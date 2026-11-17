@@ -798,25 +798,29 @@ mod tests {
     }
 
     #[test]
-    fn dropping_named_tempfile_leaves_target_unchanged() {
-        use std::io::Write;
-        // Simulates an interrupted write: create the tempfile in the parent
-        // dir, write the new content, then drop without `persist`. The target
-        // file must be unchanged.
+    #[cfg(unix)]
+    fn a_failed_write_leaves_the_tasks_unchanged_and_no_tempfile() {
+        use crate::primitives::unwritable_dir::{entries, while_unwritable};
         let tmp = tempdir().unwrap();
         write_fixture(tmp.path());
-        let tasks_path = tmp.path().join("specs/feat/tasks.md");
-        let original = fs::read_to_string(&tasks_path).unwrap();
-
-        {
-            let parent = tasks_path.parent().unwrap();
-            let mut tf = tempfile::NamedTempFile::new_in(parent).unwrap();
-            tf.write_all(b"INTERRUPTED CONTENT").unwrap();
-            // tf dropped here without persist
-        }
-
-        let after = fs::read_to_string(&tasks_path).unwrap();
-        assert_eq!(original, after);
+        let dir = tmp.path().join("specs/feat");
+        let original = fs::read_to_string(dir.join("tasks.md")).unwrap();
+        let before = entries(&dir);
+        let err = while_unwritable(&dir, || {
+            run(
+                &MarkTaskArgs {
+                    feature: "feat".into(),
+                    task_number: "1".into(),
+                    subtask_index: 0,
+                    checked: true,
+                },
+                tmp.path(),
+            )
+        })
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert_eq!(original, fs::read_to_string(dir.join("tasks.md")).unwrap());
+        assert_eq!(before, entries(&dir), "a tempfile was left behind");
     }
 
     #[test]

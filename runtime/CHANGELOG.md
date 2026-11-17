@@ -1299,6 +1299,16 @@ its version and date.
 
 ### Fixed
 
+- **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
+  from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
+  check before the marker was stripped, so it was written as an empty bullet
+  that `remove-inbox-item` could not name. The text is now checked again after
+  the strip and refused as an invalid argument, as scenario
+  `append-primitive-marker-normalization` requires.
+- **`ductus exec` labels only a command file that leaves the project
+  `command-file-outside-project` (spec 022 task 44, from 022's review).** A
+  project root that cannot be resolved was reported under the same code; it now
+  halts as `config-unreadable`, with the underlying error.
 - **BREAKING: an installed command file is read only from inside the project
   (spec 022 task 40, from 064's analysis; BE-INPUT-004).** `ductus exec`, the
   `writeCode` payload's constitution excerpts, `render-help` (and `ductus hook

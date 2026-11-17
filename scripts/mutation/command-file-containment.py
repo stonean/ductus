@@ -75,8 +75,8 @@ MUTATIONS = [
     (
         'M7 ductus exec probes and reads a candidate it never contained',
         'src/main.rs',
-        '        if let Err(err) = ductus::host::Host::contain_candidate(repo, rel) {\n',
-        '        if let Err(err) = Ok::<(), String>(()) {\n',
+        '        match ductus::host::Host::contain_candidate(repo, rel) {\n',
+        '        match Ok::<(), ductus::primitives::PrimitiveError>(()) {\n',
         '--test exec_subprocess exec_refuses_a_command_file_linked_outside_the_project',
     ),
     (

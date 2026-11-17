@@ -45,8 +45,8 @@ fi
 # gets CONNECT_TIMEOUT_SECONDS and a whole request REQUEST_TIMEOUT_SECONDS,
 # after which curl fails and the installer halts naming the URL. The two
 # requests read a redirect's headers and the bootstrap (134,396 bytes in
-# ductus-v0.59.11, the latest release on 2026-10-20, and 137,600 on main), so
-# a minute is ample on a slow link and short of a hang.
+# ductus-v0.59.11, the latest release on 2026-10-20, and 159,893 on main on
+# 2026-11-16), so a minute is ample on a slow link and short of a hang.
 CONNECT_TIMEOUT_SECONDS=10
 REQUEST_TIMEOUT_SECONDS=60
 

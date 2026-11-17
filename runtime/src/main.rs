@@ -829,11 +829,16 @@ fn locate_exec_command(
 ) -> Result<PathBuf, (&'static str, String)> {
     let candidates = exec_candidates(command, host);
     for rel in &candidates {
-        if let Err(err) = ductus::host::Host::contain_candidate(repo, rel) {
-            return Err((
-                "command-file-outside-project",
-                format!("command file outside the project: {err}"),
-            ));
+        match ductus::host::Host::contain_candidate(repo, rel) {
+            Ok(()) => {}
+            Err(err @ ductus::primitives::PrimitiveError::InvalidPath { .. }) => {
+                return Err((
+                    "command-file-outside-project",
+                    format!("command file outside the project: {err}"),
+                ));
+            }
+            // A project root that cannot be resolved is not a link leaving it.
+            Err(err) => return Err(("config-unreadable", err.to_string())),
         }
         let candidate = repo.join(rel);
         if candidate.exists() {
@@ -1829,5 +1834,23 @@ mod tests {
             matches!(err, ductus::primitives::PrimitiveError::InvalidPath { .. }),
             "{err}"
         );
+    }
+
+    /// Only a candidate leaving the project is `command-file-outside-project`
+    /// (022 task 44, O6): a project root that cannot be resolved is a failure
+    /// to read the project, not a link, and is not labelled as one.
+    #[test]
+    fn an_unresolvable_project_root_is_not_reported_as_an_outward_command_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let host = ductus::host::Host::load(tmp.path()).unwrap();
+        // A root running through a regular file cannot be resolved (ENOTDIR),
+        // which is an I/O error, not an absence.
+        let file = tmp.path().join("a-file");
+        std::fs::write(&file, "x").unwrap();
+        let unresolvable = file.join("project");
+        let (code, message) =
+            super::locate_exec_command("smoke", &host, &unresolvable).unwrap_err();
+        assert_eq!(code, "config-unreadable", "{message}");
+        assert!(message.contains("a-file"), "{message}");
     }
 }

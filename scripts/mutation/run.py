@@ -15,7 +15,9 @@ ast.literal_eval and never executed. Each mutation is a tuple
           together; each must occur in the file exactly once
   new     the replacement, or a list matching old
   filter  the test-name filters passed to `cargo test --lib --locked --`, or,
-          when it starts `--test NAME`, to `cargo test --locked --test NAME --`
+          when it starts `--test NAME`, to `cargo test --locked --test NAME --`,
+          or, when it starts `--bin NAME`, to `cargo test --locked --bin NAME --`
+          (the unit tests in a binary crate's `src/main.rs`)
 
 EXPECTED_SURVIVORS maps an id to the reason no portable test can kill it.
 
@@ -89,6 +91,8 @@ def run_one(mutation):
         words = filt.split()
         if words[:1] == ["--test"]:
             command = ["cargo", "test", "--locked", "--test", words[1], "--", *words[2:]]
+        elif words[:1] == ["--bin"]:
+            command = ["cargo", "test", "--locked", "--bin", words[1], "--", *words[2:]]
         else:
             command = ["cargo", "test", "--lib", "--locked", "--", *words]
         result = subprocess.run(

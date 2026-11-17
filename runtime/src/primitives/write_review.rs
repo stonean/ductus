@@ -5806,16 +5806,16 @@ mod tests {
     }
 
     #[test]
-    fn dropping_named_tempfile_leaves_no_review_md() {
-        use std::io::Write;
+    #[cfg(unix)]
+    fn a_failed_write_leaves_no_review_md_and_no_tempfile() {
+        use crate::primitives::unwritable_dir::{entries, while_unwritable};
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let dir = tmp.path().join("specs/001-x");
-        let dest = dir.join("review.md");
-        {
-            let mut tf = tempfile::NamedTempFile::new_in(&dir).unwrap();
-            tf.write_all(b"INTERRUPTED").unwrap();
-        }
-        assert!(!dest.exists());
+        let before = entries(&dir);
+        let err = while_unwritable(&dir, || run(&base_args("001-x"), tmp.path())).unwrap_err();
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert!(!dir.join("review.md").exists());
+        assert_eq!(before, entries(&dir), "a tempfile was left behind");
     }
 
     #[test]

@@ -22,6 +22,9 @@ The judgments and the tests that hold them:
       by append_task::a_feature_path_under_a_config_or_protected_directory_is_refused.
   M5  create-scenario routes its feature path through check_no_destination.
       Killed by create_scenario::refuses_a_feature_path_under_a_config_or_protected_directory.
+  M9  judge_names refuses the runtime pointer directory (.ductus/bin). Killed by
+      host_config::the_pointer_directory_is_refused_and_the_rest_of_ductus_state_is_not
+      (filter pointer). M6-M8 are retired ids and stay unused.
 
 `check_no_protected` has no judgment of its own to mutate: it delegates to
 `check_destination` (every base, the links, the followback) and swallows only
@@ -73,7 +76,7 @@ MUTATIONS = [
         'create_scenario',
     ),
     (
-        'M6 judge_names pointer-directory refusal removed',
+        'M9 judge_names pointer-directory refusal removed',
         'src/primitives/host_config.rs',
         '    if let Some(seq) = dir_sequence_in(POINTER_DIRS, names) {\n        return Err(refuse_pointer_dir(shown, seq));\n    }',
         '    if let Some(seq) = dir_sequence_in(POINTER_DIRS, names) {\n        let _ = seq;\n    }',

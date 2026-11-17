@@ -446,7 +446,7 @@ make_ns_tree() {
   mkdir -p "$d/framework/bootstrap" "$d/framework/commands" "$d/runtime/src/schema"
   printf '| `key` | `name` | `config_dir` | `layout` |\n| --- | --- | --- | --- |\n| `a` | A | `.agent` | x |\n' \
     > "$d/framework/bootstrap/ductus.md"
-  printf '%s\n' '/commands/{}/{command_name}.md' '/prompts/{}-{command_name}.md' 'project' > "$d/runtime/src/host.rs"
+  printf '%s\n' '/commands/{}/{command_name}.md' '/prompts/{}-{command_name}.md' 'project: Option<String>' > "$d/runtime/src/host.rs"
   printf '%s\n' '.ductus/config.toml' > "$d/runtime/src/schema/paths.rs"
   printf '# X\n' > "$d/framework/commands/x.md"
   printf '[host]\nproject = "ns"\n' > "$d/.ductus/config.toml"

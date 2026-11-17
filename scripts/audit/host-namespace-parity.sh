@@ -82,7 +82,8 @@ fi
 
 project=""
 if [ -n "$CONFIG_FILE" ]; then
-  # A config that cannot be read or does not parse halts the family, as
+  # A config that cannot be read, does not parse, or names a [host] project
+  # that is not one path component halts the family, as
   # it halts `Host::load` (runtime/src/host.rs): falling back to the
   # basename instead would compare a namespace nothing renders and could
   # pass, a check that could not run reading as one that passed.
@@ -93,15 +94,20 @@ try:
         data = tomllib.load(fh)
 except Exception:
     sys.exit(2)
-value = (data.get("host") or {}).get("project")
-if isinstance(value, str) and value:
+host = data.get("host") or {}
+if "project" in host:
+    value = host["project"]
+    # `Host::load` refuses a project that is not a string, or not one path
+    # component (screen_component, runtime/src/host.rs; 022 task 40).
+    if not isinstance(value, str) or value in ("", ".", "..") or any(c in value for c in "/\\\0"):
+        sys.exit(2)
     print(value)
 PY
 )"
   parse_status=$?
   if [ "$parse_status" -ne 0 ]; then
     emit "$CONFIG_FILE" \
-      "cannot be read or does not parse as TOML, so the rendered namespace cannot be resolved — Host::load halts on it too" \
+      "cannot be read, does not parse as TOML, or names a [host] project that is not one path component, so the rendered namespace cannot be resolved — Host::load halts on it too" \
       "fix $CONFIG_FILE so it parses, then re-run"
     exit 1
   fi
@@ -157,7 +163,7 @@ assert_contract "$HOST_RS" '/commands/{}/{command_name}.md' \
   "the commands/ candidate (Host::command_file_candidates)" || contracts_ok=0
 assert_contract "$HOST_RS" '/prompts/{}-{command_name}.md' \
   "the prompts/ candidate (Host::command_file_candidates)" || contracts_ok=0
-assert_contract "$HOST_RS" 'project' \
+assert_contract "$HOST_RS" 'project: Option<String>' \
   "the [host] project key (HostBlock)" || contracts_ok=0
 assert_contract "$ROOT/runtime/src/schema/paths.rs" '.ductus/config.toml' \
   "the new-wins config resolution order (schema::paths)" || contracts_ok=0

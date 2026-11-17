@@ -18,9 +18,12 @@ on:
       - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
       # tests/lint_markdown_scope.rs runs the markdownlint package-lock.json
-      # pins, so a change to the pin is a change to its subject.
+      # pins, and src/primitives/write_analysis.rs and tests/result_sizes.rs
+      # copy .markdownlint-cli2.jsonc into a fixture and lint with it, so a
+      # change to the pin or the config is a change to their subject.
       - 'package.json'
       - 'package-lock.json'
+      - '.markdownlint-cli2.jsonc'
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
       - '.github/workflows/runtime-release.yml'
@@ -84,9 +87,12 @@ on:
       - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
       # tests/lint_markdown_scope.rs runs the markdownlint package-lock.json
-      # pins, so a change to the pin is a change to its subject.
+      # pins, and src/primitives/write_analysis.rs and tests/result_sizes.rs
+      # copy .markdownlint-cli2.jsonc into a fixture and lint with it, so a
+      # change to the pin or the config is a change to their subject.
       - 'package.json'
       - 'package-lock.json'
+      - '.markdownlint-cli2.jsonc'
       - '.github/workflows/runtime-release.yml'
       - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'

@@ -45,7 +45,8 @@ const PROJECT_TEMPLATE: &str = "framework/templates/project/inbox.md";
 /// # Errors
 ///
 /// Returns [`super::PrimitiveError::InvalidArgument`] when `text` is empty,
-/// whitespace-only, or carries an embedded newline (structure injection
+/// whitespace-only, only a list marker (a bare checkbox), or carries an
+/// embedded newline (structure injection
 /// into `inbox.md`) — the rule `remove-inbox-item` applies too, so every
 /// bullet written here can be removed (see [`super::validate_inbox_text`]).
 /// [`super::PrimitiveError::ChangedSinceRead`] when `inbox.md` changed (or, for the
@@ -54,6 +55,11 @@ const PROJECT_TEMPLATE: &str = "framework/templates/project/inbox.md";
 /// as [`super::PrimitiveError::Io`].
 pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
     super::validate_inbox_text("append-inbox", "text", &args.text)?;
+    // Text that is only a marker (a bare checkbox) strips to nothing: the same
+    // guard refuses it rather than writing an empty bullet (scenario
+    // `append-primitive-marker-normalization`).
+    let text = strip_bullet_marker(&args.text);
+    super::validate_inbox_text("append-inbox", "text", &text)?;
 
     let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
@@ -66,7 +72,7 @@ pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
         None => (creation_base(repo), true),
     };
 
-    let new_content = append_bullet(&existing, &strip_bullet_marker(&args.text));
+    let new_content = append_bullet(&existing, &text);
     guarded::write_guarded(&snapshot, &new_content)?;
 
     Ok(AppendInboxResult {
@@ -323,6 +329,24 @@ mod tests {
             );
         }
         assert!(!tmp.path().join("specs/inbox.md").exists());
+    }
+
+    /// Scenario `append-primitive-marker-normalization`: text that is only a
+    /// marker reduces to empty and is refused, never written as a bare bullet.
+    #[test]
+    fn rejects_text_that_is_only_a_marker() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        let inbox = "# Inbox\n\n- [ ] kept\n";
+        fs::write(tmp.path().join("specs/inbox.md"), inbox).unwrap();
+        for bare in ["- [ ]", "- [x]", "- [X]", "  - [ ]  "] {
+            let err = run(&args(bare), tmp.path()).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidArgument { .. }),
+                "expected InvalidArgument for {bare:?}, got {err:?}"
+            );
+        }
+        assert_eq!(read_inbox(tmp.path()), inbox, "a bare bullet was written");
     }
 
     #[test]
