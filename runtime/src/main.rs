@@ -72,7 +72,9 @@ enum Command {
     Exec {
         /// Slash command name (e.g., "status", "validate").
         command: String,
-        /// Arguments forwarded to the command.
+        /// Arguments forwarded to the command, each `key=value`, binding one
+        /// walker-context entry over the session's; one with no `=` or an
+        /// empty key is refused.
         args: Vec<String>,
     },
 
@@ -680,6 +682,24 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
     }
 }
 
+/// The walker-context entries `ductus exec`'s forwarded arguments bind, each
+/// `key=value` split at its first `=` (spec 022 data model §JSON-over-stdio
+/// protocol, **Exec arguments**). An argument with no `=`, or an empty key, is
+/// refused rather than dropped: it has no key to bind, and dropping it ran the
+/// command against the session's target and still reported `complete`.
+fn exec_overrides(args: &[String]) -> Result<Vec<(&str, &str)>, String> {
+    args.iter()
+        .map(|arg| match arg.split_once('=') {
+            Some((key, value)) if !key.is_empty() => Ok((key, value)),
+            _ => Err(format!(
+                "argument {arg:?} is not key=value: each forwarded argument binds one \
+                 walker-context entry, such as identifier=022, so one with no key is refused \
+                 rather than dropped"
+            )),
+        })
+        .collect()
+}
+
 /// Terminal `error` envelope for a command-file parse failure under
 /// `ductus exec`. Protocol contract (spec 022 + the versioning-enforcement
 /// resolution): every non-zero exit in the 1–127 clean band is preceded
@@ -898,6 +918,14 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         eprintln!("ductus exec: {message}");
         return ExitCode::from(1);
     }
+    let overrides = match exec_overrides(args) {
+        Ok(overrides) => overrides,
+        Err(message) => {
+            emit_exec_error("invalid-argument", &message);
+            eprintln!("ductus exec: {message}");
+            return ExitCode::from(1);
+        }
+    };
     let host = match Host::load(repo) {
         Ok(host) => host,
         Err(err) => {
@@ -948,10 +976,8 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             return ExitCode::from(1);
         }
     };
-    for arg in args {
-        if let Some((key, value)) = arg.split_once('=') {
-            context.insert(key.to_string(), Value::String(value.to_string()));
-        }
+    for (key, value) in overrides {
+        context.insert(key.to_string(), Value::String(value.to_string()));
     }
 
     let stdin = io::stdin();

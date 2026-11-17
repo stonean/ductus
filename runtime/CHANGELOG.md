@@ -1346,6 +1346,16 @@ its version and date.
 
 ### Fixed
 
+- **BREAKING: `ductus exec` refuses a forwarded argument it cannot bind (spec
+  022 task 49; found by 022's pre-done verification, 2026-11-17).** `run_exec`
+  bound each `key=value` argument into the walker context and dropped any other
+  without a word. So `ductus exec analyze 022` analyzed the session's target
+  and still reported `complete`. An argument with no `=`, or with an empty key,
+  now halts before the command file is read, with a terminal `error` envelope
+  coded `invalid-argument` that names it, exit 1. `--help` says each argument
+  is `key=value`. An invocation that passed a bare argument and relied on its
+  being ignored now fails, a narrowing of accepted input (`BE-COMPAT-001`). No
+  framework file or test passed one.
 - **`merge-permissions` refuses a settings path whose link under a config
   directory leads into a protected one, and an archive's staging path may not
   contain the working directory (spec 022 task 43; 022's review of 2026-11-17,

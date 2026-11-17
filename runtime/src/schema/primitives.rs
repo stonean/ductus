@@ -4385,7 +4385,8 @@ pub struct ExtractArchiveArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ExtractArchiveResult {
-    /// Repo-relative or absolute path of the destination directory.
+    /// Absolute path of the destination directory, inside the system temp
+    /// directory, as `dest` was validated.
     pub dest: String,
     /// Repo-relative paths of every regular file extracted, in archive order.
     pub files: Vec<String>,
@@ -4430,7 +4431,8 @@ pub struct FetchArchiveArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct FetchArchiveResult {
-    /// Repo-relative or absolute path where the archive was written.
+    /// Absolute path inside the system temp directory where the archive was
+    /// written, as `archive` was validated.
     pub path: String,
     /// Lowercase hex sha256 of the downloaded archive. When the args
     /// included `sha256_url`, this value also matched the sidecar's

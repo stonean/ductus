@@ -682,6 +682,73 @@ fn exec_returns_nonzero_when_command_file_missing() {
     }
 }
 
+/// A forwarded argument with no `=`, or an empty key, binds nothing, so
+/// `ductus exec` refuses it before the command file is read (spec 022 task
+/// 49): dropping it ran the command against the session's target and still
+/// reported `complete`. A `key=value` argument beside it still runs.
+#[test]
+fn exec_refuses_an_argument_it_cannot_bind() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    write_procedure_repo(
+        tmp.path(),
+        "smoke",
+        "# /ductus:smoke\n\n## Instructions\n\n1. Invoke `read-spec` against the target.\n",
+    );
+    let feature_dir = tmp.path().join("specs/001-basic");
+    fs::create_dir_all(&feature_dir).unwrap();
+    fs::write(
+        feature_dir.join("spec.md"),
+        "---\nstatus: clarified\ndependencies: []\n---\n\n# 001\n\nbody.\n",
+    )
+    .unwrap();
+    let run = |args: &[&str]| {
+        ductus_command(runtime_binary())
+            .arg("exec")
+            .arg("smoke")
+            .args(args)
+            .current_dir(tmp.path())
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .expect("spawn runtime")
+    };
+
+    let bound = run(&["feature=001-basic"]);
+    assert!(
+        bound.status.success(),
+        "a key=value argument runs: {}",
+        String::from_utf8_lossy(&bound.stderr)
+    );
+
+    for refused in ["001-basic", "=001-basic"] {
+        let output = run(&["feature=001-basic", refused]);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(1), "{refused}: {stderr}");
+        assert!(
+            !stdout.contains("\"progress\""),
+            "{refused}: a step ran: {stdout}"
+        );
+        let envelope: Value = serde_json::from_str(
+            stdout
+                .lines()
+                .rfind(|l| !l.trim().is_empty())
+                .expect("a terminal envelope on stdout"),
+        )
+        .expect("terminal line is a JSON envelope");
+        assert_eq!(envelope["type"], "error", "{refused}");
+        assert_eq!(envelope["code"], "invalid-argument", "{refused}");
+        assert_eq!(envelope["runtime-version"], env!("CARGO_PKG_VERSION"));
+        let message = envelope["message"].as_str().unwrap();
+        assert!(
+            message.contains(&format!("{refused:?}")),
+            "the message names {refused}: {message}"
+        );
+    }
+}
+
 /// On macOS `mktemp -d -t` makes its directory in the per-user temp
 /// directory whatever `TMPDIR` says, so `/ductus`'s `{tempdir}` lies outside
 /// `std::env::temp_dir()` when `TMPDIR` points elsewhere. The staging check
