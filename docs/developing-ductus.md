@@ -75,6 +75,18 @@ A subagent reviewer finishes a part only when the part fits the reading it will 
 
 So size a part by bytes read, not by entry count. Name the contract each part reads instead of the whole spec, plan and data model: the command's normative sources are the rule files, `AGENTS.md`'s sections, the acceptance criteria and the scenarios (`framework/reference/review.md` §Load rules). A reviewer that stops short with a named gap can be asked to finish it with `SendMessage`, keeping its context; the two asked to finish took 34K and 57K more tokens. A fix-round re-read's brief carries the spec, data model and scenarios whole, so keep each round's diff small enough to fit beside them.
 
+## Sizing an analysis's judges
+
+`/{project}:analyze`'s rule judges read the design subjects whole beside their rule part, so size a cell by bytes read too. Measured on 022's analysis of 2026-11-17: 310 rules in 368 KB of rule text, a spec, plan and data model of 208 KB, and 78 scenarios of 397 KB. Nine cells, three rule parts by three scenario groups balanced by bytes, each about 450 to 480 KB, all finished with whole reads, at 264K to 306K tokens.
+
+- **Merge each rule's three answers.**
+  - All not fired is not fired.
+  - Addressed, with no finding, is addressed, citing the core subject.
+  - Any finding goes to one fresh reader, with the rule, the three answers and the cited sections.
+- **Run the deterministic steps and step 15's reader before the judges.** A fix either one prompts edits a design subject.
+- **Re-judge a design-subject edit made after the judges read by sending each judge the diff** (`SendMessage`, which keeps its context), with the changed lines to read whole, not with a fresh run. 022's re-checks took about ten seconds a cell.
+- **Name in the brief each subject line over 2,000 characters**, read with `sed -n '<n>p' <file> | fold -w 1000`, since the Read tool may cut one.
+
 ## Running a second session
 
 Each session needs its own checkout: on a fixture, one session's uncommitted file in a shared tree joined the other's review scope and took its gate from passing to `review-owed` until it was gone (079's Resolved Questions), and the pre-commit hook and `.ductus/bin/ductus` are shared there too. Two clones, each on `main`, rebase past each other cleanly, and a record's `reviewed-against` no longer being an ancestor afterwards changes neither the gate nor the scope.
